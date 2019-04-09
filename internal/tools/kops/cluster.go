@@ -2,6 +2,7 @@ package kops
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -61,4 +62,33 @@ func (c *Cmd) DeleteCluster(name string) error {
 	}
 
 	return nil
+}
+
+// GetCluster invokes kops get cluster, using the context of the created Cmd, and
+// returns the stdout.
+func (c *Cmd) GetCluster(name string) (string, error) {
+	stdout, _, err := c.run(
+		"get",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+	)
+	trimmed := strings.TrimSuffix(string(stdout), "\n")
+	if err != nil {
+		return trimmed, errors.Wrap(err, "failed to invoke kops get cluster")
+	}
+
+	return trimmed, nil
+}
+
+// Version invokes kops version, using the context of the created Cmd, and
+// returns the stdout.
+func (c *Cmd) Version() (string, error) {
+	stdout, _, err := c.run("version")
+	trimmed := strings.TrimSuffix(string(stdout), "\n")
+	if err != nil {
+		return trimmed, errors.Wrap(err, "failed to invoke kops version")
+	}
+
+	return trimmed, nil
 }
