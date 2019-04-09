@@ -6,7 +6,7 @@ Read more about the [Mattermost Private Cloud Architecture](https://docs.google.
 
 ## Other Resources
 
-This repository houses the open-source components of Mattermost Cloud. Other resources are linked below:
+This repository houses the open-source components of Mattermost Private Cloud. Other resources are linked below:
 
 - [Mattermost the server and user interface](https://github.com/mattermost/mattermost-server)
 - [Helm chart for Mattermost Enterprise Edition](https://github.com/mattermost/mattermost-kubernetes)
