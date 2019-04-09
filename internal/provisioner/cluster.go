@@ -31,7 +31,7 @@ func CreateCluster(provider, size string, logger log.FieldLogger) error {
 	}
 
 	outputDir := "tmp"
-	_, err = os.Stat("tmp")
+	_, err := os.Stat("tmp")
 	if err == nil {
 		return errors.New("tmp folder already exists: delete existing cluster first")
 	} else if err != nil && !os.IsNotExist(err) {
