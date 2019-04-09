@@ -25,7 +25,7 @@ var clusterCmd = &cobra.Command{
 
 var clusterCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create a cluster",
+	Short: "Create a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
 		provider, _ := command.Flags().GetString("provider")
 		size, _ := command.Flags().GetString("size")
