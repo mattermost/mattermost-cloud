@@ -9,7 +9,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "cloud",
-	Short: "Cloud is a tool to provision, manage and monitor Kubernetes clusters.",
+	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
 	Run: func(cmd *cobra.Command, args []string) {
 		serverCmd.Run(cmd, args)
 	},
