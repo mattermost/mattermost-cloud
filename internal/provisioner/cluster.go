@@ -30,6 +30,14 @@ func CreateCluster(provider, size string, logger log.FieldLogger) error {
 		return fmt.Errorf("unsupported size %s", size)
 	}
 
+	outputDir := "tmp"
+	_, err = os.Stat("tmp")
+	if err == nil {
+		return errors.New("tmp folder already exists: delete existing cluster first")
+	} else if err != nil && !os.IsNotExist(err) {
+		return errors.Wrap(err, "failed to stat temporary output directory")
+	}
+
 	clusterId := model.NewId()
 	s3StateStore := "dev.cloud.mattermost.com"
 	dns := fmt.Sprintf("%s-kops.k8s.local", clusterId)
@@ -50,14 +58,6 @@ func CreateCluster(provider, size string, logger log.FieldLogger) error {
 
 	// Temporarily relocate the kops output directory to a local folder named `tmp`. This won't
 	// be necessary once we persist the output to S3 instead.
-	outputDir := "tmp"
-	_, err = os.Stat("tmp")
-	if err == nil {
-		return errors.New("tmp folder already exists: delete existing cluster first")
-	} else if err != nil && !os.IsNotExist(err) {
-		return errors.Wrap(err, "failed to stat temporary output directory")
-	}
-
 	err = os.Rename(kops.GetOutputDirectory(), outputDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to rename kops output directory to tmp")
