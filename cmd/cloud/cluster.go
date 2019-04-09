@@ -38,7 +38,7 @@ var clusterCreateCmd = &cobra.Command{
 
 var clusterDeleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete a cluster",
+	Short: "Delete a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
 		clusterId, _ := command.Flags().GetString("cluster")
 
