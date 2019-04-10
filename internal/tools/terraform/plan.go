@@ -2,15 +2,16 @@ package terraform
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
 type terraformOutput struct {
-	Sensitive bool   `json:"sensitive"`
-	Type      string `json:"type"`
-	Value     string `json:"value"`
+	Sensitive bool        `json:"sensitive"`
+	Type      string      `json:"type"`
+	Value     interface{} `json:"value"`
 }
 
 // Init invokes terraform init.
@@ -67,7 +68,7 @@ func (c *Cmd) Output(variable string) (string, error) {
 		return string(stdout), errors.Wrap(err, "failed to parse terraform output")
 	}
 
-	return output.Value, nil
+	return fmt.Sprintf("%s", output.Value), nil
 }
 
 // Version invokes terraform version and returns the value.
