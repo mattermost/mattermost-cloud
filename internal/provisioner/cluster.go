@@ -3,6 +3,7 @@ package provisioner
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/mattermost/mattermost-server/model"
@@ -19,6 +20,9 @@ const ProviderAWS = "aws"
 // SizeAlef500 is a cluster sized for 500 users.
 const SizeAlef500 = "SizeAlef500"
 
+// clusterRootDir is the local directory that contains cluster configuration.
+const clusterRootDir = "clusters"
+
 // CreateCluster creates a cluster using kops and terraform.
 func CreateCluster(clusterId, provider, size string, logger log.FieldLogger) error {
 	provider = strings.ToLower(provider)
@@ -34,14 +38,24 @@ func CreateCluster(clusterId, provider, size string, logger log.FieldLogger) err
 		clusterId = model.NewId()
 	}
 
-	// Temporarily relocate the kops output directory to a local folder based on the
+	// Temporarily locate the kops output directory to a local folder based on the
 	// cluster name. This won't be necessary once we persist the output to S3 instead.
-	outputDir := fmt.Sprintf("cluster-%s", clusterId)
-	_, err := os.Stat(outputDir)
+	_, err := os.Stat(clusterRootDir)
+	if err != nil && os.IsNotExist(err) {
+		err = os.Mkdir(clusterRootDir, 0755)
+		if err != nil {
+			return errors.Wrap(err, "unable to create cluster root dir")
+		}
+	} else if err != nil {
+		return errors.Wrapf(err, "failed to stat cluster root directory %q", clusterRootDir)
+	}
+
+	outputDir := path.Join(clusterRootDir, clusterId)
+	_, err = os.Stat(outputDir)
 	if err == nil {
 		return fmt.Errorf("encountered cluster ID collision: directory %q already exists", outputDir)
 	} else if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to stat cluster directory %q: %s", outputDir, err)
+		return errors.Wrapf(err, "failed to stat cluster directory %q", outputDir)
 	}
 
 	s3StateStore := "dev.cloud.mattermost.com"
@@ -92,17 +106,20 @@ func DeleteCluster(clusterId string, logger log.FieldLogger) error {
 
 	// Temporarily look for the kops output directory as a local folder named after
 	// the cluster ID. See above.
-	outputDir := fmt.Sprintf("cluster-%s", clusterId)
+	outputDir := path.Join(clusterRootDir, clusterId)
 
 	// Validate the provided cluster ID before we alter state in any way.
-	logger.Info("verifying cluster ID")
 	_, err := os.Stat(outputDir)
 	if err != nil {
-		return fmt.Errorf("failed to find cluster directory %q: %s", outputDir, err)
+		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
 
 	terraform := terraform.New(outputDir, logger)
 	defer terraform.Close()
+	err = terraform.Init()
+	if err != nil {
+		return err
+	}
 	out, err := terraform.Output("cluster_name")
 	if err != nil {
 		return err
@@ -122,10 +139,6 @@ func DeleteCluster(clusterId string, logger log.FieldLogger) error {
 	}
 
 	logger.Info("deleting cluster")
-	err = terraform.Init()
-	if err != nil {
-		return err
-	}
 	err = terraform.Destroy()
 	if err != nil {
 		return err

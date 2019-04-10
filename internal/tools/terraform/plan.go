@@ -1,10 +1,17 @@
 package terraform
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/pkg/errors"
 )
+
+type terraformOutput struct {
+	Sensitive bool   `json:"sensitive"`
+	Type      string `json:"type"`
+	Value     string `json:"value"`
+}
 
 // Init invokes terraform init.
 func (c *Cmd) Init() error {
@@ -47,14 +54,20 @@ func (c *Cmd) Destroy() error {
 func (c *Cmd) Output(variable string) (string, error) {
 	stdout, _, err := c.run(
 		"output",
+		"-json",
 		variable,
 	)
-	trimmed := strings.TrimSuffix(string(stdout), "\n")
 	if err != nil {
-		return trimmed, errors.Wrap(err, "failed to invoke terraform output")
+		return string(stdout), errors.Wrap(err, "failed to invoke terraform output")
 	}
 
-	return trimmed, nil
+	var output terraformOutput
+	err = json.Unmarshal(stdout, &output)
+	if err != nil {
+		return string(stdout), errors.Wrap(err, "failed to parse terraform output")
+	}
+
+	return output.Value, nil
 }
 
 // Version invokes terraform version and returns the value.
