@@ -7,7 +7,6 @@ import (
 )
 
 func init() {
-	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster to be created. A random id will be used if left empty.")
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
 	clusterCreateCmd.Flags().String("size", "", "The size constant describing the cluster.")
 	clusterCreateCmd.MarkFlagRequired("size")
@@ -28,13 +27,12 @@ var clusterCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
-		clusterId, _ := command.Flags().GetString("cluster")
 		provider, _ := command.Flags().GetString("provider")
 		size, _ := command.Flags().GetString("size")
 
 		command.SilenceUsage = true
 
-		return provisioner.CreateCluster(clusterId, provider, size, logger)
+		return provisioner.CreateCluster(provider, size, logger)
 	},
 }
 

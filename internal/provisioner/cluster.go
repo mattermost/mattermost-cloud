@@ -24,7 +24,7 @@ const SizeAlef500 = "SizeAlef500"
 const clusterRootDir = "clusters"
 
 // CreateCluster creates a cluster using kops and terraform.
-func CreateCluster(clusterId, provider, size string, logger log.FieldLogger) error {
+func CreateCluster(provider, size string, logger log.FieldLogger) error {
 	provider = strings.ToLower(provider)
 	if provider != ProviderAWS {
 		return fmt.Errorf("unsupported provider %s", provider)
@@ -34,9 +34,7 @@ func CreateCluster(clusterId, provider, size string, logger log.FieldLogger) err
 		return fmt.Errorf("unsupported size %s", size)
 	}
 
-	if clusterId == "" {
-		clusterId = model.NewId()
-	}
+	clusterId := model.NewId()
 
 	// Temporarily locate the kops output directory to a local folder based on the
 	// cluster name. This won't be necessary once we persist the output to S3 instead.
