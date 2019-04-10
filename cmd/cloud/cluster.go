@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
@@ -8,10 +10,13 @@ import (
 
 func init() {
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
-	clusterCreateCmd.Flags().String("size", "", "The size constant describing the cluster.")
+	clusterCreateCmd.Flags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state")
+	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
+	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed")
 	clusterCreateCmd.MarkFlagRequired("size")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
+	clusterDeleteCmd.Flags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket where the cluster state is stored")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
 
 	clusterCmd.AddCommand(clusterCreateCmd)
@@ -28,11 +33,15 @@ var clusterCreateCmd = &cobra.Command{
 	Short: "Create a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
 		provider, _ := command.Flags().GetString("provider")
+		s3StateStore, _ := command.Flags().GetString("state-store")
 		size, _ := command.Flags().GetString("size")
+		zones, _ := command.Flags().GetString("zones")
+
+		splitZones := strings.Split(zones, ",")
 
 		command.SilenceUsage = true
 
-		return provisioner.CreateCluster(provider, size, logger)
+		return provisioner.CreateCluster(provider, s3StateStore, size, splitZones, logger)
 	},
 }
 
@@ -41,9 +50,10 @@ var clusterDeleteCmd = &cobra.Command{
 	Short: "Delete a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
 		clusterId, _ := command.Flags().GetString("cluster")
+		s3StateStore, _ := command.Flags().GetString("state-store")
 
 		command.SilenceUsage = true
 
-		return provisioner.DeleteCluster(clusterId, logger)
+		return provisioner.DeleteCluster(clusterId, s3StateStore, logger)
 	},
 }
