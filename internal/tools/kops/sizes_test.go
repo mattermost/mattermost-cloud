@@ -1,6 +1,10 @@
 package kops
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestGetSize(t *testing.T) {
 	var sizeTests = []struct {
@@ -16,15 +20,12 @@ func TestGetSize(t *testing.T) {
 	for _, tt := range sizeTests {
 		t.Run(tt.size, func(t *testing.T) {
 			clusterSize, err := GetSize(tt.size)
-			if err != nil && !tt.expectError {
-				t.Errorf("got error when expecting none: %s", err)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
-			if err == nil && tt.expectError {
-				t.Errorf("expecting error, got none")
-			}
-			if clusterSize != tt.clusterSize {
-				t.Errorf("got %+v, want %+v", clusterSize, tt.clusterSize)
-			}
+			assert.Equal(t, clusterSize, tt.clusterSize)
 		})
 	}
 }

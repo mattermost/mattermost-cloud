@@ -1,6 +1,10 @@
 package provisioner
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestCheckProvider(t *testing.T) {
 	var sizeTests = []struct {
@@ -15,11 +19,10 @@ func TestCheckProvider(t *testing.T) {
 	for _, tt := range sizeTests {
 		t.Run(tt.provider, func(t *testing.T) {
 			err := checkProvider(tt.provider)
-			if err != nil && !tt.expectError {
-				t.Errorf("got error when expecting none: %s", err)
-			}
-			if err == nil && tt.expectError {
-				t.Errorf("expecting error, got none")
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
