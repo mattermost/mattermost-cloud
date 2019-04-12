@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/pkg/errors"
@@ -19,8 +18,7 @@ const clusterRootDir = "clusters"
 
 // CreateCluster creates a cluster using kops and terraform.
 func CreateCluster(provider, s3StateStore, size string, zones []string, logger log.FieldLogger) error {
-	provider = strings.ToLower(provider)
-	err := checkProvider(provider)
+	provider, err := checkProvider(provider)
 	if err != nil {
 		return err
 	}

@@ -1,14 +1,18 @@
 package provisioner
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // providerAWS is the cloud provider AWS.
 const providerAWS = "aws"
 
-func checkProvider(provider string) error {
+func checkProvider(provider string) (string, error) {
+	provider = strings.ToLower(provider)
 	if provider == providerAWS {
-		return nil
+		return provider, nil
 	}
 
-	return fmt.Errorf("unsupported provider %s", provider)
+	return provider, fmt.Errorf("unsupported provider %s", provider)
 }

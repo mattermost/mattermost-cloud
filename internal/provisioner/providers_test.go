@@ -8,22 +8,30 @@ import (
 
 func TestCheckProvider(t *testing.T) {
 	var sizeTests = []struct {
-		provider    string
-		expectError bool
+		provider               string
+		expectedProviderString string
+		expectError            bool
 	}{
-		{"aws", false},
-		{"gce", true},
-		{"azure", true},
+		{"aws", "aws", false},
+		{"AWS", "aws", false},
+		{"Aws", "aws", false},
+		{"gce", "gce", true},
+		{"GCE", "gce", true},
+		{"Gce", "gce", true},
+		{"azure", "azure", true},
+		{"AZURE", "azure", true},
+		{"Azure", "azure", true},
 	}
 
 	for _, tt := range sizeTests {
 		t.Run(tt.provider, func(t *testing.T) {
-			err := checkProvider(tt.provider)
+			provider, err := checkProvider(tt.provider)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
+			assert.Equal(t, provider, tt.expectedProviderString)
 		})
 	}
 }
