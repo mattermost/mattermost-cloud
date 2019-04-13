@@ -9,14 +9,14 @@ import (
 )
 
 func init() {
+	clusterCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
-	clusterCreateCmd.Flags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.MarkFlagRequired("size")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
-	clusterDeleteCmd.Flags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket where the existing cluster state is stored.")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
 
 	clusterCmd.AddCommand(clusterCreateCmd)
