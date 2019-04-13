@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/pkg/errors"
@@ -14,31 +13,26 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 )
 
-// ProviderAWS is the cloud provider AWS.
-const ProviderAWS = "aws"
-
-// SizeAlef500 is a cluster sized for 500 users.
-const SizeAlef500 = "SizeAlef500"
-
 // clusterRootDir is the local directory that contains cluster configuration.
 const clusterRootDir = "clusters"
 
 // CreateCluster creates a cluster using kops and terraform.
-func CreateCluster(provider, size string, logger log.FieldLogger) error {
-	provider = strings.ToLower(provider)
-	if provider != ProviderAWS {
-		return fmt.Errorf("unsupported provider %s", provider)
+func CreateCluster(provider, s3StateStore, size string, zones []string, logger log.FieldLogger) error {
+	provider, err := checkProvider(provider)
+	if err != nil {
+		return err
 	}
 
-	if size != SizeAlef500 {
-		return fmt.Errorf("unsupported size %s", size)
+	kopsClusterSize, err := kops.GetSize(size)
+	if err != nil {
+		return err
 	}
 
 	clusterId := model.NewId()
 
 	// Temporarily locate the kops output directory to a local folder based on the
 	// cluster name. This won't be necessary once we persist the output to S3 instead.
-	_, err := os.Stat(clusterRootDir)
+	_, err = os.Stat(clusterRootDir)
 	if err != nil && os.IsNotExist(err) {
 		err = os.Mkdir(clusterRootDir, 0755)
 		if err != nil {
@@ -56,8 +50,7 @@ func CreateCluster(provider, size string, logger log.FieldLogger) error {
 		return errors.Wrapf(err, "failed to stat cluster directory %q", outputDir)
 	}
 
-	s3StateStore := "dev.cloud.mattermost.com"
-	dns := fmt.Sprintf("%s-kops.k8s.local", clusterId)
+	dns := clusterDNS(clusterId)
 
 	logger = logger.WithField("cluster", clusterId)
 
@@ -68,7 +61,7 @@ func CreateCluster(provider, size string, logger log.FieldLogger) error {
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(dns, provider, []string{"us-east-1a"})
+	err = kops.CreateCluster(dns, provider, kopsClusterSize, zones)
 	if err != nil {
 		return err
 	}
@@ -96,11 +89,10 @@ func CreateCluster(provider, size string, logger log.FieldLogger) error {
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func DeleteCluster(clusterId string, logger log.FieldLogger) error {
+func DeleteCluster(clusterId, s3StateStore string, logger log.FieldLogger) error {
 	logger = logger.WithField("cluster", clusterId)
 
-	s3StateStore := "dev.cloud.mattermost.com"
-	dns := fmt.Sprintf("%s-kops.k8s.local", clusterId)
+	dns := clusterDNS(clusterId)
 
 	// Temporarily look for the kops output directory as a local folder named after
 	// the cluster ID. See above.
@@ -155,4 +147,8 @@ func DeleteCluster(clusterId string, logger log.FieldLogger) error {
 	logger.Info("successfully deleted cluster")
 
 	return nil
+}
+
+func clusterDNS(id string) string {
+	return fmt.Sprintf("%s-kops.k8s.local", id)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, cloud string, zones []string) error {
+func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones []string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -19,6 +19,9 @@ func (c *Cmd) CreateCluster(name, cloud string, zones []string) error {
 		arg("cloud", cloud),
 		arg("state", "s3://", c.s3StateStore),
 		commaArg("zones", zones),
+		arg("node-count", clusterSize.NodeCount),
+		arg("node-size", clusterSize.NodeSize),
+		arg("master-size", clusterSize.MasterSize),
 		arg("target", "terraform"),
 		arg("out", c.outputDir),
 		arg("output", "json"),
