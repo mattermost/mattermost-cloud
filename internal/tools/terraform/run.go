@@ -30,7 +30,7 @@ func outputLogger(line string, logger log.FieldLogger) {
 		return
 	}
 
-	logger.Infof("terraform: %s", line)
+	logger.Infof("[terraform] %s", line)
 }
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {

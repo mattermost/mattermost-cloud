@@ -16,10 +16,14 @@ func init() {
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.MarkFlagRequired("size")
 
+	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
+	clusterUpgradeCmd.MarkFlagRequired("cluster")
+
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
 
 	clusterCmd.AddCommand(clusterCreateCmd)
+	clusterCmd.AddCommand(clusterUpgradeCmd)
 	clusterCmd.AddCommand(clusterDeleteCmd)
 }
 
@@ -42,6 +46,19 @@ var clusterCreateCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		return provisioner.CreateCluster(provider, s3StateStore, size, splitZones, logger)
+	},
+}
+
+var clusterUpgradeCmd = &cobra.Command{
+	Use:   "upgrade",
+	Short: "Upgrade a cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		clusterId, _ := command.Flags().GetString("cluster")
+		s3StateStore, _ := command.Flags().GetString("state-store")
+
+		command.SilenceUsage = true
+
+		return provisioner.UpgradeCluster(clusterId, s3StateStore, logger)
 	},
 }
 

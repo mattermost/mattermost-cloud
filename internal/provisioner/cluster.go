@@ -88,6 +88,76 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 	return nil
 }
 
+// UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
+func UpgradeCluster(clusterId, s3StateStore string, logger log.FieldLogger) error {
+	logger = logger.WithField("cluster", clusterId)
+
+	dns := clusterDNS(clusterId)
+
+	// Temporarily look for the kops output directory as a local folder named after
+	// the cluster ID. See above.
+	outputDir := path.Join(clusterRootDir, clusterId)
+
+	// Validate the provided cluster ID before we alter state in any way.
+	_, err := os.Stat(outputDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
+	}
+
+	terraform := terraform.New(outputDir, logger)
+	defer terraform.Close()
+	err = terraform.Init()
+	if err != nil {
+		return err
+	}
+	out, err := terraform.Output("cluster_name")
+	if err != nil {
+		return err
+	}
+	if out != dns {
+		return fmt.Errorf("terraform cluster_name (%s) does not match dns from provided ID (%s)", out, dns)
+	}
+
+	kops, err := kops.New(s3StateStore, logger)
+	defer kops.Close()
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	_, err = kops.GetCluster(dns)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("upgrading cluster")
+
+	err = kops.UpgradeCluster(dns)
+	if err != nil {
+		return err
+	}
+	err = kops.UpdateCluster(dns)
+	if err != nil {
+		return err
+	}
+
+	err = terraform.Apply()
+	if err != nil {
+		return err
+	}
+
+	err = kops.RollingUpdateCluster(dns)
+	if err != nil {
+		return err
+	}
+	err = kops.ValidateCluster(dns)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("successfully upgraded cluster")
+
+	return nil
+}
+
 // DeleteCluster deletes a previously created cluster using kops and terraform.
 func DeleteCluster(clusterId, s3StateStore string, logger log.FieldLogger) error {
 	logger = logger.WithField("cluster", clusterId)

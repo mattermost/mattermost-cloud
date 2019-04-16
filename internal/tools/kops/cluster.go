@@ -33,6 +33,22 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 	return nil
 }
 
+// RollingUpdateCluster invokes kops rolling-update cluster, using the context of the created Cmd.
+func (c *Cmd) RollingUpdateCluster(name string) error {
+	_, _, err := c.run(
+		"rolling-update",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+		"--yes",
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke kops rolling-update cluster")
+	}
+
+	return nil
+}
+
 // UpdateCluster invokes kops update cluster, using the context of the created Cmd.
 func (c *Cmd) UpdateCluster(name string) error {
 	_, _, err := c.run(
@@ -46,6 +62,37 @@ func (c *Cmd) UpdateCluster(name string) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops update cluster")
+	}
+
+	return nil
+}
+
+// UpgradeCluster invokes kops upgrade cluster, using the context of the created Cmd.
+func (c *Cmd) UpgradeCluster(name string) error {
+	_, _, err := c.run(
+		"upgrade",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+		"--yes",
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke kops upgrade cluster")
+	}
+
+	return nil
+}
+
+// ValidateCluster invokes kops validate cluster, using the context of the created Cmd.
+func (c *Cmd) ValidateCluster(name string) error {
+	_, _, err := c.run(
+		"validate",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke kops validate cluster")
 	}
 
 	return nil
