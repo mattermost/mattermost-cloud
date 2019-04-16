@@ -28,7 +28,7 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 		return err
 	}
 
-	clusterId := model.NewId()
+	clusterID := model.NewId()
 
 	// Temporarily locate the kops output directory to a local folder based on the
 	// cluster name. This won't be necessary once we persist the output to S3 instead.
@@ -42,7 +42,7 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 		return errors.Wrapf(err, "failed to stat cluster root directory %q", clusterRootDir)
 	}
 
-	outputDir := path.Join(clusterRootDir, clusterId)
+	outputDir := path.Join(clusterRootDir, clusterID)
 	_, err = os.Stat(outputDir)
 	if err == nil {
 		return fmt.Errorf("encountered cluster ID collision: directory %q already exists", outputDir)
@@ -50,9 +50,9 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 		return errors.Wrapf(err, "failed to stat cluster directory %q", outputDir)
 	}
 
-	dns := clusterDNS(clusterId)
+	dns := clusterDNS(clusterID)
 
-	logger = logger.WithField("cluster", clusterId)
+	logger = logger.WithField("cluster", clusterID)
 
 	logger.WithField("dns", dns).Info("creating cluster")
 
@@ -89,14 +89,14 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func UpgradeCluster(clusterId, s3StateStore string, logger log.FieldLogger) error {
-	logger = logger.WithField("cluster", clusterId)
+func UpgradeCluster(clusterID, s3StateStore string, logger log.FieldLogger) error {
+	logger = logger.WithField("cluster", clusterID)
 
-	dns := clusterDNS(clusterId)
+	dns := clusterDNS(clusterID)
 
 	// Temporarily look for the kops output directory as a local folder named after
 	// the cluster ID. See above.
-	outputDir := path.Join(clusterRootDir, clusterId)
+	outputDir := path.Join(clusterRootDir, clusterID)
 
 	// Validate the provided cluster ID before we alter state in any way.
 	_, err := os.Stat(outputDir)
@@ -159,14 +159,14 @@ func UpgradeCluster(clusterId, s3StateStore string, logger log.FieldLogger) erro
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func DeleteCluster(clusterId, s3StateStore string, logger log.FieldLogger) error {
-	logger = logger.WithField("cluster", clusterId)
+func DeleteCluster(clusterID, s3StateStore string, logger log.FieldLogger) error {
+	logger = logger.WithField("cluster", clusterID)
 
-	dns := clusterDNS(clusterId)
+	dns := clusterDNS(clusterID)
 
 	// Temporarily look for the kops output directory as a local folder named after
 	// the cluster ID. See above.
-	outputDir := path.Join(clusterRootDir, clusterId)
+	outputDir := path.Join(clusterRootDir, clusterID)
 
 	// Validate the provided cluster ID before we alter state in any way.
 	_, err := os.Stat(outputDir)
