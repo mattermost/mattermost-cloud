@@ -51,7 +51,7 @@ var clusterCreateCmd = &cobra.Command{
 
 var clusterUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: "Upgrade a cluster.",
+	Short: "Upgrade k8s on a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
 		clusterId, _ := command.Flags().GetString("cluster")
 		s3StateStore, _ := command.Flags().GetString("state-store")

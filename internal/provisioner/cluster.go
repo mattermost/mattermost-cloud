@@ -71,14 +71,14 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
 	}
 
-	terraform := terraform.New(outputDir, logger)
-	defer terraform.Close()
-	err = terraform.Init()
+	terraformClient := terraform.New(outputDir, logger)
+	defer terraformClient.Close()
+	err = terraformClient.Init()
 	if err != nil {
 		return err
 	}
 
-	err = terraform.Apply()
+	err = terraformClient.Apply()
 	if err != nil {
 		return err
 	}
@@ -104,13 +104,13 @@ func UpgradeCluster(clusterId, s3StateStore string, logger log.FieldLogger) erro
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
 
-	terraform := terraform.New(outputDir, logger)
-	defer terraform.Close()
-	err = terraform.Init()
+	terraformClient := terraform.New(outputDir, logger)
+	defer terraformClient.Close()
+	err = terraformClient.Init()
 	if err != nil {
 		return err
 	}
-	out, err := terraform.Output("cluster_name")
+	out, err := terraformClient.Output("cluster_name")
 	if err != nil {
 		return err
 	}
@@ -119,10 +119,10 @@ func UpgradeCluster(clusterId, s3StateStore string, logger log.FieldLogger) erro
 	}
 
 	kops, err := kops.New(s3StateStore, logger)
-	defer kops.Close()
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
+	defer kops.Close()
 	_, err = kops.GetCluster(dns)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func UpgradeCluster(clusterId, s3StateStore string, logger log.FieldLogger) erro
 		return err
 	}
 
-	err = terraform.Apply()
+	err = terraformClient.Apply()
 	if err != nil {
 		return err
 	}
@@ -174,13 +174,13 @@ func DeleteCluster(clusterId, s3StateStore string, logger log.FieldLogger) error
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
 
-	terraform := terraform.New(outputDir, logger)
-	defer terraform.Close()
-	err = terraform.Init()
+	terraformClient := terraform.New(outputDir, logger)
+	defer terraformClient.Close()
+	err = terraformClient.Init()
 	if err != nil {
 		return err
 	}
-	out, err := terraform.Output("cluster_name")
+	out, err := terraformClient.Output("cluster_name")
 	if err != nil {
 		return err
 	}
@@ -189,17 +189,17 @@ func DeleteCluster(clusterId, s3StateStore string, logger log.FieldLogger) error
 	}
 
 	kops, err := kops.New(s3StateStore, logger)
-	defer kops.Close()
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
+	defer kops.Close()
 	_, err = kops.GetCluster(dns)
 	if err != nil {
 		return err
 	}
 
 	logger.Info("deleting cluster")
-	err = terraform.Destroy()
+	err = terraformClient.Destroy()
 	if err != nil {
 		return err
 	}
