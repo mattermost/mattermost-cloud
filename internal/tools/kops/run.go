@@ -40,12 +40,12 @@ func outputLogger(line string, logger log.FieldLogger) {
 	matches := glogRe.FindStringSubmatch(line)
 	if matches == nil {
 		// Assume non-glog output is a warning.
-		logger.Warnf("kops: %s", line)
+		logger.Warnf("[kops] %s", line)
 		return
 	}
 
 	level := matches[1]
-	msg := fmt.Sprintf("kops: %s", matches[len(matches)-1])
+	msg := fmt.Sprintf("[kops] %s", matches[len(matches)-1])
 	switch level {
 	case "I":
 		logger.Info(msg)
