@@ -21,6 +21,15 @@ jobs:
     steps:
       - checkout
       - *restore_cache
+      - run: go get -u golang.org/x/lint/golint
+      - run: golint -set_exit_status ./...
+      - *save_cache
+  vet:
+    executor:
+      name: default
+    steps:
+      - checkout
+      - *restore_cache
       - run: go vet ./...
       - *save_cache
   test:
@@ -37,4 +46,5 @@ workflows:
   untagged-build:
     jobs:
       - lint
+      - vet
       - test

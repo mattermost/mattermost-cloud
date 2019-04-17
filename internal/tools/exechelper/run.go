@@ -1,4 +1,4 @@
-// package exechelper streamlines the running of external commands while both capturing and logging
+// Package exechelper streamlines the running of external commands while both capturing and logging
 // their output.
 //
 // It builds on os/exec, expecting an instance of Cmd to manipulate.
@@ -39,10 +39,10 @@ func bufferAndLog(reader io.Reader, buffer *bytes.Buffer, logger log.FieldLogger
 // Run invokes cmd.Run, both logging and returning STDOUT and STDERR, optionally transforming the output first.
 func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]byte, []byte, error) {
 	// Generate a unique identifier for the command invocation by which to group logs.
-	runId := model.NewId()
+	runID := model.NewId()
 
 	logger = logger.WithFields(log.Fields{
-		"runId": runId,
+		"runID": runID,
 	})
 
 	logger.WithFields(log.Fields{

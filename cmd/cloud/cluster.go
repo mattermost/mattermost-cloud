@@ -53,12 +53,12 @@ var clusterUpgradeCmd = &cobra.Command{
 	Use:   "upgrade",
 	Short: "Upgrade k8s on a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
-		clusterId, _ := command.Flags().GetString("cluster")
+		clusterID, _ := command.Flags().GetString("cluster")
 		s3StateStore, _ := command.Flags().GetString("state-store")
 
 		command.SilenceUsage = true
 
-		return provisioner.UpgradeCluster(clusterId, s3StateStore, logger)
+		return provisioner.UpgradeCluster(clusterID, s3StateStore, logger)
 	},
 }
 
@@ -66,11 +66,11 @@ var clusterDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete a cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
-		clusterId, _ := command.Flags().GetString("cluster")
+		clusterID, _ := command.Flags().GetString("cluster")
 		s3StateStore, _ := command.Flags().GetString("state-store")
 
 		command.SilenceUsage = true
 
-		return provisioner.DeleteCluster(clusterId, s3StateStore, logger)
+		return provisioner.DeleteCluster(clusterID, s3StateStore, logger)
 	},
 }
