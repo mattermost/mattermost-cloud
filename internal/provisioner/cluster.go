@@ -78,6 +78,21 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 		return err
 	}
 
+	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_internet_gateway.%s-kops-k8s-local", clusterID))
+	if err != nil {
+		return err
+	}
+
+	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_elb.api-%s-kops-k8s-local", clusterID))
+	if err != nil {
+		return err
+	}
+
+	err = kops.UpdateCluster(dns)
+	if err != nil {
+		return err
+	}
+
 	err = terraformClient.Apply()
 	if err != nil {
 		return err
