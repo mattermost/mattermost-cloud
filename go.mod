@@ -3,11 +3,15 @@ module github.com/mattermost/mattermost-cloud
 go 1.12
 
 require (
-	github.com/blang/semver v3.5.1+incompatible // indirect
+	github.com/Masterminds/squirrel v1.1.0
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/dyatlov/go-opengraph v0.0.0-20180429202543-816b6608b3c8 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/jmoiron/sqlx v1.2.0
+	github.com/lib/pq v1.0.0
 	github.com/mattermost/mattermost-server v5.9.0+incompatible
+	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/nicksnyder/go-i18n v1.10.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pelletier/go-toml v1.3.0 // indirect
