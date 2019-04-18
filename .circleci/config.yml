@@ -37,9 +37,15 @@ jobs:
       name: default
     steps:
       - checkout
+      - run: |
+          go get golang.org/x/tools/cmd/cover
+          go get github.com/mattn/goveralls
       - *restore_cache
-      - run: go test ./...
+      - run: go test ./... -v -covermode=count -coverprofile=coverage.out
       - *save_cache
+      - run:
+          name: coveralls
+          command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN
 
 workflows:
   version: 2
