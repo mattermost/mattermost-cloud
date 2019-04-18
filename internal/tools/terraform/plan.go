@@ -38,6 +38,21 @@ func (c *Cmd) Apply() error {
 	return nil
 }
 
+// ApplyTarget invokes terraform apply with the given target.
+func (c *Cmd) ApplyTarget(target string) error {
+	_, _, err := c.run(
+		"apply",
+		arg("input", "false"),
+		arg("target", target),
+		arg("auto-approve"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke terraform apply")
+	}
+
+	return nil
+}
+
 // Destroy invokes terraform destroy.
 func (c *Cmd) Destroy() error {
 	_, _, err := c.run(
