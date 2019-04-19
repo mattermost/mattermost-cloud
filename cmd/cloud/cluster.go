@@ -14,11 +14,11 @@ func init() {
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
-	clusterCreateCmd.Flags().Bool("cluster-ready", true, "Controls if the command should wait for k8s to become fully ready before exiting")
+	clusterCreateCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
 	clusterCreateCmd.MarkFlagRequired("size")
 
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
-	clusterUpgradeCmd.Flags().Bool("cluster-ready", true, "Controls if the command should wait for k8s to become fully ready before exiting")
+	clusterUpgradeCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
@@ -42,13 +42,13 @@ var clusterCreateCmd = &cobra.Command{
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
-		waitForReady, _ := command.Flags().GetBool("cluster-ready")
+		wait, _ := command.Flags().GetInt("wait")
 
 		splitZones := strings.Split(zones, ",")
 
 		command.SilenceUsage = true
 
-		return provisioner.CreateCluster(provider, s3StateStore, size, splitZones, waitForReady, logger)
+		return provisioner.CreateCluster(provider, s3StateStore, size, splitZones, wait, logger)
 	},
 }
 
@@ -58,11 +58,11 @@ var clusterUpgradeCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) error {
 		clusterID, _ := command.Flags().GetString("cluster")
 		s3StateStore, _ := command.Flags().GetString("state-store")
-		waitForReady, _ := command.Flags().GetBool("cluster-ready")
+		wait, _ := command.Flags().GetInt("wait")
 
 		command.SilenceUsage = true
 
-		return provisioner.UpgradeCluster(clusterID, s3StateStore, waitForReady, logger)
+		return provisioner.UpgradeCluster(clusterID, s3StateStore, wait, logger)
 	},
 }
 
