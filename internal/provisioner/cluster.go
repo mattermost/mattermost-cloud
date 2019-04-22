@@ -24,7 +24,7 @@ type clusterStore interface {
 }
 
 // CreateCluster creates a cluster using kops and terraform.
-func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones []string, logger log.FieldLogger) error {
+func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones []string, wait int, logger log.FieldLogger) error {
 	provider, err := checkProvider(provider)
 	if err != nil {
 		return err
@@ -107,13 +107,24 @@ func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones [
 		return err
 	}
 
+	if wait > 0 {
+		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+		err = kops.WaitForKubernetesReadiness(kopsCluster.KopsName(), wait)
+		if err != nil {
+			// Run non-silent validate one more time to log final cluster state
+			// and return original timeout error.
+			kops.ValidateCluster(kopsCluster.KopsName(), false)
+			return err
+		}
+	}
+
 	logger.WithField("name", kopsCluster.KopsName()).Info("successfully created cluster")
 
 	return nil
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, logger log.FieldLogger) error {
+func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, wait int, logger log.FieldLogger) error {
 	cluster, err := cs.GetCluster(clusterID)
 	if err != nil {
 		return err
@@ -180,9 +191,16 @@ func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, logger log.
 	if err != nil {
 		return err
 	}
-	err = kops.ValidateCluster(kopsCluster.KopsName())
-	if err != nil {
-		return err
+
+	if wait > 0 {
+		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+		err = kops.WaitForKubernetesReadiness(kopsCluster.KopsName(), wait)
+		if err != nil {
+			// Run non-silent validate one more time to log final cluster state
+			// and return original timeout error.
+			kops.ValidateCluster(kopsCluster.KopsName(), false)
+			return err
+		}
 	}
 
 	logger.Info("successfully upgraded cluster")
@@ -225,7 +243,7 @@ func DeleteCluster(cs clusterStore, clusterID, s3StateStore string, logger log.F
 		return err
 	}
 	if out != kopsCluster.KopsName() {
-		return fmt.Errorf("terraform cluster_name (%s) does not match dns from provided ID (%s)", out, kopsCluster.KopsName())
+		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsCluster.KopsName())
 	}
 
 	kops, err := kops.New(s3StateStore, logger)

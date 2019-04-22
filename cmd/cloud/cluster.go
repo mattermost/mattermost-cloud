@@ -18,9 +18,11 @@ func init() {
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
+	clusterCreateCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
 	clusterCreateCmd.MarkFlagRequired("size")
 
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
+	clusterUpgradeCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
@@ -60,10 +62,11 @@ var clusterCreateCmd = &cobra.Command{
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
+		wait, _ := command.Flags().GetInt("wait")
 
 		splitZones := strings.Split(zones, ",")
 
-		return provisioner.CreateCluster(sqlStore, provider, s3StateStore, size, splitZones, logger)
+		return provisioner.CreateCluster(sqlStore, provider, s3StateStore, size, splitZones, wait, logger)
 	},
 }
 
@@ -80,8 +83,9 @@ var clusterUpgradeCmd = &cobra.Command{
 
 		clusterID, _ := command.Flags().GetString("cluster")
 		s3StateStore, _ := command.Flags().GetString("state-store")
+		wait, _ := command.Flags().GetInt("wait")
 
-		return provisioner.UpgradeCluster(sqlStore, clusterID, s3StateStore, logger)
+		return provisioner.UpgradeCluster(sqlStore, clusterID, s3StateStore, wait, logger)
 	},
 }
 

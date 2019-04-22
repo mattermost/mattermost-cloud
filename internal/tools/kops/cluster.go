@@ -84,13 +84,20 @@ func (c *Cmd) UpgradeCluster(name string) error {
 }
 
 // ValidateCluster invokes kops validate cluster, using the context of the created Cmd.
-func (c *Cmd) ValidateCluster(name string) error {
-	_, _, err := c.run(
+func (c *Cmd) ValidateCluster(name string, silent bool) error {
+	args := []string{
 		"validate",
 		"cluster",
 		arg("name", name),
 		arg("state", "s3://", c.s3StateStore),
-	)
+	}
+	var err error
+	if silent {
+		_, _, err = c.runSilent(args...)
+	} else {
+		_, _, err = c.run(args...)
+	}
+
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops validate cluster")
 	}
