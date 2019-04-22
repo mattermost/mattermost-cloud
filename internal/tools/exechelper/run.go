@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/mattermost/mattermost-server/model"
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -39,7 +39,7 @@ func bufferAndLog(reader io.Reader, buffer *bytes.Buffer, logger log.FieldLogger
 // Run invokes cmd.Run, both logging and returning STDOUT and STDERR, optionally transforming the output first.
 func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]byte, []byte, error) {
 	// Generate a unique identifier for the command invocation by which to group logs.
-	runID := model.NewId()
+	runID := model.NewID()
 
 	logger = logger.WithFields(log.Fields{
 		"runID": runID,

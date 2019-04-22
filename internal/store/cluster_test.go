@@ -4,40 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/stretchr/testify/require"
 )
-
-func TestSetProviderMetadata(t *testing.T) {
-	t.Run("set nil", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProviderMetadata(nil)
-		require.NoError(t, err)
-		require.Nil(t, cluster.ProviderMetadata)
-	})
-
-	t.Run("set data", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProviderMetadata(struct{ Test string }{"test"})
-		require.NoError(t, err)
-		require.Equal(t, `{"Test":"test"}`, string(cluster.ProviderMetadata))
-	})
-}
-
-func TestSetProvisionerMetadata(t *testing.T) {
-	t.Run("set nil", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProvisionerMetadata(nil)
-		require.NoError(t, err)
-		require.Nil(t, cluster.ProvisionerMetadata)
-	})
-
-	t.Run("set data", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProvisionerMetadata(struct{ Test string }{"test"})
-		require.NoError(t, err)
-		require.Equal(t, `{"Test":"test"}`, string(cluster.ProvisionerMetadata))
-	})
-}
 
 func TestClusters(t *testing.T) {
 	t.Run("get unknown cluster", func(t *testing.T) {
@@ -51,7 +20,7 @@ func TestClusters(t *testing.T) {
 	t.Run("get clusters", func(t *testing.T) {
 		sqlStore := makeSQLStore(t)
 
-		cluster1 := &Cluster{
+		cluster1 := &model.Cluster{
 			Provider:            "aws",
 			Provisioner:         "kops",
 			ProviderMetadata:    []byte(`{"provider": "test1"}`),
@@ -59,7 +28,7 @@ func TestClusters(t *testing.T) {
 			AllowInstallations:  false,
 		}
 
-		cluster2 := &Cluster{
+		cluster2 := &model.Cluster{
 			Provider:            "azure",
 			Provisioner:         "cluster-api",
 			ProviderMetadata:    []byte(`{"provider": "test2"}`),
@@ -89,25 +58,25 @@ func TestClusters(t *testing.T) {
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, false)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster1}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, false)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, true)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster1}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, true)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 	})
 
 	t.Run("update clusters", func(t *testing.T) {
 		sqlStore := makeSQLStore(t)
 
-		cluster1 := &Cluster{
+		cluster1 := &model.Cluster{
 			Provider:            "aws",
 			Provisioner:         "kops",
 			ProviderMetadata:    []byte(`{"provider": "test1"}`),
@@ -115,7 +84,7 @@ func TestClusters(t *testing.T) {
 			AllowInstallations:  false,
 		}
 
-		cluster2 := &Cluster{
+		cluster2 := &model.Cluster{
 			Provider:            "azure",
 			Provisioner:         "cluster-api",
 			ProviderMetadata:    []byte(`{"provider": "test2"}`),
@@ -150,7 +119,7 @@ func TestClusters(t *testing.T) {
 	t.Run("delete cluster", func(t *testing.T) {
 		sqlStore := makeSQLStore(t)
 
-		cluster1 := &Cluster{
+		cluster1 := &model.Cluster{
 			Provider:            "aws",
 			Provisioner:         "kops",
 			ProviderMetadata:    []byte(`{"provider": "test1"}`),
@@ -158,7 +127,7 @@ func TestClusters(t *testing.T) {
 			AllowInstallations:  false,
 		}
 
-		cluster2 := &Cluster{
+		cluster2 := &model.Cluster{
 			Provider:            "azure",
 			Provisioner:         "cluster-api",
 			ProviderMetadata:    []byte(`{"provider": "test2"}`),
@@ -193,19 +162,19 @@ func TestClusters(t *testing.T) {
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, false)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster2}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster2}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, false)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster2}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster2}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, true)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster1}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, true)
 		require.NoError(t, err)
-		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
+		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 
 		time.Sleep(1 * time.Millisecond)
 

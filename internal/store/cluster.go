@@ -2,71 +2,15 @@ package store
 
 import (
 	"database/sql"
-	"encoding/json"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/mattermost/mattermost-server/model"
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 )
 
-// Cluster represents a Kubernetes cluster as tracked by the store.
-type Cluster struct {
-	ID                  string
-	Provider            string
-	Provisioner         string
-	ProviderMetadata    []byte
-	ProvisionerMetadata []byte
-	AllowInstallations  bool
-	CreateAt            int64
-	DeleteAt            int64
-	LockAcquiredBy      *string
-	LockAcquiredAt      int64
-}
-
-// Clone returns a deep copy the cluster.
-func (c *Cluster) Clone() *Cluster {
-	var clone Cluster
-	data, _ := json.Marshal(c)
-	json.Unmarshal(data, &clone)
-
-	return &clone
-}
-
-// SetProviderMetadata is a helper method to encode an interface{} as the corresponding bytes.
-func (c *Cluster) SetProviderMetadata(data interface{}) error {
-	if data == nil {
-		c.ProviderMetadata = nil
-		return nil
-	}
-
-	providerMetadata, err := json.Marshal(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to set provider metadata")
-	}
-
-	c.ProviderMetadata = providerMetadata
-	return nil
-}
-
-// SetProvisionerMetadata is a helper method to encode an interface{} as the corresponding bytes.
-func (c *Cluster) SetProvisionerMetadata(data interface{}) error {
-	if data == nil {
-		c.ProvisionerMetadata = nil
-		return nil
-	}
-
-	provisionerMetadata, err := json.Marshal(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to set provisioner metadata")
-	}
-
-	c.ProvisionerMetadata = provisionerMetadata
-	return nil
-}
-
 // GetCluster fetches the given cluster by id.
-func (sqlStore *SQLStore) GetCluster(id string) (*Cluster, error) {
-	var cluster Cluster
+func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
+	var cluster model.Cluster
 	err := sqlStore.getBuilder(sqlStore.db, &cluster,
 		sq.Select("*").From("Cluster").Where("ID = ?", id),
 	)
@@ -80,7 +24,7 @@ func (sqlStore *SQLStore) GetCluster(id string) (*Cluster, error) {
 }
 
 // GetClusters fetches the given page of created clusters. The first page is 0.
-func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([]*Cluster, error) {
+func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error) {
 	builder := sq.
 		Select("*").
 		From("Cluster").
@@ -92,7 +36,7 @@ func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([
 		builder = builder.Where("DeleteAt = 0")
 	}
 
-	var clusters []*Cluster
+	var clusters []*model.Cluster
 	err := sqlStore.selectBuilder(sqlStore.db, &clusters, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for clusters")
@@ -102,8 +46,8 @@ func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([
 }
 
 // CreateCluster records the given cluster to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
-	cluster.ID = model.NewId()
+func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
+	cluster.ID = model.NewID()
 	cluster.CreateAt = GetMillis()
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
@@ -125,7 +69,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 }
 
 // UpdateCluster updates the given cluster in the database.
-func (sqlStore *SQLStore) UpdateCluster(cluster *Cluster) error {
+func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Cluster").
 		SetMap(map[string]interface{}{
