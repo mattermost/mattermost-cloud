@@ -33,6 +33,38 @@ func (c *Cluster) Clone() *Cluster {
 	return &clone
 }
 
+// SetProviderMetadata is a helper method to encode an interface{} as the corresponding bytes.
+func (c *Cluster) SetProviderMetadata(data interface{}) error {
+	if data == nil {
+		c.ProviderMetadata = nil
+		return nil
+	}
+
+	providerMetadata, err := json.Marshal(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to set provider metadata")
+	}
+
+	c.ProviderMetadata = providerMetadata
+	return nil
+}
+
+// SetProvisionerMetadata is a helper method to encode an interface{} as the corresponding bytes.
+func (c *Cluster) SetProvisionerMetadata(data interface{}) error {
+	if data == nil {
+		c.ProvisionerMetadata = nil
+		return nil
+	}
+
+	provisionerMetadata, err := json.Marshal(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to set provisioner metadata")
+	}
+
+	c.ProvisionerMetadata = provisionerMetadata
+	return nil
+}
+
 // GetCluster fetches the given cluster by id.
 func (sqlStore *SQLStore) GetCluster(id string) (*Cluster, error) {
 	var cluster Cluster
@@ -89,6 +121,27 @@ func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, builder)
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster")
+	}
+
+	return nil
+}
+
+// UpdateCluster updates the given cluster in the database.
+func (sqlStore *SQLStore) UpdateCluster(cluster *Cluster) error {
+	builder := sq.
+		Update("Cluster").
+		SetMap(map[string]interface{}{
+			"Provider":            cluster.Provider,
+			"Provisioner":         cluster.Provisioner,
+			"ProviderMetadata":    cluster.ProviderMetadata,
+			"ProvisionerMetadata": cluster.ProvisionerMetadata,
+			"AllowInstallations":  cluster.AllowInstallations,
+		}).
+		Where("ID = ?", cluster.ID)
+
+	_, err := sqlStore.execBuilder(sqlStore.db, builder)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster")
 	}
 
 	return nil

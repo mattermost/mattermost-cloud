@@ -20,6 +20,7 @@ const clusterRootDir = "clusters"
 type clusterStore interface {
 	GetCluster(string) (*store.Cluster, error)
 	CreateCluster(*store.Cluster) error
+	UpdateCluster(*store.Cluster) error
 	DeleteCluster(string) error
 }
 
@@ -30,13 +31,27 @@ func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones [
 		return err
 	}
 
-	kopsClusterSize, err := kops.GetSize(size)
+	clusterSize, err := kops.GetSize(size)
 	if err != nil {
 		return err
 	}
 
-	kopsCluster := NewKopsCluster(provider)
-	err = cs.CreateCluster(&kopsCluster.Cluster)
+	cluster := store.Cluster{
+		Provider:    provider,
+		Provisioner: "kops",
+	}
+	err = cs.CreateCluster(&cluster)
+	if err != nil {
+		return err
+	}
+
+	// Once the cluster has been recorded, generate the kops name using the cluster id.
+	kopsMetadata := KopsMetadata{
+		Name: fmt.Sprintf("%s-kops.k8s.local", cluster.ID),
+	}
+	cluster.SetProvisionerMetadata(kopsMetadata)
+
+	err = cs.UpdateCluster(&cluster)
 	if err != nil {
 		return err
 	}
@@ -53,7 +68,7 @@ func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones [
 		return errors.Wrapf(err, "failed to stat cluster root directory %q", clusterRootDir)
 	}
 
-	outputDir := path.Join(clusterRootDir, kopsCluster.ID)
+	outputDir := path.Join(clusterRootDir, cluster.ID)
 	_, err = os.Stat(outputDir)
 	if err == nil {
 		return fmt.Errorf("encountered cluster ID collision: directory %q already exists", outputDir)
@@ -61,16 +76,16 @@ func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones [
 		return errors.Wrapf(err, "failed to stat cluster directory %q", outputDir)
 	}
 
-	logger = logger.WithField("cluster", kopsCluster.ID)
+	logger = logger.WithField("cluster", cluster.ID)
 
-	logger.WithField("name", kopsCluster.KopsName()).Info("creating cluster")
+	logger.WithField("name", kopsMetadata.Name).Info("creating cluster")
 
 	kops, err := kops.New(s3StateStore, logger)
 	if err != nil {
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsCluster.KopsName(), provider, kopsClusterSize, zones)
+	err = kops.CreateCluster(kopsMetadata.Name, provider, clusterSize, zones)
 	if err != nil {
 		return err
 	}
@@ -87,17 +102,17 @@ func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones [
 		return err
 	}
 
-	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_internet_gateway.%s-kops-k8s-local", kopsCluster.ID))
+	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_internet_gateway.%s-kops-k8s-local", cluster.ID))
 	if err != nil {
 		return err
 	}
 
-	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_elb.api-%s-kops-k8s-local", kopsCluster.ID))
+	err = terraformClient.ApplyTarget(fmt.Sprintf("aws_elb.api-%s-kops-k8s-local", cluster.ID))
 	if err != nil {
 		return err
 	}
 
-	err = kops.UpdateCluster(kopsCluster.KopsName())
+	err = kops.UpdateCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
@@ -109,16 +124,16 @@ func CreateCluster(cs clusterStore, provider, s3StateStore, size string, zones [
 
 	if wait > 0 {
 		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
-		err = kops.WaitForKubernetesReadiness(kopsCluster.KopsName(), wait)
+		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
 		if err != nil {
 			// Run non-silent validate one more time to log final cluster state
 			// and return original timeout error.
-			kops.ValidateCluster(kopsCluster.KopsName(), false)
+			kops.ValidateCluster(kopsMetadata.Name, false)
 			return err
 		}
 	}
 
-	logger.WithField("name", kopsCluster.KopsName()).Info("successfully created cluster")
+	logger.WithField("name", kopsMetadata.Name).Info("successfully created cluster")
 
 	return nil
 }
@@ -133,13 +148,13 @@ func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, wait int, l
 		return errors.Errorf("unknown cluster %s", clusterID)
 	}
 
-	kopsCluster := KopsClusterFromCluster(cluster)
+	kopsMetadata := NewKopsMetadata(cluster.ProvisionerMetadata)
 
-	logger = logger.WithField("cluster", kopsCluster.ID)
+	logger = logger.WithField("cluster", cluster.ID)
 
 	// Temporarily look for the kops output directory as a local folder named after
 	// the cluster ID. See above.
-	outputDir := path.Join(clusterRootDir, kopsCluster.ID)
+	outputDir := path.Join(clusterRootDir, cluster.ID)
 
 	// Validate the provided cluster ID before we alter state in any way.
 	_, err = os.Stat(outputDir)
@@ -157,8 +172,8 @@ func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, wait int, l
 	if err != nil {
 		return err
 	}
-	if out != kopsCluster.KopsName() {
-		return fmt.Errorf("terraform cluster_name (%s) does not match kops name from provided ID (%s)", out, kopsCluster.KopsName())
+	if out != kopsMetadata.Name {
+		return fmt.Errorf("terraform cluster_name (%s) does not match kops name from provided ID (%s)", out, kopsMetadata.Name)
 	}
 
 	kops, err := kops.New(s3StateStore, logger)
@@ -166,18 +181,18 @@ func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, wait int, l
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
-	_, err = kops.GetCluster(kopsCluster.KopsName())
+	_, err = kops.GetCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
 
 	logger.Info("upgrading cluster")
 
-	err = kops.UpgradeCluster(kopsCluster.KopsName())
+	err = kops.UpgradeCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
-	err = kops.UpdateCluster(kopsCluster.KopsName())
+	err = kops.UpdateCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
@@ -187,18 +202,18 @@ func UpgradeCluster(cs clusterStore, clusterID, s3StateStore string, wait int, l
 		return err
 	}
 
-	err = kops.RollingUpdateCluster(kopsCluster.KopsName())
+	err = kops.RollingUpdateCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
 
 	if wait > 0 {
 		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
-		err = kops.WaitForKubernetesReadiness(kopsCluster.KopsName(), wait)
+		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
 		if err != nil {
 			// Run non-silent validate one more time to log final cluster state
 			// and return original timeout error.
-			kops.ValidateCluster(kopsCluster.KopsName(), false)
+			kops.ValidateCluster(kopsMetadata.Name, false)
 			return err
 		}
 	}
@@ -218,13 +233,13 @@ func DeleteCluster(cs clusterStore, clusterID, s3StateStore string, logger log.F
 		return errors.Errorf("unknown cluster %s", clusterID)
 	}
 
-	kopsCluster := KopsClusterFromCluster(cluster)
+	kopsMetadata := NewKopsMetadata(cluster.ProvisionerMetadata)
 
-	logger = logger.WithField("cluster", kopsCluster.ID)
+	logger = logger.WithField("cluster", cluster.ID)
 
 	// Temporarily look for the kops output directory as a local folder named after
 	// the cluster ID. See above.
-	outputDir := path.Join(clusterRootDir, kopsCluster.ID)
+	outputDir := path.Join(clusterRootDir, cluster.ID)
 
 	// Validate the provided cluster ID before we alter state in any way.
 	_, err = os.Stat(outputDir)
@@ -242,8 +257,8 @@ func DeleteCluster(cs clusterStore, clusterID, s3StateStore string, logger log.F
 	if err != nil {
 		return err
 	}
-	if out != kopsCluster.KopsName() {
-		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsCluster.KopsName())
+	if out != kopsMetadata.Name {
+		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsMetadata.Name)
 	}
 
 	kops, err := kops.New(s3StateStore, logger)
@@ -251,7 +266,7 @@ func DeleteCluster(cs clusterStore, clusterID, s3StateStore string, logger log.F
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
-	_, err = kops.GetCluster(kopsCluster.KopsName())
+	_, err = kops.GetCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
@@ -262,7 +277,7 @@ func DeleteCluster(cs clusterStore, clusterID, s3StateStore string, logger log.F
 		return err
 	}
 
-	err = kops.DeleteCluster(kopsCluster.KopsName())
+	err = kops.DeleteCluster(kopsMetadata.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete cluster")
 	}
@@ -272,7 +287,7 @@ func DeleteCluster(cs clusterStore, clusterID, s3StateStore string, logger log.F
 		return errors.Wrap(err, "failed to clean up output directory")
 	}
 
-	err = cs.DeleteCluster(kopsCluster.ID)
+	err = cs.DeleteCluster(cluster.ID)
 	if err != nil {
 		return err
 	}
