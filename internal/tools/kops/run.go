@@ -2,6 +2,7 @@ package kops
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -62,4 +63,17 @@ func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.kopsPath, arg...)
 
 	return exechelper.Run(cmd, c.logger, outputLogger)
+}
+
+func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
+	cmd := exec.Command(c.kopsPath, arg...)
+
+	return exechelper.Run(cmd, silentLogger(), func(string, log.FieldLogger) {})
+}
+
+func silentLogger() log.FieldLogger {
+	silentLogger := log.New()
+	silentLogger.Out = ioutil.Discard
+
+	return silentLogger
 }

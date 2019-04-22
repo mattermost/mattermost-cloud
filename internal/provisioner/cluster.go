@@ -17,7 +17,7 @@ import (
 const clusterRootDir = "clusters"
 
 // CreateCluster creates a cluster using kops and terraform.
-func CreateCluster(provider, s3StateStore, size string, zones []string, logger log.FieldLogger) error {
+func CreateCluster(provider, s3StateStore, size string, zones []string, wait int, logger log.FieldLogger) error {
 	provider, err := checkProvider(provider)
 	if err != nil {
 		return err
@@ -98,13 +98,24 @@ func CreateCluster(provider, s3StateStore, size string, zones []string, logger l
 		return err
 	}
 
+	if wait > 0 {
+		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+		err = kops.WaitForKubernetesReadiness(dns, wait)
+		if err != nil {
+			// Run non-silent validate one more time to log final cluster state
+			// and return original timeout error.
+			kops.ValidateCluster(dns, false)
+			return err
+		}
+	}
+
 	logger.WithField("dns", dns).Info("successfully created cluster")
 
 	return nil
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func UpgradeCluster(clusterID, s3StateStore string, logger log.FieldLogger) error {
+func UpgradeCluster(clusterID, s3StateStore string, wait int, logger log.FieldLogger) error {
 	logger = logger.WithField("cluster", clusterID)
 
 	dns := clusterDNS(clusterID)
@@ -163,9 +174,16 @@ func UpgradeCluster(clusterID, s3StateStore string, logger log.FieldLogger) erro
 	if err != nil {
 		return err
 	}
-	err = kops.ValidateCluster(dns)
-	if err != nil {
-		return err
+
+	if wait > 0 {
+		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+		err = kops.WaitForKubernetesReadiness(dns, wait)
+		if err != nil {
+			// Run non-silent validate one more time to log final cluster state
+			// and return original timeout error.
+			kops.ValidateCluster(dns, false)
+			return err
+		}
 	}
 
 	logger.Info("successfully upgraded cluster")
