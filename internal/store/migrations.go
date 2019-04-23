@@ -30,15 +30,15 @@ var migrations = []migration{
 		_, err = e.Exec(`
 			CREATE TABLE Cluster (
 				ID CHAR(26) PRIMARY KEY,
-				Provider VARCHAR(32) NULL,
-				Provisioner VARCHAR(32) NULL,
+				Provider VARCHAR(32) NOT NULL,
+				Provisioner VARCHAR(32) NOT NULL,
 				ProviderMetadata JSONB NULL,
 				ProvisionerMetadata JSONB NULL,
-				AllowInstallations BOOLEAN NULL,
-				CreateAt TIMESTAMP NULL,
-				DeleteAt TIMESTAMP NULL,
-				LockAcquiredBy CHAR(26) NULL,
-				LockAcquiredAt TIMESTAMP NULL
+				AllowInstallations BOOLEAN NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy CHAR(26) NOT NULL,
+				LockAcquiredAt BIGINT NOT NULL
 			);
 		`)
 		if err != nil {

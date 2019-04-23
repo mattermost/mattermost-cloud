@@ -3,7 +3,6 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-server/model"
@@ -18,10 +17,10 @@ type Cluster struct {
 	ProviderMetadata    []byte
 	ProvisionerMetadata []byte
 	AllowInstallations  bool
-	CreateAt            time.Time
-	DeleteAt            *time.Time
-	LockAcquiredBy      *string
-	LockAcquiredAt      *time.Time
+	CreateAt            int64
+	DeleteAt            int64
+	LockAcquiredBy      string
+	LockAcquiredAt      int64
 }
 
 // Clone returns a deep copy the cluster.
@@ -91,7 +90,7 @@ func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([
 		Offset(uint64(page * perPage))
 
 	if !includeDeleted {
-		builder = builder.Where("DeleteAt IS NULL")
+		builder = builder.Where("DeleteAt = 0")
 	}
 
 	err := sqlStore.selectBuilder(sqlStore.db, &clusters, builder)
@@ -105,17 +104,17 @@ func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([
 // CreateCluster records the given cluster to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 	cluster.ID = model.NewId()
-	cluster.CreateAt = time.Now().UTC()
+	cluster.CreateAt = GetMillis()
 
 	builder := sq.
 		Insert("Cluster").
 		Columns(
 			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
-			"AllowInstallations", "CreateAt",
+			"AllowInstallations", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		Values(
 			cluster.ID, cluster.Provider, cluster.Provisioner, cluster.ProviderMetadata,
-			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt,
+			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt, 0, "", 0,
 		)
 
 	_, err := sqlStore.execBuilder(sqlStore.db, builder)
@@ -151,10 +150,10 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *Cluster) error {
 // database.
 func (sqlStore *SQLStore) DeleteCluster(id string) error {
 	_, err := sqlStore.namedExec(sqlStore.db, `
-		UPDATE Cluster SET DeleteAt = :DeleteAt WHERE ID = :ID AND DeleteAt IS NULL
+		UPDATE Cluster SET DeleteAt = :DeleteAt WHERE ID = :ID AND DeleteAt = 0
 	`, map[string]interface{}{
 		"ID":       id,
-		"DeleteAt": time.Now().UTC(),
+		"DeleteAt": GetMillis(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to mark cluster as deleted")

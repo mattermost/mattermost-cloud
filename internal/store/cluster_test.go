@@ -2,35 +2,9 @@ package store
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
-
-func patchClusterTimestamps(cluster *Cluster) {
-	// Workaround a Postgres-encoding issue with time.Time: https://github.com/golang/go/issues/11712.
-	cluster.CreateAt = cluster.CreateAt.In(time.UTC)
-	// Also ignore extra precision on some systems.
-	cluster.CreateAt = cluster.CreateAt.Round(time.Microsecond)
-}
-
-func assertCluster(t *testing.T, expected *Cluster, actual *Cluster) {
-	t.Helper()
-	patchClusterTimestamps(expected)
-	patchClusterTimestamps(actual)
-	require.Equal(t, expected, actual)
-}
-
-func assertClusters(t *testing.T, expected []*Cluster, actual []*Cluster) {
-	t.Helper()
-	for _, cluster := range expected {
-		patchClusterTimestamps(cluster)
-	}
-	for _, cluster := range actual {
-		patchClusterTimestamps(cluster)
-	}
-	require.Equal(t, expected, actual)
-}
 
 func TestSetProviderMetadata(t *testing.T) {
 	t.Run("set nil", func(t *testing.T) {
@@ -100,11 +74,11 @@ func TestClusters(t *testing.T) {
 
 		actualCluster1, err := sqlStore.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		assertCluster(t, cluster1, actualCluster1)
+		require.Equal(t, cluster1, actualCluster1)
 
 		actualCluster2, err := sqlStore.GetCluster(cluster2.ID)
 		require.NoError(t, err)
-		assertCluster(t, cluster2, actualCluster2)
+		require.Equal(t, cluster2, actualCluster2)
 
 		actualClusters, err := sqlStore.GetClusters(0, 0, false)
 		require.NoError(t, err)
@@ -112,19 +86,19 @@ func TestClusters(t *testing.T) {
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, false)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster1}, actualClusters)
+		require.Equal(t, []*Cluster{cluster1}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, false)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster1, cluster2}, actualClusters)
+		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, true)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster1}, actualClusters)
+		require.Equal(t, []*Cluster{cluster1}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, true)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster1, cluster2}, actualClusters)
+		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
 	})
 
 	t.Run("update clusters", func(t *testing.T) {
@@ -163,11 +137,11 @@ func TestClusters(t *testing.T) {
 
 		actualCluster1, err := sqlStore.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		assertCluster(t, cluster1, actualCluster1)
+		require.Equal(t, cluster1, actualCluster1)
 
 		actualCluster2, err := sqlStore.GetCluster(cluster2.ID)
 		require.NoError(t, err)
-		assertCluster(t, cluster2, actualCluster2)
+		require.Equal(t, cluster2, actualCluster2)
 	})
 
 	t.Run("delete cluster", func(t *testing.T) {
@@ -200,13 +174,13 @@ func TestClusters(t *testing.T) {
 
 		actualCluster1, err := sqlStore.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		require.NotNil(t, actualCluster1.DeleteAt)
+		require.NotEqual(t, 0, actualCluster1.DeleteAt)
 		cluster1.DeleteAt = actualCluster1.DeleteAt
-		assertCluster(t, cluster1, actualCluster1)
+		require.Equal(t, cluster1, actualCluster1)
 
 		actualCluster2, err := sqlStore.GetCluster(cluster2.ID)
 		require.NoError(t, err)
-		assertCluster(t, cluster2, actualCluster2)
+		require.Equal(t, cluster2, actualCluster2)
 
 		actualClusters, err := sqlStore.GetClusters(0, 0, false)
 		require.NoError(t, err)
@@ -214,18 +188,18 @@ func TestClusters(t *testing.T) {
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, false)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster2}, actualClusters)
+		require.Equal(t, []*Cluster{cluster2}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, false)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster2}, actualClusters)
+		require.Equal(t, []*Cluster{cluster2}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 1, true)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster1}, actualClusters)
+		require.Equal(t, []*Cluster{cluster1}, actualClusters)
 
 		actualClusters, err = sqlStore.GetClusters(0, 10, true)
 		require.NoError(t, err)
-		assertClusters(t, []*Cluster{cluster1, cluster2}, actualClusters)
+		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
 	})
 }
