@@ -3,13 +3,17 @@ package store
 import (
 	"database/sql"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/pkg/errors"
 )
 
 // getSystemValue queries the System table for the given key
 func (sqlStore *SQLStore) getSystemValue(q queryer, key string) (string, error) {
 	var value string
-	err := sqlStore.get(q, &value, "SELECT Value FROM System WHERE Key = ?", key)
+
+	err := sqlStore.getBuilder(q, &value,
+		sq.Select("Value").From("System").Where("Key = ?", key),
+	)
 	if err == sql.ErrNoRows {
 		return "", nil
 	} else if err != nil {
@@ -21,7 +25,9 @@ func (sqlStore *SQLStore) getSystemValue(q queryer, key string) (string, error) 
 
 // setSystemValue updates the System table for the given key.
 func (sqlStore *SQLStore) setSystemValue(e execer, key, value string) error {
-	result, err := sqlStore.exec(e, "UPDATE System SET Value = ? WHERE Key = ?", value, key)
+	result, err := sqlStore.execBuilder(e,
+		sq.Update("System").Set("Value", value).Where("Key = ?", key),
+	)
 	if err != nil {
 		return errors.Wrapf(err, "failed to update system key %s", key)
 	}
@@ -31,7 +37,9 @@ func (sqlStore *SQLStore) setSystemValue(e execer, key, value string) error {
 		return nil
 	}
 
-	result, err = sqlStore.exec(e, "INSERT INTO System (Key, Value) VALUES (?, ?)", key, value)
+	result, err = sqlStore.execBuilder(e,
+		sq.Insert("System").Columns("Key", "Value").Values(key, value),
+	)
 	if err != nil {
 		return errors.Wrapf(err, "failed to insert system key %s", key)
 	}

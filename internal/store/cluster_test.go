@@ -2,6 +2,7 @@ package store
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -201,5 +202,16 @@ func TestClusters(t *testing.T) {
 		actualClusters, err = sqlStore.GetClusters(0, 10, true)
 		require.NoError(t, err)
 		require.Equal(t, []*Cluster{cluster1, cluster2}, actualClusters)
+
+		time.Sleep(1 * time.Millisecond)
+
+		// Deleting again shouldn't change timestamp
+		err = sqlStore.DeleteCluster(cluster1.ID)
+		require.NoError(t, err)
+
+		actualCluster1, err = sqlStore.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, cluster1, actualCluster1)
+
 	})
 }

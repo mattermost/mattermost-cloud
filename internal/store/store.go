@@ -83,8 +83,25 @@ type builder interface {
 	ToSql() (string, []interface{}, error)
 }
 
-// selectBuilder queries for one or rows, building the necessary sql, and writing the result into
-// dest.
+// get queries for a single row, building the sql, and writing the result into dest.
+//
+// Use this to simplify querying for a single row or column. Dest may be a pointer to a simple
+// type, or a struct with fields to be populated from the returned columns.
+func (sqlStore *SQLStore) getBuilder(q sqlx.Queryer, dest interface{}, b builder) error {
+	sql, args, err := b.ToSql()
+	if err != nil {
+		return errors.Wrap(err, "failed to build sql")
+	}
+
+	err = sqlx.Get(q, dest, sql, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// selectBuilder queries for one or more rows, building the sql, and writing the result into dest.
 //
 // Use this to simplify querying for multiple rows (and possibly columns). Dest may be a slice of
 // a simple, or a slice of a struct with fields to be populated from the returned columns.
@@ -96,7 +113,7 @@ func (sqlStore *SQLStore) selectBuilder(q sqlx.Queryer, dest interface{}, b buil
 
 	err = sqlx.Select(q, dest, sql, args...)
 	if err != nil {
-		return errors.Wrap(err, "failed to query using builder")
+		return err
 	}
 
 	return nil
@@ -107,7 +124,6 @@ func (sqlStore *SQLStore) selectBuilder(q sqlx.Queryer, dest interface{}, b buil
 // It allows the use of *sqlx.Db and *sqlx.Tx.
 type execer interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
-	NamedExec(query string, arg interface{}) (sql.Result, error)
 }
 
 // exec executes the given query using positional arguments, automatically rebinding for the db.
@@ -124,11 +140,4 @@ func (sqlStore *SQLStore) execBuilder(e execer, b builder) (sql.Result, error) {
 	}
 
 	return sqlStore.exec(e, sql, args...)
-}
-
-// namedExec executes the given query using named arguments.
-//
-// It essentially matches sqlx.db.NamedExec, existing simply to constrain sqlx usage to this file.
-func (sqlStore *SQLStore) namedExec(e execer, sql string, args interface{}) (sql.Result, error) {
-	return e.NamedExec(sql, args)
 }

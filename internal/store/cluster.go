@@ -67,8 +67,10 @@ func (c *Cluster) SetProvisionerMetadata(data interface{}) error {
 // GetCluster fetches the given cluster by id.
 func (sqlStore *SQLStore) GetCluster(id string) (*Cluster, error) {
 	var cluster Cluster
+	err := sqlStore.getBuilder(sqlStore.db, &cluster,
+		sq.Select("*").From("Cluster").Where("ID = ?", id),
+	)
 
-	err := sqlStore.get(sqlStore.db, &cluster, `SELECT * FROM Cluster WHERE ID = ?`, id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
@@ -80,8 +82,6 @@ func (sqlStore *SQLStore) GetCluster(id string) (*Cluster, error) {
 
 // GetClusters fetches the given page of created clusters. The first page is 0.
 func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([]*Cluster, error) {
-	var clusters []*Cluster
-
 	builder := sq.
 		Select("*").
 		From("Cluster").
@@ -93,6 +93,7 @@ func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([
 		builder = builder.Where("DeleteAt = 0")
 	}
 
+	var clusters []*Cluster
 	err := sqlStore.selectBuilder(sqlStore.db, &clusters, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for clusters")
@@ -106,7 +107,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 	cluster.ID = model.NewId()
 	cluster.CreateAt = GetMillis()
 
-	builder := sq.
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("Cluster").
 		Columns(
 			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
@@ -115,9 +116,8 @@ func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 		Values(
 			cluster.ID, cluster.Provider, cluster.Provisioner, cluster.ProviderMetadata,
 			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt, 0, "", 0,
-		)
-
-	_, err := sqlStore.execBuilder(sqlStore.db, builder)
+		),
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster")
 	}
@@ -127,7 +127,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 
 // UpdateCluster updates the given cluster in the database.
 func (sqlStore *SQLStore) UpdateCluster(cluster *Cluster) error {
-	builder := sq.
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Cluster").
 		SetMap(map[string]interface{}{
 			"Provider":            cluster.Provider,
@@ -136,9 +136,8 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *Cluster) error {
 			"ProvisionerMetadata": cluster.ProvisionerMetadata,
 			"AllowInstallations":  cluster.AllowInstallations,
 		}).
-		Where("ID = ?", cluster.ID)
-
-	_, err := sqlStore.execBuilder(sqlStore.db, builder)
+		Where("ID = ?", cluster.ID),
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster")
 	}
@@ -149,12 +148,12 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *Cluster) error {
 // DeleteCluster marks the given cluster as deleted, but does not remove the record from the
 // database.
 func (sqlStore *SQLStore) DeleteCluster(id string) error {
-	_, err := sqlStore.namedExec(sqlStore.db, `
-		UPDATE Cluster SET DeleteAt = :DeleteAt WHERE ID = :ID AND DeleteAt = 0
-	`, map[string]interface{}{
-		"ID":       id,
-		"DeleteAt": GetMillis(),
-	})
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Cluster").
+		Set("DeleteAt", GetMillis()).
+		Where("ID = ?", id).
+		Where("DeleteAt = ?", 0),
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark cluster as deleted")
 	}
