@@ -32,7 +32,7 @@ jobs:
       - *restore_cache
       - run: go vet ./...
       - *save_cache
-  test:
+  test-sqlite:
     executor:
       name: default
     steps:
@@ -46,6 +46,32 @@ jobs:
       - run:
           name: coveralls
           command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN
+  test-postgres:
+    docker:
+      - image: circleci/golang:1.12
+        environment:
+          CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
+      - image: circleci/postgres:11.2-alpine
+        environment:
+          POSTGRES_USER: cloud_test
+          POSTGRES_DB: cloud_test
+    executor:
+      name: default
+    steps:
+      - run:
+          name: Waiting for Postgres to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgres && exit 1
+      - checkout
+      - *restore_cache
+      - run: go test ./...
+      - *save_cache
 
 workflows:
   version: 2
@@ -53,4 +79,5 @@ workflows:
     jobs:
       - lint
       - vet
-      - test
+      - test-sqlite
+      - test-postgres

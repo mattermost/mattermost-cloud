@@ -18,10 +18,14 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
+	rootCmd.MarkFlagRequired("database")
+
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(clusterCmd)
 	rootCmd.AddCommand(installationCmd)
 	rootCmd.AddCommand(groupCmd)
+	rootCmd.AddCommand(schemaCmd)
 }
 
 func main() {
