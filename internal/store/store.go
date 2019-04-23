@@ -93,6 +93,8 @@ func (sqlStore *SQLStore) getBuilder(q sqlx.Queryer, dest interface{}, b builder
 		return errors.Wrap(err, "failed to build sql")
 	}
 
+	sql = sqlStore.db.Rebind(sql)
+
 	err = sqlx.Get(q, dest, sql, args...)
 	if err != nil {
 		return err
@@ -110,6 +112,8 @@ func (sqlStore *SQLStore) selectBuilder(q sqlx.Queryer, dest interface{}, b buil
 	if err != nil {
 		return errors.Wrap(err, "failed to build sql")
 	}
+
+	sql = sqlStore.db.Rebind(sql)
 
 	err = sqlx.Select(q, dest, sql, args...)
 	if err != nil {

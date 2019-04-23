@@ -37,7 +37,7 @@ var migrations = []migration{
 				AllowInstallations BOOLEAN NOT NULL,
 				CreateAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL,
-				LockAcquiredBy CHAR(26) NOT NULL,
+				LockAcquiredBy CHAR(26) NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
 		`)

@@ -19,7 +19,7 @@ type Cluster struct {
 	AllowInstallations  bool
 	CreateAt            int64
 	DeleteAt            int64
-	LockAcquiredBy      string
+	LockAcquiredBy      *string
 	LockAcquiredAt      int64
 }
 
@@ -114,7 +114,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *Cluster) error {
 		).
 		Values(
 			cluster.ID, cluster.Provider, cluster.Provisioner, cluster.ProviderMetadata,
-			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt, 0, "", 0,
+			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt, 0, nil, 0,
 		),
 	)
 	if err != nil {
