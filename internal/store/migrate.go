@@ -34,28 +34,36 @@ func (sqlStore *SQLStore) Migrate() error {
 			break
 		}
 
-		sqlStore.logger.Infof("Migrating schema from %s to %s", currentVersion, migration.toVersion)
-		tx, err := sqlStore.db.Beginx()
-		if err != nil {
-			return errors.Wrapf(err, "failed to begin applying target version %s", migration.toVersion)
-		}
-		defer tx.Rollback()
+		err := func() error {
+			sqlStore.logger.Infof("Migrating schema from %s to %s", currentVersion, migration.toVersion)
+			tx, err := sqlStore.db.Beginx()
+			if err != nil {
+				return errors.Wrapf(err, "failed to begin applying target version %s", migration.toVersion)
+			}
+			defer tx.Rollback()
 
-		err = migration.migrationFunc(tx)
-		if err != nil {
-			return errors.Wrapf(err, "failed to migrate to target version %s", migration.toVersion)
-		}
+			err = migration.migrationFunc(tx)
+			if err != nil {
+				return errors.Wrapf(err, "failed to migrate to target version %s", migration.toVersion)
+			}
 
-		currentVersion = migration.toVersion
-		err = sqlStore.setCurrentVersion(tx, currentVersion.String())
-		if err != nil {
-			return errors.Wrap(err, "failed to record target version")
-		}
+			currentVersion = migration.toVersion
+			err = sqlStore.setCurrentVersion(tx, currentVersion.String())
+			if err != nil {
+				return errors.Wrap(err, "failed to record target version")
+			}
 
-		applied++
-		err = tx.Commit()
+			applied++
+			err = tx.Commit()
+			if err != nil {
+				return errors.Wrapf(err, "failed to commit target version %s", migration.toVersion)
+			}
+
+			return nil
+		}()
+
 		if err != nil {
-			return errors.Wrapf(err, "failed to commit target version %s", migration.toVersion)
+			return err
 		}
 	}
 
