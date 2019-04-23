@@ -70,7 +70,6 @@ func (sqlStore *SQLStore) GetCluster(id string) (*Cluster, error) {
 	err := sqlStore.getBuilder(sqlStore.db, &cluster,
 		sq.Select("*").From("Cluster").Where("ID = ?", id),
 	)
-
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
