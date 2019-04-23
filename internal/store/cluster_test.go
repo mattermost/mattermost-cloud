@@ -70,6 +70,8 @@ func TestClusters(t *testing.T) {
 		err := sqlStore.CreateCluster(cluster1)
 		require.NoError(t, err)
 
+		time.Sleep(1 * time.Millisecond)
+
 		err = sqlStore.CreateCluster(cluster2)
 		require.NoError(t, err)
 
@@ -166,6 +168,8 @@ func TestClusters(t *testing.T) {
 
 		err := sqlStore.CreateCluster(cluster1)
 		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
 
 		err = sqlStore.CreateCluster(cluster2)
 		require.NoError(t, err)
