@@ -1,8 +1,10 @@
 package api_test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -75,6 +77,24 @@ func TestClusters(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Empty(t, clusters)
+	})
+
+	t.Run("get clusters, invalid page", func(t *testing.T) {
+		resp, err := http.Get(fmt.Sprintf("%s/api/clusters?page=invalid&per_page=100", ts.URL))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("get clusters, invalid perPage", func(t *testing.T) {
+		resp, err := http.Get(fmt.Sprintf("%s/api/clusters?page=0&per_page=invalid", ts.URL))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("create cluster, invalid payload", func(t *testing.T) {
+		resp, err := http.Post(fmt.Sprintf("%s/api/clusters", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("clusters", func(t *testing.T) {

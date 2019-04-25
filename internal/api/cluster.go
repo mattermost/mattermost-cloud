@@ -25,12 +25,22 @@ func outputJSON(c *Context, w io.Writer, data interface{}) {
 // handleGetClusters responds to GET /api/clusters.
 func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
-	page, _ := strconv.Atoi(pageStr)
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		c.Logger.WithField("error", err).Error("failed to parse page")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	perPageStr := r.URL.Query().Get("per_page")
 	perPage := 100
 	if perPageStr != "" {
-		perPage, _ = strconv.Atoi(perPageStr)
+		perPage, err = strconv.Atoi(perPageStr)
+		if err != nil {
+			c.Logger.WithField("error", err).Error("failed to parse perPage")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	includeDeletedStr := r.URL.Query().Get("include_deleted")
@@ -54,7 +64,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	createClusterRequest, err := newCreateClusterRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithField("error", err).Error("failed to decode request")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
