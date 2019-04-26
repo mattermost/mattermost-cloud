@@ -42,9 +42,24 @@ func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 
 	case "postgres", "postgresql":
 		url.Scheme = "postgres"
+
+		usePgTemp := false
+		query := url.Query()
+		if _, ok := query["pg_temp"]; ok {
+			usePgTemp = true
+			query.Del("pg_temp")
+			url.RawQuery = query.Encode()
+		}
+
 		db, err = sqlx.Connect("postgres", url.String())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to connect to postgres database")
+		}
+
+		if usePgTemp {
+			// Force the use of the current session's temporary-table schema,
+			// simplifying cleanup for unit tests configured to use same.
+			db.Exec("SET search_path TO pg_temp")
 		}
 
 		// Leave the default mapper as strings.ToLower.

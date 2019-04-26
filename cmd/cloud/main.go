@@ -11,7 +11,7 @@ var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
 	Run: func(cmd *cobra.Command, args []string) {
-		serverCmd.Run(cmd, args)
+		serverCmd.RunE(cmd, args)
 	},
 	// SilenceErrors allows us to explicitly log the error returned from rootCmd below.
 	SilenceErrors: true,

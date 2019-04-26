@@ -7,7 +7,13 @@ import (
 
 const systemDatabaseVersionKey = "DatabaseVersion"
 
-// getCurrentVersion queries the System table for the current database version.
+// GetCurrentVersion queries the System table for the current database version.
+func (sqlStore *SQLStore) GetCurrentVersion() (semver.Version, error) {
+	return sqlStore.getCurrentVersion(sqlStore.db)
+}
+
+// getCurrentVersion queries the System table for the current database version against the given
+// queryer.
 func (sqlStore *SQLStore) getCurrentVersion(q queryer) (semver.Version, error) {
 	currentVersionStr, err := sqlStore.getSystemValue(q, systemDatabaseVersionKey)
 	if currentVersionStr == "" {

@@ -1,10 +1,10 @@
-package provisioner
+package model
 
 import (
 	"encoding/json"
 )
 
-// KopsMetadata is the provisioner metadata stored in a store.Cluster.
+// KopsMetadata is the provisioner metadata stored in a model.Cluster.
 type KopsMetadata struct {
 	Name string
 }
