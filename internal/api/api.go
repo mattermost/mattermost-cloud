@@ -9,9 +9,13 @@ func Register(rootRouter *mux.Router, context *Context) {
 	}
 
 	apiRouter := rootRouter.PathPrefix("/api").Subrouter()
-	apiRouter.Handle("/clusters", addContext(handleGetClusters)).Methods("GET")
-	apiRouter.Handle("/clusters", addContext(handleCreateCluster)).Methods("POST")
-	apiRouter.Handle("/cluster/{cluster}", addContext(handleGetCluster)).Methods("GET")
-	apiRouter.Handle("/cluster/{cluster}/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
-	apiRouter.Handle("/cluster/{cluster}", addContext(handleDeleteCluster)).Methods("DELETE")
+
+	clustersRouter := apiRouter.PathPrefix("/clusters").Subrouter()
+	clustersRouter.Handle("", addContext(handleGetClusters)).Methods("GET")
+	clustersRouter.Handle("", addContext(handleCreateCluster)).Methods("POST")
+
+	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
+	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
+	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
+	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
