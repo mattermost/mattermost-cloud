@@ -61,6 +61,7 @@ var serverCmd = &cobra.Command{
 				sqlStore,
 				nil,
 				nil,
+				nil,
 				logger,
 			),
 		})

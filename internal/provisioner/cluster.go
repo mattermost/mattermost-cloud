@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 )
@@ -21,6 +23,7 @@ type KopsProvisioner struct {
 	cs               clusterStore
 	kopsFactory      kopsFactoryFunc
 	terraformFactory terraformFactoryFunc
+	k8sFactory       k8sFactoryFunc
 	logger           log.FieldLogger
 }
 
@@ -28,7 +31,7 @@ type KopsProvisioner struct {
 //
 // kopsFactory and terraformFactory exist purely to allow for unit testing. Passing nil defaults
 // to using the kops and terraform binary wrappers.
-func NewKopsProvisioner(clusterRootDir string, s3StateStore string, cs clusterStore, kopsFactory kopsFactoryFunc, terraformFactory terraformFactoryFunc, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir string, s3StateStore string, cs clusterStore, kopsFactory kopsFactoryFunc, terraformFactory terraformFactoryFunc, k8sFactory k8sFactoryFunc, logger log.FieldLogger) *KopsProvisioner {
 	if kopsFactory == nil {
 		kopsFactory = func(logger log.FieldLogger) (KopsCmd, error) {
 			return kops.New(s3StateStore, logger)
@@ -41,12 +44,19 @@ func NewKopsProvisioner(clusterRootDir string, s3StateStore string, cs clusterSt
 		}
 	}
 
+	if k8sFactory == nil {
+		k8sFactory = func(configLocation string, logger log.FieldLogger) (K8sClient, error) {
+			return k8s.New(configLocation, logger)
+		}
+	}
+
 	return &KopsProvisioner{
 		clusterRootDir:   clusterRootDir,
 		s3StateStore:     s3StateStore,
 		cs:               cs,
 		kopsFactory:      kopsFactory,
 		terraformFactory: terraformFactory,
+		k8sFactory:       k8sFactory,
 		logger:           logger,
 	}
 }
@@ -152,16 +162,98 @@ func (provisioner *KopsProvisioner) CreateCluster(request *api.CreateClusterRequ
 
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 600
-	if wait > 0 {
-		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
-		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
+	logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+	err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
+	if err != nil {
+		// Run non-silent validate one more time to log final cluster state
+		// and return original timeout error.
+		kops.ValidateCluster(kopsMetadata.Name, false)
+		return nil, err
+	}
+
+	logger.WithField("name", kopsMetadata.Name).Info("successfully deployed kubernetes")
+
+	// Begin deploying the mattermost operator.
+	// TODO: remove reliance on kube config being in the default location.
+	k8sClient, err := provisioner.k8sFactory(filepath.Join(os.Getenv("HOME"), ".kube", "config"), logger)
+	if err != nil {
+		return &cluster, err
+	}
+
+	mysqlOperatorNamespace := "mysql-operator"
+	mattermostOperatorNamespace := "mattermost-operator"
+	namespaces := []string{
+		mysqlOperatorNamespace,
+		mattermostOperatorNamespace,
+	}
+
+	for _, ns := range namespaces {
+		_, err = k8sClient.CreateNamespace(ns)
 		if err != nil {
-			// Run non-silent validate one more time to log final cluster state
-			// and return original timeout error.
-			kops.ValidateCluster(kopsMetadata.Name, false)
-			return nil, err
+			return &cluster, err
 		}
 	}
+
+	// TODO: determine if we want to hard-code the k8s resource objects in code.
+	// For now, we will ingest manifest files to deploy the mattermost operator.
+	files := []k8s.ManifestFile{
+		k8s.ManifestFile{
+			Name:            "mysql_crd.yaml",
+			Directory:       "operator-manifests/mysql-operator/crds",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "service_account.yaml",
+			Directory:       "operator-manifests/mysql-operator",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "role.yaml",
+			Directory:       "operator-manifests/mysql-operator",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "role_binding.yaml",
+			Directory:       "operator-manifests/mysql-operator",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "operator.yaml",
+			Directory:       "operator-manifests/mysql-operator",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "mm_clusterinstallation_crd.yaml",
+			Directory:       "operator-manifests/mattermost-operator/crds",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "service_account.yaml",
+			Directory:       "operator-manifests/mattermost-operator",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "role.yaml",
+			Directory:       "operator-manifests/mattermost-operator",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "role_binding.yaml",
+			Directory:       "operator-manifests/mattermost-operator",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Name:            "operator.yaml",
+			Directory:       "operator-manifests/mattermost-operator",
+			DeployNamespace: mattermostOperatorNamespace,
+		},
+	}
+	for _, f := range files {
+		err = k8sClient.CreateFromFile(f)
+		if err != nil {
+			return &cluster, err
+		}
+	}
+
+	// TODO: Rework this as we make the API calls asynchronous.
+	wait = 60
+	logger.Infof("waiting up to %d seconds for mattermost operator to start...", wait)
+	pod, err := k8sClient.WaitForPodRunning("mattermost-operator", "mattermost-operator", wait)
+	if err != nil {
+		return &cluster, err
+	}
+	logger.Infof("successfully deployed operator %q", pod.Name)
 
 	logger.WithField("name", kopsMetadata.Name).Info("successfully created cluster")
 

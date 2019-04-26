@@ -42,6 +42,9 @@ func TestClusters(t *testing.T) {
 			func(outputDir string, logger log.FieldLogger) provisioner.TerraformCmd {
 				return mockTerraformCmd
 			},
+			func(configLocation string, logger log.FieldLogger) (provisioner.K8sClient, error) {
+				return newMockK8sClient(), nil
+			},
 			logger,
 		),
 		Logger: logger,
