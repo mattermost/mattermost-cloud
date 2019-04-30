@@ -17,7 +17,7 @@ var schemaCmd = &cobra.Command{
 
 func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
 	database, _ := command.Flags().GetString("database")
-	sqlStore, err := store.New(database, logger)
+	sqlStore, err := store.New(database, instanceID, logger)
 	if err != nil {
 		return nil, err
 	}

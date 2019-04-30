@@ -1,13 +1,16 @@
 package main
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	log "github.com/sirupsen/logrus"
 )
 
+var instanceID string
 var logger log.FieldLogger
 
 func init() {
-	logger = log.New()
+	instanceID = model.NewID()
+	logger = log.New().WithField("instance_id", instanceID)
 }
 
 type logrusWriter struct {

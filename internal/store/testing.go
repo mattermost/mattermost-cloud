@@ -29,7 +29,7 @@ func makeUnmigratedTestSQLStore(tb testing.TB, logger log.FieldLogger) *SQLStore
 		dsn = dsnURL.String()
 	}
 
-	sqlStore, err := New(dsn, logger)
+	sqlStore, err := New(dsn, model.NewID(), logger)
 	require.NoError(tb, err)
 
 	// For testing with mode=memory and pg_temp above, restrict to a single connection,
