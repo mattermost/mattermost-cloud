@@ -31,7 +31,7 @@ func (sqlStore *SQLStore) Migrate() error {
 	applied := 0
 	for _, migration := range migrations {
 		if !currentVersion.EQ(migration.fromVersion) {
-			break
+			continue
 		}
 
 		err := func() error {
