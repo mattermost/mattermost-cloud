@@ -15,14 +15,16 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
 )
 
 func TestClusters(t *testing.T) {
 	clusterRootDir, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
-	sqlStore := makeSQLStore(t)
-	logger := makeLogger(t)
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
 
 	mockTerraformCmd := newMockTerraformCmd()
 

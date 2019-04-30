@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
 )
 
 func TestClusters(t *testing.T) {
 	t.Run("get unknown cluster", func(t *testing.T) {
-		sqlStore := makeSQLStore(t)
+		logger := testlib.MakeLogger(t)
+		sqlStore := MakeTestSQLStore(t, logger)
 
 		cluster, err := sqlStore.GetCluster("unknown")
 		require.NoError(t, err)
@@ -18,7 +20,8 @@ func TestClusters(t *testing.T) {
 	})
 
 	t.Run("get clusters", func(t *testing.T) {
-		sqlStore := makeSQLStore(t)
+		logger := testlib.MakeLogger(t)
+		sqlStore := MakeTestSQLStore(t, logger)
 
 		cluster1 := &model.Cluster{
 			Provider:            "aws",
@@ -74,7 +77,8 @@ func TestClusters(t *testing.T) {
 	})
 
 	t.Run("update clusters", func(t *testing.T) {
-		sqlStore := makeSQLStore(t)
+		logger := testlib.MakeLogger(t)
+		sqlStore := MakeTestSQLStore(t, logger)
 
 		cluster1 := &model.Cluster{
 			Provider:            "aws",
@@ -117,7 +121,8 @@ func TestClusters(t *testing.T) {
 	})
 
 	t.Run("delete cluster", func(t *testing.T) {
-		sqlStore := makeSQLStore(t)
+		logger := testlib.MakeLogger(t)
+		sqlStore := MakeTestSQLStore(t, logger)
 
 		cluster1 := &model.Cluster{
 			Provider:            "aws",
