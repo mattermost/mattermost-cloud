@@ -23,6 +23,74 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 	return &cluster, nil
 }
 
+// LockCluster marks the cluster as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockCluster(clusterID string) (bool, error) {
+	result, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Cluster").
+		SetMap(map[string]interface{}{
+			"LockAcquiredBy": sqlStore.instanceID,
+			"LockAcquiredAt": GetMillis(),
+		}).
+		Where(sq.Eq{
+			"ID":             clusterID,
+			"LockAcquiredAt": 0,
+		}),
+	)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to lock cluster")
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to count rows affected")
+	}
+
+	locked := false
+	if count > 0 {
+		locked = true
+	}
+
+	return locked, nil
+}
+
+// UnlockCluster releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockCluster(clusterID string, force bool) (bool, error) {
+	builder := sq.Update("Cluster").
+		SetMap(map[string]interface{}{
+			"LockAcquiredBy": nil,
+			"LockAcquiredAt": 0,
+		}).
+		Where(sq.Eq{
+			"ID": clusterID,
+		})
+
+	if force {
+		// If forcing the unlock, only require that a lock was held by someone.
+		builder = builder.Where("LockAcquiredAt <> 0")
+	} else {
+		// If not forcing the unlock, require that the current instance held the lock.
+		builder = builder.Where(sq.Eq{
+			"LockAcquiredBy": sqlStore.instanceID,
+		})
+	}
+
+	result, err := sqlStore.execBuilder(sqlStore.db, builder)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to unlock cluster")
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to count rows affected")
+	}
+
+	unlocked := false
+	if count > 0 {
+		unlocked = true
+	}
+
+	return unlocked, nil
+}
+
 // GetClusters fetches the given page of created clusters. The first page is 0.
 func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error) {
 	builder := sq.
