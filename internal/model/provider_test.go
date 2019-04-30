@@ -1,8 +1,9 @@
-package provisioner
+package model_test
 
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +26,7 @@ func TestCheckProvider(t *testing.T) {
 
 	for _, tt := range sizeTests {
 		t.Run(tt.provider, func(t *testing.T) {
-			provider, err := checkProvider(tt.provider)
+			provider, err := model.CheckProvider(tt.provider)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {

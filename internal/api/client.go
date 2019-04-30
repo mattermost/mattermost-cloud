@@ -78,11 +78,28 @@ func (c *Client) CreateCluster(request *CreateClusterRequest) (*model.Cluster, e
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return model.ClusterFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// RetryCreateCluster retries the creation of a cluster from the configured provisioning server.
+func (c *Client) RetryCreateCluster(clusterID string) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s", clusterID), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -139,7 +156,7 @@ func (c *Client) UpgradeCluster(clusterID, version string) error {
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return nil
 
 	default:
@@ -156,7 +173,7 @@ func (c *Client) DeleteCluster(clusterID string) error {
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return nil
 
 	default:

@@ -75,8 +75,7 @@ var clusterCreateCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to create cluster")
 		}
 
-		// TODO --wait for the cluster to be ready. For now, this is done synchronously
-		// in CreateCluster with a hard-coded interval.
+		// TODO --wait for the cluster to be ready.
 		// wait, _ := command.Flags().GetInt("wait")
 
 		err = printJSON(cluster)

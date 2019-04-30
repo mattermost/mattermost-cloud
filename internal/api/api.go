@@ -16,6 +16,7 @@ func Register(rootRouter *mux.Router, context *Context) {
 
 	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
 	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
+	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
 	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }

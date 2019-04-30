@@ -2,14 +2,23 @@ package api
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
-	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/sirupsen/logrus"
 )
 
-// Provisioner describes the interface for provisioning clusters required by the API context.
-type Provisioner interface {
-	CreateCluster(request *CreateClusterRequest) (*model.Cluster, error)
-	UpgradeCluster(clusterID string, version string) error
+// Supervisor describes the interface to notify the background jobs of an actionable change.
+type Supervisor interface {
+	Do() error
+}
+
+// Store describes the interface required to persist changes made via API requests.
+type Store interface {
+	CreateCluster(cluster *model.Cluster) error
+	GetCluster(clusterID string) (*model.Cluster, error)
+	GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error)
+	GetUnlockedClusterPendingWork() (*model.Cluster, error)
+	UpdateCluster(cluster *model.Cluster) error
+	LockCluster(clusterID string) (bool, error)
+	UnlockCluster(clusterID string, force bool) (bool, error)
 	DeleteCluster(clusterID string) error
 }
 
@@ -17,16 +26,16 @@ type Provisioner interface {
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
 type Context struct {
-	SQLStore    *store.SQLStore
-	Provisioner Provisioner
-	Logger      logrus.FieldLogger
+	Store      Store
+	Supervisor Supervisor
+	Logger     logrus.FieldLogger
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
 func (c *Context) Clone() *Context {
 	return &Context{
-		SQLStore:    c.SQLStore,
-		Provisioner: c.Provisioner,
-		Logger:      c.Logger,
+		Store:      c.Store,
+		Supervisor: c.Supervisor,
+		Logger:     c.Logger,
 	}
 }
