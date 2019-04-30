@@ -28,6 +28,8 @@ func TestClusters(t *testing.T) {
 			Provisioner:         "kops",
 			ProviderMetadata:    []byte(`{"provider": "test1"}`),
 			ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
+			Size:                model.SizeAlef500,
+			State:               model.ClusterStateCreationRequested,
 			AllowInstallations:  false,
 		}
 
@@ -36,6 +38,8 @@ func TestClusters(t *testing.T) {
 			Provisioner:         "cluster-api",
 			ProviderMetadata:    []byte(`{"provider": "test2"}`),
 			ProvisionerMetadata: []byte(`{"provisioner": "test2"}`),
+			Size:                model.SizeAlef500,
+			State:               model.ClusterStateStable,
 			AllowInstallations:  true,
 		}
 
@@ -85,6 +89,8 @@ func TestClusters(t *testing.T) {
 			Provisioner:         "kops",
 			ProviderMetadata:    []byte(`{"provider": "test1"}`),
 			ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
+			Size:                model.SizeAlef500,
+			State:               model.ClusterStateCreationRequested,
 			AllowInstallations:  false,
 		}
 
@@ -93,6 +99,8 @@ func TestClusters(t *testing.T) {
 			Provisioner:         "cluster-api",
 			ProviderMetadata:    []byte(`{"provider": "test2"}`),
 			ProvisionerMetadata: []byte(`{"provisioner": "test2"}`),
+			Size:                model.SizeAlef500,
+			State:               model.ClusterStateStable,
 			AllowInstallations:  true,
 		}
 
@@ -106,6 +114,8 @@ func TestClusters(t *testing.T) {
 		cluster1.Provisioner = "cluster-api"
 		cluster1.ProviderMetadata = []byte(`{"provider": "updated-test1"}`)
 		cluster1.ProvisionerMetadata = []byte(`{"provisioner": "updated-test1"}`)
+		cluster1.Size = model.SizeAlef1000
+		cluster1.State = model.ClusterStateDeletionRequested
 		cluster1.AllowInstallations = true
 
 		err = sqlStore.UpdateCluster(cluster1)
@@ -192,6 +202,78 @@ func TestClusters(t *testing.T) {
 		require.Equal(t, cluster1, actualCluster1)
 
 	})
+}
+
+func TestGetUnlockedClusterPendingWork(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	creationRequestedCluster := &model.Cluster{
+		ProviderMetadata:    []byte(`{"provider": "test1"}`),
+		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
+		State:               model.ClusterStateCreationRequested,
+	}
+	err := sqlStore.CreateCluster(creationRequestedCluster)
+	require.NoError(t, err)
+
+	upgradeRequestedCluster := &model.Cluster{
+		ProviderMetadata:    []byte(`{"provider": "test1"}`),
+		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
+		State:               model.ClusterStateUpgradeRequested,
+	}
+	err = sqlStore.CreateCluster(upgradeRequestedCluster)
+	require.NoError(t, err)
+
+	deletionRequestedCluster := &model.Cluster{
+		ProviderMetadata:    []byte(`{"provider": "test1"}`),
+		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
+		State:               model.ClusterStateDeletionRequested,
+	}
+	err = sqlStore.CreateCluster(deletionRequestedCluster)
+	require.NoError(t, err)
+
+	otherStates := []string{
+		model.ClusterStateCreationFailed,
+		model.ClusterStateDeletionFailed,
+		model.ClusterStateDeleted,
+		model.ClusterStateUpgradeFailed,
+		model.ClusterStateStable,
+	}
+
+	otherClusters := []*model.Cluster{}
+	for _, otherState := range otherStates {
+		otherClusters = append(otherClusters, &model.Cluster{
+			State: otherState,
+		})
+	}
+
+	cluster, err := sqlStore.GetUnlockedClusterPendingWork()
+	require.NoError(t, err)
+	require.Equal(t, creationRequestedCluster, cluster)
+
+	locked, err := sqlStore.LockCluster(cluster.ID)
+	require.NoError(t, err)
+	require.True(t, locked)
+
+	cluster, err = sqlStore.GetUnlockedClusterPendingWork()
+	require.NoError(t, err)
+	require.Equal(t, deletionRequestedCluster, cluster)
+
+	locked, err = sqlStore.LockCluster(cluster.ID)
+	require.NoError(t, err)
+	require.True(t, locked)
+
+	cluster, err = sqlStore.GetUnlockedClusterPendingWork()
+	require.NoError(t, err)
+	require.Equal(t, upgradeRequestedCluster, cluster)
+
+	locked, err = sqlStore.LockCluster(cluster.ID)
+	require.NoError(t, err)
+	require.True(t, locked)
+
+	cluster, err = sqlStore.GetUnlockedClusterPendingWork()
+	require.NoError(t, err)
+	require.Nil(t, cluster)
 }
 
 func TestLockCluster(t *testing.T) {

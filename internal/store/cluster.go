@@ -23,6 +23,31 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 	return &cluster, nil
 }
 
+// GetUnlockedClusterPendingWork returns an unlocked cluster in a pending state.
+func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error) {
+	var cluster model.Cluster
+	err := sqlStore.getBuilder(sqlStore.db, &cluster, sq.
+		Select("*").
+		From("Cluster").
+		Where(sq.Eq{
+			"State": []string{
+				model.ClusterStateCreationRequested,
+				model.ClusterStateUpgradeRequested,
+				model.ClusterStateDeletionRequested,
+			},
+		}).
+		Where("LockAcquiredAt = 0").
+		OrderBy("State ASC"),
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "failed to get cluster pending work")
+	}
+
+	return &cluster, nil
+}
+
 // LockCluster marks the cluster as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockCluster(clusterID string) (bool, error) {
 	result, err := sqlStore.execBuilder(sqlStore.db, sq.
@@ -120,14 +145,20 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("Cluster").
-		Columns(
-			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
-			"AllowInstallations", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
-		).
-		Values(
-			cluster.ID, cluster.Provider, cluster.Provisioner, cluster.ProviderMetadata,
-			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt, 0, nil, 0,
-		),
+		SetMap(map[string]interface{}{
+			"ID":                  cluster.ID,
+			"Provider":            cluster.Provider,
+			"Provisioner":         cluster.Provisioner,
+			"ProviderMetadata":    cluster.ProviderMetadata,
+			"ProvisionerMetadata": cluster.ProvisionerMetadata,
+			"Size":                cluster.Size,
+			"State":               cluster.State,
+			"AllowInstallations":  cluster.AllowInstallations,
+			"CreateAt":            cluster.CreateAt,
+			"DeleteAt":            0,
+			"LockAcquiredBy":      nil,
+			"LockAcquiredAt":      0,
+		}),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster")
@@ -145,6 +176,8 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 			"Provisioner":         cluster.Provisioner,
 			"ProviderMetadata":    cluster.ProviderMetadata,
 			"ProvisionerMetadata": cluster.ProvisionerMetadata,
+			"Size":                cluster.Size,
+			"State":               cluster.State,
 			"AllowInstallations":  cluster.AllowInstallations,
 		}).
 		Where("ID = ?", cluster.ID),
