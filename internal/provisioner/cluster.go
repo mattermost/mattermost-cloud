@@ -187,11 +187,9 @@ func (provisioner *KopsProvisioner) CreateCluster(request *api.CreateClusterRequ
 		mattermostOperatorNamespace,
 	}
 
-	for _, ns := range namespaces {
-		_, err = k8sClient.CreateNamespace(ns)
-		if err != nil {
-			return &cluster, err
-		}
+	_, err = k8sClient.CreateNamespaces(namespaces)
+	if err != nil {
+		return &cluster, err
 	}
 
 	// TODO: determine if we want to hard-code the k8s resource objects in code.

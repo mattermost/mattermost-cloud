@@ -13,6 +13,7 @@ type k8sFactoryFunc func(configLocation string, logger log.FieldLogger) (K8sClie
 type K8sClient interface {
 	GetPods(string) ([]apiv1.Pod, error)
 	CreateNamespace(string) (*corev1.Namespace, error)
+	CreateNamespaces([]string) ([]*corev1.Namespace, error)
 	CreateFromFile(file k8s.ManifestFile) error
 	CreateFromFiles(file []k8s.ManifestFile) error
 	WaitForPodRunning(string, string, int) (apiv1.Pod, error)

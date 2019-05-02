@@ -23,6 +23,10 @@ func (m *mockK8sClient) CreateNamespace(string) (*corev1.Namespace, error) {
 	return nil, nil
 }
 
+func (m *mockK8sClient) CreateNamespaces([]string) ([]*corev1.Namespace, error) {
+	return nil, nil
+}
+
 func (m *mockK8sClient) CreateFromFile(file k8s.ManifestFile) error {
 	return nil
 }
