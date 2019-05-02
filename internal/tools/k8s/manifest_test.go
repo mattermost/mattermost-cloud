@@ -6,23 +6,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFQN(t *testing.T) {
-	var fqnTests = []struct {
+func TestBasename(t *testing.T) {
+	var basenameTests = []struct {
 		file     ManifestFile
 		expected string
 	}{
 		{
-			ManifestFile{
-				Name:      "file1",
-				Directory: "/tmp/test/1",
-			},
-			"/tmp/test/1/file1",
+			ManifestFile{Path: "/tmp/test/1/file1.yaml"},
+			"file1.yaml",
+		}, {
+			ManifestFile{Path: "noDirectory.yaml"},
+			"noDirectory.yaml",
 		},
 	}
 
-	for _, tt := range fqnTests {
-		t.Run(tt.file.Name, func(t *testing.T) {
-			assert.Equal(t, tt.file.FQN(), tt.expected)
+	for _, tt := range basenameTests {
+		t.Run(tt.file.Path, func(t *testing.T) {
+			assert.Equal(t, tt.file.Basename(), tt.expected)
 		})
 	}
 }

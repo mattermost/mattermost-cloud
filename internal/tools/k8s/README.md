@@ -1,10 +1,10 @@
 # Kubernetes Package
 
-This package contains the resources necessary to create a kubernetes client that is capable of interacting with Mattermost Custom Resources such as a cluster installation.
+This package contains the resources necessary to create a kubernetes client capable of interacting with Mattermost Custom Resources such as a cluster installation.
 
-To do this generated code is leveraged. This code is generated with the help of: https://github.com/kubernetes/code-generator
+This package leverages code generated using https://github.com/kubernetes/code-generator
 
-The generator takes the files found in `pkg/apis/mattermost.com/v1alpha1` and creates the necessary code to add this custom resource to the go kubernetes client.
+It takes the files found in `pkg/apis/mattermost.com/v1alpha1` and creates the necessary code to add this custom resource to the go kubernetes client.
 
 To regenerate this code, do the following:
 

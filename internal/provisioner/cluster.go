@@ -198,52 +198,40 @@ func (provisioner *KopsProvisioner) CreateCluster(request *api.CreateClusterRequ
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
 		k8s.ManifestFile{
-			Name:            "mysql_crd.yaml",
-			Directory:       "operator-manifests/mysql-operator/crds",
+			Path:            "operator-manifests/mysql-operator/crds/mysql_crd.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "service_account.yaml",
-			Directory:       "operator-manifests/mysql-operator",
+			Path:            "operator-manifests/mysql-operator/service_account.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "role.yaml",
-			Directory:       "operator-manifests/mysql-operator",
+			Path:            "operator-manifests/mysql-operator/role.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "role_binding.yaml",
-			Directory:       "operator-manifests/mysql-operator",
+			Path:            "operator-manifests/mysql-operator/role_binding.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "operator.yaml",
-			Directory:       "operator-manifests/mysql-operator",
+			Path:            "operator-manifests/mysql-operator/operator.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "mm_clusterinstallation_crd.yaml",
-			Directory:       "operator-manifests/mattermost-operator/crds",
+			Path:            "operator-manifests/mattermost-operator/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "service_account.yaml",
-			Directory:       "operator-manifests/mattermost-operator",
+			Path:            "operator-manifests/mattermost-operator/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "role.yaml",
-			Directory:       "operator-manifests/mattermost-operator",
+			Path:            "operator-manifests/mattermost-operator/role.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "role_binding.yaml",
-			Directory:       "operator-manifests/mattermost-operator",
+			Path:            "operator-manifests/mattermost-operator/role_binding.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Name:            "operator.yaml",
-			Directory:       "operator-manifests/mattermost-operator",
+			Path:            "operator-manifests/mattermost-operator/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		},
 	}
-	for _, f := range files {
-		err = k8sClient.CreateFromFile(f)
-		if err != nil {
-			return &cluster, err
-		}
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return &cluster, err
 	}
 
 	// TODO: Rework this as we make the API calls asynchronous.

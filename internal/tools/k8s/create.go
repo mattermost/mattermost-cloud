@@ -1,9 +1,9 @@
 package k8s
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -23,13 +23,26 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+// CreateFromFiles will create Kubernetes resources from the provided manifest
+// files.
+func (kc *KubeClient) CreateFromFiles(files []ManifestFile) error {
+	for _, f := range files {
+		err := kc.CreateFromFile(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // CreateFromFile will create the Kubernetes resources in the provided file.
 //
 // The current behavior leads to the create being attempted on all resources in
 // the provided file. An error is returned if any of the create actions failed.
 // This process equates to running `kubectl create -f FILENAME`.
 func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
-	data, err := ioutil.ReadFile(file.FQN())
+	data, err := ioutil.ReadFile(file.Path)
 	if err != nil {
 		return err
 	}
@@ -38,18 +51,18 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
 	mattermostscheme.AddToScheme(scheme.Scheme)
 
 	logger := kc.logger.WithFields(log.Fields{
-		"file": file.Name,
+		"file": file.Basename(),
 	})
 
 	var failures int
-	resources := strings.Split(string(data), "---")
+	resources := bytes.Split(data, []byte("---"))
 	for _, resource := range resources {
-		if resource == "" {
+		if len(resource) == 0 {
 			continue
 		}
 		decode := scheme.Codecs.UniversalDeserializer().Decode
 
-		obj, _, err := decode([]byte(resource), nil, nil)
+		obj, _, err := decode(resource, nil, nil)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "unable to decode k8s resource"))
 			failures++

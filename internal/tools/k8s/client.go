@@ -7,7 +7,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// KubeClient is used to hold kubernetes config and assist with logging.
+// KubeClient interfaces with a Kubernetes cluster in the same way kubectl would.
 type KubeClient struct {
 	config *rest.Config
 	logger log.FieldLogger
