@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -174,8 +173,7 @@ func (provisioner *KopsProvisioner) CreateCluster(request *api.CreateClusterRequ
 	logger.WithField("name", kopsMetadata.Name).Info("successfully deployed kubernetes")
 
 	// Begin deploying the mattermost operator.
-	// TODO: remove reliance on kube config being in the default location.
-	k8sClient, err := provisioner.k8sFactory(filepath.Join(os.Getenv("HOME"), ".kube", "config"), logger)
+	k8sClient, err := provisioner.k8sFactory(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return &cluster, err
 	}
