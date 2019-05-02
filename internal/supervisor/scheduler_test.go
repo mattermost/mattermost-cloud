@@ -80,4 +80,25 @@ func TestScheduler(t *testing.T) {
 		case <-time.After(500 * time.Millisecond):
 		}
 	})
+
+	t.Run("while busy", func(t *testing.T) {
+		t.Parallel()
+
+		doer := &testDoer{
+			calls: make(chan bool),
+		}
+		scheduler := supervisor.NewScheduler(doer, 0*time.Second)
+		defer scheduler.Close()
+
+		scheduler.Do()
+
+		// Second call should be non-blocking
+		scheduler.Do()
+
+		select {
+		case <-doer.calls:
+		case <-time.After(5 * time.Second):
+			assert.Fail(t, "doer not invoked within 5 seconds")
+		}
+	})
 }
