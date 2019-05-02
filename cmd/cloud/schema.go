@@ -8,6 +8,7 @@ import (
 
 func init() {
 	schemaCmd.AddCommand(schemaMigrateCmd)
+	schemaCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 }
 
 var schemaCmd = &cobra.Command{

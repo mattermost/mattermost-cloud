@@ -8,12 +8,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+var clusterSelect sq.SelectBuilder
+
+func init() {
+	clusterSelect = sq.
+		Select(
+			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
+			"Size", "State", "AllowInstallations", "CreateAt", "DeleteAt",
+			"LockAcquiredBy", "LockAcquiredAt",
+		).
+		From("Cluster")
+}
+
 // GetCluster fetches the given cluster by id.
 func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 	var cluster model.Cluster
-	err := sqlStore.getBuilder(sqlStore.db, &cluster,
-		sq.Select("*").From("Cluster").Where("ID = ?", id),
-	)
+	err := sqlStore.getBuilder(sqlStore.db, &cluster, clusterSelect.Where("ID = ?", id))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
@@ -26,9 +36,7 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 // GetUnlockedClusterPendingWork returns an unlocked cluster in a pending state.
 func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error) {
 	var cluster model.Cluster
-	err := sqlStore.getBuilder(sqlStore.db, &cluster, sq.
-		Select("*").
-		From("Cluster").
+	err := sqlStore.getBuilder(sqlStore.db, &cluster, clusterSelect.
 		Where(sq.Eq{
 			"State": []string{
 				model.ClusterStateCreationRequested,
@@ -50,82 +58,26 @@ func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error
 
 // LockCluster marks the cluster as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) {
-	result, err := sqlStore.execBuilder(sqlStore.db, sq.
-		Update("Cluster").
-		SetMap(map[string]interface{}{
-			"LockAcquiredBy": lockerID,
-			"LockAcquiredAt": GetMillis(),
-		}).
-		Where(sq.Eq{
-			"ID":             clusterID,
-			"LockAcquiredAt": 0,
-		}),
-	)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to lock cluster")
-	}
-	count, err := result.RowsAffected()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to count rows affected")
-	}
-
-	locked := false
-	if count > 0 {
-		locked = true
-	}
-
-	return locked, nil
+	return sqlStore.lockRow("Cluster", clusterID, lockerID)
 }
 
 // UnlockCluster releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
-	builder := sq.Update("Cluster").
-		SetMap(map[string]interface{}{
-			"LockAcquiredBy": nil,
-			"LockAcquiredAt": 0,
-		}).
-		Where(sq.Eq{
-			"ID": clusterID,
-		})
-
-	if force {
-		// If forcing the unlock, only require that a lock was held by someone.
-		builder = builder.Where("LockAcquiredAt <> 0")
-	} else {
-		// If not forcing the unlock, require that the current instance held the lock.
-		builder = builder.Where(sq.Eq{
-			"LockAcquiredBy": lockerID,
-		})
-	}
-
-	result, err := sqlStore.execBuilder(sqlStore.db, builder)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to unlock cluster")
-	}
-
-	count, err := result.RowsAffected()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to count rows affected")
-	}
-
-	unlocked := false
-	if count > 0 {
-		unlocked = true
-	}
-
-	return unlocked, nil
+	return sqlStore.unlockRow("Cluster", clusterID, lockerID, force)
 }
 
 // GetClusters fetches the given page of created clusters. The first page is 0.
-func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error) {
-	builder := sq.
-		Select("*").
-		From("Cluster").
-		OrderBy("CreateAt ASC").
-		Limit(uint64(perPage)).
-		Offset(uint64(page * perPage))
+func (sqlStore *SQLStore) GetClusters(filter *model.ClusterFilter) ([]*model.Cluster, error) {
+	builder := clusterSelect.
+		OrderBy("CreateAt ASC")
 
-	if !includeDeleted {
+	if filter.PerPage != model.AllPerPage {
+		builder = builder.
+			Limit(uint64(filter.PerPage)).
+			Offset(uint64(filter.Page * filter.PerPage))
+	}
+
+	if !filter.IncludeDeleted {
 		builder = builder.Where("DeleteAt = 0")
 	}
 
@@ -196,7 +148,7 @@ func (sqlStore *SQLStore) DeleteCluster(id string) error {
 		Update("Cluster").
 		Set("DeleteAt", GetMillis()).
 		Where("ID = ?", id).
-		Where("DeleteAt = ?", 0),
+		Where("DeleteAt = 0"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark cluster as deleted")

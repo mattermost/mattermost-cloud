@@ -14,7 +14,7 @@ type Supervisor interface {
 type Store interface {
 	CreateCluster(cluster *model.Cluster) error
 	GetCluster(clusterID string) (*model.Cluster, error)
-	GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error)
+	GetClusters(filter *model.ClusterFilter) ([]*model.Cluster, error)
 	GetUnlockedClusterPendingWork() (*model.Cluster, error)
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)

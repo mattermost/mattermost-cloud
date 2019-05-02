@@ -1,10 +1,10 @@
-package provisioner_test
+package supervisor_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +30,7 @@ func TestMultiDoer(t *testing.T) {
 	d2 := &failDoer{}
 	d3 := &testDoer{calls: make(chan bool)}
 
-	doer := provisioner.MultiDoer{d1, d2, d3}
+	doer := supervisor.MultiDoer{d1, d2, d3}
 
 	err := doer.Do()
 	require.EqualError(t, err, "failed")

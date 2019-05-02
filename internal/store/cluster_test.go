@@ -59,23 +59,27 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, cluster2, actualCluster2)
 
-		actualClusters, err := sqlStore.GetClusters(0, 0, false)
+		actualClusters, err := sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 0, IncludeDeleted: false})
 		require.NoError(t, err)
 		require.Empty(t, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 1, false)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: false})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 10, false)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: false})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 1, true)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: true})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 10, true)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: true})
+		require.NoError(t, err)
+		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
+
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{PerPage: model.AllPerPage, IncludeDeleted: true})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 	})
@@ -171,23 +175,23 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, cluster2, actualCluster2)
 
-		actualClusters, err := sqlStore.GetClusters(0, 0, false)
+		actualClusters, err := sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 0, IncludeDeleted: false})
 		require.NoError(t, err)
 		require.Empty(t, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 1, false)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: false})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 10, false)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: false})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 1, true)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: true})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(0, 10, true)
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: true})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 

@@ -13,6 +13,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/semaphore"
@@ -26,6 +27,7 @@ var instanceID string
 func init() {
 	instanceID = model.NewID()
 
+	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().Int("jobs", 1, "The maximum number of background jobs to allow.")
@@ -86,9 +88,9 @@ var serverCmd = &cobra.Command{
 				"jobs": jobs,
 			}).Info("Scheduler is disabled")
 		}
-		supervisor := provisioner.NewScheduler(
-			provisioner.MultiDoer{
-				provisioner.NewSupervisor(sqlStore, kopsProvisioner, workers, logger),
+		supervisor := supervisor.NewScheduler(
+			supervisor.MultiDoer{
+				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, workers, logger),
 			},
 			time.Duration(poll)*time.Second,
 		)

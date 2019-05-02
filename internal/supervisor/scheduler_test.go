@@ -1,10 +1,10 @@
-package provisioner_test
+package supervisor_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := provisioner.NewScheduler(doer, 0*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 0*time.Second)
 		defer scheduler.Close()
 
 		scheduler.Do()
@@ -33,7 +33,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := provisioner.NewScheduler(doer, 100*time.Millisecond)
+		scheduler := supervisor.NewScheduler(doer, 100*time.Millisecond)
 		defer scheduler.Close()
 
 		for i := 0; i < 5; i++ {
@@ -51,7 +51,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := provisioner.NewScheduler(doer, 30*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 30*time.Second)
 		defer scheduler.Close()
 
 		scheduler.Do()
@@ -69,7 +69,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := provisioner.NewScheduler(doer, 30*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 30*time.Second)
 		scheduler.Close()
 
 		scheduler.Do()

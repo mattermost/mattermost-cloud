@@ -16,13 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockSupervisor struct {
-}
-
-func (s *mockSupervisor) Do() error {
-	return nil
-}
-
 func TestClusters(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
@@ -321,6 +314,19 @@ func TestCreateCluster(t *testing.T) {
 		})
 		require.EqualError(t, err, "failed with status code 400")
 	})
+
+	t.Run("valid", func(t *testing.T) {
+		cluster, err := client.CreateCluster(&api.CreateClusterRequest{
+			Provider: model.ProviderAWS,
+			Size:     model.SizeAlef500,
+			Zones:    []string{"zone"},
+		})
+		require.NoError(t, err)
+		require.Equal(t, model.ProviderAWS, cluster.Provider)
+		require.Equal(t, model.SizeAlef500, cluster.Size)
+		require.Equal(t, model.ClusterStateCreationRequested, cluster.State)
+		// TODO: more fields...
+	})
 }
 
 func TestRetryCreateCluster(t *testing.T) {
@@ -466,6 +472,19 @@ func TestUpgradeCluster(t *testing.T) {
 		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
 	})
 
+	t.Run("after upgrade failed", func(t *testing.T) {
+		cluster1.State = model.ClusterStateUpgradeFailed
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.UpgradeCluster(cluster1.ID, "latest")
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+	})
+
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
 		err = sqlStore.UpdateCluster(cluster1)
@@ -551,6 +570,19 @@ func TestDeleteCluster(t *testing.T) {
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err := client.DeleteCluster(cluster1.ID)
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
+	})
+
+	t.Run("after deletion failed", func(t *testing.T) {
+		cluster1.State = model.ClusterStateDeletionFailed
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 

@@ -1,8 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -11,16 +9,21 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
 )
 
-// outputJSON is a helper method to write the given data as JSON to the given writer.
-//
-// It only logs an error if one occurs, rather than returning, since there is no point in trying
-// to send a new status code back to the client once the body has started sending.
-func outputJSON(c *Context, w io.Writer, data interface{}) {
-	encoder := json.NewEncoder(w)
-	err := encoder.Encode(data)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to encode result")
+// initCluster registers cluster endpoints on the given router.
+func initCluster(apiRouter *mux.Router, context *Context) {
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
+
+	clustersRouter := apiRouter.PathPrefix("/clusters").Subrouter()
+	clustersRouter.Handle("", addContext(handleGetClusters)).Methods("GET")
+	clustersRouter.Handle("", addContext(handleCreateCluster)).Methods("POST")
+
+	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
+	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
+	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
+	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
+	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
 // lockCluster synchronizes access to the given cluster across potentially multiple provisioning
@@ -54,7 +57,6 @@ func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
 			} else if unlocked != true {
 				c.Logger.Warn("failed to release lock for cluster")
 			}
-			c.Logger.Infof("unlocked %v", clusterID)
 		})
 	}
 }
@@ -87,7 +89,13 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	includeDeletedStr := r.URL.Query().Get("include_deleted")
 	includeDeleted := includeDeletedStr == "true"
 
-	clusters, err := c.Store.GetClusters(page, perPage, includeDeleted)
+	filter := &model.ClusterFilter{
+		Page:           page,
+		PerPage:        perPage,
+		IncludeDeleted: includeDeleted,
+	}
+
+	clusters, err := c.Store.GetClusters(filter)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query clusters")
 		w.WriteHeader(http.StatusInternalServerError)

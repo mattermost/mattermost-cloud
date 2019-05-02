@@ -107,3 +107,10 @@ func ClustersFromReader(reader io.Reader) ([]*Cluster, error) {
 
 	return clusters, nil
 }
+
+// ClusterFilter describes the parameters used to constrain a set of clusters.
+type ClusterFilter struct {
+	Page           int
+	PerPage        int
+	IncludeDeleted bool
+}

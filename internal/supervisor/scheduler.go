@@ -1,4 +1,4 @@
-package provisioner
+package supervisor
 
 import (
 	"time"

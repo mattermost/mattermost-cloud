@@ -1,4 +1,4 @@
-package provisioner
+package supervisor
 
 // Doer describes an action to be done.
 type Doer interface {

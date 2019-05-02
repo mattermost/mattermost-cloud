@@ -1,4 +1,4 @@
-package provisioner_test
+package supervisor_test
 
 import (
 	"context"
@@ -6,34 +6,34 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/semaphore"
 )
 
-type mockProvisioner struct {
+type mockClusterProvisioner struct {
 }
 
-func (p *mockProvisioner) CreateCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockProvisioner) UpgradeCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockProvisioner) DeleteCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func TestSupervisor(t *testing.T) {
+func TestClusterSupervisor(t *testing.T) {
 	t.Run("no available workers", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		workers := semaphore.NewWeighted(0)
-		supervisor := provisioner.NewSupervisor(sqlStore, &mockProvisioner{}, workers, logger)
+		supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, workers, logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 	})
@@ -42,10 +42,33 @@ func TestSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		workers := semaphore.NewWeighted(1)
-		supervisor := provisioner.NewSupervisor(sqlStore, &mockProvisioner{}, workers, logger)
+		supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, workers, logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 	})
+
+	expectClusterState := func(t *testing.T, sqlStore *store.SQLStore, cluster *model.Cluster, expectedState string) {
+		t.Helper()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		done := make(chan struct{})
+		for {
+			cluster, err := sqlStore.GetCluster(cluster.ID)
+			require.NoError(t, err)
+			if cluster.State == expectedState {
+				close(done)
+				return
+			}
+
+			select {
+			case <-ctx.Done():
+				t.Fatalf("cluster did not transition to %s within 5 seconds", expectedState)
+				return
+			default:
+			}
+		}
+	}
 
 	t.Run("transition", func(t *testing.T) {
 		testCases := []struct {
@@ -63,7 +86,7 @@ func TestSupervisor(t *testing.T) {
 				logger := testlib.MakeLogger(t)
 				sqlStore := store.MakeTestSQLStore(t, logger)
 				workers := semaphore.NewWeighted(1)
-				supervisor := provisioner.NewSupervisor(sqlStore, &mockProvisioner{}, workers, logger)
+				supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, workers, logger)
 
 				cluster := &model.Cluster{
 					Provider: model.ProviderAWS,
@@ -76,24 +99,7 @@ func TestSupervisor(t *testing.T) {
 				err = supervisor.Do()
 				require.NoError(t, err)
 
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				done := make(chan struct{})
-				for {
-					cluster, err = sqlStore.GetCluster(cluster.ID)
-					require.NoError(t, err)
-					if cluster.State == tc.ExpectedState {
-						close(done)
-						return
-					}
-
-					select {
-					case <-ctx.Done():
-						require.Failf(t, "cluster did not transition to %s within 5 seconds", tc.ExpectedState)
-						return
-					default:
-					}
-				}
+				expectClusterState(t, sqlStore, cluster, tc.ExpectedState)
 			})
 		}
 	})
