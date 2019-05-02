@@ -27,6 +27,10 @@ func (m *mockK8sClient) CreateFromFile(file k8s.ManifestFile) error {
 	return nil
 }
 
+func (m *mockK8sClient) CreateFromFiles(file []k8s.ManifestFile) error {
+	return nil
+}
+
 func (m *mockK8sClient) WaitForPodRunning(string, string, int) (apiv1.Pod, error) {
 	return dummyPod(), nil
 }
