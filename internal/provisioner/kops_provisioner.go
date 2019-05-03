@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 )
@@ -111,16 +113,84 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 600
-	if wait > 0 {
-		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
-		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
-		if err != nil {
-			// Run non-silent validate one more time to log final cluster state
-			// and return original timeout error.
-			kops.ValidateCluster(kopsMetadata.Name, false)
-			return err
-		}
+	logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+	err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
+	if err != nil {
+		// Run non-silent validate one more time to log final cluster state
+		// and return original timeout error.
+		kops.ValidateCluster(kopsMetadata.Name, false)
+		return err
 	}
+
+	logger.WithField("name", kopsMetadata.Name).Info("successfully deployed kubernetes")
+
+	// Begin deploying the mattermost operator.
+	// TODO: remove reliance on kube config being in the default location.
+	k8sClient, err := k8s.New(filepath.Join(os.Getenv("HOME"), ".kube", "config"), logger)
+	if err != nil {
+		return err
+	}
+
+	mysqlOperatorNamespace := "mysql-operator"
+	mattermostOperatorNamespace := "mattermost-operator"
+	namespaces := []string{
+		mysqlOperatorNamespace,
+		mattermostOperatorNamespace,
+	}
+
+	_, err = k8sClient.CreateNamespaces(namespaces)
+	if err != nil {
+		return err
+	}
+
+	// TODO: determine if we want to hard-code the k8s resource objects in code.
+	// For now, we will ingest manifest files to deploy the mattermost operator.
+	files := []k8s.ManifestFile{
+		k8s.ManifestFile{
+			Path:            "operator-manifests/mysql-operator/crds/mysql_crd.yaml",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mysql-operator/service_account.yaml",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mysql-operator/role.yaml",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mysql-operator/role_binding.yaml",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mysql-operator/operator.yaml",
+			DeployNamespace: mysqlOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mattermost-operator/crds/mm_clusterinstallation_crd.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mattermost-operator/service_account.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mattermost-operator/role.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mattermost-operator/role_binding.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, k8s.ManifestFile{
+			Path:            "operator-manifests/mattermost-operator/operator.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		},
+	}
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Rework this as we make the API calls asynchronous.
+	wait = 60
+	logger.Infof("waiting up to %d seconds for mattermost operator to start...", wait)
+	pod, err := k8sClient.WaitForPodRunning("mattermost-operator", "mattermost-operator", wait)
+	if err != nil {
+		return err
+	}
+	logger.Infof("successfully deployed operator %q", pod.Name)
 
 	logger.WithField("name", kopsMetadata.Name).Info("successfully created cluster")
 
