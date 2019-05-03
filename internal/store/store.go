@@ -18,13 +18,12 @@ import (
 
 // SQLStore abstracts access to the database.
 type SQLStore struct {
-	db         *sqlx.DB
-	instanceID string
-	logger     logrus.FieldLogger
+	db     *sqlx.DB
+	logger logrus.FieldLogger
 }
 
 // New constructs a new instance of SQLStore.
-func New(dsn string, instanceID string, logger logrus.FieldLogger) (*SQLStore, error) {
+func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 	url, err := url.Parse(dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse dsn as an url")
@@ -75,7 +74,6 @@ func New(dsn string, instanceID string, logger logrus.FieldLogger) (*SQLStore, e
 
 	return &SQLStore{
 		db,
-		instanceID,
 		logger,
 	}, nil
 }

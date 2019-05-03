@@ -49,11 +49,11 @@ func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error
 }
 
 // LockCluster marks the cluster as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockCluster(clusterID string) (bool, error) {
+func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) {
 	result, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Cluster").
 		SetMap(map[string]interface{}{
-			"LockAcquiredBy": sqlStore.instanceID,
+			"LockAcquiredBy": lockerID,
 			"LockAcquiredAt": GetMillis(),
 		}).
 		Where(sq.Eq{
@@ -78,7 +78,7 @@ func (sqlStore *SQLStore) LockCluster(clusterID string) (bool, error) {
 }
 
 // UnlockCluster releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockCluster(clusterID string, force bool) (bool, error) {
+func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
 	builder := sq.Update("Cluster").
 		SetMap(map[string]interface{}{
 			"LockAcquiredBy": nil,
@@ -94,7 +94,7 @@ func (sqlStore *SQLStore) UnlockCluster(clusterID string, force bool) (bool, err
 	} else {
 		// If not forcing the unlock, require that the current instance held the lock.
 		builder = builder.Where(sq.Eq{
-			"LockAcquiredBy": sqlStore.instanceID,
+			"LockAcquiredBy": lockerID,
 		})
 	}
 

@@ -12,8 +12,8 @@ type clusterStore interface {
 	GetCluster(clusterID string) (*model.Cluster, error)
 	GetUnlockedClusterPendingWork() (*model.Cluster, error)
 	UpdateCluster(cluster *model.Cluster) error
-	LockCluster(clusterID string) (bool, error)
-	UnlockCluster(clusterID string, force bool) (bool, error)
+	LockCluster(clusterID, lockerID string) (bool, error)
+	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
 	DeleteCluster(clusterID string) error
 }
 
@@ -84,11 +84,15 @@ func (s *Supervisor) DoOne() (bool, error) {
 		return false, nil
 	}
 
-	logger := s.logger.WithField("cluster", cluster.ID)
+	workerID := model.NewID()
+	logger := s.logger.WithFields(map[string]interface{}{
+		"cluster": cluster.ID,
+		"worker":  workerID,
+	})
 
 	// Attempt to lock the cluster. There's a chance another provisioning server will find
 	// the same cluster needing work and lock it first.
-	locked, err := s.clusterStore.LockCluster(cluster.ID)
+	locked, err := s.clusterStore.LockCluster(cluster.ID, workerID)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to lock cluster")
 	}
@@ -101,7 +105,7 @@ func (s *Supervisor) DoOne() (bool, error) {
 		defer func() {
 			s.workers.Release(1)
 
-			unlocked, err := s.clusterStore.UnlockCluster(cluster.ID, false)
+			unlocked, err := s.clusterStore.UnlockCluster(cluster.ID, workerID, false)
 			if err != nil {
 				logger.WithError(err).Error("failed to unlock cluster")
 			} else if unlocked != true {

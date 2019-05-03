@@ -35,7 +35,7 @@ func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
 		return nil, http.StatusNotFound, nil
 	}
 
-	locked, err := c.Store.LockCluster(clusterID)
+	locked, err := c.Store.LockCluster(clusterID, c.RequestID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to lock cluster")
 		return nil, http.StatusInternalServerError, nil
@@ -48,7 +48,7 @@ func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
 
 	return cluster, 0, func() {
 		unlockOnce.Do(func() {
-			unlocked, err := c.Store.UnlockCluster(cluster.ID, false)
+			unlocked, err := c.Store.UnlockCluster(cluster.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock cluster")
 			} else if unlocked != true {

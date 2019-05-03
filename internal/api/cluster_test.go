@@ -355,11 +355,13 @@ func TestRetryCreateCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		locked, err := sqlStore.LockCluster(cluster1.ID)
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
 		require.NoError(t, err)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, false)
+			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
 			require.NoError(t, err)
 			require.True(t, unlocked)
 		}()
@@ -436,11 +438,13 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		locked, err := sqlStore.LockCluster(cluster1.ID)
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
 		require.NoError(t, err)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, false)
+			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
 			require.NoError(t, err)
 			require.True(t, unlocked)
 		}()
@@ -526,11 +530,13 @@ func TestDeleteCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		locked, err := sqlStore.LockCluster(cluster1.ID)
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
 		require.NoError(t, err)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, false)
+			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
 			require.NoError(t, err)
 			require.True(t, unlocked)
 

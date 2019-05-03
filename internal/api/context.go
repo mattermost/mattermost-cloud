@@ -17,8 +17,8 @@ type Store interface {
 	GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error)
 	GetUnlockedClusterPendingWork() (*model.Cluster, error)
 	UpdateCluster(cluster *model.Cluster) error
-	LockCluster(clusterID string) (bool, error)
-	UnlockCluster(clusterID string, force bool) (bool, error)
+	LockCluster(clusterID, lockerID string) (bool, error)
+	UnlockCluster(clusterID, lockerID string, force bool) (bool, error)
 	DeleteCluster(clusterID string) error
 }
 
@@ -28,6 +28,7 @@ type Store interface {
 type Context struct {
 	Store      Store
 	Supervisor Supervisor
+	RequestID  string
 	Logger     logrus.FieldLogger
 }
 

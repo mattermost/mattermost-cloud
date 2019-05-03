@@ -251,7 +251,9 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, creationRequestedCluster, cluster)
 
-	locked, err := sqlStore.LockCluster(cluster.ID)
+	lockerID := model.NewID()
+
+	locked, err := sqlStore.LockCluster(cluster.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
@@ -259,7 +261,7 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, deletionRequestedCluster, cluster)
 
-	locked, err = sqlStore.LockCluster(cluster.ID)
+	locked, err = sqlStore.LockCluster(cluster.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
@@ -267,7 +269,7 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, upgradeRequestedCluster, cluster)
 
-	locked, err = sqlStore.LockCluster(cluster.ID)
+	locked, err = sqlStore.LockCluster(cluster.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
@@ -279,6 +281,9 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 func TestLockCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+
+	lockerID1 := model.NewID()
+	lockerID2 := model.NewID()
 
 	cluster1 := &model.Cluster{}
 	err := sqlStore.CreateCluster(cluster1)
@@ -301,35 +306,43 @@ func TestLockCluster(t *testing.T) {
 	})
 
 	t.Run("lock an unlocked cluster", func(t *testing.T) {
-		locked, err := sqlStore.LockCluster(cluster1.ID)
+		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID1)
 		require.NoError(t, err)
 		require.True(t, locked)
 
 		cluster1, err = sqlStore.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.NotEqual(t, int64(0), cluster1.LockAcquiredAt)
-		require.Equal(t, sqlStore.instanceID, *cluster1.LockAcquiredBy)
+		require.Equal(t, lockerID1, *cluster1.LockAcquiredBy)
 	})
 
 	t.Run("lock a previously locked cluster", func(t *testing.T) {
-		locked, err := sqlStore.LockCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.False(t, locked)
+		t.Run("by the same locker", func(t *testing.T) {
+			locked, err := sqlStore.LockCluster(cluster1.ID, lockerID1)
+			require.NoError(t, err)
+			require.False(t, locked)
+		})
+
+		t.Run("by a different locker", func(t *testing.T) {
+			locked, err := sqlStore.LockCluster(cluster1.ID, lockerID2)
+			require.NoError(t, err)
+			require.False(t, locked)
+		})
 	})
 
-	t.Run("lock a second cluster", func(t *testing.T) {
-		locked, err := sqlStore.LockCluster(cluster2.ID)
+	t.Run("lock a second cluster from a different locker", func(t *testing.T) {
+		locked, err := sqlStore.LockCluster(cluster2.ID, lockerID2)
 		require.NoError(t, err)
 		require.True(t, locked)
 
 		cluster2, err = sqlStore.GetCluster(cluster2.ID)
 		require.NoError(t, err)
 		require.NotEqual(t, int64(0), cluster2.LockAcquiredAt)
-		require.Equal(t, sqlStore.instanceID, *cluster2.LockAcquiredBy)
+		require.Equal(t, lockerID2, *cluster2.LockAcquiredBy)
 	})
 
 	t.Run("unlock the first cluster", func(t *testing.T) {
-		unlocked, err := sqlStore.UnlockCluster(cluster1.ID, false)
+		unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID1, false)
 		require.NoError(t, err)
 		require.True(t, unlocked)
 
@@ -340,7 +353,7 @@ func TestLockCluster(t *testing.T) {
 	})
 
 	t.Run("unlock the first cluster again", func(t *testing.T) {
-		unlocked, err := sqlStore.UnlockCluster(cluster1.ID, false)
+		unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID1, false)
 		require.NoError(t, err)
 		require.False(t, unlocked)
 
@@ -351,7 +364,7 @@ func TestLockCluster(t *testing.T) {
 	})
 
 	t.Run("force unlock the first cluster again", func(t *testing.T) {
-		unlocked, err := sqlStore.UnlockCluster(cluster1.ID, true)
+		unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID1, true)
 		require.NoError(t, err)
 		require.False(t, unlocked)
 
@@ -361,31 +374,20 @@ func TestLockCluster(t *testing.T) {
 		require.Nil(t, cluster1.LockAcquiredBy)
 	})
 
-	t.Run("unlock the second cluster from a difference instance", func(t *testing.T) {
-		originalInstanceID := sqlStore.instanceID
-		defer func() {
-			sqlStore.instanceID = originalInstanceID
-		}()
-		sqlStore.instanceID = "different"
-
-		unlocked, err := sqlStore.UnlockCluster(cluster2.ID, false)
+	t.Run("unlock the second cluster from the wrong locker", func(t *testing.T) {
+		unlocked, err := sqlStore.UnlockCluster(cluster2.ID, lockerID1, false)
 		require.NoError(t, err)
 		require.False(t, unlocked)
 
 		cluster2, err = sqlStore.GetCluster(cluster2.ID)
 		require.NoError(t, err)
 		require.NotEqual(t, int64(0), cluster2.LockAcquiredAt)
-		require.Equal(t, originalInstanceID, *cluster2.LockAcquiredBy)
+		require.Equal(t, lockerID2, *cluster2.LockAcquiredBy)
 	})
 
-	t.Run("force unlock the second cluster from a difference instance", func(t *testing.T) {
-		originalInstanceID := sqlStore.instanceID
-		defer func() {
-			sqlStore.instanceID = originalInstanceID
-		}()
-		sqlStore.instanceID = "different"
+	t.Run("force unlock the second cluster the wrong locker", func(t *testing.T) {
 
-		unlocked, err := sqlStore.UnlockCluster(cluster2.ID, true)
+		unlocked, err := sqlStore.UnlockCluster(cluster2.ID, lockerID1, true)
 		require.NoError(t, err)
 		require.True(t, unlocked)
 
