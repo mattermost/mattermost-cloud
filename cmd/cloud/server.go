@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/pkg/errors"
@@ -20,7 +21,11 @@ import (
 // clusterRootDir is the local directory that contains cluster configuration.
 const clusterRootDir = "clusters"
 
+var instanceID string
+
 func init() {
+	instanceID = model.NewID()
+
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().Int("jobs", 1, "The maximum number of background jobs to allow.")
@@ -32,6 +37,8 @@ var serverCmd = &cobra.Command{
 	Short: "Run the provisioning server.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
+
+		logger := logger.WithField("instance", instanceID)
 
 		sqlStore, err := sqlStore(command)
 		if err != nil {
