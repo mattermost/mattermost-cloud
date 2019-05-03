@@ -15,8 +15,8 @@ type Scheduler struct {
 
 // NewScheduler creates a new scheduler.
 //
-// If the period is zero, the doer is only run on demand. Otherwise, the period specifies how
-// long to wait after its last successful execution.
+// If the period is zero, the scheduler is never run, even if manually run. Otherwise, the period
+// specifies how long to wait after its last successful execution.
 func NewScheduler(doer Doer, period time.Duration) *Scheduler {
 	s := &Scheduler{
 		doer:   doer,
@@ -33,8 +33,9 @@ func NewScheduler(doer Doer, period time.Duration) *Scheduler {
 
 // Do requests an execution of the scheduled doer.
 //
-// If already running, the doer will be run again when done. Multiple calls to Notify while the
-// doer is running will only trigger a single additional execution.
+// The scheduler will never be run if the period is 0. If already running, the doer will be run
+// again when done. Multiple calls to Notify while the doer is running will only trigger a single
+// additional execution. Do never blocks.
 func (s *Scheduler) Do() error {
 	select {
 	case s.notify <- true:
@@ -47,16 +48,18 @@ func (s *Scheduler) Do() error {
 // run is the main thread of the scheduler and responsible for triggering the doer as required.
 func (s *Scheduler) run() {
 	for {
-		// Enabling polling only if a non-zero interval was configured.
+		// Enabling doing only if a non-zero interval was configured.
 		var poll <-chan time.Time
+		var notify <-chan bool
 		if s.period > 0 {
 			poll = time.After(s.period)
+			notify = s.notify
 		}
 
 		select {
 		case <-poll:
 			_ = s.doer.Do()
-		case <-s.notify:
+		case <-notify:
 			_ = s.doer.Do()
 		case <-s.stop:
 			close(s.done)

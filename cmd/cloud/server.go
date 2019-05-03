@@ -80,8 +80,11 @@ var serverCmd = &cobra.Command{
 		// scheduler to trigger it periodically in addition to being poked by the API
 		// layer.
 		poll, _ := command.Flags().GetInt("poll")
-		if poll == 0 {
-			logger.Info("Switching scheduler to manual mode only")
+		if jobs == 0 || poll == 0 {
+			logger.WithFields(map[string]interface{}{
+				"poll": poll,
+				"jobs": jobs,
+			}).Info("Scheduler is disabled")
 		}
 		supervisor := provisioner.NewScheduler(
 			provisioner.MultiDoer{

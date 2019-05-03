@@ -9,7 +9,7 @@ import (
 )
 
 func TestScheduler(t *testing.T) {
-	t.Run("manual only", func(t *testing.T) {
+	t.Run("disabled", func(t *testing.T) {
 		t.Parallel()
 
 		doer := &testDoer{
@@ -22,8 +22,8 @@ func TestScheduler(t *testing.T) {
 
 		select {
 		case <-doer.calls:
-		case <-time.After(5 * time.Second):
-			assert.Fail(t, "doer not invoked within 5 seconds")
+			assert.Fail(t, "doer should not have been invoked")
+		case <-time.After(500 * time.Millisecond):
 		}
 	})
 
