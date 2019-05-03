@@ -23,7 +23,7 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 		arg("node-size", clusterSize.NodeSize),
 		arg("master-size", clusterSize.MasterSize),
 		arg("target", "terraform"),
-		arg("out", c.outputDir),
+		arg("out", c.GetOutputDirectory()),
 		arg("output", "json"),
 	)
 	if err != nil {
@@ -58,7 +58,7 @@ func (c *Cmd) UpdateCluster(name string) error {
 		arg("state", "s3://", c.s3StateStore),
 		"--yes",
 		arg("target", "terraform"),
-		arg("out", c.outputDir),
+		arg("out", c.GetOutputDirectory()),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops update cluster")

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -125,8 +124,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	logger.WithField("name", kopsMetadata.Name).Info("successfully deployed kubernetes")
 
 	// Begin deploying the mattermost operator.
-	// TODO: remove reliance on kube config being in the default location.
-	k8sClient, err := k8s.New(filepath.Join(os.Getenv("HOME"), ".kube", "config"), logger)
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}

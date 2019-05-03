@@ -3,6 +3,7 @@ package kops
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -61,12 +62,20 @@ func outputLogger(line string, logger log.FieldLogger) {
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.kopsPath, arg...)
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", c.GetKubeConfigPath()),
+	)
 
 	return exechelper.Run(cmd, c.logger, outputLogger)
 }
 
 func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.kopsPath, arg...)
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KUBECONFIG=%s", c.GetKubeConfigPath()),
+	)
 
 	return exechelper.Run(cmd, silentLogger(), func(string, log.FieldLogger) {})
 }
