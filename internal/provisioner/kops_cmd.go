@@ -18,5 +18,6 @@ type KopsCmd interface {
 	WaitForKubernetesReadiness(dns string, timeout int) error
 	ValidateCluster(name string, silent bool) error
 	GetOutputDirectory() string
+	GetKubeConfigPath() string
 	Close() error
 }

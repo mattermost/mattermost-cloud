@@ -2,12 +2,13 @@ package api_test
 
 import (
 	"io/ioutil"
+	"path"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 )
 
 type mockKopsCmd struct {
-	outputDirectory string
+	tempDirectory string
 }
 
 func newMockKopsCmd() (*mockKopsCmd, error) {
@@ -17,7 +18,7 @@ func newMockKopsCmd() (*mockKopsCmd, error) {
 	}
 
 	return &mockKopsCmd{
-		outputDirectory: dir,
+		tempDirectory: dir,
 	}, nil
 }
 
@@ -54,7 +55,11 @@ func (m *mockKopsCmd) ValidateCluster(string, bool) error {
 }
 
 func (m *mockKopsCmd) GetOutputDirectory() string {
-	return m.outputDirectory
+	return m.tempDirectory
+}
+
+func (m *mockKopsCmd) GetKubeConfigPath() string {
+	return path.Join(m.tempDirectory, "kubeconfig")
 }
 
 func (m *mockKopsCmd) Close() error {
