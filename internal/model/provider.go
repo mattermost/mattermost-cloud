@@ -8,8 +8,6 @@ import (
 const (
 	// ProviderAWS is the cloud provider AWS.
 	ProviderAWS = "aws"
-	// ProviderAzure is the cloud provider Azure.
-	ProviderAzure = "azure"
 )
 
 // CheckProvider normalizes the given provider, returning an error if invalid.
