@@ -87,7 +87,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool),
 		}
-		scheduler := supervisor.NewScheduler(doer, 0*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 30*time.Second)
 		defer scheduler.Close()
 
 		scheduler.Do()
