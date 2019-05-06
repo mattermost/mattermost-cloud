@@ -206,6 +206,13 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	version := vars["version"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
+	// TODO: Support something other than "latest".
+	if version != "latest" {
+		c.Logger.Warnf("unsupported kubernetes version %s", version)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	cluster, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
@@ -219,13 +226,6 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	case model.ClusterStateUpgradeFailed:
 	default:
 		c.Logger.Warnf("unable to upgrade cluster while in state %s", cluster.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// TODO: Support something other than "latest".
-	if version != "latest" {
-		c.Logger.Warnf("unsupported kubernetes version %s", version)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
