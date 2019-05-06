@@ -6,6 +6,9 @@ import (
 )
 
 // CreateNamespaces creates kubernetes namespaces.
+//
+// Any errors will be returned immediately and the remaining namespaces will be
+// skipped.
 func (kc *KubeClient) CreateNamespaces(namespaceNames []string) ([]*corev1.Namespace, error) {
 	namespaces := []*corev1.Namespace{}
 	for _, namespaceName := range namespaceNames {
@@ -20,27 +23,25 @@ func (kc *KubeClient) CreateNamespaces(namespaceNames []string) ([]*corev1.Names
 }
 
 // CreateNamespace creates a kubernetes namespace.
-func (kc *KubeClient) CreateNamespace(namespace string) (*corev1.Namespace, error) {
-	clientset, err := kc.getKubeConfigClientset()
-	if err != nil {
-		return &corev1.Namespace{}, err
-	}
-
+func (kc *KubeClient) CreateNamespace(namespaceName string) (*corev1.Namespace, error) {
 	// Check if namespace exists first.
-	ns, err := kc.GetNamespace(namespace)
+	ns, err := kc.Clientset.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
 	if err == nil {
 		return ns, nil
 	}
 
-	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
-	return clientset.CoreV1().Namespaces().Create(nsSpec)
+	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
+	return kc.Clientset.CoreV1().Namespaces().Create(nsSpec)
 }
 
 // GetNamespaces returns a list of kubernetes namespace objects if they exist.
+//
+// Any errors will be returned immediately and the remaining namespaces will be
+// skipped.
 func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespace, error) {
 	namespaces := []*corev1.Namespace{}
 	for _, namespaceName := range namespaceNames {
-		namespace, err := kc.GetNamespace(namespaceName)
+		namespace, err := kc.Clientset.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
 		if err != nil {
 			return namespaces, err
 		}
@@ -50,12 +51,17 @@ func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespac
 	return namespaces, nil
 }
 
-// GetNamespace returns a given kubernetes namespace object if it exists.
-func (kc *KubeClient) GetNamespace(namespaceName string) (*corev1.Namespace, error) {
-	clientset, err := kc.getKubeConfigClientset()
-	if err != nil {
-		return &corev1.Namespace{}, err
+// DeleteNamespaces deletes kubernetes namespaces.
+//
+// Any errors will be returned immediately and the remaining namespaces will be
+// skipped.
+func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
+	for _, namespaceName := range namespaceNames {
+		err := kc.Clientset.CoreV1().Namespaces().Delete(namespaceName, &metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
 	}
 
-	return clientset.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+	return nil
 }
