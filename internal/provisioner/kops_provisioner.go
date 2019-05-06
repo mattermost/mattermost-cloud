@@ -218,11 +218,12 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	if err != nil {
 		return err
 	}
-	out, err := terraformClient.Output("cluster_name")
+	out, ok, err := terraformClient.Output("cluster_name")
 	if err != nil {
 		return err
-	}
-	if out != kopsMetadata.Name {
+	} else if !ok {
+		logger.Info("no cluster_name in terraform config, assuming partially initialized")
+	} else if out != kopsMetadata.Name {
 		return fmt.Errorf("terraform cluster_name (%s) does not match kops name from provided ID (%s)", out, kopsMetadata.Name)
 	}
 
@@ -287,7 +288,10 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 
 	// Validate the provided cluster ID before we alter state in any way.
 	_, err := os.Stat(outputDir)
-	if err != nil {
+	if os.IsNotExist(err) {
+		logger.Info("no resources found, assuming cluster was never created")
+		return nil
+	} else if err != nil {
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
 
@@ -298,11 +302,12 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-	out, err := terraformClient.Output("cluster_name")
-	if err != nil {
+
+	if out, ok, err := terraformClient.Output("cluster_name"); err != nil {
 		return err
-	}
-	if out != kopsMetadata.Name {
+	} else if !ok {
+		logger.Info("no cluster_name in terraform config, skipping check")
+	} else if out != kopsMetadata.Name {
 		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsMetadata.Name)
 	}
 
@@ -311,20 +316,26 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
-	_, err = kops.GetCluster(kopsMetadata.Name)
-	if err != nil {
-		return err
+
+	if kopsMetadata.Name != "" {
+		_, err = kops.GetCluster(kopsMetadata.Name)
+		if err != nil {
+			return err
+		}
 	}
 
 	logger.Info("deleting cluster")
+
 	err = terraformClient.Destroy()
 	if err != nil {
 		return err
 	}
 
-	err = kops.DeleteCluster(kopsMetadata.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete cluster")
+	if kopsMetadata.Name != "" {
+		err = kops.DeleteCluster(kopsMetadata.Name)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete cluster")
+		}
 	}
 
 	err = os.RemoveAll(outputDir)

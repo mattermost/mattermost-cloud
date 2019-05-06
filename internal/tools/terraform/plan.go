@@ -66,24 +66,26 @@ func (c *Cmd) Destroy() error {
 	return nil
 }
 
-// Output invokes terraform output and returns the value.
-func (c *Cmd) Output(variable string) (string, error) {
+// Output invokes terraform output and returns the named value, true if it exists, and an empty
+// string and false if it does not.
+func (c *Cmd) Output(variable string) (string, bool, error) {
 	stdout, _, err := c.run(
 		"output",
 		"-json",
-		variable,
 	)
 	if err != nil {
-		return string(stdout), errors.Wrap(err, "failed to invoke terraform output")
+		return string(stdout), false, errors.Wrap(err, "failed to invoke terraform output")
 	}
 
-	var output terraformOutput
-	err = json.Unmarshal(stdout, &output)
+	var outputs map[string]terraformOutput
+	err = json.Unmarshal(stdout, &outputs)
 	if err != nil {
-		return string(stdout), errors.Wrap(err, "failed to parse terraform output")
+		return string(stdout), false, errors.Wrap(err, "failed to parse terraform output")
 	}
 
-	return fmt.Sprintf("%s", output.Value), nil
+	value, ok := outputs[variable]
+
+	return fmt.Sprintf("%s", value.Value), ok, nil
 }
 
 // Version invokes terraform version and returns the value.

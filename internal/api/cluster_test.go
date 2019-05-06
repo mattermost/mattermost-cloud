@@ -568,51 +568,30 @@ func TestDeleteCluster(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
-	t.Run("while stable", func(t *testing.T) {
-		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
-		require.NoError(t, err)
+	t.Run("from a valid, unlocked state", func(t *testing.T) {
+		states := []string{
+			model.ClusterStateStable,
+			model.ClusterStateCreationRequested,
+			model.ClusterStateCreationFailed,
+			model.ClusterStateUpgradeRequested,
+			model.ClusterStateUpgradeFailed,
+			model.ClusterStateDeletionRequested,
+			model.ClusterStateDeletionFailed,
+		}
 
-		err := client.DeleteCluster(cluster1.ID)
-		require.NoError(t, err)
+		for _, state := range states {
+			t.Run(state, func(t *testing.T) {
+				cluster1.State = state
+				err = sqlStore.UpdateCluster(cluster1)
+				require.NoError(t, err)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
-	})
+				err := client.DeleteCluster(cluster1.ID)
+				require.NoError(t, err)
 
-	t.Run("after deletion failed", func(t *testing.T) {
-		cluster1.State = model.ClusterStateDeletionFailed
-		err = sqlStore.UpdateCluster(cluster1)
-		require.NoError(t, err)
-
-		err := client.DeleteCluster(cluster1.ID)
-		require.NoError(t, err)
-
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
-	})
-
-	t.Run("while deleting", func(t *testing.T) {
-		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1)
-		require.NoError(t, err)
-
-		err := client.DeleteCluster(cluster1.ID)
-		require.NoError(t, err)
-
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
-	})
-
-	t.Run("while creating", func(t *testing.T) {
-		cluster1.State = model.ClusterStateCreationRequested
-		err = sqlStore.UpdateCluster(cluster1)
-		require.NoError(t, err)
-
-		err := client.DeleteCluster(cluster1.ID)
-		require.EqualError(t, err, "failed with status code 400")
+				cluster1, err = client.GetCluster(cluster1.ID)
+				require.NoError(t, err)
+				require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
+			})
+		}
 	})
 }
