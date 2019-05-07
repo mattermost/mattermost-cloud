@@ -55,7 +55,7 @@ func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock cluster")
 			} else if unlocked != true {
-				c.Logger.Warn("failed to release lock for cluster")
+				c.Logger.Error("failed to release lock for cluster")
 			}
 		})
 	}
