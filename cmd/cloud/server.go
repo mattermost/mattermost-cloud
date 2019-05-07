@@ -66,7 +66,7 @@ var serverCmd = &cobra.Command{
 		jobs, _ := command.Flags().GetInt("jobs")
 		workers := semaphore.NewWeighted(int64(jobs))
 		defer func() {
-			if err := workers.Acquire(context.TODO(), int64(jobs)); err != nil {
+			if err := workers.Acquire(context.Background(), int64(jobs)); err != nil {
 				logger.WithError(err).Error("failed to shut down worker pool")
 			}
 		}()
