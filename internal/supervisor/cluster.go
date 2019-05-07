@@ -108,7 +108,8 @@ func (s *ClusterSupervisor) DoOne() (bool, error) {
 			logger.WithError(err).Error("transition cluster failed")
 		}
 
-		// Transition the state even if an error occurred.
+		// Transition the state even if an error occurred, because failure is represented
+		// in the states.
 		if newState != "" {
 			cluster, err := s.store.GetCluster(cluster.ID)
 			if err != nil {
