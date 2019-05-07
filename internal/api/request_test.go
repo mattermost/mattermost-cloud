@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,20 +32,28 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 		require.Nil(t, clusterRequest)
 	})
 
+	t.Run("unsupported provider", func(t *testing.T) {
+		clusterRequest, err := newCreateClusterRequestFromReader(bytes.NewReader([]byte(
+			`{"Provider": "azure", "Size": "SizeAlef1000", "Zones":["zone1", "zone2"]}`,
+		)))
+		require.EqualError(t, err, "unsupported provider azure")
+		require.Nil(t, clusterRequest)
+	})
+
 	t.Run("partial request", func(t *testing.T) {
 		clusterRequest, err := newCreateClusterRequestFromReader(bytes.NewReader([]byte(
 			`{"Size": "SizeAlef1000"}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &CreateClusterRequest{Provider: "aws", Size: "SizeAlef1000", Zones: []string{"us-east-1a"}}, clusterRequest)
+		require.Equal(t, &CreateClusterRequest{Provider: model.ProviderAWS, Size: model.SizeAlef1000, Zones: []string{"us-east-1a"}}, clusterRequest)
 	})
 
 	t.Run("full request", func(t *testing.T) {
 		clusterRequest, err := newCreateClusterRequestFromReader(bytes.NewReader([]byte(
-			`{"Provider": "azure", "Size": "SizeAlef1000", "Zones":["zone1", "zone2"]}`,
+			`{"Provider": "aws", "Size": "SizeAlef1000", "Zones":["zone1", "zone2"]}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &CreateClusterRequest{Provider: "azure", Size: "SizeAlef1000", Zones: []string{"zone1", "zone2"}}, clusterRequest)
+		require.Equal(t, &CreateClusterRequest{Provider: model.ProviderAWS, Size: model.SizeAlef1000, Zones: []string{"zone1", "zone2"}}, clusterRequest)
 	})
 }
 

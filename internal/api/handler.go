@@ -1,6 +1,10 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/mattermost/mattermost-cloud/internal/model"
+)
 
 type contextHandlerFunc func(c *Context, w http.ResponseWriter, r *http.Request)
 
@@ -11,7 +15,11 @@ type contextHandler struct {
 
 func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context := h.context.Clone()
-	context.Logger = context.Logger.WithField("path", r.URL.Path)
+	context.RequestID = model.NewID()
+	context.Logger = context.Logger.WithFields(map[string]interface{}{
+		"path":    r.URL.Path,
+		"request": context.RequestID,
+	})
 
 	h.handler(context, w, r)
 }

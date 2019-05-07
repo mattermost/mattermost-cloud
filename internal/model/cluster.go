@@ -7,6 +7,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// ClusterStateCreationRequested is a cluster in the process of being created.
+	ClusterStateCreationRequested = "creation-requested"
+	// ClusterStateCreationFailed is a cluster that failed creation.
+	ClusterStateCreationFailed = "creation-failed"
+	// ClusterStateDeletionRequested is a cluster in the process of being deleted.
+	ClusterStateDeletionRequested = "deletion-requested"
+	// ClusterStateDeletionFailed is a cluster that failed deletion.
+	ClusterStateDeletionFailed = "deletion-failed"
+	// ClusterStateDeleted is a cluster that has been deleted
+	ClusterStateDeleted = "deleted"
+	// ClusterStateUpgradeRequested is a cluster in the process of upgrading.
+	ClusterStateUpgradeRequested = "upgrade-requested"
+	// ClusterStateUpgradeFailed is a cluster that failed to upgrade.
+	ClusterStateUpgradeFailed = "upgrade-failed"
+	// ClusterStateStable is a cluster in a stable state and undergoing no changes.
+	ClusterStateStable = "stable"
+)
+
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
 	ID                  string
@@ -15,6 +34,8 @@ type Cluster struct {
 	ProviderMetadata    []byte `json:",omitempty"`
 	ProvisionerMetadata []byte `json:",omitempty"`
 	AllowInstallations  bool
+	Size                string
+	State               string
 	CreateAt            int64
 	DeleteAt            int64
 	LockAcquiredBy      *string
@@ -85,4 +106,11 @@ func ClustersFromReader(reader io.Reader) ([]*Cluster, error) {
 	}
 
 	return clusters, nil
+}
+
+// ClusterFilter describes the parameters used to constrain a set of clusters.
+type ClusterFilter struct {
+	Page           int
+	PerPage        int
+	IncludeDeleted bool
 }

@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -32,10 +33,13 @@ func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 
 	switch strings.ToLower(url.Scheme) {
 	case "sqlite", "sqlite3":
-		db, err = sqlx.Connect("sqlite3", url.Host)
+		db, err = sqlx.Connect("sqlite3", fmt.Sprintf("%s?%s", url.Host, url.RawQuery))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to connect to sqlite database")
 		}
+
+		// Serialize all access to the database. Sqlite3 doesn't allow multiple writers.
+		db.SetMaxOpenConns(1)
 
 		// Override the default mapper to use the field names "as-is"
 		db.MapperFunc(func(s string) string { return s })
@@ -143,6 +147,7 @@ func (sqlStore *SQLStore) selectBuilder(q sqlx.Queryer, dest interface{}, b buil
 // It allows the use of *sqlx.Db and *sqlx.Tx.
 type execer interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
+	DriverName() string
 }
 
 // exec executes the given query using positional arguments, automatically rebinding for the db.

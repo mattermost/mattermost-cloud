@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 )
 
@@ -24,14 +25,22 @@ func newCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 	}
 
 	if createClusterRequest.Provider == "" {
-		createClusterRequest.Provider = "aws"
+		createClusterRequest.Provider = model.ProviderAWS
 	}
 	if createClusterRequest.Size == "" {
-		createClusterRequest.Size = "SizeAlef500"
+		createClusterRequest.Size = model.SizeAlef500
 	}
 	if len(createClusterRequest.Zones) == 0 {
 		createClusterRequest.Zones = []string{"us-east-1a"}
 	}
+
+	if createClusterRequest.Provider != model.ProviderAWS {
+		return nil, errors.Errorf("unsupported provider %s", createClusterRequest.Provider)
+	}
+	if !model.IsSupportedSize(createClusterRequest.Size) {
+		return nil, errors.Errorf("unsupported size %s", createClusterRequest.Size)
+	}
+	// TODO: check zones?
 
 	return &createClusterRequest, nil
 }

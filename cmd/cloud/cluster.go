@@ -18,7 +18,6 @@ func init() {
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
-	clusterCreateCmd.MarkFlagRequired("size")
 
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
 	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target.")
@@ -75,8 +74,7 @@ var clusterCreateCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to create cluster")
 		}
 
-		// TODO --wait for the cluster to be ready. For now, this is done synchronously
-		// in CreateCluster with a hard-coded interval.
+		// TODO --wait for the cluster to be ready.
 		// wait, _ := command.Flags().GetInt("wait")
 
 		err = printJSON(cluster)

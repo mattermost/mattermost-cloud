@@ -8,12 +8,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+var clusterSelect sq.SelectBuilder
+
+func init() {
+	clusterSelect = sq.
+		Select(
+			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
+			"Size", "State", "AllowInstallations", "CreateAt", "DeleteAt",
+			"LockAcquiredBy", "LockAcquiredAt",
+		).
+		From("Cluster")
+}
+
 // GetCluster fetches the given cluster by id.
 func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 	var cluster model.Cluster
-	err := sqlStore.getBuilder(sqlStore.db, &cluster,
-		sq.Select("*").From("Cluster").Where("ID = ?", id),
-	)
+	err := sqlStore.getBuilder(sqlStore.db, &cluster, clusterSelect.Where("ID = ?", id))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
@@ -23,16 +33,51 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 	return &cluster, nil
 }
 
-// GetClusters fetches the given page of created clusters. The first page is 0.
-func (sqlStore *SQLStore) GetClusters(page, perPage int, includeDeleted bool) ([]*model.Cluster, error) {
-	builder := sq.
-		Select("*").
-		From("Cluster").
-		OrderBy("CreateAt ASC").
-		Limit(uint64(perPage)).
-		Offset(uint64(page * perPage))
+// GetUnlockedClusterPendingWork returns an unlocked cluster in a pending state.
+func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error) {
+	var cluster model.Cluster
+	err := sqlStore.getBuilder(sqlStore.db, &cluster, clusterSelect.
+		Where(sq.Eq{
+			"State": []string{
+				model.ClusterStateCreationRequested,
+				model.ClusterStateUpgradeRequested,
+				model.ClusterStateDeletionRequested,
+			},
+		}).
+		Where("LockAcquiredAt = 0").
+		OrderBy("State ASC"),
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "failed to get cluster pending work")
+	}
 
-	if !includeDeleted {
+	return &cluster, nil
+}
+
+// LockCluster marks the cluster as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) {
+	return sqlStore.lockRow("Cluster", clusterID, lockerID)
+}
+
+// UnlockCluster releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRow("Cluster", clusterID, lockerID, force)
+}
+
+// GetClusters fetches the given page of created clusters. The first page is 0.
+func (sqlStore *SQLStore) GetClusters(filter *model.ClusterFilter) ([]*model.Cluster, error) {
+	builder := clusterSelect.
+		OrderBy("CreateAt ASC")
+
+	if filter.PerPage != model.AllPerPage {
+		builder = builder.
+			Limit(uint64(filter.PerPage)).
+			Offset(uint64(filter.Page * filter.PerPage))
+	}
+
+	if !filter.IncludeDeleted {
 		builder = builder.Where("DeleteAt = 0")
 	}
 
@@ -52,14 +97,20 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("Cluster").
-		Columns(
-			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
-			"AllowInstallations", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
-		).
-		Values(
-			cluster.ID, cluster.Provider, cluster.Provisioner, cluster.ProviderMetadata,
-			cluster.ProvisionerMetadata, cluster.AllowInstallations, cluster.CreateAt, 0, nil, 0,
-		),
+		SetMap(map[string]interface{}{
+			"ID":                  cluster.ID,
+			"Provider":            cluster.Provider,
+			"Provisioner":         cluster.Provisioner,
+			"ProviderMetadata":    cluster.ProviderMetadata,
+			"ProvisionerMetadata": cluster.ProvisionerMetadata,
+			"Size":                cluster.Size,
+			"State":               cluster.State,
+			"AllowInstallations":  cluster.AllowInstallations,
+			"CreateAt":            cluster.CreateAt,
+			"DeleteAt":            0,
+			"LockAcquiredBy":      nil,
+			"LockAcquiredAt":      0,
+		}),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster")
@@ -77,6 +128,8 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 			"Provisioner":         cluster.Provisioner,
 			"ProviderMetadata":    cluster.ProviderMetadata,
 			"ProvisionerMetadata": cluster.ProvisionerMetadata,
+			"Size":                cluster.Size,
+			"State":               cluster.State,
 			"AllowInstallations":  cluster.AllowInstallations,
 		}).
 		Where("ID = ?", cluster.ID),
@@ -95,7 +148,7 @@ func (sqlStore *SQLStore) DeleteCluster(id string) error {
 		Update("Cluster").
 		Set("DeleteAt", GetMillis()).
 		Where("ID = ?", id).
-		Where("DeleteAt = ?", 0),
+		Where("DeleteAt = 0"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark cluster as deleted")

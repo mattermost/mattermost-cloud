@@ -10,14 +10,17 @@ type KopsMetadata struct {
 }
 
 // NewKopsMetadata creates an instance of KopsMetadata given the raw provisioner metadata.
-func NewKopsMetadata(provisionerMetadata []byte) *KopsMetadata {
+func NewKopsMetadata(provisionerMetadata []byte) (*KopsMetadata, error) {
 	kopsMetadata := KopsMetadata{}
 
 	if provisionerMetadata == nil {
-		return &kopsMetadata
+		return &kopsMetadata, nil
 	}
 
-	_ = json.Unmarshal(provisionerMetadata, &kopsMetadata)
+	err := json.Unmarshal(provisionerMetadata, &kopsMetadata)
+	if err != nil {
+		return nil, err
+	}
 
-	return &kopsMetadata
+	return &kopsMetadata, nil
 }

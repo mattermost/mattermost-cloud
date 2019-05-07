@@ -42,7 +42,7 @@ func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]by
 	runID := model.NewID()
 
 	logger = logger.WithFields(log.Fields{
-		"runID": runID,
+		"run": runID,
 	})
 
 	logger.WithFields(log.Fields{

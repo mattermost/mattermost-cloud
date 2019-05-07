@@ -51,13 +51,18 @@ func (c *Client) doPost(u string, request interface{}) (*http.Response, error) {
 	return c.httpClient.Post(u, "application/json", bytes.NewReader(requestBytes))
 }
 
-func (c *Client) doPut(u string) (*http.Response, error) {
-	request, err := http.NewRequest(http.MethodPut, u, nil)
+func (c *Client) doPut(u string, request interface{}) (*http.Response, error) {
+	requestBytes, err := json.Marshal(request)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal request")
+	}
+
+	httpRequest, err := http.NewRequest(http.MethodPut, u, bytes.NewReader(requestBytes))
 	if err != nil {
 		return nil, err
 	}
 
-	return c.httpClient.Do(request)
+	return c.httpClient.Do(httpRequest)
 }
 
 func (c *Client) doDelete(u string) (*http.Response, error) {
@@ -78,11 +83,28 @@ func (c *Client) CreateCluster(request *CreateClusterRequest) (*model.Cluster, e
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return model.ClusterFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// RetryCreateCluster retries the creation of a cluster from the configured provisioning server.
+func (c *Client) RetryCreateCluster(clusterID string) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s", clusterID), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -132,14 +154,14 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*model.Cluster, err
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
 func (c *Client) UpgradeCluster(clusterID, version string) error {
-	resp, err := c.doPut(c.buildURL("/api/cluster/%s/kubernetes/%s", clusterID, version))
+	resp, err := c.doPut(c.buildURL("/api/cluster/%s/kubernetes/%s", clusterID, version), nil)
 	if err != nil {
 		return err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return nil
 
 	default:
@@ -156,7 +178,7 @@ func (c *Client) DeleteCluster(clusterID string) error {
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return nil
 
 	default:
