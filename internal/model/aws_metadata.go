@@ -8,14 +8,17 @@ type AWSMetadata struct {
 }
 
 // NewAWSMetadata creates an instance of AWSMetadata given the raw provider metadata.
-func NewAWSMetadata(providerMetadata []byte) *AWSMetadata {
+func NewAWSMetadata(providerMetadata []byte) (*AWSMetadata, error) {
 	awsMetadata := AWSMetadata{}
 
 	if providerMetadata == nil {
-		return &awsMetadata
+		return &awsMetadata, nil
 	}
 
-	_ = json.Unmarshal(providerMetadata, &awsMetadata)
+	err := json.Unmarshal(providerMetadata, &awsMetadata)
+	if err != nil {
+		return nil, err
+	}
 
-	return &awsMetadata
+	return &awsMetadata, nil
 }

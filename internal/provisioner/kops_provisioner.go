@@ -34,7 +34,10 @@ func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.F
 func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	awsMetadata := model.NewAWSMetadata(cluster.ProviderMetadata)
+	awsMetadata, err := model.NewAWSMetadata(cluster.ProviderMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provider metadata")
+	}
 
 	clusterSize, err := kops.GetSize(cluster.Size)
 	if err != nil {
@@ -42,7 +45,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 
 	// Generate the kops name using the cluster id.
-	kopsMetadata := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
 	kopsMetadata.Name = fmt.Sprintf("%s-kops.k8s.local", cluster.ID)
 	cluster.SetProvisionerMetadata(kopsMetadata)
 
@@ -197,7 +203,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
 func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error {
-	kopsMetadata := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
 
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
@@ -206,7 +215,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	outputDir := path.Join(provisioner.clusterRootDir, cluster.ID)
 
 	// Validate the provided cluster ID before we alter state in any way.
-	_, err := os.Stat(outputDir)
+	_, err = os.Stat(outputDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
@@ -278,7 +287,10 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
 func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error {
-	kopsMetadata := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
 
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
@@ -287,7 +299,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 	outputDir := path.Join(provisioner.clusterRootDir, cluster.ID)
 
 	// Validate the provided cluster ID before we alter state in any way.
-	_, err := os.Stat(outputDir)
+	_, err = os.Stat(outputDir)
 	if os.IsNotExist(err) {
 		logger.Info("no resources found, assuming cluster was never created")
 		return nil
