@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNamespaces(t *testing.T) {
@@ -12,7 +13,7 @@ func TestNamespaces(t *testing.T) {
 	namespaceNames := []string{"namespace1, namespace2, namespace3"}
 	t.Run("create namespaces", func(t *testing.T) {
 		namespaces, err := testClient.CreateNamespaces(namespaceNames)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		var names []string
 		for _, namespace := range namespaces {
@@ -22,7 +23,7 @@ func TestNamespaces(t *testing.T) {
 	})
 	t.Run("get namespaces", func(t *testing.T) {
 		namespaces, err := testClient.GetNamespaces(namespaceNames)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		var names []string
 		for _, namespace := range namespaces {
@@ -32,6 +33,6 @@ func TestNamespaces(t *testing.T) {
 	})
 	t.Run("delete namespaces", func(t *testing.T) {
 		err := testClient.DeleteNamespaces(namespaceNames)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,7 +18,7 @@ func TestServiceAccounts(t *testing.T) {
 
 	t.Run("create service account", func(t *testing.T) {
 		result, err := testClient.createServiceAccount(namespace, serviceAccount)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, serviceAccount.GetName(), result.GetName())
 	})
 	t.Run("create duplicate service account", func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +18,7 @@ func TestClusterRolesV1(t *testing.T) {
 
 	t.Run("create cluster role", func(t *testing.T) {
 		result, err := testClient.createClusterRoleV1(clusterRole)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 	t.Run("create duplicate cluster role", func(t *testing.T) {
@@ -34,7 +35,7 @@ func TestClusterRolesBetaV1(t *testing.T) {
 
 	t.Run("create cluster role", func(t *testing.T) {
 		result, err := testClient.createClusterRoleBetaV1(clusterRole)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 	t.Run("create duplicate cluster role", func(t *testing.T) {

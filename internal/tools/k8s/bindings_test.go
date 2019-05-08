@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +19,7 @@ func TestRoleBindingsV1(t *testing.T) {
 
 	t.Run("create role binding", func(t *testing.T) {
 		result, err := testClient.createRoleBindingV1(namespace, roleBinding)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, roleBinding.GetName(), result.GetName())
 	})
 	t.Run("create duplicate role binding", func(t *testing.T) {
@@ -36,7 +37,7 @@ func TestRoleBindingsBetaV1(t *testing.T) {
 
 	t.Run("create role binding", func(t *testing.T) {
 		result, err := testClient.createRoleBindingBetaV1(namespace, roleBinding)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, roleBinding.GetName(), result.GetName())
 	})
 	t.Run("create duplicate role binding", func(t *testing.T) {
@@ -53,7 +54,7 @@ func TestClusterRoleBindingsV1(t *testing.T) {
 
 	t.Run("create role binding", func(t *testing.T) {
 		result, err := testClient.createClusterRoleBindingV1(roleBinding)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, roleBinding.GetName(), result.GetName())
 	})
 	t.Run("create duplicate role binding", func(t *testing.T) {
@@ -70,7 +71,7 @@ func TestClusterRoleBindingsBetaV1(t *testing.T) {
 
 	t.Run("create role binding", func(t *testing.T) {
 		result, err := testClient.createClusterRoleBindingBetaV1(roleBinding)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, roleBinding.GetName(), result.GetName())
 	})
 	t.Run("create duplicate role binding", func(t *testing.T) {

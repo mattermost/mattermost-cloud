@@ -5,6 +5,7 @@ import (
 
 	mmv1alpha1 "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/apis/mattermost.com/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,7 +18,7 @@ func TestCustomResourceDefinition(t *testing.T) {
 
 	t.Run("create custom resource definition", func(t *testing.T) {
 		result, err := testClient.createCustomResourceDefinition(customResourceDefinition)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, customResourceDefinition.GetName(), result.GetName())
 	})
 	t.Run("create duplicate custom resource definition", func(t *testing.T) {
@@ -35,7 +36,7 @@ func TestClusterInstallation(t *testing.T) {
 
 	t.Run("create custom resource", func(t *testing.T) {
 		result, err := testClient.createClusterInstallation(namespace, customResource)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, customResource.GetName(), result.GetName())
 	})
 	t.Run("create duplicate custom resource", func(t *testing.T) {

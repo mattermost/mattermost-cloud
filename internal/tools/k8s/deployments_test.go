@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	appsbetav1 "k8s.io/api/apps/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +19,7 @@ func TestDeploymentsV1(t *testing.T) {
 
 	t.Run("create deployment", func(t *testing.T) {
 		result, err := testClient.createDeploymentV1(namespace, deployment)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, deployment.GetName(), result.GetName())
 	})
 	t.Run("create duplicate deployment", func(t *testing.T) {
@@ -36,7 +37,7 @@ func TestDeploymentsBetaV1(t *testing.T) {
 
 	t.Run("create deployment", func(t *testing.T) {
 		result, err := testClient.createDeploymentBetaV1(namespace, deployment)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, deployment.GetName(), result.GetName())
 	})
 	t.Run("create duplicate deployment", func(t *testing.T) {
