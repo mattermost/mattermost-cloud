@@ -23,22 +23,22 @@ type KubeClient struct {
 func New(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", configLocation)
 	if err != nil {
-		return &KubeClient{}, err
+		return nil, err
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return &KubeClient{}, err
+		return nil, err
 	}
 
 	apixClientset, err := apixclient.NewForConfig(config)
 	if err != nil {
-		return &KubeClient{}, err
+		return nil, err
 	}
 
 	mattermostClientset, err := mmclient.NewForConfig(config)
 	if err != nil {
-		return &KubeClient{}, err
+		return nil, err
 	}
 
 	return &KubeClient{
