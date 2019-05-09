@@ -18,7 +18,7 @@ func (kc *KubeClient) WaitForPodRunning(ctx context.Context, namespace, podName 
 	for {
 		select {
 		case <-ctx.Done():
-			return &corev1.Pod{}, errors.Wrap(ctx.Err(), "timed out waiting for pod to become ready")
+			return nil, errors.Wrap(ctx.Err(), "timed out waiting for pod to become ready")
 		default:
 			pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 			if err == nil {

@@ -35,8 +35,8 @@ func TestWaitForPodRunning(t *testing.T) {
 		assert.Equal(t, corev1.PodRunning, pod.Status.Phase)
 	})
 	t.Run("don't wait for running", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
-		defer cancel()
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
 		_, err := testClient.WaitForPodRunning(ctx, namespace, podName)
 		require.Error(t, err)
 	})
