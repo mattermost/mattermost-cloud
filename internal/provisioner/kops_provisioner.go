@@ -1,9 +1,11 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -187,14 +189,28 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	// TODO: Rework this as we make the API calls asynchronous.
 	wait = 60
-	logger.Infof("waiting up to %d seconds for mattermost operator to start...", wait)
-	pod, err := k8sClient.WaitForPodRunning("mattermost-operator", "mattermost-operator", wait)
-	if err != nil {
-		return err
+	operators := []string{"mysql-operator", "mattermost-operator"}
+	for _, operator := range operators {
+		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
+		if err != nil {
+			return err
+		}
+		if len(pods.Items) == 0 {
+			return fmt.Errorf("no pods found from %q deployment", operator)
+		}
+
+		for _, pod := range pods.Items {
+			logger.Infof("waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
+			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
+			if err != nil {
+				return err
+			}
+			logger.Infof("successfully deployed operator pod %q", pod.Name)
+		}
 	}
-	logger.Infof("successfully deployed operator %q", pod.Name)
 
 	logger.WithField("name", kopsMetadata.Name).Info("successfully created cluster")
 
