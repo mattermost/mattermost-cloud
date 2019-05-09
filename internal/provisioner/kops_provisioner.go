@@ -1,9 +1,11 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -187,6 +189,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
+	wait = 60
 	operators := []string{"mysql-operator", "mattermost-operator"}
 	for _, operator := range operators {
 		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
@@ -197,11 +200,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 			return fmt.Errorf("no pods found from %q deployment", operator)
 		}
 
-		// TODO: Rework this as we make the API calls asynchronous.
-		wait = 60
 		for _, pod := range pods.Items {
 			logger.Infof("waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
-			pod, err := k8sClient.WaitForPodRunning(operator, pod.GetName(), wait)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
+			pod, err := k8sClient.WaitForPodRunning(operator, pod.GetName(), ctx)
 			if err != nil {
 				return err
 			}

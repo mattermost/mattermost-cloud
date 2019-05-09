@@ -1,8 +1,10 @@
 package k8s
 
 import (
-	"errors"
+	"context"
 	"time"
+
+	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,14 +14,11 @@ import (
 // WaitForPodRunning will poll a given kubernetes pod at a regular interval for
 // it to enter the 'Running' state. If the pod fails to become ready before
 // the provided timeout then an error will be returned.
-func (kc *KubeClient) WaitForPodRunning(namespace, podName string, timeout int) (*corev1.Pod, error) {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timer.Stop()
-
+func (kc *KubeClient) WaitForPodRunning(namespace, podName string, ctx context.Context) (*corev1.Pod, error) {
 	for {
 		select {
-		case <-timer.C:
-			return &corev1.Pod{}, errors.New("timed out waiting for pod to become ready")
+		case <-ctx.Done():
+			return &corev1.Pod{}, errors.Wrap(ctx.Err(), "timed out waiting for pod to become ready")
 		default:
 			pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 			if err == nil {

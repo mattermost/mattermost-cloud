@@ -1,7 +1,9 @@
 package k8s
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,9 +28,17 @@ func TestWaitForPodRunning(t *testing.T) {
 		assert.Equal(t, corev1.PodRunning, pod.Status.Phase)
 	})
 	t.Run("wait for running", func(t *testing.T) {
-		pod, err := testClient.WaitForPodRunning(namespace, podName, 30)
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		pod, err := testClient.WaitForPodRunning(namespace, podName, ctx)
 		require.NoError(t, err)
 		assert.Equal(t, corev1.PodRunning, pod.Status.Phase)
+	})
+	t.Run("don't wait for running", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
+		defer cancel()
+		_, err := testClient.WaitForPodRunning(namespace, podName, ctx)
+		require.Error(t, err)
 	})
 }
 
