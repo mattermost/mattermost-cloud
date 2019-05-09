@@ -204,7 +204,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 			logger.Infof("waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(operator, pod.GetName(), ctx)
+			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
 			if err != nil {
 				return err
 			}

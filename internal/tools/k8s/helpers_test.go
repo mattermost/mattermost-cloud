@@ -30,14 +30,14 @@ func TestWaitForPodRunning(t *testing.T) {
 	t.Run("wait for running", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		pod, err := testClient.WaitForPodRunning(namespace, podName, ctx)
+		pod, err := testClient.WaitForPodRunning(ctx, namespace, podName)
 		require.NoError(t, err)
 		assert.Equal(t, corev1.PodRunning, pod.Status.Phase)
 	})
 	t.Run("don't wait for running", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 0*time.Second)
 		defer cancel()
-		_, err := testClient.WaitForPodRunning(namespace, podName, ctx)
+		_, err := testClient.WaitForPodRunning(ctx, namespace, podName)
 		require.Error(t, err)
 	})
 }

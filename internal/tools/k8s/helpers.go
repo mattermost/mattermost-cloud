@@ -14,7 +14,7 @@ import (
 // WaitForPodRunning will poll a given kubernetes pod at a regular interval for
 // it to enter the 'Running' state. If the pod fails to become ready before
 // the provided timeout then an error will be returned.
-func (kc *KubeClient) WaitForPodRunning(namespace, podName string, ctx context.Context) (*corev1.Pod, error) {
+func (kc *KubeClient) WaitForPodRunning(ctx context.Context, namespace, podName string) (*corev1.Pod, error) {
 	for {
 		select {
 		case <-ctx.Done():
