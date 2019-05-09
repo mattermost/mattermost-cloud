@@ -16,18 +16,17 @@ import (
 // the provided timeout then an error will be returned.
 func (kc *KubeClient) WaitForPodRunning(ctx context.Context, namespace, podName string) (*corev1.Pod, error) {
 	for {
+		pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		if err == nil {
+			if pod.Status.Phase == corev1.PodRunning {
+				return pod, nil
+			}
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil, errors.Wrap(ctx.Err(), "timed out waiting for pod to become ready")
-		default:
-			pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
-			if err == nil {
-				if pod.Status.Phase == corev1.PodRunning {
-					return pod, nil
-				}
-			}
-
-			time.Sleep(5 * time.Second)
+		case <-time.After(5 * time.Second):
 		}
 	}
 }
