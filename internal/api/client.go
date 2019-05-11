@@ -185,3 +185,198 @@ func (c *Client) DeleteCluster(clusterID string) error {
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// CreateInstallation requests the creation of a installation from the configured provisioning server.
+func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*model.Installation, error) {
+	resp, err := c.doPost(c.buildURL("/api/installations"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return model.InstallationFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// RetryCreateInstallation retries the creation of a installation from the configured provisioning server.
+func (c *Client) RetryCreateInstallation(installationID string) error {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s", installationID), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallation fetches the specified installation from the configured provisioning server.
+func (c *Client) GetInstallation(installationID string) (*model.Installation, error) {
+	resp, err := c.doGet(c.buildURL("/api/installation/%s", installationID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.InstallationFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallations fetches the list of installations from the configured provisioning server.
+func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*model.Installation, error) {
+	u, err := url.Parse(c.buildURL("/api/installations"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.InstallationsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// UpgradeInstallation upgrades a installation to the given Mattermost version.
+func (c *Client) UpgradeInstallation(installationID, version string) error {
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost/%s", installationID, version), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteInstallation deletes the given installation and all resources contained therein.
+func (c *Client) DeleteInstallation(installationID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/installation/%s", installationID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetClusterInstallation fetches the specified cluster installation from the configured provisioning server.
+func (c *Client) GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error) {
+	resp, err := c.doGet(c.buildURL("/api/cluster_installation/%s", clusterInstallationID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.ClusterInstallationFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetClusterInstallations fetches the list of cluster installations from the configured provisioning server.
+func (c *Client) GetClusterInstallations(request *GetClusterInstallationsRequest) ([]*model.ClusterInstallation, error) {
+	u, err := url.Parse(c.buildURL("/api/cluster_installations"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.ClusterInstallationsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetClusterInstallationConfig fetches the specified cluster installation's Mattermost config.
+func (c *Client) GetClusterInstallationConfig(clusterInstallationID string) (map[string]interface{}, error) {
+	resp, err := c.doGet(c.buildURL("/api/cluster_installation/%s/config", clusterInstallationID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.ClusterInstallationConfigFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// SetClusterInstallationConfig modifies an cluster installation's Mattermost configuration.
+//
+// The operation is applied as a patch, preserving existing values if they are not specified.
+func (c *Client) SetClusterInstallationConfig(clusterInstallationID string, config map[string]interface{}) error {
+	resp, err := c.doPut(c.buildURL("/api/cluster_installation/%s/config", clusterInstallationID), config)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

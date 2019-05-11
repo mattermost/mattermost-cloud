@@ -15,8 +15,8 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/pkg/errors"
+	logrus "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/semaphore"
 )
 
 // clusterRootDir is the local directory that contains cluster configuration.
@@ -30,8 +30,8 @@ func init() {
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
-	serverCmd.PersistentFlags().Int("jobs", 1, "The maximum number of background jobs to allow.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
+	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 }
 
 var serverCmd = &cobra.Command{
@@ -39,6 +39,11 @@ var serverCmd = &cobra.Command{
 	Short: "Run the provisioning server.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
+
+		debug, _ := command.Flags().GetBool("debug")
+		if debug {
+			logger.SetLevel(logrus.DebugLevel)
+		}
 
 		logger := logger.WithField("instance", instanceID)
 
@@ -62,15 +67,6 @@ var serverCmd = &cobra.Command{
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		logger.Infof("Using state store %s", s3StateStore)
 
-		// Limit the number of concurrent background jobs within this instance.
-		jobs, _ := command.Flags().GetInt("jobs")
-		workers := semaphore.NewWeighted(int64(jobs))
-		defer func() {
-			if err := workers.Acquire(context.Background(), int64(jobs)); err != nil {
-				logger.WithError(err).Error("failed to shut down worker pool")
-			}
-		}()
-
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
@@ -82,15 +78,14 @@ var serverCmd = &cobra.Command{
 		// scheduler to trigger it periodically in addition to being poked by the API
 		// layer.
 		poll, _ := command.Flags().GetInt("poll")
-		if jobs == 0 || poll == 0 {
-			logger.WithFields(map[string]interface{}{
-				"poll": poll,
-				"jobs": jobs,
-			}).Info("Scheduler is disabled")
+		if poll == 0 {
+			logger.WithField("poll", poll).Info("Scheduler is disabled")
 		}
 		supervisor := supervisor.NewScheduler(
 			supervisor.MultiDoer{
-				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, workers, logger),
+				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
+				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
+				supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
 			},
 			time.Duration(poll)*time.Second,
 		)

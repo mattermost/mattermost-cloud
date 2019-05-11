@@ -48,7 +48,7 @@ func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]by
 	logger.WithFields(log.Fields{
 		"cmd":  cmd.Path,
 		"args": cmd.Args,
-	}).Info("invoking command")
+	}).Info("Invoking command")
 
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)

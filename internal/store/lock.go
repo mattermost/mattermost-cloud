@@ -6,7 +6,7 @@ import (
 )
 
 // lockRow marks the row in the given table as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) lockRow(table, id, lockerID string) (bool, error) {
+func (sqlStore *SQLStore) lockRows(table string, ids []string, lockerID string) (bool, error) {
 	result, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(table).
 		SetMap(map[string]interface{}{
@@ -14,12 +14,12 @@ func (sqlStore *SQLStore) lockRow(table, id, lockerID string) (bool, error) {
 			"LockAcquiredAt": GetMillis(),
 		}).
 		Where(sq.Eq{
-			"ID":             id,
+			"ID":             ids,
 			"LockAcquiredAt": 0,
 		}),
 	)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to lock row %s in %s", id, table)
+		return false, errors.Wrapf(err, "failed to lock %d rows in %s", len(ids), table)
 	}
 	count, err := result.RowsAffected()
 	if err != nil {
@@ -31,18 +31,22 @@ func (sqlStore *SQLStore) lockRow(table, id, lockerID string) (bool, error) {
 		locked = true
 	}
 
+	if count > 0 && int(count) < len(ids) {
+		sqlStore.logger.Warnf("Locked only %d of %d rows in %s", count, len(ids), table)
+	}
+
 	return locked, nil
 }
 
 // unlockRow releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) unlockRow(table, id, lockerID string, force bool) (bool, error) {
+func (sqlStore *SQLStore) unlockRows(table string, ids []string, lockerID string, force bool) (bool, error) {
 	builder := sq.Update(table).
 		SetMap(map[string]interface{}{
 			"LockAcquiredBy": nil,
 			"LockAcquiredAt": 0,
 		}).
 		Where(sq.Eq{
-			"ID": id,
+			"ID": ids,
 		})
 
 	if force {
@@ -57,7 +61,7 @@ func (sqlStore *SQLStore) unlockRow(table, id, lockerID string, force bool) (boo
 
 	result, err := sqlStore.execBuilder(sqlStore.db, builder)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to unlock row %s in %s", id, table)
+		return false, errors.Wrapf(err, "failed to unlock %d rows in %s", len(ids), table)
 	}
 
 	count, err := result.RowsAffected()
@@ -68,6 +72,10 @@ func (sqlStore *SQLStore) unlockRow(table, id, lockerID string, force bool) (boo
 	unlocked := false
 	if count > 0 {
 		unlocked = true
+	}
+
+	if int(count) < len(ids) {
+		sqlStore.logger.Warnf("Unlocked only %d of %d rows in %s", count, len(ids), table)
 	}
 
 	return unlocked, nil

@@ -131,4 +131,50 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.2.0"), semver.MustParse("0.3.0"), func(e execer) error {
+		_, err := e.Exec(`
+			CREATE TABLE Installation (
+				ID CHAR(26) PRIMARY KEY,
+				OwnerID CHAR(26) NOT NULL,
+				Version VARCHAR(32) NOT NULL,
+				DNS VARCHAR(2083) NOT NULL,
+				Affinity VARCHAR(32) NOT NULL,
+				GroupID CHAR(26) NULL,
+				State VARCHAR(32) NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX Installation_DNS_DeleteAt ON Installation (DNS, DeleteAt);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE ClusterInstallation (
+				ID TEXT PRIMARY KEY,
+				ClusterID TEXT NOT NULL,
+				InstallationID TEXT NOT NULL,
+				Namespace TEXT NOT NULL,
+				State TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

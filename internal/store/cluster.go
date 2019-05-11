@@ -33,10 +33,9 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 	return &cluster, nil
 }
 
-// GetUnlockedClusterPendingWork returns an unlocked cluster in a pending state.
-func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error) {
-	var cluster model.Cluster
-	err := sqlStore.getBuilder(sqlStore.db, &cluster, clusterSelect.
+// GetUnlockedClustersPendingWork returns an unlocked cluster in a pending state.
+func (sqlStore *SQLStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, error) {
+	builder := clusterSelect.
 		Where(sq.Eq{
 			"State": []string{
 				model.ClusterStateCreationRequested,
@@ -45,25 +44,25 @@ func (sqlStore *SQLStore) GetUnlockedClusterPendingWork() (*model.Cluster, error
 			},
 		}).
 		Where("LockAcquiredAt = 0").
-		OrderBy("State ASC"),
-	)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	} else if err != nil {
-		return nil, errors.Wrap(err, "failed to get cluster pending work")
+		OrderBy("CreateAt ASC")
+
+	var clusters []*model.Cluster
+	err := sqlStore.selectBuilder(sqlStore.db, &clusters, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get clusters pending work")
 	}
 
-	return &cluster, nil
+	return clusters, nil
 }
 
 // LockCluster marks the cluster as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) {
-	return sqlStore.lockRow("Cluster", clusterID, lockerID)
+	return sqlStore.lockRows("Cluster", []string{clusterID}, lockerID)
 }
 
 // UnlockCluster releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRow("Cluster", clusterID, lockerID, force)
+	return sqlStore.unlockRows("Cluster", []string{clusterID}, lockerID, force)
 }
 
 // GetClusters fetches the given page of created clusters. The first page is 0.
