@@ -3,7 +3,7 @@ package k8s
 import (
 	"github.com/sirupsen/logrus"
 
-	mmfake "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/clientset/versioned/fake"
+	mmfake "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/fake"
 	apixfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
