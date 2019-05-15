@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -66,30 +65,12 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 	var err error
 	owner := r.URL.Query().Get("owner")
 
-	pageStr := r.URL.Query().Get("page")
-	page := 0
-	if pageStr != "" {
-		page, err = strconv.Atoi(pageStr)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to parse page")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
-
-	perPageStr := r.URL.Query().Get("per_page")
-	perPage := 100
-	if perPageStr != "" {
-		perPage, err = strconv.Atoi(perPageStr)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to parse perPage")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-	}
-
-	includeDeletedStr := r.URL.Query().Get("include_deleted")
-	includeDeleted := includeDeletedStr == "true"
 
 	filter := &model.InstallationFilter{
 		OwnerID:        owner,
