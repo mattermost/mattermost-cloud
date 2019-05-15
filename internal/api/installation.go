@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/model"
@@ -23,41 +22,6 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
 	installationRouter.Handle("/mattermost/{version}", addContext(handleUpgradeInstallation)).Methods("PUT")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
-}
-
-// lockInstallation synchronizes access to the given installation across potentially multiple provisioning
-// servers.
-func lockInstallation(c *Context, installationID string) (*model.Installation, int, func()) {
-	installation, err := c.Store.GetInstallation(installationID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query installation")
-		return nil, http.StatusInternalServerError, nil
-	}
-	if installation == nil {
-		return nil, http.StatusNotFound, nil
-	}
-
-	locked, err := c.Store.LockInstallation(installationID, c.RequestID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to lock installation")
-		return nil, http.StatusInternalServerError, nil
-	} else if !locked {
-		c.Logger.Error("failed to acquire lock for installation")
-		return nil, http.StatusConflict, nil
-	}
-
-	unlockOnce := sync.Once{}
-
-	return installation, 0, func() {
-		unlockOnce.Do(func() {
-			unlocked, err := c.Store.UnlockInstallation(installation.ID, c.RequestID, false)
-			if err != nil {
-				c.Logger.WithError(err).Errorf("failed to unlock installation")
-			} else if unlocked != true {
-				c.Logger.Warn("failed to release lock for installation")
-			}
-		})
-	}
 }
 
 // handleGetInstallations responds to GET /api/installations, returning the specified page of installations.
