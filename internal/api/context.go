@@ -15,11 +15,21 @@ type Store interface {
 	CreateCluster(cluster *model.Cluster) error
 	GetCluster(clusterID string) (*model.Cluster, error)
 	GetClusters(filter *model.ClusterFilter) ([]*model.Cluster, error)
-	GetUnlockedClusterPendingWork() (*model.Cluster, error)
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID, lockerID string, force bool) (bool, error)
 	DeleteCluster(clusterID string) error
+
+	CreateInstallation(installation *model.Installation) error
+	GetInstallation(installationID string) (*model.Installation, error)
+	GetInstallations(filter *model.InstallationFilter) ([]*model.Installation, error)
+	UpdateInstallation(installation *model.Installation) error
+	LockInstallation(installationID, lockerID string) (bool, error)
+	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
+	DeleteInstallation(installationID string) error
+
+	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
+	GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error)
 }
 
 // Context provides the API with all necessary data and interfaces for responding to requests.

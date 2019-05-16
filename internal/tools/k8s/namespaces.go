@@ -65,3 +65,13 @@ func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
 
 	return nil
 }
+
+// DeleteNamespace returns a given kubernetes namespace object if it exists.
+func (kc *KubeClient) DeleteNamespace(namespaceName string) error {
+	clientset, err := kc.getKubeConfigClientset()
+	if err != nil {
+		return err
+	}
+
+	return clientset.CoreV1().Namespaces().Delete(namespaceName, nil)
+}

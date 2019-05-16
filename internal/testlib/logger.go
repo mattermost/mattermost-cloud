@@ -17,10 +17,11 @@ func (tw *testingWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-// MakeLogger creates a log.FieldLogger tthat routes to tb.Log.
+// MakeLogger creates a log.FieldLogger that routes to tb.Log.
 func MakeLogger(tb testing.TB) log.FieldLogger {
 	logger := log.New()
 	logger.SetOutput(&testingWriter{tb})
+	logger.SetLevel(log.TraceLevel)
 
 	return logger
 }

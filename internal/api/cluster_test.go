@@ -32,12 +32,9 @@ func TestClusters(t *testing.T) {
 	client := api.NewClient(ts.URL)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		t.Run("get cluster", func(t *testing.T) {
-			cluster, err := client.GetCluster("unknown")
-			require.NoError(t, err)
-			require.Nil(t, cluster)
-		})
-
+		cluster, err := client.GetCluster(model.NewID())
+		require.NoError(t, err)
+		require.Nil(t, cluster)
 	})
 
 	t.Run("no clusters", func(t *testing.T) {
@@ -352,7 +349,7 @@ func TestRetryCreateCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.RetryCreateCluster("unknown")
+		err := client.RetryCreateCluster(model.NewID())
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -435,7 +432,7 @@ func TestUpgradeCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.UpgradeCluster("unknown", "latest")
+		err := client.UpgradeCluster(model.NewID(), "latest")
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -540,7 +537,7 @@ func TestDeleteCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.DeleteCluster("unknown")
+		err := client.DeleteCluster(model.NewID())
 		require.EqualError(t, err, "failed with status code 404")
 	})
 

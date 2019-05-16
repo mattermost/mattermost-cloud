@@ -2,15 +2,13 @@ package supervisor
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
 )
 
 // clusterStore abstracts the database operations required to query clusters.
 type clusterStore interface {
 	GetCluster(clusterID string) (*model.Cluster, error)
-	GetUnlockedClusterPendingWork() (*model.Cluster, error)
+	GetUnlockedClustersPendingWork() ([]*model.Cluster, error)
 	GetClusters(clusterFilter *model.ClusterFilter) ([]*model.Cluster, error)
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
@@ -32,146 +30,119 @@ type clusterProvisioner interface {
 type ClusterSupervisor struct {
 	store       clusterStore
 	provisioner clusterProvisioner
-	workers     *semaphore.Weighted
+	instanceID  string
 	logger      log.FieldLogger
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, workers *semaphore.Weighted, logger log.FieldLogger) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, instanceID string, logger log.FieldLogger) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:       store,
 		provisioner: clusterProvisioner,
-		workers:     workers,
+		instanceID:  instanceID,
 		logger:      logger,
 	}
 }
 
 // Do looks for work to be done on any pending clusters and attempts to schedule the required work.
 func (s *ClusterSupervisor) Do() error {
-	for {
-		more, err := s.DoOne()
-		if err != nil {
-			return errors.Wrap(err, "failed to work on cluster")
-		}
-		if !more {
-			break
-		}
+	clusters, err := s.store.GetUnlockedClustersPendingWork()
+	if err != nil {
+		s.logger.WithError(err).Warn("Failed to query for clusters pending work")
+		return nil
+	}
+
+	for _, cluster := range clusters {
+		s.Supervise(cluster)
 	}
 
 	return nil
 }
 
-// DoOne looks for work to be done on a single cluster, and does it.
-func (s *ClusterSupervisor) DoOne() (bool, error) {
-	// Reserve a worker for any necessary work.
-	if ok := s.workers.TryAcquire(1); !ok {
-		return false, nil
-	}
-
-	workerStarted := false
-	defer func() {
-		// Restore the worker if it hasn't actually been used.
-		if !workerStarted {
-			s.workers.Release(1)
-		}
-	}()
-
-	// Look for an unlocked cluster in a state that needs to be transitioned.
-	cluster, err := s.store.GetUnlockedClusterPendingWork()
-	if err != nil {
-		return false, errors.Wrap(err, "failed to query for cluster pending work")
-	}
-	if cluster == nil {
-		return false, nil
-	}
-
-	workerID := model.NewID()
+// Supervise schedules the required work on the given cluster.
+func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 	logger := s.logger.WithFields(map[string]interface{}{
 		"cluster": cluster.ID,
-		"worker":  workerID,
 	})
 
-	lock := newClusterLock(cluster.ID, workerID, s.store, logger)
+	lock := newClusterLock(cluster.ID, s.instanceID, s.store, logger)
 	if !lock.TryLock() {
-		return false, nil
+		return
+	}
+	defer lock.Unlock()
+
+	logger.Debugf("Supervising cluster in state %s", cluster.State)
+
+	newState := s.transitionCluster(cluster, logger)
+
+	cluster, err := s.store.GetCluster(cluster.ID)
+	if err != nil {
+		logger.WithError(err).Warnf("failed to get cluster and thus persist state %s", newState)
+		return
 	}
 
-	workerStarted = true
-	go func() {
-		defer func() {
-			s.workers.Release(1)
-			lock.Unlock()
-		}()
+	if cluster.State == newState {
+		return
+	}
 
-		newState, err := s.transitionCluster(cluster, logger)
-		if err != nil {
-			logger.WithError(err).Error("transition cluster failed")
-		}
+	oldState := cluster.State
+	cluster.State = newState
+	err = s.store.UpdateCluster(cluster)
+	if err != nil {
+		logger.WithError(err).Warnf("failed to set cluster state to %s", newState)
+		return
+	}
 
-		// Transition the state even if an error occurred, because failure is represented
-		// in the states.
-		if newState != "" {
-			cluster, err := s.store.GetCluster(cluster.ID)
-			if err != nil {
-				logger.WithError(err).Error("failed to get cluster")
-				return
-			}
-
-			if newState == cluster.State {
-				return
-			}
-
-			cluster.State = newState
-			err = s.store.UpdateCluster(cluster)
-			if err != nil {
-				logger.WithError(err).Errorf("failed to set cluster state to %s", newState)
-				return
-			}
-		}
-	}()
-
-	return true, nil
+	logger.Debugf("Transitioned cluster from %s to %s", oldState, newState)
 }
 
 // Do works with the given cluster to transition it to a final state.
-func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log.FieldLogger) (string, error) {
+func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
 	switch cluster.State {
 	case model.ClusterStateCreationRequested:
 		err := s.provisioner.CreateCluster(cluster)
 		if err != nil {
-			return model.ClusterStateCreationFailed, errors.Wrap(err, "failed to create cluster")
+			logger.WithError(err).Error("Failed to create cluster")
+			return model.ClusterStateCreationFailed
 		}
 
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
-			return model.ClusterStateCreationFailed, errors.Wrap(err, "failed to record updated cluster after creation")
+			logger.WithError(err).Error("Failed to record updated cluster after creation")
+			return model.ClusterStateCreationFailed
 		}
 
-		return model.ClusterStateStable, nil
+		logger.Info("Finished creating cluster")
+		return model.ClusterStateStable
 
 	case model.ClusterStateUpgradeRequested:
 		err := s.provisioner.UpgradeCluster(cluster)
 		if err != nil {
-			return model.ClusterStateDeletionFailed, errors.Wrap(err, "failed to delete cluster")
+			logger.WithError(err).Error("Failed to upgrade cluster")
+			return model.ClusterStateUpgradeFailed
 		}
 
-		return model.ClusterStateStable, nil
+		logger.Info("Finished upgrading cluster")
+		return model.ClusterStateStable
 
 	case model.ClusterStateDeletionRequested:
 		err := s.provisioner.DeleteCluster(cluster)
 		if err != nil {
-			return model.ClusterStateDeletionFailed, errors.Wrap(err, "failed to delete cluster")
+			logger.WithError(err).Error("Failed to delete cluster")
+			return model.ClusterStateDeletionFailed
 		}
 
 		err = s.store.DeleteCluster(cluster.ID)
 		if err != nil {
-			return model.ClusterStateDeletionFailed, errors.Wrap(err, "failed to mark cluster as deleted")
+			logger.WithError(err).Error("Failed to record updated cluster after deletion")
+			return model.ClusterStateDeletionFailed
 		}
 
-		return model.ClusterStateDeleted, nil
+		logger.Info("Finished deleting cluster")
+		return model.ClusterStateDeleted
 
 	default:
-		logger.Warnf("found cluster pending work in unexpected state %s", cluster.State)
-		return "", nil
+		logger.Warnf("Found cluster pending work in unexpected state %s", cluster.State)
+		return cluster.State
 	}
 }

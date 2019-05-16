@@ -208,7 +208,7 @@ func TestClusters(t *testing.T) {
 	})
 }
 
-func TestGetUnlockedClusterPendingWork(t *testing.T) {
+func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
 
@@ -220,6 +220,8 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 	err := sqlStore.CreateCluster(creationRequestedCluster)
 	require.NoError(t, err)
 
+	time.Sleep(1 * time.Millisecond)
+
 	upgradeRequestedCluster := &model.Cluster{
 		ProviderMetadata:    []byte(`{"provider": "test1"}`),
 		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
@@ -227,6 +229,8 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 	}
 	err = sqlStore.CreateCluster(upgradeRequestedCluster)
 	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
 
 	deletionRequestedCluster := &model.Cluster{
 		ProviderMetadata:    []byte(`{"provider": "test1"}`),
@@ -251,35 +255,35 @@ func TestGetUnlockedClusterPendingWork(t *testing.T) {
 		})
 	}
 
-	cluster, err := sqlStore.GetUnlockedClusterPendingWork()
+	clusters, err := sqlStore.GetUnlockedClustersPendingWork()
 	require.NoError(t, err)
-	require.Equal(t, creationRequestedCluster, cluster)
+	require.Equal(t, []*model.Cluster{creationRequestedCluster, upgradeRequestedCluster, deletionRequestedCluster}, clusters)
 
 	lockerID := model.NewID()
 
-	locked, err := sqlStore.LockCluster(cluster.ID, lockerID)
+	locked, err := sqlStore.LockCluster(creationRequestedCluster.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
-	cluster, err = sqlStore.GetUnlockedClusterPendingWork()
+	clusters, err = sqlStore.GetUnlockedClustersPendingWork()
 	require.NoError(t, err)
-	require.Equal(t, deletionRequestedCluster, cluster)
+	require.Equal(t, []*model.Cluster{upgradeRequestedCluster, deletionRequestedCluster}, clusters)
 
-	locked, err = sqlStore.LockCluster(cluster.ID, lockerID)
+	locked, err = sqlStore.LockCluster(upgradeRequestedCluster.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
-	cluster, err = sqlStore.GetUnlockedClusterPendingWork()
+	clusters, err = sqlStore.GetUnlockedClustersPendingWork()
 	require.NoError(t, err)
-	require.Equal(t, upgradeRequestedCluster, cluster)
+	require.Equal(t, []*model.Cluster{deletionRequestedCluster}, clusters)
 
-	locked, err = sqlStore.LockCluster(cluster.ID, lockerID)
+	locked, err = sqlStore.LockCluster(deletionRequestedCluster.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
-	cluster, err = sqlStore.GetUnlockedClusterPendingWork()
+	clusters, err = sqlStore.GetUnlockedClustersPendingWork()
 	require.NoError(t, err)
-	require.Nil(t, cluster)
+	require.Empty(t, clusters)
 }
 
 func TestLockCluster(t *testing.T) {
@@ -389,15 +393,15 @@ func TestLockCluster(t *testing.T) {
 		require.Equal(t, lockerID2, *cluster2.LockAcquiredBy)
 	})
 
-	t.Run("force unlock the second cluster the wrong locker", func(t *testing.T) {
+	t.Run("force unlock the second cluster from the wrong locker", func(t *testing.T) {
 
 		unlocked, err := sqlStore.UnlockCluster(cluster2.ID, lockerID1, true)
 		require.NoError(t, err)
 		require.True(t, unlocked)
 
-		cluster1, err = sqlStore.GetCluster(cluster1.ID)
+		cluster2, err = sqlStore.GetCluster(cluster2.ID)
 		require.NoError(t, err)
-		require.Equal(t, int64(0), cluster1.LockAcquiredAt)
-		require.Nil(t, cluster1.LockAcquiredBy)
+		require.Equal(t, int64(0), cluster2.LockAcquiredAt)
+		require.Nil(t, cluster2.LockAcquiredBy)
 	})
 }

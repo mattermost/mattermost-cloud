@@ -2,8 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/model"
@@ -26,68 +24,14 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
-// lockCluster synchronizes access to the given cluster across potentially multiple provisioning
-// servers.
-func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
-	cluster, err := c.Store.GetCluster(clusterID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query cluster")
-		return nil, http.StatusInternalServerError, nil
-	}
-	if cluster == nil {
-		return nil, http.StatusNotFound, nil
-	}
-
-	locked, err := c.Store.LockCluster(clusterID, c.RequestID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to lock cluster")
-		return nil, http.StatusInternalServerError, nil
-	} else if !locked {
-		c.Logger.Error("failed to acquire lock for cluster")
-		return nil, http.StatusConflict, nil
-	}
-
-	unlockOnce := sync.Once{}
-
-	return cluster, 0, func() {
-		unlockOnce.Do(func() {
-			unlocked, err := c.Store.UnlockCluster(cluster.ID, c.RequestID, false)
-			if err != nil {
-				c.Logger.WithError(err).Errorf("failed to unlock cluster")
-			} else if unlocked != true {
-				c.Logger.Error("failed to release lock for cluster")
-			}
-		})
-	}
-}
-
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.
 func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
-	var err error
-	pageStr := r.URL.Query().Get("page")
-	page := 0
-	if pageStr != "" {
-		page, err = strconv.Atoi(pageStr)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to parse page")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
-
-	perPageStr := r.URL.Query().Get("per_page")
-	perPage := 100
-	if perPageStr != "" {
-		perPage, err = strconv.Atoi(perPageStr)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to parse perPage")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-	}
-
-	includeDeletedStr := r.URL.Query().Get("include_deleted")
-	includeDeleted := includeDeletedStr == "true"
 
 	filter := &model.ClusterFilter{
 		Page:           page,

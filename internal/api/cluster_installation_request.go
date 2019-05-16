@@ -1,0 +1,45 @@
+package api
+
+import (
+	"encoding/json"
+	"io"
+	"net/url"
+	"strconv"
+
+	"github.com/pkg/errors"
+)
+
+// GetClusterInstallationsRequest describes the parameters to request a list of cluster installations.
+type GetClusterInstallationsRequest struct {
+	ClusterID      string
+	InstallationID string
+	Page           int
+	PerPage        int
+	IncludeDeleted bool
+}
+
+// ApplyToURL modifies the given url to include query string parameters for the request.
+func (request *GetClusterInstallationsRequest) ApplyToURL(u *url.URL) {
+	q := u.Query()
+	q.Add("cluster", request.ClusterID)
+	q.Add("installation", request.InstallationID)
+	q.Add("page", strconv.Itoa(request.Page))
+	q.Add("per_page", strconv.Itoa(request.PerPage))
+	if request.IncludeDeleted {
+		q.Add("include_deleted", "true")
+	}
+	u.RawQuery = q.Encode()
+}
+
+// ClusterInstallationConfigRequest describes the payload for updating an cluster installation's configuration.
+type ClusterInstallationConfigRequest map[string]interface{}
+
+func newClusterInstallationConfigRequestFromReader(reader io.Reader) (ClusterInstallationConfigRequest, error) {
+	var clusterInstallationConfigRequest ClusterInstallationConfigRequest
+	err := json.NewDecoder(reader).Decode(&clusterInstallationConfigRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode cluster installation config request")
+	}
+
+	return clusterInstallationConfigRequest, nil
+}

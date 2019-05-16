@@ -39,6 +39,7 @@ func init() {
 	clusterCmd.AddCommand(clusterDeleteCmd)
 	clusterCmd.AddCommand(clusterGetCmd)
 	clusterCmd.AddCommand(clusterListCmd)
+	clusterCmd.AddCommand(clusterInstallationCmd)
 }
 
 var clusterCmd = &cobra.Command{

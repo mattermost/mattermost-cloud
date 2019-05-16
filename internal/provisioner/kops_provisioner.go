@@ -7,8 +7,11 @@ import (
 	"path"
 	"time"
 
+	mmv1alpha1 "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/apis/mattermost.com/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -74,7 +77,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return errors.Wrapf(err, "failed to stat cluster directory %q", outputDir)
 	}
 
-	logger.WithField("name", kopsMetadata.Name).Info("creating cluster")
+	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
 		return err
@@ -120,7 +123,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 600
-	logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+	logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
 	err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
 	if err != nil {
 		// Run non-silent validate one more time to log final cluster state
@@ -129,7 +132,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	logger.WithField("name", kopsMetadata.Name).Info("successfully deployed kubernetes")
+	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
 	// Begin deploying the mattermost operator.
 	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
@@ -201,18 +204,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		}
 
 		for _, pod := range pods.Items {
-			logger.Infof("waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
+			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 			defer cancel()
 			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
 			if err != nil {
 				return err
 			}
-			logger.Infof("successfully deployed operator pod %q", pod.Name)
+			logger.Infof("Successfully deployed operator pod %q", pod.Name)
 		}
 	}
 
-	logger.WithField("name", kopsMetadata.Name).Info("successfully created cluster")
+	logger.WithField("name", kopsMetadata.Name).Info("Successfully created cluster")
 
 	return nil
 }
@@ -247,7 +250,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	if err != nil {
 		return err
 	} else if !ok {
-		logger.Info("no cluster_name in terraform config, assuming partially initialized")
+		logger.Info("No cluster_name in terraform config, assuming partially initialized")
 	} else if out != kopsMetadata.Name {
 		return fmt.Errorf("terraform cluster_name (%s) does not match kops name from provided ID (%s)", out, kopsMetadata.Name)
 	}
@@ -262,7 +265,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		return err
 	}
 
-	logger.Info("upgrading cluster")
+	logger.Info("Upgrading cluster")
 
 	err = kops.UpgradeCluster(kopsMetadata.Name)
 	if err != nil {
@@ -286,7 +289,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	// TODO: Rework this as we make the API calls asynchronous.
 	wait := 600
 	if wait > 0 {
-		logger.Infof("waiting up to %d seconds for k8s cluster to become ready...", wait)
+		logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
 		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
 		if err != nil {
 			// Run non-silent validate one more time to log final cluster state
@@ -296,7 +299,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		}
 	}
 
-	logger.Info("successfully upgraded cluster")
+	logger.Info("Successfully upgraded cluster")
 
 	return nil
 }
@@ -317,7 +320,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 	// Validate the provided cluster ID before we alter state in any way.
 	_, err = os.Stat(outputDir)
 	if os.IsNotExist(err) {
-		logger.Info("no resources found, assuming cluster was never created")
+		logger.Info("No resources found, assuming cluster was never created")
 		return nil
 	} else if err != nil {
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
@@ -334,7 +337,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 	if out, ok, err := terraformClient.Output("cluster_name"); err != nil {
 		return err
 	} else if !ok {
-		logger.Info("no cluster_name in terraform config, skipping check")
+		logger.Info("No cluster_name in terraform config, skipping check")
 	} else if out != kopsMetadata.Name {
 		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsMetadata.Name)
 	}
@@ -352,7 +355,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		}
 	}
 
-	logger.Info("deleting cluster")
+	logger.Info("Deleting cluster")
 
 	err = terraformClient.Destroy()
 	if err != nil {
@@ -371,7 +374,123 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		return errors.Wrap(err, "failed to clean up output directory")
 	}
 
-	logger.Info("successfully deleted cluster")
+	logger.Info("Successfully deleted cluster")
+
+	return nil
+}
+
+func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation) string {
+	// TODO: Once https://mattermost.atlassian.net/browse/MM-15467 is fixed, we can use the
+	// full namespace as part of the name. For now, truncate to keep within the existing limit
+	// of 60 characters.
+	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
+}
+
+// CreateClusterInstallation creates a Mattermost installation within the given cluster.
+func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
+	_, err = k8sClient.CreateNamespace(clusterInstallation.Namespace)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
+	}
+
+	_, err = k8sClient.MattermostClientset.ExampleV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(&mmv1alpha1.ClusterInstallation{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterInstallation",
+			APIVersion: "mattermost.com/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      makeClusterInstallationName(clusterInstallation),
+			Namespace: clusterInstallation.Namespace,
+		},
+		Spec: mmv1alpha1.ClusterInstallationSpec{
+			IngressName: installation.DNS,
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create cluster installation")
+	}
+
+	logger.Info("Successfully created cluster installation")
+
+	return nil
+}
+
+// DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
+func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	if kopsMetadata.Name == "" {
+		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
+		return nil
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
+	name := makeClusterInstallationName(clusterInstallation)
+
+	err = k8sClient.MattermostClientset.ExampleV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(name, nil)
+	if k8sErrors.IsNotFound(err) {
+		logger.Infof("Cluster installation %s not found, assuming already deleted.", name)
+	} else if err != nil {
+		return errors.Wrapf(err, "failed to delete cluster installation %s", clusterInstallation.ID)
+	}
+
+	err = k8sClient.DeleteNamespace(clusterInstallation.Namespace)
+	if k8sErrors.IsNotFound(err) {
+		logger.Infof("Namespace %s not found, assuming already deleted.", clusterInstallation.Namespace)
+	} else if err != nil {
+		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
+	}
+
+	logger.Info("Successfully deleted cluster installation")
 
 	return nil
 }
