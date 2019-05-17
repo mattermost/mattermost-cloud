@@ -35,8 +35,32 @@ func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.F
 	}
 }
 
+// PrepareCluster ensures a cluster object is ready for provisioning.
+func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) (bool, error) {
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to parse existing provisioner metadata")
+	}
+
+	// Don't regenerate the name if already set.
+	if kopsMetadata.Name != "" {
+		return false, nil
+	}
+
+	// Generate the kops name using the cluster id.
+	kopsMetadata.Name = fmt.Sprintf("%s-kops.k8s.local", cluster.ID)
+	cluster.SetProvisionerMetadata(kopsMetadata)
+
+	return true, nil
+}
+
 // CreateCluster creates a cluster using kops and terraform.
 func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error {
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	awsMetadata, err := model.NewAWSMetadata(cluster.ProviderMetadata)
@@ -48,14 +72,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-
-	// Generate the kops name using the cluster id.
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-	kopsMetadata.Name = fmt.Sprintf("%s-kops.k8s.local", cluster.ID)
-	cluster.SetProvisionerMetadata(kopsMetadata)
 
 	// Temporarily locate the kops output directory to a local folder based on the
 	// cluster name. This won't be necessary once we persist the output to S3 instead.
