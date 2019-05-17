@@ -7,7 +7,7 @@ import (
 	"path"
 	"time"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/apis/mattermost.com/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -141,9 +141,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 
 	mysqlOperatorNamespace := "mysql-operator"
+	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
 	namespaces := []string{
 		mysqlOperatorNamespace,
+		minioOperatorNamespace,
 		mattermostOperatorNamespace,
 	}
 
@@ -156,34 +158,25 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
 		k8s.ManifestFile{
-			Path:            "operator-manifests/mysql-operator/crds/mysql_crd.yaml",
+			Path:            "operator-manifests/mysql/mysql-operator.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mysql-operator/service_account.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
+			Path:            "operator-manifests/minio/minio-operator.yaml",
+			DeployNamespace: minioOperatorNamespace,
 		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mysql-operator/role.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mysql-operator/role_binding.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mysql-operator/operator.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mattermost-operator/crds/mm_clusterinstallation_crd.yaml",
+			Path:            "operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mattermost-operator/service_account.yaml",
+			Path:            "operator-manifests/mattermost/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mattermost-operator/role.yaml",
+			Path:            "operator-manifests/mattermost/role.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mattermost-operator/role_binding.yaml",
+			Path:            "operator-manifests/mattermost/role_binding.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, k8s.ManifestFile{
-			Path:            "operator-manifests/mattermost-operator/operator.yaml",
+			Path:            "operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		},
 	}
@@ -193,7 +186,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 
 	wait = 60
-	operators := []string{"mysql-operator", "mattermost-operator"}
+	operators := []string{"mysql-operator", "minio-operator", "mattermost-operator"}
 	for _, operator := range operators {
 		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
 		if err != nil {
@@ -419,7 +412,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
 
-	_, err = k8sClient.MattermostClientset.ExampleV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(&mmv1alpha1.ClusterInstallation{
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(&mmv1alpha1.ClusterInstallation{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterInstallation",
 			APIVersion: "mattermost.com/v1alpha1",
@@ -476,7 +469,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 
 	name := makeClusterInstallationName(clusterInstallation)
 
-	err = k8sClient.MattermostClientset.ExampleV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(name, nil)
+	err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(name, nil)
 	if k8sErrors.IsNotFound(err) {
 		logger.Infof("Cluster installation %s not found, assuming already deleted.", name)
 	} else if err != nil {

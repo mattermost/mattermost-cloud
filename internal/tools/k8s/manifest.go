@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"path"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/apis/mattermost.com/v1alpha1"
-	mattermostscheme "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/clientset/versioned/scheme"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mattermostscheme "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/scheme"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"

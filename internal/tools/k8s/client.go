@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/kubernetes/client-go/tools/clientcmd"
-	mmclient "github.com/mattermost/mattermost-cloud/internal/tools/k8s/pkg/clientset/versioned"
+	mmclient "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
