@@ -21,6 +21,8 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
 	installationRouter.Handle("/mattermost/{version}", addContext(handleUpgradeInstallation)).Methods("PUT")
+	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
+	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
 }
 
@@ -153,7 +155,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 }
 
 // handleUpgradeInstallation responds to PUT /api/installations/{installation}/mattermost/{version}, upgrading
-// the installation to the given Kubernetes version.
+// the installation to the given Mattermost version.
 func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
@@ -199,6 +201,80 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleJoinGroup responds to PUT /api/installations/{installation}/group/{group}, joining the group.
+func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	groupID := vars["group"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	group, err := c.Store.GetGroup(groupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query group")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if group == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Update the group, but don't directly modify the version. The supervisor
+	// will transition the installation to the appropriate version.
+	if installation.GroupID == nil || *installation.GroupID != groupID {
+		installation.GroupID = &groupID
+
+		err := c.Store.UpdateInstallation(installation)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleLeaveGroup responds to DELETE /api/installations/{installation}/group, leaving any existing group.
+func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if installation.GroupID != nil {
+		installation.GroupID = nil
+
+		err := c.Store.UpdateInstallation(installation)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleDeleteInstallation responds to DELETE /api/installations/{installation}, beginning the process of

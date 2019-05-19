@@ -177,4 +177,28 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.3.0"), semver.MustParse("0.4.0"), func(e execer) error {
+		_, err := e.Exec(`
+			CREATE TABLE "Group" (
+				ID CHAR(26) PRIMARY KEY,
+				Name TEXT,
+				Description TEXT,
+				Version TEXT,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX Group_Name_DeleteAt ON "Group" (Name, DeleteAt);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

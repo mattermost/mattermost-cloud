@@ -6,3 +6,7 @@ type mockSupervisor struct {
 func (s *mockSupervisor) Do() error {
 	return nil
 }
+
+func sToP(s string) *string {
+	return &s
+}

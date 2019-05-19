@@ -500,6 +500,170 @@ func TestUpgradeInstallation(t *testing.T) {
 	})
 }
 
+func TestJoinGroup(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := api.NewClient(ts.URL)
+
+	group1, err := client.CreateGroup(&api.CreateGroupRequest{
+		Name:    "name1",
+		Version: "version1",
+	})
+	require.NoError(t, err)
+
+	group2, err := client.CreateGroup(&api.CreateGroupRequest{
+		Name:    "name2",
+		Version: "version2",
+	})
+	require.NoError(t, err)
+
+	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		OwnerID:  "owner",
+		Version:  "version",
+		DNS:      "dns.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	t.Run("unknown installation", func(t *testing.T) {
+		err := client.JoinGroup(group1.ID, model.NewID())
+		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	t.Run("unknown group", func(t *testing.T) {
+		err := client.JoinGroup(model.NewID(), installation1.ID)
+		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockInstallation(installation1.ID, lockerID)
+		require.NoError(t, err)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err := sqlStore.UnlockInstallation(installation1.ID, lockerID, false)
+			require.NoError(t, err)
+			require.True(t, unlocked)
+		}()
+
+		err = client.JoinGroup(group1.ID, installation1.ID)
+		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("to group 1", func(t *testing.T) {
+		err = client.JoinGroup(group1.ID, installation1.ID)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.NotNil(t, installation1.GroupID)
+		require.Equal(t, group1.ID, *installation1.GroupID)
+	})
+
+	t.Run("to same group 1", func(t *testing.T) {
+		err = client.JoinGroup(group1.ID, installation1.ID)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.NotNil(t, installation1.GroupID)
+		require.Equal(t, group1.ID, *installation1.GroupID)
+	})
+
+	t.Run("to group 2", func(t *testing.T) {
+		err = client.JoinGroup(group2.ID, installation1.ID)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.NotNil(t, installation1.GroupID)
+		require.Equal(t, group2.ID, *installation1.GroupID)
+	})
+}
+
+func TestLeaveGroup(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := api.NewClient(ts.URL)
+
+	group1, err := client.CreateGroup(&api.CreateGroupRequest{
+		Name:    "name1",
+		Version: "version1",
+	})
+	require.NoError(t, err)
+
+	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		OwnerID:  "owner",
+		Version:  "version",
+		DNS:      "dns.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	err = client.JoinGroup(group1.ID, installation1.ID)
+	require.NoError(t, err)
+
+	t.Run("unknown installation", func(t *testing.T) {
+		err := client.LeaveGroup(model.NewID())
+		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockInstallation(installation1.ID, lockerID)
+		require.NoError(t, err)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err := sqlStore.UnlockInstallation(installation1.ID, lockerID, false)
+			require.NoError(t, err)
+			require.True(t, unlocked)
+		}()
+
+		err = client.LeaveGroup(installation1.ID)
+		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("while in group 1", func(t *testing.T) {
+		err = client.LeaveGroup(installation1.ID)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.Nil(t, installation1.GroupID)
+	})
+
+	t.Run("while in no group", func(t *testing.T) {
+		err = client.LeaveGroup(installation1.ID)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.Nil(t, installation1.GroupID)
+	})
+}
+
 func TestDeleteInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
