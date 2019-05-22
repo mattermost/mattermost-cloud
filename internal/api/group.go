@@ -138,7 +138,8 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteGroup responds to DELETE /api/groups/{group}, marking the group as deleted.
 //
-// Installations will not automatically leave the group, but they will no longer consider the group version as an upgrade target.
+// Installations will not automatically leave the group, but they will no longer consider the
+// group version as an upgrade target.
 func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupID := vars["group"]
