@@ -1,17 +1,24 @@
 package provisioner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/remotecommand"
+	utilexec "k8s.io/client-go/util/exec"
+	"k8s.io/kubernetes/pkg/kubectl/scheme"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -625,4 +632,96 @@ func translateMattermostVersion(version string) string {
 	}
 
 	return version
+}
+
+// ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
+func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to construct k8s client")
+	}
+
+	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(metav1.ListOptions{
+		LabelSelector: "app=mattermost",
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query mattermost pods")
+	}
+
+	// In the future, we'd ideally just spin our own container on demand, allowing
+	// configuration changes even if the pods are failing to start the server. For now,
+	// we find the first pod running Mattermost, and pick the first container therein.
+
+	if len(podList.Items) == 0 {
+		return nil, errors.New("failed to find mattermost pods on which to exec")
+	}
+
+	pod := podList.Items[0]
+	if len(pod.Spec.Containers) == 0 {
+		return nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
+	}
+
+	container := pod.Spec.Containers[0]
+	command := append([]string{"./bin/mattermost"}, args...)
+	logger.Debugf("Executing `%s` on pod %s, container %s, running image %s", strings.Join(command, " "), pod.Name, container.Name, container.Image)
+
+	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(pod.Name).
+		Namespace(clusterInstallation.Namespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: container.Name,
+			Command:   command,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(k8sClient.GetConfig(), "POST", execRequest.URL())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to execute remote command")
+	}
+
+	var stdin io.Reader
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  stdin,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		if exitErr, ok := err.(utilexec.ExitError); ok && exitErr.Exited() {
+			return nil, errors.Errorf("remote command failed with exit status %d: %s%s", exitErr.ExitStatus(), stdout.String(), stderr.String())
+		}
+
+		return nil, errors.Wrapf(err, "remote command failed: %s%s", stdout.String(), stderr.String())
+	}
+
+	return stdout.Bytes(), nil
 }

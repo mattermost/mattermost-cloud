@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/aws/aws-sdk-go v1.19.41
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/engineerd/kube-exec v0.0.0-20190218153858-b4411f22744a
 	github.com/go-logr/logr v0.1.0 // indirect
 	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
@@ -44,6 +45,7 @@ require (
 	k8s.io/apimachinery v0.0.0-20190425132440-17f84483f500
 	k8s.io/client-go v0.0.0-20190425172711-65184652c889
 	k8s.io/kube-openapi v0.0.0-20190425185145-07b897206552 // indirect
+	k8s.io/kubernetes v1.14.2
 	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7 // indirect
 	sigs.k8s.io/controller-runtime v0.1.10 // indirect
 	sigs.k8s.io/testing_frameworks v0.1.1 // indirect

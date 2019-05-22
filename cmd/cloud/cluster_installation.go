@@ -20,10 +20,9 @@ func init() {
 	clusterInstallationListCmd.Flags().Int("per-page", 100, "The number of cluster installations to fetch per page.")
 	clusterInstallationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted cluster installations.")
 
-	clusterInstallationConfigGetCmd.Flags().String("installation", "", "The id of the installation.")
-	clusterInstallationConfigGetCmd.MarkFlagRequired("installation")
+	clusterInstallationConfigCmd.PersistentFlags().String("cluster_installation", "", "The id of the cluster installation.")
+	clusterInstallationConfigCmd.MarkFlagRequired("cluster_installation")
 
-	clusterInstallationConfigSetCmd.Flags().String("installation", "", "The id of the installation.")
 	clusterInstallationConfigSetCmd.Flags().String("key", "", "The configuration key to update (e.g. ServiceSettings.SiteURL).")
 	clusterInstallationConfigSetCmd.Flags().String("value", "", "The value to write to the config.")
 	clusterInstallationConfigSetCmd.MarkFlagRequired("key")
@@ -31,6 +30,10 @@ func init() {
 
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
+	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
+
+	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
+	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigSetCmd)
 }
 
 var clusterInstallationCmd = &cobra.Command{
@@ -100,6 +103,11 @@ var clusterInstallationListCmd = &cobra.Command{
 	},
 }
 
+var clusterInstallationConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Manipulate a particular cluster installation's config.",
+}
+
 var clusterInstallationConfigGetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get a particular cluster installation's config.",
@@ -144,8 +152,10 @@ var clusterInstallationConfigSetCmd = &cobra.Command{
 		keyParts := strings.Split(key, ".")
 		configRef := config
 		for i, keyPart := range keyParts {
-			if i < len(keyParts) {
-				configRef[keyPart] = make(map[string]interface{})
+			if i < len(keyParts)-1 {
+				value := make(map[string]interface{})
+				configRef[keyPart] = value
+				configRef = value
 			} else {
 				configRef[keyPart] = value
 			}

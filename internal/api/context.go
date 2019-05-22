@@ -38,21 +38,28 @@ type Store interface {
 	DeleteGroup(groupID string) error
 }
 
+// Provisioner describes the interface required to communicate with the Kubernetes cluster.
+type Provisioner interface {
+	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+}
+
 // Context provides the API with all necessary data and interfaces for responding to requests.
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
 type Context struct {
-	Store      Store
-	Supervisor Supervisor
-	RequestID  string
-	Logger     logrus.FieldLogger
+	Store       Store
+	Supervisor  Supervisor
+	Provisioner Provisioner
+	RequestID   string
+	Logger      logrus.FieldLogger
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
 func (c *Context) Clone() *Context {
 	return &Context{
-		Store:      c.Store,
-		Supervisor: c.Supervisor,
-		Logger:     c.Logger,
+		Store:       c.Store,
+		Supervisor:  c.Supervisor,
+		Provisioner: c.Provisioner,
+		Logger:      c.Logger,
 	}
 }
