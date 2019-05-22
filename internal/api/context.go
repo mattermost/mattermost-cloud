@@ -30,6 +30,12 @@ type Store interface {
 
 	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
 	GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error)
+
+	CreateGroup(group *model.Group) error
+	GetGroup(groupID string) (*model.Group, error)
+	GetGroups(filter *model.GroupFilter) ([]*model.Group, error)
+	UpdateGroup(group *model.Group) error
+	DeleteGroup(groupID string) error
 }
 
 // Context provides the API with all necessary data and interfaces for responding to requests.

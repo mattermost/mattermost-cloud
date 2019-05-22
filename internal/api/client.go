@@ -380,3 +380,132 @@ func (c *Client) SetClusterInstallationConfig(clusterInstallationID string, conf
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// CreateGroup requests the creation of a group from the configured provisioning server.
+func (c *Client) CreateGroup(request *CreateGroupRequest) (*model.Group, error) {
+	resp, err := c.doPost(c.buildURL("/api/groups"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.GroupFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// UpdateGroup updates the installation group.
+func (c *Client) UpdateGroup(request *PatchGroupRequest) error {
+	resp, err := c.doPut(c.buildURL("/api/group/%s", request.ID), request)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteGroup deletes the given group and all resources contained therein.
+func (c *Client) DeleteGroup(groupID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/group/%s", groupID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetGroup fetches the specified group from the configured provisioning server.
+func (c *Client) GetGroup(groupID string) (*model.Group, error) {
+	resp, err := c.doGet(c.buildURL("/api/group/%s", groupID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.GroupFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetGroups fetches the list of groups from the configured provisioning server.
+func (c *Client) GetGroups(request *GetGroupsRequest) ([]*model.Group, error) {
+	u, err := url.Parse(c.buildURL("/api/groups"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return model.GroupsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// JoinGroup joins an installation to the given group, leaving any existing group.
+func (c *Client) JoinGroup(groupID, installationID string) error {
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/group/%s", installationID, groupID), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// LeaveGroup removes an installation from its group, if any.
+func (c *Client) LeaveGroup(installationID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/installation/%s/group", installationID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

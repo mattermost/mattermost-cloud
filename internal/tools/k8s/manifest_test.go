@@ -93,7 +93,7 @@ rules:
 func TestCreate(t *testing.T) {
 	testClient := newTestKubeClient()
 
-	tempDir, err := ioutil.TempDir("", "k8s-file-testing-")
+	tempDir, err := ioutil.TempDir(".", "k8s-file-testing-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
