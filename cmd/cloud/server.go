@@ -132,9 +132,10 @@ var serverCmd = &cobra.Command{
 		router := mux.NewRouter()
 
 		api.Register(router, &api.Context{
-			Store:      sqlStore,
-			Supervisor: supervisor,
-			Logger:     logger,
+			Store:       sqlStore,
+			Supervisor:  supervisor,
+			Provisioner: kopsProvisioner,
+			Logger:      logger,
 		})
 
 		listen, _ := command.Flags().GetString("listen")

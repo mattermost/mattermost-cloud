@@ -255,20 +255,25 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:       sqlStore,
+		Supervisor:  &mockSupervisor{},
+		Provisioner: &mockProvisioner{},
+		Logger:      logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	client := model.NewClient(ts.URL)
 
+	cluster := &model.Cluster{}
+	err := sqlStore.CreateCluster(cluster)
+	require.NoError(t, err)
+
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      model.NewID(),
+		ClusterID:      cluster.ID,
 		InstallationID: model.NewID(),
 	}
-	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
 
 	t.Run("unknown cluster installation", func(t *testing.T) {
@@ -277,14 +282,10 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 		require.Nil(t, config)
 	})
 
-	t.Run("not yet implemented", func(t *testing.T) {
-		clusterInstallation1.State = model.ClusterInstallationStateStable
-		err = sqlStore.UpdateClusterInstallation(clusterInstallation1)
-		require.NoError(t, err)
-
+	t.Run("success", func(t *testing.T) {
 		config, err := client.GetClusterInstallationConfig(clusterInstallation1.ID)
-		require.EqualError(t, err, "failed with status code 501")
-		require.Nil(t, config)
+		require.NoError(t, err)
+		require.Contains(t, config, "ServiceSettings")
 	})
 }
 
@@ -294,20 +295,25 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:       sqlStore,
+		Supervisor:  &mockSupervisor{},
+		Provisioner: &mockProvisioner{},
+		Logger:      logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	client := model.NewClient(ts.URL)
 
+	cluster := &model.Cluster{}
+	err := sqlStore.CreateCluster(cluster)
+	require.NoError(t, err)
+
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      model.NewID(),
+		ClusterID:      cluster.ID,
 		InstallationID: model.NewID(),
 	}
-	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
 
 	config := map[string]interface{}{"ServiceSettings": map[string]interface{}{"SiteURL": "test.example.com"}}
@@ -332,15 +338,11 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(httpRequest)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusNotImplemented, resp.StatusCode)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
-	t.Run("not yet implemented", func(t *testing.T) {
-		clusterInstallation1.State = model.ClusterInstallationStateStable
-		err = sqlStore.UpdateClusterInstallation(clusterInstallation1)
-		require.NoError(t, err)
-
+	t.Run("success", func(t *testing.T) {
 		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
-		require.EqualError(t, err, "failed with status code 501")
+		require.NoError(t, err)
 	})
 }

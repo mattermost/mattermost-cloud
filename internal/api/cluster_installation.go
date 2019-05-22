@@ -94,8 +94,27 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 		return
 	}
 
-	// TODO: fetch the config for output
-	w.WriteHeader(http.StatusNotImplemented)
+	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if cluster == nil {
+		c.Logger.Errorf("failed to find cluster %s associated with cluster installations", clusterInstallation.ClusterID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	output, err := c.Provisioner.ExecMattermostCLI(cluster, clusterInstallation, "config", "show", "--json")
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to execute mattermost cli")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
 }
 
 // handleSetClusterInstallationConfig responds to PUT /api/cluster_installation/{cluster_installation}/config, merging the given config into the given cluster installation.
@@ -104,7 +123,7 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 	clusterInstallationID := vars["cluster_installation"]
 	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
 
-	_, err := model.NewClusterInstallationConfigRequestFromReader(r.Body)
+	clusterInstallationConfigRequest, err := model.NewClusterInstallationConfigRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -122,6 +141,68 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 		return
 	}
 
-	// TODO: write the config
-	w.WriteHeader(http.StatusNotImplemented)
+	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if cluster == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var applyConfig func(parentKey string, value map[string]interface{}) error
+
+	// applyConfig takes the decomposed configuration, walks the resulting map, and invokes
+	// something akin to:
+	//	mattermost config set <ParentKey1.ParentKey2.LeafKey> <value>
+	//
+	// Ideally, this would be replaced by simply using the API and passing in the config struct
+	// directly, but at the moment that requires authentication.
+	applyConfig = func(parentKey string, parentValue map[string]interface{}) error {
+		if parentKey != "" {
+			parentKey = parentKey + "."
+		}
+
+		for key, value := range parentValue {
+			fullKey := parentKey + key
+
+			valueMap, ok := value.(map[string]interface{})
+			if ok {
+				err = applyConfig(fullKey, valueMap)
+				if err != nil {
+					return err
+				}
+
+				continue
+			}
+
+			valueStr, ok := value.(string)
+			if ok {
+				_, err := c.Provisioner.ExecMattermostCLI(cluster, clusterInstallation, "config", "set", fullKey, valueStr)
+				if err != nil {
+					c.Logger.WithError(err).Errorf("failed to set key %s to value %s", fullKey, valueStr)
+					return err
+				}
+
+				c.Logger.Infof("Successfully set config key %s to value %s", fullKey, valueStr)
+				continue
+			}
+
+			c.Logger.WithError(err).Errorf("unable to set key %s with value %t", fullKey, value)
+			return err
+		}
+
+		return nil
+	}
+
+	err = applyConfig("", clusterInstallationConfigRequest)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to set the config")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
