@@ -54,6 +54,10 @@ func (s *mockClusterStore) DeleteCluster(clusterID string) error {
 type mockClusterProvisioner struct {
 }
 
+func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) (bool, error) {
+	return true, nil
+}
+
 func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster) error {
 	return nil
 }

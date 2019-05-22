@@ -92,6 +92,8 @@ func TestScheduler(t *testing.T) {
 
 		scheduler.Do()
 
+		time.Sleep(1 * time.Second)
+
 		// Second call should be non-blocking
 		scheduler.Do()
 
@@ -99,6 +101,11 @@ func TestScheduler(t *testing.T) {
 		case <-doer.calls:
 		case <-time.After(5 * time.Second):
 			assert.Fail(t, "doer not invoked within 5 seconds")
+		}
+
+		// Drain the second call, but non-blocking in case it doesn't fire in a racey way.
+		select {
+		case <-doer.calls:
 		}
 	})
 }
