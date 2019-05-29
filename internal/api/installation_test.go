@@ -468,15 +468,6 @@ func TestUpgradeInstallation(t *testing.T) {
 		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
 	})
 
-	t.Run("while stable, to invalid version", func(t *testing.T) {
-		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
-		require.NoError(t, err)
-
-		err = client.UpgradeInstallation(installation1.ID, "invalid")
-		require.EqualError(t, err, "failed with status code 400")
-	})
-
 	t.Run("after deletion failed", func(t *testing.T) {
 		installation1.State = model.InstallationStateDeletionFailed
 		err = sqlStore.UpdateInstallation(installation1)

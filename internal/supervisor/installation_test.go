@@ -22,6 +22,10 @@ func (s *mockInstallationStore) GetClusters(clusterFilter *model.ClusterFilter) 
 	return nil, nil
 }
 
+func (s *mockInstallationStore) GetCluster(id string) (*model.Cluster, error) {
+	return nil, nil
+}
+
 func (s *mockInstallationStore) LockCluster(clusterID, lockerID string) (bool, error) {
 	return true, nil
 }
@@ -89,7 +93,7 @@ func (p *mockInstallationProvisioner) CreateClusterInstallation(cluster *model.C
 	return nil
 }
 
-func (p *mockInstallationProvisioner) UpgradeClusterInstallation(clusterInstallation *model.ClusterInstallation) error {
+func (p *mockInstallationProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
 
@@ -180,7 +184,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateStable,
+			State:          model.ClusterInstallationStateStable,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -272,7 +276,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			DNS:      "dns.example.com",
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
-			State:    model.ClusterInstallationStateCreationRequested,
+			State:    model.InstallationStateCreationRequested,
 		}
 
 		err = sqlStore.CreateInstallation(installation)
@@ -312,7 +316,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateCreationFailed,
+			State:          model.ClusterInstallationStateCreationFailed,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -351,7 +355,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateStable,
+			State:          model.ClusterInstallationStateStable,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -359,6 +363,84 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.InstallationStateStable)
+	})
+
+	t.Run("upgrade requested, cluster installations stable", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, "instanceID", logger)
+
+		cluster := &model.Cluster{
+			State: model.ClusterStateStable,
+		}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateUpgradeRequested,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateStable,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateUpgradeInProgress)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
+	})
+
+	t.Run("upgrade in progress, cluster installations stable", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, "instanceID", logger)
+
+		cluster := &model.Cluster{
+			State: model.ClusterStateStable,
+		}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateUpgradeInProgress,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateStable,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
 	})
 
 	t.Run("deletion requested, cluster installations stable", func(t *testing.T) {
@@ -390,7 +472,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateStable,
+			State:          model.ClusterInstallationStateStable,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -429,7 +511,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateDeletionRequested,
+			State:          model.ClusterInstallationStateDeletionRequested,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -468,7 +550,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateDeletionFailed,
+			State:          model.ClusterInstallationStateDeletionFailed,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -507,7 +589,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateDeletionFailed,
+			State:          model.ClusterInstallationStateDeletionFailed,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
@@ -546,7 +628,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			ClusterID:      cluster.ID,
 			InstallationID: installation.ID,
 			Namespace:      "namespace",
-			State:          model.InstallationStateDeleted,
+			State:          model.ClusterInstallationStateDeleted,
 		}
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)

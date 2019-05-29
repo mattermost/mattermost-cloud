@@ -42,6 +42,7 @@ func (sqlStore *SQLStore) GetUnlockedClusterInstallationsPendingWork() ([]*model
 			"State": []string{
 				model.ClusterInstallationStateCreationRequested,
 				model.ClusterInstallationStateDeletionRequested,
+				model.ClusterInstallationStateReconciling,
 			},
 		}).
 		Where("LockAcquiredAt = 0").

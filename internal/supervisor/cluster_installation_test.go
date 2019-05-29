@@ -8,6 +8,8 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
+
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 type mockClusterInstallationStore struct {
@@ -59,6 +61,20 @@ func (p *mockClusterInstallationProvisioner) CreateClusterInstallation(cluster *
 
 func (p *mockClusterInstallationProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) error {
 	return nil
+}
+
+func (p *mockClusterInstallationProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) error {
+	return nil
+}
+
+func (p *mockClusterInstallationProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
+	return &mmv1alpha1.ClusterInstallation{
+			Spec: mmv1alpha1.ClusterInstallationSpec{},
+			Status: mmv1alpha1.ClusterInstallationStatus{
+				State: mmv1alpha1.Stable,
+			},
+		},
+		nil
 }
 
 func TestClusterInstallationSupervisorDo(t *testing.T) {
@@ -186,7 +202,8 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			ExpectedState string
 		}{
 			{"unexpected state", model.ClusterInstallationStateStable, model.ClusterInstallationStateStable},
-			{"creation requested", model.ClusterInstallationStateCreationRequested, model.ClusterInstallationStateStable},
+			{"creation requested", model.ClusterInstallationStateCreationRequested, model.ClusterInstallationStateReconciling},
+			{"creation reconciling", model.ClusterInstallationStateReconciling, model.ClusterInstallationStateStable},
 			{"deletion requested", model.ClusterInstallationStateDeletionRequested, model.ClusterInstallationStateDeleted},
 		}
 

@@ -436,8 +436,13 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      makeClusterInstallationName(clusterInstallation),
 			Namespace: clusterInstallation.Namespace,
+			Labels: map[string]string{
+				"installation":         installation.ID,
+				"cluster-installation": clusterInstallation.ID,
+			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
+			Version:     translateMattermostVersion(installation.Version),
 			IngressName: installation.DNS,
 		},
 	})
@@ -502,4 +507,120 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 	logger.Info("Successfully deleted cluster installation")
 
 	return nil
+}
+
+// UpdateClusterInstallation updates the cluster installation spec to match the
+// installation specification.
+func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	if kopsMetadata.Name == "" {
+		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
+		return nil
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
+	name := makeClusterInstallationName(clusterInstallation)
+
+	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
+
+	version := translateMattermostVersion(installation.Version)
+	if cr.Spec.Version == version {
+		return nil
+	}
+	cr.Spec.Version = version
+
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
+	}
+
+	logger.Infof("Updated cluster installation version to %s", installation.Version)
+
+	return nil
+}
+
+// GetClusterInstallationResource gets the cluster installation resource from
+// the kubernetes API.
+func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	if kopsMetadata.Name == "" {
+		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
+		return nil, nil
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return nil, err
+	}
+
+	name := makeClusterInstallationName(clusterInstallation)
+
+	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return cr, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
+
+	return cr, nil
+}
+
+// Override the version to make match the nil value in the custom resource.
+// TODO: this could probably be better. We may want the operator to understand
+// default values instead of needing to pass in empty values.
+func translateMattermostVersion(version string) string {
+	if version == "stable" {
+		return ""
+	}
+
+	return version
 }

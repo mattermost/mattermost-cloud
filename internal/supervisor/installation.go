@@ -8,6 +8,7 @@ import (
 // installationStore abstracts the database operations required to query installations.
 type installationStore interface {
 	GetClusters(clusterFilter *model.ClusterFilter) ([]*model.Cluster, error)
+	GetCluster(id string) (*model.Cluster, error)
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
 
@@ -30,6 +31,7 @@ type installationStore interface {
 type installationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -111,6 +113,12 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateCreationRequested:
 		return s.createInstallation(installation, instanceID, logger)
 
+	case model.InstallationStateUpgradeRequested:
+		return s.updateInstallation(installation, instanceID, logger)
+
+	case model.InstallationStateUpgradeInProgress:
+		return s.waitForUpdateComplete(installation, instanceID, logger)
+
 	case model.InstallationStateDeletionRequested, model.InstallationStateDeletionInProgress:
 		return s.deleteInstallation(installation, instanceID, logger)
 
@@ -134,25 +142,27 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	// installation to be stable once all cluster installations are stable. Or, if
 	// some cluster installations have failed, mark the installation as failed.
 	if len(clusterInstallations) > 0 {
-		stableClusterInstallations := 0
-		failedClusterInstallations := 0
+		var stable, reconciling, failed int
 		for _, clusterInstallation := range clusterInstallations {
 			if clusterInstallation.State == model.ClusterInstallationStateStable {
-				stableClusterInstallations++
+				stable++
+			}
+			if clusterInstallation.State == model.ClusterInstallationStateReconciling {
+				reconciling++
 			}
 			if clusterInstallation.State == model.ClusterInstallationStateCreationFailed {
-				failedClusterInstallations++
+				failed++
 			}
 		}
 
-		logger.Debugf("Found %d cluster installations, %d stable, %d failed", len(clusterInstallations), stableClusterInstallations, failedClusterInstallations)
+		logger.Debugf("Found %d cluster installations, %d stable, %d reconciling, %d failed", len(clusterInstallations), stable, reconciling, failed)
 
-		if len(clusterInstallations) == stableClusterInstallations {
+		if len(clusterInstallations) == stable {
 			logger.Infof("Finished creating installation")
 			return model.InstallationStateStable
 		}
-		if failedClusterInstallations > 0 {
-			logger.Infof("Found %d failed cluster installations", failedClusterInstallations)
+		if failed > 0 {
+			logger.Infof("Found %d failed cluster installations", failed)
 			return model.InstallationStateCreationFailed
 		}
 
@@ -225,6 +235,111 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	logger.Infof("Requested creation of cluster installation on cluster %s", cluster.ID)
 
 	return clusterInstallation
+}
+
+func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		PerPage:        model.AllPerPage,
+		InstallationID: installation.ID,
+	})
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find cluster installations")
+		return installation.State
+	}
+
+	clusterInstallationIDs := []string{}
+	if len(clusterInstallations) > 0 {
+		for _, clusterInstallation := range clusterInstallations {
+			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+		}
+
+		clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
+		if !clusterInstallationLocks.TryLock() {
+			logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
+			return installation.State
+		}
+		defer clusterInstallationLocks.Unlock()
+
+		// Fetch the same cluster installations again, now that we have the locks.
+		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+			PerPage: model.AllPerPage,
+			IDs:     clusterInstallationIDs,
+		})
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
+			return installation.State
+		}
+
+		if len(clusterInstallations) != len(clusterInstallationIDs) {
+			logger.Warnf("Found only %d cluster installations after locking, expected %d", len(clusterInstallations), len(clusterInstallationIDs))
+		}
+	}
+
+	for _, clusterInstallation := range clusterInstallations {
+		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
+			return clusterInstallation.State
+		}
+		if cluster == nil {
+			logger.Errorf("Failed to find cluster %s", clusterInstallation.ClusterID)
+			return failedClusterInstallationState(clusterInstallation.State)
+		}
+
+		err = s.provisioner.UpdateClusterInstallation(cluster, installation, clusterInstallation)
+		if err != nil {
+			logger.Error("Failed to update cluster installation")
+			return installation.State
+		}
+
+		clusterInstallation.State = model.ClusterInstallationStateReconciling
+		err = s.store.UpdateClusterInstallation(clusterInstallation)
+		if err != nil {
+			logger.Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
+			return installation.State
+		}
+	}
+
+	logger.Infof("Finished updating clusters installations")
+
+	return model.InstallationStateUpgradeInProgress
+}
+
+func (s *InstallationSupervisor) waitForUpdateComplete(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		InstallationID: installation.ID,
+		PerPage:        model.AllPerPage,
+	})
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find cluster installations")
+		return installation.State
+	}
+
+	var stable, reconciling, failed int
+	for _, clusterInstallation := range clusterInstallations {
+		if clusterInstallation.State == model.ClusterInstallationStateStable {
+			stable++
+		}
+		if clusterInstallation.State == model.ClusterInstallationStateReconciling {
+			reconciling++
+		}
+		if clusterInstallation.State == model.ClusterInstallationStateCreationFailed {
+			failed++
+		}
+	}
+
+	logger.Debugf("Found %d cluster installations, %d stable, %d reconciling, %d failed", len(clusterInstallations), stable, reconciling, failed)
+
+	if len(clusterInstallations) == stable {
+		logger.Infof("Finished updating installation")
+		return model.InstallationStateStable
+	}
+	if failed > 0 {
+		logger.Infof("Found %d failed cluster installations", failed)
+		return model.InstallationStateUpgradeFailed
+	}
+
+	return installation.State
 }
 
 func (s *InstallationSupervisor) deleteInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {

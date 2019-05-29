@@ -20,7 +20,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kubernetes/client-go v11.0.0+incompatible
 	github.com/lib/pq v1.0.0
-	github.com/mattermost/mattermost-operator v0.0.0-20190516183748-6723b29a6757
+	github.com/mattermost/mattermost-operator v0.0.0-20190528162820-699b61753dd1
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
