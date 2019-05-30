@@ -554,6 +554,7 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 
 	version := translateMattermostVersion(installation.Version)
 	if cr.Spec.Version == version {
+		logger.Debugf("Cluster installation already on version %s", version)
 		return nil
 	}
 	cr.Spec.Version = version
