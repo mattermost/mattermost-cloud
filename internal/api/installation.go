@@ -172,6 +172,7 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	switch installation.State {
 	case model.InstallationStateStable:
 	case model.InstallationStateUpgradeRequested:
+	case model.InstallationStateUpgradeInProgress:
 	case model.InstallationStateUpgradeFailed:
 	default:
 		c.Logger.Warnf("unable to upgrade installation while in state %s", installation.State)
@@ -179,15 +180,9 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// TODO: Support something other than "latest".
-	if version != "latest" {
-		c.Logger.Warnf("unsupported mattermost version %s", version)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	if installation.State != model.InstallationStateUpgradeRequested {
 		installation.State = model.InstallationStateUpgradeRequested
+		installation.Version = version
 
 		err := c.Store.UpdateInstallation(installation)
 		if err != nil {

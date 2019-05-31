@@ -6,23 +6,25 @@ import (
 )
 
 const (
-	// InstallationStateCreationRequested is a installation in the process of being created.
+	// InstallationStateCreationRequested is an installation in the process of being created.
 	InstallationStateCreationRequested = "creation-requested"
-	// InstallationStateCreationFailed is a installation that failed creation.
+	// InstallationStateCreationFailed is an installation that failed creation.
 	InstallationStateCreationFailed = "creation-failed"
-	// InstallationStateDeletionRequested is a installation to be deleted.
+	// InstallationStateDeletionRequested is an installation to be deleted.
 	InstallationStateDeletionRequested = "deletion-requested"
-	// InstallationStateDeletionInProgress is a installation being deleted.
+	// InstallationStateDeletionInProgress is an installation being deleted.
 	InstallationStateDeletionInProgress = "deletion-in-progress"
-	// InstallationStateDeletionFailed is a installation that failed deletion.
+	// InstallationStateDeletionFailed is an installation that failed deletion.
 	InstallationStateDeletionFailed = "deletion-failed"
-	// InstallationStateDeleted is a installation that has been deleted
+	// InstallationStateDeleted is an installation that has been deleted
 	InstallationStateDeleted = "deleted"
-	// InstallationStateUpgradeRequested is a installation in the process of upgrading.
+	// InstallationStateUpgradeRequested is an installation that is about to undergo a version change.
 	InstallationStateUpgradeRequested = "upgrade-requested"
-	// InstallationStateUpgradeFailed is a installation that failed to upgrade.
+	// InstallationStateUpgradeInProgress is an installation that is undergoing a version change.
+	InstallationStateUpgradeInProgress = "upgrade-in-progress"
+	// InstallationStateUpgradeFailed is an installation that failed to change versions.
 	InstallationStateUpgradeFailed = "upgrade-failed"
-	// InstallationStateStable is a installation in a stable state and undergoing no changes.
+	// InstallationStateStable is an installation in a stable state and undergoing no changes.
 	InstallationStateStable = "stable"
 )
 

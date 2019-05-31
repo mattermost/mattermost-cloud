@@ -16,6 +16,8 @@ const (
 	ClusterInstallationStateDeletionFailed = "deletion-failed"
 	// ClusterInstallationStateDeleted is a cluster installation that has been deleted
 	ClusterInstallationStateDeleted = "deleted"
+	// ClusterInstallationStateReconciling is a cluster installation that in undergoing changes and is not yet stable.
+	ClusterInstallationStateReconciling = "reconciling"
 	// ClusterInstallationStateStable is a cluster installation in a stable state and undergoing no changes.
 	ClusterInstallationStateStable = "stable"
 )

@@ -4,6 +4,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
+
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 // clusterInstallationStore abstracts the database operations required to query installations.
@@ -24,6 +26,8 @@ type clusterInstallationStore interface {
 type clusterInstallationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 }
 
 // ClusterInstallationSupervisor finds cluster installations pending work and effects the required changes.
@@ -148,7 +152,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 		}
 
 		logger.Info("Finished creating cluster installation")
-		return model.ClusterInstallationStateStable
+		return model.ClusterInstallationStateReconciling
 
 	case model.ClusterInstallationStateDeletionRequested:
 		err = s.provisioner.DeleteClusterInstallation(cluster, installation, clusterInstallation)
@@ -159,12 +163,27 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 
 		err = s.store.DeleteClusterInstallation(clusterInstallation.ID)
 		if err != nil {
-			logger.WithError(err).Error("Failed to record deleted cluster installation after creation")
+			logger.WithError(err).Error("Failed to record deleted cluster installation after deletion")
 			return model.ClusterInstallationStateCreationFailed
 		}
 
 		logger.Info("Finished deleting cluster installation")
 		return model.ClusterInstallationStateDeleted
+
+	case model.ClusterInstallationStateReconciling:
+		cr, err := s.provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster installation resource")
+			return model.ClusterInstallationStateReconciling
+		}
+
+		if cr.Status.State != mmv1alpha1.Stable {
+			logger.Info("Cluster installation is still reconciling")
+			return model.ClusterInstallationStateReconciling
+		}
+
+		logger.Info("Cluster installation finished reconciling")
+		return model.ClusterInstallationStateStable
 
 	default:
 		logger.Warnf("Found cluster installation pending work in unexpected state %s", clusterInstallation.State)

@@ -148,6 +148,8 @@ github.com/mattermost/mattermost-operator v0.0.0-20190516082539-76ed319d853b h1:
 github.com/mattermost/mattermost-operator v0.0.0-20190516082539-76ed319d853b/go.mod h1:Rinpkr6ordw53vU23itYjIaypS117QJwCGKr3YiriNI=
 github.com/mattermost/mattermost-operator v0.0.0-20190516183748-6723b29a6757 h1:/8nbpholfU7/obIUjoLHd60ytBOPMrml+s9eVNPUKy0=
 github.com/mattermost/mattermost-operator v0.0.0-20190516183748-6723b29a6757/go.mod h1:Rinpkr6ordw53vU23itYjIaypS117QJwCGKr3YiriNI=
+github.com/mattermost/mattermost-operator v0.0.0-20190528162820-699b61753dd1 h1:0DRxpC0cdsZ8dJIT3QYP20lfUDT5C2z9BGOAy8GgeUE=
+github.com/mattermost/mattermost-operator v0.0.0-20190528162820-699b61753dd1/go.mod h1:Rinpkr6ordw53vU23itYjIaypS117QJwCGKr3YiriNI=
 github.com/mattn/go-sqlite3 v1.9.0 h1:pDRiWfl+++eC2FEFRy6jXmQlvp4Yh3z1MJKg4UeYM/4=
 github.com/mattn/go-sqlite3 v1.9.0/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
