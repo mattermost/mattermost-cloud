@@ -40,6 +40,7 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 		Where(sq.Eq{
 			"State": []string{
 				model.InstallationStateCreationRequested,
+				model.InstallationStateCreationDNS,
 				model.InstallationStateUpgradeRequested,
 				model.InstallationStateUpgradeInProgress,
 				model.InstallationStateDeletionInProgress,
