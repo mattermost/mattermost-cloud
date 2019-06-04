@@ -2,3 +2,5 @@ clusters
 cloud.db
 coverage.out
 .vscode
+build
+dist

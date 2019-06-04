@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  plugin-ci: mattermost/generic-ci@volatile
+  generic-ci: mattermost/generic-ci@volatile
 
 executors:
   default:
@@ -75,8 +75,11 @@ jobs:
     - checkout
     - *restore_cache
     - run: make dist
-    - store_artifacts:
-        path: dist
+    - persist_to_workspace:
+        root: dist
+        paths:
+          - "*.tar.gz"
+          - "*.zip"
 
   deploy-master:
     docker:
@@ -84,12 +87,10 @@ jobs:
     steps:
       - attach_workspace:
           at: dist
-      - deploy-s3:
-          filename: "dist/*.tar.gz"
-          bucket: "s3://mattermost-cloud/master/"
-      - deploy-s3:
-          filename: "dist/*.zip"
-          bucket: "s3://mattermost-cloud/master/"
+      - run: ls -la dist
+      - generic-ci/deploy-s3:
+          folder: "dist"
+          bucket: "s3://mattermost-cloud-releases/master/"
 
   deploy-release:
     docker:
@@ -97,12 +98,9 @@ jobs:
     steps:
     - attach_workspace:
         at: dist
-    - deploy-s3:
-        filename: "dist/*.tar.gz"
-        bucket: "s3://mattermost-cloud/$CIRCLE_TAG/"
-    - deploy-s3:
-        filename: "dist/*.zip"
-        bucket: "s3://mattermost-cloud/$CIRCLE_TAG/"
+    - generic-ci/deploy-s3:
+        folder: "dist"
+        bucket: "s3://mattermost-cloud-releases/$CIRCLE_TAG/"
 
 workflows:
   version: 2
@@ -113,7 +111,30 @@ workflows:
     - test-postgres
   tagged-build:
     jobs:
+    - check-style:
+        filters:
+          branches:
+            only: master
+          tags:
+            only: /^v.*/
+    - test-sqlite:
+        filters:
+          branches:
+            only: master
+          tags:
+            only: /^v.*/
+    - test-postgres:
+        filters:
+          branches:
+            only: master
+          tags:
+            only: /^v.*/
     - build:
+        filters:
+          branches:
+            only: master
+          tags:
+            only: /^v.*/
         requires:
         - check-style
         - test-sqlite
