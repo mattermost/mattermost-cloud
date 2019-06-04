@@ -283,7 +283,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 
 	err = s.aws.CreateCNAME(installation.DNS, endpoints, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS A record")
+		logger.WithError(err).Error("Failed to create DNS CNAME record")
 		return model.InstallationStateCreationDNS
 	}
 
