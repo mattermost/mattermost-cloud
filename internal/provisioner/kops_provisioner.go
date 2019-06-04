@@ -442,8 +442,9 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
-			Version:     translateMattermostVersion(installation.Version),
-			IngressName: installation.DNS,
+			Version:                translateMattermostVersion(installation.Version),
+			IngressName:            installation.DNS,
+			UseServiceLoadBalancer: true,
 		},
 	})
 	if err != nil {

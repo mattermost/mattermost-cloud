@@ -14,6 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/pkg/errors"
 	logrus "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -30,8 +31,10 @@ func init() {
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.MarkPersistentFlagRequired("route53-id")
 }
 
 var serverCmd = &cobra.Command{
@@ -81,10 +84,11 @@ var serverCmd = &cobra.Command{
 		if poll == 0 {
 			logger.WithField("poll", poll).Info("Scheduler is disabled")
 		}
+		route53ZoneID, _ := command.Flags().GetString("route53-id")
 		supervisor := supervisor.NewScheduler(
 			supervisor.MultiDoer{
 				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
-				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
+				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger),
 				supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
 			},
 			time.Duration(poll)*time.Second,

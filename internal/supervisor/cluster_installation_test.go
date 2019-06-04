@@ -71,7 +71,8 @@ func (p *mockClusterInstallationProvisioner) GetClusterInstallationResource(clus
 	return &mmv1alpha1.ClusterInstallation{
 			Spec: mmv1alpha1.ClusterInstallationSpec{},
 			Status: mmv1alpha1.ClusterInstallationStatus{
-				State: mmv1alpha1.Stable,
+				State:    mmv1alpha1.Stable,
+				Endpoint: "example-dns.mattermost.cloud",
 			},
 		},
 		nil

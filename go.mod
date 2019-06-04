@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/Masterminds/squirrel v1.1.0
+	github.com/aws/aws-sdk-go v1.19.41
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-logr/logr v0.1.0 // indirect
 	github.com/go-logr/zapr v0.1.1 // indirect
@@ -20,7 +21,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kubernetes/client-go v11.0.0+incompatible
 	github.com/lib/pq v1.0.0
-	github.com/mattermost/mattermost-operator v0.0.0-20190528162820-699b61753dd1
+	github.com/mattermost/mattermost-operator v0.0.0-20190603151005-11ed14fb31db
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect

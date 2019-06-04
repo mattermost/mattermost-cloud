@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -32,6 +33,13 @@ type installationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
+}
+
+// aws abstracts the aws client operations required by the installation supervisor.
+type aws interface {
+	CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+	DeleteCNAME(dnsName string, logger log.FieldLogger) error
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -41,15 +49,17 @@ type installationProvisioner interface {
 type InstallationSupervisor struct {
 	store       installationStore
 	provisioner installationProvisioner
+	aws         aws
 	instanceID  string
 	logger      log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, instanceID string, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws, instanceID string, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:       store,
 		provisioner: installationProvisioner,
+		aws:         aws,
 		instanceID:  instanceID,
 		logger:      logger,
 	}
@@ -113,6 +123,9 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateCreationRequested:
 		return s.createInstallation(installation, instanceID, logger)
 
+	case model.InstallationStateCreationDNS:
+		return s.configureInstallationDNS(installation, logger)
+
 	case model.InstallationStateUpgradeRequested:
 		return s.updateInstallation(installation, instanceID, logger)
 
@@ -159,7 +172,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 
 		if len(clusterInstallations) == stable {
 			logger.Infof("Finished creating installation")
-			return model.InstallationStateStable
+			return s.configureInstallationDNS(installation, logger)
 		}
 		if failed > 0 {
 			logger.Infof("Found %d failed cluster installations", failed)
@@ -237,6 +250,48 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	return clusterInstallation
 }
 
+func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, logger log.FieldLogger) string {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		InstallationID: installation.ID,
+		PerPage:        model.AllPerPage,
+	})
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find cluster installations")
+		return model.InstallationStateCreationDNS
+	}
+
+	var endpoints []string
+	for _, clusterInstallation := range clusterInstallations {
+		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
+			return model.InstallationStateCreationDNS
+		}
+		if cluster == nil {
+			logger.Errorf("Failed to find cluster %s", clusterInstallation.ClusterID)
+			return failedClusterInstallationState(clusterInstallation.State)
+		}
+
+		cr, err := s.provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster installation resource")
+			return model.InstallationStateCreationDNS
+		}
+
+		endpoints = append(endpoints, cr.Status.Endpoint)
+	}
+
+	err = s.aws.CreateCNAME(installation.DNS, endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record")
+		return model.InstallationStateCreationDNS
+	}
+
+	logger.Infof("Successfully configured DNS %s", installation.DNS)
+
+	return model.InstallationStateStable
+}
+
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		PerPage:        model.AllPerPage,
@@ -247,7 +302,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		return installation.State
 	}
 
-	clusterInstallationIDs := []string{}
+	var clusterInstallationIDs []string
 	if len(clusterInstallations) > 0 {
 		for _, clusterInstallation := range clusterInstallations {
 			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
@@ -353,7 +408,7 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 		return installation.State
 	}
 
-	clusterInstallationIDs := []string{}
+	var clusterInstallationIDs []string
 	if len(clusterInstallations) > 0 {
 		for _, clusterInstallation := range clusterInstallations {
 			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
@@ -441,6 +496,12 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 
 	if deletedClusterInstallations < len(clusterInstallations) {
 		return model.InstallationStateDeletionInProgress
+	}
+
+	err = s.aws.DeleteCNAME(installation.DNS, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete installation DNS")
+		return installation.State
 	}
 
 	err = s.store.DeleteInstallation(installation.ID)

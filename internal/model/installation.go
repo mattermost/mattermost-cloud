@@ -8,6 +8,8 @@ import (
 const (
 	// InstallationStateCreationRequested is an installation in the process of being created.
 	InstallationStateCreationRequested = "creation-requested"
+	// InstallationStateCreationDNS is an installation in the process having configuring DNS.
+	InstallationStateCreationDNS = "creation-configuring-dns"
 	// InstallationStateCreationFailed is an installation that failed creation.
 	InstallationStateCreationFailed = "creation-failed"
 	// InstallationStateDeletionRequested is an installation to be deleted.
