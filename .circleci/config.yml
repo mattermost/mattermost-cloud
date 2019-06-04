@@ -1,83 +1,136 @@
 version: 2.1
+
+orbs:
+  plugin-ci: mattermost/generic-ci@volatile
+
 executors:
   default:
     docker:
-      - image: circleci/golang:1.12
+    - image: circleci/golang:1.12
 
 aliases:
-  - &restore_cache
-    restore_cache:
-      key: go-mod-v1-{{ checksum "go.sum" }}
-  - &save_cache
-    save_cache:
-      key: go-mod-v1-{{ checksum "go.sum" }}
-      paths:
-        - "/go/pkg/mod"
+- &restore_cache
+  restore_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+- &save_cache
+  save_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+    paths:
+    - "/go/pkg/mod"
 
 jobs:
-  lint:
+  check-style:
     executor:
       name: default
     steps:
-      - checkout
-      - *restore_cache
-      - run: go get -u golang.org/x/lint/golint
-      - run: golint -set_exit_status ./...
-      - *save_cache
-  vet:
-    executor:
-      name: default
-    steps:
-      - checkout
-      - *restore_cache
-      - run: go vet ./...
-      - *save_cache
+    - checkout
+    - *restore_cache
+    - run: make check-style
+    - *save_cache
   test-sqlite:
     executor:
       name: default
     steps:
-      - checkout
-      - *restore_cache
-      - run: |
-          go get golang.org/x/tools/cmd/cover
-          go get github.com/mattn/goveralls
-      - run: go test ./... -v -covermode=count -coverprofile=coverage.out
-      - *save_cache
-      - run:
-          name: coveralls
-          command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN
+    - checkout
+    - *restore_cache
+    - run: |
+        go get golang.org/x/tools/cmd/cover
+        go get github.com/mattn/goveralls
+    - run: go test ./... -v -covermode=count -coverprofile=coverage.out
+    - *save_cache
+    - run:
+        name: coveralls
+        command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN
   test-postgres:
     docker:
-      - image: circleci/golang:1.12
-        environment:
-          CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
-      - image: circleci/postgres:11.2-alpine
-        environment:
-          POSTGRES_USER: cloud_test
-          POSTGRES_DB: cloud_test
+    - image: circleci/golang:1.12
+      environment:
+        CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
+    - image: circleci/postgres:11.2-alpine
+      environment:
+        POSTGRES_USER: cloud_test
+        POSTGRES_DB: cloud_test
     executor:
       name: default
     steps:
-      - run:
-          name: Waiting for Postgres to be ready
-          command: |
-            for i in `seq 1 10`;
-            do
-              nc -z localhost 5432 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for Postgres && exit 1
-      - checkout
-      - *restore_cache
-      - run: go test ./...
-      - *save_cache
+    - run:
+        name: Waiting for Postgres to be ready
+        command: |
+          for i in `seq 1 10`;
+          do
+            nc -z localhost 5432 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Postgres && exit 1
+    - checkout
+    - *restore_cache
+    - run: go test ./...
+    - *save_cache
+
+  build:
+    executor:
+      name: default
+    steps:
+    - checkout
+    - *restore_cache
+    - run: make dist
+    - store_artifacts:
+        path: dist
+
+  deploy-master:
+    docker:
+    - image: circleci/python:2.7
+    steps:
+      - attach_workspace:
+          at: dist
+      - deploy-s3:
+          filename: "dist/*.tar.gz"
+          bucket: "s3://mattermost-cloud/master/"
+      - deploy-s3:
+          filename: "dist/*.zip"
+          bucket: "s3://mattermost-cloud/master/"
+
+  deploy-release:
+    docker:
+    - image: circleci/python:2.7
+    steps:
+    - attach_workspace:
+        at: dist
+    - deploy-s3:
+        filename: "dist/*.tar.gz"
+        bucket: "s3://mattermost-cloud/$CIRCLE_TAG/"
+    - deploy-s3:
+        filename: "dist/*.zip"
+        bucket: "s3://mattermost-cloud/$CIRCLE_TAG/"
 
 workflows:
   version: 2
-  untagged-build:
+  ci-build:
     jobs:
-      - lint
-      - vet
-      - test-sqlite
-      - test-postgres
+    - check-style
+    - test-sqlite
+    - test-postgres
+  tagged-build:
+    jobs:
+    - build:
+        requires:
+        - check-style
+        - test-sqlite
+        - test-postgres
+    - deploy-master:
+        filters:
+          branches:
+            only: master
+        context: mattermost-cloud-ci
+        requires:
+        - build
+    - deploy-release:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
+        context: mattermost-cloud-ci
+        requires:
+        - build
