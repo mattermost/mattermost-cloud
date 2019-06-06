@@ -266,7 +266,9 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*model.In
 
 // UpgradeInstallation upgrades a installation to the given Mattermost version.
 func (c *Client) UpgradeInstallation(installationID, version string) error {
-	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost/%s", installationID, version), nil)
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost", installationID), UpgradeInstallationRequest{
+		Version: version,
+	})
 	if err != nil {
 		return err
 	}

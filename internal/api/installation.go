@@ -20,7 +20,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter := apiRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
 	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
-	installationRouter.Handle("/mattermost/{version}", addContext(handleUpgradeInstallation)).Methods("PUT")
+	installationRouter.Handle("/mattermost", addContext(handleUpgradeInstallation)).Methods("PUT")
 	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
 	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
@@ -154,13 +154,19 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, installation)
 }
 
-// handleUpgradeInstallation responds to PUT /api/installations/{installation}/mattermost/{version}, upgrading
-// the installation to the given Mattermost version.
+// handleUpgradeInstallation responds to PUT /api/installations/{installation}/mattermost, upgrading
+// the installation to the Mattermost version embedded in the request.
 func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
-	version := vars["version"]
 	c.Logger = c.Logger.WithField("installation", installationID)
+
+	upgradeInstallationRequest, err := newUpgradeInstallationRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	installation, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
@@ -182,7 +188,7 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 
 	if installation.State != model.InstallationStateUpgradeRequested {
 		installation.State = model.InstallationStateUpgradeRequested
-		installation.Version = version
+		installation.Version = upgradeInstallationRequest.Version
 
 		err := c.Store.UpdateInstallation(installation)
 		if err != nil {
