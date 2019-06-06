@@ -67,3 +67,22 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	}
 	u.RawQuery = q.Encode()
 }
+
+// UpgradeInstallationRequest specifies the parameters for an upgraded installation.
+type UpgradeInstallationRequest struct {
+	Version string
+}
+
+func newUpgradeInstallationRequestFromReader(reader io.Reader) (*UpgradeInstallationRequest, error) {
+	var upgradeInstallationRequest UpgradeInstallationRequest
+	err := json.NewDecoder(reader).Decode(&upgradeInstallationRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode upgrade installation request")
+	}
+
+	if upgradeInstallationRequest.Version == "" {
+		return nil, errors.New("must specify version")
+	}
+
+	return &upgradeInstallationRequest, nil
+}

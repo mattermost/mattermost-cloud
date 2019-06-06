@@ -201,4 +201,101 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.4.0"), semver.MustParse("0.5.0"), func(e execer) error {
+		// Switch various columns to TEXT for Postgres. This isn't actually necessary for
+		// SQLite, and it's harder to change types there anyway.
+		if e.DriverName() == driverPostgres {
+			_, err := e.Exec(`ALTER TABLE System ALTER COLUMN Key TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE System ALTER COLUMN Value TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN ID TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN Provider TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN Provisioner TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN Size TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN State TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Cluster ALTER COLUMN LockAcquiredBy TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN ID TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN OwnerId TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN Version TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN DNS TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN Affinity TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN GroupID TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN State TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN LockAcquiredBy TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE ClusterInstallation ALTER COLUMN LockAcquiredBy TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE "Group" ALTER COLUMN ID TYPE TEXT;`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
 }
