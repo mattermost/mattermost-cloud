@@ -226,7 +226,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 
 	// Setup Helm
-	err = HelmSetup(logger, kops)
+	err = helmSetup(logger, kops)
 	if err != nil {
 		return err
 	}
@@ -237,34 +237,29 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 }
 
 // HelmSetup is used for the initial setup of Helm in cluster
-func HelmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
-	logger.Infof("Initializing Helm in the cluster")
-	init := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade")
-	err := init.Run()
+func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
+	logger.Info("Initializing Helm in the cluster")
+	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Creating service account")
-	svcacc := exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "create", "serviceaccount", "tiller")
-	err = svcacc.Run()
+	logger.Info("Creating Tiller service account")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "create", "serviceaccount", "tiller").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Creating cluster role bind")
-	clrobi := exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "create", "clusterrolebinding", "tiller-cluster-rule", "--clusterrole=cluster-admin", "--serviceaccount=kube-system:tiller")
-	err = clrobi.Run()
+	logger.Info("Creating Tiller cluster role bind")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "create", "clusterrolebinding", "tiller-cluster-rule", "--clusterrole=cluster-admin", "--serviceaccount=kube-system:tiller").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Patching tiller")
-	patch := exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "patch", "deploy", "tiller-deploy", "-p", "{\"spec\":{\"template\":{\"spec\":{\"serviceAccount\":\"tiller\"}}}}")
-	err = patch.Run()
+	logger.Info("Patching tiller")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "patch", "deploy", "tiller-deploy", "-p", "{\"spec\":{\"template\":{\"spec\":{\"serviceAccount\":\"tiller\"}}}}").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Upgrade Helm")
-	upgr := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
-	err = upgr.Run()
+	logger.Info("Upgrade Helm")
+	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
 	if err != nil {
 		return err
 	}
