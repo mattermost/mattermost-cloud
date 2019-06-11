@@ -109,7 +109,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 
 	err = os.Rename(kops.GetOutputDirectory(), outputDir)
 	if err != nil {
-		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
+		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to %q", outputDir))
 	}
 
 	terraformClient := terraform.New(outputDir, logger)
