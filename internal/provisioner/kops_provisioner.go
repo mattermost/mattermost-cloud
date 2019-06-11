@@ -22,17 +22,19 @@ import (
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	clusterRootDir string
-	s3StateStore   string
-	logger         log.FieldLogger
+	clusterRootDir    string
+	s3StateStore      string
+	certificateSslARN string
+	logger            log.FieldLogger
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
-		clusterRootDir: clusterRootDir,
-		s3StateStore:   s3StateStore,
-		logger:         logger,
+		clusterRootDir:    clusterRootDir,
+		s3StateStore:      s3StateStore,
+		certificateSslARN: certificateSslARN,
+		logger:            logger,
 	}
 }
 
@@ -482,6 +484,11 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			Version:                translateMattermostVersion(installation.Version),
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
+			ServiceAnnotations: map[string]string{
+				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         provisioner.certificateSslARN,
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "https",
+			},
 		},
 	})
 	if err != nil {
