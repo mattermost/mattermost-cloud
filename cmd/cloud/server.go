@@ -70,10 +70,20 @@ var serverCmd = &cobra.Command{
 		}
 
 		s3StateStore, _ := command.Flags().GetString("state-store")
-		logger.Infof("Using state store %s", s3StateStore)
-
 		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
-		logger.Infof("Using aws certificate arn %s", certificateSslARN)
+
+		wd, err := os.Getwd()
+		if err != nil {
+			wd = "error getting working directory"
+			logger.WithError(err).Error("Unable to get current working directory")
+		}
+
+		logger.WithFields(logrus.Fields{
+			"store-version":     currentVersion,
+			"state-store":       s3StateStore,
+			"aws-arn":           certificateSslARN,
+			"working-directory": wd,
+		}).Info("Starting Mattermost Provisioning Server")
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
