@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -24,16 +25,28 @@ import (
 type KopsProvisioner struct {
 	clusterRootDir    string
 	s3StateStore      string
+	aws               aws
 	certificateSslARN string
+	privateSubnetIds  string
+	publicSubnetIds   string
 	logger            log.FieldLogger
 }
 
+// aws abstracts the aws client operations required by the installation supervisor.
+type aws interface {
+	TagResource(resourceID, key, value string, logger log.FieldLogger) error
+	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
+}
+
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore string, aws aws, certificateSslARN, privateSubnetIds, publicSubnetIds string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
+		aws:               aws,
 		certificateSslARN: certificateSslARN,
+		privateSubnetIds:  privateSubnetIds,
+		publicSubnetIds:   publicSubnetIds,
 		logger:            logger,
 	}
 }
@@ -102,7 +115,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones)
+	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
 	if err != nil {
 		return err
 	}
@@ -149,6 +162,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		// and return original timeout error.
 		kops.ValidateCluster(kopsMetadata.Name, false)
 		return err
+	}
+
+	// Set the ELB tags for the public subnets
+	if provisioner.publicSubnetIds != "" {
+		subnets := strings.Split(provisioner.publicSubnetIds, ",")
+		for _, subnet := range subnets {
+			logger.WithField("name", kopsMetadata.Name).Infof("Tagging subnet %s", subnet)
+			err = provisioner.aws.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to tag subnet")
+			}
+		}
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
@@ -414,6 +439,18 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		err = kops.DeleteCluster(kopsMetadata.Name)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete cluster")
+		}
+	}
+
+	// Delete the ELB tags for the public subnets
+	if kopsMetadata.Name != "" && provisioner.publicSubnetIds != "" {
+		subnets := strings.Split(provisioner.publicSubnetIds, ",")
+		for _, subnet := range subnets {
+			logger.WithField("name", kopsMetadata.Name).Infof("Untagging subnet %s", subnet)
+			err = provisioner.aws.UntagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to untag subnet")
+			}
 		}
 	}
 

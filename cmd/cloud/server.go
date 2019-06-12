@@ -33,6 +33,8 @@ func init() {
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().String("certificate-aws-arn", "", "The certificate ARN from AWS. Generated in the certificate manager console.")
 	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
+	serverCmd.PersistentFlags().String("private-subnets", "", "The private subnet IDs to use on AWS.")
+	serverCmd.PersistentFlags().String("public-subnets", "", "The public subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.MarkPersistentFlagRequired("route53-id")
@@ -85,11 +87,21 @@ var serverCmd = &cobra.Command{
 			"working-directory": wd,
 		}).Info("Starting Mattermost Provisioning Server")
 
+		privateSubnetIds, _ := command.Flags().GetString("private-subnets")
+		logger.Infof("Using private subnets %s", privateSubnetIds)
+		publicSubnetIds, _ := command.Flags().GetString("public-subnets")
+		logger.Infof("Using public subnets %s", publicSubnetIds)
+
+		route53ZoneID, _ := command.Flags().GetString("route53-id")
+
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
+			aws.New(route53ZoneID),
 			certificateSslARN,
+			privateSubnetIds,
+			publicSubnetIds,
 			logger,
 		)
 
@@ -100,7 +112,6 @@ var serverCmd = &cobra.Command{
 		if poll == 0 {
 			logger.WithField("poll", poll).Info("Scheduler is disabled")
 		}
-		route53ZoneID, _ := command.Flags().GetString("route53-id")
 		supervisor := supervisor.NewScheduler(
 			supervisor.MultiDoer{
 				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
