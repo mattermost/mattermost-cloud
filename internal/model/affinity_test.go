@@ -15,6 +15,7 @@ func TestCheckaffinity(t *testing.T) {
 		{"", false},
 		{"unknown", false},
 		{model.InstallationAffinityIsolated, true},
+		{model.InstallationAffinityMultiTenant, true},
 	}
 
 	for _, tc := range testCases {

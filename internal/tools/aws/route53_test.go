@@ -109,7 +109,7 @@ func TestDeleteCNAME(t *testing.T) {
 			"no-matching",
 			nil,
 			false,
-			true,
+			false,
 		}, {
 			"session client error",
 			"dns4",

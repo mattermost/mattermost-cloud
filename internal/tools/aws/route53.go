@@ -103,7 +103,8 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 		}
 	}
 	if len(changes) == 0 {
-		return errors.New("unable to find any DNS records")
+		logger.Warn("Unable to find any DNS records; skipping...")
+		return nil
 	}
 
 	logger.Debugf("Attempting to delete %d DNS records", len(changes))
