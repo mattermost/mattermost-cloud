@@ -22,11 +22,12 @@ import (
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	clusterRootDir string
-	s3StateStore   string
-	logger         log.FieldLogger
-	aws            aws
-	privateDNS     string
+	clusterRootDir    string
+	s3StateStore      string
+	certificateSslARN string
+	logger            log.FieldLogger
+	aws               aws
+	privateDNS        string
 }
 
 // HelmDeployment deploys Helm charts.
@@ -48,13 +49,14 @@ type aws interface {
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.FieldLogger, aws aws, privateDNS string) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir string, s3StateStore string, certificateSslARN string, logger log.FieldLogger, aws aws, privateDNS string) *KopsProvisioner {
 	return &KopsProvisioner{
-		clusterRootDir: clusterRootDir,
-		s3StateStore:   s3StateStore,
-		logger:         logger,
-		aws:            aws,
-		privateDNS:     privateDNS,
+		clusterRootDir:    clusterRootDir,
+		s3StateStore:      s3StateStore,
+		certificateSslARN: certificateSslARN,
+		logger:            logger,
+		aws:               aws,
+		privateDNS:        privateDNS,
 	}
 }
 
@@ -129,7 +131,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 
 	err = os.Rename(kops.GetOutputDirectory(), outputDir)
 	if err != nil {
-		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
+		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to %q", outputDir))
 	}
 
 	terraformClient := terraform.New(outputDir, logger)
@@ -585,6 +587,11 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			Version:                translateMattermostVersion(installation.Version),
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
+			ServiceAnnotations: map[string]string{
+				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         provisioner.certificateSslARN,
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "https",
+			},
 		},
 	})
 	if err != nil {
