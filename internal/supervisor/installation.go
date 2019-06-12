@@ -225,12 +225,40 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		PerPage:   model.AllPerPage,
 		ClusterID: cluster.ID,
 	})
-	if len(existingClusterInstallations) > 0 {
-		// TODO: Support multi-tenancy of some kind. For now, reject a cluster that already
-		// has a cluster installation.
-		logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
-		return nil
+
+	////////////////////////////////////////////////////////////////////////////
+	//                              MULTI-TENANCY                             //
+	////////////////////////////////////////////////////////////////////////////
+	// TODO: Improve the model for handling multi-tenancy                     //
+	// Current model:                                                         //
+	// - isolation=true  | 1 cluster installations                            //
+	// - isolation=false | 5 cluster installations                            //
+	////////////////////////////////////////////////////////////////////////////
+	if installation.Affinity == model.InstallationAffinityIsolated {
+		if len(existingClusterInstallations) > 0 {
+			logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
+			return nil
+		}
+	} else {
+		if len(existingClusterInstallations) >= 5 {
+			logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
+			return nil
+		}
+		if len(existingClusterInstallations) == 1 {
+			// This should be the only scenario where we need to check if the
+			// cluster installation running requires isolation or not.
+			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID)
+			if err != nil {
+				logger.WithError(err).Warn("Unable to find installation")
+				return nil
+			}
+			if installation.Affinity == model.InstallationAffinityIsolated {
+				logger.Debugf("Cluster %s already has an isolated installation %s", cluster.ID, installation.ID)
+				return nil
+			}
+		}
 	}
+	// The cluster can support another cluster installation.
 
 	clusterInstallation := &model.ClusterInstallation{
 		ClusterID:      cluster.ID,
@@ -445,6 +473,7 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 		switch clusterInstallation.State {
 		case model.ClusterInstallationStateCreationRequested:
 		case model.ClusterInstallationStateCreationFailed:
+		case model.ClusterInstallationStateReconciling:
 
 		case model.ClusterInstallationStateDeletionRequested:
 			deletingClusterInstallations++
