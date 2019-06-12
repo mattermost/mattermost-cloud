@@ -25,14 +25,36 @@ type KopsProvisioner struct {
 	clusterRootDir string
 	s3StateStore   string
 	logger         log.FieldLogger
+	aws            aws
+	privateDNS     string
 }
 
+// HelmDeployment deploys Helm charts.
+type helmDeployment struct {
+	valuesPath          string
+	chartName           string
+	namespace           string
+	chartDeploymentName string
+	dns                 string
+}
+
+// aws abstracts the aws client operations required by the installation supervisor.
+type aws interface {
+	CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+	DeleteCNAME(dnsName string, logger log.FieldLogger) error
+}
+
+// Array of helm apps that need DNS registration
+var helmApps = []string{"prometheus"}
+
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.FieldLogger, aws aws, privateDNS string) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir: clusterRootDir,
 		s3StateStore:   s3StateStore,
 		logger:         logger,
+		aws:            aws,
+		privateDNS:     privateDNS,
 	}
 }
 
@@ -226,9 +248,41 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	}
 
 	// Setup Helm
-	err = HelmSetup(logger, kops)
+	err = helmSetup(logger, kops)
 	if err != nil {
 		return err
+	}
+
+	// Old tiller pod is deleted because of the upgrade action and therefore wait is needed
+	logger.Infof("Waiting %d seconds for the old Tiller pod to be replaced...", wait)
+	time.Sleep(time.Duration(wait) * time.Second)
+
+	// Begin deploying Helm charts
+	privateNginx := helmDeployment{valuesPath: "helm-charts/private-nginx_values.yaml", chartName: "stable/nginx-ingress", namespace: "internal-nginx", chartDeploymentName: "private-nginx"}
+	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus-client", dns: (cluster.ID + ".prometheus." + provisioner.privateDNS)}
+
+	helmDeployments := []helmDeployment{privateNginx, prometheus}
+
+	for _, value := range helmDeployments {
+		err = helmInstallation(value, logger, kops)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Get the new ELB internal-nginx endpoint
+	endpoint, err := getEndpoint("internal-nginx", logger, kops)
+	if err != nil {
+		return err
+	}
+
+	for _, app := range helmApps {
+		logger.Infof("Registering DNS for %s", app)
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		err = provisioner.aws.CreateCNAME(dns, []string{endpoint}, logger)
+		if err != nil {
+			return err
+		}
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully created cluster")
@@ -236,35 +290,70 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	return nil
 }
 
+func getEndpoint(namespace string, logger log.FieldLogger, kops *kops.Cmd) (string, error) {
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return "", err
+	}
+	services, err := k8sClient.GetServices(namespace)
+	if err != nil {
+		return "", err
+	}
+	for _, service := range services.Items {
+		if service.Status.LoadBalancer.Ingress != nil {
+			endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+			logger.Infof("Succesfully got LoadBalancer endpoint %s for Namespace %s", endpoint, namespace)
+			return endpoint, nil
+		}
+	}
+	return "", nil
+}
+
+// HelmInstallation is used to install Helm charts.
+func helmInstallation(chart helmDeployment, logger log.FieldLogger, kops *kops.Cmd) error {
+	logger.Infof("Installing helm chart %s", chart.chartName)
+	if chart.chartName == "stable/prometheus" {
+		setValue := fmt.Sprintf("server.ingress.hosts={%s}", chart.dns)
+		cmd := exec.Command("helm", "install", "--kubeconfig", kops.GetKubeConfigPath(), "--set", setValue, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName)
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+	} else {
+		cmd := exec.Command("helm", "install", "--kubeconfig", kops.GetKubeConfigPath(), "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName)
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+	logger.Infof("Successfully installed helm chart %s", chart.chartName)
+	return nil
+}
+
 // HelmSetup is used for the initial setup of Helm in cluster
-func HelmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
-	logger.Infof("Initializing Helm in the cluster")
-	init := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade")
-	err := init.Run()
+func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
+	logger.Info("Initializing Helm in the cluster")
+	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Creating service account")
-	svcacc := exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "create", "serviceaccount", "tiller")
-	err = svcacc.Run()
+	logger.Info("Creating Tiller service account")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "create", "serviceaccount", "tiller").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Creating cluster role bind")
-	clrobi := exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "create", "clusterrolebinding", "tiller-cluster-rule", "--clusterrole=cluster-admin", "--serviceaccount=kube-system:tiller")
-	err = clrobi.Run()
+	logger.Info("Creating Tiller cluster role bind")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "create", "clusterrolebinding", "tiller-cluster-rule", "--clusterrole=cluster-admin", "--serviceaccount=kube-system:tiller").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Patching tiller")
-	patch := exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "patch", "deploy", "tiller-deploy", "-p", "{\"spec\":{\"template\":{\"spec\":{\"serviceAccount\":\"tiller\"}}}}")
-	err = patch.Run()
+	logger.Info("Patching tiller")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "patch", "deploy", "tiller-deploy", "-p", "{\"spec\":{\"template\":{\"spec\":{\"serviceAccount\":\"tiller\"}}}}").Run()
 	if err != nil {
 		return err
 	}
-	logger.Infof("Upgrade Helm")
-	upgr := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
-	err = upgr.Run()
+	logger.Info("Upgrade Helm")
+	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
 	if err != nil {
 		return err
 	}
@@ -423,6 +512,15 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 	err = os.RemoveAll(outputDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to clean up output directory")
+	}
+
+	for _, app := range helmApps {
+		logger.Infof("Deleting Route53 DNS Record for %s", app)
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		err = provisioner.aws.DeleteCNAME(dns, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete Route53 DNS record for %s")
+		}
 	}
 
 	logger.Info("Successfully deleted cluster")
