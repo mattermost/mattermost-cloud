@@ -50,7 +50,7 @@ controller:
 
   ## Name of the ingress class to route through this controller
   ##
-  ingressClass: prometheus-nginx
+  ingressClass: private-nginx
   # labels to add to the pod container metadata
   podLabels: {}
   #  key: value
