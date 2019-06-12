@@ -292,6 +292,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	return nil
 }
 
+// getEndpoint is used to get the endpoint of the internal ingress.
 func getEndpoint(namespace string, logger log.FieldLogger, kops *kops.Cmd) (string, error) {
 	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
 	if err != nil {
@@ -311,7 +312,7 @@ func getEndpoint(namespace string, logger log.FieldLogger, kops *kops.Cmd) (stri
 	return "", nil
 }
 
-// HelmInstallation is used to install Helm charts.
+// helmInstallation is used to install Helm charts.
 func helmInstallation(chart helmDeployment, logger log.FieldLogger, kops *kops.Cmd) error {
 	logger.Infof("Installing helm chart %s", chart.chartName)
 	if chart.chartName == "stable/prometheus" {
@@ -332,7 +333,7 @@ func helmInstallation(chart helmDeployment, logger log.FieldLogger, kops *kops.C
 	return nil
 }
 
-// HelmSetup is used for the initial setup of Helm in cluster
+// helmSetup is used for the initial setup of Helm in cluster
 func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	logger.Info("Initializing Helm in the cluster")
 	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
