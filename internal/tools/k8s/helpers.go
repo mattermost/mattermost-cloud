@@ -43,12 +43,3 @@ func (kc *KubeClient) GetPodsFromDeployment(namespace, deploymentName string) (*
 
 	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
 }
-
-// GetServices gets the services that belong to a given namespace.
-func (kc *KubeClient) GetServices(namespace string) (*corev1.ServiceList, error) {
-	services, err := kc.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return services, nil
-}

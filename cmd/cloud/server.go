@@ -92,6 +92,7 @@ var serverCmd = &cobra.Command{
 		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
 		privateDNS, _ := command.Flags().GetString("private-dns")
 		// Setup the provisioner for actually effecting changes to clusters.
+		// TODO aws is used for Route53 registration of cluster related DNS records. It should probably moved to Cluster Supervisor in the future.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
