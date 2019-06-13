@@ -536,6 +536,20 @@ func TestDeleteCluster(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// cluster2 will have a cluster installation running on it
+	cluster2, err := client.CreateCluster(&api.CreateClusterRequest{
+		Provider: model.ProviderAWS,
+		Size:     model.SizeAlef500,
+		Zones:    []string{"zone"},
+	})
+	require.NoError(t, err)
+	err = sqlStore.CreateClusterInstallation(&model.ClusterInstallation{
+		ClusterID:      cluster2.ID,
+		InstallationID: model.NewID(),
+		State:          model.ClusterInstallationStateStable,
+	})
+	require.NoError(t, err)
+
 	t.Run("unknown cluster", func(t *testing.T) {
 		err := client.DeleteCluster(model.NewID())
 		require.EqualError(t, err, "failed with status code 404")
@@ -565,29 +579,47 @@ func TestDeleteCluster(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
-	t.Run("from a valid, unlocked state", func(t *testing.T) {
-		states := []string{
-			model.ClusterStateStable,
-			model.ClusterStateCreationRequested,
-			model.ClusterStateCreationFailed,
-			model.ClusterStateUpgradeRequested,
-			model.ClusterStateUpgradeFailed,
-			model.ClusterStateDeletionRequested,
-			model.ClusterStateDeletionFailed,
-		}
+	// valid unlocked states
+	states := []string{
+		model.ClusterStateStable,
+		model.ClusterStateCreationRequested,
+		model.ClusterStateCreationFailed,
+		model.ClusterStateUpgradeRequested,
+		model.ClusterStateUpgradeFailed,
+		model.ClusterStateDeletionRequested,
+		model.ClusterStateDeletionFailed,
+	}
 
+	t.Run("from a valid, unlocked state", func(t *testing.T) {
 		for _, state := range states {
 			t.Run(state, func(t *testing.T) {
 				cluster1.State = state
 				err = sqlStore.UpdateCluster(cluster1)
 				require.NoError(t, err)
 
-				err := client.DeleteCluster(cluster1.ID)
+				err = client.DeleteCluster(cluster1.ID)
 				require.NoError(t, err)
 
 				cluster1, err = client.GetCluster(cluster1.ID)
 				require.NoError(t, err)
 				require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
+			})
+		}
+	})
+
+	t.Run("from a valid, unlocked state, but not empty of cluster installations", func(t *testing.T) {
+		for _, state := range states {
+			t.Run(state, func(t *testing.T) {
+				cluster2.State = state
+				err = sqlStore.UpdateCluster(cluster2)
+				require.NoError(t, err)
+
+				err = client.DeleteCluster(cluster2.ID)
+				require.Error(t, err)
+
+				cluster2, err = client.GetCluster(cluster2.ID)
+				require.NoError(t, err)
+				require.Equal(t, state, cluster2.State)
 			})
 		}
 	})
