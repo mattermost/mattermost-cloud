@@ -73,6 +73,9 @@ var serverCmd = &cobra.Command{
 
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
+		privateSubnetIds, _ := command.Flags().GetString("private-subnets")
+		publicSubnetIds, _ := command.Flags().GetString("public-subnets")
+		route53ZoneID, _ := command.Flags().GetString("route53-id")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -85,14 +88,10 @@ var serverCmd = &cobra.Command{
 			"state-store":       s3StateStore,
 			"aws-arn":           certificateSslARN,
 			"working-directory": wd,
+			"private-subents":   privateSubnetIds,
+			"public-subnets":    publicSubnetIds,
+			"route53-id":        route53ZoneID,
 		}).Info("Starting Mattermost Provisioning Server")
-
-		privateSubnetIds, _ := command.Flags().GetString("private-subnets")
-		logger.Infof("Using private subnets %s", privateSubnetIds)
-		publicSubnetIds, _ := command.Flags().GetString("public-subnets")
-		logger.Infof("Using public subnets %s", publicSubnetIds)
-
-		route53ZoneID, _ := command.Flags().GetString("route53-id")
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
