@@ -33,7 +33,7 @@ type KopsProvisioner struct {
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore string, certificateSslARN, privateSubnetIds, publicSubnetIds string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
