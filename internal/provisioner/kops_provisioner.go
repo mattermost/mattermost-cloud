@@ -614,9 +614,10 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
 			ServiceAnnotations: map[string]string{
-				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol": "http",
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":         provisioner.certificateSslARN,
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":        "https",
+				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":        "tcp",
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                provisioner.certificateSslARN,
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":               "https",
+				"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout": "120",
 			},
 		},
 	})
