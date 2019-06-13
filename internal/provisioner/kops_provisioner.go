@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
@@ -25,25 +26,17 @@ import (
 type KopsProvisioner struct {
 	clusterRootDir    string
 	s3StateStore      string
-	aws               aws
 	certificateSslARN string
 	privateSubnetIds  string
 	publicSubnetIds   string
 	logger            log.FieldLogger
 }
 
-// aws abstracts the aws client operations required by the installation supervisor.
-type aws interface {
-	TagResource(resourceID, key, value string, logger log.FieldLogger) error
-	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
-}
-
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore string, aws aws, certificateSslARN, privateSubnetIds, publicSubnetIds string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore string, certificateSslARN, privateSubnetIds, publicSubnetIds string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
-		aws:               aws,
 		certificateSslARN: certificateSslARN,
 		privateSubnetIds:  privateSubnetIds,
 		publicSubnetIds:   publicSubnetIds,
@@ -71,7 +64,7 @@ func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) (bool
 }
 
 // CreateCluster creates a cluster using kops and terraform.
-func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -169,7 +162,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		subnets := strings.Split(provisioner.publicSubnetIds, ",")
 		for _, subnet := range subnets {
 			logger.WithField("name", kopsMetadata.Name).Infof("Tagging subnet %s", subnet)
-			err = provisioner.aws.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			err = aws.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to tag subnet")
 			}
@@ -378,7 +371,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -447,7 +440,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		subnets := strings.Split(provisioner.publicSubnetIds, ",")
 		for _, subnet := range subnets {
 			logger.WithField("name", kopsMetadata.Name).Infof("Untagging subnet %s", subnet)
-			err = provisioner.aws.UntagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			err = aws.UntagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to untag subnet")
 			}

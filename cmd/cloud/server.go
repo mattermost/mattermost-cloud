@@ -98,7 +98,6 @@ var serverCmd = &cobra.Command{
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
-			aws.New(route53ZoneID),
 			certificateSslARN,
 			privateSubnetIds,
 			publicSubnetIds,
@@ -114,7 +113,7 @@ var serverCmd = &cobra.Command{
 		}
 		supervisor := supervisor.NewScheduler(
 			supervisor.MultiDoer{
-				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
+				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger),
 				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger),
 				supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
 			},
