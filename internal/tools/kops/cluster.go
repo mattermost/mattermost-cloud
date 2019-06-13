@@ -22,15 +22,17 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 		arg("node-count", clusterSize.NodeCount),
 		arg("node-size", clusterSize.NodeSize),
 		arg("master-size", clusterSize.MasterSize),
-		arg("api-loadbalancer-type", "internal"),
-		arg("topology", "private"),
 		arg("target", "terraform"),
 		arg("out", c.GetOutputDirectory()),
 		arg("output", "json"),
 	}
 
 	if privateSubnetIds != "" {
-		args = append(args, arg("subnets", privateSubnetIds))
+		args = append(args,
+			arg("subnets", privateSubnetIds),
+			arg("topology", "private"),
+			arg("api-loadbalancer-type", "internal"),
+		)
 	}
 	if publicSubnetIds != "" {
 		args = append(args, arg("utility-subnets", publicSubnetIds))
