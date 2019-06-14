@@ -134,10 +134,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	if err != nil && err.(*os.LinkError).Err == syscall.EXDEV {
 		err = utils.CopyDirectory(kops.GetOutputDirectory(), outputDir)
 		if err != nil {
-			return fmt.Errorf("failed to rename kops output directory to %q using utils.CopyFolder", outputDir)
+			return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s' using utils.CopyFolder", outputDir))
 		}
-	} else {
-		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
+	} else if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s'", outputDir))
 	}
 
 	terraformClient := terraform.New(outputDir, logger)
