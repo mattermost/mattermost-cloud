@@ -3,10 +3,10 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
+	"syscall"
 	"time"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -19,6 +19,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 )
 
 // KopsProvisioner provisions clusters using kops+terraform.
@@ -106,9 +107,13 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	// err = os.Rename(kops.GetOutputDirectory(), outputDir)
-	err = copyFolder(kops.GetOutputDirectory(), outputDir)
-	if err != nil {
+	err = os.Rename(kops.GetOutputDirectory(), outputDir)
+	if err != nil && err.(*os.LinkError).Err == syscall.EXDEV {
+		err = utils.CopyDirectory(kops.GetOutputDirectory(), outputDir)
+		if err != nil {
+			return fmt.Errorf("failed to rename kops output directory to %q using utils.CopyFolder", outputDir)
+		}
+	} else {
 		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
 	}
 
@@ -665,69 +670,4 @@ func translateMattermostVersion(version string) string {
 	}
 
 	return version
-}
-
-func copyFolder(source string, dest string) (err error) {
-
-	sourceinfo, err := os.Stat(source)
-	if err != nil {
-		return err
-	}
-
-	err = os.MkdirAll(dest, sourceinfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	directory, _ := os.Open(source)
-
-	objects, err := directory.Readdir(-1)
-
-	for _, obj := range objects {
-
-		sourcefilepointer := source + "/" + obj.Name()
-
-		destinationfilepointer := dest + "/" + obj.Name()
-
-		if obj.IsDir() {
-			err = copyFolder(sourcefilepointer, destinationfilepointer)
-			if err != nil {
-				fmt.Println(err)
-			}
-		} else {
-			err = copyFile(sourcefilepointer, destinationfilepointer)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-
-	}
-	return
-}
-
-func copyFile(source string, dest string) (err error) {
-	sourcefile, err := os.Open(source)
-	if err != nil {
-		return err
-	}
-
-	defer sourcefile.Close()
-
-	destfile, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-
-	defer destfile.Close()
-
-	_, err = io.Copy(destfile, sourcefile)
-	if err == nil {
-		sourceinfo, err := os.Stat(source)
-		if err != nil {
-			err = os.Chmod(dest, sourceinfo.Mode())
-		}
-
-	}
-
-	return
 }
