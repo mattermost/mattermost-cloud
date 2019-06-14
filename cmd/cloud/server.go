@@ -102,7 +102,6 @@ var serverCmd = &cobra.Command{
 		}).Info("Starting Mattermost Provisioning Server")
 
 		// Setup the provisioner for actually effecting changes to clusters.
-		// TODO aws is used for Route53 registration of cluster related DNS records. It should probably moved to Cluster Supervisor in the future.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
