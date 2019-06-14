@@ -123,6 +123,14 @@ func (a *mockAWS) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 	return nil
 }
 
+func (a *mockAWS) TagResource(resourceID, key, value string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) UntagResource(resourceID, key, value string, logger log.FieldLogger) error {
+	return nil
+}
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	t.Run("no clusters pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
