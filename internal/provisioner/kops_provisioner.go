@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -29,17 +30,31 @@ type KopsProvisioner struct {
 	certificateSslARN string
 	privateSubnetIds  string
 	publicSubnetIds   string
+	privateDNS        string
 	logger            log.FieldLogger
 }
 
+// helmDeployment deploys Helm charts.
+type helmDeployment struct {
+	valuesPath          string
+	chartName           string
+	namespace           string
+	chartDeploymentName string
+	setArgument         string
+}
+
+// Array of helm apps that need DNS registration.
+var helmApps = []string{"prometheus"}
+
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
 		certificateSslARN: certificateSslARN,
 		privateSubnetIds:  privateSubnetIds,
 		publicSubnetIds:   publicSubnetIds,
+		privateDNS:        privateDNS,
 		logger:            logger,
 	}
 }
@@ -251,12 +266,107 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 
+	wait = 120
+	logger.Infof("Waiting up to %d seconds for helm to get ready...", wait)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
+	if err != nil {
+		return err
+	}
+	logger.Info("Helm is ready to install charts")
+
+	// Begin deploying Helm charts
+	privateNginx := helmDeployment{valuesPath: "helm-charts/private-nginx_values.yaml", chartName: "stable/nginx-ingress", namespace: "internal-nginx", chartDeploymentName: "private-nginx"}
+	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
+	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus-client", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
+
+	helmDeployments := []helmDeployment{privateNginx, prometheus}
+
+	for _, value := range helmDeployments {
+		err = installHelmChart(value, logger, kops.GetKubeConfigPath())
+		if err != nil {
+			return err
+		}
+	}
+
+	// Get the new ELB internal-nginx endpoint
+	endpoint, err := getLoadBalancerEndpoint("internal-nginx", logger, kops.GetKubeConfigPath())
+	if err != nil {
+		return err
+	}
+
+	for _, app := range helmApps {
+		logger.Infof("Registering DNS for %s", app)
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
+		if err != nil {
+			return err
+		}
+	}
+
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully created cluster")
 
 	return nil
 }
 
-// HelmSetup is used for the initial setup of Helm in cluster
+// waitForHelmRunning is used to check when Helm is ready to install charts.
+func waitForHelmRunning(ctx context.Context, configPath string) error {
+	for {
+		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
+		var out bytes.Buffer
+		cmd.Stderr = &out
+		cmd.Run()
+		if out.String() == "" {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+// getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
+func getLoadBalancerEndpoint(namespace string, logger log.FieldLogger, configPath string) (string, error) {
+	k8sClient, err := k8s.New(configPath, logger)
+	if err != nil {
+		return "", err
+	}
+	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, service := range services.Items {
+		if service.Status.LoadBalancer.Ingress != nil {
+			endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+			logger.Infof("Succesfully got LoadBalancer endpoint %s for Namespace %s", endpoint, namespace)
+			return endpoint, nil
+		}
+	}
+	return "", nil
+}
+
+// installHelmChart is used to install Helm charts.
+func installHelmChart(chart helmDeployment, logger log.FieldLogger, configPath string) error {
+	logger.Infof("Installing helm chart %s", chart.chartName)
+	if chart.setArgument != "" {
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		if err != nil {
+			return err
+		}
+	}
+	logger.Infof("Successfully installed helm chart %s", chart.chartName)
+	return nil
+}
+
+// helmSetup is used for the initial setup of Helm in cluster.
 func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	logger.Info("Initializing Helm in the cluster")
 	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
@@ -450,6 +560,15 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aw
 	err = os.RemoveAll(outputDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to clean up output directory")
+	}
+
+	for _, app := range helmApps {
+		logger.Infof("Deleting Route53 DNS Record for %s", app)
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		err = aws.DeleteCNAME(dns, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete Route53 DNS record")
+		}
 	}
 
 	logger.Info("Successfully deleted cluster")
