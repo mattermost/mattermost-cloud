@@ -121,6 +121,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		if err != nil {
 			return fmt.Errorf("failed to rename kops output directory to %q using utils.CopyFolder", outputDir)
 		}
+		err = os.RemoveAll(kops.GetOutputDirectory())
+		if err != nil {
+			return fmt.Errorf("failed to cleanup source file %s: %s", kops.GetOutputDirectory(), err)
+		}
 	} else {
 		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
 	}
