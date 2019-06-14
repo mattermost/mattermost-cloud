@@ -11,12 +11,7 @@ import (
 
 var testDNSName = "example.mattermost.com"
 
-type mockAPI struct {
-	returnedError     error
-	returnedTruncated bool
-}
-
-func (api *mockAPI) getSessionClient() (*route53.Route53, error) {
+func (api *mockAPI) getRoute53Client() (*route53.Route53, error) {
 	return nil, api.returnedError
 }
 

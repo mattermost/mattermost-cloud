@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,9 +20,9 @@ type clusterStore interface {
 // clusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
 type clusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) (bool, error)
-	CreateCluster(cluster *model.Cluster) error
+	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster) error
-	DeleteCluster(cluster *model.Cluster) error
+	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
 }
 
 // ClusterSupervisor finds clusters pending work and effects the required changes.
@@ -31,15 +32,17 @@ type clusterProvisioner interface {
 type ClusterSupervisor struct {
 	store       clusterStore
 	provisioner clusterProvisioner
+	aws         aws.AWS
 	instanceID  string
 	logger      log.FieldLogger
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, instanceID string, logger log.FieldLogger) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:       store,
 		provisioner: clusterProvisioner,
+		aws:         aws,
 		instanceID:  instanceID,
 		logger:      logger,
 	}
@@ -115,7 +118,7 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 			}
 		}
 
-		err = s.provisioner.CreateCluster(cluster)
+		err = s.provisioner.CreateCluster(cluster, s.aws)
 		if err != nil {
 			logger.WithError(err).Error("Failed to create cluster")
 			return model.ClusterStateCreationFailed
@@ -135,7 +138,7 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return model.ClusterStateStable
 
 	case model.ClusterStateDeletionRequested:
-		err := s.provisioner.DeleteCluster(cluster)
+		err := s.provisioner.DeleteCluster(cluster, s.aws)
 		if err != nil {
 			logger.WithError(err).Error("Failed to delete cluster")
 			return model.ClusterStateDeletionFailed

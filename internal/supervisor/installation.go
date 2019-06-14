@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,12 +37,6 @@ type installationProvisioner interface {
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 }
 
-// aws abstracts the aws client operations required by the installation supervisor.
-type aws interface {
-	CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
-	DeleteCNAME(dnsName string, logger log.FieldLogger) error
-}
-
 // InstallationSupervisor finds installations pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
@@ -49,13 +44,13 @@ type aws interface {
 type InstallationSupervisor struct {
 	store       installationStore
 	provisioner installationProvisioner
-	aws         aws
+	aws         aws.AWS
 	instanceID  string
 	logger      log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws, instanceID string, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:       store,
 		provisioner: installationProvisioner,
