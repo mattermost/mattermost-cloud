@@ -43,7 +43,7 @@ type helmDeployment struct {
 	setArgument         string
 }
 
-// Array of helm apps that need DNS registration
+// Array of helm apps that need DNS registration.
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
@@ -310,7 +310,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	return nil
 }
 
-// waitForHelmRunning is used to check when Helm is ready to install charts
+// waitForHelmRunning is used to check when Helm is ready to install charts.
 func waitForHelmRunning(ctx context.Context, configPath string) error {
 	for {
 		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
@@ -322,7 +322,7 @@ func waitForHelmRunning(ctx context.Context, configPath string) error {
 		}
 		select {
 		case <-ctx.Done():
-			return (errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready"))
+			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
 		case <-time.After(5 * time.Second):
 		}
 	}
@@ -352,14 +352,12 @@ func getLoadBalancerEndpoint(namespace string, logger log.FieldLogger, configPat
 func installHelmChart(chart helmDeployment, logger log.FieldLogger, configPath string) error {
 	logger.Infof("Installing helm chart %s", chart.chartName)
 	if chart.setArgument != "" {
-		cmd := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName)
-		err := cmd.Run()
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
 		if err != nil {
 			return err
 		}
 	} else {
-		cmd := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName)
-		err := cmd.Run()
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
 		if err != nil {
 			return err
 		}
@@ -368,7 +366,7 @@ func installHelmChart(chart helmDeployment, logger log.FieldLogger, configPath s
 	return nil
 }
 
-// helmSetup is used for the initial setup of Helm in cluster
+// helmSetup is used for the initial setup of Helm in cluster.
 func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	logger.Info("Initializing Helm in the cluster")
 	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
