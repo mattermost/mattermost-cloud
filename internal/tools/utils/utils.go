@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// CopyDirectory copy the entire directory to another destination
 func CopyDirectory(source string, dest string) error {
 	sourceinfo, err := os.Stat(source)
 	if err != nil {
@@ -33,7 +34,7 @@ func CopyDirectory(source string, dest string) error {
 				fmt.Println(err)
 			}
 		} else {
-			err = CopyFile(sourcefilepointer, destinationfilepointer)
+			err = copyFile(sourcefilepointer, destinationfilepointer)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -43,7 +44,7 @@ func CopyDirectory(source string, dest string) error {
 	return nil
 }
 
-func CopyFile(source string, dest string) error {
+func copyFile(source string, dest string) error {
 	sourcefile, err := os.Open(source)
 	if err != nil {
 		return err
