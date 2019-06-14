@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -21,6 +22,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 )
 
 // KopsProvisioner provisions clusters using kops+terraform.
@@ -129,8 +131,13 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	}
 
 	err = os.Rename(kops.GetOutputDirectory(), outputDir)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to %q", outputDir))
+	if err != nil && err.(*os.LinkError).Err == syscall.EXDEV {
+		err = utils.CopyDirectory(kops.GetOutputDirectory(), outputDir)
+		if err != nil {
+			return fmt.Errorf("failed to rename kops output directory to %q using utils.CopyFolder", outputDir)
+		}
+	} else {
+		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
 	}
 
 	terraformClient := terraform.New(outputDir, logger)
@@ -630,6 +637,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
+			Replicas:               1,
 			Version:                translateMattermostVersion(installation.Version),
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
