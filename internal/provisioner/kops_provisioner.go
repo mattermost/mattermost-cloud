@@ -1,13 +1,14 @@
 package provisioner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
-	"bytes"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
@@ -26,9 +28,10 @@ type KopsProvisioner struct {
 	clusterRootDir    string
 	s3StateStore      string
 	certificateSslARN string
-	logger            log.FieldLogger
-	aws               aws
+	privateSubnetIds  string
+	publicSubnetIds   string
 	privateDNS        string
+	logger            log.FieldLogger
 }
 
 // helmDeployment deploys Helm charts.
@@ -40,24 +43,19 @@ type helmDeployment struct {
 	setArgument         string
 }
 
-// aws abstracts the aws client operations required by the installation supervisor.
-type aws interface {
-	CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
-	DeleteCNAME(dnsName string, logger log.FieldLogger) error
-}
-
 // Array of helm apps that need DNS registration
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN string, logger log.FieldLogger, aws aws, privateDNS string) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
 		certificateSslARN: certificateSslARN,
-		logger:            logger,
-		aws:               aws,
+		privateSubnetIds:  privateSubnetIds,
+		publicSubnetIds:   publicSubnetIds,
 		privateDNS:        privateDNS,
+		logger:            logger,
 	}
 }
 
@@ -81,7 +79,7 @@ func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) (bool
 }
 
 // CreateCluster creates a cluster using kops and terraform.
-func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -125,7 +123,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones)
+	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
 	if err != nil {
 		return err
 	}
@@ -172,6 +170,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		// and return original timeout error.
 		kops.ValidateCluster(kopsMetadata.Name, false)
 		return err
+	}
+
+	// Set the ELB tags for the public subnets
+	if provisioner.publicSubnetIds != "" {
+		subnets := strings.Split(provisioner.publicSubnetIds, ",")
+		for _, subnet := range subnets {
+			logger.WithField("name", kopsMetadata.Name).Infof("Tagging subnet %s", subnet)
+			err = aws.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to tag subnet")
+			}
+		}
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
@@ -289,7 +299,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	for _, app := range helmApps {
 		logger.Infof("Registering DNS for %s", app)
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		err = provisioner.aws.CreateCNAME(dns, []string{endpoint}, logger)
+		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
 		if err != nil {
 			return err
 		}
@@ -473,7 +483,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -537,6 +547,18 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		}
 	}
 
+	// Delete the ELB tags for the public subnets
+	if kopsMetadata.Name != "" && provisioner.publicSubnetIds != "" {
+		subnets := strings.Split(provisioner.publicSubnetIds, ",")
+		for _, subnet := range subnets {
+			logger.WithField("name", kopsMetadata.Name).Infof("Untagging subnet %s", subnet)
+			err = aws.UntagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to untag subnet")
+			}
+		}
+	}
+
 	err = os.RemoveAll(outputDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to clean up output directory")
@@ -545,7 +567,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 	for _, app := range helmApps {
 		logger.Infof("Deleting Route53 DNS Record for %s", app)
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		err = provisioner.aws.DeleteCNAME(dns, logger)
+		err = aws.DeleteCNAME(dns, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete Route53 DNS record")
 		}

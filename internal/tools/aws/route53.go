@@ -10,18 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	defaultTTL    = 60
-	defaultWeight = 1
-)
-
 // CreateCNAME creates an AWS route53 CNAME record.
 func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for route53 creation request")
 	}
 
-	svc, err := a.api.getSessionClient()
+	svc, err := a.api.getRoute53Client()
 	if err != nil {
 		return err
 	}
@@ -123,10 +118,7 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 	return nil
 }
 
-// apiInterface abstracts out AWS API calls for testing.
-type apiInterface struct{}
-
-func (api *apiInterface) getSessionClient() (*route53.Route53, error) {
+func (api *apiInterface) getRoute53Client() (*route53.Route53, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err
