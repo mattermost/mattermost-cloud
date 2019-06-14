@@ -6,8 +6,6 @@ require (
 	github.com/Masterminds/squirrel v1.1.0
 	github.com/aws/aws-sdk-go v1.19.41
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/go-logr/logr v0.1.0 // indirect
-	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/gofuzz v1.0.0 // indirect
@@ -21,7 +19,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kubernetes/client-go v11.0.0+incompatible
 	github.com/lib/pq v1.0.0
-	github.com/mattermost/mattermost-operator v0.0.0-20190603151005-11ed14fb31db
+	github.com/mattermost/mattermost-operator v0.0.0-20190611211530-f6f1f8912464
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
@@ -45,6 +43,4 @@ require (
 	k8s.io/client-go v0.0.0-20190425172711-65184652c889
 	k8s.io/kube-openapi v0.0.0-20190425185145-07b897206552 // indirect
 	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7 // indirect
-	sigs.k8s.io/controller-runtime v0.1.10 // indirect
-	sigs.k8s.io/testing_frameworks v0.1.1 // indirect
 )

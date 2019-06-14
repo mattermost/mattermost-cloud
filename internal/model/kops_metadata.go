@@ -13,7 +13,10 @@ type KopsMetadata struct {
 func NewKopsMetadata(provisionerMetadata []byte) (*KopsMetadata, error) {
 	kopsMetadata := KopsMetadata{}
 
-	if provisionerMetadata == nil {
+	// Check if length of metadata is 0 as opposed to if the value is nil. This
+	// is done to avoid an issue encountered where the metadata value provided
+	// had a length of 0, but had non-zero capacity.
+	if len(provisionerMetadata) == 0 {
 		return &kopsMetadata, nil
 	}
 

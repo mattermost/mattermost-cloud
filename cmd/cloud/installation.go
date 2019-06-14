@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +13,7 @@ func init() {
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
 	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
-	installationCreateCmd.Flags().String("affinity", "isolated", "How other installations may be co-located in the same cluster.")
+	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 

@@ -31,10 +31,12 @@ func init() {
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+	serverCmd.PersistentFlags().String("certificate-aws-arn", "", "The certificate ARN from AWS. Generated in the certificate manager console.")
 	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.MarkPersistentFlagRequired("route53-id")
+	serverCmd.MarkPersistentFlagRequired("certificate-aws-arn")
 }
 
 var serverCmd = &cobra.Command{
@@ -68,12 +70,26 @@ var serverCmd = &cobra.Command{
 		}
 
 		s3StateStore, _ := command.Flags().GetString("state-store")
-		logger.Infof("Using state store %s", s3StateStore)
+		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
+
+		wd, err := os.Getwd()
+		if err != nil {
+			wd = "error getting working directory"
+			logger.WithError(err).Error("Unable to get current working directory")
+		}
+
+		logger.WithFields(logrus.Fields{
+			"store-version":     currentVersion,
+			"state-store":       s3StateStore,
+			"aws-arn":           certificateSslARN,
+			"working-directory": wd,
+		}).Info("Starting Mattermost Provisioning Server")
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
+			certificateSslARN,
 			logger,
 		)
 
