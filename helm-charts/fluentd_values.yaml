@@ -1,0 +1,9 @@
+annotations: {}
+elasticsearch:
+  buffer_chunk_limit: 200M
+  buffer_queue_limit: 64
+  host: internal.test.cloud.mattermost.com
+  logstash_prefix: logstash
+  port: 80
+  scheme: http
+  ssl_version: TLSv1_2
