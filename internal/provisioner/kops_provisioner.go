@@ -301,6 +301,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 
 	// Get the new ELB internal-nginx endpoint
 	logger.Infof("Waiting up to %d seconds for internal ELB to be ready...", wait)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
 	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger, kops.GetKubeConfigPath())
 	if err != nil {
@@ -308,13 +309,12 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	}
 
 	if endpoint == "" {
-		logger.Errorf("ELB endpoint is empty...")
-		return fmt.Errorf("ELB endpoint is empty")
+		return errors.New("internal DNS ELB endpoint is empty")
 	}
 
 	for _, app := range helmApps {
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		logger.Infof("Registering DNS for %s DNS:%s", app, dns)
+		logger.Infof("Registering DNS %s for %s", dns, app)
 		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
 		if err != nil {
 			return err
