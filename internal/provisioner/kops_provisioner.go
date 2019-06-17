@@ -286,9 +286,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	// Begin deploying Helm charts
 	privateNginx := helmDeployment{valuesPath: "helm-charts/private-nginx_values.yaml", chartName: "stable/nginx-ingress", namespace: "internal-nginx", chartDeploymentName: "private-nginx"}
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
-	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus-client", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
+	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
 
-	helmDeployments := []helmDeployment{privateNginx, prometheus}
+	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
+	fluentd := helmDeployment{valuesPath: "helm-charts/fluentd_values.yaml", chartName: "stable/fluentd-elasticsearch", namespace: "fluentd", chartDeploymentName: "fluentd", setArgument: fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS)}
+	helmDeployments := []helmDeployment{privateNginx, prometheus, fluentd}
 
 	for _, value := range helmDeployments {
 		err = installHelmChart(value, logger, kops.GetKubeConfigPath())
@@ -359,13 +361,21 @@ func getLoadBalancerEndpoint(namespace string, logger log.FieldLogger, configPat
 func installHelmChart(chart helmDeployment, logger log.FieldLogger, configPath string) error {
 	logger.Infof("Installing helm chart %s", chart.chartName)
 	if chart.setArgument != "" {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		cmd := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
 		if err != nil {
+			logger.Errorf("cmd.Run() failed with %s\n", err)
 			return err
 		}
 	} else {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		cmd := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
 		if err != nil {
+			logger.Errorf("cmd.Run() failed with %s\n", err)
 			return err
 		}
 	}
