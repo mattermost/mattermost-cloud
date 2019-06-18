@@ -286,9 +286,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	// Begin deploying Helm charts
 	privateNginx := helmDeployment{valuesPath: "helm-charts/private-nginx_values.yaml", chartName: "stable/nginx-ingress", namespace: "internal-nginx", chartDeploymentName: "private-nginx"}
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
-	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus-client", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
+	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
 
-	helmDeployments := []helmDeployment{privateNginx, prometheus}
+	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
+	fluentd := helmDeployment{valuesPath: "helm-charts/fluentd_values.yaml", chartName: "stable/fluentd-elasticsearch", namespace: "fluentd", chartDeploymentName: "fluentd", setArgument: fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS)}
+	helmDeployments := []helmDeployment{privateNginx, prometheus, fluentd}
 
 	for _, value := range helmDeployments {
 		err = installHelmChart(value, logger, kops.GetKubeConfigPath())
@@ -298,14 +300,21 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	}
 
 	// Get the new ELB internal-nginx endpoint
-	endpoint, err := getLoadBalancerEndpoint("internal-nginx", logger, kops.GetKubeConfigPath())
+	logger.Infof("Waiting up to %d seconds for internal ELB to be ready...", wait)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger, kops.GetKubeConfigPath())
 	if err != nil {
 		return err
 	}
 
+	if endpoint == "" {
+		return errors.New("internal DNS ELB endpoint is empty")
+	}
+
 	for _, app := range helmApps {
-		logger.Infof("Registering DNS for %s", app)
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		logger.Infof("Registering DNS %s for %s", dns, app)
 		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
 		if err != nil {
 			return err
@@ -336,23 +345,29 @@ func waitForHelmRunning(ctx context.Context, configPath string) error {
 }
 
 // getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
-func getLoadBalancerEndpoint(namespace string, logger log.FieldLogger, configPath string) (string, error) {
+func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
 	k8sClient, err := k8s.New(configPath, logger)
 	if err != nil {
 		return "", err
 	}
-	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return "", err
-	}
-	for _, service := range services.Items {
-		if service.Status.LoadBalancer.Ingress != nil {
-			endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-			logger.Infof("Succesfully got LoadBalancer endpoint %s for Namespace %s", endpoint, namespace)
-			return endpoint, nil
+	for {
+		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return "", err
+		}
+		for _, service := range services.Items {
+			if service.Status.LoadBalancer.Ingress != nil {
+				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+				logger.Infof("Succesfully got LoadBalancer endpoint %s for Namespace %s", endpoint, namespace)
+				return endpoint, nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return "", errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+		case <-time.After(5 * time.Second):
 		}
 	}
-	return "", nil
 }
 
 // installHelmChart is used to install Helm charts.
