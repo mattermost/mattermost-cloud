@@ -1,7 +1,9 @@
 package aws
 
 import (
+	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -37,7 +39,7 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 		return err
 	}
 
-	logger.Debugf("AWS ec2 response: %s", resp)
+	logger.Debugf("AWS ec2 response: %s", prettyCreateTagsResponse(resp))
 
 	return nil
 }
@@ -70,9 +72,27 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 		return err
 	}
 
-	logger.Debugf("AWS ec2 response: %s", resp)
+	logger.Debugf("AWS ec2 response: %s", prettyDeleteTagsResponse(resp))
 
 	return nil
+}
+
+func prettyCreateTagsResponse(resp *ec2.CreateTagsOutput) string {
+	prettyResp, err := json.Marshal(resp)
+	if err != nil {
+		return strings.Replace(resp.String(), "\n", " ", -1)
+	}
+
+	return string(prettyResp)
+}
+
+func prettyDeleteTagsResponse(resp *ec2.DeleteTagsOutput) string {
+	prettyResp, err := json.Marshal(resp)
+	if err != nil {
+		return strings.Replace(resp.String(), "\n", " ", -1)
+	}
+
+	return string(prettyResp)
 }
 
 func (api *apiInterface) getEC2Client() (*ec2.EC2, error) {
