@@ -73,6 +73,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		OwnerID:  createInstallationRequest.OwnerID,
 		Version:  createInstallationRequest.Version,
 		DNS:      createInstallationRequest.DNS,
+		License:  createInstallationRequest.License,
 		Affinity: createInstallationRequest.Affinity,
 		State:    model.InstallationStateCreationRequested,
 	}
@@ -132,6 +133,7 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, installation)
 }
@@ -192,6 +194,7 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	if installation.State != model.InstallationStateUpgradeRequested {
 		installation.State = model.InstallationStateUpgradeRequested
 		installation.Version = upgradeInstallationRequest.Version
+		installation.License = upgradeInstallationRequest.License
 
 		err := c.Store.UpdateInstallation(installation)
 		if err != nil {

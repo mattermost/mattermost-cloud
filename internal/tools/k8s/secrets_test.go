@@ -25,4 +25,16 @@ func TestSecrets(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, secret.GetName(), result.GetName())
 	})
+
+	t.Run("get secrets", func(t *testing.T) {
+		secrets, err := testClient.GetSecrets(namespace, []string{"test-deployment"})
+		require.NoError(t, err)
+
+		var secretNames []string
+		for _, secret := range secrets {
+			secretNames = append(secretNames, secret.GetName())
+		}
+
+		require.Equal(t, secretNames, []string{"test-deployment"})
+	})
 }

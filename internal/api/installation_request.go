@@ -15,6 +15,7 @@ type CreateInstallationRequest struct {
 	OwnerID  string
 	Version  string
 	DNS      string
+	License  string
 	Affinity string
 }
 
@@ -71,6 +72,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 // UpgradeInstallationRequest specifies the parameters for an upgraded installation.
 type UpgradeInstallationRequest struct {
 	Version string
+	License string
 }
 
 func newUpgradeInstallationRequestFromReader(reader io.Reader) (*UpgradeInstallationRequest, error) {

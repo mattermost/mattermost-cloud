@@ -14,6 +14,7 @@ func init() {
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
 	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
 	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
+	installationCreateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
@@ -58,11 +59,13 @@ var installationCreateCmd = &cobra.Command{
 		version, _ := command.Flags().GetString("version")
 		dns, _ := command.Flags().GetString("dns")
 		affinity, _ := command.Flags().GetString("affinity")
+		license, _ := command.Flags().GetString("license")
 
 		installation, err := client.CreateInstallation(&api.CreateInstallationRequest{
 			OwnerID:  ownerID,
 			Version:  version,
 			DNS:      dns,
+			License:  license,
 			Affinity: affinity,
 		})
 		if err != nil {
@@ -89,8 +92,9 @@ var installationUpgradeCmd = &cobra.Command{
 
 		installationID, _ := command.Flags().GetString("installation")
 		version, _ := command.Flags().GetString("version")
+		license, _ := command.Flags().GetString("license")
 
-		err := client.UpgradeInstallation(installationID, version)
+		err := client.UpgradeInstallation(installationID, version, license)
 		if err != nil {
 			return errors.Wrap(err, "failed to change installation version")
 		}

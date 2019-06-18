@@ -14,7 +14,7 @@ func init() {
 	installationSelect = sq.
 		Select(
 			"ID", "OwnerID", "Version", "DNS", "Affinity", "GroupID", "State",
-			"CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
+			"License", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Installation")
 }
@@ -113,6 +113,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"GroupID":        installation.GroupID,
 			"State":          installation.State,
 			"CreateAt":       installation.CreateAt,
+			"License":        installation.License,
 			"DeleteAt":       0,
 			"LockAcquiredBy": nil,
 			"LockAcquiredAt": 0,
@@ -135,6 +136,7 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 			"DNS":      installation.DNS,
 			"Affinity": installation.Affinity,
 			"GroupID":  installation.GroupID,
+			"License":  installation.License,
 			"State":    installation.State,
 		}).
 		Where("ID = ?", installation.ID),
