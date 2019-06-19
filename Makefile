@@ -3,7 +3,6 @@ MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
 MACHINE = $(shell uname -m)
 DOCKER_BUILD_IMAGE = golang:1.12
 DOCKER_BASE_IMAGE = alpine:3.9
-GOPATH ?= $(shell go env GOPATH)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
@@ -45,7 +44,7 @@ dist:	build
 .PHONY: build
 build: ## Build the mattermost-cloud
 	@echo Building Mattermost-Cloud
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(GOPATH) -asmflags all=-trimpath=$(GOPATH) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
 
 build-image:  ## Build the docker image for mattermost-cloud
 	@echo Building Mattermost-cloud Docker Image
