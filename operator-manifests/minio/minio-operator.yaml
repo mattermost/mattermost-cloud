@@ -90,3 +90,4 @@ spec:
       containers:
       - name: minio-operator
         image: minio/k8s-operator:latest
+        imagePullPolicy: Always

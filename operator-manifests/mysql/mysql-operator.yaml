@@ -231,8 +231,8 @@ spec:
       serviceAccountName: mysql-operator
       containers:
       - name: mysql-operator-controller
-        imagePullPolicy: IfNotPresent
         image: iad.ocir.io/oracle/mysql-operator:0.3.0
+        imagePullPolicy: Always
         ports:
         - containerPort: 10254
         args:
