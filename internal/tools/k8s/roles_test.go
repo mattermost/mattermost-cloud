@@ -3,7 +3,6 @@ package k8s
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
@@ -17,13 +16,14 @@ func TestClusterRolesV1(t *testing.T) {
 	}
 
 	t.Run("create cluster role", func(t *testing.T) {
-		result, err := testClient.createClusterRoleV1(clusterRole)
+		result, err := testClient.createOrUpdateClusterRoleV1(clusterRole)
 		require.NoError(t, err)
-		assert.Equal(t, clusterRole.GetName(), result.GetName())
+		require.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 	t.Run("create duplicate cluster role", func(t *testing.T) {
-		_, err := testClient.createClusterRoleV1(clusterRole)
-		assert.Error(t, err)
+		result, err := testClient.createOrUpdateClusterRoleV1(clusterRole)
+		require.NoError(t, err)
+		require.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 }
 
@@ -34,12 +34,13 @@ func TestClusterRolesBetaV1(t *testing.T) {
 	}
 
 	t.Run("create cluster role", func(t *testing.T) {
-		result, err := testClient.createClusterRoleBetaV1(clusterRole)
+		result, err := testClient.createOrUpdateClusterRoleBetaV1(clusterRole)
 		require.NoError(t, err)
-		assert.Equal(t, clusterRole.GetName(), result.GetName())
+		require.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 	t.Run("create duplicate cluster role", func(t *testing.T) {
-		_, err := testClient.createClusterRoleBetaV1(clusterRole)
-		assert.Error(t, err)
+		result, err := testClient.createOrUpdateClusterRoleBetaV1(clusterRole)
+		require.NoError(t, err)
+		require.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 }

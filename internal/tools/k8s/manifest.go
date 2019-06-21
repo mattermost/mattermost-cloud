@@ -8,7 +8,6 @@ import (
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	mattermostscheme "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/scheme"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	appsbetav1 "k8s.io/api/apps/v1beta1"
@@ -73,14 +72,14 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
 
 		obj, _, err := decode(resource, nil, nil)
 		if err != nil {
-			logger.Error(errors.Wrap(err, "unable to decode k8s resource"))
+			logger.WithError(err).Error("unable to decode k8s resource")
 			failures++
 			continue
 		}
 
 		result, err := kc.createFileResource(file.DeployNamespace, obj)
 		if err != nil {
-			logger.Error(errors.Wrap(err, "unable to create k8s resource"))
+			logger.WithError(err).Error("unable to create/update k8s resource")
 			failures++
 			continue
 		}
@@ -89,7 +88,7 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
 	}
 
 	if failures > 0 {
-		return fmt.Errorf("encountered %d create failures", failures)
+		return fmt.Errorf("encountered %d failures trying to update resources", failures)
 	}
 
 	return nil
@@ -98,27 +97,27 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
 func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}) (metav1.Object, error) {
 	switch o := obj.(type) {
 	case *apiv1.ServiceAccount:
-		return kc.createServiceAccount(deployNamespace, obj.(*apiv1.ServiceAccount))
+		return kc.createOrUpdateServiceAccount(deployNamespace, obj.(*apiv1.ServiceAccount))
 	case *appsv1.Deployment:
-		return kc.createDeploymentV1(deployNamespace, obj.(*appsv1.Deployment))
+		return kc.createOrUpdateDeploymentV1(deployNamespace, obj.(*appsv1.Deployment))
 	case *appsbetav1.Deployment:
-		return kc.createDeploymentBetaV1(deployNamespace, obj.(*appsbetav1.Deployment))
+		return kc.createOrUpdateDeploymentBetaV1(deployNamespace, obj.(*appsbetav1.Deployment))
 	case *rbacv1.RoleBinding:
-		return kc.createRoleBindingV1(deployNamespace, obj.(*rbacv1.RoleBinding))
+		return kc.createOrUpdateRoleBindingV1(deployNamespace, obj.(*rbacv1.RoleBinding))
 	case *rbacbetav1.RoleBinding:
-		return kc.createRoleBindingBetaV1(deployNamespace, obj.(*rbacbetav1.RoleBinding))
+		return kc.createOrUpdateRoleBindingBetaV1(deployNamespace, obj.(*rbacbetav1.RoleBinding))
 	case *rbacv1.ClusterRole:
-		return kc.createClusterRoleV1(obj.(*rbacv1.ClusterRole))
+		return kc.createOrUpdateClusterRoleV1(obj.(*rbacv1.ClusterRole))
 	case *rbacbetav1.ClusterRole:
-		return kc.createClusterRoleBetaV1(obj.(*rbacbetav1.ClusterRole))
+		return kc.createOrUpdateClusterRoleBetaV1(obj.(*rbacbetav1.ClusterRole))
 	case *rbacv1.ClusterRoleBinding:
-		return kc.createClusterRoleBindingV1(obj.(*rbacv1.ClusterRoleBinding))
+		return kc.createOrUpdateClusterRoleBindingV1(obj.(*rbacv1.ClusterRoleBinding))
 	case *rbacbetav1.ClusterRoleBinding:
-		return kc.createClusterRoleBindingBetaV1(obj.(*rbacbetav1.ClusterRoleBinding))
+		return kc.createOrUpdateClusterRoleBindingBetaV1(obj.(*rbacbetav1.ClusterRoleBinding))
 	case *apixv1beta1.CustomResourceDefinition:
-		return kc.createCustomResourceDefinition(obj.(*apixv1beta1.CustomResourceDefinition))
+		return kc.createOrUpdateCustomResourceDefinition(obj.(*apixv1beta1.CustomResourceDefinition))
 	case *mmv1alpha1.ClusterInstallation:
-		return kc.createClusterInstallation(deployNamespace, obj.(*mmv1alpha1.ClusterInstallation))
+		return kc.createOrUpdateClusterInstallation(deployNamespace, obj.(*mmv1alpha1.ClusterInstallation))
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}

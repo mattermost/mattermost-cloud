@@ -50,7 +50,7 @@ func TestGetPodsFromDeployment(t *testing.T) {
 	namespace := "testing"
 
 	t.Run("create deployment", func(t *testing.T) {
-		result, err := testClient.createDeploymentV1(namespace, deployment)
+		result, err := testClient.createOrUpdateDeploymentV1(namespace, deployment)
 		require.NoError(t, err)
 		assert.Equal(t, deployment.GetName(), result.GetName())
 	})
