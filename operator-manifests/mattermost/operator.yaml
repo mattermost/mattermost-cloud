@@ -16,9 +16,9 @@ spec:
       containers:
         - name: mattermost-operator
           image: mattermost/mattermost-operator:latest
+          imagePullPolicy: Always
           command:
           - mattermost-operator
-          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               value: ""
