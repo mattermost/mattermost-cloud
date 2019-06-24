@@ -8,12 +8,12 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones []string) error {
+func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
 
-	_, _, err := c.run(
+	args := []string{
 		"create", "cluster",
 		arg("name", name),
 		arg("cloud", cloud),
@@ -25,7 +25,23 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 		arg("target", "terraform"),
 		arg("out", c.GetOutputDirectory()),
 		arg("output", "json"),
-	)
+	}
+
+	if privateSubnetIds != "" {
+		args = append(args,
+			arg("subnets", privateSubnetIds),
+			arg("topology", "private"),
+			arg("api-loadbalancer-type", "internal"),
+		)
+	}
+	if publicSubnetIds != "" {
+		args = append(args, arg("utility-subnets", publicSubnetIds))
+	}
+	if cloud == "aws" {
+		args = append(args, arg("networking", "amazon-vpc-routed-eni"))
+	}
+
+	_, _, err := c.run(args...)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops create cluster")
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,7 +59,7 @@ func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) (bool, e
 	return true, nil
 }
 
-func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }
 
@@ -66,7 +67,7 @@ func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }
 
@@ -75,7 +76,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockClusterStore{}
 
-		supervisor := supervisor.NewClusterSupervisor(mockStore, &mockClusterProvisioner{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterSupervisor(mockStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -93,7 +94,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		mockStore.Cluster = mockStore.UnlockedClustersPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewClusterSupervisor(mockStore, &mockClusterProvisioner{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterSupervisor(mockStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -118,7 +119,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		t.Run(tc.Description, func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, "instanceID", logger)
+			supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
 
 			cluster := &model.Cluster{
 				Provider: model.ProviderAWS,

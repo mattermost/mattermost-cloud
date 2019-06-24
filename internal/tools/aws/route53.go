@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -21,7 +22,7 @@ func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.F
 		return errors.New("no DNS endpoints provided for route53 creation request")
 	}
 
-	svc, err := a.api.getSessionClient()
+	svc, err := a.api.getRoute53Client()
 	if err != nil {
 		return err
 	}
@@ -57,18 +58,17 @@ func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.F
 		return err
 	}
 
-	logger.Debugf("AWS route53 response: %s", resp)
+	logger.Debugf("AWS route53 response: %s", prettyRoute53Response(resp))
 
 	return nil
 }
 
 // DeleteCNAME deletes an AWS route53 CNAME record.
 func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
-	sess, err := session.NewSession()
+	svc, err := a.api.getRoute53Client()
 	if err != nil {
 		return err
 	}
-	svc := route53.New(sess)
 
 	nextRecordName := dnsName
 	var recordsets []*route53.ResourceRecordSet
@@ -103,7 +103,8 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 		}
 	}
 	if len(changes) == 0 {
-		return errors.New("unable to find any DNS records")
+		logger.Warn("Unable to find any DNS records; skipping...")
+		return nil
 	}
 
 	logger.Debugf("Attempting to delete %d DNS records", len(changes))
@@ -117,15 +118,21 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 		return err
 	}
 
-	logger.Debugf("AWS route53 response: %s", resp)
+	logger.Debugf("AWS route53 response: %s", prettyRoute53Response(resp))
 
 	return nil
 }
 
-// apiInterface abstracts out AWS API calls for testing.
-type apiInterface struct{}
+func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {
+	prettyResp, err := json.Marshal(resp)
+	if err != nil {
+		return strings.Replace(resp.String(), "\n", " ", -1)
+	}
 
-func (api *apiInterface) getSessionClient() (*route53.Route53, error) {
+	return string(prettyResp)
+}
+
+func (api *apiInterface) getRoute53Client() (*route53.Route53, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err

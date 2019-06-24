@@ -1,0 +1,10 @@
+## nginx configuration
+## Ref: https://github.com/kubernetes/ingress/blob/master/controllers/nginx/configuration.md
+##
+controller:
+  ingressClass: private-nginx
+
+defaultBackend:
+  service:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-internal: "true"

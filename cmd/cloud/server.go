@@ -31,10 +31,18 @@ func init() {
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+	serverCmd.PersistentFlags().String("certificate-aws-arn", "", "The certificate ARN from AWS. Generated in the certificate manager console.")
 	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
+	serverCmd.PersistentFlags().String("private-route53-id", "", "The route 53 hosted zone ID used for mattermost private DNS records.")
+	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
+	serverCmd.PersistentFlags().String("private-subnets", "", "The private subnet IDs to use on AWS.")
+	serverCmd.PersistentFlags().String("public-subnets", "", "The public subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.MarkPersistentFlagRequired("route53-id")
+	serverCmd.MarkPersistentFlagRequired("private-route53-id")
+	serverCmd.MarkPersistentFlagRequired("private-dns")
+	serverCmd.MarkPersistentFlagRequired("certificate-aws-arn")
 }
 
 var serverCmd = &cobra.Command{
@@ -68,12 +76,39 @@ var serverCmd = &cobra.Command{
 		}
 
 		s3StateStore, _ := command.Flags().GetString("state-store")
-		logger.Infof("Using state store %s", s3StateStore)
+		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
+		privateSubnetIds, _ := command.Flags().GetString("private-subnets")
+		publicSubnetIds, _ := command.Flags().GetString("public-subnets")
+		route53ZoneID, _ := command.Flags().GetString("route53-id")
+		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
+		privateDNS, _ := command.Flags().GetString("private-dns")
+
+		wd, err := os.Getwd()
+		if err != nil {
+			wd = "error getting working directory"
+			logger.WithError(err).Error("Unable to get current working directory")
+		}
+
+		logger.WithFields(logrus.Fields{
+			"store-version":      currentVersion,
+			"state-store":        s3StateStore,
+			"aws-arn":            certificateSslARN,
+			"working-directory":  wd,
+			"private-subents":    privateSubnetIds,
+			"public-subnets":     publicSubnetIds,
+			"route53-id":         route53ZoneID,
+			"private-route53-id": privateRoute53ZoneID,
+			"private-dns":        privateDNS,
+		}).Info("Starting Mattermost Provisioning Server")
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
+			certificateSslARN,
+			privateSubnetIds,
+			publicSubnetIds,
+			privateDNS,
 			logger,
 		)
 
@@ -84,10 +119,9 @@ var serverCmd = &cobra.Command{
 		if poll == 0 {
 			logger.WithField("poll", poll).Info("Scheduler is disabled")
 		}
-		route53ZoneID, _ := command.Flags().GetString("route53-id")
 		supervisor := supervisor.NewScheduler(
 			supervisor.MultiDoer{
-				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
+				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger),
 				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger),
 				supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
 			},

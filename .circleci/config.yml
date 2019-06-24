@@ -2,82 +2,153 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: circleci/golang:1.12
+    - image: circleci/golang:1.12
 
 aliases:
-  - &restore_cache
-    restore_cache:
-      key: go-mod-v1-{{ checksum "go.sum" }}
-  - &save_cache
-    save_cache:
-      key: go-mod-v1-{{ checksum "go.sum" }}
-      paths:
-        - "/go/pkg/mod"
+- &restore_cache
+  restore_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+- &save_cache
+  save_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+    paths:
+      - "/go/pkg/mod"
 
 jobs:
-  lint:
+  check-style:
     executor:
       name: default
     steps:
-      - checkout
-      - *restore_cache
-      - run: go get -u golang.org/x/lint/golint
-      - run: golint -set_exit_status ./...
-      - *save_cache
-  vet:
-    executor:
-      name: default
-    steps:
-      - checkout
-      - *restore_cache
-      - run: go vet ./...
-      - *save_cache
+    - checkout
+    - *restore_cache
+    - run: make check-style
+    - *save_cache
+
   test-sqlite:
     executor:
       name: default
     steps:
-      - checkout
-      - *restore_cache
-      - run: |
-          go get golang.org/x/tools/cmd/cover
-          go get github.com/mattn/goveralls
-      - run: go test ./... -v -covermode=count -coverprofile=coverage.out
-      - *save_cache
-      - run:
-          name: coveralls
-          command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN
+    - checkout
+    - *restore_cache
+    - run: |
+        go get golang.org/x/tools/cmd/cover
+        go get github.com/mattn/goveralls
+    - run: go test ./... -v -covermode=count -coverprofile=coverage.out
+    - *save_cache
+    - run:
+        name: coveralls
+        command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN
+
   test-postgres:
     docker:
-      - image: circleci/golang:1.12
-        environment:
-          CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
-      - image: circleci/postgres:11.2-alpine
-        environment:
-          POSTGRES_USER: cloud_test
-          POSTGRES_DB: cloud_test
+    - image: circleci/golang:1.12
+      environment:
+        CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
+    - image: circleci/postgres:11.2-alpine
+      environment:
+        POSTGRES_USER: cloud_test
+        POSTGRES_DB: cloud_test
     executor:
       name: default
     steps:
-      - run:
-          name: Waiting for Postgres to be ready
-          command: |
-            for i in `seq 1 10`;
-            do
-              nc -z localhost 5432 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for Postgres && exit 1
-      - checkout
-      - *restore_cache
-      - run: go test ./...
-      - *save_cache
+    - run:
+        name: Waiting for Postgres to be ready
+        command: |
+          for i in `seq 1 10`;
+          do
+            nc -z localhost 5432 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Postgres && exit 1
+    - checkout
+    - *restore_cache
+    - run: go test ./...
+    - *save_cache
+
+  push-docker:
+    executor:
+      name: default
+    steps:
+    - checkout
+    - setup_remote_docker
+    - run: make build-image
+    - run: |
+        set -e
+        set -u
+        if [[ -z "${CIRCLE_TAG:-}" ]]; then
+          echo "Pushing lastest for $CIRCLE_BRANCH..."
+          TAG=latest
+        else
+          echo "Pushing release $CIRCLE_TAG..."
+          TAG="$CIRCLE_TAG"
+        fi
+        echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
+        docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
+        docker push mattermost/mattermost-cloud:$TAG
 
 workflows:
   version: 2
-  untagged-build:
+  ci-build:
     jobs:
-      - lint
-      - vet
-      - test-sqlite
-      - test-postgres
+    - check-style
+    - test-sqlite
+    - test-postgres
+  master-build:
+    jobs:
+    - check-style:
+        filters:
+          branches:
+            only:
+            - master
+    - test-sqlite:
+        filters:
+          branches:
+            only:
+            - master
+    - test-postgres:
+        filters:
+          branches:
+            only:
+            - master
+    - push-docker:
+          context: matterbuild-docker
+          requires:
+          - check-style
+          - test-sqlite
+          - test-postgres
+          filters:
+            branches:
+              only:
+              - master
+  tag-builds:
+    jobs:
+    - check-style:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
+    - test-sqlite:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
+    - test-postgres:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
+    - push-docker:
+        context: matterbuild-docker
+        requires:
+        - check-style
+        - test-sqlite
+        - test-postgres
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/

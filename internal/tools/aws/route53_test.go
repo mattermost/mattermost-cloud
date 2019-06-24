@@ -11,17 +11,14 @@ import (
 
 var testDNSName = "example.mattermost.com"
 
-type mockAPI struct {
-	returnedError     error
-	returnedTruncated bool
-}
-
-func (api *mockAPI) getSessionClient() (*route53.Route53, error) {
+func (api *mockAPI) getRoute53Client() (*route53.Route53, error) {
 	return nil, api.returnedError
 }
 
 func (api *mockAPI) changeResourceRecordSets(svc *route53.Route53, input *route53.ChangeResourceRecordSetsInput) (*route53.ChangeResourceRecordSetsOutput, error) {
-	return nil, api.returnedError
+	return &route53.ChangeResourceRecordSetsOutput{
+		ChangeInfo: &route53.ChangeInfo{},
+	}, api.returnedError
 }
 
 func (api *mockAPI) listResourceRecordSets(svc *route53.Route53, input *route53.ListResourceRecordSetsInput) (*route53.ListResourceRecordSetsOutput, error) {
@@ -109,7 +106,7 @@ func TestDeleteCNAME(t *testing.T) {
 			"no-matching",
 			nil,
 			false,
-			true,
+			false,
 		}, {
 			"session client error",
 			"dns4",

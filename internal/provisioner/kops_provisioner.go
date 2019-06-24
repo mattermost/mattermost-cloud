@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -21,24 +23,46 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/scheme"
 
 	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 )
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	clusterRootDir string
-	s3StateStore   string
-	logger         log.FieldLogger
+	clusterRootDir    string
+	s3StateStore      string
+	certificateSslARN string
+	privateSubnetIds  string
+	publicSubnetIds   string
+	privateDNS        string
+	logger            log.FieldLogger
 }
 
+// helmDeployment deploys Helm charts.
+type helmDeployment struct {
+	valuesPath          string
+	chartName           string
+	namespace           string
+	chartDeploymentName string
+	setArgument         string
+}
+
+// Array of helm apps that need DNS registration.
+var helmApps = []string{"prometheus"}
+
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir string, s3StateStore string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
-		clusterRootDir: clusterRootDir,
-		s3StateStore:   s3StateStore,
-		logger:         logger,
+		clusterRootDir:    clusterRootDir,
+		s3StateStore:      s3StateStore,
+		certificateSslARN: certificateSslARN,
+		privateSubnetIds:  privateSubnetIds,
+		publicSubnetIds:   publicSubnetIds,
+		privateDNS:        privateDNS,
+		logger:            logger,
 	}
 }
 
@@ -62,7 +86,7 @@ func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) (bool
 }
 
 // CreateCluster creates a cluster using kops and terraform.
-func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -106,14 +130,19 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones)
+	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
 	if err != nil {
 		return err
 	}
 
 	err = os.Rename(kops.GetOutputDirectory(), outputDir)
-	if err != nil {
-		return fmt.Errorf("failed to rename kops output directory to %q", outputDir)
+	if err != nil && err.(*os.LinkError).Err == syscall.EXDEV {
+		err = utils.CopyDirectory(kops.GetOutputDirectory(), outputDir)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s' using utils.CopyFolder", outputDir))
+		}
+	} else if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s'", outputDir))
 	}
 
 	terraformClient := terraform.New(outputDir, logger)
@@ -153,6 +182,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		// and return original timeout error.
 		kops.ValidateCluster(kopsMetadata.Name, false)
 		return err
+	}
+
+	// Set the ELB tags for the public subnets
+	if provisioner.publicSubnetIds != "" {
+		subnets := strings.Split(provisioner.publicSubnetIds, ",")
+		for _, subnet := range subnets {
+			logger.WithField("name", kopsMetadata.Name).Infof("Tagging subnet %s", subnet)
+			err = aws.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to tag subnet")
+			}
+		}
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
@@ -231,8 +272,154 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		}
 	}
 
+	// Setup Helm
+	err = helmSetup(logger, kops)
+	if err != nil {
+		return err
+	}
+
+	wait = 120
+	logger.Infof("Waiting up to %d seconds for helm to get ready...", wait)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
+	if err != nil {
+		return err
+	}
+	logger.Info("Helm is ready to install charts")
+
+	// Begin deploying Helm charts
+	privateNginx := helmDeployment{valuesPath: "helm-charts/private-nginx_values.yaml", chartName: "stable/nginx-ingress", namespace: "internal-nginx", chartDeploymentName: "private-nginx"}
+	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
+	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
+
+	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
+	fluentd := helmDeployment{valuesPath: "helm-charts/fluentd_values.yaml", chartName: "stable/fluentd-elasticsearch", namespace: "fluentd", chartDeploymentName: "fluentd", setArgument: fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS)}
+	helmDeployments := []helmDeployment{privateNginx, prometheus, fluentd}
+
+	for _, value := range helmDeployments {
+		err = installHelmChart(value, logger, kops.GetKubeConfigPath())
+		if err != nil {
+			return err
+		}
+	}
+
+	// Get the new ELB internal-nginx endpoint
+	logger.Infof("Waiting up to %d seconds for internal ELB to be ready...", wait)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger, kops.GetKubeConfigPath())
+	if err != nil {
+		return err
+	}
+
+	if endpoint == "" {
+		return errors.New("internal DNS ELB endpoint is empty")
+	}
+
+	for _, app := range helmApps {
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		logger.Infof("Registering DNS %s for %s", dns, app)
+		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
+		if err != nil {
+			return err
+		}
+	}
+
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully created cluster")
 
+	return nil
+}
+
+// waitForHelmRunning is used to check when Helm is ready to install charts.
+func waitForHelmRunning(ctx context.Context, configPath string) error {
+	for {
+		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
+		var out bytes.Buffer
+		cmd.Stderr = &out
+		cmd.Run()
+		if out.String() == "" {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+// getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
+func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
+	k8sClient, err := k8s.New(configPath, logger)
+	if err != nil {
+		return "", err
+	}
+	for {
+		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return "", err
+		}
+		for _, service := range services.Items {
+			if service.Status.LoadBalancer.Ingress != nil {
+				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+				logger.Infof("Succesfully got LoadBalancer endpoint %s for Namespace %s", endpoint, namespace)
+				return endpoint, nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return "", errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+// installHelmChart is used to install Helm charts.
+func installHelmChart(chart helmDeployment, logger log.FieldLogger, configPath string) error {
+	logger.Infof("Installing helm chart %s", chart.chartName)
+	if chart.setArgument != "" {
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		if err != nil {
+			return err
+		}
+	}
+	logger.Infof("Successfully installed helm chart %s", chart.chartName)
+	return nil
+}
+
+// helmSetup is used for the initial setup of Helm in cluster.
+func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
+	logger.Info("Initializing Helm in the cluster")
+	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
+	if err != nil {
+		return err
+	}
+	logger.Info("Creating Tiller service account")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "create", "serviceaccount", "tiller").Run()
+	if err != nil {
+		return err
+	}
+	logger.Info("Creating Tiller cluster role bind")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "create", "clusterrolebinding", "tiller-cluster-rule", "--clusterrole=cluster-admin", "--serviceaccount=kube-system:tiller").Run()
+	if err != nil {
+		return err
+	}
+	logger.Info("Patching tiller")
+	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "patch", "deploy", "tiller-deploy", "-p", "{\"spec\":{\"template\":{\"spec\":{\"serviceAccount\":\"tiller\"}}}}").Run()
+	if err != nil {
+		return err
+	}
+	logger.Info("Upgrade Helm")
+	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -321,7 +508,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -385,9 +572,30 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) error 
 		}
 	}
 
+	// Delete the ELB tags for the public subnets
+	if kopsMetadata.Name != "" && provisioner.publicSubnetIds != "" {
+		subnets := strings.Split(provisioner.publicSubnetIds, ",")
+		for _, subnet := range subnets {
+			logger.WithField("name", kopsMetadata.Name).Infof("Untagging subnet %s", subnet)
+			err = aws.UntagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to untag subnet")
+			}
+		}
+	}
+
 	err = os.RemoveAll(outputDir)
 	if err != nil {
 		return errors.Wrap(err, "failed to clean up output directory")
+	}
+
+	for _, app := range helmApps {
+		logger.Infof("Deleting Route53 DNS Record for %s", app)
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		err = aws.DeleteCNAME(dns, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete Route53 DNS record")
+		}
 	}
 
 	logger.Info("Successfully deleted cluster")
@@ -449,9 +657,16 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
+			Replicas:               1,
 			Version:                translateMattermostVersion(installation.Version),
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
+			ServiceAnnotations: map[string]string{
+				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":        "tcp",
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                provisioner.certificateSslARN,
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":               "https",
+				"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout": "120",
+			},
 		},
 	})
 	if err != nil {
