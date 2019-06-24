@@ -706,8 +706,7 @@ func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, cl
 	}
 
 	var stdin io.Reader
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
 
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdin:  stdin,
