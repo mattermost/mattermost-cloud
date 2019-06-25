@@ -39,6 +39,7 @@ func (sqlStore *SQLStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, er
 		Where(sq.Eq{
 			"State": []string{
 				model.ClusterStateCreationRequested,
+				model.ClusterStateProvisioningRequested,
 				model.ClusterStateUpgradeRequested,
 				model.ClusterStateDeletionRequested,
 			},

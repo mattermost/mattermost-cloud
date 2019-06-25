@@ -3,7 +3,6 @@ package k8s
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,12 +16,13 @@ func TestServiceAccounts(t *testing.T) {
 	namespace := "testing"
 
 	t.Run("create service account", func(t *testing.T) {
-		result, err := testClient.createServiceAccount(namespace, serviceAccount)
+		result, err := testClient.createOrUpdateServiceAccount(namespace, serviceAccount)
 		require.NoError(t, err)
-		assert.Equal(t, serviceAccount.GetName(), result.GetName())
+		require.Equal(t, serviceAccount.GetName(), result.GetName())
 	})
 	t.Run("create duplicate service account", func(t *testing.T) {
-		_, err := testClient.createServiceAccount(namespace, serviceAccount)
-		assert.Error(t, err)
+		result, err := testClient.createOrUpdateServiceAccount(namespace, serviceAccount)
+		require.NoError(t, err)
+		require.Equal(t, serviceAccount.GetName(), result.GetName())
 	})
 }

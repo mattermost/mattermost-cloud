@@ -63,6 +63,10 @@ func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster, aws aws.A
 	return nil
 }
 
+func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster) error {
+	return nil
+}
+
 func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	return nil
 }
@@ -111,6 +115,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 	}{
 		{"unexpected state", model.ClusterStateStable, model.ClusterStateStable},
 		{"creation requested", model.ClusterStateCreationRequested, model.ClusterStateStable},
+		{"provision requested", model.ClusterStateProvisioningRequested, model.ClusterStateStable},
 		{"upgrade requested", model.ClusterStateUpgradeRequested, model.ClusterStateStable},
 		{"deletion requested", model.ClusterStateDeletionRequested, model.ClusterStateDeleted},
 	}

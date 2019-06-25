@@ -12,7 +12,7 @@ func TestNamespaces(t *testing.T) {
 
 	namespaceNames := []string{"namespace1, namespace2, namespace3"}
 	t.Run("create namespaces", func(t *testing.T) {
-		namespaces, err := testClient.CreateNamespaces(namespaceNames)
+		namespaces, err := testClient.CreateNamespacesIfDoesNotExist(namespaceNames)
 		require.NoError(t, err)
 
 		var names []string

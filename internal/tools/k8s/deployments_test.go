@@ -3,7 +3,6 @@ package k8s
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	appsbetav1 "k8s.io/api/apps/v1beta1"
@@ -18,13 +17,14 @@ func TestDeploymentsV1(t *testing.T) {
 	namespace := "testing"
 
 	t.Run("create deployment", func(t *testing.T) {
-		result, err := testClient.createDeploymentV1(namespace, deployment)
+		result, err := testClient.createOrUpdateDeploymentV1(namespace, deployment)
 		require.NoError(t, err)
-		assert.Equal(t, deployment.GetName(), result.GetName())
+		require.Equal(t, deployment.GetName(), result.GetName())
 	})
 	t.Run("create duplicate deployment", func(t *testing.T) {
-		_, err := testClient.createDeploymentV1(namespace, deployment)
-		assert.Error(t, err)
+		result, err := testClient.createOrUpdateDeploymentV1(namespace, deployment)
+		require.NoError(t, err)
+		require.Equal(t, deployment.GetName(), result.GetName())
 	})
 }
 
@@ -36,12 +36,13 @@ func TestDeploymentsBetaV1(t *testing.T) {
 	namespace := "testing"
 
 	t.Run("create deployment", func(t *testing.T) {
-		result, err := testClient.createDeploymentBetaV1(namespace, deployment)
+		result, err := testClient.createOrUpdateDeploymentBetaV1(namespace, deployment)
 		require.NoError(t, err)
-		assert.Equal(t, deployment.GetName(), result.GetName())
+		require.Equal(t, deployment.GetName(), result.GetName())
 	})
 	t.Run("create duplicate deployment", func(t *testing.T) {
-		_, err := testClient.createDeploymentBetaV1(namespace, deployment)
-		assert.Error(t, err)
+		result, err := testClient.createOrUpdateDeploymentBetaV1(namespace, deployment)
+		require.NoError(t, err)
+		require.Equal(t, deployment.GetName(), result.GetName())
 	})
 }

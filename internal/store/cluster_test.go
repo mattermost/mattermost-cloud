@@ -240,19 +240,18 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	err = sqlStore.CreateCluster(deletionRequestedCluster)
 	require.NoError(t, err)
 
+	// Store clusters with states that should be ignored by GetUnlockedClustersPendingWork()
 	otherStates := []string{
 		model.ClusterStateCreationFailed,
+		model.ClusterStateProvisioningFailed,
 		model.ClusterStateDeletionFailed,
 		model.ClusterStateDeleted,
 		model.ClusterStateUpgradeFailed,
 		model.ClusterStateStable,
 	}
-
-	otherClusters := []*model.Cluster{}
 	for _, otherState := range otherStates {
-		otherClusters = append(otherClusters, &model.Cluster{
-			State: otherState,
-		})
+		err = sqlStore.CreateCluster(&model.Cluster{State: otherState})
+		require.NoError(t, err)
 	}
 
 	clusters, err := sqlStore.GetUnlockedClustersPendingWork()
@@ -394,7 +393,6 @@ func TestLockCluster(t *testing.T) {
 	})
 
 	t.Run("force unlock the second cluster from the wrong locker", func(t *testing.T) {
-
 		unlocked, err := sqlStore.UnlockCluster(cluster2.ID, lockerID1, true)
 		require.NoError(t, err)
 		require.True(t, unlocked)

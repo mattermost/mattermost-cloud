@@ -5,14 +5,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CreateNamespaces creates kubernetes namespaces.
+// CreateNamespacesIfDoesNotExist creates kubernetes namespaces if they don't
+// exist already.
 //
 // Any errors will be returned immediately and the remaining namespaces will be
 // skipped.
-func (kc *KubeClient) CreateNamespaces(namespaceNames []string) ([]*corev1.Namespace, error) {
+func (kc *KubeClient) CreateNamespacesIfDoesNotExist(namespaceNames []string) ([]*corev1.Namespace, error) {
 	namespaces := []*corev1.Namespace{}
 	for _, namespaceName := range namespaceNames {
-		namespace, err := kc.CreateNamespace(namespaceName)
+		namespace, err := kc.CreateNamespaceIfDoesNotExist(namespaceName)
 		if err != nil {
 			return namespaces, err
 		}
@@ -22,9 +23,9 @@ func (kc *KubeClient) CreateNamespaces(namespaceNames []string) ([]*corev1.Names
 	return namespaces, nil
 }
 
-// CreateNamespace creates a kubernetes namespace.
-func (kc *KubeClient) CreateNamespace(namespaceName string) (*corev1.Namespace, error) {
-	// Check if namespace exists first.
+// CreateNamespaceIfDoesNotExist creates a kubernetes namespace if it doesn't
+// exist already.
+func (kc *KubeClient) CreateNamespaceIfDoesNotExist(namespaceName string) (*corev1.Namespace, error) {
 	ns, err := kc.Clientset.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
 	if err == nil {
 		return ns, nil
@@ -64,14 +65,4 @@ func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
 	}
 
 	return nil
-}
-
-// DeleteNamespace returns a given kubernetes namespace object if it exists.
-func (kc *KubeClient) DeleteNamespace(namespaceName string) error {
-	clientset, err := kc.getKubeConfigClientset()
-	if err != nil {
-		return err
-	}
-
-	return clientset.CoreV1().Namespaces().Delete(namespaceName, nil)
 }
