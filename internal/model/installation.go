@@ -12,6 +12,9 @@ const (
 	InstallationStateCreationDNS = "creation-configuring-dns"
 	// InstallationStateCreationFailed is an installation that failed creation.
 	InstallationStateCreationFailed = "creation-failed"
+	// InstallationStateCreationNoCompatibleClusters is an installation that
+	// can't be fully created because there are no compatible clusters.
+	InstallationStateCreationNoCompatibleClusters = "creation-no-compatible-clusters"
 	// InstallationStateDeletionRequested is an installation to be deleted.
 	InstallationStateDeletionRequested = "deletion-requested"
 	// InstallationStateDeletionInProgress is an installation being deleted.

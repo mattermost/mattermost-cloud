@@ -118,6 +118,9 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateCreationRequested:
 		return s.createInstallation(installation, instanceID, logger)
 
+	case model.InstallationStateCreationNoCompatibleClusters:
+		return s.createInstallation(installation, instanceID, logger)
+
 	case model.InstallationStateCreationDNS:
 		return s.configureInstallationDNS(installation, logger)
 
@@ -197,9 +200,9 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	}
 
 	// TODO: Support creating a cluster on demand if no existing cluster meets the criteria.
-	logger.Debug("No empty clusters available for installation")
+	logger.Debug("No compatible clusters available for installation")
 
-	return installation.State
+	return model.InstallationStateCreationNoCompatibleClusters
 }
 
 // createClusterInstallation attempts to schedule a cluster installation onto the given cluster.
