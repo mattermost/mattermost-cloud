@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx-internal
+  name: mattermost-cloud
+  namespace: mattermost-cloud
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          serviceName: mattermost-cloud-service
+          servicePort: 8075
+        path: /

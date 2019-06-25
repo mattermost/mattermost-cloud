@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cluster-pv-claim
+  namespace: mattermost-cloud
+  labels:
+    app.kubernetes.io/name: mattermost-cloud
+    app.kubernetes.io/component: provisioner
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
