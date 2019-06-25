@@ -570,7 +570,8 @@ func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation)
 	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
 }
 
-// waitForHelmRunning is used to check when Helm is ready to install charts.
+// waitForNamespacesDeleted is used to check when all of the provided namespaces
+// have been fully terminated.
 func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClient *k8s.KubeClient) error {
 	for {
 		select {
