@@ -14,6 +14,8 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -665,26 +667,42 @@ func installHelmChart(chart helmDeployment, configPath string) error {
 
 // helmSetup is used for the initial setup of Helm in cluster.
 func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
 	logger.Info("Initializing Helm in the cluster")
-	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
+	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
 	if err != nil {
 		return err
 	}
+
 	logger.Info("Creating Tiller service account")
-	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "create", "serviceaccount", "tiller").Run()
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
+	}
+	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(serviceAccount)
 	if err != nil {
 		return err
 	}
+	logger.Info("Successfully created Tiller service account")
+
 	logger.Info("Creating Tiller cluster role bind")
-	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "create", "clusterrolebinding", "tiller-cluster-rule", "--clusterrole=cluster-admin", "--serviceaccount=kube-system:tiller").Run()
+	roleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
+		Subjects: []rbacv1.Subject{
+			{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
+		},
+		RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
+	}
+
+	_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(roleBinding)
 	if err != nil {
 		return err
 	}
-	logger.Info("Patching tiller")
-	err = exec.Command("kubectl", "--kubeconfig", kops.GetKubeConfigPath(), "--namespace", "kube-system", "patch", "deploy", "tiller-deploy", "-p", "{\"spec\":{\"template\":{\"spec\":{\"serviceAccount\":\"tiller\"}}}}").Run()
-	if err != nil {
-		return err
-	}
+	logger.Info("Successfully created cluster role bind")
+
 	logger.Info("Upgrade Helm")
 	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
 	if err != nil {
