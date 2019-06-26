@@ -21,6 +21,7 @@ type clusterStore interface {
 type clusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) (bool, error)
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
+	ProvisionCluster(cluster *model.Cluster) error
 	UpgradeCluster(cluster *model.Cluster) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
 }
@@ -124,7 +125,23 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 			return model.ClusterStateCreationFailed
 		}
 
+		err = s.provisioner.ProvisionCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to provision cluster")
+			return model.ClusterStateProvisioningFailed
+		}
+
 		logger.Info("Finished creating cluster")
+		return model.ClusterStateStable
+
+	case model.ClusterStateProvisioningRequested:
+		err := s.provisioner.ProvisionCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to provision cluster")
+			return model.ClusterStateProvisioningFailed
+		}
+
+		logger.Info("Finished provisioning cluster")
 		return model.ClusterStateStable
 
 	case model.ClusterStateUpgradeRequested:

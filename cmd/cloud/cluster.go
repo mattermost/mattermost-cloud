@@ -19,6 +19,9 @@ func init() {
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
 
+	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
+	clusterProvisionCmd.MarkFlagRequired("cluster")
+
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
 	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target.")
 	clusterUpgradeCmd.Flags().Int("wait", 600, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
@@ -35,6 +38,7 @@ func init() {
 	clusterListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted clusters.")
 
 	clusterCmd.AddCommand(clusterCreateCmd)
+	clusterCmd.AddCommand(clusterProvisionCmd)
 	clusterCmd.AddCommand(clusterUpgradeCmd)
 	clusterCmd.AddCommand(clusterDeleteCmd)
 	clusterCmd.AddCommand(clusterGetCmd)
@@ -81,6 +85,25 @@ var clusterCreateCmd = &cobra.Command{
 		err = printJSON(cluster)
 		if err != nil {
 			return err
+		}
+
+		return nil
+	},
+}
+
+var clusterProvisionCmd = &cobra.Command{
+	Use:   "provision",
+	Short: "Provision/Reprovision a cluster's k8s operators.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := api.NewClient(serverAddress)
+
+		clusterID, _ := command.Flags().GetString("cluster")
+		err := client.ProvisionCluster(clusterID)
+		if err != nil {
+			return errors.Wrap(err, "failed to provision cluster")
 		}
 
 		return nil

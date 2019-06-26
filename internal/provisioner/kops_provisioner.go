@@ -195,6 +195,98 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
+	logger.Info("Installing Helm")
+	err = helmSetup(logger, kops)
+	if err != nil {
+		return err
+	}
+
+	wait = 120
+	logger.Infof("Waiting up to %d seconds for helm to become ready...", wait)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
+	if err != nil {
+		return err
+	}
+
+	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
+	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
+
+	helmDeployments := []helmDeployment{
+		{
+			valuesPath:          "helm-charts/private-nginx_values.yaml",
+			chartName:           "stable/nginx-ingress",
+			namespace:           "internal-nginx",
+			chartDeploymentName: "private-nginx",
+		}, {
+			valuesPath:          "helm-charts/prometheus_values.yaml",
+			chartName:           "stable/prometheus",
+			namespace:           "prometheus",
+			chartDeploymentName: "prometheus",
+			setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
+		}, {
+			valuesPath:          "helm-charts/fluentd_values.yaml",
+			chartName:           "stable/fluentd-elasticsearch",
+			namespace:           "fluentd",
+			chartDeploymentName: "fluentd",
+			setArgument:         fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS),
+		},
+	}
+
+	for _, deployment := range helmDeployments {
+		logger.Infof("Installing helm chart %s", deployment.chartName)
+		err = installHelmChart(deployment, kops.GetKubeConfigPath())
+		if err != nil {
+			return err
+		}
+	}
+
+	logger.Infof("Waiting up to %d seconds for internal ELB to become ready...", wait)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger, kops.GetKubeConfigPath())
+	if err != nil {
+		return err
+	}
+
+	for _, app := range helmApps {
+		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
+		logger.Infof("Registering DNS %s for %s", dns, app)
+		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ProvisionCluster installs all the baseline kubernetes resources needed for
+// managing installations. This can be called on an already-provisioned cluster
+// to reprovision with the newest version of the resources.
+// TODO: Move helm configuration here as well.
+func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	logger.Info("Provisioning cluster")
+
 	// Begin deploying the mattermost operator.
 	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
 	if err != nil {
@@ -210,7 +302,27 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		mattermostOperatorNamespace,
 	}
 
-	_, err = k8sClient.CreateNamespaces(namespaces)
+	// Remove all previously-installed operator namespaces and resources.
+	for _, namespace := range namespaces {
+		logger.Infof("Cleaning up namespace %s", namespace)
+		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(namespace, &metav1.DeleteOptions{})
+		if k8sErrors.IsNotFound(err) {
+			logger.Infof("Namespace %s not found; skipping...", namespace)
+		} else if err != nil {
+			return errors.Wrapf(err, "failed to delete namespace %s", namespace)
+		}
+	}
+
+	wait := 60
+	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	err = waitForNamespacesDeleted(ctx, namespaces, k8sClient)
+	if err != nil {
+		return err
+	}
+
+	_, err = k8sClient.CreateNamespacesIfDoesNotExist(namespaces)
 	if err != nil {
 		return err
 	}
@@ -218,25 +330,25 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
-		k8s.ManifestFile{
+		{
 			Path:            "operator-manifests/mysql/mysql-operator.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
-		}, k8s.ManifestFile{
+		}, {
 			Path:            "operator-manifests/minio/minio-operator.yaml",
 			DeployNamespace: minioOperatorNamespace,
-		}, k8s.ManifestFile{
+		}, {
 			Path:            "operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
-		}, k8s.ManifestFile{
+		}, {
 			Path:            "operator-manifests/mattermost/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
-		}, k8s.ManifestFile{
+		}, {
 			Path:            "operator-manifests/mattermost/role.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
-		}, k8s.ManifestFile{
+		}, {
 			Path:            "operator-manifests/mattermost/role_binding.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
-		}, k8s.ManifestFile{
+		}, {
 			Path:            "operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		},
@@ -246,7 +358,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 
-	wait = 60
 	operators := []string{"mysql-operator", "minio-operator", "mattermost-operator"}
 	for _, operator := range operators {
 		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
@@ -269,166 +380,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		}
 	}
 
-	// Setup Helm
-	err = helmSetup(logger, k8sClient, kops)
-	if err != nil {
-		return err
-	}
+	logger.WithField("name", kopsMetadata.Name).Info("Successfully provisioned cluster")
 
-	wait = 120
-	logger.Infof("Waiting up to %d seconds for helm to get ready...", wait)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
-	if err != nil {
-		return err
-	}
-	logger.Info("Helm is ready to install charts")
-
-	// Begin deploying Helm charts
-	privateNginx := helmDeployment{valuesPath: "helm-charts/private-nginx_values.yaml", chartName: "stable/nginx-ingress", namespace: "internal-nginx", chartDeploymentName: "private-nginx"}
-	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
-	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
-
-	prometheus := helmDeployment{valuesPath: "helm-charts/prometheus_values.yaml", chartName: "stable/prometheus", namespace: "prometheus", chartDeploymentName: "prometheus", setArgument: fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS)}
-	fluentd := helmDeployment{valuesPath: "helm-charts/fluentd_values.yaml", chartName: "stable/fluentd-elasticsearch", namespace: "fluentd", chartDeploymentName: "fluentd", setArgument: fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS)}
-	helmDeployments := []helmDeployment{privateNginx, prometheus, fluentd}
-
-	for _, value := range helmDeployments {
-		err = installHelmChart(value, logger, kops.GetKubeConfigPath())
-		if err != nil {
-			return err
-		}
-	}
-
-	// Get the new ELB internal-nginx endpoint
-	logger.Infof("Waiting up to %d seconds for internal ELB to be ready...", wait)
-	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger, kops.GetKubeConfigPath())
-	if err != nil {
-		return err
-	}
-
-	if endpoint == "" {
-		return errors.New("internal DNS ELB endpoint is empty")
-	}
-
-	for _, app := range helmApps {
-		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		logger.Infof("Registering DNS %s for %s", dns, app)
-		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
-		if err != nil {
-			return err
-		}
-	}
-
-	logger.WithField("name", kopsMetadata.Name).Info("Successfully created cluster")
-
-	return nil
-}
-
-// waitForHelmRunning is used to check when Helm is ready to install charts.
-func waitForHelmRunning(ctx context.Context, configPath string) error {
-	for {
-		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
-		var out bytes.Buffer
-		cmd.Stderr = &out
-		cmd.Run()
-		if out.String() == "" {
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
-		case <-time.After(5 * time.Second):
-		}
-	}
-}
-
-// getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
-func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
-	k8sClient, err := k8s.New(configPath, logger)
-	if err != nil {
-		return "", err
-	}
-	for {
-		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return "", err
-		}
-		for _, service := range services.Items {
-			if service.Status.LoadBalancer.Ingress != nil {
-				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-				logger.Infof("Succesfully got LoadBalancer endpoint %s for Namespace %s", endpoint, namespace)
-				return endpoint, nil
-			}
-		}
-		select {
-		case <-ctx.Done():
-			return "", errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
-		case <-time.After(5 * time.Second):
-		}
-	}
-}
-
-// installHelmChart is used to install Helm charts.
-func installHelmChart(chart helmDeployment, logger log.FieldLogger, configPath string) error {
-	logger.Infof("Installing helm chart %s", chart.chartName)
-	if chart.setArgument != "" {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
-		if err != nil {
-			return err
-		}
-	} else {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
-		if err != nil {
-			return err
-		}
-	}
-	logger.Infof("Successfully installed helm chart %s", chart.chartName)
-	return nil
-}
-
-// helmSetup is used for the initial setup of Helm in cluster.
-func helmSetup(logger log.FieldLogger, k8sClient *k8s.KubeClient, kops *kops.Cmd) error {
-
-	logger.Info("Initializing Helm in the cluster")
-	err := exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
-	if err != nil {
-		return err
-	}
-
-	logger.Info("Creating Tiller service account")
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
-	}
-	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(serviceAccount)
-	if err != nil {
-		return err
-	}
-	logger.Info("Successfully created Tiller service account")
-
-	logger.Info("Creating Tiller cluster role bind")
-	roleBinding := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
-		Subjects: []rbacv1.Subject{
-			{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
-		},
-		RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
-	}
-
-	_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(roleBinding)
-	if err != nil {
-		return err
-	}
-	logger.Info("Successfully created cluster role bind")
-
-	logger.Info("Upgrade Helm")
-	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -619,6 +572,145 @@ func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation)
 	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
 }
 
+// waitForNamespacesDeleted is used to check when all of the provided namespaces
+// have been fully terminated.
+func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClient *k8s.KubeClient) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "timed out waiting for namespaces to become fully terminated")
+		default:
+			var shouldWait bool
+			for _, namespace := range namespaces {
+				_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+				if err != nil && k8sErrors.IsNotFound(err) {
+					continue
+				}
+
+				shouldWait = true
+				break
+			}
+
+			if !shouldWait {
+				return nil
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+// waitForHelmRunning is used to check when Helm is ready to install charts.
+func waitForHelmRunning(ctx context.Context, configPath string) error {
+	for {
+		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
+		var out bytes.Buffer
+		cmd.Stderr = &out
+		cmd.Run()
+		if out.String() == "" {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+// getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
+func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
+	k8sClient, err := k8s.New(configPath, logger)
+	if err != nil {
+		return "", err
+	}
+	for {
+		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+		if err != nil {
+			return "", err
+		}
+		for _, service := range services.Items {
+			if service.Status.LoadBalancer.Ingress != nil {
+				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+				if endpoint == "" {
+					return "", errors.New("loadbalancer endpoint value is empty")
+				}
+
+				return endpoint, nil
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return "", errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+// installHelmChart is used to install Helm charts.
+func installHelmChart(chart helmDeployment, configPath string) error {
+	if chart.setArgument != "" {
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// helmSetup is used for the initial setup of Helm in cluster.
+func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Initializing Helm in the cluster")
+	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Creating Tiller service account")
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
+	}
+	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(serviceAccount)
+	if err != nil {
+		return err
+	}
+	logger.Info("Successfully created Tiller service account")
+
+	logger.Info("Creating Tiller cluster role bind")
+	roleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
+		Subjects: []rbacv1.Subject{
+			{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
+		},
+		RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
+	}
+
+	_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(roleBinding)
+	if err != nil {
+		return err
+	}
+	logger.Info("Successfully created cluster role bind")
+
+	logger.Info("Upgrade Helm")
+	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
 func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(map[string]interface{}{
@@ -647,7 +739,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return err
 	}
 
-	_, err = k8sClient.CreateNamespace(clusterInstallation.Namespace)
+	_, err = k8sClient.CreateNamespaceIfDoesNotExist(clusterInstallation.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
@@ -729,7 +821,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to delete cluster installation %s", clusterInstallation.ID)
 	}
 
-	err = k8sClient.DeleteNamespace(clusterInstallation.Namespace)
+	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(clusterInstallation.Namespace, &metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Infof("Namespace %s not found, assuming already deleted.", clusterInstallation.Namespace)
 	} else if err != nil {

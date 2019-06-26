@@ -12,6 +12,11 @@ const (
 	ClusterStateCreationRequested = "creation-requested"
 	// ClusterStateCreationFailed is a cluster that failed creation.
 	ClusterStateCreationFailed = "creation-failed"
+	// ClusterStateProvisioningRequested is a cluster in the process of being
+	// provisioned with operators.
+	ClusterStateProvisioningRequested = "provisioning-requested"
+	// ClusterStateProvisioningFailed is a cluster that failed provisioning.
+	ClusterStateProvisioningFailed = "provisioning-failed"
 	// ClusterStateDeletionRequested is a cluster in the process of being deleted.
 	ClusterStateDeletionRequested = "deletion-requested"
 	// ClusterStateDeletionFailed is a cluster that failed deletion.

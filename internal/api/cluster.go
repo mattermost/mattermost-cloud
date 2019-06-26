@@ -20,6 +20,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
 	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
 	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
+	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
 	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
@@ -117,6 +118,49 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to retry cluster creation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Notify even if we didn't make changes, to expedite even the no-op operations above.
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, cluster)
+}
+
+// handleProvisionCluster responds to POST /api/cluster/{cluster}/provision,
+// provisioning k8s resources on a previously-created cluster.
+func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID)
+
+	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	switch cluster.State {
+	case model.ClusterStateStable:
+	case model.ClusterStateProvisioningFailed:
+	case model.ClusterStateProvisioningRequested:
+	default:
+		c.Logger.Warnf("unable to provision cluster while in state %s", cluster.State)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if cluster.State != model.ClusterStateProvisioningRequested {
+		cluster.State = model.ClusterStateProvisioningRequested
+
+		err := c.Store.UpdateCluster(cluster)
+		if err != nil {
+			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
