@@ -706,6 +706,7 @@ func TestDeleteCluster(t *testing.T) {
 		model.ClusterStateStable,
 		model.ClusterStateCreationRequested,
 		model.ClusterStateCreationFailed,
+		model.ClusterStateProvisioningFailed,
 		model.ClusterStateUpgradeRequested,
 		model.ClusterStateUpgradeFailed,
 		model.ClusterStateDeletionRequested,
