@@ -134,7 +134,7 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	outputJSON(c, w, installation)
 }
 
-// handleGetInstallation responds to GET /api/installations/{installation}, returning the installation in question.
+// handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.
 func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
@@ -154,7 +154,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, installation)
 }
 
-// handleUpgradeInstallation responds to PUT /api/installations/{installation}/mattermost, upgrading
+// handleUpgradeInstallation responds to PUT /api/installation/{installation}/mattermost, upgrading
 // the installation to the Mattermost version embedded in the request.
 func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -204,7 +204,7 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// handleJoinGroup responds to PUT /api/installations/{installation}/group/{group}, joining the group.
+// handleJoinGroup responds to PUT /api/installation/{installation}/group/{group}, joining the group.
 func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
@@ -248,7 +248,7 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleLeaveGroup responds to DELETE /api/installations/{installation}/group, leaving any existing group.
+// handleLeaveGroup responds to DELETE /api/installation/{installation}/group, leaving any existing group.
 func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
@@ -278,7 +278,7 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleDeleteInstallation responds to DELETE /api/installations/{installation}, beginning the process of
+// handleDeleteInstallation responds to DELETE /api/installation/{installation}, beginning the process of
 // deleting the installation.
 func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

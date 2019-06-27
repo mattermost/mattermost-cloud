@@ -55,7 +55,7 @@ func handleGetClusterInstallations(c *Context, w http.ResponseWriter, r *http.Re
 	outputJSON(c, w, clusterInstallations)
 }
 
-// handleGetClusterInstallation responds to GET /api/cluster_installations/{cluster_installation}, returning the cluster installation in question.
+// handleGetClusterInstallation responds to GET /api/cluster_installation/{cluster_installation}, returning the cluster installation in question.
 func handleGetClusterInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterInstallationID := vars["cluster_installation"]
@@ -75,7 +75,7 @@ func handleGetClusterInstallation(c *Context, w http.ResponseWriter, r *http.Req
 	outputJSON(c, w, clusterInstallation)
 }
 
-// handleGetClusterInstallationConfig responds to GET /api/cluster_installations/{cluster_installation}/config, returning the config for the cluster installation in question.
+// handleGetClusterInstallationConfig responds to GET /api/cluster_installation/{cluster_installation}/config, returning the config for the cluster installation in question.
 func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterInstallationID := vars["cluster_installation"]
@@ -96,7 +96,7 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// handleSetClusterInstallationConfig responds to PUT /api/cluster_installations/{cluster_installation}/config, merging the given config into the given cluster installation.
+// handleSetClusterInstallationConfig responds to PUT /api/cluster_installation/{cluster_installation}/config, merging the given config into the given cluster installation.
 func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterInstallationID := vars["cluster_installation"]
