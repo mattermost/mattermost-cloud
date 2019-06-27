@@ -52,6 +52,7 @@ func handleGetClusterInstallations(c *Context, w http.ResponseWriter, r *http.Re
 		clusterInstallations = []*model.ClusterInstallation{}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	outputJSON(c, w, clusterInstallations)
 }
 
@@ -72,6 +73,7 @@ func handleGetClusterInstallation(c *Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	outputJSON(c, w, clusterInstallation)
 }
 

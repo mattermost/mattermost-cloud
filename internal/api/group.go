@@ -48,6 +48,7 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 		groups = []*model.Group{}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	outputJSON(c, w, groups)
 }
 
@@ -75,6 +76,7 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, group)
 }
@@ -96,6 +98,7 @@ func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	outputJSON(c, w, group)
 }
 
