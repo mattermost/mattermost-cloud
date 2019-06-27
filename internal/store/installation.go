@@ -41,6 +41,7 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 			"State": []string{
 				model.InstallationStateCreationRequested,
 				model.InstallationStateCreationDNS,
+				model.InstallationStateCreationNoCompatibleClusters,
 				model.InstallationStateUpgradeRequested,
 				model.InstallationStateUpgradeInProgress,
 				model.InstallationStateDeletionInProgress,

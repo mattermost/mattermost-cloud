@@ -244,7 +244,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationRequested)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
 		expectClusterInstallations(t, sqlStore, installation, 0, "")
 	})
 
@@ -283,7 +283,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationRequested)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
 		expectClusterInstallations(t, sqlStore, installation, 0, "")
 	})
 
@@ -432,6 +432,99 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.InstallationStateStable)
+	})
+
+	t.Run("no compatible clusters, cluster installations not yet created, no clusters", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationNoCompatibleClusters,
+		}
+
+		err := sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
+		expectClusterInstallations(t, sqlStore, installation, 0, "")
+	})
+
+	t.Run("no compatible clusters, cluster installations not yet created, no available clusters", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+
+		cluster := &model.Cluster{
+			State: model.ClusterStateStable,
+		}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: model.NewID(),
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateStable,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationNoCompatibleClusters,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
+		expectClusterInstallations(t, sqlStore, installation, 0, "")
+	})
+
+	t.Run("no compatible clusters, cluster installations not yet created, available cluster", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+
+		cluster := &model.Cluster{
+			State: model.ClusterStateStable,
+		}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationNoCompatibleClusters,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationRequested)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 	})
 
 	t.Run("upgrade requested, cluster installations stable", func(t *testing.T) {
