@@ -170,6 +170,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, cluster)
 }
@@ -191,6 +192,7 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	outputJSON(c, w, cluster)
 }
 
