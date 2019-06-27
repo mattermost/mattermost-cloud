@@ -263,6 +263,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	case model.ClusterStateStable:
 	case model.ClusterStateCreationRequested:
 	case model.ClusterStateCreationFailed:
+	case model.ClusterStateProvisioningFailed:
 	case model.ClusterStateUpgradeRequested:
 	case model.ClusterStateUpgradeFailed:
 	case model.ClusterStateDeletionRequested:
