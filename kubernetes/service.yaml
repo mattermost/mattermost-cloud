@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mattermost-cloud-service
+  namespace: mattermost-cloud
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8075
+    name: api
+    targetPort: api
+  selector:
+    app.kubernetes.io/name: mattermost-cloud
+    app.kubernetes.io/component: provisioner
