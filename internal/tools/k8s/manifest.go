@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	appsbetav1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
@@ -102,6 +103,8 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateDeploymentV1(deployNamespace, obj.(*appsv1.Deployment))
 	case *appsbetav1.Deployment:
 		return kc.createOrUpdateDeploymentBetaV1(deployNamespace, obj.(*appsbetav1.Deployment))
+	case *appsv1beta2.Deployment:
+		return kc.createOrUpdateDeploymentBetaV2(deployNamespace, obj.(*appsv1beta2.Deployment))
 	case *rbacv1.RoleBinding:
 		return kc.createOrUpdateRoleBindingV1(deployNamespace, obj.(*rbacv1.RoleBinding))
 	case *rbacbetav1.RoleBinding:
@@ -118,6 +121,14 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateCustomResourceDefinition(obj.(*apixv1beta1.CustomResourceDefinition))
 	case *mmv1alpha1.ClusterInstallation:
 		return kc.createOrUpdateClusterInstallation(deployNamespace, obj.(*mmv1alpha1.ClusterInstallation))
+	case *apiv1.Secret:
+		return kc.createOrUpdateSecret(deployNamespace, obj.(*apiv1.Secret))
+	case *apiv1.ConfigMap:
+		return kc.createOrUpdateConfigMap(deployNamespace, obj.(*apiv1.ConfigMap))
+	case *apiv1.Service:
+		return kc.createOrUpdateService(deployNamespace, obj.(*apiv1.Service))
+	case *appsv1.StatefulSet:
+		return kc.createOrUpdateStatefulSet(deployNamespace, obj.(*appsv1.StatefulSet))
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}
