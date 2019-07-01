@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	appsbetav1 "k8s.io/api/apps/v1beta1"
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,6 +43,25 @@ func TestDeploymentsBetaV1(t *testing.T) {
 	})
 	t.Run("create duplicate deployment", func(t *testing.T) {
 		result, err := testClient.createOrUpdateDeploymentBetaV1(namespace, deployment)
+		require.NoError(t, err)
+		require.Equal(t, deployment.GetName(), result.GetName())
+	})
+}
+
+func TestDeploymentsBetaV2(t *testing.T) {
+	testClient := newTestKubeClient()
+	deployment := &appsv1beta2.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-deployment"},
+	}
+	namespace := "testing"
+
+	t.Run("create deployment", func(t *testing.T) {
+		result, err := testClient.createOrUpdateDeploymentBetaV2(namespace, deployment)
+		require.NoError(t, err)
+		require.Equal(t, deployment.GetName(), result.GetName())
+	})
+	t.Run("create duplicate deployment", func(t *testing.T) {
+		result, err := testClient.createOrUpdateDeploymentBetaV2(namespace, deployment)
 		require.NoError(t, err)
 		require.Equal(t, deployment.GetName(), result.GetName())
 	})
