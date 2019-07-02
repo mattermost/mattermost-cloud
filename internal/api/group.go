@@ -52,7 +52,7 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, groups)
 }
 
-// handleCreateGroup responds to POST /api/group, beginning the process of creating a new group.
+// handleCreateGroup responds to POST /api/groups, beginning the process of creating a new group.
 func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	createGroupRequest, err := newCreateGroupRequestFromReader(r.Body)
 	if err != nil {
