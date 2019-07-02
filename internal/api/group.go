@@ -81,7 +81,7 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, group)
 }
 
-// handleGetGroup responds to GET /api/groups/{group}, returning the group in question.
+// handleGetGroup responds to GET /api/group/{group}, returning the group in question.
 func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupID := vars["group"]
@@ -102,7 +102,7 @@ func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, group)
 }
 
-// handleUpdateGroup responds to PUT /api/groups/{group}, updating the group.
+// handleUpdateGroup responds to PUT /api/group/{group}, updating the group.
 func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupID := vars["group"]
@@ -139,7 +139,7 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleDeleteGroup responds to DELETE /api/groups/{group}, marking the group as deleted.
+// handleDeleteGroup responds to DELETE /api/group/{group}, marking the group as deleted.
 //
 // Installations will not automatically leave the group, but they will no longer consider the
 // group version as an upgrade target.

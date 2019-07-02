@@ -50,6 +50,7 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 		clusters = []*model.Cluster{}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	outputJSON(c, w, clusters)
 }
 
@@ -82,6 +83,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, cluster)
 }
@@ -127,6 +129,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, cluster)
 }
@@ -175,7 +178,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	outputJSON(c, w, cluster)
 }
 
-// handleGetCluster responds to GET /api/clusters/{cluster}, returning the cluster in question.
+// handleGetCluster responds to GET /api/cluster/{cluster}, returning the cluster in question.
 func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
@@ -196,7 +199,7 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, cluster)
 }
 
-// handleUpgradeCluster responds to PUT /api/clusters/{cluster}/kubernetes/{version}, upgrading
+// handleUpgradeCluster responds to PUT /api/cluster/{cluster}/kubernetes/{version}, upgrading
 // the cluster to the given Kubernetes version.
 func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -245,7 +248,7 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// handleDeleteCluster responds to DELETE /api/clusters/{cluster}, beginning the process of
+// handleDeleteCluster responds to DELETE /api/cluster/{cluster}, beginning the process of
 // deleting the cluster.
 func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
