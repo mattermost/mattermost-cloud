@@ -62,5 +62,5 @@ $ cloud server --state-store=<your-s3-bucket> --private-dns dev.cloud.internal.m
 Run the go tests to test:
 
 ```
-$ go test
+$ go test ./...
 ```
