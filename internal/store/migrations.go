@@ -301,7 +301,7 @@ var migrations = []migration{
 	{semver.MustParse("0.5.0"), semver.MustParse("0.6.0"), func(e execer) error {
 		// Add the new Size column. SQLite will need to re-create manually.
 		if e.DriverName() == driverPostgres {
-			_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN Size TEXT NOT NULL;`)
+			_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN Size TEXT DEFAULT '100users';`)
 			if err != nil {
 				return err
 			}
