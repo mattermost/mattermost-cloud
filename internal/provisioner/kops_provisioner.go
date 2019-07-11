@@ -758,7 +758,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
-			Size:                   "100users",
+			Size:                   installation.Size,
 			Version:                translateMattermostVersion(installation.Version),
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,

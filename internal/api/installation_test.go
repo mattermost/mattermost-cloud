@@ -88,6 +88,7 @@ func TestGetInstallations(t *testing.T) {
 			OwnerID:  ownerID1,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     "1000users",
 			Affinity: model.InstallationAffinityIsolated,
 		}
 		err := sqlStore.CreateInstallation(installation1)
@@ -252,6 +253,17 @@ func TestCreateInstallation(t *testing.T) {
 		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
+			Affinity: model.InstallationAffinityIsolated,
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
+			OwnerID:  "owner",
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     "junk",
 			Affinity: model.InstallationAffinityIsolated,
 		})
 		require.EqualError(t, err, "failed with status code 400")
