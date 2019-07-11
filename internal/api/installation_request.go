@@ -15,6 +15,7 @@ type CreateInstallationRequest struct {
 	OwnerID  string
 	Version  string
 	DNS      string
+	Size     string
 	Affinity string
 }
 
@@ -28,8 +29,23 @@ func newCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 	if createInstallationRequest.Version == "" {
 		createInstallationRequest.Version = "stable"
 	}
+	if createInstallationRequest.Size == "" {
+		createInstallationRequest.Size = model.InstallationDefaultSize
+	}
 	if createInstallationRequest.Affinity == "" {
 		createInstallationRequest.Affinity = "isolated"
+	}
+
+	validSize := false
+	for _, size := range model.InstallationSizes {
+		if createInstallationRequest.Size == size {
+			validSize = true
+			break
+		}
+	}
+
+	if !validSize {
+		return nil, errors.New("invalid size")
 	}
 
 	if createInstallationRequest.OwnerID == "" {

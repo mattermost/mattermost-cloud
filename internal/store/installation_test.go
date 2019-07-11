@@ -22,6 +22,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version",
 		DNS:      "dns.example.com",
+		Size:     "100users",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID1,
 		State:    model.InstallationStateCreationRequested,
@@ -36,6 +37,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version2",
 		DNS:      "dns2.example.com",
+		Size:     "100users",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID2,
 		State:    model.InstallationStateStable,
@@ -50,6 +52,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID2,
 		Version:  "version",
 		DNS:      "dns3.example.com",
+		Size:     "100users",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID1,
 		State:    model.InstallationStateCreationRequested,
@@ -64,6 +67,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID2,
 		Version:  "version",
 		DNS:      "dns4.example.com",
+		Size:     "100users",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID2,
 		State:    model.InstallationStateCreationRequested,
@@ -416,6 +420,7 @@ func TestUpdateInstallation(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version",
 		DNS:      "dns3.example.com",
+		Size:     "100users",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID1,
 		State:    model.InstallationStateCreationRequested,
@@ -428,6 +433,7 @@ func TestUpdateInstallation(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version2",
 		DNS:      "dns4.example.com",
+		Size:     "100users",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID2,
 		State:    model.InstallationStateStable,
@@ -439,6 +445,7 @@ func TestUpdateInstallation(t *testing.T) {
 	installation1.OwnerID = ownerID2
 	installation1.Version = "verion3"
 	installation1.DNS = "dns5.example.com"
+	installation1.Size = "1000users"
 	installation1.Affinity = model.InstallationAffinityIsolated
 	installation1.GroupID = &groupID2
 	installation1.State = model.InstallationStateDeletionRequested

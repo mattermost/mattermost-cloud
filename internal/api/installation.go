@@ -73,6 +73,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		OwnerID:  createInstallationRequest.OwnerID,
 		Version:  createInstallationRequest.Version,
 		DNS:      createInstallationRequest.DNS,
+		Size:     createInstallationRequest.Size,
 		Affinity: createInstallationRequest.Affinity,
 		State:    model.InstallationStateCreationRequested,
 	}

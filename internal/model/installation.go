@@ -31,7 +31,13 @@ const (
 	InstallationStateUpgradeFailed = "upgrade-failed"
 	// InstallationStateStable is an installation in a stable state and undergoing no changes.
 	InstallationStateStable = "stable"
+
+	// InstallationDefaultSize is the default size for an installation.
+	InstallationDefaultSize = "100users"
 )
+
+// InstallationSizes is the valid sizes for an installation.
+var InstallationSizes = []string{"100users", "1000users", "5000users", "10000users", "250000users"}
 
 // Installation represents a Mattermost installation.
 type Installation struct {
@@ -39,6 +45,7 @@ type Installation struct {
 	OwnerID        string
 	Version        string
 	DNS            string
+	Size           string
 	Affinity       string
 	GroupID        *string
 	State          string
