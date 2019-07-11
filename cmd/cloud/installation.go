@@ -13,7 +13,7 @@ func init() {
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
 	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
-	installationCreateCmd.Flags().String("size", "", "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users or 25000users. Defaults to 100users.")
+	installationCreateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users or 25000users. Defaults to 100users.")
 	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
