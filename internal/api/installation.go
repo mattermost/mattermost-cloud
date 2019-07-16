@@ -74,6 +74,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		Version:  createInstallationRequest.Version,
 		DNS:      createInstallationRequest.DNS,
 		License:  createInstallationRequest.License,
+		Size:     createInstallationRequest.Size,
 		Affinity: createInstallationRequest.Affinity,
 		State:    model.InstallationStateCreationRequested,
 	}

@@ -299,6 +299,69 @@ var migrations = []migration{
 		return nil
 	}},
 	{semver.MustParse("0.5.0"), semver.MustParse("0.6.0"), func(e execer) error {
+		// Add the new Size column. SQLite will need to re-create manually.
+		if e.DriverName() == driverPostgres {
+			_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN Size TEXT DEFAULT '100users';`)
+			if err != nil {
+				return err
+			}
+		} else if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					CREATE TABLE Installation (
+						ID TEXT PRIMARY KEY,
+						OwnerID TEXT NOT NULL,
+						Version TEXT NOT NULL,
+						DNS TEXT NOT NULL,
+						Size TEXT NOT NULL,
+						Affinity TEXT NOT NULL,
+						GroupID TEXT NULL,
+						State TEXT NOT NULL,
+						CreateAt BIGINT NOT NULL,
+						DeleteAt BIGINT NOT NULL,
+						LockAcquiredBy TEXT NULL,
+						LockAcquiredAt BIGINT NOT NULL
+					);
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					INSERT INTO Installation
+					SELECT
+						ID,
+						OwnerID,
+						Version,
+						DNS,
+						"100users",
+						Affinity,
+						GroupID,
+						State,
+						CreateAt,
+						DeleteAt,
+						LockAcquiredBy,
+						LockAcquiredAt
+					FROM
+					InstallationTemp;
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.6.0"), semver.MustParse("0.7.0"), func(e execer) error {
 		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN License TEXT NULL;`)
 		if err != nil {
 			return err
@@ -308,6 +371,5 @@ var migrations = []migration{
 		if err != nil {
 			return err
 		}
-		return nil
 	}},
 }

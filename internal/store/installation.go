@@ -13,7 +13,7 @@ var installationSelect sq.SelectBuilder
 func init() {
 	installationSelect = sq.
 		Select(
-			"ID", "OwnerID", "Version", "DNS", "Affinity", "GroupID", "State",
+			"ID", "OwnerID", "Version", "DNS", "Size", "Affinity", "GroupID", "State",
 			"License", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Installation")
@@ -109,6 +109,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"OwnerID":        installation.OwnerID,
 			"Version":        installation.Version,
 			"DNS":            installation.DNS,
+			"Size":           installation.Size,
 			"Affinity":       installation.Affinity,
 			"GroupID":        installation.GroupID,
 			"State":          installation.State,
@@ -134,6 +135,7 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 			"OwnerID":  installation.OwnerID,
 			"Version":  installation.Version,
 			"DNS":      installation.DNS,
+			"Size":     installation.Size,
 			"Affinity": installation.Affinity,
 			"GroupID":  installation.GroupID,
 			"License":  installation.License,
