@@ -371,5 +371,7 @@ var migrations = []migration{
 		if err != nil {
 			return err
 		}
+
+		return nil
 	}},
 }
