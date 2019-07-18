@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // initInstallation registers installation endpoints on the given router.
@@ -62,7 +62,7 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 // handleCreateInstallation responds to POST /api/installations, beginning the process of creating
 // a new installation.
 func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
-	createInstallationRequest, err := newCreateInstallationRequestFromReader(r.Body)
+	createInstallationRequest, err := model.NewCreateInstallationRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -165,7 +165,7 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	upgradeInstallationRequest, err := newUpgradeInstallationRequestFromReader(r.Body)
+	upgradeInstallationRequest, err := model.NewUpgradeInstallationRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)

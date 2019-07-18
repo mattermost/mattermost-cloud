@@ -1,4 +1,4 @@
-package api
+package model
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +18,8 @@ type CreateInstallationRequest struct {
 	Affinity string
 }
 
-func newCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallationRequest, error) {
+// NewCreateInstallationRequestFromReader will create a CreateInstallationRequest from an io.Reader with JSON data.
+func NewCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallationRequest, error) {
 	var createInstallationRequest CreateInstallationRequest
 	err := json.NewDecoder(reader).Decode(&createInstallationRequest)
 	if err != nil && err != io.EOF {
@@ -30,14 +30,14 @@ func newCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 		createInstallationRequest.Version = "stable"
 	}
 	if createInstallationRequest.Size == "" {
-		createInstallationRequest.Size = model.InstallationDefaultSize
+		createInstallationRequest.Size = InstallationDefaultSize
 	}
 	if createInstallationRequest.Affinity == "" {
 		createInstallationRequest.Affinity = "isolated"
 	}
 
 	validSize := false
-	for _, size := range model.InstallationSizes {
+	for _, size := range InstallationSizes {
 		if createInstallationRequest.Size == size {
 			validSize = true
 			break
@@ -57,7 +57,7 @@ func newCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 	if _, err := url.Parse(createInstallationRequest.DNS); err != nil {
 		return nil, errors.Wrap(err, "invalid DNS")
 	}
-	if !model.IsSupportedAffinity(createInstallationRequest.Affinity) {
+	if !IsSupportedAffinity(createInstallationRequest.Affinity) {
 		return nil, errors.Errorf("unsupported affinity %s", createInstallationRequest.Affinity)
 	}
 
@@ -89,7 +89,8 @@ type UpgradeInstallationRequest struct {
 	Version string
 }
 
-func newUpgradeInstallationRequestFromReader(reader io.Reader) (*UpgradeInstallationRequest, error) {
+// NewUpgradeInstallationRequestFromReader will create a UpgradeInstallationRequest from an io.Reader with JSON data.
+func NewUpgradeInstallationRequestFromReader(reader io.Reader) (*UpgradeInstallationRequest, error) {
 	var upgradeInstallationRequest UpgradeInstallationRequest
 	err := json.NewDecoder(reader).Decode(&upgradeInstallationRequest)
 	if err != nil && err != io.EOF {

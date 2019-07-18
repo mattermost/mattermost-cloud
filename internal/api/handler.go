@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 type contextHandlerFunc func(c *Context, w http.ResponseWriter, r *http.Request)

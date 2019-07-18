@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestClusters(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("unknown cluster", func(t *testing.T) {
 		cluster, err := client.GetCluster(model.NewID())
@@ -38,7 +38,7 @@ func TestClusters(t *testing.T) {
 	})
 
 	t.Run("no clusters", func(t *testing.T) {
-		clusters, err := client.GetClusters(&api.GetClustersRequest{
+		clusters, err := client.GetClusters(&model.GetClustersRequest{
 			Page:           0,
 			PerPage:        10,
 			IncludeDeleted: true,
@@ -80,7 +80,7 @@ func TestClusters(t *testing.T) {
 	})
 
 	t.Run("clusters", func(t *testing.T) {
-		cluster1, err := client.CreateCluster(&api.CreateClusterRequest{
+		cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
@@ -101,7 +101,7 @@ func TestClusters(t *testing.T) {
 
 		time.Sleep(1 * time.Millisecond)
 
-		cluster2, err := client.CreateCluster(&api.CreateClusterRequest{
+		cluster2, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
@@ -122,7 +122,7 @@ func TestClusters(t *testing.T) {
 
 		time.Sleep(1 * time.Millisecond)
 
-		cluster3, err := client.CreateCluster(&api.CreateClusterRequest{
+		cluster3, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
@@ -142,7 +142,7 @@ func TestClusters(t *testing.T) {
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster3.State)
 
 		t.Run("get clusters, page 0, perPage 2, exclude deleted", func(t *testing.T) {
-			clusters, err := client.GetClusters(&api.GetClustersRequest{
+			clusters, err := client.GetClusters(&model.GetClustersRequest{
 				Page:           0,
 				PerPage:        2,
 				IncludeDeleted: false,
@@ -152,7 +152,7 @@ func TestClusters(t *testing.T) {
 		})
 
 		t.Run("get clusters, page 1, perPage 2, exclude deleted", func(t *testing.T) {
-			clusters, err := client.GetClusters(&api.GetClustersRequest{
+			clusters, err := client.GetClusters(&model.GetClustersRequest{
 				Page:           1,
 				PerPage:        2,
 				IncludeDeleted: false,
@@ -176,7 +176,7 @@ func TestClusters(t *testing.T) {
 
 		t.Run("get clusters after deletion request", func(t *testing.T) {
 			t.Run("page 0, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           0,
 					PerPage:        2,
 					IncludeDeleted: false,
@@ -186,7 +186,7 @@ func TestClusters(t *testing.T) {
 			})
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           1,
 					PerPage:        2,
 					IncludeDeleted: false,
@@ -196,7 +196,7 @@ func TestClusters(t *testing.T) {
 			})
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           0,
 					PerPage:        2,
 					IncludeDeleted: true,
@@ -206,7 +206,7 @@ func TestClusters(t *testing.T) {
 			})
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           1,
 					PerPage:        2,
 					IncludeDeleted: true,
@@ -225,7 +225,7 @@ func TestClusters(t *testing.T) {
 
 		t.Run("get clusters after actual deletion", func(t *testing.T) {
 			t.Run("page 0, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           0,
 					PerPage:        2,
 					IncludeDeleted: false,
@@ -235,7 +235,7 @@ func TestClusters(t *testing.T) {
 			})
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           1,
 					PerPage:        2,
 					IncludeDeleted: false,
@@ -245,7 +245,7 @@ func TestClusters(t *testing.T) {
 			})
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           0,
 					PerPage:        2,
 					IncludeDeleted: true,
@@ -255,7 +255,7 @@ func TestClusters(t *testing.T) {
 			})
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&api.GetClustersRequest{
+				clusters, err := client.GetClusters(&model.GetClustersRequest{
 					Page:           1,
 					PerPage:        2,
 					IncludeDeleted: true,
@@ -280,7 +280,7 @@ func TestCreateCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/clusters", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
@@ -295,7 +295,7 @@ func TestCreateCluster(t *testing.T) {
 	})
 
 	t.Run("invalid provider", func(t *testing.T) {
-		_, err := client.CreateCluster(&api.CreateClusterRequest{
+		_, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: "invalid",
 			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
@@ -304,7 +304,7 @@ func TestCreateCluster(t *testing.T) {
 	})
 
 	t.Run("invalid size", func(t *testing.T) {
-		_, err := client.CreateCluster(&api.CreateClusterRequest{
+		_, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Size:     "invalid",
 			Zones:    []string{"zone"},
@@ -313,7 +313,7 @@ func TestCreateCluster(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		cluster, err := client.CreateCluster(&api.CreateClusterRequest{
+		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
@@ -339,9 +339,9 @@ func TestRetryCreateCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	cluster1, err := client.CreateCluster(&api.CreateClusterRequest{
+	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
 		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
@@ -422,9 +422,9 @@ func TestProvisionCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	cluster1, err := client.CreateCluster(&api.CreateClusterRequest{
+	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
 		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
@@ -544,9 +544,9 @@ func TestUpgradeCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	cluster1, err := client.CreateCluster(&api.CreateClusterRequest{
+	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
 		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
@@ -649,9 +649,9 @@ func TestDeleteCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	cluster1, err := client.CreateCluster(&api.CreateClusterRequest{
+	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
 		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
@@ -659,7 +659,7 @@ func TestDeleteCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	// cluster2 will have a cluster installation running on it
-	cluster2, err := client.CreateCluster(&api.CreateClusterRequest{
+	cluster2, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
 		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // initClusterInstallation registers cluster installation endpoints on the given router.
@@ -104,7 +104,7 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 	clusterInstallationID := vars["cluster_installation"]
 	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
 
-	_, err := newClusterInstallationConfigRequestFromReader(r.Body)
+	_, err := model.NewClusterInstallationConfigRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)

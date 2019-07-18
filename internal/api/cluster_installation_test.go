@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestGetClusterInstallations(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("unknown cluster installation", func(t *testing.T) {
 		clusterInstallation, err := client.GetClusterInstallation(model.NewID())
@@ -38,7 +38,7 @@ func TestGetClusterInstallations(t *testing.T) {
 	})
 
 	t.Run("no cluster installations", func(t *testing.T) {
-		clusterInstallations, err := client.GetClusterInstallations(&api.GetClusterInstallationsRequest{
+		clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
 			Page:           0,
 			PerPage:        10,
 			IncludeDeleted: true,
@@ -148,12 +148,12 @@ func TestGetClusterInstallations(t *testing.T) {
 		t.Run("get cluster installations", func(t *testing.T) {
 			testCases := []struct {
 				Description                    string
-				GetClusterInstallationsRequest *api.GetClusterInstallationsRequest
+				GetClusterInstallationsRequest *model.GetClusterInstallationsRequest
 				Expected                       []*model.ClusterInstallation
 			}{
 				{
 					"page 0, perPage 2, exclude deleted",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: false,
@@ -163,7 +163,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"page 1, perPage 2, exclude deleted",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: false,
@@ -173,7 +173,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"page 0, perPage 2, include deleted",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: true,
@@ -183,7 +183,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"page 1, perPage 2, include deleted",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: true,
@@ -193,7 +193,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"filter by cluster",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           0,
 						PerPage:        100,
 						ClusterID:      clusterID1,
@@ -204,7 +204,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"filter by installation",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           0,
 						PerPage:        100,
 						InstallationID: installationID1,
@@ -215,7 +215,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"filter by cluster + installation",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           0,
 						PerPage:        100,
 						ClusterID:      clusterID2,
@@ -227,7 +227,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 				{
 					"filter by cluster + installation, include deleted",
-					&api.GetClusterInstallationsRequest{
+					&model.GetClusterInstallationsRequest{
 						Page:           0,
 						PerPage:        100,
 						ClusterID:      clusterID2,
@@ -262,7 +262,7 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	clusterInstallation1 := &model.ClusterInstallation{
 		ClusterID:      model.NewID(),
@@ -301,7 +301,7 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	clusterInstallation1 := &model.ClusterInstallation{
 		ClusterID:      model.NewID(),

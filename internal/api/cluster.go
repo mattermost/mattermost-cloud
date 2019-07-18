@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // initCluster registers cluster endpoints on the given router.
@@ -57,7 +57,7 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 // handleCreateCluster responds to POST /api/clusters, beginning the process of creating a new
 // cluster.
 func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
-	createClusterRequest, err := newCreateClusterRequestFromReader(r.Body)
+	createClusterRequest, err := model.NewCreateClusterRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
