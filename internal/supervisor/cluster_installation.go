@@ -3,7 +3,7 @@ package supervisor
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )

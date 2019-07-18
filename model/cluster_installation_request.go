@@ -1,4 +1,4 @@
-package api
+package model
 
 import (
 	"encoding/json"
@@ -34,7 +34,8 @@ func (request *GetClusterInstallationsRequest) ApplyToURL(u *url.URL) {
 // ClusterInstallationConfigRequest describes the payload for updating an cluster installation's configuration.
 type ClusterInstallationConfigRequest map[string]interface{}
 
-func newClusterInstallationConfigRequestFromReader(reader io.Reader) (ClusterInstallationConfigRequest, error) {
+// NewClusterInstallationConfigRequestFromReader will create a ClusterInstallationConfigRequest from an io.Reader with JSON data.
+func NewClusterInstallationConfigRequestFromReader(reader io.Reader) (ClusterInstallationConfigRequest, error) {
 	var clusterInstallationConfigRequest ClusterInstallationConfigRequest
 	err := json.NewDecoder(reader).Decode(&clusterInstallationConfigRequest)
 	if err != nil && err != io.EOF {

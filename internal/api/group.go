@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // initGroup registers group endpoints on the given router.
@@ -54,7 +54,7 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // handleCreateGroup responds to POST /api/groups, beginning the process of creating a new group.
 func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
-	createGroupRequest, err := newCreateGroupRequestFromReader(r.Body)
+	createGroupRequest, err := model.NewCreateGroupRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -108,7 +108,7 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("group", groupID)
 
-	patchGroupRequest, err := newPatchGroupRequestFromReader(r.Body)
+	patchGroupRequest, err := model.NewPatchGroupRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)

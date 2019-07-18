@@ -3,7 +3,7 @@ package model_test
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 )
 

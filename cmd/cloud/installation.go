@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +52,7 @@ var installationCreateCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		ownerID, _ := command.Flags().GetString("owner")
 		version, _ := command.Flags().GetString("version")
@@ -61,7 +60,7 @@ var installationCreateCmd = &cobra.Command{
 		dns, _ := command.Flags().GetString("dns")
 		affinity, _ := command.Flags().GetString("affinity")
 
-		installation, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  ownerID,
 			Version:  version,
 			Size:     size,
@@ -88,7 +87,7 @@ var installationUpgradeCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
 		version, _ := command.Flags().GetString("version")
@@ -109,7 +108,7 @@ var installationDeleteCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
 
@@ -129,7 +128,7 @@ var installationGetCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
 		installation, err := client.GetInstallation(installationID)
@@ -156,13 +155,13 @@ var installationListCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		owner, _ := command.Flags().GetString("owner")
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
-		installations, err := client.GetInstallations(&api.GetInstallationsRequest{
+		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 			OwnerID:        owner,
 			Page:           page,
 			PerPage:        perPage,

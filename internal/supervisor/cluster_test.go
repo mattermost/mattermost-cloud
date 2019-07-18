@@ -3,7 +3,7 @@ package supervisor_test
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"

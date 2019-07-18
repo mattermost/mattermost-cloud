@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
 )
 

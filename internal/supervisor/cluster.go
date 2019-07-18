@@ -1,7 +1,7 @@
 package supervisor
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	log "github.com/sirupsen/logrus"
 )

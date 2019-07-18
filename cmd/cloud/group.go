@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -60,13 +60,13 @@ var groupCreateCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		name, _ := command.Flags().GetString("name")
 		description, _ := command.Flags().GetString("description")
 		version, _ := command.Flags().GetString("version")
 
-		group, err := client.CreateGroup(&api.CreateGroupRequest{
+		group, err := client.CreateGroup(&model.CreateGroupRequest{
 			Name:        name,
 			Description: description,
 			Version:     version,
@@ -91,7 +91,7 @@ var groupUpdateCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		groupID, _ := command.Flags().GetString("group")
 		name, _ := command.Flags().GetString("name")
@@ -106,7 +106,7 @@ var groupUpdateCmd = &cobra.Command{
 			return &s
 		}
 
-		err := client.UpdateGroup(&api.PatchGroupRequest{
+		err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:          groupID,
 			Name:        patchPointer(name),
 			Description: patchPointer(description),
@@ -127,7 +127,7 @@ var groupDeleteCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		groupID, _ := command.Flags().GetString("group")
 
@@ -147,7 +147,7 @@ var groupGetCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		groupID, _ := command.Flags().GetString("group")
 		group, err := client.GetGroup(groupID)
@@ -174,12 +174,12 @@ var groupListCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
-		groups, err := client.GetGroups(&api.GetGroupsRequest{
+		groups, err := client.GetGroups(&model.GetGroupsRequest{
 			Page:           page,
 			PerPage:        perPage,
 			IncludeDeleted: includeDeleted,
@@ -204,7 +204,7 @@ var groupJoinCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		groupID, _ := command.Flags().GetString("group")
 		installationID, _ := command.Flags().GetString("installation")
@@ -225,7 +225,7 @@ var groupLeaveCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
 

@@ -1,4 +1,4 @@
-package api
+package model
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +74,7 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 }
 
 // CreateCluster requests the creation of a cluster from the configured provisioning server.
-func (c *Client) CreateCluster(request *CreateClusterRequest) (*model.Cluster, error) {
+func (c *Client) CreateCluster(request *CreateClusterRequest) (*Cluster, error) {
 	resp, err := c.doPost(c.buildURL("/api/clusters"), request)
 	if err != nil {
 		return nil, err
@@ -84,7 +83,7 @@ func (c *Client) CreateCluster(request *CreateClusterRequest) (*model.Cluster, e
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return model.ClusterFromReader(resp.Body)
+		return ClusterFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -126,7 +125,7 @@ func (c *Client) ProvisionCluster(clusterID string) error {
 }
 
 // GetCluster fetches the specified cluster from the configured provisioning server.
-func (c *Client) GetCluster(clusterID string) (*model.Cluster, error) {
+func (c *Client) GetCluster(clusterID string) (*Cluster, error) {
 	resp, err := c.doGet(c.buildURL("/api/cluster/%s", clusterID))
 	if err != nil {
 		return nil, err
@@ -135,7 +134,7 @@ func (c *Client) GetCluster(clusterID string) (*model.Cluster, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.ClusterFromReader(resp.Body)
+		return ClusterFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -146,7 +145,7 @@ func (c *Client) GetCluster(clusterID string) (*model.Cluster, error) {
 }
 
 // GetClusters fetches the list of clusters from the configured provisioning server.
-func (c *Client) GetClusters(request *GetClustersRequest) ([]*model.Cluster, error) {
+func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
 	u, err := url.Parse(c.buildURL("/api/clusters"))
 	if err != nil {
 		return nil, err
@@ -162,7 +161,7 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*model.Cluster, err
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.ClustersFromReader(resp.Body)
+		return ClustersFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -204,7 +203,7 @@ func (c *Client) DeleteCluster(clusterID string) error {
 }
 
 // CreateInstallation requests the creation of a installation from the configured provisioning server.
-func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*model.Installation, error) {
+func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*Installation, error) {
 	resp, err := c.doPost(c.buildURL("/api/installations"), request)
 	if err != nil {
 		return nil, err
@@ -213,7 +212,7 @@ func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*model.
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return model.InstallationFromReader(resp.Body)
+		return InstallationFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -238,7 +237,7 @@ func (c *Client) RetryCreateInstallation(installationID string) error {
 }
 
 // GetInstallation fetches the specified installation from the configured provisioning server.
-func (c *Client) GetInstallation(installationID string) (*model.Installation, error) {
+func (c *Client) GetInstallation(installationID string) (*Installation, error) {
 	resp, err := c.doGet(c.buildURL("/api/installation/%s", installationID))
 	if err != nil {
 		return nil, err
@@ -247,7 +246,7 @@ func (c *Client) GetInstallation(installationID string) (*model.Installation, er
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.InstallationFromReader(resp.Body)
+		return InstallationFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -258,7 +257,7 @@ func (c *Client) GetInstallation(installationID string) (*model.Installation, er
 }
 
 // GetInstallations fetches the list of installations from the configured provisioning server.
-func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*model.Installation, error) {
+func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installation, error) {
 	u, err := url.Parse(c.buildURL("/api/installations"))
 	if err != nil {
 		return nil, err
@@ -274,7 +273,7 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*model.In
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.InstallationsFromReader(resp.Body)
+		return InstallationsFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -318,7 +317,7 @@ func (c *Client) DeleteInstallation(installationID string) error {
 }
 
 // GetClusterInstallation fetches the specified cluster installation from the configured provisioning server.
-func (c *Client) GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error) {
+func (c *Client) GetClusterInstallation(clusterInstallationID string) (*ClusterInstallation, error) {
 	resp, err := c.doGet(c.buildURL("/api/cluster_installation/%s", clusterInstallationID))
 	if err != nil {
 		return nil, err
@@ -327,7 +326,7 @@ func (c *Client) GetClusterInstallation(clusterInstallationID string) (*model.Cl
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.ClusterInstallationFromReader(resp.Body)
+		return ClusterInstallationFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -338,7 +337,7 @@ func (c *Client) GetClusterInstallation(clusterInstallationID string) (*model.Cl
 }
 
 // GetClusterInstallations fetches the list of cluster installations from the configured provisioning server.
-func (c *Client) GetClusterInstallations(request *GetClusterInstallationsRequest) ([]*model.ClusterInstallation, error) {
+func (c *Client) GetClusterInstallations(request *GetClusterInstallationsRequest) ([]*ClusterInstallation, error) {
 	u, err := url.Parse(c.buildURL("/api/cluster_installations"))
 	if err != nil {
 		return nil, err
@@ -354,7 +353,7 @@ func (c *Client) GetClusterInstallations(request *GetClusterInstallationsRequest
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.ClusterInstallationsFromReader(resp.Body)
+		return ClusterInstallationsFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -371,7 +370,7 @@ func (c *Client) GetClusterInstallationConfig(clusterInstallationID string) (map
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.ClusterInstallationConfigFromReader(resp.Body)
+		return ClusterInstallationConfigFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -401,7 +400,7 @@ func (c *Client) SetClusterInstallationConfig(clusterInstallationID string, conf
 }
 
 // CreateGroup requests the creation of a group from the configured provisioning server.
-func (c *Client) CreateGroup(request *CreateGroupRequest) (*model.Group, error) {
+func (c *Client) CreateGroup(request *CreateGroupRequest) (*Group, error) {
 	resp, err := c.doPost(c.buildURL("/api/groups"), request)
 	if err != nil {
 		return nil, err
@@ -410,7 +409,7 @@ func (c *Client) CreateGroup(request *CreateGroupRequest) (*model.Group, error) 
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.GroupFromReader(resp.Body)
+		return GroupFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -452,7 +451,7 @@ func (c *Client) DeleteGroup(groupID string) error {
 }
 
 // GetGroup fetches the specified group from the configured provisioning server.
-func (c *Client) GetGroup(groupID string) (*model.Group, error) {
+func (c *Client) GetGroup(groupID string) (*Group, error) {
 	resp, err := c.doGet(c.buildURL("/api/group/%s", groupID))
 	if err != nil {
 		return nil, err
@@ -461,7 +460,7 @@ func (c *Client) GetGroup(groupID string) (*model.Group, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.GroupFromReader(resp.Body)
+		return GroupFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -472,7 +471,7 @@ func (c *Client) GetGroup(groupID string) (*model.Group, error) {
 }
 
 // GetGroups fetches the list of groups from the configured provisioning server.
-func (c *Client) GetGroups(request *GetGroupsRequest) ([]*model.Group, error) {
+func (c *Client) GetGroups(request *GetGroupsRequest) ([]*Group, error) {
 	u, err := url.Parse(c.buildURL("/api/groups"))
 	if err != nil {
 		return nil, err
@@ -488,7 +487,7 @@ func (c *Client) GetGroups(request *GetGroupsRequest) ([]*model.Group, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return model.GroupsFromReader(resp.Body)
+		return GroupsFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)

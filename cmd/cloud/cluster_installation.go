@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +45,7 @@ var clusterInstallationGetCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterInstallationID, _ := command.Flags().GetString("cluster_installation")
 		clusterInstallation, err := client.GetClusterInstallation(clusterInstallationID)
@@ -72,7 +72,7 @@ var clusterInstallationListCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		cluster, _ := command.Flags().GetString("cluster")
 		installation, _ := command.Flags().GetString("installation")
@@ -80,7 +80,7 @@ var clusterInstallationListCmd = &cobra.Command{
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
 
-		clusterInstallations, err := client.GetClusterInstallations(&api.GetClusterInstallationsRequest{
+		clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
 			ClusterID:      cluster,
 			InstallationID: installation,
 			Page:           page,
@@ -107,7 +107,7 @@ var clusterInstallationConfigGetCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterInstallationID, _ := command.Flags().GetString("cluster_installation")
 		clusterInstallationConfig, err := client.GetClusterInstallationConfig(clusterInstallationID)
@@ -134,7 +134,7 @@ var clusterInstallationConfigSetCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterInstallationID, _ := command.Flags().GetString("cluster_installation")
 		key, _ := command.Flags().GetString("key")

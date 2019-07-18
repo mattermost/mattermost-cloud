@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 func init() {
@@ -64,13 +64,13 @@ var clusterCreateCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		provider, _ := command.Flags().GetString("provider")
 		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
 
-		cluster, err := client.CreateCluster(&api.CreateClusterRequest{
+		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: provider,
 			Size:     size,
 			Zones:    strings.Split(zones, ","),
@@ -98,7 +98,7 @@ var clusterProvisionCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
 		err := client.ProvisionCluster(clusterID)
@@ -117,7 +117,7 @@ var clusterUpgradeCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
 		version, _ := command.Flags().GetString("version")
@@ -138,7 +138,7 @@ var clusterDeleteCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
 
@@ -158,7 +158,7 @@ var clusterGetCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
 		cluster, err := client.GetCluster(clusterID)
@@ -185,12 +185,12 @@ var clusterListCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
-		client := api.NewClient(serverAddress)
+		client := model.NewClient(serverAddress)
 
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
-		clusters, err := client.GetClusters(&api.GetClustersRequest{
+		clusters, err := client.GetClusters(&model.GetClustersRequest{
 			Page:           page,
 			PerPage:        perPage,
 			IncludeDeleted: includeDeleted,
