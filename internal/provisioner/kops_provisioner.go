@@ -19,12 +19,12 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // KopsProvisioner provisions clusters using kops+terraform.
@@ -835,9 +835,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 		secretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
 		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
 		if k8sErrors.IsNotFound(err) {
-			errMsg := fmt.Sprintf("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
-			logger.Error(errMsg)
-			return errors.Wrap(err, errMsg)
+			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
 		} else if err != nil {
 			return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secretName)
 		}
@@ -905,14 +903,27 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 	cr.Spec.Version = version
 
 	cr.Spec.MattermostLicenseSecret = ""
-	var secretName string
+	secretName := fmt.Sprintf("%s-license", name)
 	if installation.License != "" {
-		secretName = fmt.Sprintf("%s-license", name)
-		_, err = k8sClient.CreateSecret(clusterInstallation.Namespace, secretName, "license", installation.License)
+		secretSpec := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: clusterInstallation.Namespace,
+			},
+			StringData: map[string]string{
+				"license": installation.License,
+			},
+		}
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, secretSpec)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create the license secret %s/%s", clusterInstallation.Namespace, secretName)
 		}
 		cr.Spec.MattermostLicenseSecret = secretName
+	} else {
+		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
+		if k8sErrors.IsNotFound(err) {
+			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
+		}
 	}
 
 	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)

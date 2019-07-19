@@ -16,12 +16,12 @@ func TestSecrets(t *testing.T) {
 	namespace := "testing"
 
 	t.Run("create secret", func(t *testing.T) {
-		result, err := testClient.createOrUpdateSecret(namespace, secret)
+		result, err := testClient.CreateOrUpdateSecret(namespace, secret)
 		require.NoError(t, err)
 		require.Equal(t, secret.GetName(), result.GetName())
 	})
 	t.Run("create duplicate secret", func(t *testing.T) {
-		result, err := testClient.createOrUpdateSecret(namespace, secret)
+		result, err := testClient.CreateOrUpdateSecret(namespace, secret)
 		require.NoError(t, err)
 		require.Equal(t, secret.GetName(), result.GetName())
 	})
