@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// CreateOrUpdateSecret creates or update a secret
 func (kc *KubeClient) CreateOrUpdateSecret(namespace string, secret *corev1.Secret) (metav1.Object, error) {
 	_, err := kc.Clientset.CoreV1().Secrets(namespace).Get(secret.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
