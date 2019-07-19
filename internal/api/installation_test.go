@@ -417,7 +417,7 @@ func TestUpgradeInstallation(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown installation", func(t *testing.T) {
-		err := client.UpgradeInstallation(model.NewID(), "latest")
+		err := client.UpgradeInstallation(model.NewID(), "latest", "")
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -437,7 +437,7 @@ func TestUpgradeInstallation(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.UpgradeInstallation(installation1.ID, "latest")
+		err = client.UpgradeInstallation(installation1.ID, "latest", "")
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
@@ -446,7 +446,20 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest")
+		err = client.UpgradeInstallation(installation1.ID, "latest", "")
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
+	})
+
+	t.Run("add license", func(t *testing.T) {
+		installation1.State = model.InstallationStateUpgradeRequested
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		err = client.UpgradeInstallation(installation1.ID, "latest", "this_is_my_lincese")
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
@@ -459,7 +472,7 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest")
+		err = client.UpgradeInstallation(installation1.ID, "latest", "")
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
@@ -472,7 +485,7 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest")
+		err = client.UpgradeInstallation(installation1.ID, "latest", "")
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
@@ -498,7 +511,7 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest")
+		err = client.UpgradeInstallation(installation1.ID, "latest", "")
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
@@ -507,7 +520,7 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "5.9.0")
+		err = client.UpgradeInstallation(installation1.ID, "5.9.0", "")
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
@@ -520,7 +533,7 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "mattermost/mattermost-enterprise:v5.12")
+		err = client.UpgradeInstallation(installation1.ID, "mattermost/mattermost-enterprise:v5.12", "")
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)

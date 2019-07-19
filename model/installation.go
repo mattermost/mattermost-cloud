@@ -45,6 +45,7 @@ type Installation struct {
 	OwnerID        string
 	Version        string
 	DNS            string
+	License        string
 	Size           string
 	Affinity       string
 	GroupID        *string

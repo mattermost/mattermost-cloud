@@ -102,7 +102,7 @@ var migrations = []migration{
 			}
 
 			_, err = e.Exec(`
-				INSERT INTO Cluster 
+				INSERT INTO Cluster
 				SELECT
 					ID,
 					Provider,
@@ -332,7 +332,7 @@ var migrations = []migration{
 			}
 
 			_, err = e.Exec(`
-					INSERT INTO Installation 
+					INSERT INTO Installation
 					SELECT
 						ID,
 						OwnerID,
@@ -357,6 +357,19 @@ var migrations = []migration{
 			if err != nil {
 				return err
 			}
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.6.0"), semver.MustParse("0.7.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN License TEXT NULL;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`UPDATE Installation SET License = '';`)
+		if err != nil {
+			return err
 		}
 
 		return nil

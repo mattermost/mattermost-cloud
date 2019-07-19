@@ -122,7 +122,7 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 	case *mmv1alpha1.ClusterInstallation:
 		return kc.createOrUpdateClusterInstallation(deployNamespace, obj.(*mmv1alpha1.ClusterInstallation))
 	case *apiv1.Secret:
-		return kc.createOrUpdateSecret(deployNamespace, obj.(*apiv1.Secret))
+		return kc.CreateOrUpdateSecret(deployNamespace, obj.(*apiv1.Secret))
 	case *apiv1.ConfigMap:
 		return kc.createOrUpdateConfigMap(deployNamespace, obj.(*apiv1.ConfigMap))
 	case *apiv1.Service:

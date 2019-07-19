@@ -16,13 +16,25 @@ func TestSecrets(t *testing.T) {
 	namespace := "testing"
 
 	t.Run("create secret", func(t *testing.T) {
-		result, err := testClient.createOrUpdateSecret(namespace, secret)
+		result, err := testClient.CreateOrUpdateSecret(namespace, secret)
 		require.NoError(t, err)
 		require.Equal(t, secret.GetName(), result.GetName())
 	})
 	t.Run("create duplicate secret", func(t *testing.T) {
-		result, err := testClient.createOrUpdateSecret(namespace, secret)
+		result, err := testClient.CreateOrUpdateSecret(namespace, secret)
 		require.NoError(t, err)
 		require.Equal(t, secret.GetName(), result.GetName())
+	})
+
+	t.Run("get secrets", func(t *testing.T) {
+		secrets, err := testClient.GetSecrets(namespace, []string{"test-deployment"})
+		require.NoError(t, err)
+
+		var secretNames []string
+		for _, secret := range secrets {
+			secretNames = append(secretNames, secret.GetName())
+		}
+
+		require.Equal(t, secretNames, []string{"test-deployment"})
 	})
 }
