@@ -1,4 +1,4 @@
-package api
+package model
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 )
 
@@ -17,7 +16,8 @@ type CreateGroupRequest struct {
 	Version     string
 }
 
-func newCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, error) {
+// NewCreateGroupRequestFromReader will create a CreateGroupRequest from an io.Reader with JSON data.
+func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, error) {
 	var createGroupRequest CreateGroupRequest
 	err := json.NewDecoder(reader).Decode(&createGroupRequest)
 	if err != nil && err != io.EOF {
@@ -42,7 +42,8 @@ type PatchGroupRequest struct {
 	Version     *string
 }
 
-func newPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error) {
+// NewPatchGroupRequestFromReader will create a PatchGroupRequest from an io.Reader with JSON data.
+func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error) {
 	var patchGroupRequest PatchGroupRequest
 	err := json.NewDecoder(reader).Decode(&patchGroupRequest)
 	if err != nil && err != io.EOF {
@@ -53,7 +54,7 @@ func newPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error
 }
 
 // Apply applies the patch to the given group.
-func (p *PatchGroupRequest) Apply(group *model.Group) bool {
+func (p *PatchGroupRequest) Apply(group *Group) bool {
 	var applied bool
 
 	if p.Name != nil && *p.Name != group.Name {

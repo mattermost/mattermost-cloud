@@ -1,4 +1,4 @@
-package api
+package model
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
 	"github.com/pkg/errors"
 )
 
@@ -17,7 +16,8 @@ type CreateClusterRequest struct {
 	Zones    []string
 }
 
-func newCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest, error) {
+// NewCreateClusterRequestFromReader will create a CreateClusterRequest from an io.Reader with JSON data.
+func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest, error) {
 	var createClusterRequest CreateClusterRequest
 	err := json.NewDecoder(reader).Decode(&createClusterRequest)
 	if err != nil && err != io.EOF {
@@ -25,19 +25,19 @@ func newCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 	}
 
 	if createClusterRequest.Provider == "" {
-		createClusterRequest.Provider = model.ProviderAWS
+		createClusterRequest.Provider = ProviderAWS
 	}
 	if createClusterRequest.Size == "" {
-		createClusterRequest.Size = model.SizeAlef500
+		createClusterRequest.Size = SizeAlef500
 	}
 	if len(createClusterRequest.Zones) == 0 {
 		createClusterRequest.Zones = []string{"us-east-1a"}
 	}
 
-	if createClusterRequest.Provider != model.ProviderAWS {
+	if createClusterRequest.Provider != ProviderAWS {
 		return nil, errors.Errorf("unsupported provider %s", createClusterRequest.Provider)
 	}
-	if !model.IsSupportedSize(createClusterRequest.Size) {
+	if !IsSupportedSize(createClusterRequest.Size) {
 		return nil, errors.Errorf("unsupported size %s", createClusterRequest.Size)
 	}
 	// TODO: check zones?

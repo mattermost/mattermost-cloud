@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestGetGroups(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("unknown group", func(t *testing.T) {
 		group, err := client.GetGroup(model.NewID())
@@ -39,7 +39,7 @@ func TestGetGroups(t *testing.T) {
 	})
 
 	t.Run("no groups", func(t *testing.T) {
-		groups, err := client.GetGroups(&api.GetGroupsRequest{
+		groups, err := client.GetGroups(&model.GetGroupsRequest{
 			Page:           0,
 			PerPage:        10,
 			IncludeDeleted: true,
@@ -140,12 +140,12 @@ func TestGetGroups(t *testing.T) {
 		t.Run("get groups", func(t *testing.T) {
 			testCases := []struct {
 				Description      string
-				GetGroupsRequest *api.GetGroupsRequest
+				GetGroupsRequest *model.GetGroupsRequest
 				Expected         []*model.Group
 			}{
 				{
 					"page 0, perPage 2, exclude deleted",
-					&api.GetGroupsRequest{
+					&model.GetGroupsRequest{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: false,
@@ -155,7 +155,7 @@ func TestGetGroups(t *testing.T) {
 
 				{
 					"page 1, perPage 2, exclude deleted",
-					&api.GetGroupsRequest{
+					&model.GetGroupsRequest{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: false,
@@ -165,7 +165,7 @@ func TestGetGroups(t *testing.T) {
 
 				{
 					"page 0, perPage 2, include deleted",
-					&api.GetGroupsRequest{
+					&model.GetGroupsRequest{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: true,
@@ -175,7 +175,7 @@ func TestGetGroups(t *testing.T) {
 
 				{
 					"page 1, perPage 2, include deleted",
-					&api.GetGroupsRequest{
+					&model.GetGroupsRequest{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: true,
@@ -208,7 +208,7 @@ func TestCreateGroup(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/groups", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
@@ -223,7 +223,7 @@ func TestCreateGroup(t *testing.T) {
 	})
 
 	t.Run("missing name", func(t *testing.T) {
-		_, err := client.CreateGroup(&api.CreateGroupRequest{
+		_, err := client.CreateGroup(&model.CreateGroupRequest{
 			Description: "description",
 			Version:     "version",
 		})
@@ -231,7 +231,7 @@ func TestCreateGroup(t *testing.T) {
 	})
 
 	t.Run("missing version", func(t *testing.T) {
-		_, err := client.CreateGroup(&api.CreateGroupRequest{
+		_, err := client.CreateGroup(&model.CreateGroupRequest{
 			Name:        "name",
 			Description: "description",
 		})
@@ -239,7 +239,7 @@ func TestCreateGroup(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		group, err := client.CreateGroup(&api.CreateGroupRequest{
+		group, err := client.CreateGroup(&model.CreateGroupRequest{
 			Name:        "name",
 			Description: "description",
 			Version:     "version",
@@ -266,9 +266,9 @@ func TestUpdateGroup(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	group1, err := client.CreateGroup(&api.CreateGroupRequest{
+	group1, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:        "name",
 		Description: "description",
 		Version:     "version",
@@ -294,12 +294,12 @@ func TestUpdateGroup(t *testing.T) {
 	})
 
 	t.Run("unknown group", func(t *testing.T) {
-		err := client.UpdateGroup(&api.PatchGroupRequest{ID: model.NewID()})
+		err := client.UpdateGroup(&model.PatchGroupRequest{ID: model.NewID()})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
 	t.Run("partial update", func(t *testing.T) {
-		err = client.UpdateGroup(&api.PatchGroupRequest{
+		err = client.UpdateGroup(&model.PatchGroupRequest{
 			ID:      group1.ID,
 			Version: sToP("version2"),
 		})
@@ -313,7 +313,7 @@ func TestUpdateGroup(t *testing.T) {
 	})
 
 	t.Run("full update", func(t *testing.T) {
-		err = client.UpdateGroup(&api.PatchGroupRequest{
+		err = client.UpdateGroup(&model.PatchGroupRequest{
 			ID:          group1.ID,
 			Name:        sToP("name2"),
 			Description: sToP("description2"),
@@ -342,9 +342,9 @@ func TestDeleteGroup(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	group1, err := client.CreateGroup(&api.CreateGroupRequest{
+	group1, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:        "name",
 		Description: "description",
 		Version:     "version",

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
 )

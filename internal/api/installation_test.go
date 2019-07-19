@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestGetInstallations(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("unknown installation", func(t *testing.T) {
 		installation, err := client.GetInstallation(model.NewID())
@@ -39,7 +39,7 @@ func TestGetInstallations(t *testing.T) {
 	})
 
 	t.Run("no installations", func(t *testing.T) {
-		installations, err := client.GetInstallations(&api.GetInstallationsRequest{
+		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 			Page:           0,
 			PerPage:        10,
 			IncludeDeleted: true,
@@ -148,12 +148,12 @@ func TestGetInstallations(t *testing.T) {
 		t.Run("get installations", func(t *testing.T) {
 			testCases := []struct {
 				Description             string
-				GetInstallationsRequest *api.GetInstallationsRequest
+				GetInstallationsRequest *model.GetInstallationsRequest
 				Expected                []*model.Installation
 			}{
 				{
 					"page 0, perPage 2, exclude deleted",
-					&api.GetInstallationsRequest{
+					&model.GetInstallationsRequest{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: false,
@@ -163,7 +163,7 @@ func TestGetInstallations(t *testing.T) {
 
 				{
 					"page 1, perPage 2, exclude deleted",
-					&api.GetInstallationsRequest{
+					&model.GetInstallationsRequest{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: false,
@@ -173,7 +173,7 @@ func TestGetInstallations(t *testing.T) {
 
 				{
 					"page 0, perPage 2, include deleted",
-					&api.GetInstallationsRequest{
+					&model.GetInstallationsRequest{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: true,
@@ -183,7 +183,7 @@ func TestGetInstallations(t *testing.T) {
 
 				{
 					"page 1, perPage 2, include deleted",
-					&api.GetInstallationsRequest{
+					&model.GetInstallationsRequest{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: true,
@@ -192,7 +192,7 @@ func TestGetInstallations(t *testing.T) {
 				},
 				{
 					"filter by owner",
-					&api.GetInstallationsRequest{
+					&model.GetInstallationsRequest{
 						Page:           0,
 						PerPage:        100,
 						OwnerID:        ownerID1,
@@ -226,7 +226,7 @@ func TestCreateInstallation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/installations", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
@@ -241,7 +241,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("missing owner", func(t *testing.T) {
-		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			Version:  "version",
 			DNS:      "dns.example.com",
 			Affinity: model.InstallationAffinityIsolated,
@@ -250,7 +250,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("missing dns", func(t *testing.T) {
-		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
 			Affinity: model.InstallationAffinityIsolated,
@@ -259,7 +259,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("invalid size", func(t *testing.T) {
-		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
 			DNS:      "dns.example.com",
@@ -270,7 +270,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("invalid dns", func(t *testing.T) {
-		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
 			DNS:      string([]byte{0x7f}),
@@ -280,7 +280,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("invalid affinity", func(t *testing.T) {
-		_, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
 			DNS:      "dns.example.com",
@@ -290,7 +290,7 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		installation, err := client.CreateInstallation(&api.CreateInstallationRequest{
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner",
 			Version:  "version",
 			DNS:      "dns.example.com",
@@ -322,9 +322,9 @@ func TestRetryCreateInstallation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
 		DNS:      "dns.example.com",
@@ -406,9 +406,9 @@ func TestUpgradeInstallation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
 		DNS:      "dns.example.com",
@@ -556,21 +556,21 @@ func TestJoinGroup(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	group1, err := client.CreateGroup(&api.CreateGroupRequest{
+	group1, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:    "name1",
 		Version: "version1",
 	})
 	require.NoError(t, err)
 
-	group2, err := client.CreateGroup(&api.CreateGroupRequest{
+	group2, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:    "name2",
 		Version: "version2",
 	})
 	require.NoError(t, err)
 
-	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
 		DNS:      "dns.example.com",
@@ -648,15 +648,15 @@ func TestLeaveGroup(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	group1, err := client.CreateGroup(&api.CreateGroupRequest{
+	group1, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:    "name1",
 		Version: "version1",
 	})
 	require.NoError(t, err)
 
-	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
 		DNS:      "dns.example.com",
@@ -720,9 +720,9 @@ func TestDeleteInstallation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	client := api.NewClient(ts.URL)
+	client := model.NewClient(ts.URL)
 
-	installation1, err := client.CreateInstallation(&api.CreateInstallationRequest{
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
 		DNS:      "dns.example.com",

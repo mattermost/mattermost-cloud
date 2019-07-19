@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/mattermost/mattermost-cloud/internal/model"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // lockCluster synchronizes access to the given cluster across potentially multiple provisioning
