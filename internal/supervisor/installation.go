@@ -1,8 +1,8 @@
 package supervisor
 
 import (
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
@@ -230,7 +230,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	// TODO: Improve the model for handling multi-tenancy                     //
 	// Current model:                                                         //
 	// - isolation=true  | 1 cluster installations                            //
-	// - isolation=false | 5 cluster installations                            //
+	// - isolation=false | 4 cluster installations                            //
 	////////////////////////////////////////////////////////////////////////////
 	if installation.Affinity == model.InstallationAffinityIsolated {
 		if len(existingClusterInstallations) > 0 {
@@ -238,7 +238,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			return nil
 		}
 	} else {
-		if len(existingClusterInstallations) >= 5 {
+		if len(existingClusterInstallations) >= 4 {
 			logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
 			return nil
 		}
