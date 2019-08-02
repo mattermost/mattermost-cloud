@@ -37,7 +37,7 @@ const (
 )
 
 // InstallationSizes is the valid sizes for an installation.
-var InstallationSizes = []string{"100users", "1000users", "5000users", "10000users", "250000users"}
+var InstallationSizes = []string{"100users", "1000users", "5000users", "10000users", "250000users", "miniSingleton", "miniHA"}
 
 // Installation represents a Mattermost installation.
 type Installation struct {
@@ -96,4 +96,15 @@ func InstallationsFromReader(reader io.Reader) ([]*Installation, error) {
 	}
 
 	return installations, nil
+}
+
+// IsValidInstallationSize determines if a given size is one of the valid installation sizes.
+func IsValidInstallationSize(size string) bool {
+	for _, validSize := range InstallationSizes {
+		if validSize == size {
+			return true
+		}
+	}
+
+	return false
 }
