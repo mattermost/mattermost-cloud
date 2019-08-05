@@ -1,12 +1,14 @@
 package supervisor_test
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
+	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -88,7 +90,10 @@ func (s *mockInstallationStore) UpdateClusterInstallation(clusterInstallation *m
 	return nil
 }
 
-type mockInstallationProvisioner struct{}
+type mockInstallationProvisioner struct {
+	UseCustomClusterResources bool
+	CustomClusterResources    *k8s.ClusterResources
+}
 
 func (p *mockInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
@@ -109,6 +114,20 @@ func (p *mockInstallationProvisioner) GetClusterInstallationResource(cluster *mo
 				State:    mmv1alpha1.Stable,
 				Endpoint: "example-dns.mattermost.cloud",
 			},
+		},
+		nil
+}
+
+func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster) (*k8s.ClusterResources, error) {
+	if p.UseCustomClusterResources {
+		return p.CustomClusterResources, nil
+	}
+
+	return &k8s.ClusterResources{
+			MilliTotalCPU:    100000,
+			MilliUsedCPU:     100,
+			MilliTotalMemory: 100000000000000,
+			MilliUsedMemory:  100,
 		},
 		nil
 }
@@ -136,7 +155,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -154,7 +173,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		mockStore.Installation = mockStore.UnlockedInstallationsPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -185,10 +204,20 @@ func TestInstallationSupervisor(t *testing.T) {
 		}
 	}
 
+	expectClusterInstallationsOnCluster := func(t *testing.T, sqlStore *store.SQLStore, cluster *model.Cluster, expectedCount int) {
+		t.Helper()
+		clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{
+			PerPage:   model.AllPerPage,
+			ClusterID: cluster.ID,
+		})
+		require.NoError(t, err)
+		require.Len(t, clusterInstallations, expectedCount)
+	}
+
 	t.Run("unexpected state", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -202,6 +231,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateStable,
@@ -227,7 +257,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, no clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		owner := model.NewID()
 		groupID := model.NewID()
@@ -235,6 +265,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
@@ -251,7 +282,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, no available clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -274,6 +305,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
@@ -290,7 +322,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, available cluster", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -304,6 +336,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
@@ -317,10 +350,19 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 	})
 
-	t.Run("creation requested, cluster installations failed", func(t *testing.T) {
+	t.Run("creation requested, cluster installations not yet created, insufficient cluster resources", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		mockClusterInstallationProvisioner := &mockInstallationProvisioner{
+			UseCustomClusterResources: true,
+			CustomClusterResources: &k8s.ClusterResources{
+				MilliTotalCPU:    200,
+				MilliUsedCPU:     100,
+				MilliTotalMemory: 200,
+				MilliUsedMemory:  100,
+			},
+		}
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockClusterInstallationProvisioner, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -334,6 +376,38 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationRequested,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
+		expectClusterInstallations(t, sqlStore, installation, 0, "")
+	})
+
+	t.Run("creation requested, cluster installations failed", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
+
+		cluster := &model.Cluster{
+			State: model.ClusterStateStable,
+		}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
@@ -359,7 +433,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -373,6 +447,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
@@ -398,7 +473,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation dns requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -412,6 +487,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationDNS,
@@ -437,7 +513,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, no clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		owner := model.NewID()
 		groupID := model.NewID()
@@ -445,6 +521,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationNoCompatibleClusters,
@@ -461,7 +538,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, no available clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -484,6 +561,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationNoCompatibleClusters,
@@ -500,7 +578,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, available cluster", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -514,6 +592,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationNoCompatibleClusters,
@@ -530,7 +609,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("upgrade requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -544,6 +623,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateUpgradeRequested,
@@ -569,7 +649,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("upgrade in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -583,6 +663,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateUpgradeInProgress,
@@ -608,7 +689,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -622,6 +703,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
@@ -647,7 +729,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations deleting", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -661,6 +743,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
@@ -686,7 +769,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion in progress, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -700,6 +783,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionInProgress,
@@ -725,7 +809,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations failed, so retry", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -739,6 +823,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
@@ -764,7 +849,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations deleted", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
 
 		cluster := &model.Cluster{
 			State: model.ClusterStateStable,
@@ -778,6 +863,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			OwnerID:  owner,
 			Version:  "version",
 			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
@@ -798,5 +884,168 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateDeleted)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateDeleted)
+	})
+
+	t.Run("multitenant", func(t *testing.T) {
+		t.Run("creation requested, cluster installations not yet created, available cluster", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
+
+			cluster := &model.Cluster{
+				State: model.ClusterStateStable,
+			}
+			err := sqlStore.CreateCluster(cluster)
+			require.NoError(t, err)
+
+			owner := model.NewID()
+			groupID := model.NewID()
+			installation := &model.Installation{
+				OwnerID:  owner,
+				Version:  "version",
+				DNS:      "dns.example.com",
+				Size:     mmv1alpha1.Size100String,
+				Affinity: model.InstallationAffinityMultiTenant,
+				GroupID:  &groupID,
+				State:    model.InstallationStateCreationRequested,
+			}
+
+			err = sqlStore.CreateInstallation(installation)
+			require.NoError(t, err)
+
+			supervisor.Supervise(installation)
+			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationRequested)
+			expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
+		})
+
+		t.Run("creation requested, cluster installations not yet created, 3 installations, available cluster", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
+
+			cluster := &model.Cluster{
+				State: model.ClusterStateStable,
+			}
+			err := sqlStore.CreateCluster(cluster)
+			require.NoError(t, err)
+
+			for i := 1; i < 3; i++ {
+				t.Run(fmt.Sprintf("cluster-%d", i), func(t *testing.T) {
+					owner := model.NewID()
+					groupID := model.NewID()
+					installation := &model.Installation{
+						OwnerID:  owner,
+						Version:  "version",
+						DNS:      fmt.Sprintf("dns%d.example.com", i),
+						Size:     mmv1alpha1.Size100String,
+						Affinity: model.InstallationAffinityMultiTenant,
+						GroupID:  &groupID,
+						State:    model.InstallationStateCreationRequested,
+					}
+
+					err = sqlStore.CreateInstallation(installation)
+					require.NoError(t, err)
+
+					supervisor.Supervise(installation)
+					expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationRequested)
+					expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
+					expectClusterInstallationsOnCluster(t, sqlStore, cluster, i)
+				})
+			}
+		})
+
+		t.Run("creation requested, cluster installations not yet created, 1 isolated and 1 multitenant, available cluster", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, logger)
+
+			cluster := &model.Cluster{
+				State: model.ClusterStateStable,
+			}
+			err := sqlStore.CreateCluster(cluster)
+			require.NoError(t, err)
+
+			owner := model.NewID()
+			groupID := model.NewID()
+			isolatedInstallation := &model.Installation{
+				OwnerID:  owner,
+				Version:  "version",
+				DNS:      "iso-dns.example.com",
+				Size:     mmv1alpha1.Size100String,
+				Affinity: model.InstallationAffinityIsolated,
+				GroupID:  &groupID,
+				State:    model.InstallationStateCreationRequested,
+			}
+
+			err = sqlStore.CreateInstallation(isolatedInstallation)
+			require.NoError(t, err)
+
+			supervisor.Supervise(isolatedInstallation)
+			expectInstallationState(t, sqlStore, isolatedInstallation, model.InstallationStateCreationRequested)
+			expectClusterInstallations(t, sqlStore, isolatedInstallation, 1, model.ClusterInstallationStateCreationRequested)
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
+
+			owner = model.NewID()
+			groupID = model.NewID()
+			multitenantInstallation := &model.Installation{
+				OwnerID:  owner,
+				Version:  "version",
+				DNS:      "mt-dns.example.com",
+				Size:     mmv1alpha1.Size100String,
+				Affinity: model.InstallationAffinityMultiTenant,
+				GroupID:  &groupID,
+				State:    model.InstallationStateCreationRequested,
+			}
+
+			err = sqlStore.CreateInstallation(multitenantInstallation)
+			require.NoError(t, err)
+
+			supervisor.Supervise(multitenantInstallation)
+			expectInstallationState(t, sqlStore, multitenantInstallation, model.InstallationStateCreationNoCompatibleClusters)
+			expectClusterInstallations(t, sqlStore, multitenantInstallation, 0, "")
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
+		})
+
+		t.Run("creation requested, cluster installations not yet created, insufficient cluster resources", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			mockClusterInstallationProvisioner := &mockInstallationProvisioner{
+				UseCustomClusterResources: true,
+				CustomClusterResources: &k8s.ClusterResources{
+					MilliTotalCPU:    200,
+					MilliUsedCPU:     100,
+					MilliTotalMemory: 200,
+					MilliUsedMemory:  100,
+				},
+			}
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockClusterInstallationProvisioner, &mockAWS{}, "instanceID", 80, logger)
+
+			cluster := &model.Cluster{
+				State: model.ClusterStateStable,
+			}
+			err := sqlStore.CreateCluster(cluster)
+			require.NoError(t, err)
+
+			owner := model.NewID()
+			groupID := model.NewID()
+			installation := &model.Installation{
+				OwnerID:  owner,
+				Version:  "version",
+				DNS:      "dns.example.com",
+				Size:     mmv1alpha1.Size100String,
+				Affinity: model.InstallationAffinityMultiTenant,
+				GroupID:  &groupID,
+				State:    model.InstallationStateCreationRequested,
+			}
+
+			err = sqlStore.CreateInstallation(installation)
+			require.NoError(t, err)
+
+			supervisor.Supervise(installation)
+			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
+			expectClusterInstallations(t, sqlStore, installation, 0, "")
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 0)
+		})
 	})
 }

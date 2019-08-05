@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,11 +11,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	logrus "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -38,6 +39,7 @@ func init() {
 	serverCmd.PersistentFlags().String("private-subnets", "", "The private subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().String("public-subnets", "", "The public subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.MarkPersistentFlagRequired("route53-id")
 	serverCmd.MarkPersistentFlagRequired("private-route53-id")
@@ -82,6 +84,11 @@ var serverCmd = &cobra.Command{
 		route53ZoneID, _ := command.Flags().GetString("route53-id")
 		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
 		privateDNS, _ := command.Flags().GetString("private-dns")
+		clusterResourceThreshold, _ := command.Flags().GetInt("cluster-resource-threshold")
+
+		if clusterResourceThreshold < 10 || clusterResourceThreshold > 100 {
+			return fmt.Errorf("cluster-resource-threshold (%d) must be set between 10 and 100", clusterResourceThreshold)
+		}
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -90,15 +97,16 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
-			"store-version":      currentVersion,
-			"state-store":        s3StateStore,
-			"aws-arn":            certificateSslARN,
-			"working-directory":  wd,
-			"private-subents":    privateSubnetIds,
-			"public-subnets":     publicSubnetIds,
-			"route53-id":         route53ZoneID,
-			"private-route53-id": privateRoute53ZoneID,
-			"private-dns":        privateDNS,
+			"store-version":              currentVersion,
+			"state-store":                s3StateStore,
+			"aws-arn":                    certificateSslARN,
+			"working-directory":          wd,
+			"private-subents":            privateSubnetIds,
+			"public-subnets":             publicSubnetIds,
+			"route53-id":                 route53ZoneID,
+			"private-route53-id":         privateRoute53ZoneID,
+			"private-dns":                privateDNS,
+			"cluster-resource-threshold": clusterResourceThreshold,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		// Setup the provisioner for actually effecting changes to clusters.
@@ -122,7 +130,7 @@ var serverCmd = &cobra.Command{
 		supervisor := supervisor.NewScheduler(
 			supervisor.MultiDoer{
 				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger),
-				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger),
+				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, clusterResourceThreshold, logger),
 				supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, instanceID, logger),
 			},
 			time.Duration(poll)*time.Second,

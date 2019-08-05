@@ -4,9 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
+
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 func TestInstallations(t *testing.T) {
@@ -22,7 +24,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version",
 		DNS:      "dns.example.com",
-		Size:     "100users",
+		Size:     mmv1alpha1.Size100String,
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID1,
 		State:    model.InstallationStateCreationRequested,
@@ -37,7 +39,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version2",
 		DNS:      "dns2.example.com",
-		Size:     "100users",
+		Size:     mmv1alpha1.Size100String,
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID2,
 		State:    model.InstallationStateStable,
@@ -52,7 +54,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID2,
 		Version:  "version",
 		DNS:      "dns3.example.com",
-		Size:     "100users",
+		Size:     mmv1alpha1.Size100String,
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID1,
 		State:    model.InstallationStateCreationRequested,
@@ -67,7 +69,7 @@ func TestInstallations(t *testing.T) {
 		OwnerID:  ownerID2,
 		Version:  "version",
 		DNS:      "dns4.example.com",
-		Size:     "100users",
+		Size:     mmv1alpha1.Size100String,
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID2,
 		State:    model.InstallationStateCreationRequested,
@@ -420,7 +422,7 @@ func TestUpdateInstallation(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version",
 		DNS:      "dns3.example.com",
-		Size:     "100users",
+		Size:     mmv1alpha1.Size100String,
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID1,
 		State:    model.InstallationStateCreationRequested,
@@ -433,7 +435,7 @@ func TestUpdateInstallation(t *testing.T) {
 		OwnerID:  ownerID1,
 		Version:  "version2",
 		DNS:      "dns4.example.com",
-		Size:     "100users",
+		Size:     mmv1alpha1.Size100String,
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID2,
 		State:    model.InstallationStateStable,
@@ -443,9 +445,9 @@ func TestUpdateInstallation(t *testing.T) {
 	require.NoError(t, err)
 
 	installation1.OwnerID = ownerID2
-	installation1.Version = "verion3"
+	installation1.Version = "version3"
 	installation1.DNS = "dns5.example.com"
-	installation1.Size = "1000users"
+	installation1.Size = mmv1alpha1.Size1000String
 	installation1.Affinity = model.InstallationAffinityIsolated
 	installation1.GroupID = &groupID2
 	installation1.State = model.InstallationStateDeletionRequested

@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +36,7 @@ type installationProvisioner interface {
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
+	GetClusterResources(cluster *model.Cluster) (*k8s.ClusterResources, error)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -42,21 +44,23 @@ type installationProvisioner interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type InstallationSupervisor struct {
-	store       installationStore
-	provisioner installationProvisioner
-	aws         aws.AWS
-	instanceID  string
-	logger      log.FieldLogger
+	store                    installationStore
+	provisioner              installationProvisioner
+	aws                      aws.AWS
+	instanceID               string
+	clusterResourceThreshold int
+	logger                   log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
-		store:       store,
-		provisioner: installationProvisioner,
-		aws:         aws,
-		instanceID:  instanceID,
-		logger:      logger,
+		store:                    store,
+		provisioner:              installationProvisioner,
+		aws:                      aws,
+		instanceID:               instanceID,
+		clusterResourceThreshold: threshold,
+		logger:                   logger,
 	}
 }
 
@@ -227,10 +231,10 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	////////////////////////////////////////////////////////////////////////////
 	//                              MULTI-TENANCY                             //
 	////////////////////////////////////////////////////////////////////////////
-	// TODO: Improve the model for handling multi-tenancy                     //
 	// Current model:                                                         //
 	// - isolation=true  | 1 cluster installations                            //
-	// - isolation=false | 4 cluster installations                            //
+	// - isolation=false | X cluster installations, where "X" is as many as   //
+	//                     will fit with the given CPU and Memory threshold.  //
 	////////////////////////////////////////////////////////////////////////////
 	if installation.Affinity == model.InstallationAffinityIsolated {
 		if len(existingClusterInstallations) > 0 {
@@ -238,10 +242,6 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			return nil
 		}
 	} else {
-		if len(existingClusterInstallations) >= 4 {
-			logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
-			return nil
-		}
 		if len(existingClusterInstallations) == 1 {
 			// This should be the only scenario where we need to check if the
 			// cluster installation running requires isolation or not.
@@ -256,7 +256,28 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			}
 		}
 	}
-	// The cluster can support another cluster installation.
+
+	// Begin final resource check.
+
+	size, err := mmv1alpha1.GetClusterSize(installation.Size)
+	if err != nil {
+		logger.WithError(err).Error("invalid cluster installation size")
+		return nil
+	}
+	clusterResources, err := s.provisioner.GetClusterResources(cluster)
+	if err != nil {
+		logger.WithError(err).Error("failed to get cluster resources")
+		return nil
+	}
+
+	cpuPercent := clusterResources.CalculateCPUPercentUsed(size.CalculateCPUMilliRequirement(true, true))
+	memoryPercent := clusterResources.CalculateMemoryPercentUsed(size.CalculateMemoryMilliRequirement(true, true))
+	if cpuPercent > s.clusterResourceThreshold || memoryPercent > s.clusterResourceThreshold {
+		logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%%, Memory=%d%%", cluster.ID, s.clusterResourceThreshold, cpuPercent, memoryPercent)
+		return nil
+	}
+
+	// The cluster can support the cluster installation.
 
 	clusterInstallation := &model.ClusterInstallation{
 		ClusterID:      cluster.ID,
@@ -271,7 +292,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		return nil
 	}
 
-	logger.Infof("Requested creation of cluster installation on cluster %s", cluster.ID)
+	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%", cluster.ID, cpuPercent, memoryPercent)
 
 	return clusterInstallation
 }

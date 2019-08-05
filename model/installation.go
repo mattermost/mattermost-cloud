@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"io"
+
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 const (
@@ -33,11 +35,8 @@ const (
 	InstallationStateStable = "stable"
 
 	// InstallationDefaultSize is the default size for an installation.
-	InstallationDefaultSize = "100users"
+	InstallationDefaultSize = mmv1alpha1.Size100String
 )
-
-// InstallationSizes is the valid sizes for an installation.
-var InstallationSizes = []string{"100users", "1000users", "5000users", "10000users", "250000users", "miniSingleton", "miniHA"}
 
 // Installation represents a Mattermost installation.
 type Installation struct {
@@ -96,15 +95,4 @@ func InstallationsFromReader(reader io.Reader) ([]*Installation, error) {
 	}
 
 	return installations, nil
-}
-
-// IsValidInstallationSize determines if a given size is one of the valid installation sizes.
-func IsValidInstallationSize(size string) bool {
-	for _, validSize := range InstallationSizes {
-		if validSize == size {
-			return true
-		}
-	}
-
-	return false
 }
