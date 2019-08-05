@@ -37,18 +37,9 @@ func NewCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 		createInstallationRequest.Affinity = "isolated"
 	}
 
-	validSize := false
-	for _, size := range InstallationSizes {
-		if createInstallationRequest.Size == size {
-			validSize = true
-			break
-		}
-	}
-
-	if !validSize {
+	if !IsValidInstallationSize(createInstallationRequest.Size) {
 		return nil, errors.New("invalid size")
 	}
-
 	if createInstallationRequest.OwnerID == "" {
 		return nil, errors.New("must specify owner")
 	}

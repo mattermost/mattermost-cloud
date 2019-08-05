@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -152,5 +153,25 @@ func TestInstallationsFromReader(t *testing.T) {
 				LockAcquiredAt: 50,
 			},
 		}, installation)
+	})
+}
+
+func TestIsValidInstallationSize(t *testing.T) {
+	t.Run("valid sizes", func(t *testing.T) {
+		for _, size := range InstallationSizes {
+			t.Run(size, func(t *testing.T) {
+				assert.True(t, IsValidInstallationSize(size))
+			})
+		}
+	})
+
+	t.Run("invalid sizes", func(t *testing.T) {
+		var invalidSizes = []string{"invalid", "1user", ""}
+
+		for _, size := range invalidSizes {
+			t.Run(size, func(t *testing.T) {
+				assert.False(t, IsValidInstallationSize(size))
+			})
+		}
 	})
 }
