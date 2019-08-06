@@ -18,6 +18,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/kubectl/scheme"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -980,6 +981,78 @@ func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *mode
 	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
 
 	return cr, nil
+}
+
+// ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
+func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	return provisioner.execCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
+}
+
+func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to construct k8s client")
+	}
+
+	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(metav1.ListOptions{
+		LabelSelector: "app=mattermost",
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query mattermost pods")
+	}
+
+	// In the future, we'd ideally just spin our own container on demand, allowing
+	// configuration changes even if the pods are failing to start the server. For now,
+	// we find the first pod running Mattermost, and pick the first container therein.
+
+	if len(podList.Items) == 0 {
+		return nil, errors.New("failed to find mattermost pods on which to exec")
+	}
+
+	pod := podList.Items[0]
+	if len(pod.Spec.Containers) == 0 {
+		return nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
+	}
+
+	container := pod.Spec.Containers[0]
+	logger.Debugf("Executing `%s` on pod %s, container %s, running image %s", strings.Join(args, " "), pod.Name, container.Name, container.Image)
+
+	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(pod.Name).
+		Namespace(clusterInstallation.Namespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: container.Name,
+			Command:   args,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	return k8sClient.RemoteCommand("POST", execRequest.URL())
 }
 
 // Override the version to make match the nil value in the custom resource.
