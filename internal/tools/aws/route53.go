@@ -21,6 +21,11 @@ func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.F
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for route53 creation request")
 	}
+	for _, endpoint := range dnsEndpoints {
+		if endpoint == "" {
+			return errors.New("at least one of the DNS endpoints was set to an empty string")
+		}
+	}
 
 	svc, err := a.api.getRoute53Client()
 	if err != nil {

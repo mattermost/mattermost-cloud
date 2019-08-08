@@ -59,8 +59,14 @@ func TestCreateCNAME(t *testing.T) {
 			nil,
 			false,
 		}, {
-			"session client error",
+			"empty string endpoint",
 			"dns4",
+			[]string{"example1.mattermost.com", ""},
+			nil,
+			true,
+		}, {
+			"session client error",
+			"dns5",
 			[]string{"example1.mattermost.com", "example2.mattermost.com"},
 			errors.New("mock api error"),
 			true,
