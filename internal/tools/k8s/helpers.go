@@ -65,13 +65,15 @@ func (kc *KubeClient) RemoteCommand(method string, url *url.URL) ([]byte, error)
 		Stderr: &stderr,
 		Tty:    false,
 	})
+	output := append(stdout.Bytes(), stderr.Bytes()...)
+
 	if err != nil {
 		if exitErr, ok := err.(utilexec.ExitError); ok && exitErr.Exited() {
-			return nil, errors.Errorf("remote command failed with exit status %d: %s%s", exitErr.ExitStatus(), stdout.String(), stderr.String())
+			return output, errors.Errorf("remote command failed with exit status %d: %s%s", exitErr.ExitStatus(), stdout.String(), stderr.String())
 		}
 
-		return nil, errors.Wrapf(err, "remote command failed: %s%s", stdout.String(), stderr.String())
+		return output, errors.Wrapf(err, "remote command failed: %s%s", stdout.String(), stderr.String())
 	}
 
-	return stdout.Bytes(), nil
+	return output, nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -28,9 +29,13 @@ func init() {
 	clusterInstallationConfigSetCmd.MarkFlagRequired("key")
 	clusterInstallationConfigSetCmd.MarkFlagRequired("value")
 
+	clusterInstallationMattermostCLICmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
+	clusterInstallationMattermostCLICmd.Flags().String("command", "", "The Mattermost CLI subcommand to run.")
+
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
+	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigSetCmd)
@@ -164,6 +169,30 @@ var clusterInstallationConfigSetCmd = &cobra.Command{
 		err := client.SetClusterInstallationConfig(clusterInstallationID, config)
 		if err != nil {
 			return errors.Wrap(err, "failed to modify cluster installation config")
+		}
+
+		return nil
+	},
+}
+
+var clusterInstallationMattermostCLICmd = &cobra.Command{
+	Use:   "mattermost-cli",
+	Short: "Run a mattermost CLI command on a cluster installation",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
+		subcommand, _ := command.Flags().GetString("command")
+
+		output, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallationID, strings.Split(subcommand, " "))
+
+		// Print any output and then check and handle errors.
+		fmt.Println(string(output))
+		if err != nil {
+			return errors.Wrap(err, "failed to run mattermost CLI command")
 		}
 
 		return nil

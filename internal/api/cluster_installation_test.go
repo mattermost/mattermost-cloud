@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,9 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -344,5 +345,78 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
 		require.NoError(t, err)
+	})
+}
+
+func TestRunClusterInstallationMattermostCLI(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	mProvisioner := &mockProvisioner{}
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:       sqlStore,
+		Supervisor:  &mockSupervisor{},
+		Provisioner: mProvisioner,
+		Logger:      logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	cluster := &model.Cluster{}
+	err := sqlStore.CreateCluster(cluster)
+	require.NoError(t, err)
+
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      cluster.ID,
+		InstallationID: model.NewID(),
+	}
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	subcommand := model.ClusterInstallationMattermostCLISubcommand{"get", "version"}
+
+	t.Run("unknown cluster installation", func(t *testing.T) {
+		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(model.NewID(), subcommand)
+		require.EqualError(t, err, "failed with status code 404")
+		require.Empty(t, bytes)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
+		require.NoError(t, err)
+		require.NotEmpty(t, bytes)
+	})
+
+	t.Run("invalid payload", func(t *testing.T) {
+		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/mattermost_cli", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("non-zero exit command", func(t *testing.T) {
+		mProvisioner.CommandError = errors.New("encountered a command error")
+
+		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/mattermost_cli", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("cluster installation deleted", func(t *testing.T) {
+		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, err)
+
+		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
+		require.Error(t, err)
+		require.Empty(t, bytes)
 	})
 }
