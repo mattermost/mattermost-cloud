@@ -1055,6 +1055,57 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 	return k8sClient.RemoteCommand("POST", execRequest.URL())
 }
 
+// GetClusterResources returns a snapshot of resources of a given cluster.
+func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster) (*k8s.ClusterResources, error) {
+	logger := provisioner.logger.WithFields(map[string]interface{}{
+		"cluster": cluster.ID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to construct k8s client")
+	}
+
+	allPods, err := k8sClient.Clientset.CoreV1().Pods("").List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	usedCPU, usedMemory := k8s.CalculateTotalPodMilliResourceRequests(allPods)
+
+	var totalCPU, totalMemory int64
+	nodes, err := k8sClient.Clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range nodes.Items {
+		totalCPU += node.Status.Allocatable.Cpu().MilliValue()
+		totalMemory += node.Status.Allocatable.Memory().MilliValue()
+	}
+
+	return &k8s.ClusterResources{
+		MilliTotalCPU:    totalCPU,
+		MilliUsedCPU:     usedCPU,
+		MilliTotalMemory: totalMemory,
+		MilliUsedMemory:  usedMemory,
+	}, nil
+}
+
 // Override the version to make match the nil value in the custom resource.
 // TODO: this could probably be better. We may want the operator to understand
 // default values instead of needing to pass in empty values.

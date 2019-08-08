@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 // CreateInstallationRequest specifies the parameters for a new installation.
@@ -37,7 +39,8 @@ func NewCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 		createInstallationRequest.Affinity = "isolated"
 	}
 
-	if !IsValidInstallationSize(createInstallationRequest.Size) {
+	_, err = mmv1alpha1.GetClusterSize(createInstallationRequest.Size)
+	if err != nil {
 		return nil, errors.New("invalid size")
 	}
 	if createInstallationRequest.OwnerID == "" {

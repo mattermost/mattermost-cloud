@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
 )
@@ -41,6 +42,7 @@ type Store interface {
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
 type Provisioner interface {
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	GetClusterResources(*model.Cluster) (*k8s.ClusterResources, error)
 }
 
 // Context provides the API with all necessary data and interfaces for responding to requests.
