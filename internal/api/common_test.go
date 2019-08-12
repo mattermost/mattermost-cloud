@@ -13,10 +13,16 @@ func (s *mockSupervisor) Do() error {
 }
 
 type mockProvisioner struct {
+	Output       []byte
+	CommandError error
 }
 
 func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstallation, ...string) ([]byte, error) {
-	return []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`), nil
+	if len(s.Output) == 0 {
+		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)
+	}
+
+	return s.Output, s.CommandError
 }
 
 func (s *mockProvisioner) GetClusterResources(*model.Cluster) (*k8s.ClusterResources, error) {

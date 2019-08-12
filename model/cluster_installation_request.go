@@ -44,3 +44,17 @@ func NewClusterInstallationConfigRequestFromReader(reader io.Reader) (ClusterIns
 
 	return clusterInstallationConfigRequest, nil
 }
+
+// ClusterInstallationMattermostCLISubcommand describes the payload necessary to run Mattermost CLI on a cluster installation.
+type ClusterInstallationMattermostCLISubcommand []string
+
+// NewClusterInstallationMattermostCLISubcommandFromReader will create a ClusterInstallationMattermostCLISubcommand from an io.Reader.
+func NewClusterInstallationMattermostCLISubcommandFromReader(reader io.Reader) (ClusterInstallationMattermostCLISubcommand, error) {
+	var clusterInstallationMattermostCLISubcommand ClusterInstallationMattermostCLISubcommand
+	err := json.NewDecoder(reader).Decode(&clusterInstallationMattermostCLISubcommand)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode cluster installation mattermost CLI request")
+	}
+
+	return clusterInstallationMattermostCLISubcommand, nil
+}
