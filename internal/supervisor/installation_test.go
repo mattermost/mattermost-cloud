@@ -118,7 +118,7 @@ func (p *mockInstallationProvisioner) GetClusterInstallationResource(cluster *mo
 		nil
 }
 
-func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster) (*k8s.ClusterResources, error) {
+func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
 	if p.UseCustomClusterResources {
 		return p.CustomClusterResources, nil
 	}
