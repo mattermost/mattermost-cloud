@@ -1,8 +1,11 @@
 package supervisor
 
 import (
-	"github.com/mattermost/mattermost-cloud/model"
+	"time"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
+	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,6 +18,8 @@ type clusterStore interface {
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
 	DeleteCluster(clusterID string) error
+
+	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
 // clusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
@@ -96,6 +101,18 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 	if err != nil {
 		logger.WithError(err).Warnf("failed to set cluster state to %s", newState)
 		return
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeCluster,
+		ID:        cluster.ID,
+		NewState:  newState,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	logger.Debugf("Transitioned cluster from %s to %s", oldState, newState)

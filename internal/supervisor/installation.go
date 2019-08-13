@@ -1,8 +1,11 @@
 package supervisor
 
 import (
+	"time"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -28,6 +31,8 @@ type installationStore interface {
 	LockClusterInstallations(clusterInstallationID []string, lockerID string) (bool, error)
 	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
+
+	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
 // provisioner abstracts the provisioning operations required by the installation supervisor.
@@ -111,6 +116,18 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to set installation state to %s", newState)
 		return
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  newState,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	logger.Debugf("Transitioned installation from %s to %s", oldState, newState)
@@ -290,6 +307,18 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	if err != nil {
 		logger.WithError(err).Warn("Failed to create cluster installation")
 		return nil
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeClusterInstallation,
+		ID:        clusterInstallation.ID,
+		NewState:  model.ClusterInstallationStateCreationRequested,
+		OldState:  "n/a",
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%", cluster.ID, cpuPercent, memoryPercent)
