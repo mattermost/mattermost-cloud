@@ -25,7 +25,7 @@ func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstal
 	return s.Output, s.CommandError
 }
 
-func (s *mockProvisioner) GetClusterResources(*model.Cluster) (*k8s.ClusterResources, error) {
+func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error) {
 	return nil, nil
 }
 

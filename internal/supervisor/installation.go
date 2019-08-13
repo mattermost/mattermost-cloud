@@ -36,7 +36,7 @@ type installationProvisioner interface {
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
-	GetClusterResources(cluster *model.Cluster) (*k8s.ClusterResources, error)
+	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -264,7 +264,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		logger.WithError(err).Error("invalid cluster installation size")
 		return nil
 	}
-	clusterResources, err := s.provisioner.GetClusterResources(cluster)
+	clusterResources, err := s.provisioner.GetClusterResources(cluster, true)
 	if err != nil {
 		logger.WithError(err).Error("failed to get cluster resources")
 		return nil

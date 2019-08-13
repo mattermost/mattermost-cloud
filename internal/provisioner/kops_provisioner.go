@@ -1056,7 +1056,7 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 }
 
 // GetClusterResources returns a snapshot of resources of a given cluster.
-func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster) (*k8s.ClusterResources, error) {
+func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
 	logger := provisioner.logger.WithFields(map[string]interface{}{
 		"cluster": cluster.ID,
 	})
@@ -1094,8 +1094,31 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster) 
 		return nil, err
 	}
 	for _, node := range nodes.Items {
-		totalCPU += node.Status.Allocatable.Cpu().MilliValue()
-		totalMemory += node.Status.Allocatable.Memory().MilliValue()
+		var skipNode bool
+
+		if onlySchedulable {
+			if node.Spec.Unschedulable {
+				logger.Debugf("Ignoring unschedulable node %s", node.GetName())
+				skipNode = true
+			}
+
+			// TODO: handle scheduling taints in a more robust way.
+			// This is a quick and dirty check for scheduling issues that could
+			// lead to false positives. In the future, we should use a scheduling
+			// library to perform the check instead.
+			for _, taint := range node.Spec.Taints {
+				if taint.Effect == "NoSchedule" {
+					logger.Debugf("Ignoring node %s with taint '%s'", node.GetName(), taint.ToString())
+					skipNode = true
+					break
+				}
+			}
+		}
+
+		if !skipNode {
+			totalCPU += node.Status.Allocatable.Cpu().MilliValue()
+			totalMemory += node.Status.Allocatable.Memory().MilliValue()
+		}
 	}
 
 	return &k8s.ClusterResources{
