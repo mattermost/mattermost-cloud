@@ -2,8 +2,10 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -86,6 +88,18 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  model.InstallationStateCreationRequested,
+		OldState:  "n/a",
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+	}
+
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
@@ -120,6 +134,13 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	}
 
 	if installation.State != model.InstallationStateCreationRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  model.InstallationStateCreationRequested,
+			OldState:  installation.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		installation.State = model.InstallationStateCreationRequested
 
 		err := c.Store.UpdateInstallation(installation)
@@ -127,6 +148,11 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 			c.Logger.WithError(err).Errorf("failed to retry installation creation")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 
@@ -193,6 +219,13 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	if installation.State != model.InstallationStateUpgradeRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  model.InstallationStateUpgradeRequested,
+			OldState:  installation.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		installation.State = model.InstallationStateUpgradeRequested
 		installation.Version = upgradeInstallationRequest.Version
 		installation.License = upgradeInstallationRequest.License
@@ -202,6 +235,11 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 			c.Logger.WithError(err).Error("failed to mark installation for upgrade")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 
@@ -314,6 +352,13 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if installation.State != model.InstallationStateDeletionRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  model.InstallationStateDeletionRequested,
+			OldState:  installation.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		installation.State = model.InstallationStateDeletionRequested
 
 		err := c.Store.UpdateInstallation(installation)
@@ -321,6 +366,11 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 			c.Logger.WithError(err).Error("failed to mark installation for deletion")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 

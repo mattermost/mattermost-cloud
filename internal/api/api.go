@@ -10,4 +10,5 @@ func Register(rootRouter *mux.Router, context *Context) {
 	initInstallation(apiRouter, context)
 	initClusterInstallation(apiRouter, context)
 	initGroup(apiRouter, context)
+	initWebhook(apiRouter, context)
 }

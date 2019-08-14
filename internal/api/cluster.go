@@ -2,8 +2,10 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -81,6 +83,18 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeCluster,
+		ID:        cluster.ID,
+		NewState:  model.ClusterStateCreationRequested,
+		OldState:  "n/a",
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+	}
+
 	c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -115,6 +129,13 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if cluster.State != model.ClusterStateCreationRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeCluster,
+			ID:        cluster.ID,
+			NewState:  model.ClusterStateCreationRequested,
+			OldState:  cluster.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		cluster.State = model.ClusterStateCreationRequested
 
 		err := c.Store.UpdateCluster(cluster)
@@ -122,6 +143,11 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 			c.Logger.WithError(err).Errorf("failed to retry cluster creation")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 
@@ -159,6 +185,13 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 
 	if cluster.State != model.ClusterStateProvisioningRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeCluster,
+			ID:        cluster.ID,
+			NewState:  model.ClusterStateProvisioningRequested,
+			OldState:  cluster.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		cluster.State = model.ClusterStateProvisioningRequested
 
 		err := c.Store.UpdateCluster(cluster)
@@ -166,6 +199,11 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 
@@ -232,6 +270,13 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cluster.State != model.ClusterStateUpgradeRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeCluster,
+			ID:        cluster.ID,
+			NewState:  model.ClusterStateUpgradeRequested,
+			OldState:  cluster.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		cluster.State = model.ClusterStateUpgradeRequested
 
 		err := c.Store.UpdateCluster(cluster)
@@ -239,6 +284,11 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			c.Logger.WithError(err).Error("failed to mark cluster for upgrade")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 
@@ -295,6 +345,13 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cluster.State != model.ClusterStateDeletionRequested {
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeCluster,
+			ID:        cluster.ID,
+			NewState:  model.ClusterStateDeletionRequested,
+			OldState:  cluster.State,
+			Timestamp: time.Now().UnixNano(),
+		}
 		cluster.State = model.ClusterStateDeletionRequested
 
 		err := c.Store.UpdateCluster(cluster)
@@ -302,6 +359,11 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			c.Logger.WithError(err).Error("failed to mark cluster for deletion")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
 		}
 	}
 

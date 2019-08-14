@@ -25,6 +25,7 @@ func init() {
 	rootCmd.AddCommand(installationCmd)
 	rootCmd.AddCommand(groupCmd)
 	rootCmd.AddCommand(schemaCmd)
+	rootCmd.AddCommand(webhookCmd)
 	rootCmd.AddCommand(completionCmd)
 }
 

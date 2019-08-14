@@ -547,3 +547,81 @@ func (c *Client) LeaveGroup(installationID string) error {
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// CreateWebhook requests the creation of a webhook from the configured provisioning server.
+func (c *Client) CreateWebhook(request *CreateWebhookRequest) (*Webhook, error) {
+	resp, err := c.doPost(c.buildURL("/api/webhooks"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return WebhookFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetWebhook fetches the webhook from the configured provisioning server.
+func (c *Client) GetWebhook(webhookID string) (*Webhook, error) {
+	resp, err := c.doGet(c.buildURL("/api/webhook/%s", webhookID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return WebhookFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetWebhooks fetches the list of webhooks from the configured provisioning server.
+func (c *Client) GetWebhooks(request *GetWebhooksRequest) ([]*Webhook, error) {
+	u, err := url.Parse(c.buildURL("/api/webhooks"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return WebhooksFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteWebhook deletes the given webhook.
+func (c *Client) DeleteWebhook(webhookID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/webhook/%s", webhookID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

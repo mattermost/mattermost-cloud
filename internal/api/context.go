@@ -37,6 +37,11 @@ type Store interface {
 	GetGroups(filter *model.GroupFilter) ([]*model.Group, error)
 	UpdateGroup(group *model.Group) error
 	DeleteGroup(groupID string) error
+
+	CreateWebhook(webhook *model.Webhook) error
+	GetWebhook(webhookID string) (*model.Webhook, error)
+	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
+	DeleteWebhook(webhookID string) error
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
