@@ -1,8 +1,11 @@
 package supervisor
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -20,6 +23,8 @@ type clusterInstallationStore interface {
 	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(clusterInstallationID string) error
+
+	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
 // provisioner abstracts the provisioning operations required by the installation supervisor.
@@ -98,6 +103,18 @@ func (s *ClusterInstallationSupervisor) Supervise(clusterInstallation *model.Clu
 	if err != nil {
 		logger.WithError(err).Errorf("failed to set cluster installation state to %s", newState)
 		return
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeClusterInstallation,
+		ID:        clusterInstallation.ID,
+		NewState:  newState,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	logger.Debugf("Transitioned cluster installation from %s to %s", oldState, newState)

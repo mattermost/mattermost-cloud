@@ -362,12 +362,37 @@ var migrations = []migration{
 		return nil
 	}},
 	{semver.MustParse("0.6.0"), semver.MustParse("0.7.0"), func(e execer) error {
+		// Add installation license column.
 		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN License TEXT NULL;`)
 		if err != nil {
 			return err
 		}
 
 		_, err = e.Exec(`UPDATE Installation SET License = '';`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.7.0"), semver.MustParse("0.8.0"), func(e execer) error {
+		// Add webhook table.
+		_, err := e.Exec(`
+			CREATE TABLE Webhooks (
+				ID TEXT PRIMARY KEY,
+				OwnerID TEXT NOT NULL,
+				URL TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX Webhook_URL_DeleteAt ON Webhooks (URL, DeleteAt);
+		`)
 		if err != nil {
 			return err
 		}

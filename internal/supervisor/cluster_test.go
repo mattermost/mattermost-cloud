@@ -3,11 +3,11 @@ package supervisor_test
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -50,6 +50,10 @@ func (s *mockClusterStore) UnlockCluster(clusterID string, lockerID string, forc
 
 func (s *mockClusterStore) DeleteCluster(clusterID string) error {
 	return nil
+}
+
+func (s *mockClusterStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
+	return nil, nil
 }
 
 type mockClusterProvisioner struct {

@@ -90,6 +90,10 @@ func (s *mockInstallationStore) UpdateClusterInstallation(clusterInstallation *m
 	return nil
 }
 
+func (s *mockInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
+	return nil, nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources
