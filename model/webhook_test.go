@@ -1,7 +1,7 @@
 package model
 
 import (
-	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,29 +41,29 @@ func TestWebhookPayloadToJSON(t *testing.T) {
 
 func TestWebhookFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		webhook, err := WebhookFromReader(bytes.NewReader([]byte(
+		webhook, err := WebhookFromReader(strings.NewReader(
 			``,
-		)))
+		))
 		require.NoError(t, err)
 		require.Equal(t, &Webhook{}, webhook)
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		webhook, err := WebhookFromReader(bytes.NewReader([]byte(
+		webhook, err := WebhookFromReader(strings.NewReader(
 			`{test`,
-		)))
+		))
 		require.Error(t, err)
 		require.Nil(t, webhook)
 	})
 
 	t.Run("request", func(t *testing.T) {
-		webhook, err := WebhookFromReader(bytes.NewReader([]byte(`{
+		webhook, err := WebhookFromReader(strings.NewReader(`{
 			"ID":"id",
 			"OwnerID":"owner",
 			"URL":"https://domain.com",
 			"CreateAt":10,
 			"DeleteAt":20
-		}`)))
+		}`))
 		require.NoError(t, err)
 		require.Equal(t, &Webhook{
 			ID:       "id",
@@ -77,23 +77,23 @@ func TestWebhookFromReader(t *testing.T) {
 
 func TestWebhooksFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		webhooks, err := WebhooksFromReader(bytes.NewReader([]byte(
+		webhooks, err := WebhooksFromReader(strings.NewReader(
 			``,
-		)))
+		))
 		require.NoError(t, err)
 		require.Equal(t, []*Webhook{}, webhooks)
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
-		webhooks, err := WebhooksFromReader(bytes.NewReader([]byte(
+		webhooks, err := WebhooksFromReader(strings.NewReader(
 			`{test`,
-		)))
+		))
 		require.Error(t, err)
 		require.Nil(t, webhooks)
 	})
 
 	t.Run("request", func(t *testing.T) {
-		webhooks, err := WebhooksFromReader(bytes.NewReader([]byte(`[
+		webhooks, err := WebhooksFromReader(strings.NewReader(`[
 			{
 				"ID":"id1",
 				"OwnerID":"owner1",
@@ -108,7 +108,7 @@ func TestWebhooksFromReader(t *testing.T) {
 				"CreateAt":30,
 				"DeleteAt":40
 			}
-		]`)))
+		]`))
 		require.NoError(t, err)
 		require.Equal(t, []*Webhook{
 			&Webhook{
@@ -126,5 +126,41 @@ func TestWebhooksFromReader(t *testing.T) {
 				DeleteAt: 40,
 			},
 		}, webhooks)
+	})
+}
+
+func TestWebhookPayloadFromReader(t *testing.T) {
+	t.Run("empty request", func(t *testing.T) {
+		payload, err := WebhookPayloadFromReader(strings.NewReader(
+			``,
+		))
+		require.NoError(t, err)
+		require.Equal(t, &WebhookPayload{}, payload)
+	})
+
+	t.Run("invalid request", func(t *testing.T) {
+		payload, err := WebhookPayloadFromReader(strings.NewReader(
+			`{test`,
+		))
+		require.Error(t, err)
+		require.Nil(t, payload)
+	})
+
+	t.Run("request", func(t *testing.T) {
+		payload, err := WebhookPayloadFromReader(strings.NewReader(`{
+			"timestamp":1234,
+			"id":"id",
+			"type":"installation",
+			"new_state":"stable",
+			"old_state":"creation-in-progress"
+		}`))
+		require.NoError(t, err)
+		require.Equal(t, &WebhookPayload{
+			Timestamp: 1234,
+			ID:        "id",
+			Type:      "installation",
+			NewState:  "stable",
+			OldState:  "creation-in-progress",
+		}, payload)
 	})
 }
