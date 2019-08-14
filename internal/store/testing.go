@@ -12,21 +12,23 @@ import (
 )
 
 func makeUnmigratedTestSQLStore(tb testing.TB, logger log.FieldLogger) *SQLStore {
+	// TODO: fix this dirty workaround
+	// https://github.com/golang/go/issues/33633
 	dsn := os.Getenv("CLOUD_DATABASE")
 	if dsn == "" {
 		dsn = fmt.Sprintf("sqlite3://file:%s.db?mode=memory&cache=shared", model.NewID())
-	}
+	} else {
+		dsnURL, err := url.Parse(dsn)
+		require.NoError(tb, err)
 
-	dsnURL, err := url.Parse(dsn)
-	require.NoError(tb, err)
-
-	switch dsnURL.Scheme {
-	case "sqlite", "sqlite3":
-	case "postgres", "postgresql":
-		q := dsnURL.Query()
-		q.Add("pg_temp", "true")
-		dsnURL.RawQuery = q.Encode()
-		dsn = dsnURL.String()
+		switch dsnURL.Scheme {
+		case "sqlite", "sqlite3":
+		case "postgres", "postgresql":
+			q := dsnURL.Query()
+			q.Add("pg_temp", "true")
+			dsnURL.RawQuery = q.Encode()
+			dsn = dsnURL.String()
+		}
 	}
 
 	sqlStore, err := New(dsn, logger)

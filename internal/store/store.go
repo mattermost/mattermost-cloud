@@ -24,10 +24,16 @@ type SQLStore struct {
 
 // New constructs a new instance of SQLStore.
 func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
+	// TODO: fix this dirty workaround
+	// https://github.com/golang/go/issues/33633
+	if strings.Contains(dsn, "file:") {
+		dsn = strings.Replace(dsn, "file:", "fileColonPlaceholder", 1)
+	}
 	url, err := url.Parse(dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse dsn as an url")
 	}
+	url.Host = strings.Replace(url.Host, "fileColonPlaceholder", "file:", 1)
 
 	var db *sqlx.DB
 
