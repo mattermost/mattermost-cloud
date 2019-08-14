@@ -20,6 +20,7 @@ func init() {
 
 	installationUpgradeCmd.Flags().String("installation", "", "The id of the installation to be upgraded.")
 	installationUpgradeCmd.Flags().String("version", "stable", "The Mattermost version to target.")
+	installationUpgradeCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpgradeCmd.MarkFlagRequired("installation")
 	installationUpgradeCmd.MarkFlagRequired("version")
 
