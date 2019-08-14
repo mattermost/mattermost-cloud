@@ -56,7 +56,7 @@ func (p *WebhookPayload) ToJSON() (string, error) {
 	return string(b), nil
 }
 
-// WebhookFromReader decodes a json-encoded list of webhooks from the given io.Reader.
+// WebhookFromReader decodes a json-encoded webhook from the given io.Reader.
 func WebhookFromReader(reader io.Reader) (*Webhook, error) {
 	webhook := Webhook{}
 	decoder := json.NewDecoder(reader)
@@ -68,7 +68,7 @@ func WebhookFromReader(reader io.Reader) (*Webhook, error) {
 	return &webhook, nil
 }
 
-// WebhooksFromReader decodes a json-encoded webhook from the given io.Reader.
+// WebhooksFromReader decodes a json-encoded list of webhooks from the given io.Reader.
 func WebhooksFromReader(reader io.Reader) ([]*Webhook, error) {
 	webhooks := []*Webhook{}
 	decoder := json.NewDecoder(reader)
@@ -79,4 +79,16 @@ func WebhooksFromReader(reader io.Reader) ([]*Webhook, error) {
 	}
 
 	return webhooks, nil
+}
+
+// WebhookPayloadFromReader decodes a json-encoded webhook payload from the given io.Reader.
+func WebhookPayloadFromReader(reader io.Reader) (*WebhookPayload, error) {
+	payload := WebhookPayload{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&payload)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return &payload, nil
 }
