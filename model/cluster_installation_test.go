@@ -24,6 +24,22 @@ func TestClusterInstallationClone(t *testing.T) {
 	require.NotEqual(t, clusterInstallation, clone)
 }
 
+func TestClusterInstallationIsDeleted(t *testing.T) {
+	clusterInstallation := &ClusterInstallation{
+		DeleteAt: 0,
+	}
+
+	t.Run("not deleted", func(t *testing.T) {
+		require.False(t, clusterInstallation.IsDeleted())
+	})
+
+	clusterInstallation.DeleteAt = 1
+
+	t.Run("deleted", func(t *testing.T) {
+		require.True(t, clusterInstallation.IsDeleted())
+	})
+}
+
 func TestClusterInstallationFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
 		clusterInstallation, err := ClusterInstallationFromReader(bytes.NewReader([]byte(

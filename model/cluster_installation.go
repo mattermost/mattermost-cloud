@@ -54,6 +54,11 @@ func (c *ClusterInstallation) Clone() *ClusterInstallation {
 	return &clone
 }
 
+// IsDeleted returns whether the cluster installation was marked as deleted or not.
+func (c *ClusterInstallation) IsDeleted() bool {
+	return c.DeleteAt != 0
+}
+
 // ClusterInstallationFromReader decodes a json-encoded cluster installation from the given io.Reader.
 func ClusterInstallationFromReader(reader io.Reader) (*ClusterInstallation, error) {
 	clusterInstallation := ClusterInstallation{}
