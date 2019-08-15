@@ -288,6 +288,15 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, config, "ServiceSettings")
 	})
+
+	t.Run("cluster installation deleted", func(t *testing.T) {
+		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, err)
+
+		config, err := client.GetClusterInstallationConfig(clusterInstallation1.ID)
+		require.Error(t, err)
+		require.Nil(t, config)
+	})
 }
 
 func TestSetClusterInstallationConfig(t *testing.T) {
@@ -345,6 +354,14 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
 		require.NoError(t, err)
+	})
+
+	t.Run("cluster installation deleted", func(t *testing.T) {
+		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, err)
+
+		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
+		require.Error(t, err)
 	})
 }
 

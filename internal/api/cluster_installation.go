@@ -94,6 +94,11 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	if clusterInstallation.IsDeleted() {
+		c.Logger.Error("cluster installation is deleted")
+		w.WriteHeader(http.StatusGone)
+		return
+	}
 
 	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
 	if err != nil {
@@ -139,6 +144,11 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 	}
 	if clusterInstallation == nil {
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if clusterInstallation.IsDeleted() {
+		c.Logger.Error("cluster installation is deleted")
+		w.WriteHeader(http.StatusGone)
 		return
 	}
 
@@ -232,9 +242,9 @@ func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if clusterInstallation.DeleteAt != 0 {
+	if clusterInstallation.IsDeleted() {
 		c.Logger.Error("cluster installation is deleted")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusGone)
 		return
 	}
 
