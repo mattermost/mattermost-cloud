@@ -340,8 +340,12 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	switch installation.State {
 	case model.InstallationStateStable:
 	case model.InstallationStateCreationRequested:
+	case model.InstallationStateCreationDNS:
 	case model.InstallationStateCreationNoCompatibleClusters:
 	case model.InstallationStateCreationFailed:
+	case model.InstallationStateUpgradeRequested:
+	case model.InstallationStateUpgradeInProgress:
+	case model.InstallationStateUpgradeFailed:
 	case model.InstallationStateDeletionRequested:
 	case model.InstallationStateDeletionInProgress:
 	case model.InstallationStateDeletionFailed:

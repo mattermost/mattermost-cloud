@@ -10,9 +10,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -763,7 +763,12 @@ func TestDeleteInstallation(t *testing.T) {
 		validDeletingStates := []string{
 			model.InstallationStateStable,
 			model.InstallationStateCreationRequested,
+			model.InstallationStateCreationDNS,
+			model.InstallationStateCreationNoCompatibleClusters,
 			model.InstallationStateCreationFailed,
+			model.InstallationStateUpgradeRequested,
+			model.InstallationStateUpgradeInProgress,
+			model.InstallationStateUpgradeFailed,
 			model.InstallationStateDeletionRequested,
 			model.InstallationStateDeletionInProgress,
 			model.InstallationStateDeletionFailed,
