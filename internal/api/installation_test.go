@@ -416,8 +416,17 @@ func TestUpgradeInstallation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	ensureInstallationMatchesRequest := func(t *testing.T, installation *model.Installation, request *model.UpgradeInstallationRequest) {
+		require.Equal(t, request.Version, installation.Version)
+		require.Equal(t, request.License, installation.License)
+	}
+
 	t.Run("unknown installation", func(t *testing.T) {
-		err := client.UpgradeInstallation(model.NewID(), "latest", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err := client.UpgradeInstallation(model.NewID(), upgradeRequest)
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -437,7 +446,11 @@ func TestUpgradeInstallation(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.UpgradeInstallation(installation1.ID, "latest", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
@@ -446,25 +459,17 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
-	})
-
-	t.Run("add license", func(t *testing.T) {
-		installation1.State = model.InstallationStateUpgradeRequested
-		err = sqlStore.UpdateInstallation(installation1)
-		require.NoError(t, err)
-
-		err = client.UpgradeInstallation(installation1.ID, "latest", "this_is_my_lincese")
-		require.NoError(t, err)
-
-		installation1, err = client.GetInstallation(installation1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
+		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
@@ -472,12 +477,17 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
+		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
@@ -485,12 +495,17 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
+		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 	})
 
 	t.Run("after deletion failed", func(t *testing.T) {
@@ -498,12 +513,12 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err := client.DeleteInstallation(installation1.ID)
-		require.NoError(t, err)
-
-		installation1, err = client.GetInstallation(installation1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.InstallationStateDeletionRequested, installation1.State)
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
+		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
@@ -511,7 +526,11 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "latest", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
@@ -520,12 +539,16 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "5.9.0", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: model.NewID(),
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
 		require.NoError(t, err)
-		require.Equal(t, "5.9.0", installation1.Version)
+		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 	})
 
 	t.Run("to version with embedded slash", func(t *testing.T) {
@@ -533,13 +556,17 @@ func TestUpgradeInstallation(t *testing.T) {
 		err = sqlStore.UpdateInstallation(installation1)
 		require.NoError(t, err)
 
-		err = client.UpgradeInstallation(installation1.ID, "mattermost/mattermost-enterprise:v5.12", "")
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: "mattermost/mattermost-enterprise:v5.12",
+			License: model.NewID(),
+		}
+		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpgradeRequested, installation1.State)
-		require.Equal(t, "mattermost/mattermost-enterprise:v5.12", installation1.Version)
+		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 	})
 }
 

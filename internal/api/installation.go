@@ -218,7 +218,9 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if installation.State != model.InstallationStateUpgradeRequested {
+	if installation.State != model.InstallationStateUpgradeRequested ||
+		installation.Version != upgradeInstallationRequest.Version ||
+		installation.License != upgradeInstallationRequest.License {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
