@@ -97,7 +97,12 @@ var installationUpgradeCmd = &cobra.Command{
 		version, _ := command.Flags().GetString("version")
 		license, _ := command.Flags().GetString("license")
 
-		err := client.UpgradeInstallation(installationID, version, license)
+		upgradeRequest := &model.UpgradeInstallationRequest{
+			Version: version,
+			License: license,
+		}
+
+		err := client.UpgradeInstallation(installationID, upgradeRequest)
 		if err != nil {
 			return errors.Wrap(err, "failed to change installation version")
 		}

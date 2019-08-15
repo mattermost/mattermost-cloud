@@ -280,12 +280,9 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 	}
 }
 
-// UpgradeInstallation upgrades a installation to the given Mattermost version.
-func (c *Client) UpgradeInstallation(installationID, version, license string) error {
-	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost", installationID), UpgradeInstallationRequest{
-		Version: version,
-		License: license,
-	})
+// UpgradeInstallation upgrades an installation.
+func (c *Client) UpgradeInstallation(installationID string, request *UpgradeInstallationRequest) error {
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost", installationID), request)
 	if err != nil {
 		return err
 	}
