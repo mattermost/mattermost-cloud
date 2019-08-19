@@ -359,6 +359,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 		return err
 	}
 
+	// change the waiting time because creation can take more time
+	// due container download / init / container creation / volume allocation
+	wait = 240
 	operatorsWithDeployment := []string{"minio-operator", "mattermost-operator"}
 	for _, operator := range operatorsWithDeployment {
 		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
@@ -392,6 +395,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 		}
 
 		for _, pod := range pods.Items {
+
 			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 			defer cancel()
