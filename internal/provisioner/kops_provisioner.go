@@ -359,14 +359,36 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 		return err
 	}
 
-	operators := []string{"mysql-operator", "minio-operator", "mattermost-operator"}
-	for _, operator := range operators {
+	operatorsWithDeployment := []string{"minio-operator", "mattermost-operator"}
+	for _, operator := range operatorsWithDeployment {
 		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
 		if err != nil {
 			return err
 		}
 		if len(pods.Items) == 0 {
 			return fmt.Errorf("no pods found from %q deployment", operator)
+		}
+
+		for _, pod := range pods.Items {
+			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
+			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
+			if err != nil {
+				return err
+			}
+			logger.Infof("Successfully deployed operator pod %q", pod.Name)
+		}
+	}
+
+	operatorsWithStatefulSet := []string{"mysql-operator"}
+	for _, operator := range operatorsWithStatefulSet {
+		pods, err := k8sClient.GetPodsFromStatefulset(operator, operator)
+		if err != nil {
+			return err
+		}
+		if len(pods.Items) == 0 {
+			return fmt.Errorf("no pods found from %q statefulSet", operator)
 		}
 
 		for _, pod := range pods.Items {

@@ -60,3 +60,22 @@ func TestGetPodsFromDeployment(t *testing.T) {
 		assert.Len(t, pods.Items, 0)
 	})
 }
+
+func TestGetPodsFromStatefulset(t *testing.T) {
+	testClient := newTestKubeClient()
+	statefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-statefulSet"},
+	}
+	namespace := "testing"
+
+	t.Run("create statefullSet", func(t *testing.T) {
+		result, err := testClient.createOrUpdateStatefulSet(namespace, statefulSet)
+		require.NoError(t, err)
+		assert.Equal(t, statefulSet.GetName(), result.GetName())
+	})
+	t.Run("get pods from statefullSet", func(t *testing.T) {
+		pods, err := testClient.GetPodsFromStatefulset(namespace, statefulSet.GetName())
+		require.NoError(t, err)
+		assert.Len(t, pods.Items, 0)
+	})
+}
