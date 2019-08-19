@@ -49,7 +49,7 @@ func (kc *KubeClient) GetPodsFromDeployment(namespace, deploymentName string) (*
 	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
 }
 
-// GetPodsFromStatefulset gets the pods that belong to a given deployment.
+// GetPodsFromStatefulset gets the pods that belong to a given stateful set.
 func (kc *KubeClient) GetPodsFromStatefulset(namespace, statefulSetName string) (*corev1.PodList, error) {
 	statefulSet, err := kc.Clientset.AppsV1().StatefulSets(namespace).Get(statefulSetName, metav1.GetOptions{})
 	if err != nil {
