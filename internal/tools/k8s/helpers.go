@@ -49,6 +49,19 @@ func (kc *KubeClient) GetPodsFromDeployment(namespace, deploymentName string) (*
 	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
 }
 
+// GetPodsFromStatefulset gets the pods that belong to a given deployment.
+func (kc *KubeClient) GetPodsFromStatefulset(namespace, statefulSetName string) (*corev1.PodList, error) {
+	statefulSet, err := kc.Clientset.AppsV1().StatefulSets(namespace).Get(statefulSetName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	set := labels.Set(statefulSet.GetLabels())
+	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
+
+	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
+}
+
 // RemoteCommand executes a kubernetes command against a remote cluster.
 func (kc *KubeClient) RemoteCommand(method string, url *url.URL) ([]byte, error) {
 	exec, err := remotecommand.NewSPDYExecutor(kc.GetConfig(), method, url)
