@@ -1,6 +1,6 @@
 annotations: {}
 elasticsearch:
-  buffer_chunk_limit: 200M
+  buffer_chunk_limit: 50M
   buffer_queue_limit: 64
   host: internal.test.cloud.mattermost.com
   logstash_prefix: logstash

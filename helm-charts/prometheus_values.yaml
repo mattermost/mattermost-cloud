@@ -1,5 +1,12 @@
+serviceAccounts:
+  alertmanager:
+    create: false
+
 server:
   ingress:
     enabled: true
     annotations:
       kubernetes.io/ingress.class: private-nginx
+
+alertmanager:
+  enabled: false
