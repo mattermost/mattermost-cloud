@@ -1078,7 +1078,12 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 			TTY:       false,
 		}, scheme.ParameterCodec)
 
-	return k8sClient.RemoteCommand("POST", execRequest.URL())
+	now := time.Now()
+	output, err := k8sClient.RemoteCommand("POST", execRequest.URL())
+
+	logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+
+	return output, err
 }
 
 // GetClusterResources returns a snapshot of resources of a given cluster.

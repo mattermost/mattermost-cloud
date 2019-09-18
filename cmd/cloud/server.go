@@ -150,9 +150,9 @@ var serverCmd = &cobra.Command{
 		srv := &http.Server{
 			Addr:           listen,
 			Handler:        router,
-			ReadTimeout:    60 * time.Second,
-			WriteTimeout:   60 * time.Second,
-			IdleTimeout:    time.Second * 120,
+			ReadTimeout:    180 * time.Second,
+			WriteTimeout:   180 * time.Second,
+			IdleTimeout:    time.Second * 180,
 			MaxHeaderBytes: 1 << 20,
 			ErrorLog:       log.New(&logrusWriter{logger}, "", 0),
 		}
