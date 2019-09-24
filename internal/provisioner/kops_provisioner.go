@@ -341,6 +341,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 			Path:            "operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
+			Path:            "operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, {
 			Path:            "operator-manifests/mattermost/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
