@@ -14,6 +14,7 @@ import (
 // Client is the programmatic interface to the provisioning server API.
 type Client struct {
 	address    string
+	headers    map[string]string
 	httpClient *http.Client
 }
 
@@ -21,6 +22,17 @@ type Client struct {
 func NewClient(address string) *Client {
 	return &Client{
 		address:    address,
+		headers:    make(map[string]string),
+		httpClient: &http.Client{},
+	}
+}
+
+// NewClientWithHeaders creates a client to the provisioning server at the given
+// address and uses the provided headers.
+func NewClientWithHeaders(address string, headers map[string]string) *Client {
+	return &Client{
+		address:    address,
+		headers:    headers,
 		httpClient: &http.Client{},
 	}
 }
@@ -38,7 +50,15 @@ func (c *Client) buildURL(urlPath string, args ...interface{}) string {
 }
 
 func (c *Client) doGet(u string) (*http.Response, error) {
-	return c.httpClient.Get(u)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create http request")
+	}
+	for k, v := range c.headers {
+		req.Header.Add(k, v)
+	}
+
+	return c.httpClient.Do(req)
 }
 
 func (c *Client) doPost(u string, request interface{}) (*http.Response, error) {
@@ -47,7 +67,16 @@ func (c *Client) doPost(u string, request interface{}) (*http.Response, error) {
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
 
-	return c.httpClient.Post(u, "application/json", bytes.NewReader(requestBytes))
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(requestBytes))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create http request")
+	}
+	for k, v := range c.headers {
+		req.Header.Add(k, v)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return c.httpClient.Do(req)
 }
 
 func (c *Client) doPut(u string, request interface{}) (*http.Response, error) {
@@ -56,21 +85,27 @@ func (c *Client) doPut(u string, request interface{}) (*http.Response, error) {
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
 
-	httpRequest, err := http.NewRequest(http.MethodPut, u, bytes.NewReader(requestBytes))
+	req, err := http.NewRequest(http.MethodPut, u, bytes.NewReader(requestBytes))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create http request")
+	}
+	for k, v := range c.headers {
+		req.Header.Add(k, v)
 	}
 
-	return c.httpClient.Do(httpRequest)
+	return c.httpClient.Do(req)
 }
 
 func (c *Client) doDelete(u string) (*http.Response, error) {
-	request, err := http.NewRequest(http.MethodDelete, u, nil)
+	req, err := http.NewRequest(http.MethodDelete, u, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create http request")
+	}
+	for k, v := range c.headers {
+		req.Header.Add(k, v)
 	}
 
-	return c.httpClient.Do(request)
+	return c.httpClient.Do(req)
 }
 
 // CreateCluster requests the creation of a cluster from the configured provisioning server.
