@@ -21,6 +21,7 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 		commaArg("zones", zones),
 		arg("node-count", clusterSize.NodeCount),
 		arg("node-size", clusterSize.NodeSize),
+		arg("master-count", clusterSize.MasterCount),
 		arg("master-size", clusterSize.MasterSize),
 		arg("target", "terraform"),
 		arg("out", c.GetOutputDirectory()),
