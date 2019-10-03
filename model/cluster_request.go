@@ -37,7 +37,7 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 	if createClusterRequest.Provider != ProviderAWS {
 		return nil, errors.Errorf("unsupported provider %s", createClusterRequest.Provider)
 	}
-	if !IsSupportedSize(createClusterRequest.Size) {
+	if !IsSupportedClusterSize(createClusterRequest.Size) {
 		return nil, errors.Errorf("unsupported size %s", createClusterRequest.Size)
 	}
 	// TODO: check zones?

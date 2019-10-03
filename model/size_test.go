@@ -20,7 +20,7 @@ func TestCheckSize(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.size, func(t *testing.T) {
-			assert.Equal(t, tc.expectSupported, model.IsSupportedSize(tc.size))
+			assert.Equal(t, tc.expectSupported, model.IsSupportedClusterSize(tc.size))
 		})
 	}
 }

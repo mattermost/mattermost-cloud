@@ -11,7 +11,6 @@ require (
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
-	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/mux v1.7.1
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/jmoiron/sqlx v1.2.0
@@ -36,6 +35,7 @@ require (
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v2 v2.2.2 // indirect
 	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
 	k8s.io/apiextensions-apiserver v0.0.0-20190425173628-f18c1dae0463
 	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
