@@ -399,4 +399,94 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.8.0"), semver.MustParse("0.9.0"), func(e execer) error {
+		if e.DriverName() == driverPostgres {
+			_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN Database TEXT NULL;`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`ALTER TABLE Installation ADD COLUMN Filestore TEXT NULL;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`UPDATE Installation SET Database = 'mysql-operator';`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`UPDATE Installation SET Filestore = 'minio-operator';`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN Database SET NOT NULL; `)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN Filestore SET NOT NULL;`)
+			if err != nil {
+				return err
+			}
+		} else if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					CREATE TABLE Installation (
+						ID TEXT PRIMARY KEY,
+						OwnerID TEXT NOT NULL,
+						Version TEXT NOT NULL,
+						DNS TEXT NOT NULL,
+						Database TEXT NOT NULL,
+						Filestore TEXT NOT NULL,
+						License TEXT NULL,
+						Size TEXT NOT NULL,
+						Affinity TEXT NOT NULL,
+						GroupID TEXT NULL,
+						State TEXT NOT NULL,
+						CreateAt BIGINT NOT NULL,
+						DeleteAt BIGINT NOT NULL,
+						LockAcquiredBy TEXT NULL,
+						LockAcquiredAt BIGINT NOT NULL
+					);
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					INSERT INTO Installation
+					SELECT
+						ID,
+						OwnerID,
+						Version,
+						DNS,
+						"mysql-operator",
+						"minio-operator",
+						License,
+						Size,
+						Affinity,
+						GroupID,
+						State,
+						CreateAt,
+						DeleteAt,
+						LockAcquiredBy,
+						LockAcquiredAt
+					FROM
+					InstallationTemp;
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
 }

@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 
@@ -27,9 +28,9 @@ type clusterInstallationStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
-// provisioner abstracts the provisioning operations required by the installation supervisor.
+// provisioner abstracts the provisioning operations required by the cluster installation supervisor.
 type clusterInstallationProvisioner interface {
-	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
@@ -42,15 +43,17 @@ type clusterInstallationProvisioner interface {
 type ClusterInstallationSupervisor struct {
 	store       clusterInstallationStore
 	provisioner clusterInstallationProvisioner
+	aws         aws.AWS
 	instanceID  string
 	logger      log.FieldLogger
 }
 
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
-func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, instanceID string, logger log.FieldLogger) *ClusterInstallationSupervisor {
+func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *ClusterInstallationSupervisor {
 	return &ClusterInstallationSupervisor{
 		store:       store,
 		provisioner: clusterInstallationProvisioner,
+		aws:         aws,
 		instanceID:  instanceID,
 		logger:      logger,
 	}
@@ -156,10 +159,10 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 
 	switch clusterInstallation.State {
 	case model.ClusterInstallationStateCreationRequested:
-		err = s.provisioner.CreateClusterInstallation(cluster, installation, clusterInstallation)
+		err = s.provisioner.CreateClusterInstallation(cluster, installation, clusterInstallation, s.aws)
 		if err != nil {
 			logger.WithError(err).Error("Failed to provision cluster installation")
-			return model.ClusterInstallationStateCreationFailed
+			return model.ClusterInstallationStateCreationRequested
 		}
 
 		err = s.store.UpdateClusterInstallation(clusterInstallation)
@@ -181,7 +184,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 		err = s.store.DeleteClusterInstallation(clusterInstallation.ID)
 		if err != nil {
 			logger.WithError(err).Error("Failed to record deleted cluster installation after deletion")
-			return model.ClusterInstallationStateCreationFailed
+			return model.ClusterStateDeletionFailed
 		}
 
 		logger.Info("Finished deleting cluster installation")
