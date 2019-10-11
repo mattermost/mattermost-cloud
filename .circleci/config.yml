@@ -110,7 +110,7 @@ workflows:
     - check-style
     - test-sqlite
     - test-postgres
-    - push-docker:
+    - push-docker-pr:
         context: matterbuild-docker
         requires:
         - check-style
