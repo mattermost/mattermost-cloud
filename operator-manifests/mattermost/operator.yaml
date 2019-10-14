@@ -15,7 +15,7 @@ spec:
       serviceAccountName: mattermost-operator
       containers:
         - name: mattermost-operator
-          image: mattermost/mattermost-operator:v0.6.1
+          image: mattermost/mattermost-operator:v0.7.0
           imagePullPolicy: IfNotPresent
           command:
           - mattermost-operator
