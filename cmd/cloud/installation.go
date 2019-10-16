@@ -15,6 +15,8 @@ func init() {
 	installationCreateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
 	installationCreateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
+	installationCreateCmd.Flags().String("database", model.InstallationDatabaseMysqlOperator, "The Mattermost server database type. Accepts mysql-operator or aws-rds")
+	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator or aws-s3")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
@@ -62,14 +64,18 @@ var installationCreateCmd = &cobra.Command{
 		dns, _ := command.Flags().GetString("dns")
 		affinity, _ := command.Flags().GetString("affinity")
 		license, _ := command.Flags().GetString("license")
+		database, _ := command.Flags().GetString("database")
+		filestore, _ := command.Flags().GetString("filestore")
 
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:  ownerID,
-			Version:  version,
-			Size:     size,
-			DNS:      dns,
-			License:  license,
-			Affinity: affinity,
+			OwnerID:   ownerID,
+			Version:   version,
+			Size:      size,
+			DNS:       dns,
+			License:   license,
+			Affinity:  affinity,
+			Database:  database,
+			Filestore: filestore,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create installation")

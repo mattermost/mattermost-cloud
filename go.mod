@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Masterminds/squirrel v1.1.0
-	github.com/aws/aws-sdk-go v1.19.41
+	github.com/aws/aws-sdk-go v1.25.6
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d // indirect
@@ -19,7 +19,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kubernetes/client-go v11.0.0+incompatible
 	github.com/lib/pq v1.0.0
-	github.com/mattermost/mattermost-operator v0.5.2-0.20190806202600-a7b818fc48dd
+	github.com/mattermost/mattermost-operator v0.6.2-0.20191008142649-9408c34d584b
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect

@@ -72,13 +72,15 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	installation := model.Installation{
-		OwnerID:  createInstallationRequest.OwnerID,
-		Version:  createInstallationRequest.Version,
-		DNS:      createInstallationRequest.DNS,
-		License:  createInstallationRequest.License,
-		Size:     createInstallationRequest.Size,
-		Affinity: createInstallationRequest.Affinity,
-		State:    model.InstallationStateCreationRequested,
+		OwnerID:   createInstallationRequest.OwnerID,
+		Version:   createInstallationRequest.Version,
+		DNS:       createInstallationRequest.DNS,
+		Database:  createInstallationRequest.Database,
+		Filestore: createInstallationRequest.Filestore,
+		License:   createInstallationRequest.License,
+		Size:      createInstallationRequest.Size,
+		Affinity:  createInstallationRequest.Affinity,
+		State:     model.InstallationStateCreationRequested,
 	}
 
 	err = c.Store.CreateInstallation(&installation)
@@ -342,6 +344,8 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	switch installation.State {
 	case model.InstallationStateStable:
 	case model.InstallationStateCreationRequested:
+	case model.InstallationStateCreationPreProvisioning:
+	case model.InstallationStateCreationInProgress:
 	case model.InstallationStateCreationDNS:
 	case model.InstallationStateCreationNoCompatibleClusters:
 	case model.InstallationStateCreationFailed:
@@ -350,6 +354,7 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	case model.InstallationStateUpgradeFailed:
 	case model.InstallationStateDeletionRequested:
 	case model.InstallationStateDeletionInProgress:
+	case model.InstallationStateDeletionFinalCleanup:
 	case model.InstallationStateDeletionFailed:
 	default:
 		c.Logger.Warnf("unable to delete installation while in state %s", installation.State)
