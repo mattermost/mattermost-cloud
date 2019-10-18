@@ -329,7 +329,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	clusterInstallation := &model.ClusterInstallation{
 		ClusterID:      cluster.ID,
 		InstallationID: installation.ID,
-		Namespace:      model.NewID(),
+		Namespace:      installation.ID,
 		State:          model.ClusterInstallationStateCreationRequested,
 	}
 
