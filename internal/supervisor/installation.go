@@ -54,18 +54,20 @@ type InstallationSupervisor struct {
 	aws                      aws.AWS
 	instanceID               string
 	clusterResourceThreshold int
+	keepDatabaseData         bool
 	keepFilestoreData        bool
 	logger                   log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepFilestoreData bool, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:                    store,
 		provisioner:              installationProvisioner,
 		aws:                      aws,
 		instanceID:               instanceID,
 		clusterResourceThreshold: threshold,
+		keepDatabaseData:         keepDatabaseData,
 		keepFilestoreData:        keepFilestoreData,
 		logger:                   logger,
 	}
@@ -615,9 +617,15 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
+	err = installation.GetDatabase().Teardown(s.keepDatabaseData, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete database")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+
 	err = installation.GetFilestore().Teardown(s.keepFilestoreData, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to delete installation AWS S3 filestore")
+		logger.WithError(err).Error("Failed to delete filestore")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
