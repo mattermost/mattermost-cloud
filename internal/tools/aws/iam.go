@@ -31,7 +31,7 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ia
 		UserName: aws.String(awsID),
 	})
 	if err == nil {
-		logger.WithField("iam-user-name", *getResult.User.UserName).Info("AWS IAM user already exists. Skipping...")
+		logger.WithField("iam-user-name", *getResult.User.UserName).Debug("AWS IAM user already created")
 		return getResult.User, nil
 	}
 	if aerr, ok := err.(awserr.Error); ok {
@@ -49,7 +49,7 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ia
 		return nil, err
 	}
 
-	logger.WithField("iam-user-name", *createResult.User.UserName).Info("AWS IAM user created")
+	logger.WithField("iam-user-name", *createResult.User.UserName).Debug("AWS IAM user created")
 
 	return createResult.User, nil
 }
@@ -90,7 +90,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		logger.WithFields(log.Fields{
 			"iam-user-name":   awsID,
 			"iam-policy-name": *policy.PolicyName,
-		}).Info("AWS IAM policy detached from user")
+		}).Debug("AWS IAM policy detached from user")
 
 		_, err = svc.DeletePolicy(&iam.DeletePolicyInput{
 			PolicyArn: policy.PolicyArn,
@@ -102,7 +102,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		logger.WithFields(log.Fields{
 			"iam-user-name":   awsID,
 			"iam-policy-name": *policy.PolicyName,
-		}).Info("AWS IAM policy deleted")
+		}).Debug("AWS IAM policy deleted")
 	}
 
 	accessKeyResult, err := svc.ListAccessKeys(&iam.ListAccessKeysInput{
@@ -123,7 +123,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		logger.WithFields(log.Fields{
 			"iam-user-name":     awsID,
 			"iam-access-key-id": *ak.AccessKeyId,
-		}).Info("AWS IAM user access key deleted")
+		}).Debug("AWS IAM user access key deleted")
 	}
 
 	_, err = svc.DeleteUser(&iam.DeleteUserInput{
@@ -133,7 +133,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		return err
 	}
 
-	logger.WithField("iam-user-name", awsID).Info("AWS IAM user deleted")
+	logger.WithField("iam-user-name", awsID).Debug("AWS IAM user deleted")
 
 	return nil
 }
@@ -145,7 +145,7 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 		PolicyArn: aws.String(policyARN),
 	})
 	if err == nil {
-		logger.WithField("iam-policy-name", *getResult.Policy.PolicyName).Info("AWS IAM policy already exists. Skipping...")
+		logger.WithField("iam-policy-name", *getResult.Policy.PolicyName).Debug("AWS IAM policy already created")
 		return getResult.Policy, nil
 	}
 	if aerr, ok := err.(awserr.Error); ok {
@@ -194,7 +194,7 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 		return nil, errors.Wrap(err, "unable to create IAM policy")
 	}
 
-	logger.WithField("iam-policy-name", *createResult.Policy.PolicyName).Info("AWS IAM policy created")
+	logger.WithField("iam-policy-name", *createResult.Policy.PolicyName).Debug("AWS IAM policy created")
 
 	return createResult.Policy, nil
 }

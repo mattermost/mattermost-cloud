@@ -37,7 +37,7 @@ func (f *MinioOperatorFilestore) Provision(logger log.FieldLogger) error {
 	return nil
 }
 
-// Teardown removes all MinIO operator resources related to an S3 filestore.
+// Teardown removes all MinIO operator resources related to a given installation.
 func (f *MinioOperatorFilestore) Teardown(keepData bool, logger log.FieldLogger) error {
 	logger.Info("MinIO operator filestore requires no teardown; skipping...")
 	if keepData {

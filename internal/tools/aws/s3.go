@@ -38,7 +38,7 @@ func (a *Client) s3EnsureBucketCreated(bucketName string) error {
 func (a *Client) s3EnsureBucketDeleted(bucketName string) error {
 	svc := s3.New(session.New())
 
-	// AWS forces S3 buckets to be emptry before they can be deleted.
+	// AWS forces S3 buckets to be empty before they can be deleted.
 	iter := s3manager.NewDeleteListIterator(svc, &s3.ListObjectsInput{
 		Bucket: aws.String(bucketName),
 	})

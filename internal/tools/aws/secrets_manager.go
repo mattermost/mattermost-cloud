@@ -19,6 +19,36 @@ type IAMAccessKey struct {
 	Secret string
 }
 
+// Validate performs a basic sanity check on the IAM Access Key secret.
+func (s *IAMAccessKey) Validate() error {
+	if s.ID == "" {
+		return errors.New("Access key ID value is empty")
+	}
+	if s.Secret == "" {
+		return errors.New("Access key secret value is empty")
+	}
+
+	return nil
+}
+
+// RDSSecret is the Secret payload for RDS configuration.
+type RDSSecret struct {
+	MasterUsername string
+	MasterPassword string
+}
+
+// Validate performs a basic sanity check on the RDS secret.
+func (s *RDSSecret) Validate() error {
+	if s.MasterUsername == "" {
+		return errors.New("RDS master username value is empty")
+	}
+	if s.MasterPassword == "" {
+		return errors.New("RDS master password value is empty")
+	}
+
+	return nil
+}
+
 func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iam.AccessKey) error {
 	svc := secretsmanager.New(session.New())
 
@@ -26,13 +56,19 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 		ID:     *ak.AccessKeyId,
 		Secret: *ak.SecretAccessKey,
 	}
+	err := accessKeyPayload.Validate()
+	if err != nil {
+		return err
+	}
+
 	b, err := json.Marshal(&accessKeyPayload)
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal secrets manager payload")
 	}
 
+	secretName := IAMSecretName(awsID)
 	_, err = svc.CreateSecret(&secretsmanager.CreateSecretInput{
-		Name:         aws.String(awsID),
+		Name:         aws.String(secretName),
 		Description:  aws.String(fmt.Sprintf("IAM access key for user %s", awsID)),
 		SecretString: aws.String(string(b)),
 	})
@@ -43,47 +79,140 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 	return nil
 }
 
+func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
+	svc := secretsmanager.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	secretName := RDSSecretName(awsID)
+	rdsSecretPayload := &RDSSecret{}
+
+	// Check if we already have an RDS secret for this installation.
+	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretName),
+	})
+	if err == nil {
+		logger.WithField("secret-name", secretName).Debug("AWS RDS secret already created")
+
+		err = json.Unmarshal([]byte(*result.SecretString), &rdsSecretPayload)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+		}
+
+		err := rdsSecretPayload.Validate()
+		if err != nil {
+			return nil, err
+		}
+
+		return rdsSecretPayload, nil
+	}
+
+	// There is no existing secret, so we will create a new one with a strong
+	// random username and password.
+	rdsSecretPayload.MasterUsername = "mmcloud"
+	rdsSecretPayload.MasterPassword = newRandomPassword(40)
+	err = rdsSecretPayload.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := json.Marshal(&rdsSecretPayload)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+	}
+
+	_, err = svc.CreateSecret(&secretsmanager.CreateSecretInput{
+		Name:         aws.String(secretName),
+		Description:  aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
+		SecretString: aws.String(string(b)),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create secrets manager secret")
+	}
+
+	logger.WithField("secret-name", secretName).Debug("AWS RDS secret created")
+
+	return rdsSecretPayload, nil
+}
+
 func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	svc := secretsmanager.New(session.New())
 
+	secretName := IAMSecretName(awsID)
 	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(awsID),
+		SecretId: aws.String(secretName),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get secrets manager secret")
 	}
 
-	var aimAccessKey *IAMAccessKey
-	err = json.Unmarshal([]byte(*result.SecretString), &aimAccessKey)
+	var iamAccessKey *IAMAccessKey
+	err = json.Unmarshal([]byte(*result.SecretString), &iamAccessKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
 	}
 
-	if aimAccessKey.ID == "" {
-		return nil, errors.New("access key ID value was empty")
-	}
-	if aimAccessKey.Secret == "" {
-		return nil, errors.New("access key secret value was empty")
+	err = iamAccessKey.Validate()
+	if err != nil {
+		return nil, err
 	}
 
-	return aimAccessKey, nil
+	return iamAccessKey, nil
+}
+
+func secretsManagerGetRDSSecret(awsID string) (*RDSSecret, error) {
+	svc := secretsmanager.New(session.New())
+
+	secretName := RDSSecretName(awsID)
+	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get secrets manager secret")
+	}
+
+	var rdsSecret *RDSSecret
+	err = json.Unmarshal([]byte(*result.SecretString), &rdsSecret)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+	}
+
+	err = rdsSecret.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return rdsSecret, nil
 }
 
 func (a *Client) secretsManagerEnsureIAMAccessKeySecretDeleted(awsID string, logger log.FieldLogger) error {
-	svc := secretsmanager.New(session.New())
+	return a.secretsManagerEnsureSecretDeleted(IAMSecretName(awsID), logger)
+}
+
+func (a *Client) secretsManagerEnsureRDSSecretDeleted(awsID string, logger log.FieldLogger) error {
+	return a.secretsManagerEnsureSecretDeleted(RDSSecretName(awsID), logger)
+}
+
+func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
+	svc := secretsmanager.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
 
 	_, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
-		SecretId: aws.String(awsID),
+		SecretId: aws.String(secretName),
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
+				logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming already deleted")
+
 				return nil
 			}
-			return err
 		}
 		return err
 	}
+
+	logger.WithField("secret-name", secretName).Debug("Secret Manager secret deleted")
 
 	return nil
 }
