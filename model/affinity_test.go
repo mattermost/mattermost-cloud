@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckaffinity(t *testing.T) {
+func TestIsSupportedAffinity(t *testing.T) {
 	var testCases = []struct {
 		affinity        string
 		expectSupported bool

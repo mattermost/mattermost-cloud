@@ -13,8 +13,9 @@ var installationSelect sq.SelectBuilder
 func init() {
 	installationSelect = sq.
 		Select(
-			"ID", "OwnerID", "Version", "DNS", "Size", "Affinity", "GroupID", "State",
-			"License", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
+			"ID", "OwnerID", "Version", "DNS", "Database", "Filestore", "Size",
+			"Affinity", "GroupID", "State", "License", "CreateAt", "DeleteAt",
+			"LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Installation")
 }
@@ -40,12 +41,15 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 		Where(sq.Eq{
 			"State": []string{
 				model.InstallationStateCreationRequested,
-				model.InstallationStateCreationDNS,
+				model.InstallationStateCreationPreProvisioning,
+				model.InstallationStateCreationInProgress,
 				model.InstallationStateCreationNoCompatibleClusters,
+				model.InstallationStateCreationDNS,
 				model.InstallationStateUpgradeRequested,
 				model.InstallationStateUpgradeInProgress,
-				model.InstallationStateDeletionInProgress,
 				model.InstallationStateDeletionRequested,
+				model.InstallationStateDeletionInProgress,
+				model.InstallationStateDeletionFinalCleanup,
 			},
 		}).
 		Where("LockAcquiredAt = 0").
@@ -109,6 +113,8 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"OwnerID":        installation.OwnerID,
 			"Version":        installation.Version,
 			"DNS":            installation.DNS,
+			"Database":       installation.Database,
+			"Filestore":      installation.Filestore,
 			"Size":           installation.Size,
 			"Affinity":       installation.Affinity,
 			"GroupID":        installation.GroupID,
@@ -132,14 +138,16 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
-			"OwnerID":  installation.OwnerID,
-			"Version":  installation.Version,
-			"DNS":      installation.DNS,
-			"Size":     installation.Size,
-			"Affinity": installation.Affinity,
-			"GroupID":  installation.GroupID,
-			"License":  installation.License,
-			"State":    installation.State,
+			"OwnerID":   installation.OwnerID,
+			"Version":   installation.Version,
+			"DNS":       installation.DNS,
+			"Database":  installation.Database,
+			"Filestore": installation.Filestore,
+			"Size":      installation.Size,
+			"Affinity":  installation.Affinity,
+			"GroupID":   installation.GroupID,
+			"License":   installation.License,
+			"State":     installation.State,
 		}).
 		Where("ID = ?", installation.ID),
 	)

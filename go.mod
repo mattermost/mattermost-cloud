@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Masterminds/squirrel v1.1.0
-	github.com/aws/aws-sdk-go v1.19.41
+	github.com/aws/aws-sdk-go v1.25.6
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d // indirect

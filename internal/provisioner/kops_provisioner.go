@@ -742,11 +742,12 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 }
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithFields(map[string]interface{}{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
+	logger.Info("Creating cluster installation")
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
@@ -774,16 +775,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
 
-	var secretName string
-	if installation.License != "" {
-		secretName = fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
-		_, err = k8sClient.CreateSecret(clusterInstallation.Namespace, secretName, "license", installation.License)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create the license secret %s/%s", clusterInstallation.Namespace, secretName)
-		}
-	}
-
-	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(&mmv1alpha1.ClusterInstallation{
+	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterInstallation",
 			APIVersion: "mattermost.com/v1alpha1",
@@ -807,9 +799,41 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":               "https",
 				"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout": "120",
 			},
-			MattermostLicenseSecret: secretName,
 		},
-	})
+	}
+
+	if installation.License != "" {
+		licenseSecretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
+		licenseSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: licenseSecretName,
+			},
+			StringData: map[string]string{"license": installation.License},
+		}
+
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, licenseSecret)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create the license secret %s/%s", clusterInstallation.Namespace, licenseSecretName)
+		}
+
+		mattermostInstallation.Spec.MattermostLicenseSecret = licenseSecretName
+		logger.Debug("Cluster installation configured with a Mattermost license")
+	}
+
+	filestoreSpec, filestoreSecret, err := installation.GetFilestore().GenerateFilestoreSpecAndSecret(logger)
+	if err != nil {
+		return err
+	}
+
+	if filestoreSecret != nil {
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, filestoreSecret)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create the filestore secret %s/%s", clusterInstallation.Namespace, filestoreSecret.Name)
+		}
+		mattermostInstallation.Spec.Minio = *filestoreSpec
+	}
+
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(mattermostInstallation)
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation")
 	}
@@ -856,7 +880,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 
 	err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(name, nil)
 	if k8sErrors.IsNotFound(err) {
-		logger.Infof("Cluster installation %s not found, assuming already deleted.", name)
+		logger.Warnf("Cluster installation %s not found, assuming already deleted", name)
 	} else if err != nil {
 		return errors.Wrapf(err, "failed to delete cluster installation %s", clusterInstallation.ID)
 	}
@@ -865,7 +889,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 		secretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
 		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
 		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
+			logger.Warnf("Secret %s/%s not found, assuming already deleted", clusterInstallation.Namespace, secretName)
 		} else if err != nil {
 			return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secretName)
 		}
@@ -873,7 +897,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 
 	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(clusterInstallation.Namespace, &metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
-		logger.Infof("Namespace %s not found, assuming already deleted.", clusterInstallation.Namespace)
+		logger.Warnf("Namespace %s not found, assuming already deleted", clusterInstallation.Namespace)
 	} else if err != nil {
 		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
 	}

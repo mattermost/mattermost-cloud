@@ -790,6 +790,8 @@ func TestDeleteInstallation(t *testing.T) {
 		validDeletingStates := []string{
 			model.InstallationStateStable,
 			model.InstallationStateCreationRequested,
+			model.InstallationStateCreationPreProvisioning,
+			model.InstallationStateCreationInProgress,
 			model.InstallationStateCreationDNS,
 			model.InstallationStateCreationNoCompatibleClusters,
 			model.InstallationStateCreationFailed,
@@ -798,6 +800,7 @@ func TestDeleteInstallation(t *testing.T) {
 			model.InstallationStateUpgradeFailed,
 			model.InstallationStateDeletionRequested,
 			model.InstallationStateDeletionInProgress,
+			model.InstallationStateDeletionFinalCleanup,
 			model.InstallationStateDeletionFailed,
 		}
 

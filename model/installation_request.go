@@ -13,12 +13,62 @@ import (
 
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
-	OwnerID  string
-	Version  string
-	DNS      string
-	License  string
-	Size     string
-	Affinity string
+	OwnerID   string
+	Version   string
+	DNS       string
+	License   string
+	Size      string
+	Affinity  string
+	Database  string
+	Filestore string
+}
+
+// SetDefaults sets the default values for an installation create request.
+func (request *CreateInstallationRequest) SetDefaults() {
+	if request.Version == "" {
+		request.Version = "stable"
+	}
+	if request.Size == "" {
+		request.Size = InstallationDefaultSize
+	}
+	if request.Affinity == "" {
+		request.Affinity = InstallationAffinityIsolated
+	}
+	if request.Database == "" {
+		request.Database = InstallationDatabaseMysqlOperator
+	}
+	if request.Filestore == "" {
+		request.Filestore = InstallationFilestoreMinioOperator
+	}
+}
+
+// Validate validates the values of an installation create request.
+func (request *CreateInstallationRequest) Validate() error {
+	if request.OwnerID == "" {
+		return errors.New("must specify owner")
+	}
+	if request.DNS == "" {
+		return errors.New("must specify DNS")
+	}
+	_, err := mmv1alpha1.GetClusterSize(request.Size)
+	if err != nil {
+		return errors.Wrap(err, "invalid size")
+	}
+	_, err = url.Parse(request.DNS)
+	if err != nil {
+		return errors.Wrapf(err, "invalid DNS %s", request.DNS)
+	}
+	if !IsSupportedAffinity(request.Affinity) {
+		return errors.Errorf("unsupported affinity %s", request.Affinity)
+	}
+	if !IsSupportedDatabase(request.Database) {
+		return errors.Errorf("unsupported database %s", request.Database)
+	}
+	if !IsSupportedFilestore(request.Filestore) {
+		return errors.Errorf("unsupported filestore %s", request.Filestore)
+	}
+
+	return nil
 }
 
 // NewCreateInstallationRequestFromReader will create a CreateInstallationRequest from an io.Reader with JSON data.
@@ -29,31 +79,10 @@ func NewCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 		return nil, errors.Wrap(err, "failed to decode create installation request")
 	}
 
-	if createInstallationRequest.Version == "" {
-		createInstallationRequest.Version = "stable"
-	}
-	if createInstallationRequest.Size == "" {
-		createInstallationRequest.Size = InstallationDefaultSize
-	}
-	if createInstallationRequest.Affinity == "" {
-		createInstallationRequest.Affinity = "isolated"
-	}
-
-	_, err = mmv1alpha1.GetClusterSize(createInstallationRequest.Size)
+	createInstallationRequest.SetDefaults()
+	err = createInstallationRequest.Validate()
 	if err != nil {
-		return nil, errors.New("invalid size")
-	}
-	if createInstallationRequest.OwnerID == "" {
-		return nil, errors.New("must specify owner")
-	}
-	if createInstallationRequest.DNS == "" {
-		return nil, errors.New("must specify DNS")
-	}
-	if _, err := url.Parse(createInstallationRequest.DNS); err != nil {
-		return nil, errors.Wrap(err, "invalid DNS")
-	}
-	if !IsSupportedAffinity(createInstallationRequest.Affinity) {
-		return nil, errors.Errorf("unsupported affinity %s", createInstallationRequest.Affinity)
+		return nil, errors.Wrap(err, "create installation request failed validation")
 	}
 
 	return &createInstallationRequest, nil
