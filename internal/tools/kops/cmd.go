@@ -3,6 +3,7 @@ package kops
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 
 	"github.com/pkg/errors"
@@ -10,9 +11,8 @@ import (
 )
 
 const (
-	defaultKopsPath = "/usr/local/bin/kops"
-	outputDirName   = "output"
-	kubeConfigName  = "kubeconfig"
+	outputDirName  = "output"
+	kubeConfigName = "kubeconfig"
 )
 
 // Cmd is the kops command to execute.
@@ -30,8 +30,13 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 		return nil, errors.Wrap(err, "failed to create temporary kops directory")
 	}
 
+	kopsPath, err := exec.LookPath("kops")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find kops installed on your PATH")
+	}
+
 	return &Cmd{
-		kopsPath:     defaultKopsPath,
+		kopsPath:     kopsPath,
 		s3StateStore: s3StateStore,
 		tempDir:      tempDir,
 		logger:       logger,
