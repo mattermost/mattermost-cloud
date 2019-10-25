@@ -4,30 +4,141 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (a *Client) rdsEnsureDBClusterCreated(awsID string, logger log.FieldLogger) error {
-	svc := rds.New(session.New())
+func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, logger log.FieldLogger) error {
+	svc := rds.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	_, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
+	if err == nil {
+		return nil
+	}
+
 	input := &rds.CreateDBClusterInput{
 		AvailabilityZones: []*string{
 			aws.String("us-east-1a"),
+			aws.String("us-east-1b"),
+			aws.String("us-east-1c"),
 		},
-		BackupRetentionPeriod:       aws.Int64(1),
-		DBClusterIdentifier:         aws.String("mydbcluster"),
-		DBClusterParameterGroupName: aws.String("mydbclusterparametergroup"),
-		DatabaseName:                aws.String("myauroradb"),
-		Engine:                      aws.String("aurora"),
-		EngineVersion:               aws.String("5.6.10a"),
-		MasterUserPassword:          aws.String("mypassword"),
-		MasterUsername:              aws.String("myuser"),
-		Port:                        aws.Int64(3306),
-		StorageEncrypted:            aws.Bool(true),
+		BackupRetentionPeriod: aws.Int64(7),
+		DBClusterIdentifier:   aws.String(awsID),
+		DatabaseName:          aws.String("mattermost"),
+		EngineMode:            aws.String("provisioned"),
+		Engine:                aws.String("aurora-mysql"),
+		EngineVersion:         aws.String("5.7"),
+		MasterUserPassword:    aws.String(password),
+		MasterUsername:        aws.String(username),
+		Port:                  aws.Int64(3306),
+		StorageEncrypted:      aws.Bool(false),
+		DBSubnetGroupName:     aws.String("mattermost-databases"),
+		VpcSecurityGroupIds:   aws.StringSlice([]string{"sg-06bf391afdc6c4d5e"}),
 	}
 
-	fmt.Println(svc.AddDebugHandlers() + input)
+	_, err = svc.CreateDBCluster(input)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {
+	svc := rds.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	_, err := svc.DescribeDBInstances(&rds.DescribeDBInstancesInput{
+		DBInstanceIdentifier: aws.String(instanceName),
+	})
+	if err == nil {
+		return nil
+	}
+
+	_, err = svc.CreateDBInstance(&rds.CreateDBInstanceInput{
+		DBClusterIdentifier:  aws.String(awsID),
+		DBInstanceIdentifier: aws.String(instanceName),
+		DBInstanceClass:      aws.String("db.r5.large"),
+		Engine:               aws.String("aurora-mysql"),
+		PubliclyAccessible:   aws.Bool(false),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func rdsGetDBCluster(awsID string, logger log.FieldLogger) (*rds.DBCluster, error) {
+	svc := rds.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	result, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result.DBClusters) != 1 {
+		return nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
+	}
+
+	return result.DBClusters[0], nil
+}
+
+func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger) error {
+	svc := rds.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	result, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == rds.ErrCodeDBClusterNotFoundFault {
+				logger.WithField("db-cluster-name", awsID).Warn("DBCluster could not be found; assuming already deleted")
+
+				return nil
+			}
+		}
+		return err
+	}
+
+	if len(result.DBClusters) != 1 {
+		return fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
+	}
+
+	for _, instance := range result.DBClusters[0].DBClusterMembers {
+		_, err = svc.DeleteDBInstance(&rds.DeleteDBInstanceInput{
+			DBInstanceIdentifier: instance.DBInstanceIdentifier,
+			SkipFinalSnapshot:    aws.Bool(true),
+		})
+		if err != nil {
+			return err
+		}
+		logger.WithField("db-instance-name", *instance.DBInstanceIdentifier).Debug("DB instance deleted")
+	}
+
+	_, err = svc.DeleteDBCluster(&rds.DeleteDBClusterInput{
+		DBClusterIdentifier: aws.String(awsID),
+		SkipFinalSnapshot:   aws.Bool(true),
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to delete database")
+	}
+
+	logger.WithField("db-cluster-name", awsID).Debug("DBCluster deleted")
 
 	return nil
 }

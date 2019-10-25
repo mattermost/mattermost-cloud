@@ -171,9 +171,15 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 }
 
 func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := installation.GetFilestore().Provision(logger)
+	err := installation.GetDatabase().Provision(logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to provision AWS S3 filestore")
+		logger.WithError(err).Error("Failed to provision installation database")
+		return model.InstallationStateCreationPreProvisioning
+	}
+
+	err = installation.GetFilestore().Provision(logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision installation filestore")
 		return model.InstallationStateCreationPreProvisioning
 	}
 
@@ -311,13 +317,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 
 	cpuPercent := clusterResources.CalculateCPUPercentUsed(
 		size.CalculateCPUMilliRequirement(
-			true,
+			installation.InternalDatabase(),
 			installation.InternalFilestore(),
 		),
 	)
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(
 		size.CalculateMemoryMilliRequirement(
-			true,
+			installation.InternalDatabase(),
 			installation.InternalFilestore(),
 		),
 	)

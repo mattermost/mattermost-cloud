@@ -1,18 +1,35 @@
 package aws
 
-const (
-	// S3URL is the S3 URL for making bucket API calls.
-	S3URL = "s3.amazonaws.com"
-
-	// cloudIDPrefix is the prefix value used when creating AWS resource names.
-	// Warning:
-	// changing this value will break the connection to AWS resources for
-	// existing installations.
-	cloudIDPrefix = "cloud-"
+import (
+	"math/rand"
+	"time"
 )
 
 // CloudID returns the standard ID used for AWS resource names. This ID is used
 // to correlate installations to AWS resources.
 func CloudID(id string) string {
 	return cloudIDPrefix + id
+}
+
+// IAMSecretName returns the IAM Access Key secret name for a given Cloud ID.
+func IAMSecretName(cloudID string) string {
+	return cloudID + iamSuffix
+}
+
+// RDSSecretName returns the RDS secret name for a given Cloud ID.
+func RDSSecretName(cloudID string) string {
+	return cloudID + rdsSuffix
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+
+func newRandomPassword(length int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+
+	return string(b)
 }

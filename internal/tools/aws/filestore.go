@@ -127,7 +127,9 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	return nil
 }
 
-func s3FilestoreTeardown(installationID string, keepBucket bool, logger log.FieldLogger) error {
+func s3FilestoreTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
+	logger.Info("Tearing down AWS S3 filestore")
+
 	a := New("n/a")
 	awsID := CloudID(installationID)
 
@@ -141,12 +143,14 @@ func s3FilestoreTeardown(installationID string, keepBucket bool, logger log.Fiel
 	}
 	logger.WithField("iam-user-name", awsID).Info("AWS secrets manager secret deleted")
 
-	if !keepBucket {
+	if !keepData {
 		err = a.s3EnsureBucketDeleted(awsID)
 		if err != nil {
 			return err
 		}
 		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket deleted")
+	} else {
+		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
 	}
 
 	return nil
