@@ -1,10 +1,10 @@
 package terraform
 
 import (
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"os/exec"
 )
-
-const defaultTerraformPath = "/usr/local/bin/terraform"
 
 // Cmd is the terraform command to execute.
 type Cmd struct {
@@ -14,12 +14,17 @@ type Cmd struct {
 }
 
 // New creates a new instance of Cmd through which to execute terraform.
-func New(dir string, logger log.FieldLogger) *Cmd {
+func New(dir string, logger log.FieldLogger) (*Cmd, error) {
+	terraformPath, err := exec.LookPath("terraform")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find terraform installed on your PATH")
+	}
+
 	return &Cmd{
-		terraformPath: defaultTerraformPath,
+		terraformPath: terraformPath,
 		dir:           dir,
 		logger:        logger,
-	}
+	}, nil
 }
 
 // Close is a no-op.
