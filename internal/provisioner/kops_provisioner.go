@@ -143,7 +143,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s'", outputDir))
 	}
 
-	terraformClient := terraform.New(outputDir, logger)
+	terraformClient, err := terraform.New(outputDir, logger)
+	if err != nil {
+		return err
+	}
+
 	defer terraformClient.Close()
 
 	err = terraformClient.Init()
@@ -434,7 +438,10 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
 
-	terraformClient := terraform.New(outputDir, logger)
+	terraformClient, err := terraform.New(outputDir, logger)
+	if err != nil {
+		return err
+	}
 	defer terraformClient.Close()
 
 	err = terraformClient.Init()
@@ -521,7 +528,11 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aw
 		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
 	}
 
-	terraformClient := terraform.New(outputDir, logger)
+	terraformClient, err := terraform.New(outputDir, logger)
+	if err != nil {
+		return err
+	}
+
 	defer terraformClient.Close()
 
 	err = terraformClient.Init()
