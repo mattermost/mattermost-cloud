@@ -64,8 +64,6 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 		rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbCluster.Endpoint,
 	)
 
-	logger.Warn(databaseConnectionString)
-
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
