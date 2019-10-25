@@ -104,30 +104,32 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	logger.WithFields(log.Fields{
 		"iam-policy-name": *policy.PolicyName,
 		"iam-user-name":   *user.UserName,
-	}).Info("AWS IAM policy attached to user")
+	}).Debug("AWS IAM policy attached to user")
 
 	err = a.s3EnsureBucketCreated(awsID)
 	if err != nil {
 		return err
 	}
-	logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket created")
+	logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket created")
 
 	ak, err := a.iamEnsureAccessKeyCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
-	logger.WithField("iam-user-name", *user.UserName).Info("AWS IAM user access key created")
+	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
 
 	err = a.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
 	if err != nil {
 		return err
 	}
-	logger.WithField("iam-user-name", *user.UserName).Info("AWS secrets manager secret created")
+	logger.WithField("iam-user-name", *user.UserName).Debug("AWS secrets manager secret created")
 
 	return nil
 }
 
-func s3FilestoreTeardown(installationID string, keepBucket bool, logger log.FieldLogger) error {
+func s3FilestoreTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
+	logger.Info("Tearing down AWS S3 filestore")
+
 	a := New("n/a")
 	awsID := CloudID(installationID)
 
@@ -139,14 +141,15 @@ func s3FilestoreTeardown(installationID string, keepBucket bool, logger log.Fiel
 	if err != nil {
 		return err
 	}
-	logger.WithField("iam-user-name", awsID).Info("AWS secrets manager secret deleted")
 
-	if !keepBucket {
+	if !keepData {
 		err = a.s3EnsureBucketDeleted(awsID)
 		if err != nil {
 			return err
 		}
-		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket deleted")
+		logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket deleted")
+	} else {
+		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
 	}
 
 	return nil

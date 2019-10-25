@@ -820,6 +820,19 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		logger.Debug("Cluster installation configured with a Mattermost license")
 	}
 
+	databaseSpec, databaseSecret, err := installation.GetDatabase().GenerateDatabaseSpecAndSecret(logger)
+	if err != nil {
+		return err
+	}
+
+	if databaseSpec != nil {
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, databaseSecret)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create the database secret %s/%s", clusterInstallation.Namespace, databaseSecret.Name)
+		}
+		mattermostInstallation.Spec.Database = *databaseSpec
+	}
+
 	filestoreSpec, filestoreSecret, err := installation.GetFilestore().GenerateFilestoreSpecAndSecret(logger)
 	if err != nil {
 		return err

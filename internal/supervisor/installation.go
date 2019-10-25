@@ -54,18 +54,20 @@ type InstallationSupervisor struct {
 	aws                      aws.AWS
 	instanceID               string
 	clusterResourceThreshold int
+	keepDatabaseData         bool
 	keepFilestoreData        bool
 	logger                   log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepFilestoreData bool, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:                    store,
 		provisioner:              installationProvisioner,
 		aws:                      aws,
 		instanceID:               instanceID,
 		clusterResourceThreshold: threshold,
+		keepDatabaseData:         keepDatabaseData,
 		keepFilestoreData:        keepFilestoreData,
 		logger:                   logger,
 	}
@@ -169,9 +171,15 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 }
 
 func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := installation.GetFilestore().Provision(logger)
+	err := installation.GetDatabase().Provision(logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to provision AWS S3 filestore")
+		logger.WithError(err).Error("Failed to provision installation database")
+		return model.InstallationStateCreationPreProvisioning
+	}
+
+	err = installation.GetFilestore().Provision(logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision installation filestore")
 		return model.InstallationStateCreationPreProvisioning
 	}
 
@@ -309,13 +317,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 
 	cpuPercent := clusterResources.CalculateCPUPercentUsed(
 		size.CalculateCPUMilliRequirement(
-			true,
+			installation.InternalDatabase(),
 			installation.InternalFilestore(),
 		),
 	)
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(
 		size.CalculateMemoryMilliRequirement(
-			true,
+			installation.InternalDatabase(),
 			installation.InternalFilestore(),
 		),
 	)
@@ -615,9 +623,15 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
+	err = installation.GetDatabase().Teardown(s.keepDatabaseData, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete database")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+
 	err = installation.GetFilestore().Teardown(s.keepFilestoreData, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to delete installation AWS S3 filestore")
+		logger.WithError(err).Error("Failed to delete filestore")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
