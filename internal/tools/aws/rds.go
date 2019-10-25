@@ -6,10 +6,44 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
+
+func (a *Client) rdsGetDBSecurityGroupIDs(logger log.FieldLogger) ([]string, error) {
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	input := &ec2.DescribeSecurityGroupsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String(DefaultDBSecurityGroupTagKey),
+				Values: []*string{
+					aws.String(DefaultDBSecurityGroupTagValue),
+				},
+			},
+		},
+	}
+
+	result, err := svc.DescribeSecurityGroups(input)
+	if err != nil {
+		return []string{}, err
+	}
+
+	var dbSecurityGroups []string
+	for _, sg := range result.SecurityGroups {
+		dbSecurityGroups = append(dbSecurityGroups, *sg.GroupId)
+	}
+
+	if len(dbSecurityGroups) == 0 {
+		return []string{}, fmt.Errorf("unable to find security groups tagged for Mattermost DB usage: %s=%s", DefaultDBSecurityGroupTagKey, DefaultDBSecurityGroupTagValue)
+	}
+
+	return dbSecurityGroups, nil
+}
 
 func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, logger log.FieldLogger) error {
 	svc := rds.New(session.New(), &aws.Config{
@@ -21,6 +55,11 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, log
 	})
 	if err == nil {
 		return nil
+	}
+
+	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(logger)
+	if err != nil {
+		return err
 	}
 
 	input := &rds.CreateDBClusterInput{
@@ -39,8 +78,8 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, log
 		MasterUsername:        aws.String(username),
 		Port:                  aws.Int64(3306),
 		StorageEncrypted:      aws.Bool(false),
-		DBSubnetGroupName:     aws.String("mattermost-databases"),
-		VpcSecurityGroupIds:   aws.StringSlice([]string{"sg-06bf391afdc6c4d5e"}),
+		DBSubnetGroupName:     aws.String(DefaultDBSubnetGroupName),
+		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 	}
 
 	_, err = svc.CreateDBCluster(input)

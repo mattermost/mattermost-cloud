@@ -21,8 +21,6 @@ type Client struct {
 	api          api
 }
 
-var _ AWS = &Client{}
-
 // api mocks out the AWS API calls for testing.
 type api interface {
 	getRoute53Client() (*route53.Route53, error)

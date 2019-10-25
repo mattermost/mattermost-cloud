@@ -134,8 +134,9 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string) (*RDSSecret,
 func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	svc := secretsmanager.New(session.New())
 
+	secretName := IAMSecretName(awsID)
 	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(awsID),
+		SecretId: aws.String(secretName),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get secrets manager secret")
