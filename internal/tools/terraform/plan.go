@@ -24,6 +24,19 @@ func (c *Cmd) Init() error {
 	return nil
 }
 
+// Plan invokes terraform Plan.
+func (c *Cmd) Plan() error {
+	_, _, err := c.run(
+		"plan",
+		arg("input", "false"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke terraform plan")
+	}
+
+	return nil
+}
+
 // Apply invokes terraform apply.
 func (c *Cmd) Apply() error {
 	_, _, err := c.run(

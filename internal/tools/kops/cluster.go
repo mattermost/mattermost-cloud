@@ -57,6 +57,8 @@ func (c *Cmd) RollingUpdateCluster(name string) error {
 		"cluster",
 		arg("name", name),
 		arg("state", "s3://", c.s3StateStore),
+		arg("master-interval", "10m"),
+		arg("node-interval", "5m"),
 		"--yes",
 	)
 	if err != nil {
@@ -67,7 +69,7 @@ func (c *Cmd) RollingUpdateCluster(name string) error {
 }
 
 // UpdateCluster invokes kops update cluster, using the context of the created Cmd.
-func (c *Cmd) UpdateCluster(name string) error {
+func (c *Cmd) UpdateCluster(name, dir string) error {
 	_, _, err := c.run(
 		"update",
 		"cluster",
@@ -75,7 +77,7 @@ func (c *Cmd) UpdateCluster(name string) error {
 		arg("state", "s3://", c.s3StateStore),
 		"--yes",
 		arg("target", "terraform"),
-		arg("out", c.GetOutputDirectory()),
+		arg("out", dir),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops update cluster")
