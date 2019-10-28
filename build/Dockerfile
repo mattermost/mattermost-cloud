@@ -5,7 +5,7 @@ ARG DOCKER_BASE_IMAGE=alpine:3.9
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /mattermost-cloud/
 COPY . /mattermost-cloud/
-RUN apt update && apt install -y unzip
+RUN apt-get update -yq && apt-get install -yq unzip
 RUN make get-terraform get-kops get-helm get-kubectl
 RUN make build
 
