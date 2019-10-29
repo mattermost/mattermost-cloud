@@ -1,9 +1,10 @@
 package terraform
 
 import (
+	"os/exec"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"os/exec"
 )
 
 // Cmd is the terraform command to execute.
@@ -25,6 +26,11 @@ func New(dir string, logger log.FieldLogger) (*Cmd, error) {
 		dir:           dir,
 		logger:        logger,
 	}, nil
+}
+
+// GetWorkingDirectory returns the working directory used by terraform.
+func (c *Cmd) GetWorkingDirectory() string {
+	return c.dir
 }
 
 // Close is a no-op.

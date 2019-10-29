@@ -1,24 +1,18 @@
 package provisioner
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 	"syscall"
 	"time"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/kubectl/scheme"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -165,7 +159,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 
-	err = kops.UpdateCluster(kopsMetadata.Name)
+	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
 	}
@@ -176,7 +170,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	}
 
 	// TODO: Rework this as we make the API calls asynchronous.
-	wait := 600
+	wait := 1000
 	logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
 	err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
 	if err != nil {
@@ -452,7 +446,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	if err != nil {
 		return err
 	} else if !ok {
-		logger.Info("No cluster_name in terraform config, assuming partially initialized")
+		logger.Warn("No cluster_name in terraform config, assuming partially initialized")
 	} else if out != kopsMetadata.Name {
 		return fmt.Errorf("terraform cluster_name (%s) does not match kops name from provided ID (%s)", out, kopsMetadata.Name)
 	}
@@ -473,11 +467,15 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	if err != nil {
 		return err
 	}
-	err = kops.UpdateCluster(kopsMetadata.Name)
+	err = kops.UpdateCluster(kopsMetadata.Name, terraformClient.GetWorkingDirectory())
 	if err != nil {
 		return err
 	}
 
+	err = terraformClient.Plan()
+	if err != nil {
+		return err
+	}
 	err = terraformClient.Apply()
 	if err != nil {
 		return err
@@ -489,7 +487,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 
 	// TODO: Rework this as we make the API calls asynchronous.
-	wait := 600
+	wait := 1000
 	if wait > 0 {
 		logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
 		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
@@ -606,537 +604,6 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aw
 	return nil
 }
 
-func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation) string {
-	// TODO: Once https://mattermost.atlassian.net/browse/MM-15467 is fixed, we can use the
-	// full namespace as part of the name. For now, truncate to keep within the existing limit
-	// of 60 characters.
-	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
-}
-
-// waitForNamespacesDeleted is used to check when all of the provided namespaces
-// have been fully terminated.
-func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClient *k8s.KubeClient) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "timed out waiting for namespaces to become fully terminated")
-		default:
-			var shouldWait bool
-			for _, namespace := range namespaces {
-				_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
-				if err != nil && k8sErrors.IsNotFound(err) {
-					continue
-				}
-
-				shouldWait = true
-				break
-			}
-
-			if !shouldWait {
-				return nil
-			}
-
-			time.Sleep(5 * time.Second)
-		}
-	}
-}
-
-// waitForHelmRunning is used to check when Helm is ready to install charts.
-func waitForHelmRunning(ctx context.Context, configPath string) error {
-	for {
-		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
-		var out bytes.Buffer
-		cmd.Stderr = &out
-		cmd.Run()
-		if out.String() == "" {
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
-		case <-time.After(5 * time.Second):
-		}
-	}
-}
-
-// getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
-func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
-	k8sClient, err := k8s.New(configPath, logger)
-	if err != nil {
-		return "", err
-	}
-	for {
-		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return "", err
-		}
-		for _, service := range services.Items {
-			if service.Status.LoadBalancer.Ingress != nil {
-				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-				if endpoint == "" {
-					return "", errors.New("loadbalancer endpoint value is empty")
-				}
-
-				return endpoint, nil
-			}
-		}
-
-		select {
-		case <-ctx.Done():
-			return "", errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
-		case <-time.After(5 * time.Second):
-		}
-	}
-}
-
-// installHelmChart is used to install Helm charts.
-func installHelmChart(chart helmDeployment, configPath string) error {
-	if chart.setArgument != "" {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
-		if err != nil {
-			return err
-		}
-	} else {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// helmSetup is used for the initial setup of Helm in cluster.
-func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
-	}
-
-	logger.Info("Initializing Helm in the cluster")
-	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
-	if err != nil {
-		return err
-	}
-
-	logger.Info("Creating Tiller service account")
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
-	}
-	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(serviceAccount)
-	if err != nil {
-		return err
-	}
-	logger.Info("Successfully created Tiller service account")
-
-	logger.Info("Creating Tiller cluster role bind")
-	roleBinding := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
-		Subjects: []rbacv1.Subject{
-			{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
-		},
-		RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
-	}
-
-	_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(roleBinding)
-	if err != nil {
-		return err
-	}
-	logger.Info("Successfully created cluster role bind")
-
-	logger.Info("Upgrade Helm")
-	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-	logger.Info("Creating cluster installation")
-
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
-	}
-
-	_, err = k8sClient.CreateNamespaceIfDoesNotExist(clusterInstallation.Namespace)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
-	}
-
-	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterInstallation",
-			APIVersion: "mattermost.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      makeClusterInstallationName(clusterInstallation),
-			Namespace: clusterInstallation.Namespace,
-			Labels: map[string]string{
-				"installation":         installation.ID,
-				"cluster-installation": clusterInstallation.ID,
-			},
-		},
-		Spec: mmv1alpha1.ClusterInstallationSpec{
-			Size:                   installation.Size,
-			Version:                translateMattermostVersion(installation.Version),
-			IngressName:            installation.DNS,
-			UseServiceLoadBalancer: true,
-			ServiceAnnotations: map[string]string{
-				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":        "tcp",
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                provisioner.certificateSslARN,
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":               "https",
-				"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout": "120",
-			},
-		},
-	}
-
-	if installation.License != "" {
-		licenseSecretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
-		licenseSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: licenseSecretName,
-			},
-			StringData: map[string]string{"license": installation.License},
-		}
-
-		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, licenseSecret)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create the license secret %s/%s", clusterInstallation.Namespace, licenseSecretName)
-		}
-
-		mattermostInstallation.Spec.MattermostLicenseSecret = licenseSecretName
-		logger.Debug("Cluster installation configured with a Mattermost license")
-	}
-
-	databaseSpec, databaseSecret, err := installation.GetDatabase().GenerateDatabaseSpecAndSecret(logger)
-	if err != nil {
-		return err
-	}
-
-	if databaseSpec != nil {
-		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, databaseSecret)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create the database secret %s/%s", clusterInstallation.Namespace, databaseSecret.Name)
-		}
-		mattermostInstallation.Spec.Database = *databaseSpec
-	}
-
-	filestoreSpec, filestoreSecret, err := installation.GetFilestore().GenerateFilestoreSpecAndSecret(logger)
-	if err != nil {
-		return err
-	}
-
-	if filestoreSecret != nil {
-		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, filestoreSecret)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create the filestore secret %s/%s", clusterInstallation.Namespace, filestoreSecret.Name)
-		}
-		mattermostInstallation.Spec.Minio = *filestoreSpec
-	}
-
-	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(mattermostInstallation)
-	if err != nil {
-		return errors.Wrap(err, "failed to create cluster installation")
-	}
-
-	logger.Info("Successfully created cluster installation")
-
-	return nil
-}
-
-// DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
-func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	if kopsMetadata.Name == "" {
-		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
-		return nil
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
-	}
-
-	name := makeClusterInstallationName(clusterInstallation)
-
-	err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(name, nil)
-	if k8sErrors.IsNotFound(err) {
-		logger.Warnf("Cluster installation %s not found, assuming already deleted", name)
-	} else if err != nil {
-		return errors.Wrapf(err, "failed to delete cluster installation %s", clusterInstallation.ID)
-	}
-
-	if installation.License != "" {
-		secretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
-		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
-		if k8sErrors.IsNotFound(err) {
-			logger.Warnf("Secret %s/%s not found, assuming already deleted", clusterInstallation.Namespace, secretName)
-		} else if err != nil {
-			return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secretName)
-		}
-	}
-
-	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(clusterInstallation.Namespace, &metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Warnf("Namespace %s not found, assuming already deleted", clusterInstallation.Namespace)
-	} else if err != nil {
-		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
-	}
-
-	logger.Info("Successfully deleted cluster installation")
-
-	return nil
-}
-
-// UpdateClusterInstallation updates the cluster installation spec to match the
-// installation specification.
-func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	if kopsMetadata.Name == "" {
-		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
-		return nil
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
-	}
-
-	name := makeClusterInstallationName(clusterInstallation)
-
-	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
-	}
-
-	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
-
-	version := translateMattermostVersion(installation.Version)
-	if cr.Spec.Version == version {
-		logger.Infof("Cluster installation already on version %s", version)
-	}
-	cr.Spec.Version = version
-
-	cr.Spec.MattermostLicenseSecret = ""
-	secretName := fmt.Sprintf("%s-license", name)
-	if installation.License != "" {
-		secretSpec := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: clusterInstallation.Namespace,
-			},
-			StringData: map[string]string{
-				"license": installation.License,
-			},
-		}
-		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, secretSpec)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create the license secret %s/%s", clusterInstallation.Namespace, secretName)
-		}
-		cr.Spec.MattermostLicenseSecret = secretName
-	} else {
-		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
-		}
-	}
-
-	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
-	}
-
-	logger.Infof("Updated cluster installation version to %s", installation.Version)
-
-	return nil
-}
-
-// GetClusterInstallationResource gets the cluster installation resource from
-// the kubernetes API.
-func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	if kopsMetadata.Name == "" {
-		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
-		return nil, nil
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return nil, err
-	}
-
-	name := makeClusterInstallationName(clusterInstallation)
-
-	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return cr, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
-	}
-
-	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
-
-	return cr, nil
-}
-
-// ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
-func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	return provisioner.execCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
-}
-
-func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to construct k8s client")
-	}
-
-	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(metav1.ListOptions{
-		LabelSelector: "app=mattermost",
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query mattermost pods")
-	}
-
-	// In the future, we'd ideally just spin our own container on demand, allowing
-	// configuration changes even if the pods are failing to start the server. For now,
-	// we find the first pod running Mattermost, and pick the first container therein.
-
-	if len(podList.Items) == 0 {
-		return nil, errors.New("failed to find mattermost pods on which to exec")
-	}
-
-	pod := podList.Items[0]
-	if len(pod.Spec.Containers) == 0 {
-		return nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
-	}
-
-	container := pod.Spec.Containers[0]
-	logger.Debugf("Executing `%s` on pod %s, container %s, running image %s", strings.Join(args, " "), pod.Name, container.Name, container.Image)
-
-	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Name(pod.Name).
-		Namespace(clusterInstallation.Namespace).
-		SubResource("exec").
-		VersionedParams(&corev1.PodExecOptions{
-			Container: container.Name,
-			Command:   args,
-			Stdin:     false,
-			Stdout:    true,
-			Stderr:    true,
-			TTY:       false,
-		}, scheme.ParameterCodec)
-
-	now := time.Now()
-	output, err := k8sClient.RemoteCommand("POST", execRequest.URL())
-
-	logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
-
-	return output, err
-}
-
 // GetClusterResources returns a snapshot of resources of a given cluster.
 func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
 	logger := provisioner.logger.WithFields(map[string]interface{}{
@@ -1209,15 +676,4 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 		MilliTotalMemory: totalMemory,
 		MilliUsedMemory:  usedMemory,
 	}, nil
-}
-
-// Override the version to make match the nil value in the custom resource.
-// TODO: this could probably be better. We may want the operator to understand
-// default values instead of needing to pass in empty values.
-func translateMattermostVersion(version string) string {
-	if version == "stable" {
-		return ""
-	}
-
-	return version
 }
