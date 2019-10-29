@@ -44,6 +44,7 @@ func init() {
 	clusterCmd.AddCommand(clusterGetCmd)
 	clusterCmd.AddCommand(clusterListCmd)
 	clusterCmd.AddCommand(clusterInstallationCmd)
+	clusterCmd.AddCommand(clusterShowStateReport)
 }
 
 var clusterCmd = &cobra.Command{
@@ -200,6 +201,24 @@ var clusterListCmd = &cobra.Command{
 		}
 
 		err = printJSON(clusters)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// TODO:
+// Instead of showing the state data from the model of the CLI binary, add a new
+// API endpoint to return the server's state model.
+var clusterShowStateReport = &cobra.Command{
+	Use:   "state-report",
+	Short: "Shows information regarding changing cluster state.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		err := printJSON(model.GetClusterRequestStateReport())
 		if err != nil {
 			return err
 		}

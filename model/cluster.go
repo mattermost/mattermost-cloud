@@ -7,30 +7,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	// ClusterStateCreationRequested is a cluster in the process of being created.
-	ClusterStateCreationRequested = "creation-requested"
-	// ClusterStateCreationFailed is a cluster that failed creation.
-	ClusterStateCreationFailed = "creation-failed"
-	// ClusterStateProvisioningRequested is a cluster in the process of being
-	// provisioned with operators.
-	ClusterStateProvisioningRequested = "provisioning-requested"
-	// ClusterStateProvisioningFailed is a cluster that failed provisioning.
-	ClusterStateProvisioningFailed = "provisioning-failed"
-	// ClusterStateDeletionRequested is a cluster in the process of being deleted.
-	ClusterStateDeletionRequested = "deletion-requested"
-	// ClusterStateDeletionFailed is a cluster that failed deletion.
-	ClusterStateDeletionFailed = "deletion-failed"
-	// ClusterStateDeleted is a cluster that has been deleted
-	ClusterStateDeleted = "deleted"
-	// ClusterStateUpgradeRequested is a cluster in the process of upgrading.
-	ClusterStateUpgradeRequested = "upgrade-requested"
-	// ClusterStateUpgradeFailed is a cluster that failed to upgrade.
-	ClusterStateUpgradeFailed = "upgrade-failed"
-	// ClusterStateStable is a cluster in a stable state and undergoing no changes.
-	ClusterStateStable = "stable"
-)
-
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
 	ID                  string

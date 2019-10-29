@@ -42,6 +42,7 @@ func init() {
 	installationCmd.AddCommand(installationDeleteCmd)
 	installationCmd.AddCommand(installationGetCmd)
 	installationCmd.AddCommand(installationListCmd)
+	installationCmd.AddCommand(installationShowStateReport)
 }
 
 var installationCmd = &cobra.Command{
@@ -188,6 +189,24 @@ var installationListCmd = &cobra.Command{
 		}
 
 		err = printJSON(installations)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+// TODO:
+// Instead of showing the state data from the model of the CLI binary, add a new
+// API endpoint to return the server's state model.
+var installationShowStateReport = &cobra.Command{
+	Use:   "state-report",
+	Short: "Shows information regarding changing installation state.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		err := printJSON(model.GetInstallationRequestStateReport())
 		if err != nil {
 			return err
 		}

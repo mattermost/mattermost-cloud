@@ -126,24 +126,23 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	}
 	defer unlockOnce()
 
-	switch installation.State {
-	case model.InstallationStateCreationRequested:
-	case model.InstallationStateCreationFailed:
-	default:
+	newState := model.InstallationStateCreationRequested
+
+	if !installation.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to retry installation creation while in state %s", installation.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.State != model.InstallationStateCreationRequested {
+	if installation.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
-			NewState:  model.InstallationStateCreationRequested,
+			NewState:  newState,
 			OldState:  installation.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		installation.State = model.InstallationStateCreationRequested
+		installation.State = newState
 
 		err := c.Store.UpdateInstallation(installation)
 		if err != nil {
@@ -209,28 +208,25 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	}
 	defer unlockOnce()
 
-	switch installation.State {
-	case model.InstallationStateStable:
-	case model.InstallationStateUpgradeRequested:
-	case model.InstallationStateUpgradeInProgress:
-	case model.InstallationStateUpgradeFailed:
-	default:
+	newState := model.InstallationStateUpgradeRequested
+
+	if !installation.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to upgrade installation while in state %s", installation.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.State != model.InstallationStateUpgradeRequested ||
+	if installation.State != newState ||
 		installation.Version != upgradeInstallationRequest.Version ||
 		installation.License != upgradeInstallationRequest.License {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
-			NewState:  model.InstallationStateUpgradeRequested,
+			NewState:  newState,
 			OldState:  installation.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		installation.State = model.InstallationStateUpgradeRequested
+		installation.State = newState
 		installation.Version = upgradeInstallationRequest.Version
 		installation.License = upgradeInstallationRequest.License
 
@@ -341,36 +337,23 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	defer unlockOnce()
 
-	switch installation.State {
-	case model.InstallationStateStable:
-	case model.InstallationStateCreationRequested:
-	case model.InstallationStateCreationPreProvisioning:
-	case model.InstallationStateCreationInProgress:
-	case model.InstallationStateCreationDNS:
-	case model.InstallationStateCreationNoCompatibleClusters:
-	case model.InstallationStateCreationFailed:
-	case model.InstallationStateUpgradeRequested:
-	case model.InstallationStateUpgradeInProgress:
-	case model.InstallationStateUpgradeFailed:
-	case model.InstallationStateDeletionRequested:
-	case model.InstallationStateDeletionInProgress:
-	case model.InstallationStateDeletionFinalCleanup:
-	case model.InstallationStateDeletionFailed:
-	default:
+	newState := model.InstallationStateDeletionRequested
+
+	if !installation.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to delete installation while in state %s", installation.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.State != model.InstallationStateDeletionRequested {
+	if installation.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
-			NewState:  model.InstallationStateDeletionRequested,
+			NewState:  newState,
 			OldState:  installation.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		installation.State = model.InstallationStateDeletionRequested
+		installation.State = newState
 
 		err := c.Store.UpdateInstallation(installation)
 		if err != nil {
