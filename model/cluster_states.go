@@ -40,12 +40,12 @@ var AllClusterStates = []string{
 	ClusterStateDeleted,
 }
 
-// AllCusterStatesPendingWork is a list of all cluster states that the supervisor
+// AllClusterStatesPendingWork is a list of all cluster states that the supervisor
 // will attempt to transition towards stable on the next "tick".
 // Warning:
 // When creating a new cluster state, it must be added to this list if the cloud
 // cluster supervisor should perform some action on its next work cycle.
-var AllCusterStatesPendingWork = []string{
+var AllClusterStatesPendingWork = []string{
 	ClusterStateCreationRequested,
 	ClusterStateProvisioningRequested,
 	ClusterStateUpgradeRequested,

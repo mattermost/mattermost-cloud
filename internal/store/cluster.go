@@ -37,7 +37,7 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 func (sqlStore *SQLStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, error) {
 	builder := clusterSelect.
 		Where(sq.Eq{
-			"State": model.AllCusterStatesPendingWork,
+			"State": model.AllClusterStatesPendingWork,
 		}).
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
