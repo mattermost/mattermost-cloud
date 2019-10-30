@@ -119,24 +119,23 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	defer unlockOnce()
 
-	switch cluster.State {
-	case model.ClusterStateCreationRequested:
-	case model.ClusterStateCreationFailed:
-	default:
+	newState := model.ClusterStateCreationRequested
+
+	if !cluster.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to retry cluster creation while in state %s", cluster.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if cluster.State != model.ClusterStateCreationRequested {
+	if cluster.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
 			ID:        cluster.ID,
-			NewState:  model.ClusterStateCreationRequested,
+			NewState:  newState,
 			OldState:  cluster.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = model.ClusterStateCreationRequested
+		cluster.State = newState
 
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {
@@ -174,25 +173,23 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	defer unlockOnce()
 
-	switch cluster.State {
-	case model.ClusterStateStable:
-	case model.ClusterStateProvisioningFailed:
-	case model.ClusterStateProvisioningRequested:
-	default:
+	newState := model.ClusterStateProvisioningRequested
+
+	if !cluster.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to provision cluster while in state %s", cluster.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if cluster.State != model.ClusterStateProvisioningRequested {
+	if cluster.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
 			ID:        cluster.ID,
-			NewState:  model.ClusterStateProvisioningRequested,
+			NewState:  newState,
 			OldState:  cluster.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = model.ClusterStateProvisioningRequested
+		cluster.State = newState
 
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {
@@ -259,25 +256,23 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	switch cluster.State {
-	case model.ClusterStateStable:
-	case model.ClusterStateUpgradeRequested:
-	case model.ClusterStateUpgradeFailed:
-	default:
+	newState := model.ClusterStateUpgradeRequested
+
+	if !cluster.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to upgrade cluster while in state %s", cluster.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if cluster.State != model.ClusterStateUpgradeRequested {
+	if cluster.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
 			ID:        cluster.ID,
-			NewState:  model.ClusterStateUpgradeRequested,
+			NewState:  newState,
 			OldState:  cluster.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = model.ClusterStateUpgradeRequested
+		cluster.State = newState
 
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {
@@ -312,16 +307,9 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	switch cluster.State {
-	case model.ClusterStateStable:
-	case model.ClusterStateCreationRequested:
-	case model.ClusterStateCreationFailed:
-	case model.ClusterStateProvisioningFailed:
-	case model.ClusterStateUpgradeRequested:
-	case model.ClusterStateUpgradeFailed:
-	case model.ClusterStateDeletionRequested:
-	case model.ClusterStateDeletionFailed:
-	default:
+	newState := model.ClusterInstallationStateDeletionRequested
+
+	if !cluster.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to delete cluster while in state %s", cluster.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -344,15 +332,15 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if cluster.State != model.ClusterStateDeletionRequested {
+	if cluster.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
 			ID:        cluster.ID,
-			NewState:  model.ClusterStateDeletionRequested,
+			NewState:  newState,
 			OldState:  cluster.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = model.ClusterStateDeletionRequested
+		cluster.State = newState
 
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {

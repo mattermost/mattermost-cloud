@@ -39,18 +39,7 @@ func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error
 func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Installation, error) {
 	builder := installationSelect.
 		Where(sq.Eq{
-			"State": []string{
-				model.InstallationStateCreationRequested,
-				model.InstallationStateCreationPreProvisioning,
-				model.InstallationStateCreationInProgress,
-				model.InstallationStateCreationNoCompatibleClusters,
-				model.InstallationStateCreationDNS,
-				model.InstallationStateUpgradeRequested,
-				model.InstallationStateUpgradeInProgress,
-				model.InstallationStateDeletionRequested,
-				model.InstallationStateDeletionInProgress,
-				model.InstallationStateDeletionFinalCleanup,
-			},
+			"State": model.AllInstallationStatesPendingWork,
 		}).
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
