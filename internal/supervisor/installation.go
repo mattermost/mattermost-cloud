@@ -249,7 +249,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	}
 
 	// TODO: Support creating a cluster on demand if no existing cluster meets the criteria.
-	logger.Debug("No compatible clusters available for installation")
+	logger.Warn("No compatible clusters available for installation scheduling")
 
 	return model.InstallationStateCreationNoCompatibleClusters
 }
@@ -265,6 +265,10 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 
 	if cluster.State != model.ClusterStateStable {
 		logger.Debugf("Cluster %s is not stable (currently %s)", cluster.ID, cluster.State)
+		return nil
+	}
+	if !cluster.AllowInstallations {
+		logger.Debugf("Cluster %s is set to not allow for new installation scheduling", cluster.ID)
 		return nil
 	}
 
@@ -641,7 +645,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	logger.Infof("Finished deleting cluster installation")
+	logger.Info("Finished deleting installation")
 
 	return model.InstallationStateDeleted
 }
