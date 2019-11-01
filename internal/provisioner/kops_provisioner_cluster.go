@@ -235,7 +235,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 
 	for _, deployment := range helmDeployments {
 		logger.Infof("Installing helm chart %s", deployment.chartName)
-		err = installHelmChart(deployment, kops.GetKubeConfigPath())
+		err = installHelmChart(deployment, kops.GetKubeConfigPath(), logger)
 		if err != nil {
 			return err
 		}
