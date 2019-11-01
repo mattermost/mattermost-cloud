@@ -115,11 +115,17 @@ func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.F
 // installHelmChart is used to install Helm charts.
 func installHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	var cmd *exec.Cmd
-	arguments := []string{"--debug", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName}
+	arguments := []string{
+		"--debug",
+		"install",
+		"--kubeconfig", configPath,
+		"-f", chart.valuesPath,
+		chart.chartName,
+		"--namespace", chart.namespace,
+		"--name", chart.chartDeploymentName}
 
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
-
 	}
 
 	cmd = exec.Command("helm", arguments...)
