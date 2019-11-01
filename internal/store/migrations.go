@@ -489,4 +489,19 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.9.0"), semver.MustParse("0.10.0"), func(e execer) error {
+		if e.DriverName() == driverPostgres {
+			_, err := e.Exec(`UPDATE Cluster SET AllowInstallations = 'TRUE';`)
+			if err != nil {
+				return err
+			}
+		} else if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`UPDATE Cluster SET AllowInstallations = '1';`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
 }

@@ -203,6 +203,23 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
 	}
 }
 
+// UpdateCluster updates a cluster's configuration.
+func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) (*Cluster, error) {
+	resp, err := c.doPut(c.buildURL("/api/cluster/%s", clusterID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return ClusterFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
 func (c *Client) UpgradeCluster(clusterID, version string) error {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s/kubernetes/%s", clusterID, version), nil)

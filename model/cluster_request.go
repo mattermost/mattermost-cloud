@@ -11,9 +11,10 @@ import (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider string
-	Size     string
-	Zones    []string
+	Provider           string
+	Size               string
+	Zones              []string
+	AllowInstallations bool
 }
 
 // NewCreateClusterRequestFromReader will create a CreateClusterRequest from an io.Reader with JSON data.
@@ -61,4 +62,20 @@ func (request *GetClustersRequest) ApplyToURL(u *url.URL) {
 		q.Add("include_deleted", "true")
 	}
 	u.RawQuery = q.Encode()
+}
+
+// UpdateClusterRequest specifies the parameters available for updating a cluster.
+type UpdateClusterRequest struct {
+	AllowInstallations bool
+}
+
+// NewUpdateClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
+func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest, error) {
+	var updateClusterRequest UpdateClusterRequest
+	err := json.NewDecoder(reader).Decode(&updateClusterRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode update cluster request")
+	}
+
+	return &updateClusterRequest, nil
 }

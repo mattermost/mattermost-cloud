@@ -22,6 +22,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
 	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
 	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
+	clusterRouter.Handle("", addContext(handleUpdateCluster)).Methods("PUT")
 	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
 	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
@@ -67,10 +68,11 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	cluster := model.Cluster{
-		Provider:    createClusterRequest.Provider,
-		Provisioner: "kops",
-		Size:        createClusterRequest.Size,
-		State:       model.ClusterStateCreationRequested,
+		Provider:           createClusterRequest.Provider,
+		Provisioner:        "kops",
+		Size:               createClusterRequest.Size,
+		AllowInstallations: createClusterRequest.AllowInstallations,
+		State:              model.ClusterStateCreationRequested,
 	}
 	cluster.SetProviderMetadata(model.AWSMetadata{
 		Zones: createClusterRequest.Zones,
@@ -231,6 +233,45 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	outputJSON(c, w, cluster)
+}
+
+// handleUpdateCluster responds to PUT /api/cluster/{cluster}, updating a cluster's
+// configuration.
+func handleUpdateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID)
+
+	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	updateClusterRequest, err := model.NewUpdateClusterRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if cluster.AllowInstallations != updateClusterRequest.AllowInstallations {
+		cluster.AllowInstallations = updateClusterRequest.AllowInstallations
+
+		err := c.Store.UpdateCluster(cluster)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update cluster")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	unlockOnce()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, cluster)
 }
 

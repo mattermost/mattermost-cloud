@@ -231,14 +231,19 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.Len(t, clusterInstallations, expectedCount)
 	}
 
+	standardStableTestCluster := func() *model.Cluster {
+		return &model.Cluster{
+			State:              model.ClusterStateStable,
+			AllowInstallations: true,
+		}
+	}
+
 	t.Run("unexpected state", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -296,14 +301,42 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectClusterInstallations(t, sqlStore, installation, 0, "")
 	})
 
-	t.Run("creation requested, cluster installations not yet created, no available clusters", func(t *testing.T) {
+	t.Run("creation requested, cluster installations not yet created, cluster doesn't allow scheduling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
+		cluster := standardStableTestCluster()
+		cluster.AllowInstallations = false
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationRequested,
 		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
+		expectClusterInstallations(t, sqlStore, installation, 0, "")
+	})
+
+	t.Run("creation requested, cluster installations not yet created, no empty clusters", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
+
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -341,9 +374,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -380,9 +411,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			},
 		}
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", 80, false, false, logger)
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -411,9 +441,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -451,9 +479,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -491,9 +517,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -556,9 +580,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -596,9 +618,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -627,9 +647,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -667,9 +685,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -707,9 +723,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -747,9 +761,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -787,9 +799,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -827,9 +837,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -867,9 +875,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-		cluster := &model.Cluster{
-			State: model.ClusterStateStable,
-		}
+		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster)
 		require.NoError(t, err)
 
@@ -908,9 +914,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-			cluster := &model.Cluster{
-				State: model.ClusterStateStable,
-			}
+			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster)
 			require.NoError(t, err)
 
@@ -940,9 +944,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-			cluster := &model.Cluster{
-				State: model.ClusterStateStable,
-			}
+			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster)
 			require.NoError(t, err)
 
@@ -976,9 +978,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-			cluster := &model.Cluster{
-				State: model.ClusterStateStable,
-			}
+			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster)
 			require.NoError(t, err)
 
@@ -1037,9 +1037,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			}
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", 80, false, false, logger)
 
-			cluster := &model.Cluster{
-				State: model.ClusterStateStable,
-			}
+			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster)
 			require.NoError(t, err)
 
