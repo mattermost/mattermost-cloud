@@ -113,19 +113,32 @@ func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.F
 }
 
 // installHelmChart is used to install Helm charts.
-func installHelmChart(chart helmDeployment, configPath string) error {
+func installHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
+	var cmd *exec.Cmd
+	arguments := []string{
+		"--debug",
+		"install",
+		"--kubeconfig", configPath,
+		"-f", chart.valuesPath,
+		chart.chartName,
+		"--namespace", chart.namespace,
+		"--name", chart.chartDeploymentName}
+
 	if chart.setArgument != "" {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "--set", chart.setArgument, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
-		if err != nil {
-			return err
-		}
-	} else {
-		err := exec.Command("helm", "install", "--kubeconfig", configPath, "-f", chart.valuesPath, chart.chartName, "--namespace", chart.namespace, "--name", chart.chartDeploymentName).Run()
-		if err != nil {
-			return err
-		}
+		arguments = append(arguments, "--set", chart.setArgument)
 	}
 
+	cmd = exec.Command("helm", arguments...)
+
+	logger.WithFields(log.Fields{
+		"cmd":  cmd.Path,
+		"args": cmd.Args,
+	}).Info("Invoking command")
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -137,7 +150,7 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	}
 
 	logger.Info("Initializing Helm in the cluster")
-	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
+	err = exec.Command("helm", "--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
 	if err != nil {
 		return err
 	}
@@ -168,7 +181,15 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	logger.Info("Successfully created cluster role bind")
 
 	logger.Info("Upgrade Helm")
-	err = exec.Command("helm", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade").Run()
+
+	cmd := exec.Command("helm", "--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
+
+	logger.WithFields(log.Fields{
+		"cmd":  cmd.Path,
+		"args": cmd.Args,
+	}).Info("Invoking command")
+
+	err = cmd.Run()
 	if err != nil {
 		return err
 	}

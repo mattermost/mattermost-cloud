@@ -23,15 +23,21 @@ This repository houses the open-source components of Mattermost Private Cloud. O
 1. Install [Go](https://golang.org/doc/install)
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
 3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.13.X
-4. Install [Helm](https://helm.sh/docs/using_helm/)
+4. Install [Helm](https://helm.sh/docs/using_helm/) version 2.14.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-6. Generate an AWS Access and Secret key pair, then export them in your bash profile:
+6. Specify the region in your AWS config, e.g. `~/.aws/config`:
+```
+[profile mm-cloud]
+region = us-east-1
+```
+7. Generate an AWS Access and Secret key pair, then export them in your bash profile:
   ```
   export AWS_ACCESS_KEY_ID=YOURACCESSKEYID
   export AWS_SECRET_ACCESS_KEY=YOURSECRETACCESSKEY
+  export AWS_PROFILE=mm-cloud
   ```
-7. Create an S3 bucket to store the kops state
-8. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
+8. Create an S3 bucket to store the kops state
+9. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
 
 ### Building
 
