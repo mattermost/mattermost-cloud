@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -110,4 +111,35 @@ func TestClustersFromReader(t *testing.T) {
 			&Cluster{ID: "id2", Provider: "aws"},
 		}, cluster)
 	})
+}
+
+func TestValidClusterVersion(t *testing.T) {
+	tests := []struct {
+		name  string
+		valid bool
+	}{
+		{"latest", true},
+		{"0.0.0", true},
+		{"1.1.1", true},
+		{"1.11.11", true},
+		{"1.111.111", true},
+		{"1.12.34", true},
+		{"1.12.0", true},
+		{"0.12.34", true},
+		{"latest1", false},
+		{"lates", false},
+		{"1.12.34.56", false},
+		{"1111.1.2", false},
+		{"bad.bad.bad", false},
+		{"1.bad.2", false},
+		{".", false},
+		{"..", false},
+		{"...", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.valid, ValidClusterVersion(test.name))
+		})
+	}
 }

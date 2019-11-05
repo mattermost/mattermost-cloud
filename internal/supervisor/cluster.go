@@ -29,6 +29,7 @@ type clusterProvisioner interface {
 	ProvisionCluster(cluster *model.Cluster) error
 	UpgradeCluster(cluster *model.Cluster) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
+	GetClusterVersion(cluster *model.Cluster) (string, error)
 }
 
 // ClusterSupervisor finds clusters pending work and effects the required changes.
@@ -148,6 +149,21 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 			return model.ClusterStateProvisioningFailed
 		}
 
+		// Update the cluster version in the database. Log errors, but do not
+		// prevent creation from finishing cleanly.
+		version, err := s.provisioner.GetClusterVersion(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster version")
+		} else {
+			if cluster.Version != version {
+				cluster.Version = version
+				err = s.store.UpdateCluster(cluster)
+				if err != nil {
+					logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+				}
+			}
+		}
+
 		logger.Info("Finished creating cluster")
 		return model.ClusterStateStable
 
@@ -158,6 +174,21 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 			return model.ClusterStateProvisioningFailed
 		}
 
+		// Update the cluster version in the database. Log errors, but do not
+		// prevent provisioning from finishing cleanly.
+		version, err := s.provisioner.GetClusterVersion(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster version")
+		} else {
+			if cluster.Version != version {
+				cluster.Version = version
+				err = s.store.UpdateCluster(cluster)
+				if err != nil {
+					logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+				}
+			}
+		}
+
 		logger.Info("Finished provisioning cluster")
 		return model.ClusterStateStable
 
@@ -166,6 +197,21 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		if err != nil {
 			logger.WithError(err).Error("Failed to upgrade cluster")
 			return model.ClusterStateUpgradeFailed
+		}
+
+		// Update the cluster version in the database. Log errors, but do not
+		// prevent the upgrade from finishing cleanly.
+		version, err := s.provisioner.GetClusterVersion(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster version")
+		} else {
+			if cluster.Version != version {
+				cluster.Version = version
+				err = s.store.UpdateCluster(cluster)
+				if err != nil {
+					logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+				}
+			}
 		}
 
 		logger.Info("Finished upgrading cluster")

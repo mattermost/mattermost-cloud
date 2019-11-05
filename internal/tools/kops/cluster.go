@@ -8,7 +8,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds string) error {
+func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -28,6 +28,11 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 		arg("output", "json"),
 	}
 
+	if version != "latest" && version != "" {
+		args = append(args,
+			arg("kubernetes-version", version),
+		)
+	}
 	if privateSubnetIds != "" {
 		args = append(args,
 			arg("subnets", privateSubnetIds),
@@ -45,6 +50,23 @@ func (c *Cmd) CreateCluster(name, cloud string, clusterSize ClusterSize, zones [
 	_, _, err := c.run(args...)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops create cluster")
+	}
+
+	return nil
+}
+
+// SetCluster invokes kops set cluster, using the context of the created Cmd.
+// Example setValue: spec.kubernetesVersion=1.10.0
+func (c *Cmd) SetCluster(name, setValue string) error {
+	_, _, err := c.run(
+		"set",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+		setValue,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke kops set cluster")
 	}
 
 	return nil

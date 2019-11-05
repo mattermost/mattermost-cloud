@@ -10,10 +10,13 @@ import (
 )
 
 func TestNewCreateClusterRequestFromReader(t *testing.T) {
-	defaultCreateClusterRequest := &model.CreateClusterRequest{
-		Provider: "aws",
-		Size:     "SizeAlef500",
-		Zones:    []string{"us-east-1a"},
+	defaultCreateClusterRequest := func() *model.CreateClusterRequest {
+		return &model.CreateClusterRequest{
+			Provider: "aws",
+			Version:  "latest",
+			Size:     "SizeAlef500",
+			Zones:    []string{"us-east-1a"},
+		}
 	}
 
 	t.Run("empty request", func(t *testing.T) {
@@ -21,7 +24,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			``,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, defaultCreateClusterRequest, clusterRequest)
+		require.Equal(t, defaultCreateClusterRequest(), clusterRequest)
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
@@ -45,15 +48,17 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			`{"Size": "SizeAlef1000"}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &model.CreateClusterRequest{Provider: model.ProviderAWS, Size: model.SizeAlef1000, Zones: []string{"us-east-1a"}}, clusterRequest)
+		modifiedDefaultCreateClusterRequest := defaultCreateClusterRequest()
+		modifiedDefaultCreateClusterRequest.Size = "SizeAlef1000"
+		require.Equal(t, modifiedDefaultCreateClusterRequest, clusterRequest)
 	})
 
 	t.Run("full request", func(t *testing.T) {
 		clusterRequest, err := model.NewCreateClusterRequestFromReader(bytes.NewReader([]byte(
-			`{"Provider": "aws", "Size": "SizeAlef1000", "Zones":["zone1", "zone2"]}`,
+			`{"Provider": "aws", "Version": "1.12.4", "Size": "SizeAlef1000", "Zones": ["zone1", "zone2"]}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &model.CreateClusterRequest{Provider: model.ProviderAWS, Size: model.SizeAlef1000, Zones: []string{"zone1", "zone2"}}, clusterRequest)
+		require.Equal(t, &model.CreateClusterRequest{Provider: model.ProviderAWS, Version: "1.12.4", Size: model.SizeAlef1000, Zones: []string{"zone1", "zone2"}}, clusterRequest)
 	})
 }
 

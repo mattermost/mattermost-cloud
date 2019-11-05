@@ -10,9 +10,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -604,12 +604,25 @@ func TestUpgradeCluster(t *testing.T) {
 		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
 	})
 
-	t.Run("while stable", func(t *testing.T) {
+	t.Run("while stable, to latest", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
 		err = client.UpgradeCluster(cluster1.ID, "latest")
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+	})
+
+	t.Run("while stable, to valid version", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.UpgradeCluster(cluster1.ID, "1.14.1")
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)

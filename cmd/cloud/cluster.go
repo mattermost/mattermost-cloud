@@ -15,10 +15,10 @@ func init() {
 	clusterCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
 
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
+	clusterCreateCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
-	clusterCreateCmd.Flags().Int("wait", 1000, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
@@ -28,9 +28,9 @@ func init() {
 	clusterUpdateCmd.MarkFlagRequired("cluster")
 
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
-	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target.")
-	clusterUpgradeCmd.Flags().Int("wait", 1000, "The amount of seconds to wait for k8s to become fully ready before exiting. Set to 0 to exit immediately.")
+	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
+	clusterUpgradeCmd.MarkFlagRequired("version")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
@@ -74,12 +74,14 @@ var clusterCreateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		provider, _ := command.Flags().GetString("provider")
+		version, _ := command.Flags().GetString("version")
 		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:           provider,
+			Version:            version,
 			Size:               size,
 			Zones:              strings.Split(zones, ","),
 			AllowInstallations: allowInstallations,
@@ -87,9 +89,6 @@ var clusterCreateCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
 		}
-
-		// TODO --wait for the cluster to be ready.
-		// wait, _ := command.Flags().GetInt("wait")
 
 		err = printJSON(cluster)
 		if err != nil {
