@@ -12,6 +12,7 @@ import (
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
 	Provider           string
+	Version            string
 	Size               string
 	Zones              []string
 	AllowInstallations bool
@@ -28,6 +29,9 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 	if createClusterRequest.Provider == "" {
 		createClusterRequest.Provider = ProviderAWS
 	}
+	if createClusterRequest.Version == "" {
+		createClusterRequest.Version = "latest"
+	}
 	if createClusterRequest.Size == "" {
 		createClusterRequest.Size = SizeAlef500
 	}
@@ -37,6 +41,9 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 
 	if createClusterRequest.Provider != ProviderAWS {
 		return nil, errors.Errorf("unsupported provider %s", createClusterRequest.Provider)
+	}
+	if !ValidClusterVersion(createClusterRequest.Version) {
+		return nil, errors.Errorf("unsupported cluster version %s", createClusterRequest.Version)
 	}
 	if !IsSupportedClusterSize(createClusterRequest.Size) {
 		return nil, errors.Errorf("unsupported size %s", createClusterRequest.Size)

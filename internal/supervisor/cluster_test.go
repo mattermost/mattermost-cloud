@@ -78,6 +78,10 @@ func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.A
 	return nil
 }
 
+func (p *mockClusterProvisioner) GetClusterVersion(cluster *model.Cluster) (string, error) {
+	return "0.0.0", nil
+}
+
 func TestClusterSupervisorDo(t *testing.T) {
 	t.Run("no clusters pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
@@ -106,7 +110,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		require.NoError(t, err)
 
 		<-mockStore.UnlockChan
-		require.Equal(t, 2, mockStore.UpdateClusterCalls)
+		require.Equal(t, 3, mockStore.UpdateClusterCalls)
 	})
 }
 

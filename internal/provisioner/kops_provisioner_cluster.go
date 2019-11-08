@@ -22,6 +22,10 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
+// DefaultKubernetesVersion is the default value for a kubernetes cluster
+// version value.
+const DefaultKubernetesVersion = "0.0.0"
+
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
 	clusterRootDir    string
@@ -122,7 +126,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsMetadata.Name, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
+	err = kops.CreateCluster(kopsMetadata.Name, kopsMetadata.Version, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
 	if err != nil {
 		return err
 	}
@@ -463,10 +467,20 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 
 	logger.Info("Upgrading cluster")
 
-	err = kops.UpgradeCluster(kopsMetadata.Name)
-	if err != nil {
-		return err
+	switch kopsMetadata.Version {
+	case "latest", "":
+		err = kops.UpgradeCluster(kopsMetadata.Name)
+		if err != nil {
+			return err
+		}
+	default:
+		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.Version)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return err
+		}
 	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, terraformClient.GetWorkingDirectory())
 	if err != nil {
 		return err
@@ -606,9 +620,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aw
 
 // GetClusterResources returns a snapshot of resources of a given cluster.
 func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
-		"cluster": cluster.ID,
-	})
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
@@ -676,4 +688,43 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 		MilliTotalMemory: totalMemory,
 		MilliUsedMemory:  usedMemory,
 	}, nil
+}
+
+// GetClusterVersion returns the version of kubernetes running on the cluster.
+func (provisioner *KopsProvisioner) GetClusterVersion(cluster *model.Cluster) (string, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	logger.Info("Getting cluster kubernetes version")
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return DefaultKubernetesVersion, errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return DefaultKubernetesVersion, errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return DefaultKubernetesVersion, errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return DefaultKubernetesVersion, errors.Wrap(err, "failed to construct k8s client")
+	}
+
+	versionInfo, err := k8sClient.Clientset.Discovery().ServerVersion()
+	if err != nil {
+		return DefaultKubernetesVersion, errors.Wrap(err, "failed to get kubernetes version")
+	}
+
+	// The GitVersion string usually looks like v1.14.2 so we trim the "v" off
+	// to match the version syntax used in kops.
+	version := strings.TrimLeft(versionInfo.GitVersion, "v")
+
+	return version, nil
 }

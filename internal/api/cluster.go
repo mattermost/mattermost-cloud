@@ -70,13 +70,27 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	cluster := model.Cluster{
 		Provider:           createClusterRequest.Provider,
 		Provisioner:        "kops",
+		Version:            "0.0.0",
 		Size:               createClusterRequest.Size,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		State:              model.ClusterStateCreationRequested,
 	}
-	cluster.SetProviderMetadata(model.AWSMetadata{
+	err = cluster.SetProviderMetadata(model.AWSMetadata{
 		Zones: createClusterRequest.Zones,
 	})
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to set provider metadata")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	cluster.SetProvisionerMetadata(model.KopsMetadata{
+		Version: createClusterRequest.Version,
+	})
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to set provisioner metadata")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	err = c.Store.CreateCluster(&cluster)
 	if err != nil {
@@ -275,16 +289,15 @@ func handleUpdateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, cluster)
 }
 
-// handleUpgradeCluster responds to PUT /api/cluster/{cluster}/kubernetes/{version}, upgrading
-// the cluster to the given Kubernetes version.
+// handleUpgradeCluster responds to PUT /api/cluster/{cluster}/kubernetes/{version},
+// upgrading the cluster to the given Kubernetes version.
 func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
 	version := vars["version"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	// TODO: Support something other than "latest".
-	if version != "latest" {
+	if !model.ValidClusterVersion(version) {
 		c.Logger.Warnf("unsupported kubernetes version %s", version)
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -303,6 +316,29 @@ func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Logger.Warnf("unable to upgrade cluster while in state %s", cluster.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse existing provisioner metadata")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if kopsMetadata.Version != version {
+		kopsMetadata.Version = version
+		err = cluster.SetProvisionerMetadata(kopsMetadata)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to set provisioner metadata")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		err := c.Store.UpdateCluster(cluster)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to cluster version")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if cluster.State != newState {

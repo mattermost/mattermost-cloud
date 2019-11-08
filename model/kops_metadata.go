@@ -6,7 +6,8 @@ import (
 
 // KopsMetadata is the provisioner metadata stored in a model.Cluster.
 type KopsMetadata struct {
-	Name string
+	Name    string
+	Version string
 }
 
 // NewKopsMetadata creates an instance of KopsMetadata given the raw provisioner metadata.

@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"io"
+	"regexp"
 
 	"github.com/pkg/errors"
 )
@@ -15,6 +16,7 @@ type Cluster struct {
 	ProviderMetadata    []byte `json:",omitempty"`
 	ProvisionerMetadata []byte `json:",omitempty"`
 	AllowInstallations  bool
+	Version             string
 	Size                string
 	State               string
 	CreateAt            int64
@@ -94,4 +96,12 @@ type ClusterFilter struct {
 	Page           int
 	PerPage        int
 	IncludeDeleted bool
+}
+
+var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|(latest))$`)
+
+// ValidClusterVersion returns true if the provided version is either "latest"
+// or a valid k8s version number.
+func ValidClusterVersion(name string) bool {
+	return clusterVersionMatcher.MatchString(name)
 }
