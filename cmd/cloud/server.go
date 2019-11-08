@@ -31,6 +31,9 @@ func init() {
 
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
+	serverCmd.PersistentFlags().Bool("cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
+	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().String("certificate-aws-arn", "", "The certificate ARN from AWS. Generated in the certificate manager console.")
 	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
@@ -39,9 +42,9 @@ func init() {
 	serverCmd.PersistentFlags().String("private-subnets", "", "The private subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().String("public-subnets", "", "The public subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
-	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster")
-	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not")
-	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
+	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
+	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.MarkPersistentFlagRequired("route53-id")
 	serverCmd.MarkPersistentFlagRequired("private-route53-id")
@@ -84,6 +87,13 @@ var serverCmd = &cobra.Command{
 			return fmt.Errorf("cluster-resource-threshold (%d) must be set between 10 and 100", clusterResourceThreshold)
 		}
 
+		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
+		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
+		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor {
+			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
+		}
+
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
 		privateSubnetIds, _ := command.Flags().GetString("private-subnets")
@@ -101,19 +111,22 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
-			"store-version":              currentVersion,
-			"state-store":                s3StateStore,
-			"aws-arn":                    certificateSslARN,
-			"working-directory":          wd,
-			"private-subents":            privateSubnetIds,
-			"public-subnets":             publicSubnetIds,
-			"route53-id":                 route53ZoneID,
-			"private-route53-id":         privateRoute53ZoneID,
-			"private-dns":                privateDNS,
-			"cluster-resource-threshold": clusterResourceThreshold,
-			"keep-database-data":         keepDatabaseData,
-			"keep-filestore-data":        keepFilestoreData,
-			"debug":                      debug,
+			"cluster-supervisor":              clusterSupervisor,
+			"installation-supervisor":         installationSupervisor,
+			"cluster-installation-supervisor": clusterInstallationSupervisor,
+			"store-version":                   currentVersion,
+			"state-store":                     s3StateStore,
+			"aws-arn":                         certificateSslARN,
+			"working-directory":               wd,
+			"private-subents":                 privateSubnetIds,
+			"public-subnets":                  publicSubnetIds,
+			"route53-id":                      route53ZoneID,
+			"private-route53-id":              privateRoute53ZoneID,
+			"private-dns":                     privateDNS,
+			"cluster-resource-threshold":      clusterResourceThreshold,
+			"keep-database-data":              keepDatabaseData,
+			"keep-filestore-data":             keepFilestoreData,
+			"debug":                           debug,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		// Setup the provisioner for actually effecting changes to clusters.
@@ -127,6 +140,17 @@ var serverCmd = &cobra.Command{
 			logger,
 		)
 
+		var multiDoer supervisor.MultiDoer
+		if clusterSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger))
+		}
+		if installationSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+		}
+		if clusterInstallationSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger))
+		}
+
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
 		// scheduler to trigger it periodically in addition to being poked by the API
 		// layer.
@@ -134,14 +158,8 @@ var serverCmd = &cobra.Command{
 		if poll == 0 {
 			logger.WithField("poll", poll).Info("Scheduler is disabled")
 		}
-		supervisor := supervisor.NewScheduler(
-			supervisor.MultiDoer{
-				supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger),
-				supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger),
-				supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger),
-			},
-			time.Duration(poll)*time.Second,
-		)
+
+		supervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
 		defer supervisor.Close()
 
 		router := mux.NewRouter()
