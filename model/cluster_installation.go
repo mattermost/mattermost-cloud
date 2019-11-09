@@ -5,23 +5,6 @@ import (
 	"io"
 )
 
-const (
-	// ClusterInstallationStateCreationRequested is a cluster installation in the process of being created.
-	ClusterInstallationStateCreationRequested = "creation-requested"
-	// ClusterInstallationStateCreationFailed is a cluster installation that failed creation.
-	ClusterInstallationStateCreationFailed = "creation-failed"
-	// ClusterInstallationStateDeletionRequested is a cluster installation in the process of being deleted.
-	ClusterInstallationStateDeletionRequested = "deletion-requested"
-	// ClusterInstallationStateDeletionFailed is a cluster installation that failed deletion.
-	ClusterInstallationStateDeletionFailed = "deletion-failed"
-	// ClusterInstallationStateDeleted is a cluster installation that has been deleted
-	ClusterInstallationStateDeleted = "deleted"
-	// ClusterInstallationStateReconciling is a cluster installation that in undergoing changes and is not yet stable.
-	ClusterInstallationStateReconciling = "reconciling"
-	// ClusterInstallationStateStable is a cluster installation in a stable state and undergoing no changes.
-	ClusterInstallationStateStable = "stable"
-)
-
 // ClusterInstallation is a single namespace within a cluster composing a potentially larger installation.
 type ClusterInstallation struct {
 	ID             string

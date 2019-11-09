@@ -39,11 +39,7 @@ func (sqlStore *SQLStore) GetUnlockedClusterInstallationsPendingWork() ([]*model
 
 	builder := clusterInstallationSelect.
 		Where(sq.Eq{
-			"State": []string{
-				model.ClusterInstallationStateCreationRequested,
-				model.ClusterInstallationStateDeletionRequested,
-				model.ClusterInstallationStateReconciling,
-			},
+			"State": model.AllClusterInstallationStatesPendingWork,
 		}).
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")

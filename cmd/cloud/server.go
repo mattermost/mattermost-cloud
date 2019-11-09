@@ -186,7 +186,7 @@ var serverCmd = &cobra.Command{
 			logger.WithField("addr", srv.Addr).Info("Listening")
 			err := srv.ListenAndServe()
 			if err != nil && err != http.ErrServerClosed {
-				logger.WithField("err", err).Error("Failed to listen and serve")
+				logger.WithError(err).Error("Failed to listen and serve")
 			}
 		}()
 

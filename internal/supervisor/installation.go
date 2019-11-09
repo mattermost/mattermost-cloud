@@ -202,20 +202,21 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	// installation to be stable once all cluster installations are stable. Or, if
 	// some cluster installations have failed, mark the installation as failed.
 	if len(clusterInstallations) > 0 {
-		var stable, reconciling, failed int
+		var stable, reconciling, failed, other int
 		for _, clusterInstallation := range clusterInstallations {
-			if clusterInstallation.State == model.ClusterInstallationStateStable {
+			switch clusterInstallation.State {
+			case model.ClusterInstallationStateStable:
 				stable++
-			}
-			if clusterInstallation.State == model.ClusterInstallationStateReconciling {
+			case model.ClusterInstallationStateReconciling:
 				reconciling++
-			}
-			if clusterInstallation.State == model.ClusterInstallationStateCreationFailed {
+			case model.ClusterInstallationStateCreationFailed:
 				failed++
+			default:
+				other++
 			}
 		}
 
-		logger.Debugf("Found %d cluster installations, %d stable, %d reconciling, %d failed", len(clusterInstallations), stable, reconciling, failed)
+		logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
 
 		if len(clusterInstallations) == stable {
 			logger.Infof("Finished creating installation")
