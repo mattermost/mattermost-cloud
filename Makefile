@@ -1,16 +1,25 @@
-GO ?= $(shell command -v go 2> /dev/null)
-MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
-MACHINE = $(shell uname -m)
-DOCKER_BUILD_IMAGE = golang:1.12
-DOCKER_BASE_IMAGE = alpine:3.9
-GOFLAGS ?= $(GOFLAGS:)
-BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
-BUILD_HASH := $(shell git rev-parse HEAD)
+################################################################################
+##                             VERSION PARAMS                                 ##
+################################################################################
 
+## Docker Build Versions
+DOCKER_BUILD_IMAGE = golang:1.13
+DOCKER_BASE_IMAGE = alpine:3.10
+
+## Tool Versions
 TERRAFORM_VERSION=0.11.14
 KOPS_VERSION=1.14.1
 HELM_VERSION=v2.14.2
 KUBECTL_VERSION=v1.14.0
+
+################################################################################
+
+GO ?= $(shell command -v go 2> /dev/null)
+MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
+MACHINE = $(shell uname -m)
+GOFLAGS ?= $(GOFLAGS:)
+BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
+BUILD_HASH := $(shell git rev-parse HEAD)
 
 export GO111MODULE=on
 
