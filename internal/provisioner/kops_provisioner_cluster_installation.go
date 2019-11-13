@@ -94,6 +94,10 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 
 		mattermostInstallation.Spec.MattermostLicenseSecret = licenseSecretName
 		logger.Debug("Cluster installation configured with a Mattermost license")
+	} else {
+		mattermostInstallation.Spec.Image = "mattermost/mattermost-team-edition"
+		// TODO: is the mattermost team edition image name stored somewhere as a constant?
+		logger.Debug("No license provided; changing the image type to team edition")
 	}
 
 	databaseSpec, databaseSecret, err := installation.GetDatabase().GenerateDatabaseSpecAndSecret(logger)
