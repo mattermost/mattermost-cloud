@@ -69,12 +69,12 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"externalDB": databaseConnectionString,
+			"DB_CONNECTION_STRING": databaseConnectionString,
 		},
 	}
 
 	databaseSpec := &mmv1alpha1.Database{
-		ExternalSecret: databaseSecretName,
+		Secret: databaseSecretName,
 	}
 
 	logger.Debug("Cluster installation configured to use an AWS RDS Database")
