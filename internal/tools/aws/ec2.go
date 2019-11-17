@@ -17,10 +17,9 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 		return errors.New("Missing resource ID")
 	}
 
-	svc, err := a.api.getEC2Client()
-	if err != nil {
-		return err
-	}
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
 
 	input := &ec2.CreateTagsInput{
 		Resources: []*string{
@@ -39,7 +38,7 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 		return err
 	}
 
-	logger.Debugf("AWS ec2 response: %s", prettyCreateTagsResponse(resp))
+	logger.Infof("AWS EC2 create tag response: %s", prettyCreateTagsResponse(resp))
 
 	return nil
 }
@@ -72,7 +71,7 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 		return err
 	}
 
-	logger.Debugf("AWS ec2 response: %s", prettyDeleteTagsResponse(resp))
+	logger.Debugf("AWS EC2 delete tag response: %s", prettyDeleteTagsResponse(resp))
 
 	return nil
 }
@@ -96,12 +95,11 @@ func prettyDeleteTagsResponse(resp *ec2.DeleteTagsOutput) string {
 }
 
 func (api *apiInterface) getEC2Client() (*ec2.EC2, error) {
-	sess, err := session.NewSession()
-	if err != nil {
-		return nil, err
-	}
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
 
-	return ec2.New(sess), nil
+	return svc, nil
 }
 
 func (api *apiInterface) tagResource(svc *ec2.EC2, input *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error) {
@@ -110,4 +108,52 @@ func (api *apiInterface) tagResource(svc *ec2.EC2, input *ec2.CreateTagsInput) (
 
 func (api *apiInterface) untagResource(svc *ec2.EC2, input *ec2.DeleteTagsInput) (*ec2.DeleteTagsOutput, error) {
 	return svc.DeleteTags(input)
+}
+
+// GetVpcsWithFilters returns VPCs matching a given filter.
+func GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	vpcOutput, err := svc.DescribeVpcs(&ec2.DescribeVpcsInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return vpcOutput.Vpcs, nil
+}
+
+// GetSubnetsWithFilters returns subnets matching a given filter.
+func GetSubnetsWithFilters(filters []*ec2.Filter) ([]*ec2.Subnet, error) {
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	subnetOutput, err := svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return subnetOutput.Subnets, nil
+}
+
+// GetSecurityGroupsWithFilters returns SGs matching a given filter.
+func GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, error) {
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	sgOutput, err := svc.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return sgOutput.SecurityGroups, nil
 }

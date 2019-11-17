@@ -139,6 +139,14 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 
 type mockAWS struct{}
 
+func (a *mockAWS) GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (aws.ClusterResources, error) {
+	return aws.ClusterResources{}, nil
+}
+
+func (a *mockAWS) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
+	return nil
+}
+
 func (a *mockAWS) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return nil
 }

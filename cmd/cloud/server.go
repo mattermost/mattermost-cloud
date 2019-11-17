@@ -39,8 +39,6 @@ func init() {
 	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
 	serverCmd.PersistentFlags().String("private-route53-id", "", "The route 53 hosted zone ID used for mattermost private DNS records.")
 	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
-	serverCmd.PersistentFlags().String("private-subnets", "", "The private subnet IDs to use on AWS.")
-	serverCmd.PersistentFlags().String("public-subnets", "", "The public subnet IDs to use on AWS.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
@@ -96,8 +94,6 @@ var serverCmd = &cobra.Command{
 
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
-		privateSubnetIds, _ := command.Flags().GetString("private-subnets")
-		publicSubnetIds, _ := command.Flags().GetString("public-subnets")
 		route53ZoneID, _ := command.Flags().GetString("route53-id")
 		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
 		privateDNS, _ := command.Flags().GetString("private-dns")
@@ -118,8 +114,6 @@ var serverCmd = &cobra.Command{
 			"state-store":                     s3StateStore,
 			"aws-arn":                         certificateSslARN,
 			"working-directory":               wd,
-			"private-subents":                 privateSubnetIds,
-			"public-subnets":                  publicSubnetIds,
 			"route53-id":                      route53ZoneID,
 			"private-route53-id":              privateRoute53ZoneID,
 			"private-dns":                     privateDNS,
@@ -134,8 +128,6 @@ var serverCmd = &cobra.Command{
 			clusterRootDir,
 			s3StateStore,
 			certificateSslARN,
-			privateSubnetIds,
-			publicSubnetIds,
 			privateDNS,
 			logger,
 		)

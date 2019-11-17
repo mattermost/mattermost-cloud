@@ -7,6 +7,26 @@ const (
 	// DefaultAWSRegion is the default AWS region for AWS resources.
 	DefaultAWSRegion = "us-east-1"
 
+	// VpcAvailableTagKey is the tag key to determine if a VPC is currently in
+	// use by a cluster or not.
+	VpcAvailableTagKey = "tag:Available"
+
+	// VpcAvailableTagValueTrue is the tag value for VpcAvailableTagKey when the
+	// VPC is currently not in use by a cluster and can be claimed.
+	VpcAvailableTagValueTrue = "true"
+
+	// VpcAvailableTagValueFalse is the tag value for VpcAvailableTagKey when the
+	// VPC is currently in use by a cluster and cannot be claimed.
+	VpcAvailableTagValueFalse = "false"
+
+	// VpcClusterIDTagKey is the tag key used to store the cluster ID of the
+	// cluster running in that VPC.
+	VpcClusterIDTagKey = "tag:CloudClusterID"
+
+	// VpcClusterIDTagValueNone is the tag value for VpcClusterIDTagKey when
+	// there is no cluster running in the VPC.
+	VpcClusterIDTagValueNone = "none"
+
 	// DefaultDBSubnetGroupName is the default DB subnet group name used when
 	// creating DB clusters. This group name is defined by the owner of the AWS
 	// accounts and can be the same across all accounts.
