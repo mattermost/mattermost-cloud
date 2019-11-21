@@ -8,7 +8,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds string) error {
+func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds, customAWSAMIImage string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -45,6 +45,10 @@ func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize
 	}
 	if cloud == "aws" {
 		args = append(args, arg("networking", "amazon-vpc-routed-eni"))
+	}
+
+	if customAWSAMIImage != "" {
+		args = append(args, arg("image", customAWSAMIImage))
 	}
 
 	_, _, err := c.run(args...)

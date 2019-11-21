@@ -46,6 +46,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().String("custom-kops-aws-ami-image", "", "The custom kops AWS AMI image.")
 	serverCmd.MarkPersistentFlagRequired("route53-id")
 	serverCmd.MarkPersistentFlagRequired("private-route53-id")
 	serverCmd.MarkPersistentFlagRequired("private-dns")
@@ -103,6 +104,7 @@ var serverCmd = &cobra.Command{
 		privateDNS, _ := command.Flags().GetString("private-dns")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
+		customAWSAMIImageData, _ := command.Flags().GetString("custom-kops-aws-ami-image")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -126,6 +128,7 @@ var serverCmd = &cobra.Command{
 			"cluster-resource-threshold":      clusterResourceThreshold,
 			"keep-database-data":              keepDatabaseData,
 			"keep-filestore-data":             keepFilestoreData,
+			"custom-aws-ami-image":            customAWSAMIImageData,
 			"debug":                           debug,
 		}).Info("Starting Mattermost Provisioning Server")
 
@@ -137,6 +140,7 @@ var serverCmd = &cobra.Command{
 			privateSubnetIds,
 			publicSubnetIds,
 			privateDNS,
+			customAWSAMIImageData,
 			logger,
 		)
 

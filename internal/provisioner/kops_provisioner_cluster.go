@@ -34,6 +34,7 @@ type KopsProvisioner struct {
 	privateSubnetIds  string
 	publicSubnetIds   string
 	privateDNS        string
+	customAWSAMIImage string
 	logger            log.FieldLogger
 }
 
@@ -50,7 +51,7 @@ type helmDeployment struct {
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds, privateDNS, customAWSAMIImage string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
@@ -58,6 +59,7 @@ func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, private
 		privateSubnetIds:  privateSubnetIds,
 		publicSubnetIds:   publicSubnetIds,
 		privateDNS:        privateDNS,
+		customAWSAMIImage: customAWSAMIImage,
 		logger:            logger,
 	}
 }
@@ -126,7 +128,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsMetadata.Name, kopsMetadata.Version, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
+	err = kops.CreateCluster(kopsMetadata.Name, kopsMetadata.Version, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds, provisioner.customAWSAMIImage)
 	if err != nil {
 		return err
 	}
