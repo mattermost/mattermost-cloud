@@ -214,10 +214,16 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	}
 
 	logger.Info("Adding https://kiwigrid.github.io Helm repo.")
-	addHelmRepo("kiwigrid", "https://kiwigrid.github.io", logger)
+	err = addHelmRepo("kiwigrid", "https://kiwigrid.github.io", logger)
+	if err != nil {
+		return err
+	}
 
 	logger.Info("Updating all Helm repos.")
-	helmRepoUpdate(logger)
+	err = helmRepoUpdate(logger)
+	if err != nil {
+		return err
+	}
 
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
 	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
