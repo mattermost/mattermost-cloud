@@ -8,6 +8,9 @@ var logger *log.Logger
 
 func init() {
 	logger = log.New()
+	logger.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
 }
 
 type logrusWriter struct {
