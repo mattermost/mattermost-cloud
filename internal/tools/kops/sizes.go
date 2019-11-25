@@ -19,33 +19,51 @@ type ClusterSize struct {
 
 // validSizes is a mapping of a size keyword to kops cluster configuration.
 var validSizes = map[string]ClusterSize{
-	model.SizeAlef500:  sizeAlef500,
-	model.SizeAlef1000: sizeAlef1000,
-	model.SizeAlef5000: sizeAlef5000,
+	model.SizeAlefDev:   sizeAlefDev,
+	model.SizeAlef500:   sizeAlef500,
+	model.SizeAlef1000:  sizeAlef1000,
+	model.SizeAlef5000:  sizeAlef5000,
+	model.SizeAlef10000: sizeAlef10000,
+}
+
+// sizeAlefDev is a cluster sized for development and testing.
+var sizeAlefDev = ClusterSize{
+	NodeCount:   "2",
+	NodeSize:    "t3.medium",
+	MasterCount: "1",
+	MasterSize:  "t3.medium",
 }
 
 // sizeAlef500 is a cluster sized for 500 users.
 var sizeAlef500 = ClusterSize{
 	NodeCount:   "2",
-	NodeSize:    "t2.medium",
+	NodeSize:    "m5.large",
 	MasterCount: "1",
-	MasterSize:  "t2.medium",
+	MasterSize:  "t3.medium",
 }
 
 // sizeAlef1000 is a cluster sized for 1000 users.
 var sizeAlef1000 = ClusterSize{
 	NodeCount:   "4",
-	NodeSize:    "t2.medium",
+	NodeSize:    "m5.large",
 	MasterCount: "1",
-	MasterSize:  "t2.large",
+	MasterSize:  "t3.large",
 }
 
 // sizeAlef5000 is a cluster sized for 5000 users.
 var sizeAlef5000 = ClusterSize{
 	NodeCount:   "6",
-	NodeSize:    "t2.large",
+	NodeSize:    "m5.large",
 	MasterCount: "1",
-	MasterSize:  "t2.large",
+	MasterSize:  "t3.large",
+}
+
+// sizeAlef10000 is a cluster sized for 10000 users.
+var sizeAlef10000 = ClusterSize{
+	NodeCount:   "10",
+	NodeSize:    "m5.large",
+	MasterCount: "1",
+	MasterSize:  "t3.large",
 }
 
 // GetSize takes a size keyword and returns the matching kops cluster

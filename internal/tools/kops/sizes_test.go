@@ -12,9 +12,11 @@ func TestGetSize(t *testing.T) {
 		clusterSize ClusterSize
 		expectError bool
 	}{
+		{"SizeAlefDev", sizeAlefDev, false},
 		{"SizeAlef500", sizeAlef500, false},
 		{"SizeAlef1000", sizeAlef1000, false},
 		{"SizeAlef5000", sizeAlef5000, false},
+		{"SizeAlef10000", sizeAlef10000, false},
 		{"IncorrectSize", ClusterSize{}, true},
 	}
 
