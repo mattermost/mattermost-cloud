@@ -112,6 +112,45 @@ func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.F
 	}
 }
 
+// addHelmRepo adds a new Helm repo
+func addHelmRepo(repoName, repoURL string, logger log.FieldLogger) error {
+	var cmd *exec.Cmd
+	arguments := []string{
+		"repo",
+		"add",
+		repoName,
+		repoURL,
+	}
+
+	cmd = exec.Command("helm", arguments...)
+
+	logger.WithFields(log.Fields{
+		"cmd":  cmd.Path,
+		"args": cmd.Args,
+	}).Info("Invoking command")
+
+	err := cmd.Run()
+	return err
+}
+
+// helmRepoUpdate updates the helm repos to get latest available charts
+func helmRepoUpdate(logger log.FieldLogger) error {
+	var cmd *exec.Cmd
+	arguments := []string{
+		"repo",
+		"update",
+	}
+
+	cmd = exec.Command("helm", arguments...)
+
+	logger.WithFields(log.Fields{
+		"cmd": cmd.Path,
+	}).Info("Invoking command")
+
+	err := cmd.Run()
+	return err
+}
+
 // installHelmChart is used to install Helm charts.
 func installHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	var cmd *exec.Cmd

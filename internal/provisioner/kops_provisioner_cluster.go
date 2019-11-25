@@ -213,6 +213,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 
+	logger.Info("Adding https://kiwigrid.github.io Helm repo.")
+	err = addHelmRepo("kiwigrid", "https://kiwigrid.github.io", logger)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Updating all Helm repos.")
+	err = helmRepoUpdate(logger)
+	if err != nil {
+		return err
+	}
+
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
 	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
 
@@ -230,7 +242,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 			setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
 		}, {
 			valuesPath:          "helm-charts/fluentd_values.yaml",
-			chartName:           "stable/fluentd-elasticsearch",
+			chartName:           "kiwigrid/fluentd-elasticsearch",
 			namespace:           "fluentd",
 			chartDeploymentName: "fluentd",
 			setArgument:         fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS),
