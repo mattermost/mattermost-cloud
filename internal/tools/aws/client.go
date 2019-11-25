@@ -8,6 +8,9 @@ import (
 
 // AWS interface for use by other packages.
 type AWS interface {
+	GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
+	ReleaseVpc(clusterID string, logger log.FieldLogger) error
+
 	CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 	DeleteCNAME(dnsName string, logger log.FieldLogger) error
 

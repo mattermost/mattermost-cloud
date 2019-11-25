@@ -8,7 +8,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds string) error {
+func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups []string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -33,15 +33,21 @@ func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize
 			arg("kubernetes-version", version),
 		)
 	}
-	if privateSubnetIds != "" {
+	if len(privateSubnetIds) != 0 {
 		args = append(args,
-			arg("subnets", privateSubnetIds),
+			commaArg("subnets", privateSubnetIds),
 			arg("topology", "private"),
 			arg("api-loadbalancer-type", "internal"),
 		)
 	}
-	if publicSubnetIds != "" {
-		args = append(args, arg("utility-subnets", publicSubnetIds))
+	if len(publicSubnetIds) != 0 {
+		args = append(args, commaArg("utility-subnets", publicSubnetIds))
+	}
+	if len(masterSecurityGroups) != 0 {
+		args = append(args, commaArg("master-security-groups", masterSecurityGroups))
+	}
+	if len(workerSecurityGroups) != 0 {
+		args = append(args, commaArg("node-security-groups", workerSecurityGroups))
 	}
 	if cloud == "aws" {
 		args = append(args, arg("networking", "amazon-vpc-routed-eni"))

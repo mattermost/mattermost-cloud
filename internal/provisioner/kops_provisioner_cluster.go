@@ -50,13 +50,11 @@ type helmDeployment struct {
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateSubnetIds, publicSubnetIds, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		clusterRootDir:    clusterRootDir,
 		s3StateStore:      s3StateStore,
 		certificateSslARN: certificateSslARN,
-		privateSubnetIds:  privateSubnetIds,
-		publicSubnetIds:   publicSubnetIds,
 		privateDNS:        privateDNS,
 		logger:            logger,
 	}
@@ -82,7 +80,7 @@ func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) (bool
 }
 
 // CreateCluster creates a cluster using kops and terraform.
-func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {
+func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -126,9 +124,30 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		return err
 	}
 	defer kops.Close()
-	err = kops.CreateCluster(kopsMetadata.Name, kopsMetadata.Version, cluster.Provider, clusterSize, awsMetadata.Zones, provisioner.privateSubnetIds, provisioner.publicSubnetIds)
+
+	clusterResources, err := awsClient.GetAndClaimVpcResources(cluster.ID, logger)
 	if err != nil {
 		return err
+	}
+
+	err = kops.CreateCluster(
+		kopsMetadata.Name,
+		kopsMetadata.Version,
+		cluster.Provider,
+		clusterSize,
+		awsMetadata.Zones,
+		clusterResources.PrivateSubnetIDs,
+		clusterResources.PublicSubnetsIDs,
+		clusterResources.MasterSecurityGroupIDs,
+		clusterResources.WorkerSecurityGroupIDs,
+	)
+	if err != nil {
+		releaseErr := awsClient.ReleaseVpc(cluster.ID, logger)
+		if releaseErr != nil {
+			logger.WithError(releaseErr).Error("Unable to release VPC")
+		}
+
+		return errors.Wrap(err, "unable to create kops cluster")
 	}
 
 	err = os.Rename(kops.GetOutputDirectory(), outputDir)
@@ -182,18 +201,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 		// and return original timeout error.
 		kops.ValidateCluster(kopsMetadata.Name, false)
 		return err
-	}
-
-	// Set the ELB tags for the public subnets
-	if provisioner.publicSubnetIds != "" {
-		subnets := strings.Split(provisioner.publicSubnetIds, ",")
-		for _, subnet := range subnets {
-			logger.WithField("name", kopsMetadata.Name).Infof("Tagging subnet %s", subnet)
-			err = aws.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
-			if err != nil {
-				return errors.Wrap(err, "failed to tag subnet")
-			}
-		}
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
@@ -268,7 +275,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, aws aw
 	for _, app := range helmApps {
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
 		logger.Infof("Registering DNS %s for %s", dns, app)
-		err = aws.CreateCNAME(dns, []string{endpoint}, logger)
+		err = awsClient.CreateCNAME(dns, []string{endpoint}, logger)
 		if err != nil {
 			return err
 		}
@@ -531,7 +538,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) error {
+func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse provisioner metadata")
@@ -599,16 +606,9 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aw
 		}
 	}
 
-	// Delete the ELB tags for the public subnets
-	if kopsMetadata.Name != "" && provisioner.publicSubnetIds != "" {
-		subnets := strings.Split(provisioner.publicSubnetIds, ",")
-		for _, subnet := range subnets {
-			logger.WithField("name", kopsMetadata.Name).Infof("Untagging subnet %s", subnet)
-			err = aws.UntagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", kopsMetadata.Name), "shared", logger)
-			if err != nil {
-				return errors.Wrap(err, "failed to untag subnet")
-			}
-		}
+	err = awsClient.ReleaseVpc(cluster.ID, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to release VPC")
 	}
 
 	err = os.RemoveAll(outputDir)
@@ -619,7 +619,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, aws aw
 	for _, app := range helmApps {
 		logger.Infof("Deleting Route53 DNS Record for %s", app)
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		err = aws.DeleteCNAME(dns, logger)
+		err = awsClient.DeleteCNAME(dns, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete Route53 DNS record")
 		}

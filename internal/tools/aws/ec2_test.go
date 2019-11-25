@@ -2,11 +2,13 @@ package aws
 
 import (
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func (api *mockAPI) getEC2Client() (*ec2.EC2, error) {
@@ -121,4 +123,21 @@ func TestUntagResource(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVPCReal(t *testing.T) {
+	if os.Getenv("SUPER_AWS_VPC_TEST") == "" {
+		return
+	}
+
+	logger := logrus.New()
+	awsClient := New("n/a")
+
+	clusterID := "testclusterID1"
+
+	_, err := awsClient.GetAndClaimVpcResources(clusterID, logger)
+	require.NoError(t, err)
+
+	err = awsClient.releaseVpc(clusterID, logger)
+	require.NoError(t, err)
 }

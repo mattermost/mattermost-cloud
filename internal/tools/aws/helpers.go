@@ -2,6 +2,7 @@ package aws
 
 import (
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -19,6 +20,10 @@ func IAMSecretName(cloudID string) string {
 // RDSSecretName returns the RDS secret name for a given Cloud ID.
 func RDSSecretName(cloudID string) string {
 	return cloudID + rdsSuffix
+}
+
+func trimTagPrefix(tag string) string {
+	return strings.TrimLeft(tag, "tag:")
 }
 
 const passwordBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
