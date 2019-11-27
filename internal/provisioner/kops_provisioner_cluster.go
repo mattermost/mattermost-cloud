@@ -220,12 +220,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	logger.Info("Adding https://kiwigrid.github.io Helm repo.")
-	err = addHelmRepo("kiwigrid", "https://kiwigrid.github.io", logger)
-	if err != nil {
-		return err
-	}
-
 	logger.Info("Updating all Helm repos.")
 	err = helmRepoUpdate(logger)
 	if err != nil {
@@ -248,11 +242,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			chartDeploymentName: "prometheus",
 			setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
 		}, {
-			valuesPath:          "helm-charts/fluentd_values.yaml",
-			chartName:           "kiwigrid/fluentd-elasticsearch",
-			namespace:           "fluentd",
-			chartDeploymentName: "fluentd",
-			setArgument:         fmt.Sprintf("elasticsearch.host=%s", elasticsearchDNS),
+			valuesPath:          "helm-charts/fluent-bit_values.yaml",
+			chartName:           "stable/fluent-bit",
+			namespace:           "fluent-bit",
+			chartDeploymentName: "fluent-bit",
+			setArgument:         fmt.Sprintf("backend.es.host=%s", elasticsearchDNS),
 		},
 	}
 
