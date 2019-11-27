@@ -8,7 +8,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize, zones []string, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups []string) error {
+func (c *Cmd) CreateCluster(name, version, ami, cloud string, clusterSize ClusterSize, zones, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups []string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -32,6 +32,9 @@ func (c *Cmd) CreateCluster(name, version, cloud string, clusterSize ClusterSize
 		args = append(args,
 			arg("kubernetes-version", version),
 		)
+	}
+	if ami != "" {
+		args = append(args, arg("image", ami))
 	}
 	if len(privateSubnetIds) != 0 {
 		args = append(args,

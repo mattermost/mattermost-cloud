@@ -8,6 +8,7 @@ import (
 type KopsMetadata struct {
 	Name    string
 	Version string
+	AMI     string
 }
 
 // NewKopsMetadata creates an instance of KopsMetadata given the raw provisioner metadata.

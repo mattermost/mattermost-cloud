@@ -13,6 +13,7 @@ import (
 type CreateClusterRequest struct {
 	Provider           string
 	Version            string
+	KopsAMI            string
 	Size               string
 	Zones              []string
 	AllowInstallations bool

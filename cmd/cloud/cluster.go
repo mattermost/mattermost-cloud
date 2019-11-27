@@ -16,6 +16,7 @@ func init() {
 
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
 	clusterCreateCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
+	clusterCreateCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Leave empty for the default kops image.")
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
@@ -75,6 +76,7 @@ var clusterCreateCmd = &cobra.Command{
 
 		provider, _ := command.Flags().GetString("provider")
 		version, _ := command.Flags().GetString("version")
+		kopsAMI, _ := command.Flags().GetString("kops-ami")
 		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
@@ -82,6 +84,7 @@ var clusterCreateCmd = &cobra.Command{
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:           provider,
 			Version:            version,
+			KopsAMI:            kopsAMI,
 			Size:               size,
 			Zones:              strings.Split(zones, ","),
 			AllowInstallations: allowInstallations,
