@@ -133,6 +133,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	err = kops.CreateCluster(
 		kopsMetadata.Name,
 		kopsMetadata.Version,
+		kopsMetadata.AMI,
 		cluster.Provider,
 		clusterSize,
 		awsMetadata.Zones,

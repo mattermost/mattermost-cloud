@@ -85,6 +85,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	cluster.SetProvisionerMetadata(model.KopsMetadata{
 		Version: createClusterRequest.Version,
+		AMI:     createClusterRequest.KopsAMI,
 	})
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to set provisioner metadata")
