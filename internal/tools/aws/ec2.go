@@ -38,7 +38,10 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 		return err
 	}
 
-	logger.Infof("AWS EC2 create tag response: %s", prettyCreateTagsResponse(resp))
+	logger.WithFields(map[string]interface{}{
+		"tag-key":   key,
+		"tag-value": value,
+	}).Debugf("AWS EC2 create tag response for %s: %s", resourceID, prettyCreateTagsResponse(resp))
 
 	return nil
 }
@@ -71,7 +74,10 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 		return err
 	}
 
-	logger.Debugf("AWS EC2 delete tag response: %s", prettyDeleteTagsResponse(resp))
+	logger.WithFields(map[string]interface{}{
+		"tag-key":   key,
+		"tag-value": value,
+	}).Debugf("AWS EC2 delete tag response for %s: %s", resourceID, prettyDeleteTagsResponse(resp))
 
 	return nil
 }
