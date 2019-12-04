@@ -77,7 +77,7 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 	logger.WithFields(map[string]interface{}{
 		"tag-key":   key,
 		"tag-value": value,
-	}).Debugf("AWS EC2 create tag response for %s: %s", resourceID, prettyDeleteTagsResponse(resp))
+	}).Debugf("AWS EC2 delete tag response for %s: %s", resourceID, prettyDeleteTagsResponse(resp))
 
 	return nil
 }
