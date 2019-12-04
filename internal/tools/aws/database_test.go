@@ -13,10 +13,9 @@ import (
 // database in a real AWS account. Only set the test env vars below if you wish
 // to test this process with real AWS resources.
 
-var id = "test-id-1"
-
 func TestDatabaseProvision(t *testing.T) {
-	if os.Getenv("SUPER_AWS_DATABASE_TEST") == "" {
+	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
+	if id == "" {
 		return
 	}
 
@@ -29,7 +28,9 @@ func TestDatabaseProvision(t *testing.T) {
 }
 
 func TestDatabaseTeardown(t *testing.T) {
-	if os.Getenv("SUPER_AWS_DATABASE_TEST") == "" {
+
+	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
+	if id == "" {
 		return
 	}
 
