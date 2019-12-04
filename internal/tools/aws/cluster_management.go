@@ -249,7 +249,6 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	}
 
 	for _, subnet := range publicSubnets {
-		logger.Debugf("Untagging subnet %s", *subnet.SubnetId)
 		err = a.UntagResource(*subnet.SubnetId, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to untag subnet")
