@@ -88,8 +88,6 @@ func (c *Cmd) RollingUpdateCluster(name string) error {
 		"cluster",
 		arg("name", name),
 		arg("state", "s3://", c.s3StateStore),
-		arg("master-interval", "10m"),
-		arg("node-interval", "5m"),
 		"--yes",
 	)
 	if err != nil {
