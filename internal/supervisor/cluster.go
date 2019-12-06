@@ -72,7 +72,7 @@ func (s *ClusterSupervisor) Do() error {
 
 // Supervise schedules the required work on the given cluster.
 func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
-	logger := s.logger.WithFields(map[string]interface{}{
+	logger := s.logger.WithFields(log.Fields{
 		"cluster": cluster.ID,
 	})
 

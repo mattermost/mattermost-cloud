@@ -90,7 +90,7 @@ func (s *InstallationSupervisor) Do() error {
 
 // Supervise schedules the required work on the given installation.
 func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
-	logger := s.logger.WithFields(map[string]interface{}{
+	logger := s.logger.WithFields(log.Fields{
 		"installation": installation.ID,
 	})
 

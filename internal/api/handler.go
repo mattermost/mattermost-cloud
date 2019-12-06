@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/mattermost/mattermost-cloud/model"
+	log "github.com/sirupsen/logrus"
 )
 
 type contextHandlerFunc func(c *Context, w http.ResponseWriter, r *http.Request)
@@ -16,7 +17,7 @@ type contextHandler struct {
 func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context := h.context.Clone()
 	context.RequestID = model.NewID()
-	context.Logger = context.Logger.WithFields(map[string]interface{}{
+	context.Logger = context.Logger.WithFields(log.Fields{
 		"path":    r.URL.Path,
 		"request": context.RequestID,
 	})

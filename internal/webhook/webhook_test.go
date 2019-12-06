@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,7 @@ func (s *mockWebhookStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.We
 
 func TestGetAndSendWebhooks(t *testing.T) {
 	mockStore := &mockWebhookStore{}
-	logger := testlib.MakeLogger(t).WithFields(map[string]interface{}{
+	logger := testlib.MakeLogger(t).WithFields(log.Fields{
 		"webhooks-tests": true,
 	})
 
@@ -57,7 +58,7 @@ func TestGetAndSendWebhooks(t *testing.T) {
 
 // TODO: add happy-path test.
 func TestSendWebhooks(t *testing.T) {
-	logger := testlib.MakeLogger(t).WithFields(map[string]interface{}{
+	logger := testlib.MakeLogger(t).WithFields(log.Fields{
 		"webhooks-tests": true,
 	})
 	hook := &model.Webhook{
