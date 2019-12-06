@@ -28,13 +28,14 @@ const DefaultKubernetesVersion = "0.0.0"
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	clusterRootDir    string
-	s3StateStore      string
-	certificateSslARN string
-	privateSubnetIds  string
-	publicSubnetIds   string
-	privateDNS        string
-	logger            log.FieldLogger
+	clusterRootDir          string
+	s3StateStore            string
+	certificateSslARN       string
+	privateSubnetIds        string
+	publicSubnetIds         string
+	privateDNS              string
+	useExistingAWSResources bool
+	logger                  log.FieldLogger
 }
 
 // helmDeployment deploys Helm charts.
@@ -50,13 +51,14 @@ type helmDeployment struct {
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateDNS string, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
-		clusterRootDir:    clusterRootDir,
-		s3StateStore:      s3StateStore,
-		certificateSslARN: certificateSslARN,
-		privateDNS:        privateDNS,
-		logger:            logger,
+		clusterRootDir:          clusterRootDir,
+		s3StateStore:            s3StateStore,
+		certificateSslARN:       certificateSslARN,
+		privateDNS:              privateDNS,
+		useExistingAWSResources: useExistingAWSResources,
+		logger:                  logger,
 	}
 }
 
@@ -125,9 +127,12 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	}
 	defer kops.Close()
 
-	clusterResources, err := awsClient.GetAndClaimVpcResources(cluster.ID, logger)
-	if err != nil {
-		return err
+	var clusterResources aws.ClusterResources
+	if provisioner.useExistingAWSResources {
+		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, logger)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = kops.CreateCluster(
