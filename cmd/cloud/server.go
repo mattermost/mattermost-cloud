@@ -41,6 +41,7 @@ func init() {
 	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
+	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
@@ -97,6 +98,7 @@ var serverCmd = &cobra.Command{
 		route53ZoneID, _ := command.Flags().GetString("route53-id")
 		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
 		privateDNS, _ := command.Flags().GetString("private-dns")
+		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 
@@ -118,6 +120,7 @@ var serverCmd = &cobra.Command{
 			"private-route53-id":              privateRoute53ZoneID,
 			"private-dns":                     privateDNS,
 			"cluster-resource-threshold":      clusterResourceThreshold,
+			"use-existing-aws-resources":      useExistingResources,
 			"keep-database-data":              keepDatabaseData,
 			"keep-filestore-data":             keepFilestoreData,
 			"debug":                           debug,
@@ -129,6 +132,7 @@ var serverCmd = &cobra.Command{
 			s3StateStore,
 			certificateSslARN,
 			privateDNS,
+			useExistingResources,
 			logger,
 		)
 

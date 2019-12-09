@@ -36,6 +36,10 @@ func (c *Cmd) CreateCluster(name, version, ami, cloud string, clusterSize Cluste
 	if ami != "" {
 		args = append(args, arg("image", ami))
 	}
+	if cloud == "aws" {
+		args = append(args, arg("networking", "amazon-vpc-routed-eni"))
+	}
+
 	if len(privateSubnetIds) != 0 {
 		args = append(args,
 			commaArg("subnets", privateSubnetIds),
@@ -51,9 +55,6 @@ func (c *Cmd) CreateCluster(name, version, ami, cloud string, clusterSize Cluste
 	}
 	if len(workerSecurityGroups) != 0 {
 		args = append(args, commaArg("node-security-groups", workerSecurityGroups))
-	}
-	if cloud == "aws" {
-		args = append(args, arg("networking", "amazon-vpc-routed-eni"))
 	}
 
 	_, _, err := c.run(args...)

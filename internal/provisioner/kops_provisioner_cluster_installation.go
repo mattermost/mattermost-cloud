@@ -11,6 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,7 @@ import (
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
 func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -135,7 +136,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
 func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -217,7 +218,7 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 
 // DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
 func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -282,7 +283,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 // GetClusterInstallationResource gets the cluster installation resource from
 // the kubernetes API.
 func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -331,7 +332,7 @@ func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, cl
 }
 
 func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	logger := provisioner.logger.WithFields(map[string]interface{}{
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})

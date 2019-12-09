@@ -63,7 +63,10 @@ func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.F
 		return err
 	}
 
-	logger.Debugf("AWS route53 response: %s", prettyRoute53Response(resp))
+	logger.WithFields(log.Fields{
+		"route53-dns-value":     dnsName,
+		"route53-dns-endpoints": dnsEndpoints,
+	}).Debugf("AWS Route53 create response: %s", prettyRoute53Response(resp))
 
 	return nil
 }
@@ -112,8 +115,6 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 		return nil
 	}
 
-	logger.Debugf("Attempting to delete %d DNS records", len(changes))
-
 	input := &route53.ChangeResourceRecordSetsInput{
 		ChangeBatch:  &route53.ChangeBatch{Changes: changes},
 		HostedZoneId: aws.String(a.hostedZoneID),
@@ -123,7 +124,10 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 		return err
 	}
 
-	logger.Debugf("AWS route53 response: %s", prettyRoute53Response(resp))
+	logger.WithFields(log.Fields{
+		"route53-records-deleted": len(changes),
+		"route53-dns-value":       dnsName,
+	}).Debugf("AWS route53 delete response: %s", prettyRoute53Response(resp))
 
 	return nil
 }
