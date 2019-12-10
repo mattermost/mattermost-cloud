@@ -11,12 +11,12 @@ import (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider           string
-	Version            string
-	KopsAMI            string
-	Size               string
-	Zones              []string
-	AllowInstallations bool
+	Provider           string   `json:"provider,omitempty"`
+	Version            string   `json:"version,omitempty"`
+	KopsAMI            string   `json:"kops-ami,omitempty"`
+	Size               string   `json:"size,omitempty"`
+	Zones              []string `json:"zones,omitempty"`
+	AllowInstallations bool     `json:"allow-installations,omitempty"`
 }
 
 // NewCreateClusterRequestFromReader will create a CreateClusterRequest from an io.Reader with JSON data.
