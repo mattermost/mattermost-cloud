@@ -123,118 +123,130 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
 	switch cluster.State {
 	case model.ClusterStateCreationRequested:
-		changed, err := s.provisioner.PrepareCluster(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to prepare cluster")
-			return model.ClusterStateCreationFailed
-		}
-
-		if changed {
-			err = s.store.UpdateCluster(cluster)
-			if err != nil {
-				logger.WithError(err).Error("Failed to record updated cluster after creation")
-				return model.ClusterStateCreationFailed
-			}
-		}
-
-		err = s.provisioner.CreateCluster(cluster, s.aws)
-		if err != nil {
-			logger.WithError(err).Error("Failed to create cluster")
-			return model.ClusterStateCreationFailed
-		}
-
-		err = s.provisioner.ProvisionCluster(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to provision cluster")
-			return model.ClusterStateProvisioningFailed
-		}
-
-		// Update the cluster version in the database. Log errors, but do not
-		// prevent creation from finishing cleanly.
-		version, err := s.provisioner.GetClusterVersion(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to get cluster version")
-		} else {
-			if cluster.Version != version {
-				cluster.Version = version
-				err = s.store.UpdateCluster(cluster)
-				if err != nil {
-					logger.WithError(err).Warnf("failed to set cluster version to %s", version)
-				}
-			}
-		}
-
-		logger.Info("Finished creating cluster")
-		return model.ClusterStateStable
-
+		return s.createCluster(cluster, logger)
 	case model.ClusterStateProvisioningRequested:
-		err := s.provisioner.ProvisionCluster(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to provision cluster")
-			return model.ClusterStateProvisioningFailed
-		}
-
-		// Update the cluster version in the database. Log errors, but do not
-		// prevent provisioning from finishing cleanly.
-		version, err := s.provisioner.GetClusterVersion(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to get cluster version")
-		} else {
-			if cluster.Version != version {
-				cluster.Version = version
-				err = s.store.UpdateCluster(cluster)
-				if err != nil {
-					logger.WithError(err).Warnf("failed to set cluster version to %s", version)
-				}
-			}
-		}
-
-		logger.Info("Finished provisioning cluster")
-		return model.ClusterStateStable
-
+		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateUpgradeRequested:
-		err := s.provisioner.UpgradeCluster(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to upgrade cluster")
-			return model.ClusterStateUpgradeFailed
-		}
-
-		// Update the cluster version in the database. Log errors, but do not
-		// prevent the upgrade from finishing cleanly.
-		version, err := s.provisioner.GetClusterVersion(cluster)
-		if err != nil {
-			logger.WithError(err).Error("Failed to get cluster version")
-		} else {
-			if cluster.Version != version {
-				cluster.Version = version
-				err = s.store.UpdateCluster(cluster)
-				if err != nil {
-					logger.WithError(err).Warnf("failed to set cluster version to %s", version)
-				}
-			}
-		}
-
-		logger.Info("Finished upgrading cluster")
-		return model.ClusterStateStable
-
+		return s.upgradeCluster(cluster, logger)
 	case model.ClusterStateDeletionRequested:
-		err := s.provisioner.DeleteCluster(cluster, s.aws)
-		if err != nil {
-			logger.WithError(err).Error("Failed to delete cluster")
-			return model.ClusterStateDeletionFailed
-		}
-
-		err = s.store.DeleteCluster(cluster.ID)
-		if err != nil {
-			logger.WithError(err).Error("Failed to record updated cluster after deletion")
-			return model.ClusterStateDeletionFailed
-		}
-
-		logger.Info("Finished deleting cluster")
-		return model.ClusterStateDeleted
-
+		return s.deleteCluster(cluster, logger)
 	default:
 		logger.Warnf("Found cluster pending work in unexpected state %s", cluster.State)
 		return cluster.State
 	}
+}
+
+func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	changed, err := s.provisioner.PrepareCluster(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to prepare cluster")
+		return model.ClusterStateCreationFailed
+	}
+
+	if changed {
+		err = s.store.UpdateCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to record updated cluster after creation")
+			return model.ClusterStateCreationFailed
+		}
+	}
+
+	err = s.provisioner.CreateCluster(cluster, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create cluster")
+		return model.ClusterStateCreationFailed
+	}
+
+	err = s.provisioner.ProvisionCluster(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision cluster")
+		return model.ClusterStateProvisioningFailed
+	}
+
+	// Update the cluster version in the database. Log errors, but do not
+	// prevent creation from finishing cleanly.
+	version, err := s.provisioner.GetClusterVersion(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get cluster version")
+	} else {
+		if cluster.Version != version {
+			cluster.Version = version
+			err = s.store.UpdateCluster(cluster)
+			if err != nil {
+				logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+			}
+		}
+	}
+
+	logger.Info("Finished creating cluster")
+	return model.ClusterStateStable
+}
+
+func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	err := s.provisioner.ProvisionCluster(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision cluster")
+		return model.ClusterStateProvisioningFailed
+	}
+
+	// Update the cluster version in the database. Log errors, but do not
+	// prevent provisioning from finishing cleanly.
+	version, err := s.provisioner.GetClusterVersion(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get cluster version")
+	} else {
+		if cluster.Version != version {
+			cluster.Version = version
+			err = s.store.UpdateCluster(cluster)
+			if err != nil {
+				logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+			}
+		}
+	}
+
+	logger.Info("Finished provisioning cluster")
+	return model.ClusterStateStable
+}
+
+func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	err := s.provisioner.UpgradeCluster(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to upgrade cluster")
+		return model.ClusterStateUpgradeFailed
+	}
+
+	// Update the cluster version in the database. Log errors, but do not
+	// prevent the upgrade from finishing cleanly.
+	version, err := s.provisioner.GetClusterVersion(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get cluster version")
+	} else {
+		if cluster.Version != version {
+			cluster.Version = version
+			err = s.store.UpdateCluster(cluster)
+			if err != nil {
+				logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+			}
+		}
+	}
+
+	logger.Info("Finished upgrading cluster")
+	return model.ClusterStateStable
+}
+
+func (s *ClusterSupervisor) deleteCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	err := s.provisioner.DeleteCluster(cluster, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete cluster")
+		return model.ClusterStateDeletionFailed
+	}
+
+	err = s.store.DeleteCluster(cluster.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to record updated cluster after deletion")
+		return model.ClusterStateDeletionFailed
+	}
+
+	logger.Info("Finished deleting cluster")
+	return model.ClusterStateDeleted
 }
