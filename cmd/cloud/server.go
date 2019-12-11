@@ -141,7 +141,9 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+			awsClient := aws.New(route53ZoneID)
+			awsClient.AddSQLStore(sqlStore)
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger))

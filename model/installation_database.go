@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	//"github.com/mattermost/mattermost-cloud/internal/store"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -16,9 +16,13 @@ const (
 
 // Database is the interface for managing Mattermost databases.
 type Database interface {
-	Provision(logger log.FieldLogger) error
+	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
 	Teardown(keepData bool, logger log.FieldLogger) error
 	GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
+}
+
+type InstallationDatabaseStoreInterface interface {
+	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.
@@ -30,7 +34,7 @@ func NewMysqlOperatorDatabase() *MysqlOperatorDatabase {
 }
 
 // Provision completes all the steps necessary to provision a MySQL operator database.
-func (d *MysqlOperatorDatabase) Provision(logger log.FieldLogger) error {
+func (d *MysqlOperatorDatabase) Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger.Info("MySQL operator database requires no pre-provisioning; skipping...")
 
 	return nil
@@ -50,20 +54,6 @@ func (d *MysqlOperatorDatabase) Teardown(keepData bool, logger log.FieldLogger) 
 // accessing the MySQL operator database.
 func (d *MysqlOperatorDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	return nil, nil, nil
-}
-
-// GetDatabase returns the Database interface that matches the installation.
-func (i *Installation) GetDatabase() Database {
-	switch i.Database {
-	case InstallationDatabaseMysqlOperator:
-		return NewMysqlOperatorDatabase()
-	case InstallationDatabaseAwsRDS:
-		return aws.NewRDSDatabase(i.ID)
-	}
-
-	// Warning: we should never get here as it would mean that we didn't match
-	// our database type.
-	return NewMysqlOperatorDatabase()
 }
 
 // InternalDatabase returns true if the installation's database is internal

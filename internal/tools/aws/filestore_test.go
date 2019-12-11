@@ -20,24 +20,24 @@ func TestFilestoreProvision(t *testing.T) {
 	}
 
 	logger := logrus.New()
-
 	filestore := NewS3Filestore(id)
+
+	logger.Warnf("Provisioning down AWS filestore %s", id)
 
 	err := filestore.Provision(logger)
 	require.NoError(t, err)
 }
 
 func TestFilestoreTeardown(t *testing.T) {
-
 	id := os.Getenv("SUPER_AWS_FILESTORE_TEST")
 	if id == "" {
 		return
 	}
 
 	logger := logrus.New()
-	logger.Warnf("Tearing down S3 bucket %s", id)
-
 	filestore := NewS3Filestore(id)
+
+	logger.Warnf("Tearing down AWS filestore %s", id)
 
 	err := filestore.Teardown(false, logger)
 	require.NoError(t, err)

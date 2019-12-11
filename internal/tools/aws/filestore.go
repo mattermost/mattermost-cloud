@@ -6,10 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 // S3Filestore is a filestore backed by AWS S3.
@@ -75,6 +74,7 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*m
 	return filestoreSpec, filestoreSecret, nil
 }
 
+// s3FilestoreProvision provisions an S3 filestore for an installation.
 func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	logger.Info("Provisioning AWS S3 filestore")
 

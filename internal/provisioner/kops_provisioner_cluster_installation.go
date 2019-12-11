@@ -8,6 +8,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
@@ -97,7 +98,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		logger.Debug("Cluster installation configured with a Mattermost license")
 	}
 
-	databaseSpec, databaseSecret, err := installation.GetDatabase().GenerateDatabaseSpecAndSecret(logger)
+	databaseSpec, databaseSecret, err := utils.GetDatabase(installation).GenerateDatabaseSpecAndSecret(logger)
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		mattermostInstallation.Spec.Database = *databaseSpec
 	}
 
-	filestoreSpec, filestoreSecret, err := installation.GetFilestore().GenerateFilestoreSpecAndSecret(logger)
+	filestoreSpec, filestoreSecret, err := utils.GetFilestore(installation).GenerateFilestoreSpecAndSecret(logger)
 	if err != nil {
 		return err
 	}

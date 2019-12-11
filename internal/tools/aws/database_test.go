@@ -20,22 +20,19 @@ func TestDatabaseProvision(t *testing.T) {
 	}
 
 	logger := logrus.New()
-
 	database := NewRDSDatabase(id)
 
-	err := database.Provision(logger)
+	err := database.Provision(nil, logger)
 	require.NoError(t, err)
 }
 
 func TestDatabaseTeardown(t *testing.T) {
-
 	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
 	if id == "" {
 		return
 	}
 
 	logger := logrus.New()
-
 	database := NewRDSDatabase(id)
 
 	err := database.Teardown(false, logger)

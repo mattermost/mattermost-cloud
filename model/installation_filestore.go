@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	log "github.com/sirupsen/logrus"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -51,20 +50,6 @@ func (f *MinioOperatorFilestore) Teardown(keepData bool, logger log.FieldLogger)
 // accessing the MinIO operator filestore.
 func (f *MinioOperatorFilestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	return nil, nil, nil
-}
-
-// GetFilestore returns the Filestore interface that matches the installation.
-func (i *Installation) GetFilestore() Filestore {
-	switch i.Filestore {
-	case InstallationFilestoreMinioOperator:
-		return NewMinioOperatorFilestore()
-	case InstallationFilestoreAwsS3:
-		return aws.NewS3Filestore(i.ID)
-	}
-
-	// Warning: we should never get here as it would mean that we didn't match
-	// our filestore type.
-	return NewMinioOperatorFilestore()
 }
 
 // InternalFilestore returns true if the installation's filestore is internal

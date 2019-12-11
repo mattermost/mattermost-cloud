@@ -5,6 +5,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -171,13 +172,13 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 }
 
 func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := installation.GetDatabase().Provision(logger)
+	err := utils.GetDatabase(installation).Provision(s.store, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision installation database")
 		return model.InstallationStateCreationPreProvisioning
 	}
 
-	err = installation.GetFilestore().Provision(logger)
+	err = utils.GetFilestore(installation).Provision(logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision installation filestore")
 		return model.InstallationStateCreationPreProvisioning
@@ -628,13 +629,13 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = installation.GetDatabase().Teardown(s.keepDatabaseData, logger)
+	err = utils.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = installation.GetFilestore().Teardown(s.keepFilestoreData, logger)
+	err = utils.GetFilestore(installation).Teardown(s.keepFilestoreData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete filestore")
 		return model.InstallationStateDeletionFinalCleanup

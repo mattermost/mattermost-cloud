@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // CopyDirectory copy the entire directory to another destination
@@ -69,4 +72,32 @@ func copyFile(source string, dest string) error {
 	}
 
 	return nil
+}
+
+// GetFilestore returns the Filestore interface that matches the installation.
+func GetFilestore(i *model.Installation) model.Filestore {
+	switch i.Filestore {
+	case model.InstallationFilestoreMinioOperator:
+		return model.NewMinioOperatorFilestore()
+	case model.InstallationFilestoreAwsS3:
+		return aws.NewS3Filestore(i.ID)
+	}
+
+	// Warning: we should never get here as it would mean that we didn't match
+	// our filestore type.
+	return model.NewMinioOperatorFilestore()
+}
+
+// GetDatabase returns the Database interface that matches the installation.
+func GetDatabase(i *model.Installation) model.Database {
+	switch i.Database {
+	case model.InstallationDatabaseMysqlOperator:
+		return model.NewMysqlOperatorDatabase()
+	case model.InstallationDatabaseAwsRDS:
+		return aws.NewRDSDatabase(i.ID)
+	}
+
+	// Warning: we should never get here as it would mean that we didn't match
+	// our database type.
+	return model.NewMysqlOperatorDatabase()
 }
