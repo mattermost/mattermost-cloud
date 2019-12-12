@@ -340,7 +340,7 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 
 	logger.Info("Installation pre-provisioning complete")
 
-	return model.InstallationStateCreationInProgress
+	return s.waitForClusterInstallationStable(installation, instanceID, logger)
 }
 
 func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
