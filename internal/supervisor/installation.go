@@ -142,12 +142,14 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 func (s *InstallationSupervisor) transitionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	switch installation.State {
 	case model.InstallationStateCreationRequested,
-		model.InstallationStateCreationPreProvisioning:
-		return s.preProvisionInstallation(installation, instanceID, logger)
-
-	case model.InstallationStateCreationInProgress,
 		model.InstallationStateCreationNoCompatibleClusters:
 		return s.createInstallation(installation, instanceID, logger)
+
+	case model.InstallationStateCreationPreProvisioning:
+		return s.preProvisionInstallation(installation, instanceID, logger)
+
+	case model.InstallationStateCreationInProgress:
+		return s.waitForClusterInstallationStable(installation, instanceID, logger)
 
 	case model.InstallationStateCreationDNS:
 		return s.configureInstallationDNS(installation, logger)
@@ -171,24 +173,6 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	}
 }
 
-func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := utils.GetDatabase(installation).Provision(s.store, logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to provision installation database")
-		return model.InstallationStateCreationPreProvisioning
-	}
-
-	err = utils.GetFilestore(installation).Provision(logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to provision installation filestore")
-		return model.InstallationStateCreationPreProvisioning
-	}
-
-	logger.Info("Installation pre-provisioning complete")
-
-	return s.createInstallation(installation, instanceID, logger)
-}
-
 func (s *InstallationSupervisor) createInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
@@ -196,57 +180,28 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
-		return installation.State
+		return model.InstallationStateCreationRequested
 	}
 
-	// If we've previously created one or more cluster installations, consider the
-	// installation to be stable once all cluster installations are stable. Or, if
-	// some cluster installations have failed, mark the installation as failed.
 	if len(clusterInstallations) > 0 {
-		var stable, reconciling, failed, other int
-		for _, clusterInstallation := range clusterInstallations {
-			switch clusterInstallation.State {
-			case model.ClusterInstallationStateStable:
-				stable++
-			case model.ClusterInstallationStateReconciling:
-				reconciling++
-			case model.ClusterInstallationStateCreationFailed:
-				failed++
-			default:
-				other++
-			}
-		}
-
-		logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
-
-		if len(clusterInstallations) == stable {
-			logger.Infof("Finished creating installation")
-			return s.configureInstallationDNS(installation, logger)
-		}
-		if failed > 0 {
-			logger.Infof("Found %d failed cluster installations", failed)
-			return model.InstallationStateCreationFailed
-		}
-
-		return model.InstallationStateCreationInProgress
+		logger.Warnf("Expected no cluster installations, but found %d", len(clusterInstallations))
+		return s.preProvisionInstallation(installation, instanceID, logger)
 	}
 
-	// Otherwise proceed to requesting cluster installation creation on any available clusters.
+	// Proceed to requesting cluster installation creation on any available clusters.
 	clusters, err := s.store.GetClusters(&model.ClusterFilter{
 		PerPage:        model.AllPerPage,
 		IncludeDeleted: false,
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to query clusters")
-		return installation.State
+		return model.InstallationStateCreationRequested
 	}
 
 	for _, cluster := range clusters {
 		clusterInstallation := s.createClusterInstallation(cluster, installation, instanceID, logger)
 		if clusterInstallation != nil {
-			// Once created, preserve the existing state until the cluster installation
-			// stabilizes.
-			return model.InstallationStateCreationInProgress
+			return s.preProvisionInstallation(installation, instanceID, logger)
 		}
 	}
 
@@ -368,6 +323,70 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%", cluster.ID, cpuPercent, memoryPercent)
 
 	return clusterInstallation
+}
+
+func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	err := utils.GetDatabase(installation).Provision(s.store, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision installation database")
+		return model.InstallationStateCreationPreProvisioning
+	}
+
+	err = utils.GetFilestore(installation).Provision(logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision installation filestore")
+		return model.InstallationStateCreationPreProvisioning
+	}
+
+	logger.Info("Installation pre-provisioning complete")
+
+	return model.InstallationStateCreationInProgress
+}
+
+func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		InstallationID: installation.ID,
+		PerPage:        model.AllPerPage,
+	})
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find cluster installations")
+		return model.InstallationStateCreationInProgress
+	}
+
+	// Consider the installation to be stable once all cluster installations are
+	// stable. Or, if some cluster installations have failed, mark the
+	// installation as failed.
+	if len(clusterInstallations) == 0 {
+		logger.Error("Expected 1 cluster installations to be created, but found none")
+		return model.InstallationStateCreationFailed
+	}
+
+	var stable, reconciling, failed, other int
+	for _, clusterInstallation := range clusterInstallations {
+		switch clusterInstallation.State {
+		case model.ClusterInstallationStateStable:
+			stable++
+		case model.ClusterInstallationStateReconciling:
+			reconciling++
+		case model.ClusterInstallationStateCreationFailed:
+			failed++
+		default:
+			other++
+		}
+	}
+
+	logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
+
+	if len(clusterInstallations) == stable {
+		logger.Infof("Finished creating installation")
+		return s.configureInstallationDNS(installation, logger)
+	}
+	if failed > 0 {
+		logger.Infof("Found %d failed cluster installations", failed)
+		return model.InstallationStateCreationFailed
+	}
+
+	return model.InstallationStateCreationInProgress
 }
 
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, logger log.FieldLogger) string {

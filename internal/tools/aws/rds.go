@@ -24,8 +24,8 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 				Values: []*string{aws.String(vpcID)},
 			},
 			{
-				Name:   aws.String("tag:DatabaseType"),
-				Values: []*string{aws.String("MYSQL/Aurora")},
+				Name:   aws.String(DefaultDBSecurityGroupTagKey),
+				Values: []*string{aws.String(DefaultDBSecurityGroupTagValue)},
 			},
 		},
 	}
@@ -54,32 +54,31 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 		Region: aws.String(DefaultAWSRegion),
 	})
 
-	input := &rds.DescribeDBSubnetGroupsInput{
-		Filters: []*rds.Filter{
-			{
-				Name:   aws.String("vpc-id"),
-				Values: []*string{aws.String(vpcID)},
-			},
-			{
-				Name:   aws.String("tag:DBSubnetGroupType"),
-				Values: []*string{aws.String("provisioning")},
-			},
-		},
-	}
+	// TODO:
+	// The subnet group describe functionality does not currently support
+	// filters. Instead, we look up all the subnet groups and match based on
+	// name. The name format is based on our terraform creation logic.
+	// Example Name: mattermost-provisioner-db-vpc-VPC_ID_HERE
+	//
+	// We should periodically check if filters become supported and move to that
+	// when they do.
 
-	result, err := svc.DescribeDBSubnetGroups(input)
+	result, err := svc.DescribeDBSubnetGroups(nil)
 	if err != nil {
 		return "", err
 	}
 
-	if len(result.DBSubnetGroups) != 1 {
-		return "", fmt.Errorf("unable to find security groups tagged for Mattermost DB usage: %s=%s", DefaultDBSecurityGroupTagKey, DefaultDBSecurityGroupTagValue)
+	for _, subnetGroup := range result.DBSubnetGroups {
+		// AWS names are unique, so there will only be one that correctly matches.
+		if *subnetGroup.DBSubnetGroupName == fmt.Sprintf("mattermost-provisioner-db-%s", vpcID) {
+			name := *subnetGroup.DBSubnetGroupName
+			logger.WithField("db-subnet-group-name", name).Debugf("Found DB subnet group")
+
+			return name, nil
+		}
 	}
 
-	name := *result.DBSubnetGroups[0].DBSubnetGroupName
-	logger.WithField("db-subnet-group-name", name).Debugf("Found DB subnet group")
-
-	return name, nil
+	return "", fmt.Errorf("unable to find subnet group tagged for Mattermost DB usage: %s=%s", DefaultDBSubnetGroupTagKey, DefaultDBSubnetGroupTagValue)
 }
 
 func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password string, logger log.FieldLogger) error {
@@ -96,7 +95,6 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 		return nil
 	}
 
-	//DB Subnet Group -> DBSubnetGroupType: provisioning
 	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(vpcID, logger)
 	if err != nil {
 		return err

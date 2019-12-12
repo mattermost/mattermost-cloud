@@ -120,6 +120,10 @@ func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.F
 			Name:   aws.String(VpcClusterIDTagKey),
 			Values: []*string{aws.String(clusterID)},
 		},
+		{
+			Name:   aws.String(VpcAvailableTagKey),
+			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+		},
 	}
 	vpcs, err := GetVpcsWithFilters(vpcFilters)
 	if err != nil {

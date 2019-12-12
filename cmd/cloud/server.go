@@ -126,6 +126,11 @@ var serverCmd = &cobra.Command{
 			"debug":                           debug,
 		}).Info("Starting Mattermost Provisioning Server")
 
+		// Warn on settings we consider to be non-production.
+		if !useExistingResources {
+			logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
+		}
+
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,

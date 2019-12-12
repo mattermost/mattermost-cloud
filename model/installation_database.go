@@ -21,6 +21,8 @@ type Database interface {
 	GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
 }
 
+// InstallationDatabaseStoreInterface is the interface necessary for SQLStore
+// functionality to correlate an installation to a cluster for database creation.
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
 }
