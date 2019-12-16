@@ -43,6 +43,21 @@ func (cr *ClusterResources) IsValid() error {
 // GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
 func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error) {
+	totalVpcsFilter := []*ec2.Filter{
+		{
+			Name: aws.String(VpcAvailableTagKey),
+			Values: []*string{
+				aws.String(VpcAvailableTagValueTrue),
+				aws.String(VpcAvailableTagValueFalse),
+			},
+		},
+	}
+	totalVpcs, err := GetVpcsWithFilters(totalVpcsFilter)
+	if err != nil {
+		return ClusterResources{}, err
+	}
+	totalVpcCount := len(totalVpcs)
+
 	vpcFilters := []*ec2.Filter{
 		{
 			Name:   aws.String(VpcAvailableTagKey),
@@ -54,6 +69,9 @@ func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogge
 	if err != nil {
 		return ClusterResources{}, err
 	}
+	availableVpcCount := len(vpcs)
+
+	logger.Debugf("Claiming VPC: %d total, %d available", totalVpcCount, availableVpcCount)
 
 	// Loop through the VPCs. Based on the filter above these should all be
 	// valid so we will claim the first one. Before doing that a sanity check of
@@ -137,8 +155,6 @@ func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogge
 			return clusterResources, err
 		}
 
-		logger.Debugf("Claimed VPC %s", clusterResources.VpcID)
-
 		return clusterResources, nil
 	}
 
@@ -183,13 +199,6 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, l
 		return fmt.Errorf("query for VPC %s somehow returned multiple results", clusterResources.VpcID)
 	}
 
-	for _, subnet := range clusterResources.PublicSubnetsIDs {
-		err = a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to tag subnet")
-		}
-	}
-
 	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueFalse, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
@@ -198,6 +207,15 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, l
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
 	}
+
+	for _, subnet := range clusterResources.PublicSubnetsIDs {
+		err = a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to tag subnet")
+		}
+	}
+
+	logger.Debugf("Claimed VPC %s", clusterResources.VpcID)
 
 	return nil
 }
@@ -264,6 +282,8 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
 	}
+
+	logger.Debugf("Released VPC %s", clusterID)
 
 	return nil
 }
