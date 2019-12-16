@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (a *Client) rdsGetDBSecurityGroupIDs(logger log.FieldLogger) ([]string, error) {
+func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) ([]string, error) {
 	svc := ec2.New(session.New(), &aws.Config{
 		Region: aws.String(DefaultAWSRegion),
 	})
@@ -20,10 +20,12 @@ func (a *Client) rdsGetDBSecurityGroupIDs(logger log.FieldLogger) ([]string, err
 	input := &ec2.DescribeSecurityGroupsInput{
 		Filters: []*ec2.Filter{
 			{
-				Name: aws.String(DefaultDBSecurityGroupTagKey),
-				Values: []*string{
-					aws.String(DefaultDBSecurityGroupTagValue),
-				},
+				Name:   aws.String("vpc-id"),
+				Values: []*string{aws.String(vpcID)},
+			},
+			{
+				Name:   aws.String(DefaultDBSecurityGroupTagKey),
+				Values: []*string{aws.String(DefaultDBSecurityGroupTagValue)},
 			},
 		},
 	}
@@ -47,7 +49,39 @@ func (a *Client) rdsGetDBSecurityGroupIDs(logger log.FieldLogger) ([]string, err
 	return dbSecurityGroups, nil
 }
 
-func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, logger log.FieldLogger) error {
+func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (string, error) {
+	svc := rds.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	// TODO:
+	// The subnet group describe functionality does not currently support
+	// filters. Instead, we look up all the subnet groups and match based on
+	// name. The name format is based on our terraform creation logic.
+	// Example Name: mattermost-provisioner-db-vpc-VPC_ID_HERE
+	//
+	// We should periodically check if filters become supported and move to that
+	// when they do.
+
+	result, err := svc.DescribeDBSubnetGroups(nil)
+	if err != nil {
+		return "", err
+	}
+
+	for _, subnetGroup := range result.DBSubnetGroups {
+		// AWS names are unique, so there will only be one that correctly matches.
+		if *subnetGroup.DBSubnetGroupName == fmt.Sprintf("mattermost-provisioner-db-%s", vpcID) {
+			name := *subnetGroup.DBSubnetGroupName
+			logger.WithField("db-subnet-group-name", name).Debugf("Found DB subnet group")
+
+			return name, nil
+		}
+	}
+
+	return "", fmt.Errorf("unable to find subnet group tagged for Mattermost DB usage: %s=%s", DefaultDBSubnetGroupTagKey, DefaultDBSubnetGroupTagValue)
+}
+
+func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password string, logger log.FieldLogger) error {
 	svc := rds.New(session.New(), &aws.Config{
 		Region: aws.String(DefaultAWSRegion),
 	})
@@ -61,7 +95,12 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, log
 		return nil
 	}
 
-	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(logger)
+	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(vpcID, logger)
+	if err != nil {
+		return err
+	}
+
+	dbSubnetGroupName, err := a.rdsGetDBSubnetGroupName(vpcID, logger)
 	if err != nil {
 		return err
 	}
@@ -82,7 +121,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, username, password string, log
 		MasterUsername:        aws.String(username),
 		Port:                  aws.Int64(3306),
 		StorageEncrypted:      aws.Bool(false),
-		DBSubnetGroupName:     aws.String(DefaultDBSubnetGroupName),
+		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 	}
 
@@ -174,7 +213,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 			SkipFinalSnapshot:    aws.Bool(true),
 		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "unable to delete DB cluster instance")
 		}
 		logger.WithField("db-instance-name", *instance.DBInstanceIdentifier).Debug("DB instance deleted")
 	}
@@ -184,7 +223,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 		SkipFinalSnapshot:   aws.Bool(true),
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to delete database")
+		return errors.Wrap(err, "unable to delete DB cluster")
 	}
 
 	logger.WithField("db-cluster-name", awsID).Debug("DBCluster deleted")

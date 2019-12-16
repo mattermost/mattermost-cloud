@@ -135,6 +135,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 	return rdsSecretPayload, nil
 }
 
+// secretsManagerGetIAMAccessKey returns the AccessKey for an IAM account.
 func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	svc := secretsmanager.New(session.New())
 

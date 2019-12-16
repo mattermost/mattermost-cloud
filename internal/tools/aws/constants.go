@@ -45,6 +45,17 @@ const (
 	// Note: This needs to be manually created before RDS databases can be used.
 	DefaultDBSecurityGroupTagValue = "MYSQL/Aurora"
 
+	// DefaultDBSubnetGroupTagKey is the default DB subnet group tag key that is
+	// used to find subnet groups to use in configuration of the RDS database.
+	// Note: This needs to be manually created before RDS databases can be used.
+	DefaultDBSubnetGroupTagKey = "tag:MattermostCloudInstallationDatabase"
+
+	// DefaultDBSubnetGroupTagValue is the default DB subnet group tag value
+	// that is used to find subnet groups to use in configuration of the RDS
+	// database.
+	// Note: This needs to be manually created before RDS databases can be used.
+	DefaultDBSubnetGroupTagValue = "MYSQL/Aurora"
+
 	// cloudIDPrefix is the prefix value used when creating AWS resource names.
 	// Warning:
 	// changing this value will break the connection to AWS resources for

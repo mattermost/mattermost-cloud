@@ -3,6 +3,7 @@ package aws
 import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,6 +23,7 @@ type AWS interface {
 type Client struct {
 	hostedZoneID string
 	api          api
+	store        model.InstallationDatabaseStoreInterface
 }
 
 // api mocks out the AWS API calls for testing.
@@ -41,4 +43,14 @@ func New(hostedZoneID string) *Client {
 		hostedZoneID: hostedZoneID,
 		api:          &apiInterface{},
 	}
+}
+
+// AddSQLStore adds SQLStore functionality to the AWS client.
+func (c *Client) AddSQLStore(store model.InstallationDatabaseStoreInterface) {
+	c.store = store
+}
+
+// HasSQLStore returns whether the AWS client has a SQL store or not.
+func (c *Client) HasSQLStore() bool {
+	return c.store != nil
 }
