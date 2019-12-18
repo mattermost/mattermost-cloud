@@ -120,6 +120,13 @@ func TestDeleteCNAME(t *testing.T) {
 			false,
 			true,
 		},
+		{
+			"dns name too long should skip",
+			"xoxo-serverwithverylongnametoexposeissuesrelatedtolengthofkeystha",
+			nil,
+			false,
+			false,
+		},
 	}
 
 	logger := logrus.New()

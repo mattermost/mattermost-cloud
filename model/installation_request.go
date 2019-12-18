@@ -50,6 +50,9 @@ func (request *CreateInstallationRequest) Validate() error {
 	if request.DNS == "" {
 		return errors.New("must specify DNS")
 	}
+	if len(request.DNS) >= 64 {
+		return errors.Errorf("DNS names must be less than 64 characters, but name was %d long. DNS=%s", len(request.DNS), request.DNS)
+	}
 	_, err := mmv1alpha1.GetClusterSize(request.Size)
 	if err != nil {
 		return errors.Wrap(err, "invalid size")
