@@ -214,8 +214,8 @@ var serverCmd = &cobra.Command{
 func deprecationWarnings(logger logrus.FieldLogger) {
 	_, err := os.Stat(clusterRootDir)
 	if err == nil {
-		logger.Warn("[Depreciation] The directory './clusters' was found; this is no longer used by the kops provisioner")
-		logger.Warn("[Depreciation] Any remaining terraform in this directory should be manually moved to remote state")
-		logger.Warn("[Depreciation] Instructions for doing this can be found in the README")
+		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
+		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
+		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
 	}
 }
