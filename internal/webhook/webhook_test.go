@@ -71,10 +71,10 @@ func TestSendWebhooks(t *testing.T) {
 	payload := &model.WebhookPayload{
 		Type:      "type",
 		ID:        model.NewID(),
-		ClusterID: model.NewID(),
 		NewState:  "new_state",
 		OldState:  "old_state",
 		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"ClusterID": model.NewID()},
 	}
 
 	err := sendWebhook(hook, payload, logger)

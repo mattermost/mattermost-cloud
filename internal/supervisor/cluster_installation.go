@@ -111,10 +111,10 @@ func (s *ClusterInstallationSupervisor) Supervise(clusterInstallation *model.Clu
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeClusterInstallation,
 		ID:        clusterInstallation.ID,
-		ClusterID: clusterInstallation.ClusterID,
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"ClusterID": clusterInstallation.ClusterID},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
