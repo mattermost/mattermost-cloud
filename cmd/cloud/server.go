@@ -126,6 +126,8 @@ var serverCmd = &cobra.Command{
 			"debug":                           debug,
 		}).Info("Starting Mattermost Provisioning Server")
 
+		deprecationWarnings(logger)
+
 		// Warn on settings we consider to be non-production.
 		if !useExistingResources {
 			logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
@@ -133,7 +135,6 @@ var serverCmd = &cobra.Command{
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
-			clusterRootDir,
 			s3StateStore,
 			certificateSslARN,
 			privateDNS,
@@ -206,4 +207,15 @@ var serverCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// deprecationWarnings performs all checks for deprecated settings and warns if
+// any are found.
+func deprecationWarnings(logger logrus.FieldLogger) {
+	_, err := os.Stat(clusterRootDir)
+	if err == nil {
+		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
+		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
+		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
+	}
 }

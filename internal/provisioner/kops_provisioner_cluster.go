@@ -3,10 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,7 +15,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -28,7 +24,6 @@ const DefaultKubernetesVersion = "0.0.0"
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	clusterRootDir          string
 	s3StateStore            string
 	certificateSslARN       string
 	privateSubnetIds        string
@@ -51,9 +46,8 @@ type helmDeployment struct {
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(clusterRootDir, s3StateStore, certificateSslARN, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(s3StateStore, certificateSslARN, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
-		clusterRootDir:          clusterRootDir,
 		s3StateStore:            s3StateStore,
 		certificateSslARN:       certificateSslARN,
 		privateDNS:              privateDNS,
@@ -100,26 +94,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	// Temporarily locate the kops output directory to a local folder based on the
-	// cluster name. This won't be necessary once we persist the output to S3 instead.
-	_, err = os.Stat(provisioner.clusterRootDir)
-	if err != nil && os.IsNotExist(err) {
-		err = os.Mkdir(provisioner.clusterRootDir, 0755)
-		if err != nil {
-			return errors.Wrap(err, "unable to create cluster root dir")
-		}
-	} else if err != nil {
-		return errors.Wrapf(err, "failed to stat cluster root directory %q", provisioner.clusterRootDir)
-	}
-
-	outputDir := path.Join(provisioner.clusterRootDir, cluster.ID)
-	_, err = os.Stat(outputDir)
-	if err == nil {
-		return fmt.Errorf("encountered cluster ID collision: directory %q already exists", outputDir)
-	} else if err != nil && !os.IsNotExist(err) {
-		return errors.Wrapf(err, "failed to stat cluster directory %q", outputDir)
-	}
-
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
@@ -156,24 +130,13 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to create kops cluster")
 	}
 
-	err = os.Rename(kops.GetOutputDirectory(), outputDir)
-	if err != nil && err.(*os.LinkError).Err == syscall.EXDEV {
-		err = utils.CopyDirectory(kops.GetOutputDirectory(), outputDir)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s' using utils.CopyFolder", outputDir))
-		}
-	} else if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to rename kops output directory to '%s'", outputDir))
-	}
-
-	terraformClient, err := terraform.New(outputDir, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
 	if err != nil {
 		return err
 	}
-
 	defer terraformClient.Close()
 
-	err = terraformClient.Init()
+	err = terraformClient.Init(kopsMetadata.Name)
 	if err != nil {
 		return err
 	}
@@ -445,41 +408,29 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	// Temporarily look for the kops output directory as a local folder named after
-	// the cluster ID. See above.
-	outputDir := path.Join(provisioner.clusterRootDir, cluster.ID)
-
-	// Validate the provided cluster ID before we alter state in any way.
-	_, err = os.Stat(outputDir)
-	if err != nil {
-		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
-	}
-
-	terraformClient, err := terraform.New(outputDir, logger)
-	if err != nil {
-		return err
-	}
-	defer terraformClient.Close()
-
-	err = terraformClient.Init()
-	if err != nil {
-		return err
-	}
-	out, ok, err := terraformClient.Output("cluster_name")
-	if err != nil {
-		return err
-	} else if !ok {
-		logger.Warn("No cluster_name in terraform config, assuming partially initialized")
-	} else if out != kopsMetadata.Name {
-		return fmt.Errorf("terraform cluster_name (%s) does not match kops name from provided ID (%s)", out, kopsMetadata.Name)
-	}
-
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
-	_, err = kops.GetCluster(kopsMetadata.Name)
+
+	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+	if err != nil {
+		return err
+	}
+
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	if err != nil {
+		return err
+	}
+	defer terraformClient.Close()
+
+	err = terraformClient.Init(kopsMetadata.Name)
+	if err != nil {
+		return err
+	}
+
+	err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
 	if err != nil {
 		return err
 	}
@@ -500,7 +451,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		}
 	}
 
-	err = kops.UpdateCluster(kopsMetadata.Name, terraformClient.GetWorkingDirectory())
+	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
 	}
@@ -546,50 +497,31 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	// Temporarily look for the kops output directory as a local folder named after
-	// the cluster ID. See above.
-	outputDir := path.Join(provisioner.clusterRootDir, cluster.ID)
-
-	// Validate the provided cluster ID before we alter state in any way.
-	_, err = os.Stat(outputDir)
-	if os.IsNotExist(err) {
-		logger.Info("No resources found, assuming cluster was never created")
-		return nil
-	} else if err != nil {
-		return errors.Wrapf(err, "failed to find cluster directory %q", outputDir)
-	}
-
-	terraformClient, err := terraform.New(outputDir, logger)
-	if err != nil {
-		return err
-	}
-
-	defer terraformClient.Close()
-
-	err = terraformClient.Init()
-	if err != nil {
-		return err
-	}
-
-	if out, ok, err := terraformClient.Output("cluster_name"); err != nil {
-		return err
-	} else if !ok {
-		logger.Info("No cluster_name in terraform config, skipping check")
-	} else if out != kopsMetadata.Name {
-		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsMetadata.Name)
-	}
-
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
 
-	if kopsMetadata.Name != "" {
-		_, err = kops.GetCluster(kopsMetadata.Name)
-		if err != nil {
-			return err
-		}
+	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+	if err != nil {
+		return err
+	}
+
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	if err != nil {
+		return err
+	}
+	defer terraformClient.Close()
+
+	err = terraformClient.Init(kopsMetadata.Name)
+	if err != nil {
+		return err
+	}
+
+	err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
+	if err != nil {
+		return err
 	}
 
 	logger.Info("Deleting cluster")
@@ -599,21 +531,14 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	if kopsMetadata.Name != "" {
-		err = kops.DeleteCluster(kopsMetadata.Name)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete cluster")
-		}
+	err = kops.DeleteCluster(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete cluster")
 	}
 
 	err = awsClient.ReleaseVpc(cluster.ID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to release VPC")
-	}
-
-	err = os.RemoveAll(outputDir)
-	if err != nil {
-		return errors.Wrap(err, "failed to clean up output directory")
 	}
 
 	for _, app := range helmApps {

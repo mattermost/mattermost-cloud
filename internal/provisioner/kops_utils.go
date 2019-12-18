@@ -9,6 +9,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -17,6 +18,27 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// verifyTerraformAndKopsMatch looks at terraform output and verifies that the
+// given kops name matches. This should only catch errors where terraform output
+// was incorrectly created from kops or if the terraform client is targeting the
+// wrong directory, but should be used as a final sanity check before invoking
+// terraform commands.
+func verifyTerraformAndKopsMatch(kopsName string, terraformClient *terraform.Cmd, logger log.FieldLogger) error {
+	out, ok, err := terraformClient.Output("cluster_name")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		logger.Warn("No cluster_name in terraform config, skipping check")
+		return nil
+	}
+	if out != kopsName {
+		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsName)
+	}
+
+	return nil
+}
 
 // Override the version to make match the nil value in the custom resource.
 // TODO: this could probably be better. We may want the operator to understand

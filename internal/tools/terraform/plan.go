@@ -3,6 +3,8 @@ package terraform
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -15,8 +17,23 @@ type terraformOutput struct {
 }
 
 // Init invokes terraform init.
-func (c *Cmd) Init() error {
-	_, _, err := c.run("init")
+func (c *Cmd) Init(remoteKey string) error {
+	input, err := ioutil.ReadFile(path.Join("terraform", backendFilename))
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(c.dir, backendFilename), input, 0644)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = c.run(
+		"init",
+		arg("backend-config", fmt.Sprintf("bucket=%s", c.remoteStateBucket)),
+		arg("backend-config", fmt.Sprintf("key=%s/%s", remoteStateDirectory, remoteKey)),
+		arg("backend-config", "region=us-east-1"),
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke terraform init")
 	}
