@@ -66,7 +66,7 @@ func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster, aws aws.A
 	return nil
 }
 
-func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }
 
