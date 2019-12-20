@@ -45,10 +45,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
-	serverCmd.MarkPersistentFlagRequired("route53-id")
-	serverCmd.MarkPersistentFlagRequired("private-route53-id")
 	serverCmd.MarkPersistentFlagRequired("private-dns")
-	serverCmd.MarkPersistentFlagRequired("certificate-aws-arn")
 }
 
 var serverCmd = &cobra.Command{
@@ -87,20 +84,52 @@ var serverCmd = &cobra.Command{
 		}
 
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
-		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
 		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
-		s3StateStore, _ := command.Flags().GetString("state-store")
-		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
-		route53ZoneID, _ := command.Flags().GetString("route53-id")
-		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
+		certificateSlsARN, _ := command.Flags().GetString("certificate-aws-arn")
 		privateDNS, _ := command.Flags().GetString("private-dns")
-		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
+		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
+		route53ZoneID, _ := command.Flags().GetString("route53-id")
+		s3StateStore, _ := command.Flags().GetString("state-store")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
+		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
+
+		// If not supplied, retrieve public hosted zone ID from AWS.
+		if route53ZoneID == "" {
+			route53ZoneID, err = aws.GetHostedZoneIDByTag(aws.GroupsTagFilter{{
+				Key:    aws.DefaultCloudDNSTagKey,
+				Values: []string{aws.DefaultPublicCloudDNSTagValue},
+			}})
+			if err != nil {
+				return err
+			}
+		}
+
+		// If not supplied, retrieve private hosted zone ID from AWS.
+		if privateRoute53ZoneID == "" {
+			privateRoute53ZoneID, err = aws.GetHostedZoneIDByTag(aws.GroupsTagFilter{{
+				Key:    aws.DefaultCloudDNSTagKey,
+				Values: []string{aws.DefaultPrivateCloudDNSTagValue},
+			}})
+			if err != nil {
+				return err
+			}
+		}
+
+		// If not supplied, retrieve certificate ARN from AWS.
+		if certificateSlsARN == "" {
+			// TODO(qsagula): GetCertificateByTag returns DNS name that can potentially be used to deduct the `--private-dns` parameter.
+			certificateSummary, err := aws.GetCertificateByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
+			if err != nil {
+				return err
+			}
+			certificateSlsARN = *certificateSummary.CertificateArn
+		}
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -114,7 +143,7 @@ var serverCmd = &cobra.Command{
 			"cluster-installation-supervisor": clusterInstallationSupervisor,
 			"store-version":                   currentVersion,
 			"state-store":                     s3StateStore,
-			"aws-arn":                         certificateSslARN,
+			"aws-arn":                         certificateSlsARN,
 			"working-directory":               wd,
 			"route53-id":                      route53ZoneID,
 			"private-route53-id":              privateRoute53ZoneID,
@@ -135,7 +164,7 @@ var serverCmd = &cobra.Command{
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
-			certificateSslARN,
+			certificateSlsARN,
 			privateDNS,
 			useExistingResources,
 			logger,

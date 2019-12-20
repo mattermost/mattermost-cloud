@@ -2,12 +2,13 @@ package aws
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	arn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -156,4 +157,33 @@ func (api *apiInterface) changeResourceRecordSets(svc *route53.Route53, input *r
 
 func (api *apiInterface) listResourceRecordSets(svc *route53.Route53, input *route53.ListResourceRecordSetsInput) (*route53.ListResourceRecordSetsOutput, error) {
 	return svc.ListResourceRecordSets(input)
+}
+
+// GetHostedZoneIDByTag returns the hosted zone id when passing a valid tag key and values
+// attached to the Route53 hosted zone.
+func GetHostedZoneIDByTag(filter GroupsTagFilter) (string, error) {
+	resources, err := filter.GetResources()
+	if err != nil {
+		return "", err
+	}
+
+	size := len(resources)
+	if size < 1 {
+		return "", errors.New("no hosted zone ID")
+	}
+	if size > 1 {
+		return "", errors.New("too many hosted zone IDs")
+	}
+
+	arn, err := arn.Parse(*resources[0].ResourceARN)
+	if err != nil {
+		return "", errors.Wrapf(err, "when parsing ARN: %s", *resources[0].ResourceARN)
+	}
+
+	parts := strings.Split(arn.Resource, "/")
+	if len(parts) > 1 && parts[1] == "" {
+		return parts[1], errors.New("invalid zone id")
+	}
+
+	return parts[1], nil
 }
