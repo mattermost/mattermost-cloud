@@ -1,4 +1,4 @@
 clusters
-cloud.db
+cloud*.db
 coverage.out
 .vscode
