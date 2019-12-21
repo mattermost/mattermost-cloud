@@ -92,34 +92,12 @@ var serverCmd = &cobra.Command{
 
 		certificateSlsARN, _ := command.Flags().GetString("certificate-aws-arn")
 		privateDNS, _ := command.Flags().GetString("private-dns")
-		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
-		route53ZoneID, _ := command.Flags().GetString("route53-id")
+		// privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
+		// route53ZoneID, _ := command.Flags().GetString("route53-id")
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
-
-		// If not supplied, retrieve public hosted zone ID from AWS.
-		if route53ZoneID == "" {
-			route53ZoneID, err = aws.GetHostedZoneIDByTag(aws.GroupsTagFilter{{
-				Key:    aws.DefaultCloudDNSTagKey,
-				Values: []string{aws.DefaultPublicCloudDNSTagValue},
-			}})
-			if err != nil {
-				return err
-			}
-		}
-
-		// If not supplied, retrieve private hosted zone ID from AWS.
-		if privateRoute53ZoneID == "" {
-			privateRoute53ZoneID, err = aws.GetHostedZoneIDByTag(aws.GroupsTagFilter{{
-				Key:    aws.DefaultCloudDNSTagKey,
-				Values: []string{aws.DefaultPrivateCloudDNSTagValue},
-			}})
-			if err != nil {
-				return err
-			}
-		}
 
 		// If not supplied, retrieve certificate ARN from AWS.
 		if certificateSlsARN == "" {
@@ -145,8 +123,6 @@ var serverCmd = &cobra.Command{
 			"state-store":                     s3StateStore,
 			"aws-arn":                         certificateSlsARN,
 			"working-directory":               wd,
-			"route53-id":                      route53ZoneID,
-			"private-route53-id":              privateRoute53ZoneID,
 			"private-dns":                     privateDNS,
 			"cluster-resource-threshold":      clusterResourceThreshold,
 			"use-existing-aws-resources":      useExistingResources,
@@ -164,7 +140,9 @@ var serverCmd = &cobra.Command{
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			clusterRootDir,
 			s3StateStore,
-			certificateSlsARN,
+
+			certificateSlsARN, // TODO(gsagula): remove this!!!!
+
 			privateDNS,
 			useExistingResources,
 			logger,
@@ -172,13 +150,13 @@ var serverCmd = &cobra.Command{
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a

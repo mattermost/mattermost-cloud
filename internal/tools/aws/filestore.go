@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 // S3Filestore is a filestore backed by AWS S3.
@@ -78,7 +78,7 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*m
 func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	logger.Info("Provisioning AWS S3 filestore")
 
-	a := New("n/a")
+	a := New()
 	awsID := CloudID(installationID)
 
 	user, err := a.iamEnsureUserCreated(awsID, logger)
@@ -130,7 +130,7 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 func s3FilestoreTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
 	logger.Info("Tearing down AWS S3 filestore")
 
-	a := New("n/a")
+	a := New()
 	awsID := CloudID(installationID)
 
 	err := a.iamEnsureUserDeleted(awsID, logger)

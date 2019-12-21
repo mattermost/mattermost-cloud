@@ -275,7 +275,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	for _, app := range helmApps {
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
 		logger.Infof("Registering DNS %s for %s", dns, app)
-		err = awsClient.CreateCNAME(dns, []string{endpoint}, logger)
+		err = awsClient.CreatePrivateCNAME(dns, []string{endpoint}, logger)
 		if err != nil {
 			return err
 		}
@@ -619,7 +619,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	for _, app := range helmApps {
 		logger.Infof("Deleting Route53 DNS Record for %s", app)
 		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		err = awsClient.DeleteCNAME(dns, logger)
+		err = awsClient.DeletePrivateCNAME(dns, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete Route53 DNS record")
 		}

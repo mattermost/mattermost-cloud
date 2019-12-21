@@ -2,10 +2,10 @@ package aws
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	arn "github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/pkg/errors"
@@ -13,12 +13,85 @@ import (
 )
 
 const (
-	defaultTTL    = 60
-	defaultWeight = 1
+	defaultTTL             = 60
+	defaultWeight          = 1
+	hostedZoneIDLength     = 13
+	hostedZoneResourceType = "hostedzone"
+	hostedZonePrefix       = "/hostedzone/"
 )
 
+// GetHostedZoneIDWithTag ...
+func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
+	svc, err := a.api.getRoute53Client()
+	if err != nil {
+		return "", err
+	}
+
+	var next *string
+	for {
+		zoneList, err := svc.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
+		if err != nil {
+			return "", errors.Wrapf(err, "listing hosted all zones")
+		}
+
+		for _, zone := range zoneList.HostedZones {
+			id, err := parseHostedZoneResourceID(zone)
+			if err != nil {
+				return "", errors.Wrapf(err, "when parsing hosted zone: %s", zone.String())
+			}
+
+			tagList, err := svc.ListTagsForResource(&route53.ListTagsForResourceInput{
+				ResourceId:   aws.String(id),
+				ResourceType: aws.String(hostedZoneResourceType),
+			})
+			if err != nil {
+				return "", err
+			}
+
+			for _, resourceTag := range tagList.ResourceTagSet.Tags {
+				if tag.Compare(resourceTag) {
+					return id, nil
+				}
+			}
+		}
+
+		if zoneList.Marker == nil || *zoneList.Marker == "" {
+			break
+		}
+		next = zoneList.Marker
+	}
+
+	return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
+}
+
+// CreatePublicCNAME ..
+func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPublicCloudDNSTagValue,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "creating a public CNAME")
+	}
+
+	return a.CreateCNAME(id, dnsName, dnsEndpoints, logger)
+}
+
+// CreatePrivateCNAME ...
+func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPrivateCloudDNSTagValue,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "creating a private CNAME")
+	}
+
+	return a.CreateCNAME(id, dnsName, dnsEndpoints, logger)
+}
+
 // CreateCNAME creates an AWS route53 CNAME record.
-func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+func (a *Client) CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for route53 creation request")
 	}
@@ -56,7 +129,7 @@ func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.F
 				},
 			},
 		},
-		HostedZoneId: aws.String(a.hostedZoneID),
+		HostedZoneId: &hostedZoneID,
 	}
 
 	resp, err := a.api.changeResourceRecordSets(svc, input)
@@ -65,15 +138,42 @@ func (a *Client) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.F
 	}
 
 	logger.WithFields(log.Fields{
-		"route53-dns-value":     dnsName,
-		"route53-dns-endpoints": dnsEndpoints,
+		"route53-dns-value":      dnsName,
+		"route53-dns-endpoints":  dnsEndpoints,
+		"route53-hosted-zone-id": hostedZoneID,
 	}).Debugf("AWS Route53 create response: %s", prettyRoute53Response(resp))
 
 	return nil
 }
 
+// DeletePublicCNAME ..
+func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPublicCloudDNSTagValue,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "creating a private CNAME")
+	}
+
+	return a.DeleteCNAME(id, dnsName, logger)
+}
+
+// DeletePrivateCNAME ..
+func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPrivateCloudDNSTagValue,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "creating a private CNAME")
+	}
+
+	return a.DeleteCNAME(id, dnsName, logger)
+}
+
 // DeleteCNAME deletes an AWS route53 CNAME record.
-func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
+func (a *Client) DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
 	svc, err := a.api.getRoute53Client()
 	if err != nil {
 		return err
@@ -84,7 +184,7 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 	for {
 		recordList, err := a.api.listResourceRecordSets(svc,
 			&route53.ListResourceRecordSetsInput{
-				HostedZoneId:    &a.hostedZoneID,
+				HostedZoneId:    &hostedZoneID,
 				StartRecordName: &nextRecordName,
 			})
 		if err != nil {
@@ -118,7 +218,7 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 
 	input := &route53.ChangeResourceRecordSetsInput{
 		ChangeBatch:  &route53.ChangeBatch{Changes: changes},
-		HostedZoneId: aws.String(a.hostedZoneID),
+		HostedZoneId: &hostedZoneID,
 	}
 	resp, err := a.api.changeResourceRecordSets(svc, input)
 	if err != nil {
@@ -128,9 +228,36 @@ func (a *Client) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
 	logger.WithFields(log.Fields{
 		"route53-records-deleted": len(changes),
 		"route53-dns-value":       dnsName,
+		"route53-hosted-zone-id":  hostedZoneID,
 	}).Debugf("AWS route53 delete response: %s", prettyRoute53Response(resp))
 
 	return nil
+}
+
+// Tag ...
+type Tag struct {
+	Key   string
+	Value string
+}
+
+// Compare ..
+func (t *Tag) Compare(tag *route53.Tag) bool {
+	if tag != nil {
+		if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
+			if tag.Value != nil && len(*tag.Value) > 0 {
+				if *tag.Value == t.Value {
+					return true
+				}
+				return false
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Tag) String() string {
+	return fmt.Sprintf("%s:%s", t.Key, t.Value)
 }
 
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {
@@ -159,31 +286,10 @@ func (api *apiInterface) listResourceRecordSets(svc *route53.Route53, input *rou
 	return svc.ListResourceRecordSets(input)
 }
 
-// GetHostedZoneIDByTag returns the hosted zone id when passing a valid tag key and values
-// attached to the Route53 hosted zone.
-func GetHostedZoneIDByTag(filter GroupsTagFilter) (string, error) {
-	resources, err := filter.GetResources()
-	if err != nil {
-		return "", err
+func parseHostedZoneResourceID(hostedZone *route53.HostedZone) (string, error) {
+	id := strings.TrimLeft(*hostedZone.Id, hostedZonePrefix)
+	if len(id) < hostedZoneIDLength {
+		return "", errors.Errorf("invalid hosted zone ID: %s", id)
 	}
-
-	size := len(resources)
-	if size < 1 {
-		return "", errors.New("no hosted zone ID")
-	}
-	if size > 1 {
-		return "", errors.New("too many hosted zone IDs")
-	}
-
-	arn, err := arn.Parse(*resources[0].ResourceARN)
-	if err != nil {
-		return "", errors.Wrapf(err, "when parsing ARN: %s", *resources[0].ResourceARN)
-	}
-
-	parts := strings.Split(arn.Resource, "/")
-	if len(parts) > 1 && parts[1] == "" {
-		return parts[1], errors.New("invalid zone id")
-	}
-
-	return parts[1], nil
+	return id, nil
 }

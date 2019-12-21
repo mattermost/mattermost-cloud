@@ -131,7 +131,7 @@ func TestVPCReal(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	awsClient := New("n/a")
+	awsClient := New()
 
 	clusterID := "testclusterID1"
 

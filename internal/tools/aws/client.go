@@ -12,8 +12,13 @@ type AWS interface {
 	GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
 
-	CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
-	DeleteCNAME(dnsName string, logger log.FieldLogger) error
+	CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+	CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+
+	DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error
+	DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error
+	DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
 
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
@@ -21,9 +26,8 @@ type AWS interface {
 
 // Client is a client for interacting with AWS resources.
 type Client struct {
-	hostedZoneID string
-	api          api
-	store        model.InstallationDatabaseStoreInterface
+	api   api
+	store model.InstallationDatabaseStoreInterface
 }
 
 // api mocks out the AWS API calls for testing.
@@ -38,10 +42,9 @@ type api interface {
 }
 
 // New returns a new AWS client.
-func New(hostedZoneID string) *Client {
+func New() *Client {
 	return &Client{
-		hostedZoneID: hostedZoneID,
-		api:          &apiInterface{},
+		api: &apiInterface{},
 	}
 }
 

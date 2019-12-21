@@ -82,7 +82,7 @@ func TestCreateCNAME(t *testing.T) {
 				api:          &mockAPI{returnedError: tt.mockError},
 			}
 
-			err := a.CreateCNAME(tt.dnsName, tt.endpoints, logger)
+			err := a.CreatePublicCNAME(tt.dnsName, tt.endpoints, logger)
 			switch tt.expectError {
 			case true:
 				assert.Error(t, err)
@@ -131,7 +131,7 @@ func TestDeleteCNAME(t *testing.T) {
 				api:          &mockAPI{returnedError: tt.mockError},
 			}
 
-			err := a.DeleteCNAME(tt.dnsName, logger)
+			err := a.DeletePublicCNAME(tt.dnsName, logger)
 			switch tt.expectError {
 			case true:
 				assert.Error(t, err)
