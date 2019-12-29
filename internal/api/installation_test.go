@@ -269,6 +269,16 @@ func TestCreateInstallation(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
+	t.Run("dns too long", func(t *testing.T) {
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:  "owner",
+			Version:  "version",
+			DNS:      "xoxo-serverwithverylongnametoexposeissuesrelatedtolengthofkeystha",
+			Affinity: model.InstallationAffinityIsolated,
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
 	t.Run("invalid dns", func(t *testing.T) {
 		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner",

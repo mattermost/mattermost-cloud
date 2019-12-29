@@ -34,11 +34,12 @@ type WebhookFilter struct {
 
 // WebhookPayload is the payload sent in every webhook.
 type WebhookPayload struct {
-	Timestamp int64  `json:"timestamp"`
-	ID        string `json:"id"`
-	Type      string `json:"type"`
-	NewState  string `json:"new_state"`
-	OldState  string `json:"old_state"`
+	Timestamp int64             `json:"timestamp"`
+	ID        string            `json:"id"`
+	Type      string            `json:"type"`
+	NewState  string            `json:"new_state"`
+	OldState  string            `json:"old_state"`
+	ExtraData map[string]string `json:"extra_data,omitempty"`
 }
 
 // IsDeleted returns whether the webhook was marked as deleted or not.
