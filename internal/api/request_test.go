@@ -39,7 +39,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 		clusterRequest, err := model.NewCreateClusterRequestFromReader(bytes.NewReader([]byte(
 			`{"Provider": "azure", "Size": "SizeAlef1000", "Zones":["zone1", "zone2"]}`,
 		)))
-		require.EqualError(t, err, "unsupported provider azure")
+		require.EqualError(t, err, "create cluster request failed validation: unsupported provider azure")
 		require.Nil(t, clusterRequest)
 	})
 

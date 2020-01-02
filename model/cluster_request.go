@@ -19,7 +19,40 @@ type CreateClusterRequest struct {
 	AllowInstallations bool     `json:"allow-installations,omitempty"`
 }
 
-// NewCreateClusterRequestFromReader will create a CreateClusterRequest from an io.Reader with JSON data.
+// SetDefaults sets the default values for a cluster create request.
+func (request *CreateClusterRequest) SetDefaults() {
+	if request.Provider == "" {
+		request.Provider = ProviderAWS
+	}
+	if request.Version == "" {
+		request.Version = "latest"
+	}
+	if request.Size == "" {
+		request.Size = SizeAlef500
+	}
+	if len(request.Zones) == 0 {
+		request.Zones = []string{"us-east-1a"}
+	}
+}
+
+// Validate validates the values of a cluster create request.
+func (request *CreateClusterRequest) Validate() error {
+	if request.Provider != ProviderAWS {
+		return errors.Errorf("unsupported provider %s", request.Provider)
+	}
+	if !ValidClusterVersion(request.Version) {
+		return errors.Errorf("unsupported cluster version %s", request.Version)
+	}
+	if !IsSupportedClusterSize(request.Size) {
+		return errors.Errorf("unsupported size %s", request.Size)
+	}
+	// TODO: check zones?
+
+	return nil
+}
+
+// NewCreateClusterRequestFromReader will create a CreateClusterRequest from an
+// io.Reader with JSON data.
 func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest, error) {
 	var createClusterRequest CreateClusterRequest
 	err := json.NewDecoder(reader).Decode(&createClusterRequest)
@@ -27,29 +60,11 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 		return nil, errors.Wrap(err, "failed to decode create cluster request")
 	}
 
-	if createClusterRequest.Provider == "" {
-		createClusterRequest.Provider = ProviderAWS
+	createClusterRequest.SetDefaults()
+	err = createClusterRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "create cluster request failed validation")
 	}
-	if createClusterRequest.Version == "" {
-		createClusterRequest.Version = "latest"
-	}
-	if createClusterRequest.Size == "" {
-		createClusterRequest.Size = SizeAlef500
-	}
-	if len(createClusterRequest.Zones) == 0 {
-		createClusterRequest.Zones = []string{"us-east-1a"}
-	}
-
-	if createClusterRequest.Provider != ProviderAWS {
-		return nil, errors.Errorf("unsupported provider %s", createClusterRequest.Provider)
-	}
-	if !ValidClusterVersion(createClusterRequest.Version) {
-		return nil, errors.Errorf("unsupported cluster version %s", createClusterRequest.Version)
-	}
-	if !IsSupportedClusterSize(createClusterRequest.Size) {
-		return nil, errors.Errorf("unsupported size %s", createClusterRequest.Size)
-	}
-	// TODO: check zones?
 
 	return &createClusterRequest, nil
 }
