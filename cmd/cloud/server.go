@@ -35,6 +35,9 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+	serverCmd.PersistentFlags().String("certificate-aws-arn", "", "The certificate ARN from AWS. Generated in the certificate manager console.")
+	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
+	serverCmd.PersistentFlags().String("private-route53-id", "", "The route 53 hosted zone ID used for mattermost private DNS records.")
 	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
@@ -114,7 +117,7 @@ var serverCmd = &cobra.Command{
 			"debug":                           debug,
 		}).Info("Starting Mattermost Provisioning Server")
 
-		deprecationWarnings(logger)
+		deprecationWarnings(logger, command)
 
 		// Warn on settings we consider to be non-production.
 		if !useExistingResources {
@@ -198,11 +201,19 @@ var serverCmd = &cobra.Command{
 
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
-func deprecationWarnings(logger logrus.FieldLogger) {
-	_, err := os.Stat(clusterRootDir)
-	if err == nil {
+func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
+	if _, err := os.Stat(clusterRootDir); err == nil {
 		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
 		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
 		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
+	}
+	if v, _ := cmd.Flags().GetString("route53-id"); v != "" {
+		logger.Warnf("[Deprecation] Flag route53-id is deprecated.")
+	}
+	if v, _ := cmd.Flags().GetString("private-route53-id"); v != "" {
+		logger.Warnf("[Deprecation] Flag private-route53-id is deprecated.")
+	}
+	if v, _ := cmd.Flags().GetString("certificate-aws-arn"); v != "" {
+		logger.Warnf("[Deprecation] Flag certificate-aws-arn is deprecated.")
 	}
 }

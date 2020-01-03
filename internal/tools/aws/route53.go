@@ -20,52 +20,6 @@ const (
 	hostedZonePrefix       = "/hostedzone/"
 )
 
-// GetHostedZoneIDWithTag ...
-func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
-	svc, err := a.api.getRoute53Client()
-	if err != nil {
-		return "", err
-	}
-
-	var next *string
-	for {
-		zoneList, err := a.api.listHostedZones(svc, &route53.ListHostedZonesInput{Marker: next})
-		if err != nil {
-			return "", errors.Wrapf(err, "listing hosted all zones")
-		}
-
-		for _, zone := range zoneList.HostedZones {
-			id, err := parseHostedZoneResourceID(zone)
-			if err != nil {
-				return "", errors.Wrapf(err, "when parsing hosted zone: %s", zone.String())
-			}
-			fmt.Printf("zone %s:", id)
-
-			tagList, err := a.api.listTagsForResource(svc, &route53.ListTagsForResourceInput{
-				ResourceId:   aws.String(id),
-				ResourceType: aws.String(hostedZoneResourceType),
-			})
-			fmt.Printf("tag list %v:", tagList)
-			if err != nil {
-				return "", err
-			}
-
-			for _, resourceTag := range tagList.ResourceTagSet.Tags {
-				if tag.Compare(resourceTag) {
-					return id, nil
-				}
-			}
-		}
-
-		if zoneList.Marker == nil || *zoneList.Marker == "" {
-			break
-		}
-		next = zoneList.Marker
-	}
-
-	return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
-}
-
 // CreatePublicCNAME creates a public dns name in Route53.
 func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	id, err := a.getHostedZoneIDWithTag(Tag{
@@ -240,6 +194,51 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	return nil
 }
 
+func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
+	svc, err := a.api.getRoute53Client()
+	if err != nil {
+		return "", err
+	}
+
+	var next *string
+	for {
+		zoneList, err := a.api.listHostedZones(svc, &route53.ListHostedZonesInput{Marker: next})
+		if err != nil {
+			return "", errors.Wrapf(err, "listing hosted all zones")
+		}
+
+		for _, zone := range zoneList.HostedZones {
+			id, err := parseHostedZoneResourceID(zone)
+			if err != nil {
+				return "", errors.Wrapf(err, "when parsing hosted zone: %s", zone.String())
+			}
+			fmt.Printf("zone %s:", id)
+
+			tagList, err := a.api.listTagsForResource(svc, &route53.ListTagsForResourceInput{
+				ResourceId:   aws.String(id),
+				ResourceType: aws.String(hostedZoneResourceType),
+			})
+			fmt.Printf("tag list %v:", tagList)
+			if err != nil {
+				return "", err
+			}
+
+			for _, resourceTag := range tagList.ResourceTagSet.Tags {
+				if tag.Compare(resourceTag) {
+					return id, nil
+				}
+			}
+		}
+
+		if zoneList.Marker == nil || *zoneList.Marker == "" {
+			break
+		}
+		next = zoneList.Marker
+	}
+
+	return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
+}
+
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {
 	prettyResp, err := json.Marshal(resp)
 	if err != nil {
@@ -282,13 +281,13 @@ func parseHostedZoneResourceID(hostedZone *route53.HostedZone) (string, error) {
 	return id, nil
 }
 
-// Tag ...
+// Tag represents a aws tag with convenient methods to work with Route53 resource tags.
 type Tag struct {
 	Key   string
 	Value string
 }
 
-// Compare ..
+// Compare the tag with a Route53 resource tag.
 func (t *Tag) Compare(tag *route53.Tag) bool {
 	if tag != nil {
 		if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
@@ -304,6 +303,7 @@ func (t *Tag) Compare(tag *route53.Tag) bool {
 	return false
 }
 
+// String prints the tag's key and value.
 func (t *Tag) String() string {
 	return fmt.Sprintf("%s:%s", t.Key, t.Value)
 }
