@@ -1,8 +1,6 @@
 package aws
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
@@ -33,9 +31,7 @@ func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.Certificate
 			if err != nil {
 				return nil, errors.Wrapf(err, "error listing tags for certificate %s", *cert.CertificateArn)
 			}
-
 			for _, v := range list.Tags {
-				fmt.Println(*v.Key == *tag.Key)
 				if v.Key != nil && *v.Key == *tag.Key {
 					if v.Value != nil {
 						if *v.Value == *tag.Value {

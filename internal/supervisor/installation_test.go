@@ -152,19 +152,11 @@ func (a *mockAWS) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
 	return nil
 }
 
-func (a *mockAWS) CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
-	return nil
-}
-
 func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return nil
 }
 
 func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
-	return nil
-}
-
-func (a *mockAWS) DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
 	return nil
 }
 
