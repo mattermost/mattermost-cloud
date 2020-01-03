@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -139,6 +140,10 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 
 type mockAWS struct{}
 
+func (a *mockAWS) GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error) {
+	return nil, nil
+}
+
 func (a *mockAWS) GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }
@@ -147,11 +152,27 @@ func (a *mockAWS) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
 	return nil
 }
 
-func (a *mockAWS) CreateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+func (a *mockAWS) CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return nil
 }
 
-func (a *mockAWS) DeleteCNAME(dnsName string, logger log.FieldLogger) error {
+func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
 	return nil
 }
 

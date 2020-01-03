@@ -7,15 +7,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO(gsagula): create interface for mocking and write tests.
+// GetCertificateSummaryByTag returns the certificate summary associated with a valid tag key and value in AWS.
+func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error) {
+	svc, err := a.api.getACMClient()
+	if err != nil {
+		errors.Wrap(err, "failed to get ACM client")
+	}
 
-// GetCertificateByTag returns the certificate summary associated with a valid tag key and value in AWS.
-func GetCertificateByTag(key, value string) (*acm.CertificateSummary, error) {
 	key = trimTagPrefix(key)
 	tag := acm.Tag{Key: &key, Value: &value}
-	svc := acm.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
 
 	var next *string
 	for {
@@ -25,15 +25,23 @@ func GetCertificateByTag(key, value string) (*acm.CertificateSummary, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		for _, cert := range out.CertificateSummaryList {
-			ok, err := isCertificateTag(cert.CertificateArn, &tag)
+			list, err := a.api.listTagsForCertificate(svc, &acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "error listing tags for certificate %s", *cert.CertificateArn)
 			}
-			if ok {
-				return cert, nil
+
+			for _, v := range list.Tags {
+				if *v.Key == *tag.Key {
+					if tag.Value != nil && *v.Value == *tag.Value {
+						return cert, nil
+					}
+					return cert, nil
+				}
 			}
 		}
+
 		if out.NextToken == nil || *out.NextToken == "" {
 			break
 		}
@@ -43,27 +51,21 @@ func GetCertificateByTag(key, value string) (*acm.CertificateSummary, error) {
 	return nil, errors.Errorf("no certificate was found under tag:%s:%s", *tag.Key, *tag.Value)
 }
 
-func isCertificateTag(arn *string, tag *acm.Tag) (bool, error) {
-	if tag == nil || tag.Key == nil || *tag.Key == "" {
-		return false, errors.New("tag key cannot be empty")
-	}
-	svc := acm.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	list, err := svc.ListTagsForCertificate(&acm.ListTagsForCertificateInput{CertificateArn: arn})
+func (api *apiInterface) getACMClient() (*acm.ACM, error) {
+	sess, err := session.NewSession()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	for _, v := range list.Tags {
-		if *v.Key == *tag.Key {
-			if tag.Value != nil {
-				return *v.Value == *tag.Value, nil
-			}
-			return true, nil
-		}
-	}
+	return acm.New(sess, &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	}), nil
+}
 
-	return false, nil
+func (api *apiInterface) listCertificates(svc *acm.ACM, input *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error) {
+	return svc.ListCertificates(input)
+}
+
+func (api *apiInterface) listTagsForCertificate(svc *acm.ACM, input *acm.ListTagsForCertificateInput) (*acm.ListTagsForCertificateOutput, error) {
+	return svc.ListTagsForCertificate(input)
 }

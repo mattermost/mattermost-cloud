@@ -53,6 +53,11 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
 
+	certificateSummary, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch AWS certificate ARN for tag %s:%s", aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
+	}
+
 	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterInstallation",
@@ -73,7 +78,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			UseServiceLoadBalancer: true,
 			ServiceAnnotations: map[string]string{
 				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":        "tcp",
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                provisioner.certificateSslARN,
+				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                *certificateSummary.CertificateArn,
 				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":               "https",
 				"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout": "120",
 			},

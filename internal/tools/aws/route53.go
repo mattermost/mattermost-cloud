@@ -29,7 +29,7 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
 
 	var next *string
 	for {
-		zoneList, err := svc.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
+		zoneList, err := a.api.listHostedZones(svc, &route53.ListHostedZonesInput{Marker: next})
 		if err != nil {
 			return "", errors.Wrapf(err, "listing hosted all zones")
 		}
@@ -39,11 +39,13 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
 			if err != nil {
 				return "", errors.Wrapf(err, "when parsing hosted zone: %s", zone.String())
 			}
+			fmt.Printf("zone %s:", id)
 
-			tagList, err := svc.ListTagsForResource(&route53.ListTagsForResourceInput{
+			tagList, err := a.api.listTagsForResource(svc, &route53.ListTagsForResourceInput{
 				ResourceId:   aws.String(id),
 				ResourceType: aws.String(hostedZoneResourceType),
 			})
+			fmt.Printf("tag list %v:", tagList)
 			if err != nil {
 				return "", err
 			}
@@ -239,32 +241,6 @@ func (a *Client) DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	return nil
 }
 
-// Tag ...
-type Tag struct {
-	Key   string
-	Value string
-}
-
-// Compare ..
-func (t *Tag) Compare(tag *route53.Tag) bool {
-	if tag != nil {
-		if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
-			if tag.Value != nil && len(*tag.Value) > 0 {
-				if *tag.Value == t.Value {
-					return true
-				}
-				return false
-			}
-			return true
-		}
-	}
-	return false
-}
-
-func (t *Tag) String() string {
-	return fmt.Sprintf("%s:%s", t.Key, t.Value)
-}
-
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {
 	prettyResp, err := json.Marshal(resp)
 	if err != nil {
@@ -291,10 +267,44 @@ func (api *apiInterface) listResourceRecordSets(svc *route53.Route53, input *rou
 	return svc.ListResourceRecordSets(input)
 }
 
+func (api *apiInterface) listHostedZones(svc *route53.Route53, input *route53.ListHostedZonesInput) (*route53.ListHostedZonesOutput, error) {
+	return svc.ListHostedZones(input)
+}
+
+func (api *apiInterface) listTagsForResource(svc *route53.Route53, input *route53.ListTagsForResourceInput) (*route53.ListTagsForResourceOutput, error) {
+	return svc.ListTagsForResource(input)
+}
+
 func parseHostedZoneResourceID(hostedZone *route53.HostedZone) (string, error) {
 	id := strings.TrimLeft(*hostedZone.Id, hostedZonePrefix)
 	if len(id) < hostedZoneIDLength {
 		return "", errors.Errorf("invalid hosted zone ID: %s", id)
 	}
 	return id, nil
+}
+
+// Tag ...
+type Tag struct {
+	Key   string
+	Value string
+}
+
+// Compare ..
+func (t *Tag) Compare(tag *route53.Tag) bool {
+	if tag != nil {
+		if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
+			if tag.Value != nil && len(*tag.Value) > 0 {
+				if *tag.Value == t.Value {
+					return true
+				}
+				return false
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Tag) String() string {
+	return fmt.Sprintf("%s:%s", t.Key, t.Value)
 }

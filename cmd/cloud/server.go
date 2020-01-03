@@ -35,9 +35,6 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
-	serverCmd.PersistentFlags().String("certificate-aws-arn", "", "The certificate ARN from AWS. Generated in the certificate manager console.")
-	serverCmd.PersistentFlags().String("route53-id", "", "The route 53 hosted zone ID used for mattermost DNS records.")
-	serverCmd.PersistentFlags().String("private-route53-id", "", "The route 53 hosted zone ID used for mattermost private DNS records.")
 	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
@@ -90,24 +87,11 @@ var serverCmd = &cobra.Command{
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
-		certificateSlsARN, _ := command.Flags().GetString("certificate-aws-arn")
 		privateDNS, _ := command.Flags().GetString("private-dns")
-		// privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
-		// route53ZoneID, _ := command.Flags().GetString("route53-id")
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
-
-		// If not supplied, retrieve certificate ARN from AWS.
-		if certificateSlsARN == "" {
-			// TODO(qsagula): GetCertificateByTag returns DNS name that can potentially be used to deduct the `--private-dns` parameter.
-			certificateSummary, err := aws.GetCertificateByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
-			if err != nil {
-				return err
-			}
-			certificateSlsARN = *certificateSummary.CertificateArn
-		}
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -121,7 +105,6 @@ var serverCmd = &cobra.Command{
 			"cluster-installation-supervisor": clusterInstallationSupervisor,
 			"store-version":                   currentVersion,
 			"state-store":                     s3StateStore,
-			"aws-arn":                         certificateSlsARN,
 			"working-directory":               wd,
 			"private-dns":                     privateDNS,
 			"cluster-resource-threshold":      clusterResourceThreshold,
@@ -141,9 +124,6 @@ var serverCmd = &cobra.Command{
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
-
-			certificateSlsARN, // TODO(gsagula): remove this!!!!
-
 			privateDNS,
 			useExistingResources,
 			logger,

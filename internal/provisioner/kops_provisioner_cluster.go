@@ -25,7 +25,6 @@ const DefaultKubernetesVersion = "0.0.0"
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
 	s3StateStore            string
-	certificateSslARN       string
 	privateSubnetIds        string
 	publicSubnetIds         string
 	privateDNS              string
@@ -46,10 +45,9 @@ type helmDeployment struct {
 var helmApps = []string{"prometheus"}
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, certificateSslARN, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(s3StateStore, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
-		certificateSslARN:       certificateSslARN,
 		privateDNS:              privateDNS,
 		useExistingAWSResources: useExistingAWSResources,
 		logger:                  logger,
