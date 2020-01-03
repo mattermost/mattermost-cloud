@@ -66,7 +66,7 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
 	return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
 }
 
-// CreatePublicCNAME ..
+// CreatePublicCNAME creates a public dns name in Route53.
 func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	id, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,
@@ -76,10 +76,10 @@ func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger
 		return errors.Wrapf(err, "creating a public CNAME")
 	}
 
-	return a.CreateCNAME(id, dnsName, dnsEndpoints, logger)
+	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
 }
 
-// CreatePrivateCNAME ...
+// CreatePrivateCNAME creates a private dns name in Route53.
 func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	id, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,
@@ -89,11 +89,10 @@ func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logge
 		return errors.Wrapf(err, "creating a private CNAME")
 	}
 
-	return a.CreateCNAME(id, dnsName, dnsEndpoints, logger)
+	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
 }
 
-// CreateCNAME creates an AWS route53 CNAME record.
-func (a *Client) CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for route53 creation request")
 	}
@@ -148,34 +147,34 @@ func (a *Client) CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 	return nil
 }
 
-// DeletePublicCNAME ..
+// DeletePublicCNAME removes a public dns name from Route53.
 func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
 	id, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPublicCloudDNSTagValue,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "creating a private CNAME")
+		return errors.Wrapf(err, "deleting a public CNAME: %s", dnsName)
 	}
 
-	return a.DeleteCNAME(id, dnsName, logger)
+	return a.deleteCNAME(id, dnsName, logger)
 }
 
-// DeletePrivateCNAME ..
+// DeletePrivateCNAME removes a private dns name from Route53.
 func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error {
 	id, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPrivateCloudDNSTagValue,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "creating a private CNAME")
+		return errors.Wrapf(err, "deleting a private CNAME: %s", dnsName)
 	}
 
-	return a.DeleteCNAME(id, dnsName, logger)
+	return a.deleteCNAME(id, dnsName, logger)
 }
 
 // DeleteCNAME deletes an AWS route53 CNAME record.
-func (a *Client) DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
+func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
 	svc, err := a.api.getRoute53Client()
 	if err != nil {
 		return err

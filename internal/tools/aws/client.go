@@ -15,11 +15,9 @@ type AWS interface {
 	GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
 
-	CreateCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 	CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 
-	DeleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error
 	DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error
 	DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
 

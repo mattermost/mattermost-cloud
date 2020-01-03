@@ -3,7 +3,6 @@ package aws
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -13,7 +12,6 @@ import (
 var (
 	testDNSName             = "example.mattermost.com"
 	testParsedHostedZoneID  = "Z3P5QSUBK4POTI"
-	testARNCertificate      = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
 	testParsedRoute53TagKey = "MattermostCloudDNS"
 	testRoute53TagValue     = "public"
 )
@@ -35,24 +33,6 @@ func (api *mockAPI) listResourceRecordSets(svc *route53.Route53, input *route53.
 			{
 				Name: &testDNSName,
 			},
-		},
-	}, api.returnedError
-}
-
-func (api *mockAPI) listCertificates(*acm.ACM, *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error) {
-	return &acm.ListCertificatesOutput{
-		CertificateSummaryList: []*acm.CertificateSummary{&acm.CertificateSummary{
-			CertificateArn: &testARNCertificate,
-			DomainName:     &testDNSName,
-		}},
-	}, api.returnedError
-}
-
-func (api *mockAPI) listTagsForCertificate(*acm.ACM, *acm.ListTagsForCertificateInput) (*acm.ListTagsForCertificateOutput, error) {
-	return &acm.ListTagsForCertificateOutput{
-		Tags: []*acm.Tag{&acm.Tag{
-			Key:   &testParsedRoute53TagKey,
-			Value: &testRoute53TagValue},
 		},
 	}, api.returnedError
 }

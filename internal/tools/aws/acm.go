@@ -1,6 +1,8 @@
 package aws
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
@@ -11,7 +13,7 @@ import (
 func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error) {
 	svc, err := a.api.getACMClient()
 	if err != nil {
-		errors.Wrap(err, "failed to get ACM client")
+		return nil, errors.Wrap(err, "failed to get ACM client")
 	}
 
 	key = trimTagPrefix(key)
@@ -19,11 +21,11 @@ func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.Certificate
 
 	var next *string
 	for {
-		out, err := svc.ListCertificates(&acm.ListCertificatesInput{
+		out, err := a.api.listCertificates(svc, &acm.ListCertificatesInput{
 			NextToken: next,
 		})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error fetching certificates")
 		}
 
 		for _, cert := range out.CertificateSummaryList {
@@ -33,9 +35,13 @@ func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.Certificate
 			}
 
 			for _, v := range list.Tags {
-				if *v.Key == *tag.Key {
-					if tag.Value != nil && *v.Value == *tag.Value {
-						return cert, nil
+				fmt.Println(*v.Key == *tag.Key)
+				if v.Key != nil && *v.Key == *tag.Key {
+					if v.Value != nil {
+						if *v.Value == *tag.Value {
+							return cert, nil
+						}
+						continue
 					}
 					return cert, nil
 				}
