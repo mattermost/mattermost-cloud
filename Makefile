@@ -87,3 +87,7 @@ get-kubectl: ## Download kubectl only if it's not available. Used in the docker 
 		curl -Lo build/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl &&\
 		chmod +x build/kubectl;\
 	fi
+
+.PHONY: install
+install: build
+	go install ./...
