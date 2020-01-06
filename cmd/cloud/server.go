@@ -46,6 +46,9 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.MarkPersistentFlagRequired("private-dns")
+	serverCmd.Flags().MarkDeprecated("route53-id", "This flag is deprecated and it will have no effect")
+	serverCmd.Flags().MarkDeprecated("private-route53-id", "This flag is deprecated and it will have no effect")
+	serverCmd.Flags().MarkDeprecated("certificate-aws-arn", "This flag is deprecated and it will have no effect")
 }
 
 var serverCmd = &cobra.Command{
@@ -202,18 +205,25 @@ var serverCmd = &cobra.Command{
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
 func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
-	if _, err := os.Stat(clusterRootDir); err == nil {
+	_, err := os.Stat(clusterRootDir)
+	if err == nil {
 		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
 		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
 		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
 	}
-	if v, _ := cmd.Flags().GetString("route53-id"); v != "" {
-		logger.Warnf("[Deprecation] Flag route53-id is deprecated.")
+
+	route53Flag, _ := cmd.Flags().GetString("route53-id")
+	if route53Flag != "" {
+		logger.Warn("[Deprecation] Flag route53-id is deprecated. Provisioner will use a resource tag to find route53-id in AWS.")
 	}
-	if v, _ := cmd.Flags().GetString("private-route53-id"); v != "" {
-		logger.Warnf("[Deprecation] Flag private-route53-id is deprecated.")
+
+	privateRoute53Flag, _ := cmd.Flags().GetString("private-route53-id")
+	if privateRoute53Flag != "" {
+		logger.Warn("[Deprecation] Flag private-route53-id is deprecated. Provisioner will use a resource tag to find private-route53-id in AWS.")
 	}
-	if v, _ := cmd.Flags().GetString("certificate-aws-arn"); v != "" {
-		logger.Warnf("[Deprecation] Flag certificate-aws-arn is deprecated.")
+
+	certificateARNFlag, _ := cmd.Flags().GetString("certificate-aws-arn")
+	if certificateARNFlag != "" {
+		logger.Warn("[Deprecation] Flag certificate-aws-arn is deprecated. Provisioner will use a resource tag to find certificate-aws-arn in AWS.")
 	}
 }

@@ -27,7 +27,7 @@ func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger
 		Value: DefaultPublicCloudDNSTagValue,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "creating a public CNAME")
+		return errors.Wrapf(err, "unable to create a public CNAME: %s", dnsName)
 	}
 
 	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
@@ -40,7 +40,7 @@ func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logge
 		Value: DefaultPrivateCloudDNSTagValue,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "creating a private CNAME")
+		return errors.Wrapf(err, "unable to create a private CNAME: %s", dnsName)
 	}
 
 	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
@@ -108,7 +108,7 @@ func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
 		Value: DefaultPublicCloudDNSTagValue,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "deleting a public CNAME: %s", dnsName)
+		return errors.Wrapf(err, "unable to delete a public CNAME: %s", dnsName)
 	}
 
 	return a.deleteCNAME(id, dnsName, logger)
@@ -121,7 +121,7 @@ func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) erro
 		Value: DefaultPrivateCloudDNSTagValue,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "deleting a private CNAME: %s", dnsName)
+		return errors.Wrapf(err, "unable to delete a private CNAME: %s", dnsName)
 	}
 
 	return a.deleteCNAME(id, dnsName, logger)
