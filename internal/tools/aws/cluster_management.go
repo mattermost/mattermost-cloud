@@ -283,7 +283,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
 	}
 
-	logger.Debugf("Released VPC %s", clusterID)
+	logger.Debugf("Released VPC %s", *vpcs[0].VpcId)
 
 	return nil
 }
