@@ -521,7 +521,10 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
 	if err != nil {
-		return err
+		// There are a few reasons why this may fail including an failed cluster
+		// creation. For now, let's log an error if there is one and proceed.
+		// TODO: make this better.
+		logger.WithError(err).Error("Proceeding with cluster deletion despite failing terraform output match check")
 	}
 
 	logger.Info("Deleting cluster")
