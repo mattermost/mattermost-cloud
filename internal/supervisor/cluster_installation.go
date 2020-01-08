@@ -160,54 +160,65 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 
 	switch clusterInstallation.State {
 	case model.ClusterInstallationStateCreationRequested:
-		err = s.provisioner.CreateClusterInstallation(cluster, installation, clusterInstallation, s.aws)
-		if err != nil {
-			logger.WithError(err).Error("Failed to provision cluster installation")
-			return model.ClusterInstallationStateCreationRequested
-		}
-
-		err = s.store.UpdateClusterInstallation(clusterInstallation)
-		if err != nil {
-			logger.WithError(err).Error("Failed to record updated cluster installation after provisioning")
-			return model.ClusterInstallationStateCreationFailed
-		}
-
-		logger.Info("Finished creating cluster installation")
-		return model.ClusterInstallationStateReconciling
-
+		return s.createClusterInstallation(clusterInstallation, logger, installation, cluster)
 	case model.ClusterInstallationStateDeletionRequested:
-		err = s.provisioner.DeleteClusterInstallation(cluster, installation, clusterInstallation)
-		if err != nil {
-			logger.WithError(err).Error("Failed to delete cluster installation")
-			return model.ClusterInstallationStateDeletionFailed
-		}
-
-		err = s.store.DeleteClusterInstallation(clusterInstallation.ID)
-		if err != nil {
-			logger.WithError(err).Error("Failed to record deleted cluster installation after deletion")
-			return model.ClusterStateDeletionFailed
-		}
-
-		logger.Info("Finished deleting cluster installation")
-		return model.ClusterInstallationStateDeleted
-
+		return s.deleteClusterInstallation(clusterInstallation, logger, installation, cluster)
 	case model.ClusterInstallationStateReconciling:
-		cr, err := s.provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
-		if err != nil {
-			logger.WithError(err).Error("Failed to get cluster installation resource")
-			return model.ClusterInstallationStateReconciling
-		}
-
-		if cr.Status.State != mmv1alpha1.Stable {
-			logger.Info("Cluster installation is still reconciling")
-			return model.ClusterInstallationStateReconciling
-		}
-
-		logger.Info("Cluster installation finished reconciling")
-		return model.ClusterInstallationStateStable
-
+		return s.checkReconcilingClusterInstallation(clusterInstallation, logger, installation, cluster)
 	default:
 		logger.Warnf("Found cluster installation pending work in unexpected state %s", clusterInstallation.State)
 		return clusterInstallation.State
 	}
+}
+
+func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
+	err := s.provisioner.CreateClusterInstallation(cluster, installation, clusterInstallation, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision cluster installation")
+		return model.ClusterInstallationStateCreationRequested
+	}
+
+	err = s.store.UpdateClusterInstallation(clusterInstallation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to record updated cluster installation after provisioning")
+		return model.ClusterInstallationStateCreationFailed
+	}
+
+	logger.Info("Finished creating cluster installation")
+	return model.ClusterInstallationStateReconciling
+}
+
+func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
+	err := s.provisioner.DeleteClusterInstallation(cluster, installation, clusterInstallation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete cluster installation")
+		return model.ClusterInstallationStateDeletionFailed
+	}
+
+	err = s.store.DeleteClusterInstallation(clusterInstallation.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to record deleted cluster installation after deletion")
+		return model.ClusterStateDeletionFailed
+	}
+
+	logger.Info("Finished deleting cluster installation")
+	return model.ClusterInstallationStateDeleted
+}
+
+func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
+
+	cr, err := s.provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get cluster installation resource")
+		return model.ClusterInstallationStateReconciling
+	}
+
+	if cr.Status.State != mmv1alpha1.Stable {
+		logger.Info("Cluster installation is still reconciling")
+		return model.ClusterInstallationStateReconciling
+	}
+
+	logger.Info("Cluster installation finished reconciling")
+	return model.ClusterInstallationStateStable
+
 }
