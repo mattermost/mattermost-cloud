@@ -97,7 +97,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	var clusterResources aws.ClusterResources
 	if provisioner.useExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, logger)
+		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, cluster.Owner, logger)
 		if err != nil {
 			return err
 		}

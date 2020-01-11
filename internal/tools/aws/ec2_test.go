@@ -143,7 +143,7 @@ func TestVPCReal(t *testing.T) {
 
 	clusterID := "testclusterID1"
 
-	_, err := awsClient.GetAndClaimVpcResources(clusterID, logger)
+	_, err := awsClient.GetAndClaimVpcResources(clusterID, "testowner", logger)
 	require.NoError(t, err)
 
 	err = awsClient.releaseVpc(clusterID, logger)

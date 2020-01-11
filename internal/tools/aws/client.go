@@ -12,7 +12,7 @@ import (
 type AWS interface {
 	GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error)
 
-	GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
+	GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
 
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error

@@ -83,6 +83,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		Size:               createClusterRequest.Size,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		State:              model.ClusterStateCreationRequested,
+		Owner:              createClusterRequest.Owner,
 	}
 	err = cluster.SetProviderMetadata(model.AWSMetadata{
 		Zones: createClusterRequest.Zones,

@@ -21,6 +21,9 @@ func init() {
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 
+	clusterCreateCmd.Flags().String("owner", "", "The person to whom this cluster belongs.")
+	clusterCreateCmd.MarkFlagRequired("owner")
+
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
@@ -80,6 +83,7 @@ var clusterCreateCmd = &cobra.Command{
 		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
+		owner, _ := command.Flags().GetString("owner")
 
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:           provider,
@@ -88,6 +92,7 @@ var clusterCreateCmd = &cobra.Command{
 			Size:               size,
 			Zones:              strings.Split(zones, ","),
 			AllowInstallations: allowInstallations,
+			Owner:              owner,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
