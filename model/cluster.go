@@ -23,7 +23,6 @@ type Cluster struct {
 	DeleteAt            int64
 	LockAcquiredBy      *string
 	LockAcquiredAt      int64
-	Owner               string
 }
 
 // Clone returns a deep copy the cluster.

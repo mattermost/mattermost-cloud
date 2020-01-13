@@ -58,7 +58,6 @@ func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisio
 // Do looks for work to be done on any pending clusters and attempts to schedule the required work.
 func (s *ClusterSupervisor) Do() error {
 	clusters, err := s.store.GetUnlockedClustersPendingWork()
-
 	if err != nil {
 		s.logger.WithError(err).Warn("Failed to query for clusters pending work")
 		return nil

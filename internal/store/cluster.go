@@ -15,7 +15,7 @@ func init() {
 		Select(
 			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
 			"Version", "Size", "State", "AllowInstallations", "CreateAt", "DeleteAt",
-			"LockAcquiredBy", "LockAcquiredAt", "Owner",
+			"LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Cluster")
 }
@@ -94,7 +94,6 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 		Insert("Cluster").
 		SetMap(map[string]interface{}{
 			"ID":                  cluster.ID,
-			"Owner":               cluster.Owner,
 			"Provider":            cluster.Provider,
 			"Provisioner":         cluster.Provisioner,
 			"ProviderMetadata":    cluster.ProviderMetadata,

@@ -17,7 +17,6 @@ type CreateClusterRequest struct {
 	Size               string   `json:"size,omitempty"`
 	Zones              []string `json:"zones,omitempty"`
 	AllowInstallations bool     `json:"allow-installations,omitempty"`
-	Owner              string   `json:"owner,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
