@@ -40,9 +40,114 @@ func (cr *ClusterResources) IsValid() error {
 	return nil
 }
 
+func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
+	clusterResources := ClusterResources{
+		VpcID: vpcID,
+	}
+
+	baseFilter := []*ec2.Filter{
+		{
+			Name:   aws.String("vpc-id"),
+			Values: []*string{aws.String(vpcID)},
+		},
+	}
+
+	privateSubnetFilter := append(baseFilter, &ec2.Filter{
+		Name:   aws.String("tag:SubnetType"),
+		Values: []*string{aws.String("private")},
+	})
+
+	privateSubnets, err := GetSubnetsWithFilters(privateSubnetFilter)
+	if err != nil {
+		return clusterResources, err
+	}
+
+	for _, subnet := range privateSubnets {
+		clusterResources.PrivateSubnetIDs = append(clusterResources.PrivateSubnetIDs, *subnet.SubnetId)
+	}
+
+	publicSubnetFilter := append(baseFilter, &ec2.Filter{
+		Name:   aws.String("tag:SubnetType"),
+		Values: []*string{aws.String("public")},
+	})
+
+	publicSubnets, err := GetSubnetsWithFilters(publicSubnetFilter)
+	if err != nil {
+		return clusterResources, err
+	}
+
+	for _, subnet := range publicSubnets {
+		clusterResources.PublicSubnetsIDs = append(clusterResources.PublicSubnetsIDs, *subnet.SubnetId)
+	}
+
+	masterSGFilter := append(baseFilter, &ec2.Filter{
+		Name:   aws.String("tag:NodeType"),
+		Values: []*string{aws.String("master")},
+	})
+
+	masterSecurityGroups, err := GetSecurityGroupsWithFilters(masterSGFilter)
+	if err != nil {
+		return clusterResources, err
+	}
+
+	for _, securityGroup := range masterSecurityGroups {
+		clusterResources.MasterSecurityGroupIDs = append(clusterResources.MasterSecurityGroupIDs, *securityGroup.GroupId)
+	}
+
+	workerSGFilter := append(baseFilter, &ec2.Filter{
+		Name:   aws.String("tag:NodeType"),
+		Values: []*string{aws.String("worker")},
+	})
+
+	workerSecurityGroups, err := GetSecurityGroupsWithFilters(workerSGFilter)
+	if err != nil {
+		return clusterResources, err
+	}
+
+	for _, securityGroup := range workerSecurityGroups {
+		clusterResources.WorkerSecurityGroupIDs = append(clusterResources.WorkerSecurityGroupIDs, *securityGroup.GroupId)
+	}
+
+	err = clusterResources.IsValid()
+	if err != nil {
+		return clusterResources, errors.Wrapf(err, "VPC %s is misconfigured", clusterResources.VpcID)
+	}
+
+	return clusterResources, nil
+}
+
 // GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
 func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error) {
+	// First, check if a VPC has been claimed by this cluster. If only one has
+	// already been claimed, then return that with no error.
+	clusterAlreadyClaimedFilter := []*ec2.Filter{
+		{
+			Name: aws.String(VpcAvailableTagKey),
+			Values: []*string{
+				aws.String(VpcAvailableTagValueFalse),
+			},
+		},
+		{
+			Name: aws.String(VpcClusterIDTagKey),
+			Values: []*string{
+				aws.String(clusterID),
+			},
+		},
+	}
+	clusterAlreadyClaimedVpcs, err := GetVpcsWithFilters(clusterAlreadyClaimedFilter)
+	if err != nil {
+		return ClusterResources{}, err
+	}
+	if len(clusterAlreadyClaimedVpcs) > 1 {
+		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), clusterID)
+	}
+	if len(clusterAlreadyClaimedVpcs) == 0 {
+		return getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId)
+	}
+
+	// This cluster has not alraedy claimed a VPC. Continue with claiming process.
+
 	totalVpcsFilter := []*ec2.Filter{
 		{
 			Name: aws.String(VpcAvailableTagKey),
@@ -77,76 +182,9 @@ func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogge
 	// valid so we will claim the first one. Before doing that a sanity check of
 	// the VPCs resources will occur.
 	for _, vpc := range vpcs {
-		clusterResources := ClusterResources{
-			VpcID: *vpc.VpcId,
-		}
-
-		baseFilter := []*ec2.Filter{
-			{
-				Name:   aws.String("vpc-id"),
-				Values: []*string{vpc.VpcId},
-			},
-		}
-
-		privateSubnetFilter := append(baseFilter, &ec2.Filter{
-			Name:   aws.String("tag:SubnetType"),
-			Values: []*string{aws.String("private")},
-		})
-
-		privateSubnets, err := GetSubnetsWithFilters(privateSubnetFilter)
+		clusterResources, err := getClusterResourcesForVPC(*vpc.VpcId)
 		if err != nil {
-			return clusterResources, err
-		}
-
-		for _, subnet := range privateSubnets {
-			clusterResources.PrivateSubnetIDs = append(clusterResources.PrivateSubnetIDs, *subnet.SubnetId)
-		}
-
-		publicSubnetFilter := append(baseFilter, &ec2.Filter{
-			Name:   aws.String("tag:SubnetType"),
-			Values: []*string{aws.String("public")},
-		})
-
-		publicSubnets, err := GetSubnetsWithFilters(publicSubnetFilter)
-		if err != nil {
-			return clusterResources, err
-		}
-
-		for _, subnet := range publicSubnets {
-			clusterResources.PublicSubnetsIDs = append(clusterResources.PublicSubnetsIDs, *subnet.SubnetId)
-		}
-
-		masterSGFilter := append(baseFilter, &ec2.Filter{
-			Name:   aws.String("tag:NodeType"),
-			Values: []*string{aws.String("master")},
-		})
-
-		masterSecurityGroups, err := GetSecurityGroupsWithFilters(masterSGFilter)
-		if err != nil {
-			return clusterResources, err
-		}
-
-		for _, securityGroup := range masterSecurityGroups {
-			clusterResources.MasterSecurityGroupIDs = append(clusterResources.MasterSecurityGroupIDs, *securityGroup.GroupId)
-		}
-
-		workerSGFilter := append(baseFilter, &ec2.Filter{
-			Name:   aws.String("tag:NodeType"),
-			Values: []*string{aws.String("worker")},
-		})
-
-		workerSecurityGroups, err := GetSecurityGroupsWithFilters(workerSGFilter)
-		if err != nil {
-			return clusterResources, err
-		}
-
-		for _, securityGroup := range workerSecurityGroups {
-			clusterResources.WorkerSecurityGroupIDs = append(clusterResources.WorkerSecurityGroupIDs, *securityGroup.GroupId)
-		}
-
-		err = clusterResources.IsValid()
-		if err != nil {
-			logger.Warn(errors.Wrapf(err, "VPC %s is misconfigured", clusterResources.VpcID).Error())
+			logger.Warn(err)
 			continue
 		}
 
