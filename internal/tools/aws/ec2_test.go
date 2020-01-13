@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,10 @@ func (api *mockAPI) tagResource(svc *ec2.EC2, input *ec2.CreateTagsInput) (*ec2.
 
 func (api *mockAPI) untagResource(svc *ec2.EC2, input *ec2.DeleteTagsInput) (*ec2.DeleteTagsOutput, error) {
 	return nil, api.returnedError
+}
+
+func (api *mockAPI) describeImages(svc *ec2.EC2, input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+	return api.returnedDescribeImagesOutput, api.returnedError
 }
 
 func TestTagResource(t *testing.T) {
@@ -140,4 +145,52 @@ func TestVPCReal(t *testing.T) {
 
 	err = awsClient.releaseVpc(clusterID, logger)
 	require.NoError(t, err)
+}
+
+func TestAMIs(t *testing.T) {
+	tests := []struct {
+		name           string
+		AMIID          string
+		mockError      error
+		mockResponse   *ec2.DescribeImagesOutput
+		expectResponse bool
+	}{
+		{
+			name:           "invalid AMI",
+			AMIID:          "invalid-AMI-ID",
+			mockError:      errors.New("invalid AMI ID"),
+			mockResponse:   &ec2.DescribeImagesOutput{},
+			expectResponse: false,
+		},
+		{
+			name:      "valid AMI",
+			AMIID:     "valid-AMI-ID",
+			mockError: nil,
+			mockResponse: &ec2.DescribeImagesOutput{
+				Images: []*ec2.Image{
+					{
+						ImageId:      aws.String("valid-AMI-ID"),
+						CreationDate: aws.String("2020-01-13T00:00:00.001Z"),
+					},
+				},
+			},
+			expectResponse: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := Client{
+				api: &mockAPI{returnedDescribeImagesOutput: tt.mockResponse, returnedError: tt.mockError},
+			}
+
+			isValid := a.IsValidAMI(tt.AMIID)
+			switch tt.expectResponse {
+			case true:
+				assert.True(t, isValid)
+			case false:
+				assert.False(t, isValid)
+			}
+		})
+	}
 }

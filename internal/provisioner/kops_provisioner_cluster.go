@@ -89,6 +89,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "failed to parse provider metadata")
 	}
 
+	if !awsClient.IsValidAMI(kopsMetadata.AMI) {
+		return errors.Wrapf(err, "invalid AWS AMI Image %s", kopsMetadata.AMI)
+	}
+
 	clusterSize, err := kops.GetSize(cluster.Size)
 	if err != nil {
 		return err

@@ -163,6 +163,10 @@ func (a *mockAWS) UntagResource(resourceID, key, value string, logger log.FieldL
 	return nil
 }
 
+func (a *mockAWS) IsValidAMI(AMIID string) bool {
+	return true
+}
+
 func (a *mockAWS) S3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	return nil
 }
