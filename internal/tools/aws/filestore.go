@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
 // S3Filestore is a filestore backed by AWS S3.
@@ -143,7 +143,7 @@ func s3FilestoreTeardown(installationID string, keepData bool, logger log.FieldL
 	}
 
 	if !keepData {
-		err = a.s3EnsureBucketDeleted(awsID)
+		err = a.s3EnsureBucketDeleted(awsID, logger)
 		if err != nil {
 			return err
 		}
