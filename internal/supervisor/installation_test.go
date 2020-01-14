@@ -144,7 +144,7 @@ func (a *mockAWS) GetCertificateSummaryByTag(key, value string) (*acm.Certificat
 	return nil, nil
 }
 
-func (a *mockAWS) GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (aws.ClusterResources, error) {
+func (a *mockAWS) GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }
 

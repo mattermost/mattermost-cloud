@@ -30,15 +30,17 @@ type KopsProvisioner struct {
 	privateDNS              string
 	useExistingAWSResources bool
 	logger                  log.FieldLogger
+	owner                   string
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(s3StateStore, privateDNS, owner string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
 		privateDNS:              privateDNS,
 		useExistingAWSResources: useExistingAWSResources,
 		logger:                  logger,
+		owner:                   owner,
 	}
 }
 
@@ -97,7 +99,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	var clusterResources aws.ClusterResources
 	if provisioner.useExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, cluster.Owner, logger)
+		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, provisioner.owner, logger)
 		if err != nil {
 			return err
 		}
