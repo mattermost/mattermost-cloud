@@ -89,7 +89,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "failed to parse provider metadata")
 	}
 
-	if !awsClient.IsValidAMI(kopsMetadata.AMI) {
+	isAMIValid, err := awsClient.IsValidAMI(kopsMetadata.AMI)
+	if err != nil {
+		return errors.Wrapf(err, "Error checking the AWS AMI Image %s", kopsMetadata.AMI)
+	}
+	if !isAMIValid {
 		return errors.Wrapf(err, "invalid AWS AMI Image %s", kopsMetadata.AMI)
 	}
 

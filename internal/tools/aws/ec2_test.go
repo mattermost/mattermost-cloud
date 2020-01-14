@@ -184,12 +184,14 @@ func TestAMIs(t *testing.T) {
 				api: &mockAPI{returnedDescribeImagesOutput: tt.mockResponse, returnedError: tt.mockError},
 			}
 
-			isValid := a.IsValidAMI(tt.AMIID)
+			isValid, err := a.IsValidAMI(tt.AMIID)
 			switch tt.expectResponse {
 			case true:
 				assert.True(t, isValid)
+				assert.Nil(t, err)
 			case false:
 				assert.False(t, isValid)
+				assert.NotNil(t, err)
 			}
 		})
 	}

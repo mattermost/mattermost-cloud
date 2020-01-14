@@ -17,7 +17,7 @@ type AWS interface {
 
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
-	IsValidAMI(AMIImage string) bool
+	IsValidAMI(AMIImage string) (bool, error)
 }
 
 // Client is a client for interacting with AWS resources.

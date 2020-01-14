@@ -169,11 +169,7 @@ func GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, 
 }
 
 // IsValidAMI check if the provided AMI exists
-func (a *Client) IsValidAMI(AMIImage string) bool {
-	if AMIImage == "" {
-		return false
-	}
-
+func (a *Client) IsValidAMI(AMIImage string) (bool, error) {
 	svc := ec2.New(session.New(), &aws.Config{
 		Region: aws.String(DefaultAWSRegion),
 	})
@@ -189,13 +185,11 @@ func (a *Client) IsValidAMI(AMIImage string) bool {
 
 	out, err := a.api.describeImages(svc, describeImageInput)
 	if err != nil {
-		log.Errorf("failed to find ami %s. err=%s", AMIImage, err.Error())
-		return false
+		return false, err
 	}
 	if len(out.Images) == 0 {
-		log.Errorf("found no AMIs with the ID %s. err=%s", AMIImage, err.Error())
-		return false
+		return false, err
 	}
 
-	return true
+	return true, nil
 }
