@@ -170,6 +170,10 @@ func GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, 
 
 // IsValidAMI check if the provided AMI exists
 func (a *Client) IsValidAMI(AMIImage string) (bool, error) {
+	// if AMI image is blank it will use the default KOPS image
+	if AMIImage == "" {
+		return true, nil
+	}
 	svc := ec2.New(session.New(), &aws.Config{
 		Region: aws.String(DefaultAWSRegion),
 	})
@@ -188,7 +192,7 @@ func (a *Client) IsValidAMI(AMIImage string) (bool, error) {
 		return false, err
 	}
 	if len(out.Images) == 0 {
-		return false, err
+		return false, nil
 	}
 
 	return true, nil
