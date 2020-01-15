@@ -45,10 +45,10 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
-	serverCmd.MarkPersistentFlagRequired("route53-id")
-	serverCmd.MarkPersistentFlagRequired("private-route53-id")
 	serverCmd.MarkPersistentFlagRequired("private-dns")
-	serverCmd.MarkPersistentFlagRequired("certificate-aws-arn")
+	serverCmd.Flags().MarkDeprecated("route53-id", "This flag is deprecated and it will have no effect")
+	serverCmd.Flags().MarkDeprecated("private-route53-id", "This flag is deprecated and it will have no effect")
+	serverCmd.Flags().MarkDeprecated("certificate-aws-arn", "This flag is deprecated and it will have no effect")
 }
 
 var serverCmd = &cobra.Command{
@@ -87,20 +87,17 @@ var serverCmd = &cobra.Command{
 		}
 
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
-		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
 		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
-		s3StateStore, _ := command.Flags().GetString("state-store")
-		certificateSslARN, _ := command.Flags().GetString("certificate-aws-arn")
-		route53ZoneID, _ := command.Flags().GetString("route53-id")
-		privateRoute53ZoneID, _ := command.Flags().GetString("private-route53-id")
 		privateDNS, _ := command.Flags().GetString("private-dns")
-		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
+		s3StateStore, _ := command.Flags().GetString("state-store")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
+		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -114,10 +111,7 @@ var serverCmd = &cobra.Command{
 			"cluster-installation-supervisor": clusterInstallationSupervisor,
 			"store-version":                   currentVersion,
 			"state-store":                     s3StateStore,
-			"aws-arn":                         certificateSslARN,
 			"working-directory":               wd,
-			"route53-id":                      route53ZoneID,
-			"private-route53-id":              privateRoute53ZoneID,
 			"private-dns":                     privateDNS,
 			"cluster-resource-threshold":      clusterResourceThreshold,
 			"use-existing-aws-resources":      useExistingResources,
@@ -126,7 +120,7 @@ var serverCmd = &cobra.Command{
 			"debug":                           debug,
 		}).Info("Starting Mattermost Provisioning Server")
 
-		deprecationWarnings(logger)
+		deprecationWarnings(logger, command)
 
 		// Warn on settings we consider to be non-production.
 		if !useExistingResources {
@@ -136,7 +130,6 @@ var serverCmd = &cobra.Command{
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
-			certificateSslARN,
 			privateDNS,
 			useExistingResources,
 			logger,
@@ -144,13 +137,13 @@ var serverCmd = &cobra.Command{
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(privateRoute53ZoneID), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(route53ZoneID), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -211,11 +204,26 @@ var serverCmd = &cobra.Command{
 
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
-func deprecationWarnings(logger logrus.FieldLogger) {
+func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 	_, err := os.Stat(clusterRootDir)
 	if err == nil {
 		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
 		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
 		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
+	}
+
+	route53Flag, _ := cmd.Flags().GetString("route53-id")
+	if route53Flag != "" {
+		logger.Warn("[Deprecation] Flag route53-id is deprecated. Provisioner will use a resource tag to find route53-id in AWS.")
+	}
+
+	privateRoute53Flag, _ := cmd.Flags().GetString("private-route53-id")
+	if privateRoute53Flag != "" {
+		logger.Warn("[Deprecation] Flag private-route53-id is deprecated. Provisioner will use a resource tag to find private-route53-id in AWS.")
+	}
+
+	certificateARNFlag, _ := cmd.Flags().GetString("certificate-aws-arn")
+	if certificateARNFlag != "" {
+		logger.Warn("[Deprecation] Flag certificate-aws-arn is deprecated. Provisioner will use a resource tag to find certificate-aws-arn in AWS.")
 	}
 }

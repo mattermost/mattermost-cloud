@@ -420,7 +420,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		endpoints = append(endpoints, cr.Status.Endpoint)
 	}
 
-	err = s.aws.CreateCNAME(installation.DNS, endpoints, logger)
+	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record")
 		return model.InstallationStateCreationDNS
@@ -642,7 +642,7 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 }
 
 func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Installation, logger log.FieldLogger) string {
-	err := s.aws.DeleteCNAME(installation.DNS, logger)
+	err := s.aws.DeletePublicCNAME(installation.DNS, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete installation DNS")
 		return model.InstallationStateDeletionFinalCleanup

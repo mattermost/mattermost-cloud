@@ -1,15 +1,20 @@
 package aws
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-var testDNSName = "example.mattermost.com"
+var (
+	testDNSName             = "example.mattermost.com"
+	testParsedHostedZoneID  = "Z3P5QSUBK4POTI"
+	testParsedRoute53TagKey = "MattermostCloudDNS"
+	testRoute53TagValue     = "public"
+)
 
 func (api *mockAPI) getRoute53Client() (*route53.Route53, error) {
 	return nil, api.returnedError
@@ -32,6 +37,26 @@ func (api *mockAPI) listResourceRecordSets(svc *route53.Route53, input *route53.
 	}, api.returnedError
 }
 
+func (api *mockAPI) listHostedZones(*route53.Route53, *route53.ListHostedZonesInput) (*route53.ListHostedZonesOutput, error) {
+	return &route53.ListHostedZonesOutput{
+		IsTruncated: &api.returnedTruncated,
+		HostedZones: []*route53.HostedZone{&route53.HostedZone{
+			Id: &testParsedHostedZoneID,
+		}},
+	}, api.returnedError
+}
+
+func (api *mockAPI) listTagsForResource(*route53.Route53, *route53.ListTagsForResourceInput) (*route53.ListTagsForResourceOutput, error) {
+	return &route53.ListTagsForResourceOutput{
+		ResourceTagSet: &route53.ResourceTagSet{
+			ResourceId: &testParsedHostedZoneID,
+			Tags: []*route53.Tag{&route53.Tag{
+				Key:   &testParsedRoute53TagKey,
+				Value: &testRoute53TagValue},
+			}},
+	}, api.returnedError
+}
+
 func TestCreateCNAME(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -46,25 +71,29 @@ func TestCreateCNAME(t *testing.T) {
 			[]string{},
 			nil,
 			true,
-		}, {
+		},
+		{
 			"one endpoints",
 			"dns2",
 			[]string{"example.mattermost.com"},
 			nil,
 			false,
-		}, {
+		},
+		{
 			"two endpoints",
 			"dns3",
 			[]string{"example1.mattermost.com", "example2.mattermost.com"},
 			nil,
 			false,
-		}, {
+		},
+		{
 			"empty string endpoint",
 			"dns4",
 			[]string{"example1.mattermost.com", ""},
 			nil,
 			true,
-		}, {
+		},
+		{
 			"session client error",
 			"dns5",
 			[]string{"example1.mattermost.com", "example2.mattermost.com"},
@@ -78,11 +107,10 @@ func TestCreateCNAME(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := Client{
-				hostedZoneID: "ABCDEFGH",
-				api:          &mockAPI{returnedError: tt.mockError},
+				api: &mockAPI{returnedError: tt.mockError},
 			}
 
-			err := a.CreateCNAME(tt.dnsName, tt.endpoints, logger)
+			err := a.CreatePublicCNAME(tt.dnsName, tt.endpoints, logger)
 			switch tt.expectError {
 			case true:
 				assert.Error(t, err)
@@ -134,11 +162,10 @@ func TestDeleteCNAME(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := Client{
-				hostedZoneID: "ABCDEFGH",
-				api:          &mockAPI{returnedError: tt.mockError},
+				api: &mockAPI{returnedError: tt.mockError},
 			}
 
-			err := a.DeleteCNAME(tt.dnsName, logger)
+			err := a.DeletePublicCNAME(tt.dnsName, logger)
 			switch tt.expectError {
 			case true:
 				assert.Error(t, err)

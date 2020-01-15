@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -13,6 +13,10 @@ import (
 )
 
 func (api *mockAPI) getEC2Client() (*ec2.EC2, error) {
+	return nil, api.returnedError
+}
+
+func (api *mockAPI) getACMClient() (*acm.ACM, error) {
 	return nil, api.returnedError
 }
 
@@ -68,8 +72,7 @@ func TestTagResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := Client{
-				hostedZoneID: "ABCDEFGH",
-				api:          &mockAPI{returnedError: tt.mockError},
+				api: &mockAPI{returnedError: tt.mockError},
 			}
 
 			err := a.TagResource(tt.resourceID, tt.key, tt.value, logger)
@@ -115,8 +118,7 @@ func TestUntagResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := Client{
-				hostedZoneID: "ABCDEFGH",
-				api:          &mockAPI{returnedError: tt.mockError},
+				api: &mockAPI{returnedError: tt.mockError},
 			}
 
 			err := a.UntagResource(tt.resourceID, tt.key, tt.value, logger)
@@ -136,7 +138,7 @@ func TestVPCReal(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	awsClient := New("n/a")
+	awsClient := New()
 
 	clusterID := "testclusterID1"
 
