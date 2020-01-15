@@ -246,10 +246,6 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
 	}
 
-	if owner == "" {
-		owner = "SRETeam"
-	}
-
 	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterOwnerKey), owner, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)

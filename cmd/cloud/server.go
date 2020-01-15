@@ -129,7 +129,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		// best-effort attempt to tag the VPC with a human's identity for dev purposes
-		owner := getGitEmail()
+		owner := getHumanReadableID()
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
@@ -233,13 +233,18 @@ func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 	}
 }
 
-// getGitEmail  represents  a  best  effort  attempt  to  retrieve  an
+// getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an
 // identifiable  human to  associate with  a given  provisioner. Since
-// this is for dev workflows, any  error causes it to merely return an
-// empty string.
-func getGitEmail() string {
+// this is for dev workflows, any  error causes it to merely return a
+// generic string.
+func getHumanReadableID() string {
 	cmd := exec.Command("git", "config",
 		"--get", "user.email")
+
+	envVar := os.Getenv("CLOUD_SERVER_OWNER")
+	if envVar != "" {
+		return envVar
+	}
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -247,7 +252,7 @@ func getGitEmail() string {
 		if len(output) != 0 {
 			logger.Debugf("Command output was: %s", string(output))
 		}
-		return ""
+		return "SRETeam"
 	}
 
 	return string(output)
