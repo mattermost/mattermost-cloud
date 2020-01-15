@@ -28,7 +28,7 @@ func NewRDSDatabase(installationID string) *RDSDatabase {
 
 // Provision completes all the steps necessary to provision a RDS database.
 func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	awsClient := New("n/a")
+	awsClient := New()
 	awsClient.AddSQLStore(store)
 
 	err := rdsDatabaseProvision(d.installationID, awsClient, logger)
@@ -157,7 +157,7 @@ func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.F
 func rdsDatabaseTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
 	logger.Info("Tearing down AWS RDS database")
 
-	a := New("n/a")
+	a := New()
 	awsID := CloudID(installationID)
 
 	err := a.secretsManagerEnsureRDSSecretDeleted(awsID, logger)

@@ -56,6 +56,26 @@ const (
 	// Note: This needs to be manually created before RDS databases can be used.
 	DefaultDBSubnetGroupTagValue = "MYSQL/Aurora"
 
+	// DefaultInstallCertificatesTagKey is the default key used to find the server
+	// TLS certificate ARN.
+	DefaultInstallCertificatesTagKey = "tag:MattermostCloudInstallationCertificates"
+
+	// DefaultInstallCertificatesTagValue is the default value used to find the server
+	// TLS certificate ARN.
+	DefaultInstallCertificatesTagValue = "true"
+
+	// DefaultCloudDNSTagKey is the default key used to find private and public hosted
+	// zone IDs in AWS Route53.
+	DefaultCloudDNSTagKey = "tag:MattermostCloudDNS"
+
+	// DefaultPrivateCloudDNSTagValue is the default value used to find private hosted zone ID
+	// in AWS Route53.
+	DefaultPrivateCloudDNSTagValue = "private"
+
+	// DefaultPublicCloudDNSTagValue is the default value used to find public hosted zone ID
+	// in AWS Route53.
+	DefaultPublicCloudDNSTagValue = "public"
+
 	// cloudIDPrefix is the prefix value used when creating AWS resource names.
 	// Warning:
 	// changing this value will break the connection to AWS resources for

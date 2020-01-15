@@ -55,12 +55,10 @@ Before running the server the first time you must set up the DB with:
 $ cloud schema migrate
 ```
 
-To run the server you will need a certificate ARN, private and public Route53 IDs, and a private DNS from AWS. For staff developers you can get these in our dev AWS account.
-
 Run the server with:
 
 ```
-$ cloud server --state-store=<your-s3-bucket> --private-dns dev.cloud.internal.mattermost.com --private-route53-id=<private-route53-id> --route53-id=<public-route53-id> --certificate-aws-arn <certifcate-aws-arn>
+$ cloud server --state-store=<your-s3-bucket> --private-dns dev.cloud.internal.mattermost.com
 ```
 
 ### Testing
