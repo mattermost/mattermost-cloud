@@ -142,7 +142,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogge
 	if len(clusterAlreadyClaimedVpcs) > 1 {
 		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), clusterID)
 	}
-	if len(clusterAlreadyClaimedVpcs) == 0 {
+	if len(clusterAlreadyClaimedVpcs) == 1 {
 		return getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId)
 	}
 
