@@ -116,6 +116,10 @@ func (api *apiInterface) untagResource(svc *ec2.EC2, input *ec2.DeleteTagsInput)
 	return svc.DeleteTags(input)
 }
 
+func (api *apiInterface) describeImages(svc *ec2.EC2, input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+	return svc.DescribeImages(input)
+}
+
 // GetVpcsWithFilters returns VPCs matching a given filter.
 func GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
 	svc := ec2.New(session.New(), &aws.Config{
@@ -162,4 +166,34 @@ func GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, 
 	}
 
 	return sgOutput.SecurityGroups, nil
+}
+
+// IsValidAMI check if the provided AMI exists
+func (a *Client) IsValidAMI(AMIImage string) (bool, error) {
+	// if AMI image is blank it will use the default KOPS image
+	if AMIImage == "" {
+		return true, nil
+	}
+	svc := ec2.New(session.New(), &aws.Config{
+		Region: aws.String(DefaultAWSRegion),
+	})
+
+	describeImageInput := &ec2.DescribeImagesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("image-id"),
+				Values: []*string{aws.String(AMIImage)},
+			},
+		},
+	}
+
+	out, err := a.api.describeImages(svc, describeImageInput)
+	if err != nil {
+		return false, err
+	}
+	if len(out.Images) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }

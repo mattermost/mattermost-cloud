@@ -23,6 +23,7 @@ type AWS interface {
 
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
+	IsValidAMI(AMIImage string) (bool, error)
 }
 
 // Client is a client for interacting with AWS resources.
@@ -42,6 +43,7 @@ type api interface {
 	getEC2Client() (*ec2.EC2, error)
 	tagResource(*ec2.EC2, *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
 	untagResource(*ec2.EC2, *ec2.DeleteTagsInput) (*ec2.DeleteTagsOutput, error)
+	describeImages(svc *ec2.EC2, input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error)
 
 	getACMClient() (*acm.ACM, error)
 	listCertificates(*acm.ACM, *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error)
