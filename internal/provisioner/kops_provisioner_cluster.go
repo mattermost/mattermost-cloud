@@ -32,18 +32,6 @@ type KopsProvisioner struct {
 	logger                  log.FieldLogger
 }
 
-// helmDeployment deploys Helm charts.
-type helmDeployment struct {
-	valuesPath          string
-	chartName           string
-	namespace           string
-	chartDeploymentName string
-	setArgument         string
-}
-
-// Array of helm apps that need DNS registration.
-var helmApps = []string{"prometheus"}
-
 // NewKopsProvisioner creates a new KopsProvisioner.
 func NewKopsProvisioner(s3StateStore, privateDNS string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
@@ -180,84 +168,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
-	logger.Info("Installing Helm")
-	err = helmSetup(logger, kops)
+	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return err
 	}
 
-	wait = 120
-	logger.Infof("Waiting up to %d seconds for helm to become ready...", wait)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
-	if err != nil {
-		return err
-	}
-
-	logger.Info("Updating all Helm repos.")
-	err = helmRepoUpdate(logger)
-	if err != nil {
-		return err
-	}
-
-	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", cluster.ID, provisioner.privateDNS)
-	elasticsearchDNS := fmt.Sprintf("elasticsearch.%s", provisioner.privateDNS)
-
-	helmDeployments := []helmDeployment{
-		{
-			valuesPath:          "helm-charts/private-nginx_values.yaml",
-			chartName:           "stable/nginx-ingress",
-			namespace:           "internal-nginx",
-			chartDeploymentName: "private-nginx",
-		}, {
-			valuesPath:          "helm-charts/prometheus_values.yaml",
-			chartName:           "stable/prometheus",
-			namespace:           "prometheus",
-			chartDeploymentName: "prometheus",
-			setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
-		}, {
-			valuesPath:          "helm-charts/fluent-bit_values.yaml",
-			chartName:           "stable/fluent-bit",
-			namespace:           "fluent-bit",
-			chartDeploymentName: "fluent-bit",
-			setArgument:         fmt.Sprintf("backend.es.host=%s", elasticsearchDNS),
-		},
-	}
-
-	for _, deployment := range helmDeployments {
-		logger.Infof("Installing helm chart %s", deployment.chartName)
-		err = installHelmChart(deployment, kops.GetKubeConfigPath(), logger)
-		if err != nil {
-			return err
-		}
-	}
-
-	logger.Infof("Waiting up to %d seconds for internal ELB to become ready...", wait)
-	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger, kops.GetKubeConfigPath())
-	if err != nil {
-		return err
-	}
-
-	for _, app := range helmApps {
-		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		logger.Infof("Registering DNS %s for %s", dns, app)
-		err = awsClient.CreatePrivateCNAME(dns, []string{endpoint}, logger)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return ugh.CreateUtilityGroup()
 }
 
 // ProvisionCluster installs all the baseline kubernetes resources needed for
 // managing installations. This can be called on an already-provisioned cluster
 // to reprovision with the newest version of the resources.
-// TODO: Move helm configuration here as well.
-func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
@@ -398,6 +320,16 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) err
 			}
 			logger.Infof("Successfully deployed operator pod %q", pod.Name)
 		}
+	}
+
+	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create new cluster utility group handle")
+	}
+
+	err = ugh.UpgradeUtilityGroup()
+	if err != nil {
+		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully provisioned cluster")
@@ -550,13 +482,14 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to release VPC")
 	}
 
-	for _, app := range helmApps {
-		logger.Infof("Deleting Route53 DNS Record for %s", app)
-		dns := fmt.Sprintf("%s.%s.%s", cluster.ID, app, provisioner.privateDNS)
-		err = awsClient.DeletePrivateCNAME(dns, logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete Route53 DNS record")
-		}
+	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "couldn't greate new utility group handle while deleting the cluster")
+	}
+
+	err = ugh.DestroyUtilityGroup()
+	if err != nil {
+		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
 	logger.Info("Successfully deleted cluster")
