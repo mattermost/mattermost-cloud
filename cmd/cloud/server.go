@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -255,5 +256,5 @@ func getHumanReadableID() string {
 		return "SRETeam"
 	}
 
-	return string(output)
+	return strings.TrimSpace(string(output))
 }
