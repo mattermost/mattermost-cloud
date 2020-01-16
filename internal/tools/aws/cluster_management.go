@@ -326,6 +326,11 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
 	}
 
+	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcClusterOwnerKey), VpcClusterOwnerValueNone, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to untag owner from %s", *vpcs[0].VpcId)
+	}
+
 	logger.Debugf("Released VPC %s", *vpcs[0].VpcId)
 
 	return nil
