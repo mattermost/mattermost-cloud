@@ -143,7 +143,7 @@ func s3FilestoreTeardown(installationID string, keepData bool, logger log.FieldL
 	}
 
 	if !keepData {
-		err = a.s3EnsureBucketDeleted(awsID)
+		err = a.s3EnsureBucketDeleted(awsID, logger)
 		if err != nil {
 			return err
 		}
