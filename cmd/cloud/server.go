@@ -239,13 +239,13 @@ func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 // this is for dev workflows, any  error causes it to merely return a
 // generic string.
 func getHumanReadableID() string {
-	cmd := exec.Command("git", "config",
-		"--get", "user.email")
-
 	envVar := os.Getenv("CLOUD_SERVER_OWNER")
 	if envVar != "" {
 		return envVar
 	}
+
+	cmd := exec.Command("git", "config",
+		"--get", "user.email")
 
 	output, err := cmd.Output()
 	if err != nil {
