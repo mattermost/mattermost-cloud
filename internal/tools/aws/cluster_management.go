@@ -118,7 +118,7 @@ func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
 
 // GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
-func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error) {
+func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error) {
 	// First, check if a VPC has been claimed by this cluster. If only one has
 	// already been claimed, then return that with no error.
 	clusterAlreadyClaimedFilter := []*ec2.Filter{
@@ -147,7 +147,6 @@ func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogge
 	}
 
 	// This cluster has not alraedy claimed a VPC. Continue with claiming process.
-
 	totalVpcsFilter := []*ec2.Filter{
 		{
 			Name: aws.String(VpcAvailableTagKey),
@@ -188,7 +187,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID string, logger log.FieldLogge
 			continue
 		}
 
-		err = a.claimVpc(clusterResources, clusterID, logger)
+		err = a.claimVpc(clusterResources, clusterID, owner, logger)
 		if err != nil {
 			return clusterResources, err
 		}
@@ -209,7 +208,7 @@ func (a *Client) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
 //   - Requires the VPC to exist. #mindblown
 //   - VPC availabiltiy tag must be "true"
 //   - VPC cluster ID tag must by "none"
-func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, logger log.FieldLogger) error {
+func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
 	vpcFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("vpc-id"),
@@ -241,7 +240,13 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, l
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
 	}
+
 	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), clusterID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+	}
+
+	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterOwnerKey), owner, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
 	}
@@ -319,6 +324,11 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueTrue, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
+	}
+
+	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcClusterOwnerKey), VpcClusterOwnerValueNone, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to untag owner from %s", *vpcs[0].VpcId)
 	}
 
 	logger.Debugf("Released VPC %s", *vpcs[0].VpcId)

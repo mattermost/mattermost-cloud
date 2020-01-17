@@ -23,6 +23,14 @@ const (
 	// cluster running in that VPC.
 	VpcClusterIDTagKey = "tag:CloudClusterID"
 
+	// VpcClusterOwnerKey is the tag key  used to store the owner of the
+	// cluster's human name so that the VPC's owner can be identified
+	VpcClusterOwnerKey = "tag:CloudClusterOwner"
+
+	// VpcClusterOwnerValueNone is the tag value for VpcClusterOwnerKey when
+	// there is no cluster running in the VPC.
+	VpcClusterOwnerValueNone = "none"
+
 	// VpcClusterIDTagValueNone is the tag value for VpcClusterIDTagKey when
 	// there is no cluster running in the VPC.
 	VpcClusterIDTagValueNone = "none"

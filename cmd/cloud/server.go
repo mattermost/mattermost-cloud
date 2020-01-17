@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -127,10 +129,14 @@ var serverCmd = &cobra.Command{
 			logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
 		}
 
+		// best-effort attempt to tag the VPC with a human's identity for dev purposes
+		owner := getHumanReadableID()
+
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
 			privateDNS,
+			owner,
 			useExistingResources,
 			logger,
 		)
@@ -226,4 +232,29 @@ func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 	if certificateARNFlag != "" {
 		logger.Warn("[Deprecation] Flag certificate-aws-arn is deprecated. Provisioner will use a resource tag to find certificate-aws-arn in AWS.")
 	}
+}
+
+// getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an
+// identifiable  human to  associate with  a given  provisioner. Since
+// this is for dev workflows, any  error causes it to merely return a
+// generic string.
+func getHumanReadableID() string {
+	envVar := os.Getenv("CLOUD_SERVER_OWNER")
+	if envVar != "" {
+		return envVar
+	}
+
+	cmd := exec.Command("git", "config",
+		"--get", "user.email")
+
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Debugf("Couldn't determine username of developer with which to tag infrastructure due to error: %s", err.Error())
+		if len(output) != 0 {
+			logger.Debugf("Command output was: %s", string(output))
+		}
+		return "SRETeam"
+	}
+
+	return strings.TrimSpace(string(output))
 }
