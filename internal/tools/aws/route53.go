@@ -133,11 +133,6 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		return err
 	}
 
-	if len(dnsName) >= 64 {
-		logger.Warnf("DNS name too long, skipping since it could never have been created record-name=%s", dnsName)
-		return nil
-	}
-
 	nextRecordName := dnsName
 	var recordsets []*route53.ResourceRecordSet
 	for {
