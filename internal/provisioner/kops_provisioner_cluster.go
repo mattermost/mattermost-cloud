@@ -443,40 +443,54 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	}
 	defer kops.Close()
 
-	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
-	if err != nil {
-		return err
-	}
-
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
-	if err != nil {
-		return err
-	}
-	defer terraformClient.Close()
-
-	err = terraformClient.Init(kopsMetadata.Name)
-	if err != nil {
-		return err
-	}
-
-	err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
-	if err != nil {
-		// There are a few reasons why this may fail including an failed cluster
-		// creation. For now, let's log an error if there is one and proceed.
-		// TODO: make this better.
-		logger.WithError(err).Error("Proceeding with cluster deletion despite failing terraform output match check")
-	}
+	// Use these vars to keep track of which resources need to be deleted.
+	var skipDeleteKops, skipDeleteTerraform bool
 
 	logger.Info("Deleting cluster")
 
-	err = terraformClient.Destroy()
+	_, err = kops.GetCluster(kopsMetadata.Name)
 	if err != nil {
-		return err
+		logger.WithError(err).Error("Failed kops get cluster check: proceeding assuming kops and terraform resources were never created")
+		skipDeleteKops = true
+		skipDeleteTerraform = true
 	}
 
-	err = kops.DeleteCluster(kopsMetadata.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete cluster")
+	if !skipDeleteKops {
+		err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+		if err != nil {
+			return errors.Wrap(err, "failed to run kops update")
+		}
+	}
+
+	if !skipDeleteTerraform {
+		terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to create terraform wrapper")
+		}
+		defer terraformClient.Close()
+
+		err = terraformClient.Init(kopsMetadata.Name)
+		if err != nil {
+			return errors.Wrap(err, "failed to init terraform")
+		}
+
+		err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
+		if err != nil {
+			skipDeleteTerraform = true
+			logger.WithError(err).Error("Proceeding with cluster deletion despite failing terraform output match check")
+		}
+
+		err = terraformClient.Destroy()
+		if err != nil {
+			return errors.Wrap(err, "failed to run terraform destroy")
+		}
+	}
+
+	if !skipDeleteKops {
+		err = kops.DeleteCluster(kopsMetadata.Name)
+		if err != nil {
+			return errors.Wrap(err, "failed to run kops delete")
+		}
 	}
 
 	err = awsClient.ReleaseVpc(cluster.ID, logger)

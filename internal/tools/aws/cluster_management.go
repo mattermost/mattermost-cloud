@@ -146,7 +146,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		return getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId)
 	}
 
-	// This cluster has not alraedy claimed a VPC. Continue with claiming process.
+	// This cluster has not already claimed a VPC. Continue with claiming process.
 	totalVpcsFilter := []*ec2.Filter{
 		{
 			Name: aws.String(VpcAvailableTagKey),
