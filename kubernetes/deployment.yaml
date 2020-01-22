@@ -34,19 +34,12 @@ spec:
             secretKeyRef:
               name: mattermost-cloud-secret
               key: DATABASE
-      - name: volume-mount-hack
-        image: busybox:latest
-        imagePullPolicy: IfNotPresent
-        command: ["sh", "-c", "chown -R 10001:10001 /mattermost-cloud/clusters && rm -rf /mattermost-cloud/clusters/*"]
-        volumeMounts:
-        - name: cluster-persistent-storage
-          mountPath: /mattermost-cloud/clusters/
       containers:
       - name: mattermost-cloud
         image: mattermost/mattermost-cloud:latest
         imagePullPolicy: Always
         terminationMessagePolicy: "FallbackToLogsOnError"
-        args: ["server", "--debug", "true", "--state-store", "mattermost-kops-state-test", "--route53-id", "$(ROUTE53_ID)","--certificate-aws-arn", "$(CERTIFICATE_AWS_ARN)", "--private-route53-id", "$(PRIVATE_ROUTE53_ID)", "--private-dns", "$(PRIVATE_DNS)", "--private-subnets", "$(PRIVATE_SUBNETS)", "--public-subnets", "$(PUBLIC_SUBNETS)", "--database", "$(DATABASE)"]
+        args: ["server", "--debug", "true", "--state-store", "mattermost-kops-state-test", "--private-dns", "$(PRIVATE_DNS)", "--private-subnets", "$(PRIVATE_SUBNETS)", "--public-subnets", "$(PUBLIC_SUBNETS)", "--database", "$(DATABASE)"]
         ports:
         - containerPort: 8075
           name: api
@@ -78,16 +71,6 @@ spec:
             secretKeyRef:
               name: mattermost-cloud-secret
               key: DATABASE
-        - name: ROUTE53_ID
-          valueFrom:
-            secretKeyRef:
-              name: mattermost-cloud-secret
-              key: ROUTE53_ID
-        - name: PRIVATE_ROUTE53_ID
-          valueFrom:
-            secretKeyRef:
-              name: mattermost-cloud-secret
-              key: PRIVATE_ROUTE53_ID
         - name: PRIVATE_DNS
           valueFrom:
             secretKeyRef:
@@ -103,14 +86,7 @@ spec:
             secretKeyRef:
               name: mattermost-cloud-secret
               key: PUBLIC_SUBNETS
-        - name: CERTIFICATE_AWS_ARN
-          valueFrom:
-            secretKeyRef:
-              name: mattermost-cloud-secret
-              key: CERTIFICATE_AWS_ARN
         volumeMounts:
-        - name: cluster-persistent-storage
-          mountPath: /mattermost-cloud/clusters/
         - name: mattermost-cloud-ssh-volume
           mountPath: /.ssh
         - name: mattermost-cloud-tmp-volume
@@ -118,9 +94,6 @@ spec:
         - name: mattermost-cloud-helm-volume
           mountPath: /.helm
       volumes:
-      - name: cluster-persistent-storage
-        persistentVolumeClaim:
-          claimName: cluster-pv-claim
       - name: mattermost-cloud-ssh-volume
         secret:
           secretName: mattermost-cloud-ssh-secret
