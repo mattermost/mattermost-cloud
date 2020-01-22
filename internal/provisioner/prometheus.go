@@ -11,12 +11,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const PROMETHEUS_CHART_NAME = "stable/prometheus"
+
 type prometheus struct {
 	awsClient   aws.AWS
 	cluster     *model.Cluster
 	kops        *kops.Cmd
 	logger      log.FieldLogger
 	provisioner *KopsProvisioner
+	version     string
 }
 
 func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheus, error) {
@@ -41,11 +44,12 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 	}
 
 	return &prometheus{
-		cluster:     cluster,
-		provisioner: provisioner,
 		awsClient:   awsClient,
+		cluster:     cluster,
 		kops:        kops,
 		logger:      logger.WithField("cluster-utility", "prometheus"),
+		provisioner: provisioner,
+		version:     cluster.PrometheusVersion,
 	}, nil
 }
 
@@ -98,12 +102,13 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", p.cluster.ID, p.provisioner.privateDNS)
 	return &helmDeployment{
 		chartDeploymentName: "prometheus",
-		chartName:           "stable/prometheus",
+		chartName:           PROMETHEUS_CHART_NAME,
+		kops:                p.kops,
+		kopsProvisioner:     p.provisioner,
+		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
 		valuesPath:          "helm-charts/prometheus_values.yaml",
-		kopsProvisioner:     p.provisioner,
-		kops:                p.kops,
-		logger:              p.logger,
+		version:             p.version,
 	}
 }

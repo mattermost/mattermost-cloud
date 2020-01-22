@@ -142,9 +142,10 @@ func (c *Client) RetryCreateCluster(clusterID string) error {
 	}
 }
 
-// ProvisionCluster provisions k8s operators on a cluster from the configured provisioning server.
-func (c *Client) ProvisionCluster(clusterID string) error {
-	resp, err := c.doPost(c.buildURL("/api/cluster/%s/provision", clusterID), nil)
+// ProvisionCluster provisions k8s operators and Helm charts on a
+// cluster from the configured provisioning server.
+func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s/provision", clusterID), request)
 	if err != nil {
 		return err
 	}

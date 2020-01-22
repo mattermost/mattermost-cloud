@@ -15,7 +15,7 @@ func init() {
 		Select(
 			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
 			"Version", "Size", "State", "AllowInstallations", "CreateAt", "DeleteAt",
-			"LockAcquiredBy", "LockAcquiredAt",
+			"LockAcquiredBy", "LockAcquiredAt", "PrometheusVersion", "FluentbitVersion", "NginxVersion",
 		).
 		From("Cluster")
 }
@@ -106,6 +106,9 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 			"DeleteAt":            0,
 			"LockAcquiredBy":      nil,
 			"LockAcquiredAt":      0,
+			"PrometheusVersion":   cluster.PrometheusVersion,
+			"FluentbitVersion":    cluster.FluentbitVersion,
+			"NginxVersion":        cluster.NginxVersion,
 		}),
 	)
 	if err != nil {
@@ -128,6 +131,10 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 			"Size":                cluster.Size,
 			"State":               cluster.State,
 			"AllowInstallations":  cluster.AllowInstallations,
+
+			"PrometheusVersion": cluster.PrometheusVersion,
+			"FluentbitVersion":  cluster.FluentbitVersion,
+			"NginxVersion":      cluster.NginxVersion,
 		}).
 		Where("ID = ?", cluster.ID),
 	)

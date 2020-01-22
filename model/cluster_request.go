@@ -11,12 +11,13 @@ import (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider           string   `json:"provider,omitempty"`
-	Version            string   `json:"version,omitempty"`
-	KopsAMI            string   `json:"kops-ami,omitempty"`
-	Size               string   `json:"size,omitempty"`
-	Zones              []string `json:"zones,omitempty"`
-	AllowInstallations bool     `json:"allow-installations,omitempty"`
+	Provider           string            `json:"provider,omitempty"`
+	Version            string            `json:"version,omitempty"`
+	KopsAMI            string            `json:"kops-ami,omitempty"`
+	Size               string            `json:"size,omitempty"`
+	Zones              []string          `json:"zones,omitempty"`
+	AllowInstallations bool              `json:"allow-installations,omitempty"`
+	UtilityVersions    map[string]string `json:"utility-versions,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -99,6 +100,19 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode update cluster request")
 	}
-
 	return &updateClusterRequest, nil
+}
+
+type ProvisionClusterRequest struct {
+	UtilityVersions map[string]string `json:"utility-versions,omitempty"`
+}
+
+// NewUpdateClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
+func NewProvisionClusterRequestFromReader(reader io.Reader) (*ProvisionClusterRequest, error) {
+	var provisionClusterRequest ProvisionClusterRequest
+	err := json.NewDecoder(reader).Decode(&provisionClusterRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode provision cluster request")
+	}
+	return &provisionClusterRequest, nil
 }

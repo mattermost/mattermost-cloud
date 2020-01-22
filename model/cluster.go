@@ -23,6 +23,10 @@ type Cluster struct {
 	DeleteAt            int64
 	LockAcquiredBy      *string
 	LockAcquiredAt      int64
+
+	PrometheusVersion string
+	NginxVersion      string
+	FluentbitVersion  string
 }
 
 // Clone returns a deep copy the cluster.
@@ -104,4 +108,24 @@ var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1
 // or a valid k8s version number.
 func ValidClusterVersion(name string) bool {
 	return clusterVersionMatcher.MatchString(name)
+}
+
+// UpdateUtilityVersions expects a map of cluster name to version
+// string and finds valid ones in the map and adds them to the cluster
+// object throws away invalid entries in order to avoid becoming an
+// impure function that needs to return an error type as a possible
+// side effect, as this complicates usage
+func (c *Cluster) UpdateUtilityVersions(versions map[string]string) {
+	for utility, version := range versions {
+		switch utility {
+		case "prometheus":
+			c.PrometheusVersion = version
+		case "nginx":
+			c.NginxVersion = version
+		case "fluentbit":
+			c.FluentbitVersion = version
+		default:
+			continue
+		}
+	}
 }

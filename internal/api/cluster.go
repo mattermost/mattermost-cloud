@@ -22,10 +22,14 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
 	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
 	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
-	clusterRouter.Handle("", addContext(handleUpdateCluster)).Methods("PUT")
+	clusterRouter.Handle("", addContext(handleUpdateClusterConfiguration)).Methods("PUT")
 	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
-	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeCluster)).Methods("PUT")
+	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeKubernetes)).Methods("PUT")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
+
+	// TODO XXX
+	// utilityRouter := clusterRouter.PathPrefix("/utility/{utilityName:[A-Za-z]}").Subrouter()
+	//	utilityRouter.Handle("/{version}:[A-Za-z.0-9]+", addContext(handleUpgradeUtility)).Methods("PUT")
 }
 
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.
@@ -87,6 +91,8 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	err = cluster.SetProviderMetadata(model.AWSMetadata{
 		Zones: createClusterRequest.Zones,
 	})
+
+	cluster.UpdateUtilityVersions(createClusterRequest.UtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to set provider metadata")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -199,6 +205,12 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	defer unlockOnce()
 
+	provisionClusterRequest, err := model.NewProvisionClusterRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to deserialize cluster provision request body")
+	}
+
+	cluster.UpdateUtilityVersions(provisionClusterRequest.UtilityVersions)
 	newState := model.ClusterStateProvisioningRequested
 
 	if !cluster.ValidTransitionState(newState) {
@@ -260,9 +272,9 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, cluster)
 }
 
-// handleUpdateCluster responds to PUT /api/cluster/{cluster}, updating a cluster's
+// handleUpdateClusterConfiguration responds to PUT /api/cluster/{cluster}, updating a cluster's
 // configuration.
-func handleUpdateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
@@ -283,7 +295,6 @@ func handleUpdateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	if cluster.AllowInstallations != updateClusterRequest.AllowInstallations {
 		cluster.AllowInstallations = updateClusterRequest.AllowInstallations
-
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
@@ -299,9 +310,9 @@ func handleUpdateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, cluster)
 }
 
-// handleUpgradeCluster responds to PUT /api/cluster/{cluster}/kubernetes/{version},
+// handleUpgradeKubernetes responds to PUT /api/cluster/{cluster}/kubernetes/{version},
 // upgrading the cluster to the given Kubernetes version.
-func handleUpgradeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
 	version := vars["version"]
@@ -446,4 +457,50 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func handleUpgradeUtility(c *Context, w http.ResponseWriter, r *http.Request) {
+	logger := c.Logger.WithField("cluster-utility-api", "upgrade")
+
+	// gather and validate necessary inputs
+	vars := mux.Vars(r)
+	clusterID, ok := vars["cluster"]
+	if !ok {
+		logger.Warning("cluster ID was omitted")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	logger = logger.WithField("cluster", clusterID)
+
+	utility, ok := vars["utilityName"]
+	if !ok {
+		logger.Warning("name of the utility that needs to be updated was omitted")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	version, ok := vars["version"]
+	if !ok {
+		logger.Warning("version of the utility to be updated was omitted")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	if status != 0 {
+		w.WriteHeader(status)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	cluster.UpdateUtilityVersions(map[string]string{utility: version})
+	c.Store.UpdateCluster(cluster)
+
+	// for clusterUtility := range cluster
+	defer unlockOnce()
+
+	// store  the versions in the  database and then change  the cluster
+	// state to provisioning requested state then call supervise.do()
+	c.Supervisor.Do()
 }

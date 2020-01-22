@@ -20,8 +20,14 @@ func init() {
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
+	clusterCreateCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, latest stable version if omitted")
+	clusterCreateCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, latest stable version if omitted")
+	clusterCreateCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, latest stable version if omitted")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
+	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted")
+	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted")
+	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -65,6 +71,28 @@ func printJSON(data interface{}) error {
 	return encoder.Encode(data)
 }
 
+func getRequestedUtilityVersions(command *cobra.Command) map[string]string {
+	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
+	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
+	nginxVersion, _ := command.Flags().GetString("nginx-version")
+
+	utilityVersions := make(map[string]string)
+
+	if prometheusVersion != "" {
+		utilityVersions["prometheus"] = prometheusVersion
+	}
+
+	if prometheusVersion != "" {
+		utilityVersions["fluentbit"] = fluentbitVersion
+	}
+
+	if prometheusVersion != "" {
+		utilityVersions["nginx"] = nginxVersion
+	}
+
+	return utilityVersions
+}
+
 var clusterCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a cluster.",
@@ -88,6 +116,7 @@ var clusterCreateCmd = &cobra.Command{
 			Size:               size,
 			Zones:              strings.Split(zones, ","),
 			AllowInstallations: allowInstallations,
+			UtilityVersions:    getRequestedUtilityVersions(command),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
@@ -112,7 +141,15 @@ var clusterProvisionCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		err := client.ProvisionCluster(clusterID)
+
+		var pcr *model.ProvisionClusterRequest = nil
+		if utilityVersions := getRequestedUtilityVersions(command); len(utilityVersions) > 0 {
+			pcr = &model.ProvisionClusterRequest{
+				UtilityVersions: utilityVersions,
+			}
+		}
+
+		err := client.ProvisionCluster(clusterID, pcr)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
 		}

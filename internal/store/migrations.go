@@ -580,4 +580,67 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.11.0"), semver.MustParse("0.12.0"), func(e execer) error {
+		// Add version columns for all of the utilities.
+		// Also convert SQLite char/varchar columns to type TEXT to match PG.
+		_, err := e.Exec(`ALTER TABLE Cluster RENAME TO ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				CREATE TABLE Cluster (
+					ID                   TEXT PRIMARY KEY,
+					Provider             TEXT NOT NULL,
+					Provisioner          TEXT NOT NULL,
+					ProviderMetadata     BYTEA NULL,
+					ProvisionerMetadata  BYTEA NULL,
+					Version              TEXT NOT NULL,
+					Size                 TEXT NOT NULL,
+					State                TEXT NOT NULL,
+					AllowInstallations   BOOLEAN NOT NULL,
+					CreateAt             BIGINT NOT NULL,
+					DeleteAt             BIGINT NOT NULL,
+					LockAcquiredBy       TEXT NULL,
+					LockAcquiredAt       BIGINT NOT NULL,
+					PrometheusVersion    TEXT NOT NULL,
+					FluentbitVersion     TEXT NOT NULL,
+					NginxVersion         TEXT NOT NULL
+				);
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				INSERT INTO Cluster
+				SELECT
+					ID,
+					Provider,
+					Provisioner,
+					ProviderMetadata,
+					ProvisionerMetadata,
+					Version,
+					Size,
+					State,
+					AllowInstallations,
+					CreateAt,
+					DeleteAt,
+					LockAcquiredBy,
+					LockAcquiredAt,
+					"","",""
+				FROM
+					ClusterTemp;
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
