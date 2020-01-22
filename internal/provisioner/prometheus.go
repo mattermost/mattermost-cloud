@@ -17,6 +17,7 @@ type prometheus struct {
 	kops        *kops.Cmd
 	logger      log.FieldLogger
 	provisioner *KopsProvisioner
+	version     string
 }
 
 func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheus, error) {
@@ -40,12 +41,18 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 		return nil, errors.New("cannot create a connection to Prometheus if the Kops command provided is nil")
 	}
 
+	version, err := cluster.GetUtilityVersion("prometheus")
+	if err != nil {
+		return nil, errors.Wrap(err, "something went wrong while getting chart version for Prometheus")
+	}
+
 	return &prometheus{
-		cluster:     cluster,
-		provisioner: provisioner,
 		awsClient:   awsClient,
+		cluster:     cluster,
 		kops:        kops,
 		logger:      logger.WithField("cluster-utility", "prometheus"),
+		provisioner: provisioner,
+		version:     version,
 	}, nil
 }
 
@@ -115,11 +122,12 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 	return &helmDeployment{
 		chartDeploymentName: "prometheus",
 		chartName:           "stable/prometheus",
+		kops:                p.kops,
+		kopsProvisioner:     p.provisioner,
+		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
 		valuesPath:          "helm-charts/prometheus_values.yaml",
-		kopsProvisioner:     p.provisioner,
-		kops:                p.kops,
-		logger:              p.logger,
+		version:             p.version,
 	}
 }

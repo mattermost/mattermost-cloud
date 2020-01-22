@@ -432,7 +432,7 @@ func TestProvisionCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.ProvisionCluster(model.NewID())
+		err := client.ProvisionCluster(model.NewID(), nil)
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -452,7 +452,7 @@ func TestProvisionCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
@@ -461,7 +461,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -474,7 +474,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -487,7 +487,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -500,7 +500,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -513,7 +513,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -526,7 +526,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
 	})
 }

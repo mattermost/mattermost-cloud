@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"regexp"
 
@@ -23,6 +24,12 @@ type Cluster struct {
 	DeleteAt            int64
 	LockAcquiredBy      *string
 	LockAcquiredAt      int64
+	UtilityMetadata     []byte `json:",omitempty"`
+	utilityMetadata     *utilityMetadata
+}
+
+type utilityMetadata struct {
+	Versions map[string]string
 }
 
 // Clone returns a deep copy the cluster.
@@ -104,4 +111,64 @@ var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1
 // or a valid k8s version number.
 func ValidClusterVersion(name string) bool {
 	return clusterVersionMatcher.MatchString(name)
+}
+
+// UpdateUtilityMetadata takes a map of string to string representing
+// any metadata related to the utility group and stores it as a []byte
+// in Cluster so that it can be inserted into the database
+func (c *Cluster) UpdateUtilityMetadata(versions map[string]string) error {
+	var metadata []byte
+	metadata, err := json.Marshal(versions)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal provided utility metadata map %#v", versions)
+	}
+
+	c.UtilityMetadata = metadata
+	return nil
+}
+
+type utilityVersions struct {
+	Prometheus string
+	Nginx      string
+	Fluentbit  string
+}
+
+// GetUtilityVersion fetches the desired version of a utility from the
+// Cluster object
+func (c *Cluster) GetUtilityVersion(utility string) (string, error) {
+
+	if c.utilityMetadata == nil { // if the data doesn't exist, deserialize and cache it
+		c.unmarshalAndCacheUtilityMetadata()
+	}
+
+	version, ok := c.utilityMetadata.Versions[utility]
+	if !ok {
+		return "", errors.New(fmt.Sprintf("couldn't get version for utility %s", utility))
+	}
+	return version, nil
+}
+
+func (c *Cluster) unmarshalAndCacheUtilityMetadata() error {
+	output := &utilityVersions{}
+	err := json.Unmarshal(c.UtilityMetadata, output)
+	if err != nil {
+		return errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
+	}
+
+	if c.utilityMetadata == nil {
+		c.utilityMetadata = &utilityMetadata{Versions: make(map[string]string)}
+	}
+
+	for _, utility := range [3]string{"prometheus", "fluentbit", "nginx"} {
+		switch utility {
+		case "prometheus":
+			c.utilityMetadata.Versions[utility] = output.Prometheus
+		case "nginx":
+			c.utilityMetadata.Versions[utility] = output.Nginx
+		case "fluentbit":
+			c.utilityMetadata.Versions[utility] = output.Fluentbit
+		}
+	}
+
+	return nil
 }

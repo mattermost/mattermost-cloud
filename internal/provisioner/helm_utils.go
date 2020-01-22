@@ -25,6 +25,7 @@ type helmDeployment struct {
 	namespace           string
 	setArgument         string
 	valuesPath          string
+	version             string
 
 	cluster         *model.Cluster
 	kopsProvisioner *KopsProvisioner
@@ -126,6 +127,10 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
 
+	if chart.version != "" {
+		arguments = append(arguments, "--version", chart.version)
+	}
+
 	cmd = exec.Command("helm", arguments...)
 
 	logger.WithFields(log.Fields{
@@ -133,8 +138,9 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"args": cmd.Args,
 	}).Info("Invoking command")
 
-	err := cmd.Run()
+	out, err := cmd.Output()
 	if err != nil {
+		logger.Debugf("Helm output was %s", string(out))
 		return errors.Wrap(err, fmt.Sprintf("Couldn't execute Helm when trying to install the chart %s", chart.chartName))
 	}
 	return nil
@@ -155,6 +161,10 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
+	}
+
+	if chart.version != "" {
+		arguments = append(arguments, "--version", chart.version)
 	}
 
 	cmd = exec.Command("helm", arguments...)

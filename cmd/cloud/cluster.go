@@ -20,8 +20,14 @@ func init() {
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
+	clusterCreateCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, latest stable version if omitted.")
+	clusterCreateCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, latest stable version if omitted.")
+	clusterCreateCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, latest stable version if omitted.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
+	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
+	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
+	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -88,6 +94,7 @@ var clusterCreateCmd = &cobra.Command{
 			Size:               size,
 			Zones:              strings.Split(zones, ","),
 			AllowInstallations: allowInstallations,
+			UtilityMetadata:    getRequestedUtilityMetadata(command),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
@@ -112,7 +119,15 @@ var clusterProvisionCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		err := client.ProvisionCluster(clusterID)
+
+		var pcr *model.ProvisionClusterRequest = nil
+		if utilityMetadata := getRequestedUtilityMetadata(command); len(utilityMetadata) > 0 {
+			pcr = &model.ProvisionClusterRequest{
+				UtilityMetadata: utilityMetadata,
+			}
+		}
+
+		err := client.ProvisionCluster(clusterID, pcr)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
 		}
@@ -263,4 +278,47 @@ var clusterShowStateReport = &cobra.Command{
 
 		return nil
 	},
+}
+
+func getRequestedUtilityMetadata(command *cobra.Command) map[string]string {
+	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
+	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
+	nginxVersion, _ := command.Flags().GetString("nginx-version")
+
+	utilityVersions := make(map[string]string)
+
+	// if a version is originally not provided, we want to install the
+	// "stable" version. However, if a version is specified, the user
+	// might later want to move the version back to tracking the stable
+	// release. This helper allows the user to pass in "stable" to
+	// change from tracking a specific release to tracking the latest
+	// stable release, instead. This is represented by including the key
+	// for the utility that we want to move back to stable in the
+	// returned map, but making the value empty. This is not to be
+	// confused with when the user provides an empty value from one of
+	// the command line tools. An empty value at that time means the
+	// user intends no change to be effected from whatever the previous
+	// state was.
+	emptyIfStable := func(s *string) {
+		if *s == "stable" {
+			*s = ""
+		}
+	}
+
+	if prometheusVersion != "" {
+		emptyIfStable(&prometheusVersion)
+		utilityVersions["prometheus"] = prometheusVersion
+	}
+
+	if fluentbitVersion != "" {
+		emptyIfStable(&fluentbitVersion)
+		utilityVersions["fluentbit"] = fluentbitVersion
+	}
+
+	if nginxVersion != "" {
+		emptyIfStable(&nginxVersion)
+		utilityVersions["nginx"] = nginxVersion
+	}
+
+	return utilityVersions
 }

@@ -15,7 +15,7 @@ func init() {
 		Select(
 			"ID", "Provider", "Provisioner", "ProviderMetadata", "ProvisionerMetadata",
 			"Version", "Size", "State", "AllowInstallations", "CreateAt", "DeleteAt",
-			"LockAcquiredBy", "LockAcquiredAt",
+			"LockAcquiredBy", "LockAcquiredAt", "UtilityMetadata",
 		).
 		From("Cluster")
 }
@@ -106,6 +106,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 			"DeleteAt":            0,
 			"LockAcquiredBy":      nil,
 			"LockAcquiredAt":      0,
+			"UtilityMetadata":     cluster.UtilityMetadata,
 		}),
 	)
 	if err != nil {
@@ -128,6 +129,7 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 			"Size":                cluster.Size,
 			"State":               cluster.State,
 			"AllowInstallations":  cluster.AllowInstallations,
+			"UtilityMetadata":     cluster.UtilityMetadata,
 		}).
 		Where("ID = ?", cluster.ID),
 	)
