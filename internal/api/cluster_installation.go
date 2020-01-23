@@ -54,6 +54,7 @@ func handleGetClusterInstallations(c *Context, w http.ResponseWriter, r *http.Re
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, clusterInstallations)
 }
 
@@ -75,6 +76,7 @@ func handleGetClusterInstallation(c *Context, w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, clusterInstallation)
 }
 

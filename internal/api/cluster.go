@@ -54,6 +54,7 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, clusters)
 }
 
@@ -257,6 +258,7 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, cluster)
 }
 

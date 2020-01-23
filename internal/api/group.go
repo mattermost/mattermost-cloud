@@ -49,6 +49,7 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, groups)
 }
 
@@ -99,6 +100,7 @@ func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, group)
 }
 

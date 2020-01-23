@@ -58,6 +58,7 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, installations)
 }
 
@@ -104,8 +105,8 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	c.Supervisor.Do()
 
-	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, installation)
 }
 
@@ -184,6 +185,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, installation)
 }
 
