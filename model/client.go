@@ -606,7 +606,7 @@ func (c *Client) CreateWebhook(request *CreateWebhookRequest) (*Webhook, error) 
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusOK:
+	case http.StatusAccepted:
 		return WebhookFromReader(resp.Body)
 
 	default:
