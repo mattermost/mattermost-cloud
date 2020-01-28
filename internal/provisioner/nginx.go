@@ -1,9 +1,8 @@
 package provisioner
 
 import (
-	"fmt"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,15 +14,15 @@ type nginx struct {
 
 func newNginxHandle(provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
-		return nil, fmt.Errorf("cannot instantiate NGINX handle with nil logger")
+		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
 
 	if provisioner == nil {
-		return nil, fmt.Errorf("Cannot create a connection to Nginx if the provisioner provided is nil")
+		return nil, errors.New("cannot create a connection to Nginx if the provisioner provided is nil")
 	}
 
 	if kops == nil {
-		return nil, fmt.Errorf("Cannot create a connection to Nginx if the Kops command provided is nil")
+		return nil, errors.New("cannot create a connection to Nginx if the Kops command provided is nil")
 	}
 
 	return &nginx{
