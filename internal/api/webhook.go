@@ -43,8 +43,8 @@ func handleCreateWebhook(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, webhook)
 }
 
@@ -66,6 +66,7 @@ func handleGetWebhook(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, webhook)
 }
 
@@ -99,6 +100,7 @@ func handleGetWebhooks(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, webhooks)
 }
 
