@@ -44,7 +44,6 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
-	serverCmd.MarkPersistentFlagRequired("private-dns")
 }
 
 var serverCmd = &cobra.Command{
@@ -89,7 +88,6 @@ var serverCmd = &cobra.Command{
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
-		privateDNS, _ := command.Flags().GetString("private-dns")
 		s3StateStore, _ := command.Flags().GetString("state-store")
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
@@ -108,7 +106,6 @@ var serverCmd = &cobra.Command{
 			"store-version":                   currentVersion,
 			"state-store":                     s3StateStore,
 			"working-directory":               wd,
-			"private-dns":                     privateDNS,
 			"cluster-resource-threshold":      clusterResourceThreshold,
 			"use-existing-aws-resources":      useExistingResources,
 			"keep-database-data":              keepDatabaseData,
@@ -129,7 +126,6 @@ var serverCmd = &cobra.Command{
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
-			privateDNS,
 			owner,
 			useExistingResources,
 			logger,
@@ -210,6 +206,11 @@ func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
 		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
 		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
+	}
+
+	privateDNS, _ := cmd.Flags().GetString("private-dns")
+	if privateDNS != "" {
+		logger.Warn("[Deprecation] The `private-dns` flag is deprecated and won't be used")
 	}
 }
 

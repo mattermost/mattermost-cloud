@@ -25,19 +25,19 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 	}
 
 	if cluster == nil {
-		return nil, fmt.Errorf("Cannot create a connection to Prometheus if the cluster provided is nil")
+		return nil, errors.New("cannot create a connection to Prometheus if the cluster provided is nil")
 	}
 
 	if provisioner == nil {
-		return nil, fmt.Errorf("Cannot create a connection to Prometheus if the provisioner provided is nil")
+		return nil, errors.New("cannot create a connection to Prometheus if the provisioner provided is nil")
 	}
 
 	if awsClient == nil {
-		return nil, fmt.Errorf("Cannot create a connection to Prometheus if the awsClient provided is nil")
+		return nil, errors.New("cannot create a connection to Prometheus if the awsClient provided is nil")
 	}
 
 	if kops == nil {
-		return nil, fmt.Errorf("Cannot create a connection to Prometheus if the Kops command provided is nil")
+		return nil, errors.New("cannot create a connection to Prometheus if the Kops command provided is nil")
 	}
 
 	return &prometheus{
@@ -57,8 +57,13 @@ func (p *prometheus) Create() error {
 
 	logger := p.logger.WithField("prometheus-action", "create")
 
+	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to lookup private zone name")
+	}
+
 	app := "prometheus"
-	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, p.provisioner.privateDNS)
+	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120)
 	defer cancel()
@@ -78,11 +83,17 @@ func (p *prometheus) Create() error {
 }
 
 func (p *prometheus) Destroy() error {
-	app := "prometheus"
 	logger := p.logger.WithField("prometheus-action", "destroy")
+
+	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to lookup private zone name")
+	}
+	app := "prometheus"
+	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
+
 	logger.Infof("Deleting Route53 DNS Record for %s", app)
-	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, p.provisioner.privateDNS)
-	err := p.awsClient.DeletePrivateCNAME(dns, logger.WithField("prometheus-dns-delete", dns))
+	err = p.awsClient.DeletePrivateCNAME(dns, logger.WithField("prometheus-dns-delete", dns))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete Route53 DNS record")
 	}
@@ -95,7 +106,12 @@ func (p *prometheus) Upgrade() error {
 }
 
 func (p *prometheus) NewHelmDeployment() *helmDeployment {
-	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", p.cluster.ID, p.provisioner.privateDNS)
+	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(p.logger)
+	if err != nil {
+		p.logger.WithError(err).Error("unable to lookup private zone name")
+	}
+	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", p.cluster.ID, privateDomainName)
+
 	return &helmDeployment{
 		chartDeploymentName: "prometheus",
 		chartName:           "stable/prometheus",

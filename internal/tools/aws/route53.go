@@ -46,6 +46,46 @@ func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logge
 	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
 }
 
+// GetPrivateZoneDomainName gets the private Route53 domain name.
+func (a *Client) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error) {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPrivateCloudDNSTagValue,
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "unable to get private domain name")
+	}
+
+	return a.getZoneDNS(id, logger)
+}
+
+func (a *Client) getZoneDNS(hostedZoneID string, logger log.FieldLogger) (string, error) {
+	svc, err := a.api.getRoute53Client()
+	if err != nil {
+		return "", err
+	}
+
+	out, err := svc.GetHostedZone(&route53.GetHostedZoneInput{
+		Id: aws.String(hostedZoneID),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	domainName := trimTrailingDomainDot(*out.HostedZone.Name)
+
+	if domainName == "" {
+		return "", errors.New("the returned domain name was empty")
+	}
+
+	logger.WithFields(log.Fields{
+		"route53-domain-name":    domainName,
+		"route53-hosted-zone-id": hostedZoneID,
+	}).Debug("AWS Route53 domain lookup complete")
+
+	return domainName, nil
+}
+
 func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for route53 creation request")
@@ -298,4 +338,10 @@ func (t *Tag) Compare(tag *route53.Tag) bool {
 // String prints tag's key/value.
 func (t *Tag) String() string {
 	return fmt.Sprintf("%s:%s", t.Key, t.Value)
+}
+
+// trimTrailingDomainDot is used to trim the trailing dot returned on route53
+// hosted zone domain names.
+func trimTrailingDomainDot(domain string) string {
+	return strings.TrimRight(domain, ".")
 }

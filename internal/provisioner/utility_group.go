@@ -41,7 +41,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
-	fluentbit, err := newFluentbitHandle(provisioner, kops, logger)
+	fluentbit, err := newFluentbitHandle(provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}

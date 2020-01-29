@@ -27,17 +27,15 @@ type KopsProvisioner struct {
 	s3StateStore            string
 	privateSubnetIds        string
 	publicSubnetIds         string
-	privateDNS              string
 	useExistingAWSResources bool
 	logger                  log.FieldLogger
 	owner                   string
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, privateDNS, owner string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
-		privateDNS:              privateDNS,
 		useExistingAWSResources: useExistingAWSResources,
 		logger:                  logger,
 		owner:                   owner,
