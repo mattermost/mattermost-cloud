@@ -85,24 +85,29 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		State:              model.ClusterStateCreationRequested,
 	}
+
 	err = cluster.SetProviderMetadata(model.AWSMetadata{
 		Zones: createClusterRequest.Zones,
 	})
-
-	err = cluster.UpdateUtilityMetadata(createClusterRequest.UtilityMetadata)
-	if err != nil {
-		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
-	}
 
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to set provider metadata")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	err = cluster.SetUtilityMetadata(createClusterRequest.UtilityMetadata)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	cluster.SetProvisionerMetadata(model.KopsMetadata{
 		Version: createClusterRequest.Version,
 		AMI:     createClusterRequest.KopsAMI,
 	})
+
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to set provisioner metadata")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -209,11 +214,15 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	provisionClusterRequest, err := model.NewProvisionClusterRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to deserialize cluster provision request body")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	err = cluster.UpdateUtilityMetadata(provisionClusterRequest.UtilityMetadata)
+	err = cluster.SetUtilityMetadata(provisionClusterRequest.UtilityMetadata)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	newState := model.ClusterStateProvisioningRequested
 

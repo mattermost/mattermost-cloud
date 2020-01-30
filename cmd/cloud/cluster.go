@@ -287,36 +287,15 @@ func getRequestedUtilityMetadata(command *cobra.Command) map[string]string {
 
 	utilityVersions := make(map[string]string)
 
-	// if a version is originally not provided, we want to install the
-	// "stable" version. However, if a version is specified, the user
-	// might later want to move the version back to tracking the stable
-	// release. This helper allows the user to pass in "stable" to
-	// change from tracking a specific release to tracking the latest
-	// stable release, instead. This is represented by including the key
-	// for the utility that we want to move back to stable in the
-	// returned map, but making the value empty. This is not to be
-	// confused with when the user provides an empty value from one of
-	// the command line tools. An empty value at that time means the
-	// user intends no change to be effected from whatever the previous
-	// state was.
-	emptyIfStable := func(s *string) {
-		if *s == "stable" {
-			*s = ""
-		}
-	}
-
 	if prometheusVersion != "" {
-		emptyIfStable(&prometheusVersion)
 		utilityVersions["prometheus"] = prometheusVersion
 	}
 
 	if fluentbitVersion != "" {
-		emptyIfStable(&fluentbitVersion)
 		utilityVersions["fluentbit"] = fluentbitVersion
 	}
 
 	if nginxVersion != "" {
-		emptyIfStable(&nginxVersion)
 		utilityVersions["nginx"] = nginxVersion
 	}
 

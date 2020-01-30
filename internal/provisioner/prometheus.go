@@ -41,7 +41,7 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 		return nil, errors.New("cannot create a connection to Prometheus if the Kops command provided is nil")
 	}
 
-	version, err := cluster.GetUtilityVersion("prometheus")
+	version, err := cluster.UtilityVersion("prometheus")
 	if err != nil {
 		return nil, errors.Wrap(err, "something went wrong while getting chart version for Prometheus")
 	}

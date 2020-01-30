@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"regexp"
 
@@ -25,7 +24,6 @@ type Cluster struct {
 	LockAcquiredBy      *string
 	LockAcquiredAt      int64
 	UtilityMetadata     []byte `json:",omitempty"`
-	utilityMetadata     *utilityMetadata
 }
 
 type utilityMetadata struct {
@@ -113,62 +111,53 @@ func ValidClusterVersion(name string) bool {
 	return clusterVersionMatcher.MatchString(name)
 }
 
-// UpdateUtilityMetadata takes a map of string to string representing
+// SetUtilityMetadata takes a map of string to string representing
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
-func (c *Cluster) UpdateUtilityMetadata(versions map[string]string) error {
-	var metadata []byte
-	metadata, err := json.Marshal(versions)
+func (c *Cluster) SetUtilityMetadata(versions map[string]string) error {
+	// If a version is originally not provided, we want to install the
+	// "stable" version. However, if a version is specified, the user
+	// might later want to move the version back to tracking the stable
+	// release.
+	for utility, version := range versions {
+		if version == "stable" {
+			versions[utility] = ""
+		}
+	}
+
+	var utilityMetadata []byte
+	utilityMetadata, err := json.Marshal(versions)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal provided utility metadata map %#v", versions)
 	}
 
-	c.UtilityMetadata = metadata
+	c.UtilityMetadata = utilityMetadata
 	return nil
 }
 
-type utilityVersions struct {
-	Prometheus string
-	Nginx      string
-	Fluentbit  string
-}
-
-// GetUtilityVersion fetches the desired version of a utility from the
+// UtilityVersion fetches the desired version of a utility from the
 // Cluster object
-func (c *Cluster) GetUtilityVersion(utility string) (string, error) {
-
-	if c.utilityMetadata == nil { // if the data doesn't exist, deserialize and cache it
-		c.unmarshalAndCacheUtilityMetadata()
+func (c *Cluster) UtilityVersion(utility string) (string, error) {
+	type utilityVersions struct {
+		Prometheus string
+		Nginx      string
+		Fluentbit  string
 	}
 
-	version, ok := c.utilityMetadata.Versions[utility]
-	if !ok {
-		return "", errors.New(fmt.Sprintf("couldn't get version for utility %s", utility))
-	}
-	return version, nil
-}
-
-func (c *Cluster) unmarshalAndCacheUtilityMetadata() error {
 	output := &utilityVersions{}
 	err := json.Unmarshal(c.UtilityMetadata, output)
 	if err != nil {
-		return errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
+		return "", errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
 	}
 
-	if c.utilityMetadata == nil {
-		c.utilityMetadata = &utilityMetadata{Versions: make(map[string]string)}
+	switch utility {
+	case "prometheus":
+		return output.Prometheus, nil
+	case "nginx":
+		return output.Nginx, nil
+	case "fluentbit":
+		return output.Fluentbit, nil
 	}
 
-	for _, utility := range [3]string{"prometheus", "fluentbit", "nginx"} {
-		switch utility {
-		case "prometheus":
-			c.utilityMetadata.Versions[utility] = output.Prometheus
-		case "nginx":
-			c.utilityMetadata.Versions[utility] = output.Nginx
-		case "fluentbit":
-			c.utilityMetadata.Versions[utility] = output.Fluentbit
-		}
-	}
-
-	return nil
+	return "", errors.Errorf("unable to find version for utility %s", utility)
 }

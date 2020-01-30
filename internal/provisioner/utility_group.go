@@ -31,7 +31,12 @@ type utilityGroup struct {
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	nginx, err := newNginxHandle(cluster, provisioner, kops, logger)
+	desiredVersion, err := cluster.UtilityVersion("nginx")
+	if err != nil {
+		return nil, err
+	}
+
+	nginx, err := newNginxHandle(desiredVersion, provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
@@ -41,7 +46,12 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
-	fluentbit, err := newFluentbitHandle(cluster, provisioner, awsClient, kops, logger)
+	desiredVersion, err = cluster.UtilityVersion("fluentbit")
+	if err != nil {
+		return nil, err
+	}
+
+	fluentbit, err := newFluentbitHandle(desiredVersion, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}

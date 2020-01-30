@@ -5,7 +5,6 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -18,7 +17,7 @@ type fluentbit struct {
 	version     string
 }
 
-func newFluentbitHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
+func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
 	}
@@ -33,11 +32,6 @@ func newFluentbitHandle(cluster *model.Cluster, provisioner *KopsProvisioner, aw
 
 	if kops == nil {
 		return nil, errors.New("cannot create a connection to Fluentbit if the Kops command provided is nil")
-	}
-
-	version, err := cluster.GetUtilityVersion("fluentbit")
-	if err != nil {
-		return nil, errors.Wrap(err, "something went wrong while getting chart version for Prometheus")
 	}
 
 	return &fluentbit{
