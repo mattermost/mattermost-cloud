@@ -103,7 +103,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cluster.SetProvisionerMetadata(model.KopsMetadata{
+	err = cluster.SetProvisionerMetadata(model.KopsMetadata{
 		Version: createClusterRequest.Version,
 		AMI:     createClusterRequest.KopsAMI,
 	})
