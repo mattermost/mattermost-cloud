@@ -100,14 +100,15 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 	cmd = exec.Command("helm", arguments...)
 
-	logger.WithFields(log.Fields{
+	logger = logger.WithFields(log.Fields{
 		"cmd": cmd.Path,
-	}).Info("Invoking command")
+	})
 
+	logger.Info("Invoking command")
 	output, err := cmd.Output()
 	if err != nil {
 		if len(output) > 0 {
-			log.Debugf("helm output was:\n%s\n", string(output))
+			logger.Debugf("Helm output was:\n%s\n", string(output))
 		}
 		return errors.Wrap(err, "Failed to execute Helm to update the Helm repos")
 	}
@@ -241,7 +242,7 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	output, err := cmd.Output()
 	if err != nil {
 		if len(output) > 0 {
-			log.Debugf("Helm output was:\n%s\n", string(output))
+			logger.Debugf("Helm output was:\n%s\n", string(output))
 		}
 		return errors.Wrap(err, "failed to invoke Helm command")
 	}
