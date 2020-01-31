@@ -30,21 +30,6 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
 }
 
-func handleGetAllUtilityMetadata(c *Context, w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clusterID := vars["cluster"]
-	c.Logger = c.Logger.WithField("cluster", clusterID).WithField("action", "get-utilities")
-
-	cluster, err := c.Store.GetCluster(clusterID)
-	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to look up cluster %s", clusterID)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
-	w.Write(cluster.UtilityMetadata)
-}
-
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.
 func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	page, perPage, includeDeleted, err := parsePaging(r.URL)
@@ -488,4 +473,19 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func handleGetAllUtilityMetadata(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID).WithField("action", "get-utilities")
+
+	cluster, err := c.Store.GetCluster(clusterID)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to look up cluster %s", clusterID)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	w.Write(cluster.UtilityMetadata)
 }
