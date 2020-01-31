@@ -273,12 +273,12 @@ var clusterUtilitiesCmd = &cobra.Command{
 
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
-		clusterId, err := command.Flags().GetString("cluster")
+		clusterID, err := command.Flags().GetString("cluster")
 		if err != nil {
 			return err
 		}
 
-		metadata, err := client.GetClusterUtilities(clusterId)
+		metadata, err := client.GetClusterUtilities(clusterID)
 		if err != nil {
 			return err
 		}

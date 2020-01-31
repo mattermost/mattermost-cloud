@@ -204,6 +204,7 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
 	}
 }
 
+// GetClusterUtilities returns the metadata for all utilities running in the given cluster.
 func (c *Client) GetClusterUtilities(clusterID string) (*UtilityMetadata, error) {
 	resp, err := c.doGet(c.buildURL("/api/cluster/%s/utilities", clusterID))
 	if err != nil {

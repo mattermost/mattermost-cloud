@@ -112,6 +112,8 @@ func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
 	return getUtilityVersion(&output.ActualVersions, utility), nil
 }
 
+// UtilityMetadataFromReader produces a UtilityMetadata object from
+// the JSON representation embedded in a io.Reader
 func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 	utilityMetadata := UtilityMetadata{}
 	decoder := json.NewDecoder(reader)
