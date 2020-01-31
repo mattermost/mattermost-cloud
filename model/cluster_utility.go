@@ -7,6 +7,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	PROMETHEUS = "prometheus"
+	NGINX      = "nginx"
+	FLUENTBIT  = "fluentbit"
+)
+
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
@@ -129,11 +135,11 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 // the utility's name's string representation for lookup
 func getUtilityVersion(versions *utilityVersions, utility string) string {
 	switch utility {
-	case "prometheus":
+	case PROMETHEUS:
 		return versions.Prometheus
-	case "nginx":
+	case NGINX:
 		return versions.Nginx
-	case "fluentbit":
+	case FLUENTBIT:
 		return versions.Fluentbit
 	}
 
@@ -146,11 +152,11 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 // first argument
 func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string) {
 	switch utility {
-	case "prometheus":
+	case PROMETHEUS:
 		versions.Prometheus = desiredVersion
-	case "nginx":
+	case NGINX:
 		versions.Nginx = desiredVersion
-	case "fluentbit":
+	case FLUENTBIT:
 		versions.Fluentbit = desiredVersion
 	}
 }
