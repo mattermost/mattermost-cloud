@@ -9,15 +9,33 @@ import (
 )
 
 // A Utility is a service that runs one per cluster but is not part of
-// k8s  itself,  nor  is  it  part  of  a  ClusterInstallation  or  an
+// k8s itself, nor is it part of a ClusterInstallation or an
 // Installation
 type Utility interface {
+	// Create is responsible for deploying the utility in the cluster
 	Create() error
+
+	// Upgrade is responsible for handling changes to an existing
+	// utility
 	Upgrade() error
+
+	// Destroy can be used if special care must be taken for deleting a
+	// utility from a cluster
 	Destroy() error
+
+	// ActualVersion returns the utility's last reported actual version,
+	// at the time of Create or Upgrade. This version will remain valid
+	// unless something interacts with the cluster out of band, at which
+	// time it will be invalid until Upgrade is called again
 	ActualVersion() string
+
+	// DesiredVersion returns the utility's target version, which has been
+	// requested, but may not yet have been reconciled
 	DesiredVersion() string
-	String() string
+
+	// Name returns the canonical string-version name for the utility,
+	// used throughout the application
+	Name() string
 }
 
 // utilityGroup  holds  the  metadata  needed  to  manage  a  specific
@@ -85,7 +103,7 @@ func (group utilityGroup) CreateUtilityGroup() error {
 			return errors.Wrap(err, "failed to provision one of the cluster utilities")
 		}
 
-		err = group.cluster.SetUtilityActualVersion(utility.String(), utility.ActualVersion())
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
 		if err != nil {
 			return err
 		}
@@ -103,7 +121,7 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 			return errors.Wrap(err, "failed to destroy one of the cluster utilities")
 		}
 
-		err = group.cluster.SetUtilityActualVersion(utility.String(), utility.ActualVersion())
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
 		if err != nil {
 			return err
 		}
@@ -120,7 +138,7 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
 		}
 
-		err = group.cluster.SetUtilityActualVersion(utility.String(), utility.ActualVersion())
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
 		if err != nil {
 			return err
 		}

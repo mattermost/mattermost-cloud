@@ -80,7 +80,7 @@ func (f *fluentbit) ActualVersion() string {
 	return f.actualVersion
 }
 
-func (f *fluentbit) String() string {
+func (f *fluentbit) Name() string {
 	return "fluentbit"
 }
 

@@ -94,6 +94,6 @@ func (n *nginx) NewHelmDeployment() *helmDeployment {
 	}
 }
 
-func (n *nginx) String() string {
+func (n *nginx) Name() string {
 	return "nginx"
 }

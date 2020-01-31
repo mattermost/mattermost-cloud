@@ -148,7 +148,7 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 	}
 }
 
-func (p *prometheus) String() string {
+func (p *prometheus) Name() string {
 	return "prometheus"
 }
 
