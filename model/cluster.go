@@ -213,13 +213,9 @@ func (c *Cluster) DesiredUtilityVersion(utility string) (string, error) {
 		return "", errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
 	}
 
-	switch utility {
-	case "prometheus":
-		return output.DesiredVersions.Prometheus, nil
-	case "nginx":
-		return output.DesiredVersions.Nginx, nil
-	case "fluentbit":
-		return output.DesiredVersions.Fluentbit, nil
+	version := getUtilityVersion(utility, &output.DesiredVersions)
+	if version != "" {
+		return version, nil
 	}
 
 	return "", errors.Errorf("unable to find version for utility %s", utility)
@@ -234,14 +230,25 @@ func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
 		return "", errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
 	}
 
-	switch utility {
-	case "prometheus":
-		return output.ActualVersions.Prometheus, nil
-	case "nginx":
-		return output.ActualVersions.Nginx, nil
-	case "fluentbit":
-		return output.ActualVersions.Fluentbit, nil
+	version := getUtilityVersion(utility, &output.ActualVersions)
+	if version != "" {
+		return version, nil
 	}
 
 	return "", errors.Errorf("unable to find version for utility %s", utility)
+}
+
+func getUtilityVersion(utility string, versions *utilityVersions) string {
+
+	switch utility {
+	case "prometheus":
+		return versions.Prometheus
+	case "nginx":
+		return versions.Nginx
+	case "fluentbit":
+		return versions.Fluentbit
+	}
+
+	return ""
+
 }
