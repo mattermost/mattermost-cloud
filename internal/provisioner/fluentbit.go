@@ -10,11 +10,12 @@ import (
 )
 
 type fluentbit struct {
-	provisioner *KopsProvisioner
-	awsClient   aws.AWS
-	kops        *kops.Cmd
-	logger      log.FieldLogger
-	version     string
+	provisioner    *KopsProvisioner
+	awsClient      aws.AWS
+	kops           *kops.Cmd
+	logger         log.FieldLogger
+	desiredVersion string
+	actualVersion  string
 }
 
 func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
@@ -35,17 +36,24 @@ func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient 
 	}
 
 	return &fluentbit{
-		provisioner: provisioner,
-		awsClient:   awsClient,
-		kops:        kops,
-		logger:      logger.WithField("cluster-utility", "fluentbit"),
-		version:     version,
+		provisioner:    provisioner,
+		awsClient:      awsClient,
+		kops:           kops,
+		logger:         logger.WithField("cluster-utility", "fluentbit"),
+		desiredVersion: version,
 	}, nil
 }
 
 func (f *fluentbit) Create() error {
 	logger := f.logger.WithField("fluentbit-action", "create")
-	return f.NewHelmDeployment(logger).Create()
+	h := f.NewHelmDeployment(logger)
+	err := h.Create()
+	if err != nil {
+		return err
+	}
+
+	err = f.updateVersion(h)
+	return err
 }
 
 func (f *fluentbit) Destroy() error {
@@ -54,7 +62,26 @@ func (f *fluentbit) Destroy() error {
 
 func (f *fluentbit) Upgrade() error {
 	logger := f.logger.WithField("fluentbit-action", "upgrade")
-	return f.NewHelmDeployment(logger).Update()
+	h := f.NewHelmDeployment(logger)
+	err := h.Update()
+	if err != nil {
+		return err
+	}
+
+	err = f.updateVersion(h)
+	return err
+}
+
+func (f *fluentbit) DesiredVersion() string {
+	return f.desiredVersion
+}
+
+func (f *fluentbit) ActualVersion() string {
+	return f.actualVersion
+}
+
+func (f *fluentbit) String() string {
+	return "fluentbit"
 }
 
 func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
@@ -72,6 +99,16 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 		kopsProvisioner:     f.provisioner,
 		kops:                f.kops,
 		logger:              f.logger,
-		version:             f.version,
+		desiredVersion:      f.desiredVersion,
 	}
+}
+
+func (f *fluentbit) updateVersion(h *helmDeployment) error {
+	actualVersion, err := h.Version()
+	if err != nil {
+		return err
+	}
+
+	f.actualVersion = actualVersion
+	return nil
 }

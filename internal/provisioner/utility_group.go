@@ -5,7 +5,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,6 +15,9 @@ type Utility interface {
 	Create() error
 	Upgrade() error
 	Destroy() error
+	ActualVersion() string
+	DesiredVersion() string
+	String() string
 }
 
 // utilityGroup  holds  the  metadata  needed  to  manage  a  specific
@@ -26,12 +28,13 @@ type utilityGroup struct {
 	utilities   []Utility
 	kops        *kops.Cmd
 	provisioner *KopsProvisioner
+	cluster     *model.Cluster
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	desiredVersion, err := cluster.UtilityVersion("nginx")
+	desiredVersion, err := cluster.DesiredUtilityVersion("nginx")
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +49,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
-	desiredVersion, err = cluster.UtilityVersion("fluentbit")
+	desiredVersion, err = cluster.DesiredUtilityVersion("fluentbit")
 	if err != nil {
 		return nil, err
 	}
@@ -56,10 +59,13 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
+	// the order of utilities here matters; the utilities are deployed
+	// in order to resolve dependencies between them
 	return &utilityGroup{
 		utilities:   []Utility{nginx, prometheus, fluentbit},
 		kops:        kops,
 		provisioner: provisioner,
+		cluster:     cluster,
 	}, nil
 
 }
@@ -78,6 +84,11 @@ func (group utilityGroup) CreateUtilityGroup() error {
 		if err != nil {
 			return errors.Wrap(err, "failed to provision one of the cluster utilities")
 		}
+
+		err = group.cluster.SetUtilityActualVersion(utility.String(), utility.ActualVersion())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -91,6 +102,11 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 		if err != nil {
 			return errors.Wrap(err, "failed to destroy one of the cluster utilities")
 		}
+
+		err = group.cluster.SetUtilityActualVersion(utility.String(), utility.ActualVersion())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -102,6 +118,11 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 		err := utility.Upgrade()
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+		}
+
+		err = group.cluster.SetUtilityActualVersion(utility.String(), utility.ActualVersion())
+		if err != nil {
+			return err
 		}
 	}
 

@@ -26,6 +26,23 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
 	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeKubernetes)).Methods("PUT")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
+
+	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
+}
+
+func handleGetAllUtilityMetadata(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID).WithField("action", "get-utilities")
+
+	cluster, err := c.Store.GetCluster(clusterID)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to look up cluster %s", clusterID)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	w.Write(cluster.UtilityMetadata)
 }
 
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.
@@ -96,7 +113,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = cluster.SetUtilityMetadata(createClusterRequest.UtilityMetadata)
+	err = cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusBadRequest)
@@ -218,7 +235,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = cluster.SetUtilityMetadata(provisionClusterRequest.UtilityMetadata)
+	err = cluster.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusInternalServerError)

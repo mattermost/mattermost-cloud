@@ -7,13 +7,14 @@ import (
 )
 
 type nginx struct {
-	provisioner *KopsProvisioner
-	kops        *kops.Cmd
-	logger      log.FieldLogger
-	version     string
+	provisioner    *KopsProvisioner
+	kops           *kops.Cmd
+	logger         log.FieldLogger
+	desiredVersion string
+	actualVersion  string
 }
 
-func newNginxHandle(version string, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
@@ -27,20 +28,52 @@ func newNginxHandle(version string, provisioner *KopsProvisioner, kops *kops.Cmd
 	}
 
 	return &nginx{
-		provisioner: provisioner,
-		kops:        kops,
-		logger:      logger.WithField("cluster-utility", "nginx"),
-		version:     version,
+		provisioner:    provisioner,
+		kops:           kops,
+		logger:         logger.WithField("cluster-utility", "nginx"),
+		desiredVersion: desiredVersion,
 	}, nil
 
 }
 
+func (n *nginx) updateVersion(h *helmDeployment) error {
+	actualVersion, err := h.Version()
+	if err != nil {
+		return err
+	}
+
+	n.actualVersion = actualVersion
+	return nil
+}
+
 func (n *nginx) Create() error {
-	return n.NewHelmDeployment().Create()
+	h := n.NewHelmDeployment()
+	err := h.Create()
+	if err != nil {
+		return err
+	}
+
+	err = n.updateVersion(h)
+	return err
 }
 
 func (n *nginx) Upgrade() error {
-	return n.NewHelmDeployment().Update()
+	h := n.NewHelmDeployment()
+	err := h.Update()
+	if err != nil {
+		return err
+	}
+
+	err = n.updateVersion(h)
+	return err
+}
+
+func (n *nginx) DesiredVersion() string {
+	return n.desiredVersion
+}
+
+func (n *nginx) ActualVersion() string {
+	return n.actualVersion
 }
 
 func (n *nginx) Destroy() error {
@@ -57,6 +90,10 @@ func (n *nginx) NewHelmDeployment() *helmDeployment {
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,
-		version:             n.version,
+		desiredVersion:      n.desiredVersion,
 	}
+}
+
+func (n *nginx) String() string {
+	return "nginx"
 }

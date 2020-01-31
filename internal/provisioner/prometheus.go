@@ -12,12 +12,13 @@ import (
 )
 
 type prometheus struct {
-	awsClient   aws.AWS
-	cluster     *model.Cluster
-	kops        *kops.Cmd
-	logger      log.FieldLogger
-	provisioner *KopsProvisioner
-	version     string
+	awsClient      aws.AWS
+	cluster        *model.Cluster
+	kops           *kops.Cmd
+	logger         log.FieldLogger
+	provisioner    *KopsProvisioner
+	desiredVersion string
+	actualVersion  string
 }
 
 func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheus, error) {
@@ -41,25 +42,31 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 		return nil, errors.New("cannot create a connection to Prometheus if the Kops command provided is nil")
 	}
 
-	version, err := cluster.UtilityVersion("prometheus")
+	version, err := cluster.DesiredUtilityVersion("prometheus")
 	if err != nil {
 		return nil, errors.Wrap(err, "something went wrong while getting chart version for Prometheus")
 	}
 
 	return &prometheus{
-		awsClient:   awsClient,
-		cluster:     cluster,
-		kops:        kops,
-		logger:      logger.WithField("cluster-utility", "prometheus"),
-		provisioner: provisioner,
-		version:     version,
+		awsClient:      awsClient,
+		cluster:        cluster,
+		kops:           kops,
+		logger:         logger.WithField("cluster-utility", "prometheus"),
+		provisioner:    provisioner,
+		desiredVersion: version,
 	}, nil
 }
 
 func (p *prometheus) Create() error {
-	err := p.NewHelmDeployment().Create()
+	h := p.NewHelmDeployment()
+	err := h.Create()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Helm deployment")
+	}
+
+	err = p.updateVersion(h)
+	if err != nil {
+		return err
 	}
 
 	logger := p.logger.WithField("prometheus-action", "create")
@@ -105,11 +112,20 @@ func (p *prometheus) Destroy() error {
 		return errors.Wrap(err, "failed to delete Route53 DNS record")
 	}
 
+	p.actualVersion = ""
 	return nil
 }
 
 func (p *prometheus) Upgrade() error {
-	return p.NewHelmDeployment().Update()
+	h := p.NewHelmDeployment()
+
+	err := p.NewHelmDeployment().Update()
+	if err != nil {
+		return err
+	}
+
+	err = p.updateVersion(h)
+	return err
 }
 
 func (p *prometheus) NewHelmDeployment() *helmDeployment {
@@ -128,6 +144,28 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 		namespace:           "prometheus",
 		setArgument:         fmt.Sprintf("server.ingress.hosts={%s}", prometheusDNS),
 		valuesPath:          "helm-charts/prometheus_values.yaml",
-		version:             p.version,
+		desiredVersion:      p.desiredVersion,
 	}
+}
+
+func (p *prometheus) String() string {
+	return "prometheus"
+}
+
+func (p *prometheus) DesiredVersion() string {
+	return p.desiredVersion
+}
+
+func (p *prometheus) ActualVersion() string {
+	return p.actualVersion
+}
+
+func (p *prometheus) updateVersion(h *helmDeployment) error {
+	actualVersion, err := h.Version()
+	if err != nil {
+		return err
+	}
+
+	p.actualVersion = actualVersion
+	return nil
 }

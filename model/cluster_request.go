@@ -11,13 +11,13 @@ import (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider           string            `json:"provider,omitempty"`
-	Version            string            `json:"version,omitempty"`
-	KopsAMI            string            `json:"kops-ami,omitempty"`
-	Size               string            `json:"size,omitempty"`
-	Zones              []string          `json:"zones,omitempty"`
-	AllowInstallations bool              `json:"allow-installations,omitempty"`
-	UtilityMetadata    map[string]string `json:"utility-versions,omitempty"`
+	Provider               string            `json:"provider,omitempty"`
+	Version                string            `json:"version,omitempty"`
+	KopsAMI                string            `json:"kops-ami,omitempty"`
+	Size                   string            `json:"size,omitempty"`
+	Zones                  []string          `json:"zones,omitempty"`
+	AllowInstallations     bool              `json:"allow-installations,omitempty"`
+	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -105,7 +105,7 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
-	UtilityMetadata map[string]string `json:"utility-versions,omitempty"`
+	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.

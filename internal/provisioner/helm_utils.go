@@ -3,6 +3,7 @@ package provisioner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"time"
@@ -25,7 +26,7 @@ type helmDeployment struct {
 	namespace           string
 	setArgument         string
 	valuesPath          string
-	version             string
+	desiredVersion      string
 
 	cluster         *model.Cluster
 	kopsProvisioner *KopsProvisioner
@@ -131,8 +132,8 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
 
-	if chart.version != "" {
-		arguments = append(arguments, "--version", chart.version)
+	if chart.desiredVersion != "" {
+		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
 	cmd = exec.Command("helm", arguments...)
@@ -167,8 +168,8 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
 
-	if chart.version != "" {
-		arguments = append(arguments, "--version", chart.version)
+	if chart.desiredVersion != "" {
+		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
 	cmd = exec.Command("helm", arguments...)
@@ -187,6 +188,66 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		return errors.Wrap(err, fmt.Sprintf("failed to upgrade Helm chart %s", chart.chartName))
 	}
 	return nil
+}
+
+type helmReleaseJSON struct {
+	Name       string `json:"Name"`
+	Revision   int    `json:"Revision"`
+	Updated    string `json:"Updated"`
+	Status     string `json:"Status"`
+	Chart      string `json:"Chart"`
+	AppVersion string `json:"AppVersion"`
+	Namespace  string `json:"Namespace"`
+}
+
+type HelmListOutput struct {
+	Releases []helmReleaseJSON `json:"Releases"`
+}
+
+func (h *helmDeployment) List() (*HelmListOutput, error) {
+	arguments := []string{
+		"list",
+		"--kubeconfig", h.kops.GetKubeConfigPath(),
+		"--output", "json",
+	}
+
+	cmd := exec.Command("helm", arguments...)
+
+	logger := h.logger.WithFields(log.Fields{
+		"cmd": cmd.Path,
+	})
+
+	rawOutput, err := cmd.Output()
+	if err != nil {
+		if len(rawOutput) > 0 {
+			logger.Debugf("Helm output was:\n%s\n", string(rawOutput))
+		}
+		return nil, err
+	}
+
+	output := &HelmListOutput{}
+	err = json.Unmarshal(rawOutput, output)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't unmarshal JSON output from helm list")
+	}
+
+	return output, nil
+
+}
+
+func (h *helmDeployment) Version() (string, error) {
+	output, err := h.List()
+	if err != nil {
+		return "", err
+	}
+
+	for _, release := range output.Releases {
+		if release.Name == h.chartDeploymentName {
+			return release.Chart, nil
+		}
+	}
+
+	return "", errors.Errorf("couldn't get version for chart %s", h.chartDeploymentName)
 }
 
 // helmSetup is used for the initial setup of Helm in cluster.

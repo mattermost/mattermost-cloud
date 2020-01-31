@@ -88,13 +88,13 @@ var clusterCreateCmd = &cobra.Command{
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
-			Provider:           provider,
-			Version:            version,
-			KopsAMI:            kopsAMI,
-			Size:               size,
-			Zones:              strings.Split(zones, ","),
-			AllowInstallations: allowInstallations,
-			UtilityMetadata:    getRequestedUtilityMetadata(command),
+			Provider:               provider,
+			Version:                version,
+			KopsAMI:                kopsAMI,
+			Size:                   size,
+			Zones:                  strings.Split(zones, ","),
+			AllowInstallations:     allowInstallations,
+			DesiredUtilityVersions: processUtilityFlags(command),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
@@ -117,13 +117,12 @@ var clusterProvisionCmd = &cobra.Command{
 
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
-
 		clusterID, _ := command.Flags().GetString("cluster")
 
 		var pcr *model.ProvisionClusterRequest = nil
-		if utilityMetadata := getRequestedUtilityMetadata(command); len(utilityMetadata) > 0 {
+		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
 			pcr = &model.ProvisionClusterRequest{
-				UtilityMetadata: utilityMetadata,
+				DesiredUtilityVersions: desiredUtilityVersions,
 			}
 		}
 
@@ -280,7 +279,7 @@ var clusterShowStateReport = &cobra.Command{
 	},
 }
 
-func getRequestedUtilityMetadata(command *cobra.Command) map[string]string {
+func processUtilityFlags(command *cobra.Command) map[string]string {
 	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
