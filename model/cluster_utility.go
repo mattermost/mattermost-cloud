@@ -6,6 +6,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// UtilityMetadata is a container struct for any metadata related to
+// cluster utilities that needs to be persisted in the database
+type UtilityMetadata struct {
+	DesiredVersions utilityVersions `json:"desiredVersions"`
+	ActualVersions  utilityVersions `json:"actualVersions"`
+}
+
+type utilityVersions struct {
+	Prometheus string
+	Nginx      string
+	Fluentbit  string
+}
+
 // SetUtilityActualVersion stores the provided version for the
 // provided utility in the UtilityMetadata JSON []byte in this Cluster
 func (c *Cluster) SetUtilityActualVersion(utility string, version string) error {
@@ -81,19 +94,6 @@ func (c *Cluster) SetUtilityDesiredVersions(versions map[string]string) error {
 
 	c.UtilityMetadata = utilityMetadata
 	return nil
-}
-
-// UtilityMetadata is a container struct for any metadata related to
-// cluster utilities that needs to be persisted in the database
-type UtilityMetadata struct {
-	DesiredVersions utilityVersions `json:"desiredVersions"`
-	ActualVersions  utilityVersions `json:"actualVersions"`
-}
-
-type utilityVersions struct {
-	Prometheus string
-	Nginx      string
-	Fluentbit  string
 }
 
 // DesiredUtilityVersion fetches the desired version of a utility from the
