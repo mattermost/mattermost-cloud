@@ -184,6 +184,8 @@ func (c *Cluster) SetUtilityDesiredVersions(versions map[string]string) error {
 	return nil
 }
 
+// UtilityMetadata is a container struct for any metadata related to
+// cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
 	DesiredVersions utilityVersions `json:"desiredVersions"`
 	ActualVersions  utilityVersions `json:"actualVersions"`
@@ -223,7 +225,7 @@ func (c *Cluster) DesiredUtilityVersion(utility string) (string, error) {
 	return "", errors.Errorf("unable to find version for utility %s", utility)
 }
 
-// DesiredUtilityVersion fetches the desired version of a utility from the
+// ActualUtilityVersion fetches the desired version of a utility from the
 // Cluster object
 func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
 	output := &UtilityMetadata{}

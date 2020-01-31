@@ -200,20 +200,22 @@ type helmReleaseJSON struct {
 	Namespace  string `json:"Namespace"`
 }
 
+// HelmListOutput is a struct for holding the unmarshaled
+// representation of the output from helm list --output json
 type HelmListOutput struct {
 	Releases []helmReleaseJSON `json:"Releases"`
 }
 
-func (h *helmDeployment) List() (*HelmListOutput, error) {
+func (d *helmDeployment) List() (*HelmListOutput, error) {
 	arguments := []string{
 		"list",
-		"--kubeconfig", h.kops.GetKubeConfigPath(),
+		"--kubeconfig", d.kops.GetKubeConfigPath(),
 		"--output", "json",
 	}
 
 	cmd := exec.Command("helm", arguments...)
 
-	logger := h.logger.WithFields(log.Fields{
+	logger := d.logger.WithFields(log.Fields{
 		"cmd": cmd.Path,
 	})
 
@@ -235,19 +237,19 @@ func (h *helmDeployment) List() (*HelmListOutput, error) {
 
 }
 
-func (h *helmDeployment) Version() (string, error) {
-	output, err := h.List()
+func (d *helmDeployment) Version() (string, error) {
+	output, err := d.List()
 	if err != nil {
 		return "", err
 	}
 
 	for _, release := range output.Releases {
-		if release.Name == h.chartDeploymentName {
+		if release.Name == d.chartDeploymentName {
 			return release.Chart, nil
 		}
 	}
 
-	return "", errors.Errorf("couldn't get version for chart %s", h.chartDeploymentName)
+	return "", errors.Errorf("couldn't get version for chart %s", d.chartDeploymentName)
 }
 
 // helmSetup is used for the initial setup of Helm in cluster.
