@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"io"
 
 	"github.com/pkg/errors"
 )
@@ -109,6 +110,17 @@ func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
 	}
 
 	return getUtilityVersion(&output.ActualVersions, utility), nil
+}
+
+func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
+	utilityMetadata := UtilityMetadata{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&utilityMetadata)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return &utilityMetadata, nil
 }
 
 // Gets the version for a utility from a utilityVersions struct using

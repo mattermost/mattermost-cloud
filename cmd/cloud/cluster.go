@@ -49,6 +49,9 @@ func init() {
 	clusterListCmd.Flags().Int("per-page", 100, "The number of clusters to fetch per page.")
 	clusterListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted clusters.")
 
+	clusterUtilitiesCmd.Flags().String("cluster", "", "The id of the cluster whose utilities are to be fetched.")
+	clusterUtilitiesCmd.MarkFlagRequired("cluster")
+
 	clusterCmd.AddCommand(clusterCreateCmd)
 	clusterCmd.AddCommand(clusterProvisionCmd)
 	clusterCmd.AddCommand(clusterUpdateCmd)
@@ -58,6 +61,7 @@ func init() {
 	clusterCmd.AddCommand(clusterListCmd)
 	clusterCmd.AddCommand(clusterInstallationCmd)
 	clusterCmd.AddCommand(clusterShowStateReport)
+	clusterCmd.AddCommand(clusterUtilitiesCmd)
 }
 
 var clusterCmd = &cobra.Command{
@@ -253,6 +257,33 @@ var clusterListCmd = &cobra.Command{
 		}
 
 		err = printJSON(clusters)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var clusterUtilitiesCmd = &cobra.Command{
+	Use:   "utilities",
+	Short: "Show metadata regarding utility services running in a cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+		clusterId, err := command.Flags().GetString("cluster")
+		if err != nil {
+			return err
+		}
+
+		metadata, err := client.GetClusterUtilities(clusterId)
+		if err != nil {
+			return err
+		}
+
+		err = printJSON(metadata)
 		if err != nil {
 			return err
 		}

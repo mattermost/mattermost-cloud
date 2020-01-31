@@ -204,6 +204,21 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
 	}
 }
 
+func (c *Client) GetClusterUtilities(clusterID string) (*UtilityMetadata, error) {
+	resp, err := c.doGet(c.buildURL("/api/cluster/%s/utilities", clusterID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return UtilityMetadataFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // UpdateCluster updates a cluster's configuration.
 func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) (*Cluster, error) {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s", clusterID), request)
