@@ -8,9 +8,12 @@ import (
 )
 
 const (
+	// PROMETHEUS is the canonical string representation of prometheus
 	PROMETHEUS = "prometheus"
-	NGINX      = "nginx"
-	FLUENTBIT  = "fluentbit"
+	// NGINX is the canonical string representation of nginx
+	NGINX = "nginx"
+	// FLUENTBIT is the canonical string representation of fluentbit
+	FLUENTBIT = "fluentbit"
 )
 
 // UtilityMetadata is a container struct for any metadata related to
