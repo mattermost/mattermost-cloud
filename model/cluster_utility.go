@@ -28,16 +28,7 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version string) error 
 		return errors.Wrap(err, "failed to unmarshal existing utility metadata")
 	}
 
-	switch utility {
-	case "prometheus":
-		oldMetadata.ActualVersions.Prometheus = version
-	case "nginx":
-		oldMetadata.ActualVersions.Nginx = version
-	case "fluentbit":
-		oldMetadata.ActualVersions.Fluentbit = version
-	default:
-		oldMetadata.ActualVersions.Fluentbit = utility
-	}
+	setUtilityVersion(&oldMetadata.ActualVersions, utility, version)
 
 	// reserialize and write it back to the object
 	var utilityMetadata []byte
@@ -75,14 +66,7 @@ func (c *Cluster) SetUtilityDesiredVersions(versions map[string]string) error {
 
 	// assign new desired versions to the object
 	for utility, version := range versions {
-		switch utility {
-		case "prometheus":
-			oldMetadata.DesiredVersions.Prometheus = version
-		case "nginx":
-			oldMetadata.DesiredVersions.Nginx = version
-		case "fluentbit":
-			oldMetadata.DesiredVersions.Fluentbit = version
-		}
+		setUtilityVersion(&oldMetadata.DesiredVersions, utility, version)
 	}
 
 	// reserialize and write it back to the object
@@ -137,8 +121,9 @@ func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
 	return "", errors.Errorf("unable to find version for utility %s", utility)
 }
 
+// Gets the version for a utility from a utilityVersions struct using
+// the utility's name's string representation for lookup
 func getUtilityVersion(utility string, versions *utilityVersions) string {
-
 	switch utility {
 	case "prometheus":
 		return versions.Prometheus
@@ -149,5 +134,19 @@ func getUtilityVersion(utility string, versions *utilityVersions) string {
 	}
 
 	return ""
+}
 
+// setUtilityVersion will assign the version in desiredVersion to the
+// utility whose name's string representation matches one of the known
+// utilities with a version field in utilityVersion struct in the
+// first argument
+func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string) {
+	switch utility {
+	case "prometheus":
+		versions.Prometheus = desiredVersion
+	case "nginx":
+		versions.Nginx = desiredVersion
+	case "fluentbit":
+		versions.Fluentbit = desiredVersion
+	}
 }
