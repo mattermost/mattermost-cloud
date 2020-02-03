@@ -27,6 +27,7 @@ type Installation struct {
 // InstallationFilter describes the parameters used to constrain a set of installations.
 type InstallationFilter struct {
 	OwnerID        string
+	GroupID        string
 	Page           int
 	PerPage        int
 	IncludeDeleted bool
