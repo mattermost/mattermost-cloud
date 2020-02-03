@@ -760,3 +760,38 @@ func TestDeleteCluster(t *testing.T) {
 		}
 	})
 }
+
+func TestGetAllUtilityMetadata(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+	c, err := client.CreateCluster(
+		&model.CreateClusterRequest{
+			Provider: model.ProviderAWS,
+			Size:     model.SizeAlef500,
+			Zones:    []string{"zone"},
+			DesiredUtilityVersions: map[string]string{
+				"prometheus": "10.3.0",
+				"nginx":      "stable",
+			},
+		})
+
+	require.NoError(t, err)
+	utilityMetadata, err := client.GetClusterUtilities(c.ID)
+
+	require.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
+	require.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
+	require.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
+
+	require.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
+	require.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
+	require.Equal(t, "", utilityMetadata.DesiredVersions.Fluentbit)
+}
