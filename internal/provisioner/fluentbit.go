@@ -3,6 +3,8 @@ package provisioner
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -78,7 +80,7 @@ func (f *fluentbit) DesiredVersion() string {
 }
 
 func (f *fluentbit) ActualVersion() string {
-	return f.actualVersion
+	return strings.TrimPrefix(f.actualVersion, "fluent-bit-")
 }
 
 func (f *fluentbit) Name() string {

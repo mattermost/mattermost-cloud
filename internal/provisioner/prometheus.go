@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"strings"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -157,7 +159,7 @@ func (p *prometheus) DesiredVersion() string {
 }
 
 func (p *prometheus) ActualVersion() string {
-	return p.actualVersion
+	return strings.TrimPrefix(p.actualVersion, "prometheus-")
 }
 
 func (p *prometheus) updateVersion(h *helmDeployment) error {

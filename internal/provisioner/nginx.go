@@ -1,6 +1,8 @@
 package provisioner
 
 import (
+	"strings"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -74,7 +76,7 @@ func (n *nginx) DesiredVersion() string {
 }
 
 func (n *nginx) ActualVersion() string {
-	return n.actualVersion
+	return strings.TrimPrefix(n.actualVersion, "nginx-ingress-")
 }
 
 func (n *nginx) Destroy() error {
