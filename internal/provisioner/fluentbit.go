@@ -5,6 +5,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -39,7 +40,7 @@ func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient 
 		provisioner:    provisioner,
 		awsClient:      awsClient,
 		kops:           kops,
-		logger:         logger.WithField("cluster-utility", "fluentbit"),
+		logger:         logger.WithField("cluster-utility", model.FLUENTBIT),
 		desiredVersion: version,
 	}, nil
 }
@@ -81,7 +82,7 @@ func (f *fluentbit) ActualVersion() string {
 }
 
 func (f *fluentbit) Name() string {
-	return "fluentbit"
+	return model.FLUENTBIT
 }
 
 func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {

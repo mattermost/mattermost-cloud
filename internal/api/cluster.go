@@ -100,7 +100,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	err = cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
+		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -215,14 +215,14 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	provisionClusterRequest, err := model.NewProvisionClusterRequestFromReader(r.Body)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to deserialize cluster provision request body")
+		c.Logger.WithError(err).Error("failed to deserialize cluster provision request body")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	err = cluster.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("provided utility metadata could not be applied without error")
+		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -486,6 +486,6 @@ func handleGetAllUtilityMetadata(c *Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 	w.Write(cluster.UtilityMetadata)
 }

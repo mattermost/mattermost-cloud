@@ -149,7 +149,7 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 }
 
 func (p *prometheus) Name() string {
-	return "prometheus"
+	return model.PROMETHEUS
 }
 
 func (p *prometheus) DesiredVersion() string {

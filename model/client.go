@@ -213,7 +213,7 @@ func (c *Client) GetClusterUtilities(clusterID string) (*UtilityMetadata, error)
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusAccepted:
+	case http.StatusOK:
 		return UtilityMetadataFromReader(resp.Body)
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
