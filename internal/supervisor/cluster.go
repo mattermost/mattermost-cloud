@@ -174,7 +174,7 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 		}
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
-			logger.WithError(err).Warnf("failed to save cluster with version %s", version)
+			logger.WithError(err).Warnf("failed to persist updated cluster %#v to database", cluster)
 		}
 	}
 
@@ -200,7 +200,7 @@ func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.
 		}
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
-			logger.WithError(err).Warnf("failed to save cluster with version %s", version)
+			logger.WithError(err).Warnf("failed to persist updated cluster %#v to database", cluster)
 		}
 	}
 
