@@ -2,6 +2,7 @@ package provisioner
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +31,7 @@ func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *k
 	return &nginx{
 		provisioner:    provisioner,
 		kops:           kops,
-		logger:         logger.WithField("cluster-utility", "nginx"),
+		logger:         logger.WithField("cluster-utility", model.NGINX),
 		desiredVersion: desiredVersion,
 	}, nil
 
@@ -95,5 +96,5 @@ func (n *nginx) NewHelmDeployment() *helmDeployment {
 }
 
 func (n *nginx) Name() string {
-	return "nginx"
+	return model.NGINX
 }
