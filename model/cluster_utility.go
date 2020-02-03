@@ -33,16 +33,18 @@ type utilityVersions struct {
 // provided utility in the UtilityMetadata JSON []byte in this Cluster
 func (c *Cluster) SetUtilityActualVersion(utility string, version string) error {
 	oldMetadata := &UtilityMetadata{}
-	err := json.Unmarshal(c.UtilityMetadata, oldMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal existing utility metadata")
+	if len(c.UtilityMetadata) != 0 {
+		err := json.Unmarshal(c.UtilityMetadata, oldMetadata)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal existing utility metadata")
+		}
 	}
 
 	setUtilityVersion(&oldMetadata.ActualVersions, utility, version)
 
 	// reserialize and write it back to the object
 	var utilityMetadata []byte
-	utilityMetadata, err = json.Marshal(oldMetadata)
+	utilityMetadata, err := json.Marshal(oldMetadata)
 	if err != nil {
 		return errors.Wrapf(err, "failed to store actual version info for %s", utility)
 	}
