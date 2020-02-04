@@ -13,6 +13,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -787,11 +788,11 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	require.NoError(t, err)
 	utilityMetadata, err := client.GetClusterUtilities(c.ID)
 
-	require.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
-	require.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
-	require.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
 
-	require.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
-	require.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
-	require.Equal(t, "", utilityMetadata.DesiredVersions.Fluentbit)
+	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
+	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
+	assert.Equal(t, "", utilityMetadata.DesiredVersions.Fluentbit)
 }
