@@ -160,6 +160,23 @@ func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	installations, err := c.Store.GetInstallations(&model.InstallationFilter{
+		GroupID:        groupID,
+		Page:           0,
+		PerPage:        model.AllPerPage,
+		IncludeDeleted: false,
+	})
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get installations in group")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(installations) != 0 {
+		c.Logger.Errorf("unable to delete group while it still has %d installation members", len(installations))
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	err = c.Store.DeleteGroup(group.ID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to mark group for deletion")
