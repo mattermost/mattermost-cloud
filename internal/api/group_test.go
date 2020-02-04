@@ -10,9 +10,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -351,13 +351,43 @@ func TestDeleteGroup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner",
+		Version:  "version",
+		DNS:      "dns.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	t.Run("join group", func(t *testing.T) {
+		err = client.JoinGroup(group1.ID, installation1.ID)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID)
+		require.NoError(t, err)
+		require.NotNil(t, installation1.GroupID)
+		require.Equal(t, group1.ID, *installation1.GroupID)
+	})
+
 	t.Run("unknown group", func(t *testing.T) {
-		err := client.DeleteGroup(model.NewID())
+		err = client.DeleteGroup(model.NewID())
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
+	t.Run("installations in group", func(t *testing.T) {
+		err = client.DeleteGroup(group1.ID)
+		require.Error(t, err)
+
+		group1, err = client.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group1.DeleteAt)
+	})
+
 	t.Run("success", func(t *testing.T) {
-		err := client.DeleteGroup(group1.ID)
+		err = client.LeaveGroup(installation1.ID)
+		require.NoError(t, err)
+
+		err = client.DeleteGroup(group1.ID)
 		require.NoError(t, err)
 
 		group1, err = client.GetGroup(group1.ID)

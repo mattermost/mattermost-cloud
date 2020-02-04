@@ -442,7 +442,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	if len(clusterInstallations) != 0 {
 		c.Logger.Errorf("unable to delete cluster while it still has %d cluster installations", len(clusterInstallations))
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 

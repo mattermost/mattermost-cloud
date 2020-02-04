@@ -85,10 +85,6 @@ func TestInstallations(t *testing.T) {
 
 	err = sqlStore.CreateInstallation(installation4)
 	require.NoError(t, err)
-	err = sqlStore.DeleteInstallation(installation4.ID)
-	require.NoError(t, err)
-	installation4, err = sqlStore.GetInstallation(installation4.ID)
-	require.NoError(t, err)
 
 	t.Run("get unknown installation", func(t *testing.T) {
 		installation, err := sqlStore.GetInstallation("unknown")
@@ -106,6 +102,23 @@ func TestInstallations(t *testing.T) {
 		installation, err := sqlStore.GetInstallation(installation2.ID)
 		require.NoError(t, err)
 		require.Equal(t, installation2, installation)
+	})
+
+	t.Run("get installation 3", func(t *testing.T) {
+		installation, err := sqlStore.GetInstallation(installation3.ID)
+		require.NoError(t, err)
+		require.Equal(t, installation3, installation)
+	})
+
+	t.Run("get and delete installation 4", func(t *testing.T) {
+		installation, err := sqlStore.GetInstallation(installation4.ID)
+		require.NoError(t, err)
+		require.Equal(t, installation4, installation)
+
+		err = sqlStore.DeleteInstallation(installation4.ID)
+		require.NoError(t, err)
+		installation4, err = sqlStore.GetInstallation(installation4.ID)
+		require.NoError(t, err)
 	})
 
 	testCases := []struct {
@@ -188,6 +201,27 @@ func TestInstallations(t *testing.T) {
 				IncludeDeleted: true,
 			},
 			[]*model.Installation{installation3, installation4},
+		},
+		{
+			"group 1",
+			&model.InstallationFilter{
+				GroupID:        groupID1,
+				Page:           0,
+				PerPage:        10,
+				IncludeDeleted: true,
+			},
+			[]*model.Installation{installation1, installation3},
+		},
+		{
+			"owner 2, group 2, include deleted",
+			&model.InstallationFilter{
+				OwnerID:        ownerID2,
+				GroupID:        groupID2,
+				Page:           0,
+				PerPage:        10,
+				IncludeDeleted: true,
+			},
+			[]*model.Installation{installation4},
 		},
 	}
 

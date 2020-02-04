@@ -77,6 +77,9 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter) ([]
 	if filter.OwnerID != "" {
 		builder = builder.Where("OwnerID = ?", filter.OwnerID)
 	}
+	if filter.GroupID != "" {
+		builder = builder.Where("GroupID = ?", filter.GroupID)
+	}
 	if !filter.IncludeDeleted {
 		builder = builder.Where("DeleteAt = 0")
 	}
