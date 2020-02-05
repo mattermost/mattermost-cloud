@@ -168,6 +168,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
+	logger.WithField("name", kopsMetadata.Name).Info("Updating VolumeBindingMode in default storage class")
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
+	_, err = k8sClient.UpdateStorageClassVolumeBindingMode("gp2")
+	if err != nil {
+		return err
+	}
+	logger.WithField("name", kopsMetadata.Name).Info("Successfully updated storage class")
+
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return err
