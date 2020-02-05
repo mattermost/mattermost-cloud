@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// UpdateStorageClassVolumeBindingMode updates the storage class volume binding mode from immediate to WaitForFirstCustomer.
+// UpdateStorageClassVolumeBindingMode updates the storage class volume binding mode from immediate to WaitForFirstConsumer.
 func (kc *KubeClient) UpdateStorageClassVolumeBindingMode(class string) (metav1.Object, error) {
 
 	storageClass, err := kc.Clientset.StorageV1beta1().StorageClasses().Get(class, metav1.GetOptions{})
