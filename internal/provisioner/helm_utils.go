@@ -63,7 +63,7 @@ func (d *helmDeployment) Update() error {
 	logger := d.logger.WithField("helm-update", d.chartName)
 
 	logger.Infof("Refreshing helm chart %s -- may trigger service upgrade", d.chartName)
-	err := upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
+	err = upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("got an error trying to upgrade the helm chart %s", d.chartName))
 	}
