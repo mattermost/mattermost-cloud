@@ -16,6 +16,15 @@ const (
 	FLUENTBIT = "fluentbit"
 )
 
+const (
+	// PROMETHEUS_DEFAULT_VERSION defines the default version for the Helm chart
+	PROMETHEUS_DEFAULT_VERSION = "10.4.0"
+	// NGINX_DEFAULT_VERSION defines the default version for the Helm chart
+	NGINX_DEFAULT_VERSION = "1.30.0"
+	// FLUENTBIT_DEFAULT_VERSION defines the default version for the Helm chart
+	FLUENTBIT_DEFAULT_VERSION = "2.8.7"
+)
+
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
