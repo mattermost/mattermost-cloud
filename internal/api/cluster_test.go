@@ -794,5 +794,5 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 
 	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
 	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
-	assert.Equal(t, "", utilityMetadata.DesiredVersions.Fluentbit)
+	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
 }
