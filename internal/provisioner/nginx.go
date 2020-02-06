@@ -1,18 +1,23 @@
 package provisioner
 
 import (
+	"strings"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type nginx struct {
-	provisioner *KopsProvisioner
-	kops        *kops.Cmd
-	logger      log.FieldLogger
+	provisioner    *KopsProvisioner
+	kops           *kops.Cmd
+	logger         log.FieldLogger
+	desiredVersion string
+	actualVersion  string
 }
 
-func newNginxHandle(provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
@@ -26,15 +31,60 @@ func newNginxHandle(provisioner *KopsProvisioner, kops *kops.Cmd, logger log.Fie
 	}
 
 	return &nginx{
-		provisioner: provisioner,
-		kops:        kops,
-		logger:      logger.WithField("cluster-utility", "nginx"),
+		provisioner:    provisioner,
+		kops:           kops,
+		logger:         logger.WithField("cluster-utility", model.NGINX),
+		desiredVersion: desiredVersion,
 	}, nil
 
 }
 
+func (n *nginx) updateVersion(h *helmDeployment) error {
+	actualVersion, err := h.Version()
+	if err != nil {
+		return err
+	}
+
+	n.actualVersion = actualVersion
+	return nil
+}
+
 func (n *nginx) Create() error {
-	return (&helmDeployment{
+	h := n.NewHelmDeployment()
+	err := h.Create()
+	if err != nil {
+		return err
+	}
+
+	err = n.updateVersion(h)
+	return err
+}
+
+func (n *nginx) Upgrade() error {
+	h := n.NewHelmDeployment()
+	err := h.Update()
+	if err != nil {
+		return err
+	}
+
+	err = n.updateVersion(h)
+	return err
+}
+
+func (n *nginx) DesiredVersion() string {
+	return n.desiredVersion
+}
+
+func (n *nginx) ActualVersion() string {
+	return strings.TrimPrefix(n.actualVersion, "nginx-ingress-")
+}
+
+func (n *nginx) Destroy() error {
+	return nil
+}
+
+func (n *nginx) NewHelmDeployment() *helmDeployment {
+	return &helmDeployment{
 		chartDeploymentName: "private-nginx",
 		chartName:           "stable/nginx-ingress",
 		namespace:           "internal-nginx",
@@ -43,13 +93,10 @@ func (n *nginx) Create() error {
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,
-	}).Create()
+		desiredVersion:      n.desiredVersion,
+	}
 }
 
-func (n *nginx) Upgrade() error {
-	return nil
-}
-
-func (n *nginx) Destroy() error {
-	return nil
+func (n *nginx) Name() string {
+	return model.NGINX
 }

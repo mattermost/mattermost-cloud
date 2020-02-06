@@ -142,9 +142,10 @@ func (c *Client) RetryCreateCluster(clusterID string) error {
 	}
 }
 
-// ProvisionCluster provisions k8s operators on a cluster from the configured provisioning server.
-func (c *Client) ProvisionCluster(clusterID string) error {
-	resp, err := c.doPost(c.buildURL("/api/cluster/%s/provision", clusterID), nil)
+// ProvisionCluster provisions k8s operators and Helm charts on a
+// cluster from the configured provisioning server.
+func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s/provision", clusterID), request)
 	if err != nil {
 		return err
 	}
@@ -198,6 +199,22 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
 	case http.StatusOK:
 		return ClustersFromReader(resp.Body)
 
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetClusterUtilities returns the metadata for all utilities running in the given cluster.
+func (c *Client) GetClusterUtilities(clusterID string) (*UtilityMetadata, error) {
+	resp, err := c.doGet(c.buildURL("/api/cluster/%s/utilities", clusterID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return UtilityMetadataFromReader(resp.Body)
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}

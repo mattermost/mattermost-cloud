@@ -580,4 +580,15 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.11.0"), semver.MustParse("0.12.0"), func(e execer) error {
+		// Add version columns for all of the utilities.
+		_, err := e.Exec(`
+				ALTER TABLE Cluster ADD COLUMN UtilityMetadata BYTEA NULL;
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

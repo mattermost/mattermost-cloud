@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,6 +31,7 @@ func TestClusters(t *testing.T) {
 			Size:                model.SizeAlef500,
 			State:               model.ClusterStateCreationRequested,
 			AllowInstallations:  false,
+			UtilityMetadata:     []byte(`{}`),
 		}
 
 		cluster2 := &model.Cluster{
@@ -41,6 +42,7 @@ func TestClusters(t *testing.T) {
 			Size:                model.SizeAlef500,
 			State:               model.ClusterStateStable,
 			AllowInstallations:  true,
+			UtilityMetadata:     []byte(`{}`),
 		}
 
 		err := sqlStore.CreateCluster(cluster1)
@@ -96,6 +98,7 @@ func TestClusters(t *testing.T) {
 			Size:                model.SizeAlef500,
 			State:               model.ClusterStateCreationRequested,
 			AllowInstallations:  false,
+			UtilityMetadata:     []byte(`{}`),
 		}
 
 		cluster2 := &model.Cluster{
@@ -106,6 +109,7 @@ func TestClusters(t *testing.T) {
 			Size:                model.SizeAlef500,
 			State:               model.ClusterStateStable,
 			AllowInstallations:  true,
+			UtilityMetadata:     []byte(`{}`),
 		}
 
 		err := sqlStore.CreateCluster(cluster1)
@@ -144,6 +148,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadata:    []byte(`{"provider": "test1"}`),
 			ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
 			AllowInstallations:  false,
+			UtilityMetadata:     []byte(`{}`),
 		}
 
 		cluster2 := &model.Cluster{
@@ -152,6 +157,7 @@ func TestClusters(t *testing.T) {
 			ProviderMetadata:    []byte(`{"provider": "test2"}`),
 			ProvisionerMetadata: []byte(`{"provisioner": "test2"}`),
 			AllowInstallations:  true,
+			UtilityMetadata:     []byte(`{}`),
 		}
 
 		err := sqlStore.CreateCluster(cluster1)
@@ -216,6 +222,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 		ProviderMetadata:    []byte(`{"provider": "test1"}`),
 		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
 		State:               model.ClusterStateCreationRequested,
+		UtilityMetadata:     []byte(`{}`),
 	}
 	err := sqlStore.CreateCluster(creationRequestedCluster)
 	require.NoError(t, err)
@@ -226,6 +233,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 		ProviderMetadata:    []byte(`{"provider": "test1"}`),
 		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
 		State:               model.ClusterStateUpgradeRequested,
+		UtilityMetadata:     []byte(`{}`),
 	}
 	err = sqlStore.CreateCluster(upgradeRequestedCluster)
 	require.NoError(t, err)
@@ -236,6 +244,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 		ProviderMetadata:    []byte(`{"provider": "test1"}`),
 		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
 		State:               model.ClusterStateDeletionRequested,
+		UtilityMetadata:     []byte(`{}`),
 	}
 	err = sqlStore.CreateCluster(deletionRequestedCluster)
 	require.NoError(t, err)

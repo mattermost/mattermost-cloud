@@ -20,8 +20,14 @@ func init() {
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
+	clusterCreateCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, latest stable version if omitted.")
+	clusterCreateCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, latest stable version if omitted.")
+	clusterCreateCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, latest stable version if omitted.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
+	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
+	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
+	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -43,6 +49,9 @@ func init() {
 	clusterListCmd.Flags().Int("per-page", 100, "The number of clusters to fetch per page.")
 	clusterListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted clusters.")
 
+	clusterUtilitiesCmd.Flags().String("cluster", "", "The id of the cluster whose utilities are to be fetched.")
+	clusterUtilitiesCmd.MarkFlagRequired("cluster")
+
 	clusterCmd.AddCommand(clusterCreateCmd)
 	clusterCmd.AddCommand(clusterProvisionCmd)
 	clusterCmd.AddCommand(clusterUpdateCmd)
@@ -52,6 +61,7 @@ func init() {
 	clusterCmd.AddCommand(clusterListCmd)
 	clusterCmd.AddCommand(clusterInstallationCmd)
 	clusterCmd.AddCommand(clusterShowStateReport)
+	clusterCmd.AddCommand(clusterUtilitiesCmd)
 }
 
 var clusterCmd = &cobra.Command{
@@ -82,12 +92,13 @@ var clusterCreateCmd = &cobra.Command{
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
-			Provider:           provider,
-			Version:            version,
-			KopsAMI:            kopsAMI,
-			Size:               size,
-			Zones:              strings.Split(zones, ","),
-			AllowInstallations: allowInstallations,
+			Provider:               provider,
+			Version:                version,
+			KopsAMI:                kopsAMI,
+			Size:                   size,
+			Zones:                  strings.Split(zones, ","),
+			AllowInstallations:     allowInstallations,
+			DesiredUtilityVersions: processUtilityFlags(command),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
@@ -110,9 +121,16 @@ var clusterProvisionCmd = &cobra.Command{
 
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
-
 		clusterID, _ := command.Flags().GetString("cluster")
-		err := client.ProvisionCluster(clusterID)
+
+		var pcr *model.ProvisionClusterRequest = nil
+		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
+			pcr = &model.ProvisionClusterRequest{
+				DesiredUtilityVersions: desiredUtilityVersions,
+			}
+		}
+
+		err := client.ProvisionCluster(clusterID, pcr)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
 		}
@@ -247,6 +265,33 @@ var clusterListCmd = &cobra.Command{
 	},
 }
 
+var clusterUtilitiesCmd = &cobra.Command{
+	Use:   "utilities",
+	Short: "Show metadata regarding utility services running in a cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+		clusterID, err := command.Flags().GetString("cluster")
+		if err != nil {
+			return err
+		}
+
+		metadata, err := client.GetClusterUtilities(clusterID)
+		if err != nil {
+			return err
+		}
+
+		err = printJSON(metadata)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 // TODO:
 // Instead of showing the state data from the model of the CLI binary, add a new
 // API endpoint to return the server's state model.
@@ -263,4 +308,26 @@ var clusterShowStateReport = &cobra.Command{
 
 		return nil
 	},
+}
+
+func processUtilityFlags(command *cobra.Command) map[string]string {
+	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
+	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
+	nginxVersion, _ := command.Flags().GetString("nginx-version")
+
+	utilityVersions := make(map[string]string)
+
+	if prometheusVersion != "" {
+		utilityVersions[model.PROMETHEUS] = prometheusVersion
+	}
+
+	if fluentbitVersion != "" {
+		utilityVersions[model.FLUENTBIT] = fluentbitVersion
+	}
+
+	if nginxVersion != "" {
+		utilityVersions[model.NGINX] = nginxVersion
+	}
+
+	return utilityVersions
 }

@@ -3,6 +3,7 @@ package provisioner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"time"
@@ -25,6 +26,7 @@ type helmDeployment struct {
 	namespace           string
 	setArgument         string
 	valuesPath          string
+	desiredVersion      string
 
 	cluster         *model.Cluster
 	kopsProvisioner *KopsProvisioner
@@ -99,12 +101,16 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 	cmd = exec.Command("helm", arguments...)
 
-	logger.WithFields(log.Fields{
+	logger = logger.WithFields(log.Fields{
 		"cmd": cmd.Path,
-	}).Info("Invoking command")
+	})
 
-	err := cmd.Run()
+	logger.Info("Invoking command")
+	output, err := cmd.Output()
 	if err != nil {
+		if len(output) > 0 {
+			logger.Debugf("Helm output was:\n%s\n", string(output))
+		}
 		return errors.Wrap(err, "Failed to execute Helm to update the Helm repos")
 	}
 	return nil
@@ -126,6 +132,10 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
 
+	if chart.desiredVersion != "" {
+		arguments = append(arguments, "--version", chart.desiredVersion)
+	}
+
 	cmd = exec.Command("helm", arguments...)
 
 	logger.WithFields(log.Fields{
@@ -133,8 +143,9 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"args": cmd.Args,
 	}).Info("Invoking command")
 
-	err := cmd.Run()
+	out, err := cmd.Output()
 	if err != nil {
+		logger.Debugf("Helm output was %s", string(out))
 		return errors.Wrap(err, fmt.Sprintf("Couldn't execute Helm when trying to install the chart %s", chart.chartName))
 	}
 	return nil
@@ -157,6 +168,10 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
 
+	if chart.desiredVersion != "" {
+		arguments = append(arguments, "--version", chart.desiredVersion)
+	}
+
 	cmd = exec.Command("helm", arguments...)
 
 	logger.WithFields(log.Fields{
@@ -173,6 +188,68 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		return errors.Wrap(err, fmt.Sprintf("failed to upgrade Helm chart %s", chart.chartName))
 	}
 	return nil
+}
+
+type helmReleaseJSON struct {
+	Name       string `json:"Name"`
+	Revision   int    `json:"Revision"`
+	Updated    string `json:"Updated"`
+	Status     string `json:"Status"`
+	Chart      string `json:"Chart"`
+	AppVersion string `json:"AppVersion"`
+	Namespace  string `json:"Namespace"`
+}
+
+// HelmListOutput is a struct for holding the unmarshaled
+// representation of the output from helm list --output json
+type HelmListOutput struct {
+	Releases []helmReleaseJSON `json:"Releases"`
+}
+
+func (d *helmDeployment) List() (*HelmListOutput, error) {
+	arguments := []string{
+		"list",
+		"--kubeconfig", d.kops.GetKubeConfigPath(),
+		"--output", "json",
+	}
+
+	cmd := exec.Command("helm", arguments...)
+
+	logger := d.logger.WithFields(log.Fields{
+		"cmd": cmd.Path,
+	})
+
+	rawOutput, err := cmd.Output()
+	if err != nil {
+		if len(rawOutput) > 0 {
+			logger.Debugf("Helm output was:\n%s\n", string(rawOutput))
+		}
+		return nil, err
+	}
+
+	output := &HelmListOutput{}
+	err = json.Unmarshal(rawOutput, output)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't unmarshal JSON output from helm list")
+	}
+
+	return output, nil
+
+}
+
+func (d *helmDeployment) Version() (string, error) {
+	output, err := d.List()
+	if err != nil {
+		return "", err
+	}
+
+	for _, release := range output.Releases {
+		if release.Name == d.chartDeploymentName {
+			return release.Chart, nil
+		}
+	}
+
+	return "", errors.Errorf("couldn't get version for chart %s", d.chartDeploymentName)
 }
 
 // helmSetup is used for the initial setup of Helm in cluster.
@@ -225,8 +302,11 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 		"args": cmd.Args,
 	}).Info("Invoking command")
 
-	err = cmd.Run()
+	output, err := cmd.Output()
 	if err != nil {
+		if len(output) > 0 {
+			logger.Debugf("Helm output was:\n%s\n", string(output))
+		}
 		return errors.Wrap(err, "failed to invoke Helm command")
 	}
 

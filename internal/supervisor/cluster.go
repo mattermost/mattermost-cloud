@@ -171,10 +171,10 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 	} else {
 		if cluster.Version != version {
 			cluster.Version = version
-			err = s.store.UpdateCluster(cluster)
-			if err != nil {
-				logger.WithError(err).Warnf("failed to set cluster version to %s", version)
-			}
+		}
+		err = s.store.UpdateCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Warnf("failed to persist updated cluster %#v to database", cluster)
 		}
 	}
 
@@ -197,10 +197,10 @@ func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.
 	} else {
 		if cluster.Version != version {
 			cluster.Version = version
-			err = s.store.UpdateCluster(cluster)
-			if err != nil {
-				logger.WithError(err).Warnf("failed to set cluster version to %s", version)
-			}
+		}
+		err = s.store.UpdateCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Warnf("failed to persist updated cluster %#v to database", cluster)
 		}
 	}
 

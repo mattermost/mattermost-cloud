@@ -13,6 +13,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -432,7 +433,7 @@ func TestProvisionCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.ProvisionCluster(model.NewID())
+		err := client.ProvisionCluster(model.NewID(), nil)
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -452,7 +453,7 @@ func TestProvisionCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
@@ -461,7 +462,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -474,7 +475,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -487,7 +488,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -500,7 +501,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -513,7 +514,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -526,7 +527,7 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID)
+		err = client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
 	})
 }
@@ -759,4 +760,39 @@ func TestDeleteCluster(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestGetAllUtilityMetadata(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+	c, err := client.CreateCluster(
+		&model.CreateClusterRequest{
+			Provider: model.ProviderAWS,
+			Size:     model.SizeAlef500,
+			Zones:    []string{"zone"},
+			DesiredUtilityVersions: map[string]string{
+				"prometheus": "10.3.0",
+				"nginx":      "stable",
+			},
+		})
+
+	require.NoError(t, err)
+	utilityMetadata, err := client.GetClusterUtilities(c.ID)
+
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
+
+	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
+	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
+	assert.Equal(t, "", utilityMetadata.DesiredVersions.Fluentbit)
 }

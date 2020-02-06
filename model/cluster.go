@@ -23,6 +23,7 @@ type Cluster struct {
 	DeleteAt            int64
 	LockAcquiredBy      *string
 	LockAcquiredAt      int64
+	UtilityMetadata     []byte `json:",omitempty"`
 }
 
 // Clone returns a deep copy the cluster.

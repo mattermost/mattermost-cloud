@@ -5,17 +5,37 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
 )
 
 // A Utility is a service that runs one per cluster but is not part of
-// k8s  itself,  nor  is  it  part  of  a  ClusterInstallation  or  an
+// k8s itself, nor is it part of a ClusterInstallation or an
 // Installation
 type Utility interface {
+	// Create is responsible for deploying the utility in the cluster
 	Create() error
+
+	// Upgrade is responsible for handling changes to an existing
+	// utility
 	Upgrade() error
+
+	// Destroy can be used if special care must be taken for deleting a
+	// utility from a cluster
 	Destroy() error
+
+	// ActualVersion returns the utility's last reported actual version,
+	// at the time of Create or Upgrade. This version will remain valid
+	// unless something interacts with the cluster out of band, at which
+	// time it will be invalid until Upgrade is called again
+	ActualVersion() string
+
+	// DesiredVersion returns the utility's target version, which has been
+	// requested, but may not yet have been reconciled
+	DesiredVersion() string
+
+	// Name returns the canonical string-version name for the utility,
+	// used throughout the application
+	Name() string
 }
 
 // utilityGroup  holds  the  metadata  needed  to  manage  a  specific
@@ -26,12 +46,18 @@ type utilityGroup struct {
 	utilities   []Utility
 	kops        *kops.Cmd
 	provisioner *KopsProvisioner
+	cluster     *model.Cluster
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	nginx, err := newNginxHandle(provisioner, kops, logger)
+	desiredVersion, err := cluster.DesiredUtilityVersion(model.NGINX)
+	if err != nil {
+		return nil, err
+	}
+
+	nginx, err := newNginxHandle(desiredVersion, provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
@@ -41,15 +67,23 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
-	fluentbit, err := newFluentbitHandle(provisioner, awsClient, kops, logger)
+	desiredVersion, err = cluster.DesiredUtilityVersion(model.FLUENTBIT)
+	if err != nil {
+		return nil, err
+	}
+
+	fluentbit, err := newFluentbitHandle(desiredVersion, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
+	// the order of utilities here matters; the utilities are deployed
+	// in order to resolve dependencies between them
 	return &utilityGroup{
 		utilities:   []Utility{nginx, prometheus, fluentbit},
 		kops:        kops,
 		provisioner: provisioner,
+		cluster:     cluster,
 	}, nil
 
 }
@@ -68,6 +102,11 @@ func (group utilityGroup) CreateUtilityGroup() error {
 		if err != nil {
 			return errors.Wrap(err, "failed to provision one of the cluster utilities")
 		}
+
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -81,6 +120,11 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 		if err != nil {
 			return errors.Wrap(err, "failed to destroy one of the cluster utilities")
 		}
+
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -92,6 +136,11 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 		err := utility.Upgrade()
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+		}
+
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+		if err != nil {
+			return err
 		}
 	}
 
