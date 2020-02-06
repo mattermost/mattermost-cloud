@@ -14,6 +14,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -39,7 +40,7 @@ func installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
 
 	err := helmSetup(logger, kops)
 	if err != nil {
-		return errors.Wrap(err, "couldn't install Helm")
+		return errors.Wrap(err, "unable to install helm")
 	}
 
 	wait := 120
@@ -48,7 +49,7 @@ func installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
 	defer cancel()
 	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
 	if err != nil {
-		return errors.Wrap(err, "Helm didn't start as expected, or we couldn't detect it")
+		return errors.Wrap(err, "helm didn't start as expected, or we couldn't detect it")
 	}
 
 	logger.Info("Updating all Helm repos.")
@@ -93,32 +94,27 @@ func waitForHelmRunning(ctx context.Context, configPath string) error {
 
 // helmRepoUpdate updates the helm repos to get latest available charts
 func helmRepoUpdate(logger log.FieldLogger) error {
-	var cmd *exec.Cmd
 	arguments := []string{
 		"repo",
 		"update",
 	}
 
-	cmd = exec.Command("helm", arguments...)
-
-	logger = logger.WithFields(log.Fields{
-		"cmd": cmd.Path,
-	})
-
-	logger.Info("Invoking command")
-	output, err := cmd.Output()
+	helmClient, err := helm.New(logger)
 	if err != nil {
-		if len(output) > 0 {
-			logger.Debugf("Helm output was:\n%s\n", string(output))
-		}
-		return errors.Wrap(err, "Failed to execute Helm to update the Helm repos")
+		return errors.Wrap(err, "unable to create helm wrapper")
 	}
+	defer helmClient.Close()
+
+	err = helmClient.RunGenericCommand(arguments...)
+	if err != nil {
+		return errors.Wrap(err, "unable to update helm repos")
+	}
+
 	return nil
 }
 
 // installHelmChart is used to install Helm charts.
 func installHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
-	var cmd *exec.Cmd
 	arguments := []string{
 		"--debug",
 		"install",
@@ -126,34 +122,31 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"-f", chart.valuesPath,
 		chart.chartName,
 		"--namespace", chart.namespace,
-		"--name", chart.chartDeploymentName}
-
+		"--name", chart.chartDeploymentName,
+	}
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
-
 	if chart.desiredVersion != "" {
 		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
-	cmd = exec.Command("helm", arguments...)
-
-	logger.WithFields(log.Fields{
-		"cmd":  cmd.Path,
-		"args": cmd.Args,
-	}).Info("Invoking command")
-
-	out, err := cmd.Output()
+	helmClient, err := helm.New(logger)
 	if err != nil {
-		logger.Debugf("Helm output was %s", string(out))
-		return errors.Wrap(err, fmt.Sprintf("Couldn't execute Helm when trying to install the chart %s", chart.chartName))
+		return errors.Wrap(err, "unable to create helm wrapper")
 	}
+	defer helmClient.Close()
+
+	err = helmClient.RunGenericCommand(arguments...)
+	if err != nil {
+		return errors.Wrapf(err, "unable to install helm chart %s", chart.chartName)
+	}
+
 	return nil
 }
 
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
-	var cmd *exec.Cmd
 	arguments := []string{
 		"--debug",
 		"upgrade",
@@ -163,30 +156,24 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"-f", chart.valuesPath,
 		"--namespace", chart.namespace,
 	}
-
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
-
 	if chart.desiredVersion != "" {
 		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
-	cmd = exec.Command("helm", arguments...)
-
-	logger.WithFields(log.Fields{
-		"cmd":  cmd.Path,
-		"args": cmd.Args,
-	}).Info("Invoking command")
-
-	output, err := cmd.Output()
-	if len(output) > 0 {
-		log.Debugf("Helm output was:\n%s\n", string(output))
-	}
-
+	helmClient, err := helm.New(logger)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to upgrade Helm chart %s", chart.chartName))
+		return errors.Wrap(err, "unable to create helm wrapper")
 	}
+	defer helmClient.Close()
+
+	err = helmClient.RunGenericCommand(arguments...)
+	if err != nil {
+		return errors.Wrapf(err, "unable to upgrade helm chart %s", chart.chartName)
+	}
+
 	return nil
 }
 
@@ -213,6 +200,7 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 		"--output", "json",
 	}
 
+	// TODO: Not using helm client here due to requirement for raw output
 	cmd := exec.Command("helm", arguments...)
 
 	logger := d.logger.WithFields(log.Fields{
@@ -230,7 +218,7 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 	output := &HelmListOutput{}
 	err = json.Unmarshal(rawOutput, output)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't unmarshal JSON output from helm list")
+		return nil, errors.Wrap(err, "unable to unmarshal JSON output from helm list")
 	}
 
 	return output, nil
@@ -249,7 +237,7 @@ func (d *helmDeployment) Version() (string, error) {
 		}
 	}
 
-	return "", errors.Errorf("couldn't get version for chart %s", d.chartDeploymentName)
+	return "", errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
 }
 
 // helmSetup is used for the initial setup of Helm in cluster.
@@ -259,8 +247,14 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
+	helmClient, err := helm.New(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to create helm wrapper")
+	}
+	defer helmClient.Close()
+
 	logger.Info("Initializing Helm in the cluster")
-	err = exec.Command("helm", "--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade").Run()
+	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade")
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize Helm in the cluster")
 	}
@@ -274,8 +268,6 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to set up Tiller service account for Helm")
 	}
-
-	logger.Info("Successfully created Tiller service account")
 
 	logger.Info("Creating Tiller cluster role bind")
 	roleBinding := &rbacv1.ClusterRoleBinding{
@@ -291,23 +283,11 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 		return errors.Wrap(err, "failed to create cluster role bindings")
 	}
 
-	logger.Info("Successfully created cluster role bind")
+	logger.Info("Upgrading Helm")
 
-	logger.Info("Upgrade Helm")
-
-	cmd := exec.Command("helm", "--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
-
-	logger.WithFields(log.Fields{
-		"cmd":  cmd.Path,
-		"args": cmd.Args,
-	}).Info("Invoking command")
-
-	output, err := cmd.Output()
+	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
 	if err != nil {
-		if len(output) > 0 {
-			logger.Debugf("Helm output was:\n%s\n", string(output))
-		}
-		return errors.Wrap(err, "failed to invoke Helm command")
+		return errors.Wrap(err, "failed to upgrade helm")
 	}
 
 	return nil
