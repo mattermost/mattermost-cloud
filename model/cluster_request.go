@@ -34,6 +34,18 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Zones) == 0 {
 		request.Zones = []string{"us-east-1a"}
 	}
+	if request.DesiredUtilityVersions == nil {
+		request.DesiredUtilityVersions = make(map[string]string)
+	}
+	if _, ok := request.DesiredUtilityVersions[PrometheusCanonicalName]; !ok {
+		request.DesiredUtilityVersions[PrometheusCanonicalName] = PrometheusDefaultVersion
+	}
+	if _, ok := request.DesiredUtilityVersions[NginxCanonicalName]; !ok {
+		request.DesiredUtilityVersions[NginxCanonicalName] = NginxDefaultVersion
+	}
+	if _, ok := request.DesiredUtilityVersions[FluentbitCanonicalName]; !ok {
+		request.DesiredUtilityVersions[FluentbitCanonicalName] = FluentbitDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.
