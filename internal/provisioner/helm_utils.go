@@ -107,10 +107,8 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 	logger.Info("Invoking command")
 	output, err := cmd.Output()
+	logger.Infof("Helm output was:\n%s\n", string(output))
 	if err != nil {
-		if len(output) > 0 {
-			logger.Debugf("Helm output was:\n%s\n", string(output))
-		}
 		return errors.Wrap(err, "Failed to execute Helm to update the Helm repos")
 	}
 	return nil
@@ -144,8 +142,8 @@ func installHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	}).Info("Invoking command")
 
 	out, err := cmd.Output()
+	logger.Infof("Helm output was: \n%s\n", string(out))
 	if err != nil {
-		logger.Debugf("Helm output was %s", string(out))
 		return errors.Wrap(err, fmt.Sprintf("Couldn't execute Helm when trying to install the chart %s", chart.chartName))
 	}
 	return nil
@@ -180,9 +178,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	}).Info("Invoking command")
 
 	output, err := cmd.Output()
-	if len(output) > 0 {
-		log.Debugf("Helm output was:\n%s\n", string(output))
-	}
+	log.Infof("Helm output was:\n%s\n", string(output))
 
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to upgrade Helm chart %s", chart.chartName))
@@ -220,10 +216,8 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 	})
 
 	rawOutput, err := cmd.Output()
+	logger.Infof("Helm output was:\n%s\n", string(rawOutput))
 	if err != nil {
-		if len(rawOutput) > 0 {
-			logger.Debugf("Helm output was:\n%s\n", string(rawOutput))
-		}
 		return nil, err
 	}
 
@@ -303,10 +297,8 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 	}).Info("Invoking command")
 
 	output, err := cmd.Output()
+	logger.Infof("Helm output was:\n%s\n", string(output))
 	if err != nil {
-		if len(output) > 0 {
-			logger.Debugf("Helm output was:\n%s\n", string(output))
-		}
 		return errors.Wrap(err, "failed to invoke Helm command")
 	}
 
