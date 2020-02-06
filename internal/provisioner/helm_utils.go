@@ -54,6 +54,12 @@ func installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
 }
 
 func (d *helmDeployment) Update() error {
+	logger.Info("Updating all Helm repos.")
+	err := helmRepoUpdate(logger)
+	if err != nil {
+		return errors.Wrap(err, "error when update the help repo")
+	}
+
 	logger := d.logger.WithField("helm-update", d.chartName)
 
 	logger.Infof("Refreshing helm chart %s -- may trigger service upgrade", d.chartName)
