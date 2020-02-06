@@ -318,15 +318,15 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 	utilityVersions := make(map[string]string)
 
 	if prometheusVersion != "" {
-		utilityVersions[model.PROMETHEUS] = prometheusVersion
+		utilityVersions[model.PrometheusCanonicalName] = prometheusVersion
 	}
 
 	if fluentbitVersion != "" {
-		utilityVersions[model.FLUENTBIT] = fluentbitVersion
+		utilityVersions[model.FluentbitCanonicalName] = fluentbitVersion
 	}
 
 	if nginxVersion != "" {
-		utilityVersions[model.NGINX] = nginxVersion
+		utilityVersions[model.NginxCanonicalName] = nginxVersion
 	}
 
 	return utilityVersions

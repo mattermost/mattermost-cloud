@@ -15,10 +15,10 @@ func TestSetUtilityVersion(t *testing.T) {
 		Fluentbit:  "",
 	}
 
-	setUtilityVersion(u, PROMETHEUS, "1.9")
+	setUtilityVersion(u, PrometheusCanonicalName, "1.9")
 	assert.Equal(t, u.Prometheus, "1.9")
 
-	setUtilityVersion(u, NGINX, "0.9")
+	setUtilityVersion(u, NginxCanonicalName, "0.9")
 	assert.Equal(t, u.Prometheus, "1.9")
 	assert.Equal(t, u.Nginx, "0.9")
 
@@ -34,9 +34,9 @@ func TestGetUtilityVersion(t *testing.T) {
 		Fluentbit:  "6",
 	}
 
-	assert.Equal(t, getUtilityVersion(u, PROMETHEUS), "4")
-	assert.Equal(t, getUtilityVersion(u, NGINX), "5")
-	assert.Equal(t, getUtilityVersion(u, FLUENTBIT), "6")
+	assert.Equal(t, getUtilityVersion(u, PrometheusCanonicalName), "4")
+	assert.Equal(t, getUtilityVersion(u, NginxCanonicalName), "5")
+	assert.Equal(t, getUtilityVersion(u, FluentbitCanonicalName), "6")
 	assert.Equal(t, getUtilityVersion(u, "anything else"), "")
 }
 
@@ -50,10 +50,10 @@ func TestSetActualVersion(t *testing.T) {
 	}
 
 	assert.Equal(t, c.UtilityMetadata, []byte(nil))
-	err := c.SetUtilityActualVersion(NGINX, "1.9.9")
+	err := c.SetUtilityActualVersion(NginxCanonicalName, "1.9.9")
 	require.NoError(t, err)
 	assert.NotEqual(t, []byte(nil), c.UtilityMetadata)
-	version, err := c.ActualUtilityVersion(NGINX)
+	version, err := c.ActualUtilityVersion(NginxCanonicalName)
 	require.NoError(t, err)
 	assert.Equal(t, "1.9.9", version)
 }
@@ -69,17 +69,17 @@ func TestSetDesired(t *testing.T) {
 
 	assert.Equal(t, c.UtilityMetadata, []byte(nil))
 	err := c.SetUtilityDesiredVersions(map[string]string{
-		NGINX: "1.9.9",
+		NginxCanonicalName: "1.9.9",
 	})
 	require.NoError(t, err)
 
 	assert.NotEqual(t, []byte(nil), c.UtilityMetadata)
 
-	version, err := c.DesiredUtilityVersion(NGINX)
+	version, err := c.DesiredUtilityVersion(NginxCanonicalName)
 	require.NoError(t, err)
 	assert.Equal(t, "1.9.9", version)
 
-	version, err = c.DesiredUtilityVersion(PROMETHEUS)
+	version, err = c.DesiredUtilityVersion(PrometheusCanonicalName)
 	require.NoError(t, err)
 	assert.Equal(t, "", version)
 
@@ -114,15 +114,15 @@ func TestGetActualVersion(t *testing.T) {
 
 	require.NotEqual(t, 0, len(c.UtilityMetadata))
 
-	version, err := c.ActualUtilityVersion(PROMETHEUS)
+	version, err := c.ActualUtilityVersion(PrometheusCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "prometheus-10.3", version)
 
-	version, err = c.ActualUtilityVersion(NGINX)
+	version, err = c.ActualUtilityVersion(NginxCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "nginx-10.2", version)
 
-	version, err = c.ActualUtilityVersion(FLUENTBIT)
+	version, err = c.ActualUtilityVersion(FluentbitCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "fluent-bit-0.9", version)
 
@@ -160,15 +160,15 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	assert.NotEqual(t, 0, len(c.UtilityMetadata))
 
-	version, err := c.DesiredUtilityVersion(PROMETHEUS)
+	version, err := c.DesiredUtilityVersion(PrometheusCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "", version)
 
-	version, err = c.DesiredUtilityVersion(NGINX)
+	version, err = c.DesiredUtilityVersion(NginxCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "10.3", version)
 
-	version, err = c.DesiredUtilityVersion(FLUENTBIT)
+	version, err = c.DesiredUtilityVersion(FluentbitCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "1337", version)
 

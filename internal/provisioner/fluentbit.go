@@ -42,7 +42,7 @@ func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient 
 		provisioner:    provisioner,
 		awsClient:      awsClient,
 		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.FLUENTBIT),
+		logger:         logger.WithField("cluster-utility", model.FluentbitCanonicalName),
 		desiredVersion: version,
 	}, nil
 }
@@ -84,7 +84,7 @@ func (f *fluentbit) ActualVersion() string {
 }
 
 func (f *fluentbit) Name() string {
-	return model.FLUENTBIT
+	return model.FluentbitCanonicalName
 }
 
 func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {

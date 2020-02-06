@@ -44,7 +44,7 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 		return nil, errors.New("cannot create a connection to Prometheus if the Kops command provided is nil")
 	}
 
-	version, err := cluster.DesiredUtilityVersion(model.PROMETHEUS)
+	version, err := cluster.DesiredUtilityVersion(model.PrometheusCanonicalName)
 	if err != nil {
 		return nil, errors.Wrap(err, "something went wrong while getting chart version for Prometheus")
 	}
@@ -53,7 +53,7 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 		awsClient:      awsClient,
 		cluster:        cluster,
 		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.PROMETHEUS),
+		logger:         logger.WithField("cluster-utility", model.PrometheusCanonicalName),
 		provisioner:    provisioner,
 		desiredVersion: version,
 	}, nil
@@ -151,7 +151,7 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 }
 
 func (p *prometheus) Name() string {
-	return model.PROMETHEUS
+	return model.PrometheusCanonicalName
 }
 
 func (p *prometheus) DesiredVersion() string {
