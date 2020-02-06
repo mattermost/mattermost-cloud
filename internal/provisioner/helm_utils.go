@@ -162,6 +162,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"--kubeconfig", configPath,
 		"-f", chart.valuesPath,
 		"--namespace", chart.namespace,
+		"--install",
 	}
 
 	if chart.setArgument != "" {
