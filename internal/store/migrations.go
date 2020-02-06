@@ -606,7 +606,7 @@ var migrations = []migration{
 
 		// if there are UtilityMetadata fields that are not empty, this
 		// table has already been manually migrated
-		if numRows > 1 {
+		if numRows > 0 {
 			return nil
 		}
 
