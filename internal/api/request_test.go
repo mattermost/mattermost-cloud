@@ -12,10 +12,11 @@ import (
 func TestNewCreateClusterRequestFromReader(t *testing.T) {
 	defaultCreateClusterRequest := func() *model.CreateClusterRequest {
 		return &model.CreateClusterRequest{
-			Provider: "aws",
-			Version:  "latest",
-			Size:     "SizeAlef500",
-			Zones:    []string{"us-east-1a"},
+			Provider:               "aws",
+			Version:                "latest",
+			Size:                   "SizeAlef500",
+			Zones:                  []string{"us-east-1a"},
+			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "1.30.0", "prometheus": "10.4.0"},
 		}
 	}
 
@@ -58,7 +59,16 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			`{"Provider": "aws", "Version": "1.12.4", "Size": "SizeAlef1000", "Zones": ["zone1", "zone2"]}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &model.CreateClusterRequest{Provider: model.ProviderAWS, Version: "1.12.4", Size: model.SizeAlef1000, Zones: []string{"zone1", "zone2"}}, clusterRequest)
+		require.Equal(t, &model.CreateClusterRequest{
+			Provider: model.ProviderAWS,
+			Version:  "1.12.4",
+			Size:     model.SizeAlef1000,
+			Zones:    []string{"zone1", "zone2"},
+			DesiredUtilityVersions: map[string]string{
+				"fluentbit":  "2.8.7",
+				"nginx":      "1.30.0",
+				"prometheus": "10.4.0"},
+		}, clusterRequest)
 	})
 }
 

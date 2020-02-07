@@ -8,12 +8,21 @@ import (
 )
 
 const (
-	// PROMETHEUS is the canonical string representation of prometheus
-	PROMETHEUS = "prometheus"
-	// NGINX is the canonical string representation of nginx
-	NGINX = "nginx"
-	// FLUENTBIT is the canonical string representation of fluentbit
-	FLUENTBIT = "fluentbit"
+	// PrometheusCanonicalName is the canonical string representation of prometheus
+	PrometheusCanonicalName = "prometheus"
+	// NginxCanonicalName is the canonical string representation of nginx
+	NginxCanonicalName = "nginx"
+	// FluentbitCanonicalName is the canonical string representation of fluentbit
+	FluentbitCanonicalName = "fluentbit"
+)
+
+const (
+	// PrometheusDefaultVersion defines the default version for the Helm chart
+	PrometheusDefaultVersion = "10.4.0"
+	// NginxDefaultVersion defines the default version for the Helm chart
+	NginxDefaultVersion = "1.30.0"
+	// FluentbitDefaultVersion defines the default version for the Helm chart
+	FluentbitDefaultVersion = "2.8.7"
 )
 
 // UtilityMetadata is a container struct for any metadata related to
@@ -140,11 +149,11 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 // the utility's name's string representation for lookup
 func getUtilityVersion(versions *utilityVersions, utility string) string {
 	switch utility {
-	case PROMETHEUS:
+	case PrometheusCanonicalName:
 		return versions.Prometheus
-	case NGINX:
+	case NginxCanonicalName:
 		return versions.Nginx
-	case FLUENTBIT:
+	case FluentbitCanonicalName:
 		return versions.Fluentbit
 	}
 
@@ -157,11 +166,11 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 // first argument
 func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string) {
 	switch utility {
-	case PROMETHEUS:
+	case PrometheusCanonicalName:
 		versions.Prometheus = desiredVersion
-	case NGINX:
+	case NginxCanonicalName:
 		versions.Nginx = desiredVersion
-	case FLUENTBIT:
+	case FluentbitCanonicalName:
 		versions.Fluentbit = desiredVersion
 	}
 }

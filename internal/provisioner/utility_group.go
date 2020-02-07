@@ -52,7 +52,7 @@ type utilityGroup struct {
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	desiredVersion, err := cluster.DesiredUtilityVersion(model.NGINX)
+	desiredVersion, err := cluster.DesiredUtilityVersion(model.NginxCanonicalName)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.FLUENTBIT)
+	desiredVersion, err = cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
 	if err != nil {
 		return nil, err
 	}

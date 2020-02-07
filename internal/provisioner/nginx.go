@@ -33,7 +33,7 @@ func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *k
 	return &nginx{
 		provisioner:    provisioner,
 		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.NGINX),
+		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
 		desiredVersion: desiredVersion,
 	}, nil
 
@@ -98,5 +98,5 @@ func (n *nginx) NewHelmDeployment() *helmDeployment {
 }
 
 func (n *nginx) Name() string {
-	return model.NGINX
+	return model.NginxCanonicalName
 }

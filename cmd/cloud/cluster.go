@@ -20,9 +20,9 @@ func init() {
 	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
-	clusterCreateCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, latest stable version if omitted.")
-	clusterCreateCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, latest stable version if omitted.")
-	clusterCreateCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, latest stable version if omitted.")
+	clusterCreateCmd.Flags().String("prometheus-version", model.PrometheusDefaultVersion, "The version of Prometheus to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
@@ -318,15 +318,15 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 	utilityVersions := make(map[string]string)
 
 	if prometheusVersion != "" {
-		utilityVersions[model.PROMETHEUS] = prometheusVersion
+		utilityVersions[model.PrometheusCanonicalName] = prometheusVersion
 	}
 
 	if fluentbitVersion != "" {
-		utilityVersions[model.FLUENTBIT] = fluentbitVersion
+		utilityVersions[model.FluentbitCanonicalName] = fluentbitVersion
 	}
 
 	if nginxVersion != "" {
-		utilityVersions[model.NGINX] = nginxVersion
+		utilityVersions[model.NginxCanonicalName] = nginxVersion
 	}
 
 	return utilityVersions
