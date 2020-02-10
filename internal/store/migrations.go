@@ -591,28 +591,12 @@ var migrations = []migration{
 
 		return nil
 	}},
-	{semver.MustParse("0.12.0"), semver.MustParse("0.13.0"), func(e execer) error {
+	{semver.MustParse("0.12.0"), semver.MustParse("0.12.1"), func(e execer) error {
 		// Assign default values to UtilityMetadata if values do not
 		// exist, otherwise, keep existing values
-		result, err := e.Exec(`SELECT * FROM Cluster WHERE UtilityMetadata != ''`)
-		if err != nil {
-			return err
-		}
-
-		numRows, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-
-		// if there are UtilityMetadata fields that are not empty, this
-		// table has already been manually migrated
-		if numRows > 0 {
-			return nil
-		}
-
-		_, err = e.Exec(`
+		_, err := e.Exec(`
 				UPDATE Cluster
-				SET	UtilityMetadata = '{}';
+				SET UtilityMetadata = '{}' WHERE UtilityMetadata is NULL;
 		 `)
 		return err
 	}},
