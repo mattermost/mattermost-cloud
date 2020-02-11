@@ -290,7 +290,7 @@ func TestChangeMattermostVersion(t *testing.T) {
 		require.NoError(t, err)
 	})
 	t.Run("bad group", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s/mattermost/%s", ts.URL, group1.ID[:len(group1.ID)-2], "5.17"), nil)
+		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s/mattermost/%s", ts.URL, group1.ID[:len(group1.ID)-2]+"XX", "5.17"), nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(httpRequest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)

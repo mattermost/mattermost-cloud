@@ -54,6 +54,12 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if group == nil {
+		c.Logger.Errorf("couldn't find group with ID %s", groupId)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	group.Version = version
 	err = c.Store.UpdateGroup(group)
 	if err != nil {
