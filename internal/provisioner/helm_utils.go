@@ -284,7 +284,22 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 		return errors.Wrap(err, "failed to create cluster role bindings")
 	}
 
+	err = helmInit(logger, kops)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// helmInit calls helm init and doesn't do anything fancy
+func helmInit(logger log.FieldLogger, kops *kops.Cmd) error {
 	logger.Info("Upgrading Helm")
+	helmClient, err := helm.New(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to create helm wrapper")
+	}
+	defer helmClient.Close()
 
 	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
 	if err != nil {

@@ -132,6 +132,12 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 
 // UpgradeUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
 func (group utilityGroup) UpgradeUtilityGroup() error {
+	logger := group.provisioner.logger.WithField("helm-init", "UpgradeUtilityGroup")
+	err := helmInit(logger, group.kops)
+	if err != nil {
+		logger.WithError(err).Errorf("couldn't re-initialize Helm in the cluster")
+	}
+
 	for _, utility := range group.utilities {
 		err := utility.Upgrade()
 		if err != nil {
