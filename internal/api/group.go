@@ -31,13 +31,13 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	groupId, ok := vars["group"]
+	groupID, ok := vars["group"]
 	if !ok {
 		c.Logger.Error("couldn't get group ID from request parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	c.Logger = c.Logger.WithField("group", groupId)
+	c.Logger = c.Logger.WithField("group", groupID)
 
 	version, ok := vars["version"]
 	if !ok {
@@ -47,15 +47,15 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 	}
 	c.Logger = c.Logger.WithField("version", version)
 
-	group, err := c.Store.GetGroup(groupId)
+	group, err := c.Store.GetGroup(groupID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("couldn't find group with ID %s", groupId)
+		c.Logger.WithError(err).Errorf("couldn't find group with ID %s", groupID)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if group == nil {
-		c.Logger.Errorf("couldn't find group with ID %s", groupId)
+		c.Logger.Errorf("couldn't find group with ID %s", groupID)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
