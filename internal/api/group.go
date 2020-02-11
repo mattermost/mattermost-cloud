@@ -33,7 +33,7 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 
 	groupID, ok := vars["group"]
 	if !ok {
-		c.Logger.Error("couldn't get group ID from request parameters")
+		c.Logger.Error("failed to get group ID from request parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -41,7 +41,7 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 
 	version, ok := vars["version"]
 	if !ok {
-		c.Logger.Error("couldn't get version from request parameters")
+		c.Logger.Error("failed to get version from request parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -49,13 +49,13 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 
 	group, err := c.Store.GetGroup(groupID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("couldn't find group with ID %s", groupID)
+		c.Logger.WithError(err).Errorf("failed to find group with ID %s", groupID)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	if group == nil {
-		c.Logger.Errorf("couldn't find group with ID %s", groupID)
+		c.Logger.Errorf("failed to find group with ID %s", groupID)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
