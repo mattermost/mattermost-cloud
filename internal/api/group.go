@@ -22,13 +22,13 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
 	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
 
-	groupRouter.Handle("/mattermost/{version:[A-Za-z0-9.]+}", addContext(handleChangeMattermostVersion)).Methods("PUT")
+	groupRouter.Handle("/mattermost/{version:[A-Za-z0-9.]+}", addContext(handleChangeGroupMattermostVersion)).Methods("PUT")
 }
 
-// handleChangeMattermostVersion responds to PUT
+// handleChangeGroupMattermostVersion responds to PUT
 // /api/group/{group}/mattermost/{version}, upgrading or downgrading
 // the installation to the Mattermost version embedded in the request.
-func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleChangeGroupMattermostVersion(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	groupID, ok := vars["group"]
