@@ -33,7 +33,6 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 
 	groupId, ok := vars["group"]
 	if !ok {
-		// TODO write out an error
 		c.Logger.Error("couldn't get group ID from request parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -59,61 +58,6 @@ func handleChangeMattermostVersion(c *Context, w http.ResponseWriter, r *http.Re
 	err = c.Store.UpdateGroup(group)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("error writing group object to database %#v", group)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// TODO isw
-	// iterate through pages and do this whole thing with batches up to
-	// MaxReconciling in the Group object
-
-	installations, err := c.Store.GetInstallations(
-		&model.InstallationFilter{
-			GroupID: groupId,
-			Page:    0,
-			PerPage: 10,
-		})
-
-	if err != nil {
-		c.Logger.WithError(err).Errorf("couldn't look up installation with ID %s", groupId)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	if len(installations) == 0 {
-		c.Logger.Errorf("Couldn't find any installations with group ID %s", groupId)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	for _, installation := range installations {
-		_, status, unlockOnce := lockInstallation(c, installation.ID)
-		if status != 0 {
-			c.Logger.Errorf("failed to upgrade group %s due to bad status locking installation %s", groupId, installation.ID)
-			w.WriteHeader(status)
-			return
-		}
-		defer unlockOnce()
-	}
-
-	for _, installation := range installations {
-		installation.Version = version
-		state := model.InstallationStateUpgradeRequested
-		if !installation.ValidTransitionState(state) {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		installation.State = state
-		err = c.Store.UpdateInstallation(installation)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	}
-
-	err = c.Supervisor.Do()
-	if err != nil {
-		c.Logger.WithError(err).Error("couldn't supervise")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
