@@ -135,7 +135,7 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("helm-init", "UpgradeUtilityGroup")
 	err := helmInit(logger, group.kops)
 	if err != nil {
-		logger.WithError(err).Errorf("couldn't re-initialize Helm in the cluster")
+		logger.WithError(err).Error("couldn't re-initialize Helm in the cluster")
 	}
 
 	for _, utility := range group.utilities {
