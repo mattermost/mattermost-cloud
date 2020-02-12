@@ -8,7 +8,6 @@ import (
 
 // UpdateStorageClassVolumeBindingMode updates the storage class volume binding mode from immediate to WaitForFirstConsumer.
 func (kc *KubeClient) UpdateStorageClassVolumeBindingMode(class string) (metav1.Object, error) {
-
 	storageClass, err := kc.Clientset.StorageV1beta1().StorageClasses().Get(class, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
