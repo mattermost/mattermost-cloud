@@ -591,4 +591,13 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.12.0"), semver.MustParse("0.12.1"), func(e execer) error {
+		// Assign default values to UtilityMetadata if values do not
+		// exist, otherwise, keep existing values
+		_, err := e.Exec(`
+				UPDATE Cluster
+				SET UtilityMetadata = '{}' WHERE UtilityMetadata is NULL;
+		 `)
+		return err
+	}},
 }
