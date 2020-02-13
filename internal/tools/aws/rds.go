@@ -152,7 +152,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 	_, err = svc.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
 		DBInstanceIdentifier: aws.String(instanceName),
-		DBInstanceClass:      aws.String("db.r5.large"),
+		DBInstanceClass:      aws.String("db.t3.small"),
 		Engine:               aws.String("aurora-mysql"),
 		PubliclyAccessible:   aws.Bool(false),
 	})
