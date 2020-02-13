@@ -9,14 +9,15 @@ import (
 type Installation struct {
 	ID             string
 	OwnerID        string
+	GroupID        *string
 	Version        string
 	DNS            string
 	Database       string
 	Filestore      string
 	License        string
+	MattermostEnv  EnvVarMap
 	Size           string
 	Affinity       string
-	GroupID        *string
 	State          string
 	CreateAt       int64
 	DeleteAt       int64

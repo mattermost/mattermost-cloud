@@ -25,9 +25,8 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("", addContext(handleUpdateClusterConfiguration)).Methods("PUT")
 	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
 	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeKubernetes)).Methods("PUT")
-	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
-
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
+	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.

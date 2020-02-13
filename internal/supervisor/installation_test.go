@@ -955,7 +955,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
-			State:    model.InstallationStateUpgradeRequested,
+			State:    model.InstallationStateUpdateRequested,
 		}
 
 		err = sqlStore.CreateInstallation(installation)
@@ -971,7 +971,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateUpgradeInProgress)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateUpdateInProgress)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
 	})
 
@@ -993,7 +993,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
-			State:    model.InstallationStateUpgradeInProgress,
+			State:    model.InstallationStateUpdateInProgress,
 		}
 
 		err = sqlStore.CreateInstallation(installation)

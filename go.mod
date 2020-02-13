@@ -3,44 +3,60 @@ module github.com/mattermost/mattermost-cloud
 go 1.13
 
 require (
-	github.com/Masterminds/squirrel v1.1.0
-	github.com/aws/aws-sdk-go v1.25.6
+	github.com/Masterminds/squirrel v1.2.0
+	github.com/aws/aws-sdk-go v1.29.2
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
-	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d // indirect
-	github.com/golang/protobuf v1.3.1 // indirect
-	github.com/google/uuid v1.1.1 // indirect
-	github.com/googleapis/gnostic v0.2.0 // indirect
-	github.com/gorilla/mux v1.7.1
-	github.com/imdario/mergo v0.3.7 // indirect
+	github.com/emicklei/go-restful v2.11.2+incompatible // indirect
+	github.com/go-openapi/spec v0.19.6 // indirect
+	github.com/go-openapi/swag v0.19.7 // indirect
+	github.com/googleapis/gnostic v0.4.1 // indirect
+	github.com/gorilla/mux v1.7.4
 	github.com/jmoiron/sqlx v1.2.0
-	github.com/json-iterator/go v1.1.7 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/kubernetes/client-go v11.0.0+incompatible
-	github.com/lib/pq v1.0.0
-	github.com/mattermost/mattermost-operator v0.8.5
-	github.com/mattn/go-sqlite3 v1.9.0
-	github.com/onsi/ginkgo v1.8.0 // indirect
-	github.com/onsi/gomega v1.5.0 // indirect
+	github.com/lib/pq v1.3.0
+	github.com/mattermost/mattermost-operator v1.1.1
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pborman/uuid v1.2.0
-	github.com/pkg/errors v0.8.1
-	github.com/sirupsen/logrus v1.4.1
-	github.com/spf13/cobra v0.0.3
-	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/stretchr/testify v1.3.0
-	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
-	golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f // indirect
-	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
-	k8s.io/api v0.0.0-20190819141258-3544db3b9e44
-	k8s.io/apiextensions-apiserver v0.0.0-20190425173628-f18c1dae0463
-	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
-	k8s.io/client-go v0.0.0-20190819141724-e14f31a72a77
-	k8s.io/kube-openapi v0.0.0-20190709113604-33be087ad058 // indirect
-	k8s.io/kubernetes v1.14.2
-	k8s.io/utils v0.0.0-20190801114015-581e00157fb1 // indirect
+	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/cobra v0.0.5
+	github.com/stretchr/testify v1.4.0
+	golang.org/x/crypto v0.0.0-20200210222208-86ce3cb69678 // indirect
+	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
+	k8s.io/api v0.17.3
+	k8s.io/apiextensions-apiserver v0.17.3
+	k8s.io/apimachinery v0.17.3
+	k8s.io/client-go v12.0.0+incompatible
+	k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // indirect
+	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect
+	sigs.k8s.io/yaml v1.2.0 // indirect
+)
+
+// Pinned to kubernetes-1.16.7
+replace (
+	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
+	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.2.0
+	k8s.io/api => k8s.io/api v0.16.7
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.16.7
+	k8s.io/apimachinery => k8s.io/apimachinery v0.16.8-beta.0
+	k8s.io/apiserver => k8s.io/apiserver v0.16.7
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.16.7
+	k8s.io/client-go => k8s.io/client-go v0.16.7
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.16.7
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.16.7
+	k8s.io/code-generator => k8s.io/code-generator v0.16.8-beta.0
+	k8s.io/component-base => k8s.io/component-base v0.16.7
+	k8s.io/cri-api => k8s.io/cri-api v0.16.8-beta.0
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.16.7
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.16.7
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.16.7
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.16.7
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.16.7
+	k8s.io/kubectl => k8s.io/kubectl v0.16.7
+	k8s.io/kubelet => k8s.io/kubelet v0.16.7
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.16.7
+	k8s.io/metrics => k8s.io/metrics v0.16.7
+	k8s.io/node-api => k8s.io/node-api v0.16.7
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.16.7
+	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.16.7
+	k8s.io/sample-controller => k8s.io/sample-controller v0.16.7
 )

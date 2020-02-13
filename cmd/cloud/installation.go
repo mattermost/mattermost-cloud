@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -17,14 +19,16 @@ func init() {
 	installationCreateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationCreateCmd.Flags().String("database", model.InstallationDatabaseMysqlOperator, "The Mattermost server database type. Accepts mysql-operator or aws-rds")
 	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator or aws-s3")
+	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
-	installationUpgradeCmd.Flags().String("installation", "", "The id of the installation to be upgraded.")
-	installationUpgradeCmd.Flags().String("version", "stable", "The Mattermost version to target.")
-	installationUpgradeCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
-	installationUpgradeCmd.MarkFlagRequired("installation")
-	installationUpgradeCmd.MarkFlagRequired("version")
+	installationUpdateCmd.Flags().String("installation", "", "The id of the installation to be updated.")
+	installationUpdateCmd.Flags().String("version", "stable", "The Mattermost version to target.")
+	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
+	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationUpdateCmd.MarkFlagRequired("installation")
+	installationUpdateCmd.MarkFlagRequired("version")
 
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
 	installationDeleteCmd.MarkFlagRequired("installation")
@@ -38,7 +42,7 @@ func init() {
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
 
 	installationCmd.AddCommand(installationCreateCmd)
-	installationCmd.AddCommand(installationUpgradeCmd)
+	installationCmd.AddCommand(installationUpdateCmd)
 	installationCmd.AddCommand(installationDeleteCmd)
 	installationCmd.AddCommand(installationGetCmd)
 	installationCmd.AddCommand(installationListCmd)
@@ -67,16 +71,23 @@ var installationCreateCmd = &cobra.Command{
 		license, _ := command.Flags().GetString("license")
 		database, _ := command.Flags().GetString("database")
 		filestore, _ := command.Flags().GetString("filestore")
+		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+
+		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		if err != nil {
+			return err
+		}
 
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:   ownerID,
-			Version:   version,
-			Size:      size,
-			DNS:       dns,
-			License:   license,
-			Affinity:  affinity,
-			Database:  database,
-			Filestore: filestore,
+			OwnerID:       ownerID,
+			Version:       version,
+			Size:          size,
+			DNS:           dns,
+			License:       license,
+			Affinity:      affinity,
+			Database:      database,
+			Filestore:     filestore,
+			MattermostEnv: envVarMap,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create installation")
@@ -91,9 +102,9 @@ var installationCreateCmd = &cobra.Command{
 	},
 }
 
-var installationUpgradeCmd = &cobra.Command{
-	Use:   "upgrade",
-	Short: "Upgrade (or downgrade) the version of Mattermost.",
+var installationUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update an installation's configuration",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 
@@ -103,13 +114,20 @@ var installationUpgradeCmd = &cobra.Command{
 		installationID, _ := command.Flags().GetString("installation")
 		version, _ := command.Flags().GetString("version")
 		license, _ := command.Flags().GetString("license")
+		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
-		upgradeRequest := &model.UpgradeInstallationRequest{
-			Version: version,
-			License: license,
+		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		if err != nil {
+			return err
 		}
 
-		err := client.UpgradeInstallation(installationID, upgradeRequest)
+		updateRequest := &model.UpdateInstallationRequest{
+			Version:       version,
+			License:       license,
+			MattermostEnv: envVarMap,
+		}
+
+		err = client.UpgradeInstallation(installationID, updateRequest)
 		if err != nil {
 			return errors.Wrap(err, "failed to change installation version")
 		}
@@ -213,4 +231,27 @@ var installationShowStateReport = &cobra.Command{
 
 		return nil
 	},
+}
+
+func parseEnvVarInput(rawInput []string) (model.EnvVarMap, error) {
+	if len(rawInput) == 0 {
+		return nil, nil
+	}
+
+	envVarMap := make(model.EnvVarMap)
+
+	for _, env := range rawInput {
+		kv := strings.Split(env, "=")
+		if len(kv) != 2 {
+			return nil, errors.Errorf("%s is not in a valid env format; expecting KEY_NAME=VALUE", env)
+		}
+
+		if _, ok := envVarMap[kv[0]]; ok {
+			return nil, errors.Errorf("env var %s was defined more than once", kv[0])
+		}
+
+		envVarMap[kv[0]] = model.EnvVar{Value: kv[1]}
+	}
+
+	return envVarMap, nil
 }
