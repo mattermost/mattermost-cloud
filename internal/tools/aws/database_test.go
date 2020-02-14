@@ -4,6 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
@@ -37,4 +39,35 @@ func TestDatabaseTeardown(t *testing.T) {
 
 	err := database.Teardown(false, logger)
 	require.NoError(t, err)
+}
+
+func (a *AWSTestSuite) TestSnapshot() {
+	database := RDSDatabase{
+		installationID: a.InstallationA.ID,
+		client:         a.Mocks.AWS,
+	}
+
+	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Once()
+	a.Mocks.LOG.WithFieldString("installation-id", "id000000000000000000000000a")
+
+	err := database.Snapshot(a.Mocks.LOG.Logger)
+
+	a.Assert().NoError(err)
+	a.Mocks.API.RDS.AssertExpectations(a.T())
+}
+
+func (a *AWSTestSuite) TestSnapshotError() {
+	database := RDSDatabase{
+		installationID: a.InstallationA.ID,
+		client:         a.Mocks.AWS,
+	}
+
+	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(nil, errors.New("database is not stable")).Once()
+	a.Mocks.LOG.WithFieldString("installation-id", "id000000000000000000000000a")
+
+	err := database.Snapshot(a.Mocks.LOG.Logger)
+
+	a.Assert().Error(err)
+	a.Assert().Equal("unable to snapshot RDS database: failed to create a DB cluster snapshot for replication: database is not stable", err.Error())
+	a.Mocks.API.RDS.AssertExpectations(a.T())
 }

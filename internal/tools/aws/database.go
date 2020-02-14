@@ -17,6 +17,9 @@ import (
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
 	installationID string
+
+	// Mainly used for dependency injection.
+	client *Client
 }
 
 // NewRDSDatabase returns a new RDSDatabase interface.
@@ -51,12 +54,12 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 
 // Snapshot creates a snapshot of the RDS database.
 func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
-	sess, err := DefaultSessionConfig().CreateSession(logger)
+	client, err := d.awsClient(logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to snapshot RDS database")
 	}
 
-	err = NewAWSClient(sess).CreateDatabaseSnapshot(d.installationID)
+	err = client.CreateDatabaseSnapshot(d.installationID)
 	if err != nil {
 		return errors.Wrap(err, "unable to snapshot RDS database")
 	}
@@ -103,6 +106,19 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 	logger.Debug("Cluster installation configured to use an AWS RDS Database")
 
 	return databaseSpec, databaseSecret, nil
+}
+
+func (d *RDSDatabase) awsClient(logger log.FieldLogger) (*Client, error) {
+	if d.client != nil {
+		return d.client, nil
+	}
+
+	sess, err := DefaultSessionConfig().CreateSession(logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewAWSClient(sess), nil
 }
 
 func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.FieldLogger) error {
