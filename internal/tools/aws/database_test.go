@@ -48,7 +48,7 @@ func (a *AWSTestSuite) TestSnapshot() {
 	}
 
 	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Once()
-	a.Mocks.LOG.WithFieldString("installation-id", "id000000000000000000000000a")
+	a.Mocks.LOG.WithFieldString("installation-id", a.InstallationA.ID)
 
 	err := database.Snapshot(a.Mocks.LOG.Logger)
 
@@ -63,7 +63,7 @@ func (a *AWSTestSuite) TestSnapshotError() {
 	}
 
 	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(nil, errors.New("database is not stable")).Once()
-	a.Mocks.LOG.WithFieldString("installation-id", "id000000000000000000000000a")
+	a.Mocks.LOG.WithFieldString("installation-id", a.InstallationA.ID)
 
 	err := database.Snapshot(a.Mocks.LOG.Logger)
 
