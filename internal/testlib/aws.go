@@ -2,7 +2,7 @@ package testlib
 
 import mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-sdk"
 
-// AWSMockedAPI ..
+// AWSMockedAPI has all AWS mocked services. New services should be added here.
 type AWSMockedAPI struct {
 	ACM            *mocks.ACMAPI
 	RDS            *mocks.RDSAPI
@@ -13,7 +13,7 @@ type AWSMockedAPI struct {
 	SecretsManager *mocks.SecretsManagerAPI
 }
 
-// NewAWSMockedAPI ...
+// NewAWSMockedAPI returns an instance of AWSMockedAPI.
 func NewAWSMockedAPI() *AWSMockedAPI {
 	return &AWSMockedAPI{
 		ACM:            &mocks.ACMAPI{},
