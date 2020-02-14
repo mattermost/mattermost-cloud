@@ -47,7 +47,8 @@ func TestGroupFromReader(t *testing.T) {
 			"Description":"description",
 			"Version":"version",
 			"CreateAt":10,
-			"DeleteAt":20
+			"DeleteAt":20,
+			"MattermostEnv":{"envVarKey": {"value": "envVarValue"}}
 		}`)))
 		require.NoError(t, err)
 		require.Equal(t, &Group{
@@ -57,6 +58,12 @@ func TestGroupFromReader(t *testing.T) {
 			Version:     "version",
 			CreateAt:    10,
 			DeleteAt:    20,
+			MattermostEnv: EnvVarMap{
+				"envVarKey": EnvVar{
+					Value:     "envVarValue",
+					ValueFrom: nil,
+				},
+			},
 		}, group)
 	})
 }

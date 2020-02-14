@@ -10,15 +10,42 @@ import (
 
 var groupSelect sq.SelectBuilder
 
+type rawGroup struct {
+	ID            string
+	Name          string
+	Description   string
+	Version       string
+	CreateAt      int64
+	DeleteAt      int64
+	MattermostEnv []byte
+}
+
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt").
+		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt", "MattermostEnv").
 		From(`"Group"`)
+}
+
+func rawGroupToGroup(raw *rawGroup) (*model.Group, error) {
+	mattermostEnv, err := model.EnvVarFromJSON(raw.MattermostEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Group{
+		ID:            raw.ID,
+		Name:          raw.Name,
+		Description:   raw.Description,
+		Version:       raw.Version,
+		CreateAt:      raw.CreateAt,
+		DeleteAt:      raw.DeleteAt,
+		MattermostEnv: *mattermostEnv,
+	}, nil
 }
 
 // GetGroup fetches the given group by id.
 func (sqlStore *SQLStore) GetGroup(id string) (*model.Group, error) {
-	var group model.Group
+	var group rawGroup
 	err := sqlStore.getBuilder(sqlStore.db, &group,
 		groupSelect.Where("ID = ?", id),
 	)
@@ -28,7 +55,7 @@ func (sqlStore *SQLStore) GetGroup(id string) (*model.Group, error) {
 		return nil, errors.Wrap(err, "failed to get group by id")
 	}
 
-	return &group, nil
+	return rawGroupToGroup(&group)
 }
 
 // GetGroups fetches the given page of created groups. The first page is 0.
@@ -46,10 +73,19 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 		builder = builder.Where("DeleteAt = 0")
 	}
 
-	var groups []*model.Group
-	err := sqlStore.selectBuilder(sqlStore.db, &groups, builder)
+	var rawGroups []*rawGroup
+	err := sqlStore.selectBuilder(sqlStore.db, &rawGroups, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for groups")
+	}
+
+	var groups []*model.Group
+	for _, rg := range rawGroups {
+		group, err := rawGroupToGroup(rg)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
 	}
 
 	return groups, nil
@@ -59,16 +95,21 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 	group.ID = model.NewID()
 	group.CreateAt = GetMillis()
+	envVarMap, err := group.MattermostEnv.ToJSON()
+	if err != nil {
+		return err
+	}
 
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(`"Group"`).
 		SetMap(map[string]interface{}{
-			"ID":          group.ID,
-			"Name":        group.Name,
-			"Description": group.Description,
-			"Version":     group.Version,
-			"CreateAt":    group.CreateAt,
-			"DeleteAt":    0,
+			"ID":            group.ID,
+			"Name":          group.Name,
+			"Description":   group.Description,
+			"Version":       group.Version,
+			"CreateAt":      group.CreateAt,
+			"DeleteAt":      0,
+			"MattermostEnv": envVarMap,
 		}),
 	)
 	if err != nil {
@@ -80,12 +121,17 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 
 // UpdateGroup updates the given group in the database.
 func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+	envVarMap, err := group.MattermostEnv.ToJSON()
+	if err != nil {
+		return err
+	}
+	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Update(`"Group"`).
 		SetMap(map[string]interface{}{
-			"Name":        group.Name,
-			"Description": group.Description,
-			"Version":     group.Version,
+			"Name":          group.Name,
+			"Description":   group.Description,
+			"Version":       group.Version,
+			"MattermostEnv": envVarMap,
 		}).
 		Where("ID = ?", group.ID),
 	)

@@ -606,6 +606,14 @@ var migrations = []migration{
 				ALTER TABLE Installation
 				ADD COLUMN MattermostEnvRaw BYTEA NULL;
 		`)
+		return err
+	}},
+	{semver.MustParse("0.13.0"), semver.MustParse("0.14.0"), func(e execer) error {
+		// Add Mattermost Env column for groups.
+		_, err := e.Exec(`
+						ALTER TABLE "Group"
+						ADD COLUMN MattermostEnv BYTEA NOT NULL DEFAULT '{}';
+				`)
 		if err != nil {
 			return err
 		}
