@@ -19,7 +19,7 @@ func compareGroupLists(t *testing.T, list1 []*model.Group, list2 []*model.Group)
 		for _, g2 := range list2 {
 			if g1.ID == g2.ID {
 				found = true
-				compareGroups(t, *g1, *g2)
+				compareGroups(t, g1, g2)
 				break
 			}
 		}
@@ -30,7 +30,7 @@ func compareGroupLists(t *testing.T, list1 []*model.Group, list2 []*model.Group)
 	}
 }
 
-func compareGroups(t *testing.T, group1 model.Group, group2 model.Group) {
+func compareGroups(t *testing.T, group1 *model.Group, group2 *model.Group) {
 	assert.Equal(t, group1.ID, group2.ID)
 	assert.Equal(t, group1.Name, group2.Name)
 	assert.Equal(t, group1.Description, group2.Description)
@@ -140,13 +140,13 @@ func TestGroups(t *testing.T) {
 	t.Run("get group 1", func(t *testing.T) {
 		group, err := sqlStore.GetGroup(group1.ID)
 		require.NoError(t, err)
-		compareGroups(t, *group1, *group)
+		compareGroups(t, group1, group)
 	})
 
 	t.Run("get group 2", func(t *testing.T) {
 		group, err := sqlStore.GetGroup(group2.ID)
 		require.NoError(t, err)
-		compareGroups(t, *group2, *group)
+		compareGroups(t, group2, group)
 	})
 
 	testCases := []struct {
@@ -232,11 +232,11 @@ func TestUpdateGroup(t *testing.T) {
 
 	actualGroup1, err := sqlStore.GetGroup(group1.ID)
 	require.NoError(t, err)
-	compareGroups(t, *group1, *actualGroup1)
+	compareGroups(t, group1, actualGroup1)
 
 	actualGroup2, err := sqlStore.GetGroup(group2.ID)
 	require.NoError(t, err)
-	compareGroups(t, *group2, *actualGroup2)
+	compareGroups(t, group2, actualGroup2)
 }
 
 func TestDeleteGroup(t *testing.T) {
@@ -270,11 +270,11 @@ func TestDeleteGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, 0, actualGroup1.DeleteAt)
 	group1.DeleteAt = actualGroup1.DeleteAt
-	compareGroups(t, *group1, *actualGroup1)
+	compareGroups(t, group1, actualGroup1)
 
 	actualGroup2, err := sqlStore.GetGroup(group2.ID)
 	require.NoError(t, err)
-	compareGroups(t, *group2, *actualGroup2)
+	compareGroups(t, group2, actualGroup2)
 
 	time.Sleep(1 * time.Millisecond)
 
@@ -284,5 +284,5 @@ func TestDeleteGroup(t *testing.T) {
 
 	actualGroup1, err = sqlStore.GetGroup(group1.ID)
 	require.NoError(t, err)
-	compareGroups(t, *group1, *actualGroup1)
+	compareGroups(t, group1, actualGroup1)
 }
