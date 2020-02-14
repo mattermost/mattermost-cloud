@@ -1,9 +1,21 @@
 package aws
 
 import (
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/aws-sdk-go/service/acm/acmiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,12 +37,25 @@ type AWS interface {
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
 	IsValidAMI(AMIImage string) (bool, error)
+
+	CreateDatabaseSnapshot(installationID string) error
 }
 
 // Client is a client for interacting with AWS resources.
 type Client struct {
-	api   api
+	// This is here for backwards compatibility but it should be deprecated in favour of
+	// the interfaces provided by AWS official SDK.
+	api api
+
 	store model.InstallationDatabaseStoreInterface
+
+	acm            acmiface.ACMAPI
+	ec2            ec2iface.EC2API
+	iam            iamiface.IAMAPI
+	rds            rdsiface.RDSAPI
+	s3             s3iface.S3API
+	route53        route53iface.Route53API
+	secretsManager secretsmanageriface.SecretsManagerAPI
 }
 
 // api mocks out the AWS API calls for testing.
@@ -49,6 +74,21 @@ type api interface {
 	getACMClient() (*acm.ACM, error)
 	listCertificates(*acm.ACM, *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error)
 	listTagsForCertificate(*acm.ACM, *acm.ListTagsForCertificateInput) (*acm.ListTagsForCertificateOutput, error)
+}
+
+// NewAWSClient returns a new AWS client.
+func NewAWSClient(sess *session.Session) *Client {
+	return &Client{
+		api: &apiInterface{},
+
+		acm:            acm.New(sess),
+		ec2:            ec2.New(sess),
+		iam:            iam.New(sess),
+		rds:            rds.New(sess),
+		s3:             s3.New(sess),
+		route53:        route53.New(sess),
+		secretsManager: secretsmanager.New(sess),
+	}
 }
 
 // New returns a new AWS client.

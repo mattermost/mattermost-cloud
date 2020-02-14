@@ -11,6 +11,8 @@ TERRAFORM_VERSION=0.11.14
 KOPS_VERSION=1.15.0
 HELM_VERSION=v2.14.2
 KUBECTL_VERSION=v1.14.0
+AWS_SDK_VERSION=v1.25.6
+LOGRUS_VERSION=v1.4.1
 
 ################################################################################
 
@@ -20,6 +22,8 @@ MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
+AWS_SDK_PATH := $(GOPATH)/pkg/mod/github.com/aws/aws-sdk-go\@${AWS_SDK_VERSION}
+LOGRUS_PATH := $(GOPATH)/pkg/mod/github.com/sirupsen/logrus\@${LOGRUS_VERSION}
 
 export GO111MODULE=on
 
@@ -91,3 +95,21 @@ get-kubectl: ## Download kubectl only if it's not available. Used in the docker 
 .PHONY: install
 install: build
 	go install ./...
+
+# Generate mocks from the interfaces.
+.PHONY: mocks
+mocks:
+	@if [ ! -f $(GOPATH)/bin/mockery ]; then \
+		echo "installing mockery ..." && \
+ 		env GO111MODULE=off $(GO) get -u github.com/vektra/mockery/.../; \
+	fi
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/ec2/ec2iface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/rds/rdsiface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/s3/s3iface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/acm/acmiface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/iam/iamiface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/route53/route53iface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface -all -output ./internal/mocks/aws-sdk/
+	$(GOPATH)/bin/mockery -dir $(LOGRUS_PATH)/ -all -output ./internal/mocks/logger/
+	$(GOPATH)/bin/mockery -dir ./internal/tools/aws -all -output ./internal/mocks/aws-tools/
+

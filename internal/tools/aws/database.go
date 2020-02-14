@@ -49,6 +49,23 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 	return nil
 }
 
+// Snapshot creates a snapshot of the RDS database.
+func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
+	sess, err := DefaultSessionConfig().CreateSession(logger)
+	if err != nil {
+		return err
+	}
+
+	err = NewAWSClient(sess).CreateDatabaseSnapshot(d.installationID)
+	if err != nil {
+		return errors.Wrap(err, "unable to snapshot RDS database")
+	}
+
+	logger.WithField("installation-id", d.installationID).Info("RDS database snapshot in progress")
+
+	return nil
+}
+
 // GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
 // accessing the RDS database.
 func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {

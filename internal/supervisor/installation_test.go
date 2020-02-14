@@ -196,6 +196,10 @@ func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string) (*aws.IAM
 	return nil, nil
 }
 
+func (a *mockAWS) CreateDatabaseSnapshot(installationID string) error {
+	return nil
+}
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	t.Run("no clusters pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)

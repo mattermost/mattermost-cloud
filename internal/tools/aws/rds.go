@@ -8,9 +8,29 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
+
+// CreateDatabaseSnapshot creates a snapshot of RDS database.
+func (a *Client) CreateDatabaseSnapshot(installationID string) error {
+	dbClusterID := CloudID(installationID)
+
+	_, err := a.rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
+		DBClusterIdentifier:         aws.String(dbClusterID),
+		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%s", dbClusterID, model.NewID())),
+		Tags: []*rds.Tag{&rds.Tag{
+			Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
+			Value: aws.String(fmt.Sprintf("rds-snapshot-%s", dbClusterID)),
+		}},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create a DB cluster snapshot for replication")
+	}
+
+	return nil
+}
 
 func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) ([]string, error) {
 	svc := ec2.New(session.New(), &aws.Config{
