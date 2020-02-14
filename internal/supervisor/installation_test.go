@@ -138,6 +138,8 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 		nil
 }
 
+// TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
+// can be tested.
 type mockAWS struct{}
 
 func (a *mockAWS) GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error) {
