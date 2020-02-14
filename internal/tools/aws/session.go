@@ -11,7 +11,7 @@ var singletonSessionOpts *SessionOpts
 
 // DefaultSessionConfig returns a singleton instance of SessionOpts with a default AWS config in it.
 func DefaultSessionConfig() *SessionOpts {
-	if singletonSessionOpts != nil {
+	if singletonSessionOpts == nil {
 		singletonSessionOpts = &SessionOpts{
 			Opts: &session.Options{
 				Config: aws.Config{
