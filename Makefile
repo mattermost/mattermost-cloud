@@ -11,8 +11,6 @@ TERRAFORM_VERSION=0.11.14
 KOPS_VERSION=1.15.0
 HELM_VERSION=v2.14.2
 KUBECTL_VERSION=v1.14.0
-AWS_SDK_VERSION=v1.25.6
-LOGRUS_VERSION=v1.4.1
 
 ################################################################################
 
@@ -22,10 +20,23 @@ MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
 BUILD_HASH := $(shell git rev-parse HEAD)
-AWS_SDK_PATH := $(GOPATH)/pkg/mod/github.com/aws/aws-sdk-go\@${AWS_SDK_VERSION}
-LOGRUS_PATH := $(GOPATH)/pkg/mod/github.com/sirupsen/logrus\@${LOGRUS_VERSION}
+
+################################################################################
+
+AWS_SDK_URL := github.com/aws/aws-sdk-go
+AWS_SDK_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${AWS_SDK_URL} | cut -c28-)
+AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
+
+LOGRUS_URL := github.com/sirupsen/logrus
+LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL} | cut -c29-)
+LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
 export GO111MODULE=on
+
+.PHONY: paths
+paths:
+	@echo ${LOGRUS_VERSION}
+	@echo ${LOGRUS_PATH}
 
 ## Checks the code style, tests, builds and bundles.
 all: check-style dist
