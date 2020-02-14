@@ -43,8 +43,6 @@ type AWS interface {
 
 // Client is a client for interacting with AWS resources.
 type Client struct {
-	// This is here for backwards compatibility but it should be deprecated in favour of
-	// the interfaces provided by AWS official SDK.
 	api api
 
 	store model.InstallationDatabaseStoreInterface
@@ -59,6 +57,7 @@ type Client struct {
 }
 
 // api mocks out the AWS API calls for testing.
+// TODO(gsagula): This should be deprecated in favour of the interfaces provided by AWS SDK.
 type api interface {
 	getRoute53Client() (*route53.Route53, error)
 	changeResourceRecordSets(*route53.Route53, *route53.ChangeResourceRecordSetsInput) (*route53.ChangeResourceRecordSetsOutput, error)
