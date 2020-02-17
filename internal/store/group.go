@@ -11,23 +11,18 @@ import (
 var groupSelect sq.SelectBuilder
 
 type rawGroup struct {
-	ID            string
-	Name          string
-	Description   string
-	Version       string
-	CreateAt      int64
-	DeleteAt      int64
-	MattermostEnv []byte
+	model.Group
+	RawMattermostEnv []byte
 }
 
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt", "MattermostEnv").
+		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt", "RawMattermostEnv").
 		From(`"Group"`)
 }
 
 func rawGroupToGroup(raw *rawGroup) (*model.Group, error) {
-	mattermostEnv, err := model.EnvVarFromJSON(raw.MattermostEnv)
+	mattermostEnv, err := model.EnvVarFromJSON(raw.RawMattermostEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +98,13 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(`"Group"`).
 		SetMap(map[string]interface{}{
-			"ID":            group.ID,
-			"Name":          group.Name,
-			"Description":   group.Description,
-			"Version":       group.Version,
-			"CreateAt":      group.CreateAt,
-			"DeleteAt":      0,
-			"MattermostEnv": envVarMap,
+			"ID":               group.ID,
+			"Name":             group.Name,
+			"Description":      group.Description,
+			"Version":          group.Version,
+			"CreateAt":         group.CreateAt,
+			"DeleteAt":         0,
+			"RawMattermostEnv": envVarMap,
 		}),
 	)
 	if err != nil {
@@ -128,10 +123,10 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Update(`"Group"`).
 		SetMap(map[string]interface{}{
-			"Name":          group.Name,
-			"Description":   group.Description,
-			"Version":       group.Version,
-			"MattermostEnv": envVarMap,
+			"Name":             group.Name,
+			"Description":      group.Description,
+			"Version":          group.Version,
+			"RawMattermostEnv": envVarMap,
 		}).
 		Where("ID = ?", group.ID),
 	)
