@@ -110,9 +110,9 @@ func NewAWSTestSuite() *AWSTestSuite {
 		RDSParamGroup:        "mattermost-provisioner-rds-pg",
 		RDSAvailabilityZones: []string{"us-east-1a", "us-east-1b", "us-east-1c"},
 		GroupID:              "id-0000000000000000",
-		SecretString:         "{\"MasterUsername\":\"mmcloud\",\"MasterPassword\":\"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC\"}",
-		SecretStringUserErr:  "{\"username\":\"mmcloud\",\"MasterPassword\":\"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC\"}",
-		SecretStringPassErr:  "{\"MasterUsername\":\"mmcloud\",\"password\":\"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC\"}",
+		SecretString:         `{"MasterUsername":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
+		SecretStringUserErr:  `{"username":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
+		SecretStringPassErr:  `{"MasterUsername":"mmcloud","password":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
 		EndpointsB: []string{"example1.mattermost.com"},

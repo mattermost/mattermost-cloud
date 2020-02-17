@@ -1,7 +1,7 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/acm/acmiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -76,7 +76,7 @@ type api interface {
 }
 
 // NewAWSClient returns a new AWS client.
-func NewAWSClient(sess *session.Session) *Client {
+func NewAWSClient(sess *awsSession.Session) *Client {
 	return &Client{
 		api: &apiInterface{},
 

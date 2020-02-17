@@ -110,10 +110,6 @@ install: build
 # Generate mocks from the interfaces.
 .PHONY: mocks
 mocks:
-	@if [ ! -f $(GOPATH)/bin/mockery ]; then \
-		echo "installing mockery ..." && \
- 		env GO111MODULE=off $(GO) get -u github.com/vektra/mockery/.../; \
-	fi
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/ec2/ec2iface -all -output ./internal/mocks/aws-sdk/
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/rds/rdsiface -all -output ./internal/mocks/aws-sdk/
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/s3/s3iface -all -output ./internal/mocks/aws-sdk/
