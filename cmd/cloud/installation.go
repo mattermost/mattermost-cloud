@@ -241,8 +241,10 @@ func parseEnvVarInput(rawInput []string) (model.EnvVarMap, error) {
 	envVarMap := make(model.EnvVarMap)
 
 	for _, env := range rawInput {
-		kv := strings.Split(env, "=")
-		if len(kv) != 2 {
+		// Split the input once by "=" to allow for multiple "="s to be in the
+		// value. Expect there to still be one key and value.
+		kv := strings.SplitN(env, "=", 2)
+		if len(kv) != 2 || len(kv[0]) == 0 || len(kv[1]) == 0 {
 			return nil, errors.Errorf("%s is not in a valid env format; expecting KEY_NAME=VALUE", env)
 		}
 
