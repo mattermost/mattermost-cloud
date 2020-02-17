@@ -612,7 +612,7 @@ var migrations = []migration{
 		// Add Mattermost Env column for groups.
 		_, err := e.Exec(`
 						ALTER TABLE "Group"
-						ADD COLUMN RawMattermostEnv BYTEA NOT NULL DEFAULT '{}';
+						ADD COLUMN MattermostEnvRaw BYTEA NULL;
 				`)
 		if err != nil {
 			return err

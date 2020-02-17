@@ -12,17 +12,17 @@ var groupSelect sq.SelectBuilder
 
 type rawGroup struct {
 	model.Group
-	RawMattermostEnv []byte
+	MattermostEnvRaw []byte
 }
 
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt", "RawMattermostEnv").
+		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt", "MattermostEnvRaw").
 		From(`"Group"`)
 }
 
 func rawGroupToGroup(raw *rawGroup) (*model.Group, error) {
-	mattermostEnv, err := model.EnvVarFromJSON(raw.RawMattermostEnv)
+	mattermostEnv, err := model.EnvVarFromJSON(raw.MattermostEnvRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 			"Version":          group.Version,
 			"CreateAt":         group.CreateAt,
 			"DeleteAt":         0,
-			"RawMattermostEnv": envVarMap,
+			"MattermostEnvRaw": envVarMap,
 		}),
 	)
 	if err != nil {
@@ -126,7 +126,7 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
 			"Name":             group.Name,
 			"Description":      group.Description,
 			"Version":          group.Version,
-			"RawMattermostEnv": envVarMap,
+			"MattermostEnvRaw": envVarMap,
 		}).
 		Where("ID = ?", group.ID),
 	)
