@@ -62,10 +62,18 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = createGroupRequest.MattermostEnv.Validate()
+	if err != nil {
+		c.Logger.WithError(err).Error("invalid env var settings")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	group := model.Group{
-		Name:        createGroupRequest.Name,
-		Description: createGroupRequest.Description,
-		Version:     createGroupRequest.Version,
+		Name:          createGroupRequest.Name,
+		Description:   createGroupRequest.Description,
+		Version:       createGroupRequest.Version,
+		MattermostEnv: createGroupRequest.MattermostEnv,
 	}
 
 	err = c.Store.CreateGroup(&group)
@@ -114,6 +122,13 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = patchGroupRequest.MattermostEnv.Validate()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		c.Logger.WithError(err).Error("invalid env var settings")
 		return
 	}
 

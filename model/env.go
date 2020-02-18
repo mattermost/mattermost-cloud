@@ -54,8 +54,8 @@ func (em *EnvVarMap) ToEnvList() []corev1.EnvVar {
 
 // ToJSON converts the EnvVarMap to a JSON object represented as a
 // []byte
-func (e *EnvVarMap) ToJSON() ([]byte, error) {
-	b, err := json.Marshal(e)
+func (em *EnvVarMap) ToJSON() ([]byte, error) {
+	b, err := json.Marshal(em)
 	if err != nil {
 		return []byte(nil), err
 	}

@@ -11,9 +11,10 @@ import (
 
 // CreateGroupRequest specifies the parameters for a new group.
 type CreateGroupRequest struct {
-	Name        string
-	Description string
-	Version     string
+	Name          string
+	Description   string
+	Version       string
+	MattermostEnv EnvVarMap
 }
 
 // NewCreateGroupRequestFromReader will create a CreateGroupRequest from an io.Reader with JSON data.
@@ -36,10 +37,11 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 
 // PatchGroupRequest specifies the parameters for an updated group.
 type PatchGroupRequest struct {
-	ID          string
-	Name        *string
-	Description *string
-	Version     *string
+	ID            string
+	Name          *string
+	Description   *string
+	Version       *string
+	MattermostEnv EnvVarMap
 }
 
 // NewPatchGroupRequestFromReader will create a PatchGroupRequest from an io.Reader with JSON data.
@@ -68,6 +70,16 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 	if p.Version != nil && *p.Version != group.Version {
 		applied = true
 		group.Version = *p.Version
+	}
+
+	if len(p.MattermostEnv) != 0 {
+		applied = true
+		for k, v := range p.MattermostEnv {
+			if len(group.MattermostEnv) == 0 {
+				group.MattermostEnv = make(EnvVarMap)
+			}
+			group.MattermostEnv[k] = v
+		}
 	}
 
 	return applied
