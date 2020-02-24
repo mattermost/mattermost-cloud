@@ -154,10 +154,10 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateCreationDNS:
 		return s.configureInstallationDNS(installation, logger)
 
-	case model.InstallationStateUpgradeRequested:
+	case model.InstallationStateUpdateRequested:
 		return s.updateInstallation(installation, instanceID, logger)
 
-	case model.InstallationStateUpgradeInProgress:
+	case model.InstallationStateUpdateInProgress:
 		return s.waitForUpdateComplete(installation, instanceID, logger)
 
 	case model.InstallationStateDeletionRequested,
@@ -496,7 +496,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 	logger.Infof("Finished updating clusters installations")
 
-	return model.InstallationStateUpgradeInProgress
+	return model.InstallationStateUpdateInProgress
 }
 
 func (s *InstallationSupervisor) waitForUpdateComplete(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -530,7 +530,7 @@ func (s *InstallationSupervisor) waitForUpdateComplete(installation *model.Insta
 	}
 	if failed > 0 {
 		logger.Infof("Found %d failed cluster installations", failed)
-		return model.InstallationStateUpgradeFailed
+		return model.InstallationStateUpdateFailed
 	}
 
 	return installation.State

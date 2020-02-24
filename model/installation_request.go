@@ -13,14 +13,15 @@ import (
 
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
-	OwnerID   string
-	Version   string
-	DNS       string
-	License   string
-	Size      string
-	Affinity  string
-	Database  string
-	Filestore string
+	OwnerID       string
+	Version       string
+	DNS           string
+	License       string
+	Size          string
+	Affinity      string
+	Database      string
+	Filestore     string
+	MattermostEnv EnvVarMap
 }
 
 // SetDefaults sets the default values for an installation create request.
@@ -70,6 +71,10 @@ func (request *CreateInstallationRequest) Validate() error {
 	if !IsSupportedFilestore(request.Filestore) {
 		return errors.Errorf("unsupported filestore %s", request.Filestore)
 	}
+	err = request.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrap(err, "invalid env var settings")
+	}
 
 	return nil
 }
@@ -111,23 +116,45 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	u.RawQuery = q.Encode()
 }
 
-// UpgradeInstallationRequest specifies the parameters for an upgraded installation.
-type UpgradeInstallationRequest struct {
-	Version string
-	License string
+// UpdateInstallationRequest specifies the parameters for an updated installation.
+type UpdateInstallationRequest struct {
+	Version       string
+	License       string
+	MattermostEnv EnvVarMap
 }
 
-// NewUpgradeInstallationRequestFromReader will create a UpgradeInstallationRequest from an io.Reader with JSON data.
-func NewUpgradeInstallationRequestFromReader(reader io.Reader) (*UpgradeInstallationRequest, error) {
-	var upgradeInstallationRequest UpgradeInstallationRequest
-	err := json.NewDecoder(reader).Decode(&upgradeInstallationRequest)
+// SetDefaults sets the default values for an installation update request.
+func (request *UpdateInstallationRequest) SetDefaults() {
+	// Currently a no-op.
+}
+
+// Validate validates the values of an installation update request.
+func (request *UpdateInstallationRequest) Validate() error {
+	// TODO: remove version check after verifying that nothing will break.
+	if request.Version == "" {
+		return errors.New("must specify version")
+	}
+	err := request.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrap(err, "invalid env var settings")
+	}
+
+	return nil
+}
+
+// NewUpdateInstallationRequestFromReader will create a UpdateInstallationRequest from an io.Reader with JSON data.
+func NewUpdateInstallationRequestFromReader(reader io.Reader) (*UpdateInstallationRequest, error) {
+	var updateInstallationRequest UpdateInstallationRequest
+	err := json.NewDecoder(reader).Decode(&updateInstallationRequest)
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode upgrade installation request")
 	}
 
-	if upgradeInstallationRequest.Version == "" {
-		return nil, errors.New("must specify version")
+	updateInstallationRequest.SetDefaults()
+	err = updateInstallationRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "update installation request failed validation")
 	}
 
-	return &upgradeInstallationRequest, nil
+	return &updateInstallationRequest, nil
 }

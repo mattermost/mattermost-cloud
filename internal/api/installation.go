@@ -22,10 +22,32 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter := apiRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
 	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
-	installationRouter.Handle("/mattermost", addContext(handleUpgradeInstallation)).Methods("PUT")
+	installationRouter.Handle("/mattermost", addContext(handleUpdateInstallation)).Methods("PUT")
 	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
 	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
+}
+
+// handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.
+func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, err := c.Store.GetInstallation(installationID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if installation == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, installation)
 }
 
 // handleGetInstallations responds to GET /api/installations, returning the specified page of installations.
@@ -73,15 +95,16 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	installation := model.Installation{
-		OwnerID:   createInstallationRequest.OwnerID,
-		Version:   createInstallationRequest.Version,
-		DNS:       createInstallationRequest.DNS,
-		Database:  createInstallationRequest.Database,
-		Filestore: createInstallationRequest.Filestore,
-		License:   createInstallationRequest.License,
-		Size:      createInstallationRequest.Size,
-		Affinity:  createInstallationRequest.Affinity,
-		State:     model.InstallationStateCreationRequested,
+		OwnerID:       createInstallationRequest.OwnerID,
+		Version:       createInstallationRequest.Version,
+		DNS:           createInstallationRequest.DNS,
+		Database:      createInstallationRequest.Database,
+		Filestore:     createInstallationRequest.Filestore,
+		License:       createInstallationRequest.License,
+		Size:          createInstallationRequest.Size,
+		Affinity:      createInstallationRequest.Affinity,
+		MattermostEnv: createInstallationRequest.MattermostEnv,
+		State:         model.InstallationStateCreationRequested,
 	}
 
 	err = c.Store.CreateInstallation(&installation)
@@ -167,36 +190,14 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	outputJSON(c, w, installation)
 }
 
-// handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.
-func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+// handleUpdateInstallation responds to PUT /api/installation/{installation}/mattermost,
+// updating the installation to the Mattermost configuration embedded in the request.
+func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, err := c.Store.GetInstallation(installationID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query installation")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if installation == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, installation)
-}
-
-// handleUpgradeInstallation responds to PUT /api/installation/{installation}/mattermost, upgrading
-// the installation to the Mattermost version embedded in the request.
-func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	installationID := vars["installation"]
-	c.Logger = c.Logger.WithField("installation", installationID)
-
-	upgradeInstallationRequest, err := model.NewUpgradeInstallationRequestFromReader(r.Body)
+	updateInstallationRequest, err := model.NewUpdateInstallationRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -210,39 +211,36 @@ func handleUpgradeInstallation(c *Context, w http.ResponseWriter, r *http.Reques
 	}
 	defer unlockOnce()
 
-	newState := model.InstallationStateUpgradeRequested
+	newState := model.InstallationStateUpdateRequested
 
 	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to upgrade installation while in state %s", installation.State)
+		c.Logger.Warnf("unable to update installation while in state %s", installation.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.State != newState ||
-		installation.Version != upgradeInstallationRequest.Version ||
-		installation.License != upgradeInstallationRequest.License {
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeInstallation,
-			ID:        installation.ID,
-			NewState:  newState,
-			OldState:  installation.State,
-			Timestamp: time.Now().UnixNano(),
-		}
-		installation.State = newState
-		installation.Version = upgradeInstallationRequest.Version
-		installation.License = upgradeInstallationRequest.License
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  newState,
+		OldState:  installation.State,
+		Timestamp: time.Now().UnixNano(),
+	}
+	installation.State = newState
+	installation.Version = updateInstallationRequest.Version
+	installation.License = updateInstallationRequest.License
+	installation.MattermostEnv = updateInstallationRequest.MattermostEnv
 
-		err := c.Store.UpdateInstallation(installation)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to mark installation for upgrade")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	err = c.Store.UpdateInstallation(installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to mark installation for update")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
-		}
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	unlockOnce()

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestInstallations(t *testing.T) {
@@ -256,15 +257,15 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
-	upgradeRequestedInstallation := &model.Installation{
+	updateRequestedInstallation := &model.Installation{
 		OwnerID:  ownerID,
 		Version:  "version",
 		DNS:      "dns2.example.com",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID,
-		State:    model.InstallationStateUpgradeRequested,
+		State:    model.InstallationStateUpdateRequested,
 	}
-	err = sqlStore.CreateInstallation(upgradeRequestedInstallation)
+	err = sqlStore.CreateInstallation(updateRequestedInstallation)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -284,7 +285,7 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 		model.InstallationStateCreationFailed,
 		model.InstallationStateDeletionFailed,
 		model.InstallationStateDeleted,
-		model.InstallationStateUpgradeFailed,
+		model.InstallationStateUpdateFailed,
 		model.InstallationStateStable,
 	}
 
@@ -297,7 +298,7 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 
 	installations, err := sqlStore.GetUnlockedInstallationsPendingWork()
 	require.NoError(t, err)
-	require.Equal(t, []*model.Installation{creationRequestedInstallation, upgradeRequestedInstallation, deletionRequestedInstallation}, installations)
+	require.Equal(t, []*model.Installation{creationRequestedInstallation, updateRequestedInstallation, deletionRequestedInstallation}, installations)
 
 	lockerID := model.NewID()
 
@@ -307,9 +308,9 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 
 	installations, err = sqlStore.GetUnlockedInstallationsPendingWork()
 	require.NoError(t, err)
-	require.Equal(t, []*model.Installation{upgradeRequestedInstallation, deletionRequestedInstallation}, installations)
+	require.Equal(t, []*model.Installation{updateRequestedInstallation, deletionRequestedInstallation}, installations)
 
-	locked, err = sqlStore.LockInstallation(upgradeRequestedInstallation.ID, lockerID)
+	locked, err = sqlStore.LockInstallation(updateRequestedInstallation.ID, lockerID)
 	require.NoError(t, err)
 	require.True(t, locked)
 
@@ -462,16 +463,44 @@ func TestUpdateInstallation(t *testing.T) {
 	groupID1 := model.NewID()
 	groupID2 := model.NewID()
 
+	someBool := false
+
 	installation1 := &model.Installation{
 		OwnerID:   ownerID1,
 		Version:   "version",
 		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
-		Affinity:  model.InstallationAffinityIsolated,
-		GroupID:   &groupID1,
-		State:     model.InstallationStateCreationRequested,
+		MattermostEnv: model.EnvVarMap{
+			"Var1": model.EnvVar{
+				Value: "Var1Value",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "1",
+						FieldPath:  "some/path/neat",
+					},
+					ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+						Key:      "key_string",
+						Optional: &someBool,
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "configMap_localObjectReference",
+						},
+					},
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "secret_localObjectReference",
+						},
+						Key:      "key_secret",
+						Optional: &someBool,
+					},
+				},
+			},
+		},
+		Size:     mmv1alpha1.Size100String,
+		Affinity: model.InstallationAffinityIsolated,
+		GroupID:  &groupID1,
+		State:    model.InstallationStateCreationRequested,
 	}
 
 	err := sqlStore.CreateInstallation(installation1)
