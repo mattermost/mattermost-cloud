@@ -30,9 +30,13 @@ type rawInstallations []*rawInstallation
 
 func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 	// We only need to set values that are converted from a raw database format.
-	mattermostEnv, err := envVarFromJSON(r.MattermostEnvRaw)
-	if err != nil {
-		return nil, err
+	var err error
+	mattermostEnv := model.EnvVarMap{}
+	if r.MattermostEnvRaw != nil {
+		mattermostEnv, err = envVarFromJSON(r.MattermostEnvRaw)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	r.Installation.MattermostEnv = mattermostEnv
