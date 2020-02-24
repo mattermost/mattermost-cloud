@@ -5,7 +5,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// EnvVar contains the value source for a given environement variable.
+// EnvVar contains the value source for a given environment variable.
 type EnvVar struct {
 	Value     string               `json:"value,omitempty"`
 	ValueFrom *corev1.EnvVarSource `json:"valueFrom,omitempty"`
