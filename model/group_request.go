@@ -74,12 +74,7 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 
 	if len(p.MattermostEnv) != 0 {
 		applied = true
-		for k, v := range p.MattermostEnv {
-			if len(group.MattermostEnv) == 0 {
-				group.MattermostEnv = make(EnvVarMap)
-			}
-			group.MattermostEnv[k] = v
-		}
+		group.MattermostEnv = p.MattermostEnv
 	}
 
 	return applied
