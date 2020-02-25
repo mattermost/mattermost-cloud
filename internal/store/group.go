@@ -22,9 +22,13 @@ func init() {
 }
 
 func rawGroupToGroup(raw *rawGroup) (*model.Group, error) {
-	mattermostEnv, err := model.EnvVarFromJSON(raw.MattermostEnvRaw)
-	if err != nil {
-		return nil, err
+	var err error
+	mattermostEnv := &model.EnvVarMap{}
+	if raw.MattermostEnvRaw != nil {
+		mattermostEnv, err = model.EnvVarFromJSON(raw.MattermostEnvRaw)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &model.Group{
