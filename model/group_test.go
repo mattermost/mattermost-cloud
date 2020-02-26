@@ -66,6 +66,41 @@ func TestGroupFromReader(t *testing.T) {
 			},
 		}, group)
 	})
+
+	t.Run("request with no environment variable map", func(t *testing.T) {
+		group, err := GroupFromReader(bytes.NewReader([]byte(`{
+			"ID":"id",
+			"Name":"name",
+			"Description":"description",
+			"Version":"version",
+			"CreateAt":10,
+			"DeleteAt":20
+		}`)))
+		require.NoError(t, err)
+		require.Equal(t, &Group{
+			ID:            "id",
+			Name:          "name",
+			Description:   "description",
+			Version:       "version",
+			CreateAt:      10,
+			DeleteAt:      20,
+			MattermostEnv: nil,
+		},
+			group)
+	})
+
+	t.Run("request with malformed environment variable map", func(t *testing.T) {
+		_, err := GroupFromReader(bytes.NewReader([]byte(`{
+			"ID":"id",
+			"Name":"name",
+			"Description":"description",
+			"Version":"version",
+			"CreateAt":10,
+			"DeleteAt":20
+			"MattermostEnv": {
+		}`)))
+		require.Error(t, err)
+	})
 }
 
 func TestGroupsFromReader(t *testing.T) {
