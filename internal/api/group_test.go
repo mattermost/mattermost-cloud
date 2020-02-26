@@ -240,9 +240,10 @@ func TestCreateGroup(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		group, err := client.CreateGroup(&model.CreateGroupRequest{
-			Name:        "name",
-			Description: "description",
-			Version:     "version",
+			Name:          "name",
+			Description:   "description",
+			Version:       "version",
+			MattermostEnv: model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "name", group.Name)
@@ -250,6 +251,7 @@ func TestCreateGroup(t *testing.T) {
 		require.Equal(t, "version", group.Version)
 		require.NotEqual(t, 0, group.CreateAt)
 		require.EqualValues(t, 0, group.DeleteAt)
+		require.EqualValues(t, group.MattermostEnv, model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}})
 	})
 }
 
@@ -313,10 +315,13 @@ func TestUpdateGroup(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 
+	mattermostEnvFooBar := model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}}
+
 	group1, err := client.CreateGroup(&model.CreateGroupRequest{
-		Name:        "name",
-		Description: "description",
-		Version:     "version",
+		Name:          "name",
+		Description:   "description",
+		Version:       "version",
+		MattermostEnv: mattermostEnvFooBar,
 	})
 	require.NoError(t, err)
 
@@ -355,14 +360,16 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, "name", group1.Name)
 		require.Equal(t, "description", group1.Description)
 		require.Equal(t, "version2", group1.Version)
+		require.EqualValues(t, group1.MattermostEnv, mattermostEnvFooBar)
 	})
 
 	t.Run("full update", func(t *testing.T) {
 		err = client.UpdateGroup(&model.PatchGroupRequest{
-			ID:          group1.ID,
-			Name:        sToP("name2"),
-			Description: sToP("description2"),
-			Version:     sToP("version2"),
+			ID:            group1.ID,
+			Name:          sToP("name2"),
+			Description:   sToP("description2"),
+			Version:       sToP("version2"),
+			MattermostEnv: model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}},
 		})
 		require.NoError(t, err)
 
@@ -371,6 +378,8 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, "name2", group1.Name)
 		require.Equal(t, "description2", group1.Description)
 		require.Equal(t, "version2", group1.Version)
+		require.NotEqual(t, group1.MattermostEnv, mattermostEnvFooBar)
+		require.Equal(t, group1.MattermostEnv, model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}})
 	})
 }
 
