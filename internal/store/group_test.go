@@ -26,7 +26,7 @@ func TestGroups(t *testing.T) {
 					FieldPath:  "some/path/neat",
 				},
 
-				// TODO isw 2/17/2020
+				// TODO @gigawhitlocks 2/17/2020
 
 				// The ResourceFieldRef member below, for some reason, breaks
 				// testify's Equal() comparator, which in turn causes this
