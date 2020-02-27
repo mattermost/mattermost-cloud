@@ -35,6 +35,16 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 	return &createGroupRequest, nil
 }
 
+// Validate validates the values of a group create request
+func (request *CreateGroupRequest) Validate() error {
+	err := request.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "bad environment variable map in create group request")
+	}
+
+	return nil
+}
+
 // PatchGroupRequest specifies the parameters for an updated group.
 type PatchGroupRequest struct {
 	ID            string

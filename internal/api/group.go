@@ -110,9 +110,9 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = createGroupRequest.MattermostEnv.Validate()
+	err = createGroupRequest.Validate()
 	if err != nil {
-		c.Logger.WithError(err).Error("invalid env var settings")
+		c.Logger.WithError(err).Error("invalid create group request")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
