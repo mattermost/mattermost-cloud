@@ -72,7 +72,7 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 		group.Version = *p.Version
 	}
 
-	if len(p.MattermostEnv) != 0 {
+	if p.MattermostEnv != nil {
 		applied = true
 		group.MattermostEnv = p.MattermostEnv
 	}
