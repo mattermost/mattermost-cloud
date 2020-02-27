@@ -173,10 +173,10 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = patchGroupRequest.MattermostEnv.Validate()
+	err = patchGroupRequest.Validate()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		c.Logger.WithError(err).Error("invalid env var settings")
+		c.Logger.WithError(err).Error("invalid patch group request")
 		return
 	}
 

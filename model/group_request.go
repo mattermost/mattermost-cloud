@@ -90,6 +90,17 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 	return applied
 }
 
+// Validate validates the values of a group patch request
+func (p *PatchGroupRequest) Validate() error {
+
+	err := p.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "bad environment variable map in patch group request")
+	}
+
+	return nil
+}
+
 // GetGroupsRequest describes the parameters to request a list of groups.
 type GetGroupsRequest struct {
 	Page           int
