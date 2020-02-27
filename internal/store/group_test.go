@@ -1,8 +1,6 @@
 package store
 
 import (
-	corev1 "k8s.io/api/core/v1"
-
 	"testing"
 	"time"
 
@@ -10,6 +8,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestGroups(t *testing.T) {
