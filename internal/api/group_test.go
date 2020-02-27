@@ -238,12 +238,13 @@ func TestCreateGroup(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
+	mattermostEnvFooBar := model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}}
 	t.Run("valid", func(t *testing.T) {
 		group, err := client.CreateGroup(&model.CreateGroupRequest{
 			Name:          "name",
 			Description:   "description",
 			Version:       "version",
-			MattermostEnv: model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}},
+			MattermostEnv: mattermostEnvFooBar,
 		})
 		require.NoError(t, err)
 		require.Equal(t, "name", group.Name)
@@ -251,7 +252,7 @@ func TestCreateGroup(t *testing.T) {
 		require.Equal(t, "version", group.Version)
 		require.NotEqual(t, 0, group.CreateAt)
 		require.EqualValues(t, 0, group.DeleteAt)
-		require.EqualValues(t, group.MattermostEnv, model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}})
+		require.EqualValues(t, group.MattermostEnv, mattermostEnvFooBar)
 	})
 }
 
@@ -363,13 +364,14 @@ func TestUpdateGroup(t *testing.T) {
 		require.EqualValues(t, group1.MattermostEnv, mattermostEnvFooBar)
 	})
 
+	mattermostEnvBarBaz := model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}}
 	t.Run("full update", func(t *testing.T) {
 		err = client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            group1.ID,
 			Name:          sToP("name2"),
 			Description:   sToP("description2"),
 			Version:       sToP("version2"),
-			MattermostEnv: model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}},
+			MattermostEnv: mattermostEnvBarBaz,
 		})
 		require.NoError(t, err)
 
@@ -379,7 +381,7 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, "description2", group1.Description)
 		require.Equal(t, "version2", group1.Version)
 		require.NotEqual(t, group1.MattermostEnv, mattermostEnvFooBar)
-		require.Equal(t, group1.MattermostEnv, model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}})
+		require.Equal(t, group1.MattermostEnv, mattermostEnvBarBaz)
 	})
 }
 
