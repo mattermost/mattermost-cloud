@@ -11,9 +11,10 @@ import (
 
 // CreateGroupRequest specifies the parameters for a new group.
 type CreateGroupRequest struct {
-	Name        string
-	Description string
-	Version     string
+	Name          string
+	Description   string
+	Version       string
+	MattermostEnv EnvVarMap
 }
 
 // NewCreateGroupRequestFromReader will create a CreateGroupRequest from an io.Reader with JSON data.
@@ -34,12 +35,23 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 	return &createGroupRequest, nil
 }
 
+// Validate validates the values of a group create request
+func (request *CreateGroupRequest) Validate() error {
+	err := request.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "bad environment variable map in create group request")
+	}
+
+	return nil
+}
+
 // PatchGroupRequest specifies the parameters for an updated group.
 type PatchGroupRequest struct {
-	ID          string
-	Name        *string
-	Description *string
-	Version     *string
+	ID            string
+	Name          *string
+	Description   *string
+	Version       *string
+	MattermostEnv EnvVarMap
 }
 
 // NewPatchGroupRequestFromReader will create a PatchGroupRequest from an io.Reader with JSON data.
@@ -70,7 +82,22 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 		group.Version = *p.Version
 	}
 
+	if p.MattermostEnv != nil {
+		applied = true
+		group.MattermostEnv = p.MattermostEnv
+	}
+
 	return applied
+}
+
+// Validate validates the values of a group patch request
+func (p *PatchGroupRequest) Validate() error {
+	err := p.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrapf(err, "bad environment variable map in patch group request")
+	}
+
+	return nil
 }
 
 // GetGroupsRequest describes the parameters to request a list of groups.
