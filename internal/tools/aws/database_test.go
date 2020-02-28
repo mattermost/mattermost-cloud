@@ -44,7 +44,6 @@ func TestDatabaseTeardown(t *testing.T) {
 func (a *AWSTestSuite) TestSnapshot() {
 	database := RDSDatabase{
 		installationID: a.InstallationA.ID,
-		client:         a.Mocks.AWS,
 	}
 
 	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Once()
@@ -59,7 +58,6 @@ func (a *AWSTestSuite) TestSnapshot() {
 func (a *AWSTestSuite) TestSnapshotError() {
 	database := RDSDatabase{
 		installationID: a.InstallationA.ID,
-		client:         a.Mocks.AWS,
 	}
 
 	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(nil, errors.New("database is not stable")).Once()

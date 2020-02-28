@@ -1,7 +1,6 @@
 package aws
 
 import (
-	awsSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/acm/acmiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -19,6 +18,28 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
+
+// AWSClient is a singleton instance of an AWS client.
+var AWSClient *Client
+
+func init() {
+	// Create a singleton instance of an AWS session.
+	sess, err := NewAWSSessionWithLogger(log.WithField("tools-aws", "session"))
+	if err != nil {
+		log.Fatalf("failed to initialize AWS session: %s", err.Error())
+	}
+
+	// Create a single instance of an AWS client.
+	AWSClient = &Client{
+		acm:            acm.New(sess),
+		ec2:            ec2.New(sess),
+		iam:            iam.New(sess),
+		rds:            rds.New(sess),
+		s3:             s3.New(sess),
+		route53:        route53.New(sess),
+		secretsManager: secretsmanager.New(sess),
+	}
+}
 
 // AWS interface for use by other packages.
 type AWS interface {
@@ -41,10 +62,10 @@ type AWS interface {
 	CreateDatabaseSnapshot(installationID string) error
 }
 
+var client *Client
+
 // Client is a client for interacting with AWS resources.
 type Client struct {
-	api api
-
 	store model.InstallationDatabaseStoreInterface
 
 	acm            acmiface.ACMAPI
@@ -56,50 +77,11 @@ type Client struct {
 	secretsManager secretsmanageriface.SecretsManagerAPI
 }
 
-// api mocks out the AWS API calls for testing.
-// TODO(gsagula): This should be deprecated in favour of the interfaces provided by AWS SDK.
-type api interface {
-	getRoute53Client() (*route53.Route53, error)
-	changeResourceRecordSets(*route53.Route53, *route53.ChangeResourceRecordSetsInput) (*route53.ChangeResourceRecordSetsOutput, error)
-	listResourceRecordSets(*route53.Route53, *route53.ListResourceRecordSetsInput) (*route53.ListResourceRecordSetsOutput, error)
-	listHostedZones(*route53.Route53, *route53.ListHostedZonesInput) (*route53.ListHostedZonesOutput, error)
-	listTagsForResource(*route53.Route53, *route53.ListTagsForResourceInput) (*route53.ListTagsForResourceOutput, error)
-
-	getEC2Client() (*ec2.EC2, error)
-	tagResource(*ec2.EC2, *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
-	untagResource(*ec2.EC2, *ec2.DeleteTagsInput) (*ec2.DeleteTagsOutput, error)
-	describeImages(svc *ec2.EC2, input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error)
-
-	getACMClient() (*acm.ACM, error)
-	listCertificates(*acm.ACM, *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error)
-	listTagsForCertificate(*acm.ACM, *acm.ListTagsForCertificateInput) (*acm.ListTagsForCertificateOutput, error)
-}
-
-// NewAWSClient returns a new AWS client.
-func NewAWSClient(sess *awsSession.Session) *Client {
-	return &Client{
-		api: &apiInterface{},
-
-		acm:            acm.New(sess),
-		ec2:            ec2.New(sess),
-		iam:            iam.New(sess),
-		rds:            rds.New(sess),
-		s3:             s3.New(sess),
-		route53:        route53.New(sess),
-		secretsManager: secretsmanager.New(sess),
-	}
-}
-
-// New returns a new AWS client.
-func New() *Client {
-	return &Client{
-		api: &apiInterface{},
-	}
-}
-
 // AddSQLStore adds SQLStore functionality to the AWS client.
 func (c *Client) AddSQLStore(store model.InstallationDatabaseStoreInterface) {
-	c.store = store
+	if !c.HasSQLStore() {
+		c.store = store
+	}
 }
 
 // HasSQLStore returns whether the AWS client has a SQL store or not.
