@@ -14,6 +14,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const connStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
+
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
 	installationID string
@@ -28,10 +30,15 @@ func NewRDSDatabase(installationID string) *RDSDatabase {
 
 // Provision completes all the steps necessary to provision a RDS database.
 func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	awsClient := New()
+	sess, err := NewAWSSession()
+	if err != nil {
+		return err
+	}
+
+	awsClient := NewAWSClient(sess)
 	awsClient.AddSQLStore(store)
 
-	err := rdsDatabaseProvision(d.installationID, awsClient, logger)
+	err = rdsDatabaseProvision(d.installationID, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to provision RDS database")
 	}
@@ -41,9 +48,28 @@ func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, 
 
 // Teardown removes all AWS resources related to a RDS database.
 func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
-	err := rdsDatabaseTeardown(d.installationID, keepData, logger)
+	logger.Info("Tearing down AWS RDS database")
+	awsID := CloudID(d.installationID)
+
+	sess, err := NewAWSSession()
 	if err != nil {
-		return errors.Wrap(err, "unable to teardown RDS database")
+		return err
+	}
+
+	awsClient := NewAWSClient(sess)
+	err = awsClient.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete RDS secret")
+	}
+
+	if !keepData {
+		err = awsClient.rdsEnsureDBClusterDeleted(awsID, logger)
+		if err != nil {
+			return errors.Wrap(err, "unable to delete RDS DB cluster")
+		}
+		logger.WithField("db-cluster-name", awsID).Debug("AWS RDS DB cluster deleted")
+	} else {
+		logger.WithField("db-cluster-name", awsID).Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
 	}
 
 	return nil
@@ -51,7 +77,7 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 
 // Snapshot creates a snapshot of the RDS database.
 func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
-	sess, err := DefaultSessionConfig().CreateSession(logger)
+	sess, err := NewAWSSession()
 	if err != nil {
 		return err
 	}
@@ -82,17 +108,13 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
-	databaseConnectionString := fmt.Sprintf(
-		"mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
-		rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbCluster.Endpoint,
-	)
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": databaseConnectionString,
+			"DB_CONNECTION_STRING": fmt.Sprintf(connStringTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbCluster.Endpoint),
 		},
 	}
 
@@ -162,34 +184,9 @@ func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.F
 		return err
 	}
 
-	masterInstanceName := fmt.Sprintf("%s-master", awsID)
-	err = awsClient.rdsEnsureDBClusterInstanceCreated(awsID, masterInstanceName, logger)
+	err = awsClient.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), logger)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func rdsDatabaseTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
-	logger.Info("Tearing down AWS RDS database")
-
-	a := New()
-	awsID := CloudID(installationID)
-
-	err := a.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to delete RDS secret")
-	}
-
-	if !keepData {
-		err = a.rdsEnsureDBClusterDeleted(awsID, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to delete RDS DB cluster")
-		}
-		logger.WithField("db-cluster-name", awsID).Debug("AWS RDS DB cluster deleted")
-	} else {
-		logger.WithField("db-cluster-name", awsID).Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
 	}
 
 	return nil

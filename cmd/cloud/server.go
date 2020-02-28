@@ -9,14 +9,16 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+
 	"time"
 
+	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	awstools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	logrus "github.com/sirupsen/logrus"
@@ -131,15 +133,33 @@ var serverCmd = &cobra.Command{
 			logger,
 		)
 
+		// Create a single instance of an AWS session.
+		sess, err := awstools.NewAWSSession()
+		if err != nil {
+			return err
+		}
+
+		awstools.MargeSessionConfig(&awssdk.Config{
+			Region: awssdk.String(awstools.DefaultAWSRegion),
+			// TODO(gsagula): we should use Retryer for a more robust retry strategy.
+			// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
+			MaxRetries: awssdk.Int(awstools.DefaultAWSClientRetries),
+		})
+
+		awstools.AddSessionLoggingHandler(logger)
+
+		// Create a single instance of an AWS client.
+		awsClient := awstools.NewAWSClient(sess)
+
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a

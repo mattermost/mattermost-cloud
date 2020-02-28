@@ -35,11 +35,38 @@ func (f *S3Filestore) Provision(logger log.FieldLogger) error {
 
 // Teardown removes all AWS resources related to an S3 filestore.
 func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
-	err := s3FilestoreTeardown(f.installationID, keepData, logger)
+	logger.Info("Tearing down AWS S3 filestore")
+
+	sess, err := NewAWSSession()
+	if err != nil {
+		return err
+	}
+
+	awsClient := NewAWSClient(sess)
+
+	awsID := CloudID(f.installationID)
+
+	err = awsClient.iamEnsureUserDeleted(awsID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
 	}
 
+	err = awsClient.secretsManagerEnsureIAMAccessKeySecretDeleted(awsID, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
+	}
+
+	if keepData {
+		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
+		return nil
+	}
+
+	err = awsClient.s3EnsureBucketDeleted(awsID, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
+	}
+
+	logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket deleted")
 	return nil
 }
 
@@ -78,10 +105,16 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*m
 func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	logger.Info("Provisioning AWS S3 filestore")
 
-	a := New()
+	sess, err := NewAWSSession()
+	if err != nil {
+		return err
+	}
+
+	awsClient := NewAWSClient(sess)
+
 	awsID := CloudID(installationID)
 
-	user, err := a.iamEnsureUserCreated(awsID, logger)
+	user, err := awsClient.iamEnsureUserCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
@@ -93,11 +126,11 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 		return err
 	}
 	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", arn.AccountID, awsID)
-	policy, err := a.iamEnsurePolicyCreated(awsID, policyARN, logger)
+	policy, err := awsClient.iamEnsurePolicyCreated(awsID, policyARN, logger)
 	if err != nil {
 		return err
 	}
-	err = a.iamEnsurePolicyAttached(awsID, policyARN)
+	err = awsClient.iamEnsurePolicyAttached(awsID, policyARN)
 	if err != nil {
 		return err
 	}
@@ -106,51 +139,23 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 		"iam-user-name":   *user.UserName,
 	}).Debug("AWS IAM policy attached to user")
 
-	err = a.s3EnsureBucketCreated(awsID)
+	err = awsClient.s3EnsureBucketCreated(awsID)
 	if err != nil {
 		return err
 	}
 	logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket created")
 
-	ak, err := a.iamEnsureAccessKeyCreated(awsID, logger)
+	ak, err := awsClient.iamEnsureAccessKeyCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
 
-	err = a.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
+	err = awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
 	if err != nil {
 		return err
 	}
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS secrets manager secret created")
-
-	return nil
-}
-
-func s3FilestoreTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
-	logger.Info("Tearing down AWS S3 filestore")
-
-	a := New()
-	awsID := CloudID(installationID)
-
-	err := a.iamEnsureUserDeleted(awsID, logger)
-	if err != nil {
-		return err
-	}
-	err = a.secretsManagerEnsureIAMAccessKeySecretDeleted(awsID, logger)
-	if err != nil {
-		return err
-	}
-
-	if !keepData {
-		err = a.s3EnsureBucketDeleted(awsID, logger)
-		if err != nil {
-			return err
-		}
-		logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket deleted")
-	} else {
-		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
-	}
 
 	return nil
 }
