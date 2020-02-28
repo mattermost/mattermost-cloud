@@ -92,7 +92,6 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 
 // Validate validates the values of a group patch request
 func (p *PatchGroupRequest) Validate() error {
-
 	err := p.MattermostEnv.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "bad environment variable map in patch group request")
