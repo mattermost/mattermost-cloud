@@ -21,6 +21,54 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupRouter.Handle("", addContext(handleGetGroup)).Methods("GET")
 	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
 	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
+
+	groupRouter.Handle("/mattermost/{version:[A-Za-z0-9.]+}", addContext(handleChangeGroupMattermostVersion)).Methods("PUT")
+}
+
+// handleChangeGroupMattermostVersion responds to PUT
+// /api/group/{group}/mattermost/{version}, upgrading or downgrading
+// the installation to the Mattermost version embedded in the request.
+func handleChangeGroupMattermostVersion(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	groupID, ok := vars["group"]
+	if !ok {
+		c.Logger.Error("failed to get group ID from request parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	c.Logger = c.Logger.WithField("group", groupID)
+
+	version, ok := vars["version"]
+	if !ok {
+		c.Logger.Error("failed to get version from request parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	c.Logger = c.Logger.WithField("version", version)
+
+	group, err := c.Store.GetGroup(groupID)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to find group with ID %s", groupID)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if group == nil {
+		c.Logger.Errorf("failed to find group with ID %s", groupID)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	group.Version = version
+	err = c.Store.UpdateGroup(group)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("error writing group object to database %#v", group)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // handleGetGroups responds to GET /api/groups, returning the specified page of groups.

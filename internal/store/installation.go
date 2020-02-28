@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -14,16 +15,60 @@ func init() {
 	installationSelect = sq.
 		Select(
 			"ID", "OwnerID", "Version", "DNS", "Database", "Filestore", "Size",
-			"Affinity", "GroupID", "State", "License", "CreateAt", "DeleteAt",
-			"LockAcquiredBy", "LockAcquiredAt",
+			"Affinity", "GroupID", "State", "License", "MattermostEnvRaw",
+			"CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Installation")
 }
 
+type rawInstallation struct {
+	*model.Installation
+	MattermostEnvRaw []byte
+}
+
+type rawInstallations []*rawInstallation
+
+func (r *rawInstallation) toInstallation() (*model.Installation, error) {
+	// We only need to set values that are converted from a raw database format.
+	var err error
+	mattermostEnv := model.EnvVarMap{}
+	if r.MattermostEnvRaw != nil {
+		mattermostEnv, err = envVarFromJSON(r.MattermostEnvRaw)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	r.Installation.MattermostEnv = mattermostEnv
+	return r.Installation, nil
+}
+
+func (rs *rawInstallations) toInstallations() ([]*model.Installation, error) {
+	var installations []*model.Installation
+	for _, rawInstallation := range *rs {
+		installation, err := rawInstallation.toInstallation()
+		if err != nil {
+			return nil, err
+		}
+		installations = append(installations, installation)
+	}
+
+	return installations, nil
+}
+
+func envVarFromJSON(raw []byte) (model.EnvVarMap, error) {
+	e := model.EnvVarMap{}
+	err := json.Unmarshal(raw, &e)
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
 // GetInstallation fetches the given installation by id.
 func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error) {
-	var installation model.Installation
-	err := sqlStore.getBuilder(sqlStore.db, &installation,
+	var rawInstallation rawInstallation
+	err := sqlStore.getBuilder(sqlStore.db, &rawInstallation,
 		installationSelect.Where("ID = ?", id),
 	)
 	if err == sql.ErrNoRows {
@@ -32,7 +77,7 @@ func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error
 		return nil, errors.Wrap(err, "failed to get installation by id")
 	}
 
-	return &installation, nil
+	return rawInstallation.toInstallation()
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
@@ -44,13 +89,13 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
 
-	var installations []*model.Installation
-	err := sqlStore.selectBuilder(sqlStore.db, &installations, builder)
+	var rawInstallations rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations pending work")
 	}
 
-	return installations, nil
+	return rawInstallations.toInstallations()
 }
 
 // LockInstallation marks the installation as locked for exclusive use by the caller.
@@ -84,13 +129,13 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter) ([]
 		builder = builder.Where("DeleteAt = 0")
 	}
 
-	var installations []*model.Installation
-	err := sqlStore.selectBuilder(sqlStore.db, &installations, builder)
+	var rawInstallations rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for installations")
 	}
 
-	return installations, nil
+	return rawInstallations.toInstallations()
 }
 
 // CreateInstallation records the given installation to the database, assigning it a unique ID.
@@ -98,24 +143,30 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 	installation.ID = model.NewID()
 	installation.CreateAt = GetMillis()
 
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+	envJSON, err := json.Marshal(installation.MattermostEnv)
+	if err != nil {
+		errors.Wrap(err, "unable to marshal MattermostEnv")
+	}
+
+	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("Installation").
 		SetMap(map[string]interface{}{
-			"ID":             installation.ID,
-			"OwnerID":        installation.OwnerID,
-			"Version":        installation.Version,
-			"DNS":            installation.DNS,
-			"Database":       installation.Database,
-			"Filestore":      installation.Filestore,
-			"Size":           installation.Size,
-			"Affinity":       installation.Affinity,
-			"GroupID":        installation.GroupID,
-			"State":          installation.State,
-			"CreateAt":       installation.CreateAt,
-			"License":        installation.License,
-			"DeleteAt":       0,
-			"LockAcquiredBy": nil,
-			"LockAcquiredAt": 0,
+			"ID":               installation.ID,
+			"OwnerID":          installation.OwnerID,
+			"Version":          installation.Version,
+			"DNS":              installation.DNS,
+			"Database":         installation.Database,
+			"Filestore":        installation.Filestore,
+			"Size":             installation.Size,
+			"Affinity":         installation.Affinity,
+			"GroupID":          installation.GroupID,
+			"State":            installation.State,
+			"CreateAt":         installation.CreateAt,
+			"License":          installation.License,
+			"MattermostEnvRaw": []byte(envJSON),
+			"DeleteAt":         0,
+			"LockAcquiredBy":   nil,
+			"LockAcquiredAt":   0,
 		}),
 	)
 	if err != nil {
@@ -127,19 +178,25 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 
 // UpdateInstallation updates the given installation in the database.
 func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) error {
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+	envJSON, err := json.Marshal(installation.MattermostEnv)
+	if err != nil {
+		errors.Wrap(err, "unable to marshal MattermostEnv")
+	}
+
+	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
-			"OwnerID":   installation.OwnerID,
-			"Version":   installation.Version,
-			"DNS":       installation.DNS,
-			"Database":  installation.Database,
-			"Filestore": installation.Filestore,
-			"Size":      installation.Size,
-			"Affinity":  installation.Affinity,
-			"GroupID":   installation.GroupID,
-			"License":   installation.License,
-			"State":     installation.State,
+			"OwnerID":          installation.OwnerID,
+			"Version":          installation.Version,
+			"DNS":              installation.DNS,
+			"Database":         installation.Database,
+			"Filestore":        installation.Filestore,
+			"Size":             installation.Size,
+			"Affinity":         installation.Affinity,
+			"GroupID":          installation.GroupID,
+			"License":          installation.License,
+			"MattermostEnvRaw": []byte(envJSON),
+			"State":            installation.State,
 		}).
 		Where("ID = ?", installation.ID),
 	)

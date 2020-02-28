@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/kubectl/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
@@ -76,6 +76,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			Version:                translateMattermostVersion(installation.Version),
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
+			MattermostEnv:          installation.MattermostEnv.ToEnvList(),
 			ServiceAnnotations: map[string]string{
 				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":        "tcp",
 				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                *certificateSummary.CertificateArn,
@@ -212,12 +213,14 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		}
 	}
 
+	cr.Spec.MattermostEnv = installation.MattermostEnv.ToEnvList()
+
 	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	logger.Infof("Updated cluster installation version to %s", installation.Version)
+	logger.Info("Updated cluster installation")
 
 	return nil
 }

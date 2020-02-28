@@ -3,11 +3,11 @@ package k8s
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/kubernetes/client-go/tools/clientcmd"
 	mmclient "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // KubeClient interfaces with a Kubernetes cluster in the same way kubectl would.

@@ -600,4 +600,16 @@ var migrations = []migration{
 		 `)
 		return err
 	}},
+	{semver.MustParse("0.12.1"), semver.MustParse("0.13.0"), func(e execer) error {
+		// Add Mattermost Env column for installations.
+		_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN MattermostEnvRaw BYTEA NULL;
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

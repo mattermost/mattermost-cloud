@@ -20,12 +20,12 @@ const (
 	// InstallationStateCreationNoCompatibleClusters is an installation that
 	// can't be fully created because there are no compatible clusters.
 	InstallationStateCreationNoCompatibleClusters = "creation-no-compatible-clusters"
-	// InstallationStateUpgradeRequested is an installation that is about to undergo a version change.
-	InstallationStateUpgradeRequested = "upgrade-requested"
-	// InstallationStateUpgradeInProgress is an installation that is undergoing a version change.
-	InstallationStateUpgradeInProgress = "upgrade-in-progress"
-	// InstallationStateUpgradeFailed is an installation that failed to change versions.
-	InstallationStateUpgradeFailed = "upgrade-failed"
+	// InstallationStateUpdateRequested is an installation that is about to undergo an update.
+	InstallationStateUpdateRequested = "update-requested"
+	// InstallationStateUpdateInProgress is an installation that is being updated.
+	InstallationStateUpdateInProgress = "update-in-progress"
+	// InstallationStateUpdateFailed is an installation that failed to update.
+	InstallationStateUpdateFailed = "update-failed"
 	// InstallationStateDeletionRequested is an installation to be deleted.
 	InstallationStateDeletionRequested = "deletion-requested"
 	// InstallationStateDeletionInProgress is an installation being deleted.
@@ -54,9 +54,9 @@ var AllInstallationStates = []string{
 	InstallationStateCreationDNS,
 	InstallationStateCreationFailed,
 	InstallationStateCreationNoCompatibleClusters,
-	InstallationStateUpgradeRequested,
-	InstallationStateUpgradeInProgress,
-	InstallationStateUpgradeFailed,
+	InstallationStateUpdateRequested,
+	InstallationStateUpdateInProgress,
+	InstallationStateUpdateFailed,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
@@ -75,8 +75,8 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateCreationInProgress,
 	InstallationStateCreationNoCompatibleClusters,
 	InstallationStateCreationDNS,
-	InstallationStateUpgradeRequested,
-	InstallationStateUpgradeInProgress,
+	InstallationStateUpdateRequested,
+	InstallationStateUpdateInProgress,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
@@ -89,7 +89,7 @@ var AllInstallationStatesPendingWork = []string{
 // API endpoint should put the installation in this state.
 var AllInstallationRequestStates = []string{
 	InstallationStateCreationRequested,
-	InstallationStateUpgradeRequested,
+	InstallationStateUpdateRequested,
 	InstallationStateDeletionRequested,
 }
 
@@ -99,7 +99,7 @@ func (i *Installation) ValidTransitionState(newState string) bool {
 	switch newState {
 	case InstallationStateCreationRequested:
 		return validTransitionToInstallationStateCreationRequested(i.State)
-	case InstallationStateUpgradeRequested:
+	case InstallationStateUpdateRequested:
 		return validTransitionToInstallationStateUpgradeRequested(i.State)
 	case InstallationStateDeletionRequested:
 		return validTransitionToInstallationStateDeletionRequested(i.State)
@@ -121,9 +121,8 @@ func validTransitionToInstallationStateCreationRequested(currentState string) bo
 func validTransitionToInstallationStateUpgradeRequested(currentState string) bool {
 	switch currentState {
 	case InstallationStateStable,
-		InstallationStateUpgradeRequested,
-		InstallationStateUpgradeInProgress,
-		InstallationStateUpgradeFailed:
+		InstallationStateUpdateRequested,
+		InstallationStateUpdateFailed:
 		return true
 	}
 
@@ -139,9 +138,9 @@ func validTransitionToInstallationStateDeletionRequested(currentState string) bo
 		InstallationStateCreationDNS,
 		InstallationStateCreationNoCompatibleClusters,
 		InstallationStateCreationFailed,
-		InstallationStateUpgradeRequested,
-		InstallationStateUpgradeInProgress,
-		InstallationStateUpgradeFailed,
+		InstallationStateUpdateRequested,
+		InstallationStateUpdateInProgress,
+		InstallationStateUpdateFailed,
 		InstallationStateDeletionRequested,
 		InstallationStateDeletionInProgress,
 		InstallationStateDeletionFinalCleanup,
