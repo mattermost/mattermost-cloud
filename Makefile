@@ -24,11 +24,11 @@ BUILD_HASH := $(shell git rev-parse HEAD)
 ################################################################################
 
 AWS_SDK_URL := github.com/aws/aws-sdk-go
-AWS_SDK_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${AWS_SDK_URL} | cut -c28-)
+AWS_SDK_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${AWS_SDK_URL} | awk '{print $$NF}')
 AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
 
 LOGRUS_URL := github.com/sirupsen/logrus
-LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL} | cut -c29-)
+LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL} | awk '{print $$NF}')
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
 export GO111MODULE=on
@@ -110,6 +110,9 @@ install: build
 # Generate mocks from the interfaces.
 .PHONY: mocks
 mocks:
+	@if [ ! -f $(GOPATH)/pkg/mod ]; then \
+		$(GO) mod download;\
+	fi
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/ec2/ec2iface -all -output ./internal/mocks/aws-sdk/
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/rds/rdsiface -all -output ./internal/mocks/aws-sdk/
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/s3/s3iface -all -output ./internal/mocks/aws-sdk/
