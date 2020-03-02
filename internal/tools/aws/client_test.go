@@ -33,9 +33,10 @@ func TestClientSuite(t *testing.T) {
 }
 
 type Mocks struct {
-	AWS *Client
-	API *testlib.AWSMockedAPI
-	LOG *testlib.MockedFieldLogger
+	AWS   *Client
+	API   *testlib.AWSMockedAPI
+	LOG   *testlib.MockedFieldLogger
+	Model *testlib.ModelMockedAPI
 }
 
 // Holds mocks, clients and fixtures for testing any AWS service. Any new fixtures
@@ -144,13 +145,14 @@ func (a *AWSTestSuite) SetupTest() {
 		secretsManager: api.SecretsManager,
 	}
 
-	// Point singleton AWS client to the mocked instance.
+	// Point the singleton AWS client instance to a mocked AWS client instance.
 	AWSClient = aws
 
 	a.Mocks = &Mocks{
-		API: api,
-		AWS: aws,
-		LOG: testlib.NewMockedFieldLogger(),
+		API:   api,
+		AWS:   aws,
+		LOG:   testlib.NewMockedFieldLogger(),
+		Model: testlib.NewModelMockedAPI(),
 	}
 }
 

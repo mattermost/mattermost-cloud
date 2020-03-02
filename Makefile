@@ -122,4 +122,4 @@ mocks:
 	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface -all -output ./internal/mocks/aws-sdk/
 	$(GOPATH)/bin/mockery -dir $(LOGRUS_PATH)/ -all -output ./internal/mocks/logger/
 	$(GOPATH)/bin/mockery -dir ./internal/tools/aws -all -output ./internal/mocks/aws-tools/
-
+	$(GOPATH)/bin/mockery -dir ./model -all -output ./internal/mocks/model/
