@@ -47,6 +47,11 @@ func (m *MockedFieldLogger) WithFieldArgs(name string, args ...string) *mock.Cal
 	return m.Logger.Mock.On("WithField", name, args).Return(logrus.NewEntry(&logrus.Logger{}))
 }
 
+// WithFields set expectations for WithFields by passing logrus.Fields.
+func (m *MockedFieldLogger) WithFields(fields logrus.Fields) *mock.Call {
+	return m.Logger.Mock.On("WithFields", fields).Return(logrus.NewEntry(&logrus.Logger{}))
+}
+
 // WithFieldString set expectations for WithField by passing name and value
 func (m *MockedFieldLogger) WithFieldString(name string, value string) *mock.Call {
 	return m.Logger.Mock.On("WithField", name, value).Return(logrus.NewEntry(&logrus.Logger{}))

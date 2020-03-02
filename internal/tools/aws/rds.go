@@ -8,36 +8,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-// CreateDatabaseSnapshot creates a snapshot of RDS database.
-func (a *Client) CreateDatabaseSnapshot(installationID string) error {
-	dbClusterID := CloudID(installationID)
-
-	_, err := a.rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
-		DBClusterIdentifier:         aws.String(dbClusterID),
-		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%s", dbClusterID, model.NewID())),
-		Tags: []*rds.Tag{&rds.Tag{
-			Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
-			Value: aws.String(fmt.Sprintf("rds-snapshot-%s", dbClusterID)),
-		}},
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create a DB cluster snapshot for replication")
-	}
-
-	return nil
-}
-
 func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) ([]string, error) {
-	svc := ec2.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	input := &ec2.DescribeSecurityGroupsInput{
+	result, err := a.ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("vpc-id"),
@@ -48,9 +24,7 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 				Values: []*string{aws.String(DefaultDBSecurityGroupTagValue)},
 			},
 		},
-	}
-
-	result, err := svc.DescribeSecurityGroups(input)
+	})
 	if err != nil {
 		return []string{}, err
 	}
@@ -70,10 +44,6 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 }
 
 func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (string, error) {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
 	// TODO:
 	// The subnet group describe functionality does not currently support
 	// filters. Instead, we look up all the subnet groups and match based on
@@ -82,8 +52,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	//
 	// We should periodically check if filters become supported and move to that
 	// when they do.
-
-	result, err := svc.DescribeDBSubnetGroups(nil)
+	result, err := a.rds.DescribeDBSubnetGroups(nil)
 	if err != nil {
 		return "", err
 	}
@@ -102,11 +71,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 }
 
 func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password string, logger log.FieldLogger) error {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	_, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	_, err := a.rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err == nil {
@@ -145,7 +110,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 	}
 
-	_, err = svc.CreateDBCluster(input)
+	_, err = a.rds.CreateDBCluster(input)
 	if err != nil {
 		return err
 	}
@@ -156,11 +121,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 }
 
 func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	_, err := svc.DescribeDBInstances(&rds.DescribeDBInstancesInput{
+	_, err := a.rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceName),
 	})
 	if err == nil {
@@ -169,7 +130,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 		return nil
 	}
 
-	_, err = svc.CreateDBInstance(&rds.CreateDBInstanceInput{
+	_, err = a.rds.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
 		DBInstanceIdentifier: aws.String(instanceName),
 		DBInstanceClass:      aws.String("db.t3.small"),
@@ -183,25 +144,6 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 	logger.WithField("db-instance-name", instanceName).Debug("AWS DB instance created")
 
 	return nil
-}
-
-func rdsGetDBCluster(awsID string, logger log.FieldLogger) (*rds.DBCluster, error) {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	result, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(result.DBClusters) != 1 {
-		return nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
-	}
-
-	return result.DBClusters[0], nil
 }
 
 func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger) error {

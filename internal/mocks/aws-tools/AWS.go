@@ -15,20 +15,6 @@ type AWS struct {
 	mock.Mock
 }
 
-// CreateDatabaseSnapshot provides a mock function with given fields: installationID
-func (_m *AWS) CreateDatabaseSnapshot(installationID string) error {
-	ret := _m.Called(installationID)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(installationID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // CreatePrivateCNAME provides a mock function with given fields: dnsName, dnsEndpoints, logger
 func (_m *AWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
 	ret := _m.Called(dnsName, dnsEndpoints, logger)

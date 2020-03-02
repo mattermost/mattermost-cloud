@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -65,9 +66,18 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 
 // Snapshot creates a snapshot of the RDS database.
 func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
-	err = AWSClient.CreateDatabaseSnapshot(d.installationID)
+	dbClusterID := CloudID(d.installationID)
+
+	_, err := AWSClient.rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
+		DBClusterIdentifier:         aws.String(dbClusterID),
+		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%s", dbClusterID, model.NewID())),
+		Tags: []*rds.Tag{&rds.Tag{
+			Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
+			Value: aws.String(fmt.Sprintf("rds-snapshot-%s", dbClusterID)),
+		}},
+	})
 	if err != nil {
-		return errors.Wrap(err, "unable to snapshot RDS database")
+		return errors.Wrap(err, "failed to create a DB cluster snapshot for replication")
 	}
 
 	logger.WithField("installation-id", d.installationID).Info("RDS database snapshot in progress")
@@ -85,9 +95,15 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 		return nil, nil, err
 	}
 
-	dbCluster, err := rdsGetDBCluster(awsID, logger)
+	result, err := AWSClient.rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if len(result.DBClusters) != 1 {
+		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
@@ -97,7 +113,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": fmt.Sprintf(connStringTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbCluster.Endpoint),
+			"DB_CONNECTION_STRING": fmt.Sprintf(connStringTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint),
 		},
 	}
 
@@ -155,14 +171,12 @@ func rdsDatabaseProvision(installationID string, logger log.FieldLogger) error {
 		return fmt.Errorf("expected 1 VPC for cluster %s, but got %d", clusterID, len(vpcs))
 	}
 
-	vpcID := *vpcs[0].VpcId
-
 	rdsSecret, err := AWSClient.secretsManagerEnsureRDSSecretCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
 
-	err = AWSClient.rdsEnsureDBClusterCreated(awsID, vpcID, rdsSecret.MasterUsername, rdsSecret.MasterPassword, logger)
+	err = AWSClient.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, logger)
 	if err != nil {
 		return err
 	}

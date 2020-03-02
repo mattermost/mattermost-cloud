@@ -24,7 +24,7 @@ var AWSClient *Client
 
 func init() {
 	// Create a singleton instance of an AWS session.
-	sess, err := NewAWSSessionWithLogger(log.WithField("tools-aws", "session"))
+	sess, err := NewAWSSessionWithLogger(log.WithField("tools-aws", "client"))
 	if err != nil {
 		log.Fatalf("failed to initialize AWS session: %s", err.Error())
 	}
@@ -58,11 +58,7 @@ type AWS interface {
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
 	IsValidAMI(AMIImage string) (bool, error)
-
-	CreateDatabaseSnapshot(installationID string) error
 }
-
-var client *Client
 
 // Client is a client for interacting with AWS resources.
 type Client struct {

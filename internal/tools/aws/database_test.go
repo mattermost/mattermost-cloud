@@ -66,6 +66,6 @@ func (a *AWSTestSuite) TestSnapshotError() {
 	err := database.Snapshot(a.Mocks.LOG.Logger)
 
 	a.Assert().Error(err)
-	a.Assert().Equal("unable to snapshot RDS database: failed to create a DB cluster snapshot for replication: database is not stable", err.Error())
+	a.Assert().Equal("failed to create a DB cluster snapshot for replication: database is not stable", err.Error())
 	a.Mocks.API.RDS.AssertExpectations(a.T())
 }

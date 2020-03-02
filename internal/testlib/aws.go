@@ -1,6 +1,8 @@
 package testlib
 
-import mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-sdk"
+import (
+	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-sdk"
+)
 
 // AWSMockedAPI has all AWS mocked services. New services should be added here.
 type AWSMockedAPI struct {

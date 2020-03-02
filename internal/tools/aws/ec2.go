@@ -28,7 +28,7 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 		},
 	})
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "unable to tag resource id: %s", resourceID)
 	}
 
 	logger.WithFields(log.Fields{

@@ -4,6 +4,13 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -63,6 +70,7 @@ type AWSTestSuite struct {
 	RDSParamGroupCluster string
 	RDSParamGroup        string
 	DBName               string
+	ResourceID           string
 	RDSAvailabilityZones []string
 
 	//Route53 fixtures
@@ -113,6 +121,7 @@ func NewAWSTestSuite() *AWSTestSuite {
 		SecretString:         `{"MasterUsername":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		SecretStringUserErr:  `{"username":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		SecretStringPassErr:  `{"MasterUsername":"mmcloud","password":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
+		ResourceID:           "WSxqXCaZw1dC",
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
 		EndpointsB: []string{"example1.mattermost.com"},
@@ -124,6 +133,7 @@ func NewAWSTestSuite() *AWSTestSuite {
 // This will take care of reseting the mocks on every run. Any new mocked library should be added here.
 func (a *AWSTestSuite) SetupTest() {
 	api := testlib.NewAWSMockedAPI()
+
 	aws := &Client{
 		rds:            api.RDS,
 		ec2:            api.EC2,
@@ -133,6 +143,9 @@ func (a *AWSTestSuite) SetupTest() {
 		route53:        api.Route53,
 		secretsManager: api.SecretsManager,
 	}
+
+	// Point singleton AWS client to the mocked instance.
+	AWSClient = aws
 
 	a.Mocks = &Mocks{
 		API: api,
@@ -145,7 +158,15 @@ func (a *AWSTestSuite) TestNewClient() {
 	session, err := session.NewSession()
 	a.Assert().NoError(err)
 
-	client := NewAWSClient(session)
+	client := &Client{
+		acm:            acm.New(session),
+		ec2:            ec2.New(session),
+		iam:            iam.New(session),
+		rds:            rds.New(session),
+		s3:             s3.New(session),
+		route53:        route53.New(session),
+		secretsManager: secretsmanager.New(session),
+	}
 
 	a.Assert().NotNil(client)
 	a.Assert().NotNil(client.acm)

@@ -562,6 +562,84 @@ func (_m *RDSAPI) BacktrackDBClusterWithContext(_a0 context.Context, _a1 *rds.Ba
 	return r0, r1
 }
 
+// CancelExportTask provides a mock function with given fields: _a0
+func (_m *RDSAPI) CancelExportTask(_a0 *rds.CancelExportTaskInput) (*rds.CancelExportTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.CancelExportTaskOutput
+	if rf, ok := ret.Get(0).(func(*rds.CancelExportTaskInput) *rds.CancelExportTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.CancelExportTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.CancelExportTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CancelExportTaskRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) CancelExportTaskRequest(_a0 *rds.CancelExportTaskInput) (*request.Request, *rds.CancelExportTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.CancelExportTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.CancelExportTaskOutput
+	if rf, ok := ret.Get(1).(func(*rds.CancelExportTaskInput) *rds.CancelExportTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.CancelExportTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CancelExportTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) CancelExportTaskWithContext(_a0 context.Context, _a1 *rds.CancelExportTaskInput, _a2 ...request.Option) (*rds.CancelExportTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.CancelExportTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.CancelExportTaskInput, ...request.Option) *rds.CancelExportTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.CancelExportTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.CancelExportTaskInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CopyDBClusterParameterGroup provides a mock function with given fields: _a0
 func (_m *RDSAPI) CopyDBClusterParameterGroup(_a0 *rds.CopyDBClusterParameterGroupInput) (*rds.CopyDBClusterParameterGroupOutput, error) {
 	ret := _m.Called(_a0)
@@ -944,6 +1022,84 @@ func (_m *RDSAPI) CopyOptionGroupWithContext(_a0 context.Context, _a1 *rds.CopyO
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.CopyOptionGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateCustomAvailabilityZone provides a mock function with given fields: _a0
+func (_m *RDSAPI) CreateCustomAvailabilityZone(_a0 *rds.CreateCustomAvailabilityZoneInput) (*rds.CreateCustomAvailabilityZoneOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.CreateCustomAvailabilityZoneOutput
+	if rf, ok := ret.Get(0).(func(*rds.CreateCustomAvailabilityZoneInput) *rds.CreateCustomAvailabilityZoneOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.CreateCustomAvailabilityZoneOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.CreateCustomAvailabilityZoneInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateCustomAvailabilityZoneRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) CreateCustomAvailabilityZoneRequest(_a0 *rds.CreateCustomAvailabilityZoneInput) (*request.Request, *rds.CreateCustomAvailabilityZoneOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.CreateCustomAvailabilityZoneInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.CreateCustomAvailabilityZoneOutput
+	if rf, ok := ret.Get(1).(func(*rds.CreateCustomAvailabilityZoneInput) *rds.CreateCustomAvailabilityZoneOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.CreateCustomAvailabilityZoneOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateCustomAvailabilityZoneWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) CreateCustomAvailabilityZoneWithContext(_a0 context.Context, _a1 *rds.CreateCustomAvailabilityZoneInput, _a2 ...request.Option) (*rds.CreateCustomAvailabilityZoneOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.CreateCustomAvailabilityZoneOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.CreateCustomAvailabilityZoneInput, ...request.Option) *rds.CreateCustomAvailabilityZoneOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.CreateCustomAvailabilityZoneOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.CreateCustomAvailabilityZoneInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1498,6 +1654,84 @@ func (_m *RDSAPI) CreateDBParameterGroupWithContext(_a0 context.Context, _a1 *rd
 	return r0, r1
 }
 
+// CreateDBProxy provides a mock function with given fields: _a0
+func (_m *RDSAPI) CreateDBProxy(_a0 *rds.CreateDBProxyInput) (*rds.CreateDBProxyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.CreateDBProxyOutput
+	if rf, ok := ret.Get(0).(func(*rds.CreateDBProxyInput) *rds.CreateDBProxyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.CreateDBProxyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.CreateDBProxyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateDBProxyRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) CreateDBProxyRequest(_a0 *rds.CreateDBProxyInput) (*request.Request, *rds.CreateDBProxyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.CreateDBProxyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.CreateDBProxyOutput
+	if rf, ok := ret.Get(1).(func(*rds.CreateDBProxyInput) *rds.CreateDBProxyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.CreateDBProxyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateDBProxyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) CreateDBProxyWithContext(_a0 context.Context, _a1 *rds.CreateDBProxyInput, _a2 ...request.Option) (*rds.CreateDBProxyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.CreateDBProxyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.CreateDBProxyInput, ...request.Option) *rds.CreateDBProxyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.CreateDBProxyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.CreateDBProxyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateDBSecurityGroup provides a mock function with given fields: _a0
 func (_m *RDSAPI) CreateDBSecurityGroup(_a0 *rds.CreateDBSecurityGroupInput) (*rds.CreateDBSecurityGroupOutput, error) {
 	ret := _m.Called(_a0)
@@ -1958,6 +2192,84 @@ func (_m *RDSAPI) CreateOptionGroupWithContext(_a0 context.Context, _a1 *rds.Cre
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.CreateOptionGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteCustomAvailabilityZone provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeleteCustomAvailabilityZone(_a0 *rds.DeleteCustomAvailabilityZoneInput) (*rds.DeleteCustomAvailabilityZoneOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DeleteCustomAvailabilityZoneOutput
+	if rf, ok := ret.Get(0).(func(*rds.DeleteCustomAvailabilityZoneInput) *rds.DeleteCustomAvailabilityZoneOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeleteCustomAvailabilityZoneOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DeleteCustomAvailabilityZoneInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteCustomAvailabilityZoneRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeleteCustomAvailabilityZoneRequest(_a0 *rds.DeleteCustomAvailabilityZoneInput) (*request.Request, *rds.DeleteCustomAvailabilityZoneOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DeleteCustomAvailabilityZoneInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DeleteCustomAvailabilityZoneOutput
+	if rf, ok := ret.Get(1).(func(*rds.DeleteCustomAvailabilityZoneInput) *rds.DeleteCustomAvailabilityZoneOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DeleteCustomAvailabilityZoneOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteCustomAvailabilityZoneWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DeleteCustomAvailabilityZoneWithContext(_a0 context.Context, _a1 *rds.DeleteCustomAvailabilityZoneInput, _a2 ...request.Option) (*rds.DeleteCustomAvailabilityZoneOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DeleteCustomAvailabilityZoneOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DeleteCustomAvailabilityZoneInput, ...request.Option) *rds.DeleteCustomAvailabilityZoneOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeleteCustomAvailabilityZoneOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DeleteCustomAvailabilityZoneInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -2512,6 +2824,84 @@ func (_m *RDSAPI) DeleteDBParameterGroupWithContext(_a0 context.Context, _a1 *rd
 	return r0, r1
 }
 
+// DeleteDBProxy provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeleteDBProxy(_a0 *rds.DeleteDBProxyInput) (*rds.DeleteDBProxyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DeleteDBProxyOutput
+	if rf, ok := ret.Get(0).(func(*rds.DeleteDBProxyInput) *rds.DeleteDBProxyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeleteDBProxyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DeleteDBProxyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteDBProxyRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeleteDBProxyRequest(_a0 *rds.DeleteDBProxyInput) (*request.Request, *rds.DeleteDBProxyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DeleteDBProxyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DeleteDBProxyOutput
+	if rf, ok := ret.Get(1).(func(*rds.DeleteDBProxyInput) *rds.DeleteDBProxyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DeleteDBProxyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteDBProxyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DeleteDBProxyWithContext(_a0 context.Context, _a1 *rds.DeleteDBProxyInput, _a2 ...request.Option) (*rds.DeleteDBProxyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DeleteDBProxyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DeleteDBProxyInput, ...request.Option) *rds.DeleteDBProxyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeleteDBProxyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DeleteDBProxyInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteDBSecurityGroup provides a mock function with given fields: _a0
 func (_m *RDSAPI) DeleteDBSecurityGroup(_a0 *rds.DeleteDBSecurityGroupInput) (*rds.DeleteDBSecurityGroupOutput, error) {
 	ret := _m.Called(_a0)
@@ -2902,6 +3292,84 @@ func (_m *RDSAPI) DeleteGlobalClusterWithContext(_a0 context.Context, _a1 *rds.D
 	return r0, r1
 }
 
+// DeleteInstallationMedia provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeleteInstallationMedia(_a0 *rds.DeleteInstallationMediaInput) (*rds.DeleteInstallationMediaOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DeleteInstallationMediaOutput
+	if rf, ok := ret.Get(0).(func(*rds.DeleteInstallationMediaInput) *rds.DeleteInstallationMediaOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeleteInstallationMediaOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DeleteInstallationMediaInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteInstallationMediaRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeleteInstallationMediaRequest(_a0 *rds.DeleteInstallationMediaInput) (*request.Request, *rds.DeleteInstallationMediaOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DeleteInstallationMediaInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DeleteInstallationMediaOutput
+	if rf, ok := ret.Get(1).(func(*rds.DeleteInstallationMediaInput) *rds.DeleteInstallationMediaOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DeleteInstallationMediaOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteInstallationMediaWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DeleteInstallationMediaWithContext(_a0 context.Context, _a1 *rds.DeleteInstallationMediaInput, _a2 ...request.Option) (*rds.DeleteInstallationMediaOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DeleteInstallationMediaOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DeleteInstallationMediaInput, ...request.Option) *rds.DeleteInstallationMediaOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeleteInstallationMediaOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DeleteInstallationMediaInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeleteOptionGroup provides a mock function with given fields: _a0
 func (_m *RDSAPI) DeleteOptionGroup(_a0 *rds.DeleteOptionGroupInput) (*rds.DeleteOptionGroupOutput, error) {
 	ret := _m.Called(_a0)
@@ -2972,6 +3440,84 @@ func (_m *RDSAPI) DeleteOptionGroupWithContext(_a0 context.Context, _a1 *rds.Del
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.DeleteOptionGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeregisterDBProxyTargets provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeregisterDBProxyTargets(_a0 *rds.DeregisterDBProxyTargetsInput) (*rds.DeregisterDBProxyTargetsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DeregisterDBProxyTargetsOutput
+	if rf, ok := ret.Get(0).(func(*rds.DeregisterDBProxyTargetsInput) *rds.DeregisterDBProxyTargetsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeregisterDBProxyTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DeregisterDBProxyTargetsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeregisterDBProxyTargetsRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DeregisterDBProxyTargetsRequest(_a0 *rds.DeregisterDBProxyTargetsInput) (*request.Request, *rds.DeregisterDBProxyTargetsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DeregisterDBProxyTargetsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DeregisterDBProxyTargetsOutput
+	if rf, ok := ret.Get(1).(func(*rds.DeregisterDBProxyTargetsInput) *rds.DeregisterDBProxyTargetsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DeregisterDBProxyTargetsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeregisterDBProxyTargetsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DeregisterDBProxyTargetsWithContext(_a0 context.Context, _a1 *rds.DeregisterDBProxyTargetsInput, _a2 ...request.Option) (*rds.DeregisterDBProxyTargetsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DeregisterDBProxyTargetsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DeregisterDBProxyTargetsInput, ...request.Option) *rds.DeregisterDBProxyTargetsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DeregisterDBProxyTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DeregisterDBProxyTargetsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -3128,6 +3674,119 @@ func (_m *RDSAPI) DescribeCertificatesWithContext(_a0 context.Context, _a1 *rds.
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeCertificatesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeCustomAvailabilityZones provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeCustomAvailabilityZones(_a0 *rds.DescribeCustomAvailabilityZonesInput) (*rds.DescribeCustomAvailabilityZonesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DescribeCustomAvailabilityZonesOutput
+	if rf, ok := ret.Get(0).(func(*rds.DescribeCustomAvailabilityZonesInput) *rds.DescribeCustomAvailabilityZonesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeCustomAvailabilityZonesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DescribeCustomAvailabilityZonesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeCustomAvailabilityZonesPages provides a mock function with given fields: _a0, _a1
+func (_m *RDSAPI) DescribeCustomAvailabilityZonesPages(_a0 *rds.DescribeCustomAvailabilityZonesInput, _a1 func(*rds.DescribeCustomAvailabilityZonesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*rds.DescribeCustomAvailabilityZonesInput, func(*rds.DescribeCustomAvailabilityZonesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeCustomAvailabilityZonesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *RDSAPI) DescribeCustomAvailabilityZonesPagesWithContext(_a0 context.Context, _a1 *rds.DescribeCustomAvailabilityZonesInput, _a2 func(*rds.DescribeCustomAvailabilityZonesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeCustomAvailabilityZonesInput, func(*rds.DescribeCustomAvailabilityZonesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeCustomAvailabilityZonesRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeCustomAvailabilityZonesRequest(_a0 *rds.DescribeCustomAvailabilityZonesInput) (*request.Request, *rds.DescribeCustomAvailabilityZonesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DescribeCustomAvailabilityZonesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DescribeCustomAvailabilityZonesOutput
+	if rf, ok := ret.Get(1).(func(*rds.DescribeCustomAvailabilityZonesInput) *rds.DescribeCustomAvailabilityZonesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DescribeCustomAvailabilityZonesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeCustomAvailabilityZonesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DescribeCustomAvailabilityZonesWithContext(_a0 context.Context, _a1 *rds.DescribeCustomAvailabilityZonesInput, _a2 ...request.Option) (*rds.DescribeCustomAvailabilityZonesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DescribeCustomAvailabilityZonesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeCustomAvailabilityZonesInput, ...request.Option) *rds.DescribeCustomAvailabilityZonesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeCustomAvailabilityZonesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeCustomAvailabilityZonesInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -4395,6 +5054,345 @@ func (_m *RDSAPI) DescribeDBParametersWithContext(_a0 context.Context, _a1 *rds.
 	return r0, r1
 }
 
+// DescribeDBProxies provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeDBProxies(_a0 *rds.DescribeDBProxiesInput) (*rds.DescribeDBProxiesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DescribeDBProxiesOutput
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxiesInput) *rds.DescribeDBProxiesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeDBProxiesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DescribeDBProxiesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxiesPages provides a mock function with given fields: _a0, _a1
+func (_m *RDSAPI) DescribeDBProxiesPages(_a0 *rds.DescribeDBProxiesInput, _a1 func(*rds.DescribeDBProxiesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxiesInput, func(*rds.DescribeDBProxiesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDBProxiesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *RDSAPI) DescribeDBProxiesPagesWithContext(_a0 context.Context, _a1 *rds.DescribeDBProxiesInput, _a2 func(*rds.DescribeDBProxiesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeDBProxiesInput, func(*rds.DescribeDBProxiesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDBProxiesRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeDBProxiesRequest(_a0 *rds.DescribeDBProxiesInput) (*request.Request, *rds.DescribeDBProxiesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxiesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DescribeDBProxiesOutput
+	if rf, ok := ret.Get(1).(func(*rds.DescribeDBProxiesInput) *rds.DescribeDBProxiesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DescribeDBProxiesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxiesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DescribeDBProxiesWithContext(_a0 context.Context, _a1 *rds.DescribeDBProxiesInput, _a2 ...request.Option) (*rds.DescribeDBProxiesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DescribeDBProxiesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeDBProxiesInput, ...request.Option) *rds.DescribeDBProxiesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeDBProxiesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeDBProxiesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxyTargetGroups provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeDBProxyTargetGroups(_a0 *rds.DescribeDBProxyTargetGroupsInput) (*rds.DescribeDBProxyTargetGroupsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DescribeDBProxyTargetGroupsOutput
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxyTargetGroupsInput) *rds.DescribeDBProxyTargetGroupsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeDBProxyTargetGroupsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DescribeDBProxyTargetGroupsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxyTargetGroupsPages provides a mock function with given fields: _a0, _a1
+func (_m *RDSAPI) DescribeDBProxyTargetGroupsPages(_a0 *rds.DescribeDBProxyTargetGroupsInput, _a1 func(*rds.DescribeDBProxyTargetGroupsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxyTargetGroupsInput, func(*rds.DescribeDBProxyTargetGroupsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDBProxyTargetGroupsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *RDSAPI) DescribeDBProxyTargetGroupsPagesWithContext(_a0 context.Context, _a1 *rds.DescribeDBProxyTargetGroupsInput, _a2 func(*rds.DescribeDBProxyTargetGroupsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeDBProxyTargetGroupsInput, func(*rds.DescribeDBProxyTargetGroupsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDBProxyTargetGroupsRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeDBProxyTargetGroupsRequest(_a0 *rds.DescribeDBProxyTargetGroupsInput) (*request.Request, *rds.DescribeDBProxyTargetGroupsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxyTargetGroupsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DescribeDBProxyTargetGroupsOutput
+	if rf, ok := ret.Get(1).(func(*rds.DescribeDBProxyTargetGroupsInput) *rds.DescribeDBProxyTargetGroupsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DescribeDBProxyTargetGroupsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxyTargetGroupsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DescribeDBProxyTargetGroupsWithContext(_a0 context.Context, _a1 *rds.DescribeDBProxyTargetGroupsInput, _a2 ...request.Option) (*rds.DescribeDBProxyTargetGroupsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DescribeDBProxyTargetGroupsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeDBProxyTargetGroupsInput, ...request.Option) *rds.DescribeDBProxyTargetGroupsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeDBProxyTargetGroupsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeDBProxyTargetGroupsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxyTargets provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeDBProxyTargets(_a0 *rds.DescribeDBProxyTargetsInput) (*rds.DescribeDBProxyTargetsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DescribeDBProxyTargetsOutput
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxyTargetsInput) *rds.DescribeDBProxyTargetsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeDBProxyTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DescribeDBProxyTargetsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxyTargetsPages provides a mock function with given fields: _a0, _a1
+func (_m *RDSAPI) DescribeDBProxyTargetsPages(_a0 *rds.DescribeDBProxyTargetsInput, _a1 func(*rds.DescribeDBProxyTargetsOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxyTargetsInput, func(*rds.DescribeDBProxyTargetsOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDBProxyTargetsPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *RDSAPI) DescribeDBProxyTargetsPagesWithContext(_a0 context.Context, _a1 *rds.DescribeDBProxyTargetsInput, _a2 func(*rds.DescribeDBProxyTargetsOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeDBProxyTargetsInput, func(*rds.DescribeDBProxyTargetsOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeDBProxyTargetsRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeDBProxyTargetsRequest(_a0 *rds.DescribeDBProxyTargetsInput) (*request.Request, *rds.DescribeDBProxyTargetsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DescribeDBProxyTargetsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DescribeDBProxyTargetsOutput
+	if rf, ok := ret.Get(1).(func(*rds.DescribeDBProxyTargetsInput) *rds.DescribeDBProxyTargetsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DescribeDBProxyTargetsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeDBProxyTargetsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DescribeDBProxyTargetsWithContext(_a0 context.Context, _a1 *rds.DescribeDBProxyTargetsInput, _a2 ...request.Option) (*rds.DescribeDBProxyTargetsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DescribeDBProxyTargetsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeDBProxyTargetsInput, ...request.Option) *rds.DescribeDBProxyTargetsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeDBProxyTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeDBProxyTargetsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeDBSecurityGroups provides a mock function with given fields: _a0
 func (_m *RDSAPI) DescribeDBSecurityGroups(_a0 *rds.DescribeDBSecurityGroupsInput) (*rds.DescribeDBSecurityGroupsOutput, error) {
 	ret := _m.Called(_a0)
@@ -5307,6 +6305,119 @@ func (_m *RDSAPI) DescribeEventsWithContext(_a0 context.Context, _a1 *rds.Descri
 	return r0, r1
 }
 
+// DescribeExportTasks provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeExportTasks(_a0 *rds.DescribeExportTasksInput) (*rds.DescribeExportTasksOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DescribeExportTasksOutput
+	if rf, ok := ret.Get(0).(func(*rds.DescribeExportTasksInput) *rds.DescribeExportTasksOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeExportTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DescribeExportTasksInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeExportTasksPages provides a mock function with given fields: _a0, _a1
+func (_m *RDSAPI) DescribeExportTasksPages(_a0 *rds.DescribeExportTasksInput, _a1 func(*rds.DescribeExportTasksOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*rds.DescribeExportTasksInput, func(*rds.DescribeExportTasksOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeExportTasksPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *RDSAPI) DescribeExportTasksPagesWithContext(_a0 context.Context, _a1 *rds.DescribeExportTasksInput, _a2 func(*rds.DescribeExportTasksOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeExportTasksInput, func(*rds.DescribeExportTasksOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeExportTasksRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeExportTasksRequest(_a0 *rds.DescribeExportTasksInput) (*request.Request, *rds.DescribeExportTasksOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DescribeExportTasksInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DescribeExportTasksOutput
+	if rf, ok := ret.Get(1).(func(*rds.DescribeExportTasksInput) *rds.DescribeExportTasksOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DescribeExportTasksOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeExportTasksWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DescribeExportTasksWithContext(_a0 context.Context, _a1 *rds.DescribeExportTasksInput, _a2 ...request.Option) (*rds.DescribeExportTasksOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DescribeExportTasksOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeExportTasksInput, ...request.Option) *rds.DescribeExportTasksOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeExportTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeExportTasksInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeGlobalClusters provides a mock function with given fields: _a0
 func (_m *RDSAPI) DescribeGlobalClusters(_a0 *rds.DescribeGlobalClustersInput) (*rds.DescribeGlobalClustersOutput, error) {
 	ret := _m.Called(_a0)
@@ -5412,6 +6523,119 @@ func (_m *RDSAPI) DescribeGlobalClustersWithContext(_a0 context.Context, _a1 *rd
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeGlobalClustersInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeInstallationMedia provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeInstallationMedia(_a0 *rds.DescribeInstallationMediaInput) (*rds.DescribeInstallationMediaOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.DescribeInstallationMediaOutput
+	if rf, ok := ret.Get(0).(func(*rds.DescribeInstallationMediaInput) *rds.DescribeInstallationMediaOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeInstallationMediaOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.DescribeInstallationMediaInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeInstallationMediaPages provides a mock function with given fields: _a0, _a1
+func (_m *RDSAPI) DescribeInstallationMediaPages(_a0 *rds.DescribeInstallationMediaInput, _a1 func(*rds.DescribeInstallationMediaOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*rds.DescribeInstallationMediaInput, func(*rds.DescribeInstallationMediaOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeInstallationMediaPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *RDSAPI) DescribeInstallationMediaPagesWithContext(_a0 context.Context, _a1 *rds.DescribeInstallationMediaInput, _a2 func(*rds.DescribeInstallationMediaOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeInstallationMediaInput, func(*rds.DescribeInstallationMediaOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DescribeInstallationMediaRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) DescribeInstallationMediaRequest(_a0 *rds.DescribeInstallationMediaInput) (*request.Request, *rds.DescribeInstallationMediaOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.DescribeInstallationMediaInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.DescribeInstallationMediaOutput
+	if rf, ok := ret.Get(1).(func(*rds.DescribeInstallationMediaInput) *rds.DescribeInstallationMediaOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.DescribeInstallationMediaOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeInstallationMediaWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) DescribeInstallationMediaWithContext(_a0 context.Context, _a1 *rds.DescribeInstallationMediaInput, _a2 ...request.Option) (*rds.DescribeInstallationMediaOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.DescribeInstallationMediaOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.DescribeInstallationMediaInput, ...request.Option) *rds.DescribeInstallationMediaOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.DescribeInstallationMediaOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.DescribeInstallationMediaInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -6410,6 +7634,84 @@ func (_m *RDSAPI) FailoverDBClusterWithContext(_a0 context.Context, _a1 *rds.Fai
 	return r0, r1
 }
 
+// ImportInstallationMedia provides a mock function with given fields: _a0
+func (_m *RDSAPI) ImportInstallationMedia(_a0 *rds.ImportInstallationMediaInput) (*rds.ImportInstallationMediaOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.ImportInstallationMediaOutput
+	if rf, ok := ret.Get(0).(func(*rds.ImportInstallationMediaInput) *rds.ImportInstallationMediaOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ImportInstallationMediaOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.ImportInstallationMediaInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ImportInstallationMediaRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) ImportInstallationMediaRequest(_a0 *rds.ImportInstallationMediaInput) (*request.Request, *rds.ImportInstallationMediaOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.ImportInstallationMediaInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.ImportInstallationMediaOutput
+	if rf, ok := ret.Get(1).(func(*rds.ImportInstallationMediaInput) *rds.ImportInstallationMediaOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.ImportInstallationMediaOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ImportInstallationMediaWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) ImportInstallationMediaWithContext(_a0 context.Context, _a1 *rds.ImportInstallationMediaInput, _a2 ...request.Option) (*rds.ImportInstallationMediaOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.ImportInstallationMediaOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.ImportInstallationMediaInput, ...request.Option) *rds.ImportInstallationMediaOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ImportInstallationMediaOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.ImportInstallationMediaInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListTagsForResource provides a mock function with given fields: _a0
 func (_m *RDSAPI) ListTagsForResource(_a0 *rds.ListTagsForResourceInput) (*rds.ListTagsForResourceOutput, error) {
 	ret := _m.Called(_a0)
@@ -6480,6 +7782,84 @@ func (_m *RDSAPI) ListTagsForResourceWithContext(_a0 context.Context, _a1 *rds.L
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.ListTagsForResourceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyCertificates provides a mock function with given fields: _a0
+func (_m *RDSAPI) ModifyCertificates(_a0 *rds.ModifyCertificatesInput) (*rds.ModifyCertificatesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.ModifyCertificatesOutput
+	if rf, ok := ret.Get(0).(func(*rds.ModifyCertificatesInput) *rds.ModifyCertificatesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ModifyCertificatesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.ModifyCertificatesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyCertificatesRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) ModifyCertificatesRequest(_a0 *rds.ModifyCertificatesInput) (*request.Request, *rds.ModifyCertificatesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.ModifyCertificatesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.ModifyCertificatesOutput
+	if rf, ok := ret.Get(1).(func(*rds.ModifyCertificatesInput) *rds.ModifyCertificatesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.ModifyCertificatesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ModifyCertificatesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) ModifyCertificatesWithContext(_a0 context.Context, _a1 *rds.ModifyCertificatesInput, _a2 ...request.Option) (*rds.ModifyCertificatesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.ModifyCertificatesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.ModifyCertificatesInput, ...request.Option) *rds.ModifyCertificatesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ModifyCertificatesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.ModifyCertificatesInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -7026,6 +8406,162 @@ func (_m *RDSAPI) ModifyDBParameterGroupWithContext(_a0 context.Context, _a1 *rd
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.ModifyDBParameterGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyDBProxy provides a mock function with given fields: _a0
+func (_m *RDSAPI) ModifyDBProxy(_a0 *rds.ModifyDBProxyInput) (*rds.ModifyDBProxyOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.ModifyDBProxyOutput
+	if rf, ok := ret.Get(0).(func(*rds.ModifyDBProxyInput) *rds.ModifyDBProxyOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ModifyDBProxyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.ModifyDBProxyInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyDBProxyRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) ModifyDBProxyRequest(_a0 *rds.ModifyDBProxyInput) (*request.Request, *rds.ModifyDBProxyOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.ModifyDBProxyInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.ModifyDBProxyOutput
+	if rf, ok := ret.Get(1).(func(*rds.ModifyDBProxyInput) *rds.ModifyDBProxyOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.ModifyDBProxyOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ModifyDBProxyTargetGroup provides a mock function with given fields: _a0
+func (_m *RDSAPI) ModifyDBProxyTargetGroup(_a0 *rds.ModifyDBProxyTargetGroupInput) (*rds.ModifyDBProxyTargetGroupOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.ModifyDBProxyTargetGroupOutput
+	if rf, ok := ret.Get(0).(func(*rds.ModifyDBProxyTargetGroupInput) *rds.ModifyDBProxyTargetGroupOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ModifyDBProxyTargetGroupOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.ModifyDBProxyTargetGroupInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyDBProxyTargetGroupRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) ModifyDBProxyTargetGroupRequest(_a0 *rds.ModifyDBProxyTargetGroupInput) (*request.Request, *rds.ModifyDBProxyTargetGroupOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.ModifyDBProxyTargetGroupInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.ModifyDBProxyTargetGroupOutput
+	if rf, ok := ret.Get(1).(func(*rds.ModifyDBProxyTargetGroupInput) *rds.ModifyDBProxyTargetGroupOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.ModifyDBProxyTargetGroupOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ModifyDBProxyTargetGroupWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) ModifyDBProxyTargetGroupWithContext(_a0 context.Context, _a1 *rds.ModifyDBProxyTargetGroupInput, _a2 ...request.Option) (*rds.ModifyDBProxyTargetGroupOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.ModifyDBProxyTargetGroupOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.ModifyDBProxyTargetGroupInput, ...request.Option) *rds.ModifyDBProxyTargetGroupOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ModifyDBProxyTargetGroupOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.ModifyDBProxyTargetGroupInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ModifyDBProxyWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) ModifyDBProxyWithContext(_a0 context.Context, _a1 *rds.ModifyDBProxyInput, _a2 ...request.Option) (*rds.ModifyDBProxyOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.ModifyDBProxyOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.ModifyDBProxyInput, ...request.Option) *rds.ModifyDBProxyOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.ModifyDBProxyOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.ModifyDBProxyInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -7806,6 +9342,84 @@ func (_m *RDSAPI) RebootDBInstanceWithContext(_a0 context.Context, _a1 *rds.Rebo
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.RebootDBInstanceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// RegisterDBProxyTargets provides a mock function with given fields: _a0
+func (_m *RDSAPI) RegisterDBProxyTargets(_a0 *rds.RegisterDBProxyTargetsInput) (*rds.RegisterDBProxyTargetsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.RegisterDBProxyTargetsOutput
+	if rf, ok := ret.Get(0).(func(*rds.RegisterDBProxyTargetsInput) *rds.RegisterDBProxyTargetsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.RegisterDBProxyTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.RegisterDBProxyTargetsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// RegisterDBProxyTargetsRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) RegisterDBProxyTargetsRequest(_a0 *rds.RegisterDBProxyTargetsInput) (*request.Request, *rds.RegisterDBProxyTargetsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.RegisterDBProxyTargetsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.RegisterDBProxyTargetsOutput
+	if rf, ok := ret.Get(1).(func(*rds.RegisterDBProxyTargetsInput) *rds.RegisterDBProxyTargetsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.RegisterDBProxyTargetsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// RegisterDBProxyTargetsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) RegisterDBProxyTargetsWithContext(_a0 context.Context, _a1 *rds.RegisterDBProxyTargetsInput, _a2 ...request.Option) (*rds.RegisterDBProxyTargetsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.RegisterDBProxyTargetsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.RegisterDBProxyTargetsInput, ...request.Option) *rds.RegisterDBProxyTargetsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.RegisterDBProxyTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.RegisterDBProxyTargetsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -9132,6 +10746,84 @@ func (_m *RDSAPI) StartDBInstanceWithContext(_a0 context.Context, _a1 *rds.Start
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *rds.StartDBInstanceInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartExportTask provides a mock function with given fields: _a0
+func (_m *RDSAPI) StartExportTask(_a0 *rds.StartExportTaskInput) (*rds.StartExportTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *rds.StartExportTaskOutput
+	if rf, ok := ret.Get(0).(func(*rds.StartExportTaskInput) *rds.StartExportTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.StartExportTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*rds.StartExportTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartExportTaskRequest provides a mock function with given fields: _a0
+func (_m *RDSAPI) StartExportTaskRequest(_a0 *rds.StartExportTaskInput) (*request.Request, *rds.StartExportTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*rds.StartExportTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *rds.StartExportTaskOutput
+	if rf, ok := ret.Get(1).(func(*rds.StartExportTaskInput) *rds.StartExportTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*rds.StartExportTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// StartExportTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *RDSAPI) StartExportTaskWithContext(_a0 context.Context, _a1 *rds.StartExportTaskInput, _a2 ...request.Option) (*rds.StartExportTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *rds.StartExportTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *rds.StartExportTaskInput, ...request.Option) *rds.StartExportTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rds.StartExportTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *rds.StartExportTaskInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
