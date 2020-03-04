@@ -1,14 +1,10 @@
 package aws
 
 import (
-	"os"
-	"testing"
-
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 func (a *AWSTestSuite) TestTagResource() {
@@ -110,18 +106,18 @@ func (a *AWSTestSuite) TestIsValidAMIError() {
 	a.Mocks.API.RDS.AssertExpectations(a.T())
 }
 
-func TestVPCReal(t *testing.T) {
-	if os.Getenv("SUPER_AWS_VPC_TEST") == "" {
-		return
-	}
+// func TestVPCReal(t *testing.T) {
+// 	if os.Getenv("SUPER_AWS_VPC_TEST") == "" {
+// 		return
+// 	}
 
-	logger := logrus.New()
+// 	logger := logrus.New()
 
-	clusterID := "testclusterID1"
+// 	clusterID := "testclusterID1"
 
-	_, err := AWSClient.GetAndClaimVpcResources(clusterID, "testowner", logger)
-	require.NoError(t, err)
+// 	_, err := AWSClient.GetAndClaimVpcResources(clusterID, "testowner", logger)
+// 	require.NoError(t, err)
 
-	err = AWSClient.releaseVpc(clusterID, logger)
-	require.NoError(t, err)
-}
+// 	err = AWSClient.releaseVpc(clusterID, logger)
+// 	require.NoError(t, err)
+// }

@@ -15,6 +15,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -27,17 +28,19 @@ type KopsProvisioner struct {
 	s3StateStore            string
 	privateSubnetIds        string
 	publicSubnetIds         string
-	useExistingAWSResources bool
-	logger                  log.FieldLogger
 	owner                   string
+	useExistingAWSResources bool
+	resourceUtil            *utils.ResourceUtil
+	logger                  log.FieldLogger
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *KopsProvisioner {
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
 		useExistingAWSResources: useExistingAWSResources,
 		logger:                  logger,
+		resourceUtil:            resourceUtil,
 		owner:                   owner,
 	}
 }

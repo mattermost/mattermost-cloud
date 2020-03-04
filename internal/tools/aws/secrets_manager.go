@@ -64,7 +64,7 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 	}
 
 	secretName := IAMSecretName(awsID)
-	_, err = a.secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
+	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
 		Name:         aws.String(secretName),
 		Description:  aws.String(fmt.Sprintf("IAM access key for user %s", awsID)),
 		SecretString: aws.String(string(b)),
@@ -81,7 +81,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 	rdsSecretPayload := &RDSSecret{}
 
 	// Check if we already have an RDS secret for this installation.
-	result, err := a.secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 	if err == nil {
@@ -114,7 +114,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
 	}
 
-	_, err = a.secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
+	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
 		Name:         aws.String(secretName),
 		Description:  aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
 		SecretString: aws.String(string(b)),
@@ -129,9 +129,9 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 }
 
 // secretsManagerGetIAMAccessKey returns the AccessKey for an IAM account.
-func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
+func (a *Client) secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	secretName := IAMSecretName(awsID)
-	result, err := AWSClient.secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {
@@ -152,9 +152,9 @@ func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	return iamAccessKey, nil
 }
 
-func secretsManagerGetRDSSecret(awsID string) (*RDSSecret, error) {
+func (a *Client) secretsManagerGetRDSSecret(awsID string) (*RDSSecret, error) {
 	secretName := RDSSecretName(awsID)
-	result, err := AWSClient.secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {
@@ -184,7 +184,7 @@ func (a *Client) secretsManagerEnsureRDSSecretDeleted(awsID string, logger log.F
 }
 
 func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
-	_, err := a.secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
+	_, err := a.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {

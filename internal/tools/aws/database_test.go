@@ -1,17 +1,12 @@
 package aws
 
 import (
-	"os"
-	"testing"
-
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 // WARNING:
@@ -19,35 +14,36 @@ import (
 // database in a real AWS account. Only set the test env vars below if you wish
 // to test this process with real AWS resources.
 
-func TestDatabaseProvision(t *testing.T) {
-	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
-	if id == "" {
-		return
-	}
+// func TestDatabaseProvision(t *testing.T) {
+// 	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
+// 	if id == "" {
+// 		return
+// 	}
 
-	logger := logrus.New()
-	database := NewRDSDatabase(id)
+// 	logger := logrus.New()
+// 	database := NewRDSDatabase(id)
 
-	err := database.Provision(nil, logger)
-	require.NoError(t, err)
-}
+// 	err := database.Provision(nil, logger)
+// 	require.NoError(t, err)
+// }
 
-func TestDatabaseTeardown(t *testing.T) {
-	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
-	if id == "" {
-		return
-	}
+// func TestDatabaseTeardown(t *testing.T) {
+// 	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
+// 	if id == "" {
+// 		return
+// 	}
 
-	logger := logrus.New()
-	database := NewRDSDatabase(id)
+// 	logger := logrus.New()
+// 	database := NewRDSDatabase(id)
 
-	err := database.Teardown(false, logger)
-	require.NoError(t, err)
-}
+// 	err := database.Teardown(false, logger)
+// 	require.NoError(t, err)
+// }
 
 func (a *AWSTestSuite) TestSnapshot() {
 	database := RDSDatabase{
 		installationID: a.InstallationA.ID,
+		client:         a.Mocks.AWS,
 	}
 
 	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Once()
@@ -62,6 +58,7 @@ func (a *AWSTestSuite) TestSnapshot() {
 func (a *AWSTestSuite) TestSnapshotError() {
 	database := RDSDatabase{
 		installationID: a.InstallationA.ID,
+		client:         a.Mocks.AWS,
 	}
 
 	a.SetCreateDBClusterSnapshotExpectation(a.InstallationA.ID).Return(nil, errors.New("database is not stable")).Once()
@@ -79,6 +76,7 @@ func (a *AWSTestSuite) TestSnapshotError() {
 func (a *AWSTestSuite) TestProvisionRDS() {
 	database := RDSDatabase{
 		installationID: a.InstallationA.ID,
+		client:         a.Mocks.AWS,
 	}
 
 	a.SetDescribeVpcsExpectations(a.ClusterA.ID).Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{&ec2.Vpc{VpcId: &a.VPCa}}}, nil).Once()

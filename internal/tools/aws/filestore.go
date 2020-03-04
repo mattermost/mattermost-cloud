@@ -14,18 +14,20 @@ import (
 // S3Filestore is a filestore backed by AWS S3.
 type S3Filestore struct {
 	installationID string
+	awsClient      *Client
 }
 
 // NewS3Filestore returns a new S3Filestore interface.
-func NewS3Filestore(installationID string) *S3Filestore {
+func NewS3Filestore(installationID string, awsClient *Client) *S3Filestore {
 	return &S3Filestore{
 		installationID: installationID,
+		awsClient:      awsClient,
 	}
 }
 
 // Provision completes all the steps necessary to provision an S3 filestore.
 func (f *S3Filestore) Provision(logger log.FieldLogger) error {
-	err := s3FilestoreProvision(f.installationID, logger)
+	err := f.s3FilestoreProvision(f.installationID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to provision AWS S3 filestore")
 	}
@@ -39,12 +41,12 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 
 	awsID := CloudID(f.installationID)
 
-	err = AWSClient.iamEnsureUserDeleted(awsID, logger)
+	err := f.awsClient.iamEnsureUserDeleted(awsID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
 	}
 
-	err = AWSClient.secretsManagerEnsureIAMAccessKeySecretDeleted(awsID, logger)
+	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretDeleted(awsID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
 	}
@@ -54,7 +56,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 		return nil
 	}
 
-	err = AWSClient.s3EnsureBucketDeleted(awsID, logger)
+	err = f.awsClient.s3EnsureBucketDeleted(awsID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
 	}
@@ -67,7 +69,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 // accessing the S3 bucket.
 func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
-	iamAccessKey, err := secretsManagerGetIAMAccessKey(awsID)
+	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -95,12 +97,12 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*m
 }
 
 // s3FilestoreProvision provisions an S3 filestore for an installation.
-func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
+func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 	logger.Info("Provisioning AWS S3 filestore")
 
 	awsID := CloudID(installationID)
 
-	user, err := AWSClient.iamEnsureUserCreated(awsID, logger)
+	user, err := f.awsClient.iamEnsureUserCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
@@ -112,11 +114,11 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 		return err
 	}
 	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", arn.AccountID, awsID)
-	policy, err := AWSClient.iamEnsurePolicyCreated(awsID, policyARN, logger)
+	policy, err := f.awsClient.iamEnsurePolicyCreated(awsID, policyARN, logger)
 	if err != nil {
 		return err
 	}
-	err = AWSClient.iamEnsurePolicyAttached(awsID, policyARN)
+	err = f.awsClient.iamEnsurePolicyAttached(awsID, policyARN)
 	if err != nil {
 		return err
 	}
@@ -125,19 +127,19 @@ func s3FilestoreProvision(installationID string, logger log.FieldLogger) error {
 		"iam-user-name":   *user.UserName,
 	}).Debug("AWS IAM policy attached to user")
 
-	err = AWSClient.s3EnsureBucketCreated(awsID)
+	err = f.awsClient.s3EnsureBucketCreated(awsID)
 	if err != nil {
 		return err
 	}
 	logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket created")
 
-	ak, err := AWSClient.iamEnsureAccessKeyCreated(awsID, logger)
+	ak, err := f.awsClient.iamEnsureAccessKeyCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
 
-	err = AWSClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
+	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
 	if err != nil {
 		return err
 	}

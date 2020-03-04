@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
@@ -13,7 +12,7 @@ import (
 )
 
 func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) ([]string, error) {
-	result, err := a.ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+	result, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("vpc-id"),
@@ -52,7 +51,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	//
 	// We should periodically check if filters become supported and move to that
 	// when they do.
-	result, err := a.rds.DescribeDBSubnetGroups(nil)
+	result, err := a.Service().rds.DescribeDBSubnetGroups(nil)
 	if err != nil {
 		return "", err
 	}
@@ -71,7 +70,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 }
 
 func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password string, logger log.FieldLogger) error {
-	_, err := a.rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err == nil {
@@ -110,7 +109,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 	}
 
-	_, err = a.rds.CreateDBCluster(input)
+	_, err = a.Service().rds.CreateDBCluster(input)
 	if err != nil {
 		return err
 	}
@@ -121,7 +120,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 }
 
 func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {
-	_, err := a.rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
+	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceName),
 	})
 	if err == nil {
@@ -130,7 +129,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 		return nil
 	}
 
-	_, err = a.rds.CreateDBInstance(&rds.CreateDBInstanceInput{
+	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
 		DBInstanceIdentifier: aws.String(instanceName),
 		DBInstanceClass:      aws.String("db.t3.small"),
@@ -147,11 +146,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 }
 
 func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger) error {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	result, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	result, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err != nil {
@@ -170,7 +165,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 	}
 
 	for _, instance := range result.DBClusters[0].DBClusterMembers {
-		_, err = svc.DeleteDBInstance(&rds.DeleteDBInstanceInput{
+		_, err = a.Service().rds.DeleteDBInstance(&rds.DeleteDBInstanceInput{
 			DBInstanceIdentifier: instance.DBInstanceIdentifier,
 			SkipFinalSnapshot:    aws.Bool(true),
 		})
@@ -180,7 +175,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 		logger.WithField("db-instance-name", *instance.DBInstanceIdentifier).Debug("DB instance deleted")
 	}
 
-	_, err = svc.DeleteDBCluster(&rds.DeleteDBClusterInput{
+	_, err = a.Service().rds.DeleteDBCluster(&rds.DeleteDBClusterInput{
 		DBClusterIdentifier: aws.String(awsID),
 		SkipFinalSnapshot:   aws.Bool(true),
 	})

@@ -57,11 +57,12 @@ type InstallationSupervisor struct {
 	clusterResourceThreshold int
 	keepDatabaseData         bool
 	keepFilestoreData        bool
+	resourceUtil             *utils.ResourceUtil
 	logger                   log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:                    store,
 		provisioner:              installationProvisioner,
@@ -70,6 +71,7 @@ func NewInstallationSupervisor(store installationStore, installationProvisioner 
 		clusterResourceThreshold: threshold,
 		keepDatabaseData:         keepDatabaseData,
 		keepFilestoreData:        keepFilestoreData,
+		resourceUtil:             resourceUtil,
 		logger:                   logger,
 	}
 }
@@ -326,13 +328,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 }
 
 func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := utils.GetDatabase(installation).Provision(s.store, logger)
+	err := s.resourceUtil.GetDatabase(installation).Provision(s.store, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision installation database")
 		return model.InstallationStateCreationPreProvisioning
 	}
 
-	err = utils.GetFilestore(installation).Provision(logger)
+	err = s.resourceUtil.GetFilestore(installation).Provision(logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision installation filestore")
 		return model.InstallationStateCreationPreProvisioning
@@ -648,13 +650,13 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = utils.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
+	err = s.resourceUtil.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = utils.GetFilestore(installation).Teardown(s.keepFilestoreData, logger)
+	err = s.resourceUtil.GetFilestore(installation).Teardown(s.keepFilestoreData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete filestore")
 		return model.InstallationStateDeletionFinalCleanup

@@ -1,16 +1,12 @@
 package aws
 
 import (
+	"sync"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -134,49 +130,41 @@ func NewAWSTestSuite() *AWSTestSuite {
 // This will take care of reseting the mocks on every run. Any new mocked library should be added here.
 func (a *AWSTestSuite) SetupTest() {
 	api := testlib.NewAWSMockedAPI()
-
-	aws := &Client{
-		rds:            api.RDS,
-		ec2:            api.EC2,
-		iam:            api.IAM,
-		acm:            api.ACM,
-		s3:             api.S3,
-		route53:        api.Route53,
-		secretsManager: api.SecretsManager,
-	}
-
-	// Point the singleton AWS client instance to a mocked AWS client instance.
-	AWSClient = aws
-
 	a.Mocks = &Mocks{
-		API:   api,
-		AWS:   aws,
+		API: api,
+		AWS: &Client{
+			service: &Service{
+				rds:            api.RDS,
+				ec2:            api.EC2,
+				iam:            api.IAM,
+				acm:            api.ACM,
+				s3:             api.S3,
+				route53:        api.Route53,
+				secretsManager: api.SecretsManager,
+			},
+			config: &aws.Config{},
+			mux:    &sync.Mutex{},
+		},
 		LOG:   testlib.NewMockedFieldLogger(),
 		Model: testlib.NewModelMockedAPI(),
 	}
 }
 
 func (a *AWSTestSuite) TestNewClient() {
-	session, err := session.NewSession()
-	a.Assert().NoError(err)
-
 	client := &Client{
-		acm:            acm.New(session),
-		ec2:            ec2.New(session),
-		iam:            iam.New(session),
-		rds:            rds.New(session),
-		s3:             s3.New(session),
-		route53:        route53.New(session),
-		secretsManager: secretsmanager.New(session),
+		mux: &sync.Mutex{},
 	}
 
 	a.Assert().NotNil(client)
-	a.Assert().NotNil(client.acm)
-	a.Assert().NotNil(client.iam)
-	a.Assert().NotNil(client.rds)
-	a.Assert().NotNil(client.s3)
-	a.Assert().NotNil(client.route53)
-	a.Assert().NotNil(client.secretsManager)
+	a.Assert().NotNil(client.Service().acm)
+	a.Assert().NotNil(client.Service().iam)
+	a.Assert().NotNil(client.Service().s3)
+	a.Assert().NotNil(client.Service().route53)
+	a.Assert().NotNil(client.Service().secretsManager)
+	a.Assert().NotNil(client.Service().ec2)
+
+	_, err := client.Service().acm.ListCertificates(&acm.ListCertificatesInput{})
+	a.Assert().Error(err)
 }
 
 func TestAWSSuite(t *testing.T) {

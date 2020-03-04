@@ -1,6 +1,10 @@
 package aws
 
 import (
+	"sync"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/acm/acmiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -18,28 +22,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
-
-// AWSClient is a singleton instance of an AWS client.
-var AWSClient *Client
-
-func init() {
-	// Create a singleton instance of an AWS session.
-	sess, err := NewAWSSessionWithLogger(log.WithField("tools-aws", "client"))
-	if err != nil {
-		log.Fatalf("failed to initialize AWS session: %s", err.Error())
-	}
-
-	// Create a single instance of an AWS client.
-	AWSClient = &Client{
-		acm:            acm.New(sess),
-		ec2:            ec2.New(sess),
-		iam:            iam.New(sess),
-		rds:            rds.New(sess),
-		s3:             s3.New(sess),
-		route53:        route53.New(sess),
-		secretsManager: secretsmanager.New(sess),
-	}
-}
 
 // AWS interface for use by other packages.
 type AWS interface {
@@ -60,10 +42,16 @@ type AWS interface {
 	IsValidAMI(AMIImage string) (bool, error)
 }
 
-// Client is a client for interacting with AWS resources.
-type Client struct {
-	store model.InstallationDatabaseStoreInterface
+// NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
+func NewAWSClientWithConfig(config *aws.Config) *Client {
+	return &Client{
+		config: config,
+		mux:    &sync.Mutex{},
+	}
+}
 
+// Service hold AWS clients for each service.
+type Service struct {
 	acm            acmiface.ACMAPI
 	ec2            ec2iface.EC2API
 	iam            iamiface.IAMAPI
@@ -71,6 +59,45 @@ type Client struct {
 	s3             s3iface.S3API
 	route53        route53iface.Route53API
 	secretsManager secretsmanageriface.SecretsManagerAPI
+}
+
+// NewService creates a new instance of Service.
+func NewService(sess *session.Session) *Service {
+	return &Service{
+		acm:            acm.New(sess),
+		iam:            iam.New(sess),
+		rds:            rds.New(sess),
+		s3:             s3.New(sess),
+		route53:        route53.New(sess),
+		secretsManager: secretsmanager.New(sess),
+		ec2:            ec2.New(sess),
+	}
+}
+
+// Client is a client for interacting with AWS resources.
+type Client struct {
+	store   model.InstallationDatabaseStoreInterface
+	service *Service
+	config  *aws.Config
+	mux     *sync.Mutex
+}
+
+// Service contructs an AWS session if not yet successfully done and returns AWS clients.
+func (c *Client) Service() *Service {
+	if c.service == nil {
+		sess, err := NewAWSSessionWithLogger(c.config, log.WithField("tools-aws", "client"))
+		if err != nil {
+			log.Errorf("failed to initialize AWS session: %s", err.Error())
+			// Calls to AWS will fail until a healthy session is acquired.
+			return NewService(&session.Session{})
+		}
+
+		c.mux.Lock()
+		c.service = NewService(sess)
+		c.mux.Unlock()
+	}
+
+	return c.service
 }
 
 // AddSQLStore adds SQLStore functionality to the AWS client.

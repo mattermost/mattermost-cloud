@@ -16,7 +16,7 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 		return errors.New("Missing resource ID")
 	}
 
-	resp, err := AWSClient.ec2.CreateTags(&ec2.CreateTagsInput{
+	resp, err := a.Service().ec2.CreateTags(&ec2.CreateTagsInput{
 		Resources: []*string{
 			aws.String(resourceID),
 		},
@@ -45,7 +45,7 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 		return errors.New("unable to remove AWS tag from resource: missing resource ID")
 	}
 
-	resp, err := AWSClient.ec2.DeleteTags(&ec2.DeleteTagsInput{
+	resp, err := a.Service().ec2.DeleteTags(&ec2.DeleteTagsInput{
 		Resources: []*string{
 			aws.String(resourceID),
 		},
@@ -68,27 +68,9 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 	return nil
 }
 
-func prettyCreateTagsResponse(resp *ec2.CreateTagsOutput) string {
-	prettyResp, err := json.Marshal(resp)
-	if err != nil {
-		return strings.Replace(resp.String(), "\n", " ", -1)
-	}
-
-	return string(prettyResp)
-}
-
-func prettyDeleteTagsResponse(resp *ec2.DeleteTagsOutput) string {
-	prettyResp, err := json.Marshal(resp)
-	if err != nil {
-		return strings.Replace(resp.String(), "\n", " ", -1)
-	}
-
-	return string(prettyResp)
-}
-
 // GetVpcsWithFilters returns VPCs matching a given filter.
-func GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
-	vpcOutput, err := AWSClient.ec2.DescribeVpcs(&ec2.DescribeVpcsInput{
+func (a *Client) GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
+	vpcOutput, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{
 		Filters: filters,
 	})
 	if err != nil {
@@ -99,8 +81,8 @@ func GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
 }
 
 // GetSubnetsWithFilters returns subnets matching a given filter.
-func GetSubnetsWithFilters(filters []*ec2.Filter) ([]*ec2.Subnet, error) {
-	subnetOutput, err := AWSClient.ec2.DescribeSubnets(&ec2.DescribeSubnetsInput{
+func (a *Client) GetSubnetsWithFilters(filters []*ec2.Filter) ([]*ec2.Subnet, error) {
+	subnetOutput, err := a.Service().ec2.DescribeSubnets(&ec2.DescribeSubnetsInput{
 		Filters: filters,
 	})
 	if err != nil {
@@ -111,8 +93,8 @@ func GetSubnetsWithFilters(filters []*ec2.Filter) ([]*ec2.Subnet, error) {
 }
 
 // GetSecurityGroupsWithFilters returns SGs matching a given filter.
-func GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, error) {
-	sgOutput, err := AWSClient.ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+func (a *Client) GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, error) {
+	sgOutput, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		Filters: filters,
 	})
 	if err != nil {
@@ -129,7 +111,7 @@ func (a *Client) IsValidAMI(AMIImage string) (bool, error) {
 		return true, nil
 	}
 
-	out, err := AWSClient.ec2.DescribeImages(&ec2.DescribeImagesInput{
+	out, err := a.Service().ec2.DescribeImages(&ec2.DescribeImagesInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("image-id"),
@@ -145,4 +127,22 @@ func (a *Client) IsValidAMI(AMIImage string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func prettyCreateTagsResponse(resp *ec2.CreateTagsOutput) string {
+	prettyResp, err := json.Marshal(resp)
+	if err != nil {
+		return strings.Replace(resp.String(), "\n", " ", -1)
+	}
+
+	return string(prettyResp)
+}
+
+func prettyDeleteTagsResponse(resp *ec2.DeleteTagsOutput) string {
+	prettyResp, err := json.Marshal(resp)
+	if err != nil {
+		return strings.Replace(resp.String(), "\n", " ", -1)
+	}
+
+	return string(prettyResp)
 }
