@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -10,6 +11,11 @@ import (
 // to correlate installations to AWS resources.
 func CloudID(id string) string {
 	return cloudIDPrefix + id
+}
+
+// RDSSnapshotTagValue returns the value for tagging a RDS snapshot.
+func RDSSnapshotTagValue(cloudID string) string {
+	return fmt.Sprintf("rds-snapshot-%s", cloudID)
 }
 
 // IAMSecretName returns the IAM Access Key secret name for a given Cloud ID.

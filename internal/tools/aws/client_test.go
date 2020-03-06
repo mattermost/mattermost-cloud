@@ -127,7 +127,7 @@ func NewAWSTestSuite() *AWSTestSuite {
 	}
 }
 
-// This will take care of reseting the mocks on every run. Any new mocked library should be added here.
+// This will take care of resetting the mocks on every run. Any new mocked library should be added here.
 func (a *AWSTestSuite) SetupTest() {
 	api := testlib.NewAWSMockedAPI()
 	a.Mocks = &Mocks{

@@ -1,44 +1,19 @@
 package aws
 
 import (
+	"os"
+	"sync"
+	"testing"
+
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
-
-// WARNING:
-// This test is meant to exercise the provisioning and teardown of an AWS RDS
-// database in a real AWS account. Only set the test env vars below if you wish
-// to test this process with real AWS resources.
-
-// func TestDatabaseProvision(t *testing.T) {
-// 	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
-// 	if id == "" {
-// 		return
-// 	}
-
-// 	logger := logrus.New()
-// 	database := NewRDSDatabase(id)
-
-// 	err := database.Provision(nil, logger)
-// 	require.NoError(t, err)
-// }
-
-// func TestDatabaseTeardown(t *testing.T) {
-// 	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
-// 	if id == "" {
-// 		return
-// 	}
-
-// 	logger := logrus.New()
-// 	database := NewRDSDatabase(id)
-
-// 	err := database.Teardown(false, logger)
-// 	require.NoError(t, err)
-// }
 
 func (a *AWSTestSuite) TestSnapshot() {
 	database := RDSDatabase{
@@ -67,7 +42,7 @@ func (a *AWSTestSuite) TestSnapshotError() {
 	err := database.Snapshot(a.Mocks.LOG.Logger)
 
 	a.Assert().Error(err)
-	a.Assert().Equal("failed to create a DB cluster snapshot for replication: database is not stable", err.Error())
+	a.Assert().Equal("failed to create a DB cluster snapshot: database is not stable", err.Error())
 	a.Mocks.API.RDS.AssertExpectations(a.T())
 }
 
@@ -128,4 +103,39 @@ func (a *AWSTestSuite) SetGetSecretValueExpectations(installationID string) *moc
 		func(input *secretsmanager.GetSecretValueInput) bool {
 			return *input.SecretId == RDSSecretName(CloudID(installationID))
 		}))
+}
+
+// WARNING:
+// This test is meant to exercise the provisioning and teardown of an AWS RDS
+// database in a real AWS account. Only set the test env vars below if you wish
+// to test this process with real AWS resources.
+
+func TestDatabaseProvision(t *testing.T) {
+	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
+	if id == "" {
+		return
+	}
+
+	logger := logrus.New()
+	database := NewRDSDatabase(id, &Client{
+		mux: &sync.Mutex{},
+	})
+
+	err := database.Provision(nil, logger)
+	require.NoError(t, err)
+}
+
+func TestDatabaseTeardown(t *testing.T) {
+	id := os.Getenv("SUPER_AWS_DATABASE_TEST")
+	if id == "" {
+		return
+	}
+
+	logger := logrus.New()
+	database := NewRDSDatabase(id, &Client{
+		mux: &sync.Mutex{},
+	})
+
+	err := database.Teardown(false, logger)
+	require.NoError(t, err)
 }

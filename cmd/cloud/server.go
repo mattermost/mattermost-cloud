@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
-
 	"time"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"

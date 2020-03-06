@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -72,14 +73,14 @@ func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
 
 	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
 		DBClusterIdentifier:         aws.String(dbClusterID),
-		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%s", dbClusterID, model.NewID())),
+		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", dbClusterID, time.Now().Nanosecond())),
 		Tags: []*rds.Tag{&rds.Tag{
 			Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
-			Value: aws.String(fmt.Sprintf("rds-snapshot-%s", dbClusterID)),
+			Value: aws.String(RDSSnapshotTagValue(dbClusterID)),
 		}},
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a DB cluster snapshot for replication")
+		return errors.Wrap(err, "failed to create a DB cluster snapshot")
 	}
 
 	logger.WithField("installation-id", d.installationID).Info("RDS database snapshot in progress")

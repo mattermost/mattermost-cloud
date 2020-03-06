@@ -117,15 +117,11 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreateError() {
 
 // Helpers
 
-func RDSSnapshotTagValue(installationID string) string {
-	return fmt.Sprintf("rds-snapshot-cloud-%s", installationID)
-}
-
 func (a *AWSTestSuite) SetCreateDBClusterSnapshotExpectation(installationID string) *mock.Call {
 	return a.Mocks.API.RDS.On("CreateDBClusterSnapshot", mock.MatchedBy(func(input *rds.CreateDBClusterSnapshotInput) bool {
 		return *input.DBClusterIdentifier == CloudID(installationID) &&
 			*input.Tags[0].Key == DefaultClusterInstallationSnapshotTagKey &&
-			*input.Tags[0].Value == RDSSnapshotTagValue(installationID)
+			*input.Tags[0].Value == RDSSnapshotTagValue(CloudID(installationID))
 	}))
 }
 
