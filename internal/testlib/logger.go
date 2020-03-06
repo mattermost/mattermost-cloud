@@ -29,7 +29,7 @@ func MakeLogger(tb testing.TB) log.FieldLogger {
 	return logger
 }
 
-// MockedFieldLogger supplies a mocked library for testing logs
+// MockedFieldLogger supplies a mocked library for testing logs.
 type MockedFieldLogger struct {
 	Logger *mocks.FieldLogger
 }
