@@ -24,19 +24,15 @@ BUILD_HASH := $(shell git rev-parse HEAD)
 ################################################################################
 
 AWS_SDK_URL := github.com/aws/aws-sdk-go
-AWS_SDK_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${AWS_SDK_URL} | awk '{print $$NF}')
-AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
-
 LOGRUS_URL := github.com/sirupsen/logrus
+
+AWS_SDK_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${AWS_SDK_URL} | awk '{print $$NF}')
 LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL} | awk '{print $$NF}')
+
+AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
 export GO111MODULE=on
-
-.PHONY: paths
-paths:
-	@echo ${LOGRUS_VERSION}
-	@echo ${LOGRUS_PATH}
 
 ## Checks the code style, tests, builds and bundles.
 all: check-style dist
