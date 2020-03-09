@@ -69,7 +69,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 // accessing the S3 bucket.
 func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
-	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID)
+	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,7 +118,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 	if err != nil {
 		return err
 	}
-	err = f.awsClient.iamEnsurePolicyAttached(awsID, policyARN)
+	err = f.awsClient.iamEnsurePolicyAttached(awsID, policyARN, logger)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 		"iam-user-name":   *user.UserName,
 	}).Debug("AWS IAM policy attached to user")
 
-	err = f.awsClient.s3EnsureBucketCreated(awsID)
+	err = f.awsClient.s3EnsureBucketCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 	}
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
 
-	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak)
+	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak, logger)
 	if err != nil {
 		return err
 	}

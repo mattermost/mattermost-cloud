@@ -25,7 +25,7 @@ import (
 
 // AWS interface for use by other packages.
 type AWS interface {
-	GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error)
+	GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error)
 
 	GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
@@ -39,7 +39,7 @@ type AWS interface {
 
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
-	IsValidAMI(AMIImage string) (bool, error)
+	IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error)
 }
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
@@ -83,11 +83,11 @@ type Client struct {
 }
 
 // Service contructs an AWS session if not yet successfully done and returns AWS clients.
-func (c *Client) Service() *Service {
+func (c *Client) Service(logger log.FieldLogger) *Service {
 	if c.service == nil {
-		sess, err := NewAWSSessionWithLogger(c.config, log.WithField("tools-aws", "client"))
+		sess, err := NewAWSSessionWithLogger(c.config, logger)
 		if err != nil {
-			log.Errorf("failed to initialize AWS session: %s", err.Error())
+			logger.WithError(err).Error("failed to initialize AWS session")
 			// Calls to AWS will fail until a healthy session is acquired.
 			return NewService(&session.Session{})
 		}

@@ -143,7 +143,7 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 // can be tested.
 type mockAWS struct{}
 
-func (a *mockAWS) GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error) {
+func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error) {
 	return nil, nil
 }
 
@@ -183,7 +183,7 @@ func (a *mockAWS) UntagResource(resourceID, key, value string, logger log.FieldL
 	return nil
 }
 
-func (a *mockAWS) IsValidAMI(AMIID string) (bool, error) {
+func (a *mockAWS) IsValidAMI(AMIID string, logger log.FieldLogger) (bool, error) {
 	return true, nil
 }
 
@@ -195,7 +195,7 @@ func (a *mockAWS) S3FilestoreTeardown(installationID string, keepBucket bool, lo
 	return nil
 }
 
-func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string) (*aws.IAMAccessKey, error) {
+func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string, logger log.FieldLogger) (*aws.IAMAccessKey, error) {
 	return nil, nil
 }
 

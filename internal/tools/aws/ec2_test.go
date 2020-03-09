@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -69,7 +70,7 @@ func (a *AWSTestSuite) TestIsValidAMIEmptyResourceID() {
 	a.Mocks.API.EC2.On("DescribeImages", mock.AnythingOfType("*ec2.DescribeImagesInput")).Times(0)
 	a.Mocks.LOG.WithFields(logrus.Fields{}).Times(0)
 
-	ok, err := a.Mocks.AWS.IsValidAMI("")
+	ok, err := a.Mocks.AWS.IsValidAMI("", a.Mocks.LOG.Logger)
 
 	a.Assert().NoError(err)
 	a.Assert().True(ok)
@@ -81,7 +82,7 @@ func (a *AWSTestSuite) TestIsValidAMI() {
 		Images: make([]*ec2.Image, 2),
 	}, nil).Once()
 
-	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID)
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.LOG.Logger)
 
 	a.Assert().NoError(err)
 	a.Assert().True(ok)
@@ -93,7 +94,7 @@ func (a *AWSTestSuite) TestIsValidAMINoImages() {
 		Images: make([]*ec2.Image, 0),
 	}, nil).Once()
 
-	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID)
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.LOG.Logger)
 
 	a.Assert().NoError(err)
 	a.Assert().False(ok)
@@ -103,7 +104,7 @@ func (a *AWSTestSuite) TestIsValidAMINoImages() {
 func (a *AWSTestSuite) TestIsValidAMIError() {
 	a.Mocks.API.EC2.On("DescribeImages", mock.AnythingOfType("*ec2.DescribeImagesInput")).Return(nil, errors.New("resource id not found")).Once()
 
-	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID)
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, log.New())
 
 	a.Assert().Error(err)
 	a.Assert().False(ok)

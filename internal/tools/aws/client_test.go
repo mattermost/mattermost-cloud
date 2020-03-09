@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/sirupsen/logrus"
 
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -155,15 +156,17 @@ func (a *AWSTestSuite) TestNewClient() {
 		mux: &sync.Mutex{},
 	}
 
-	a.Assert().NotNil(client)
-	a.Assert().NotNil(client.Service().acm)
-	a.Assert().NotNil(client.Service().iam)
-	a.Assert().NotNil(client.Service().s3)
-	a.Assert().NotNil(client.Service().route53)
-	a.Assert().NotNil(client.Service().secretsManager)
-	a.Assert().NotNil(client.Service().ec2)
+	logger := logrus.New()
 
-	_, err := client.Service().acm.ListCertificates(&acm.ListCertificatesInput{})
+	a.Assert().NotNil(client)
+	a.Assert().NotNil(client.Service(logger).acm)
+	a.Assert().NotNil(client.Service(logger).iam)
+	a.Assert().NotNil(client.Service(logger).s3)
+	a.Assert().NotNil(client.Service(logger).route53)
+	a.Assert().NotNil(client.Service(logger).secretsManager)
+	a.Assert().NotNil(client.Service(logger).ec2)
+
+	_, err := client.Service(logger).acm.ListCertificates(&acm.ListCertificatesInput{})
 	a.Assert().Error(err)
 }
 

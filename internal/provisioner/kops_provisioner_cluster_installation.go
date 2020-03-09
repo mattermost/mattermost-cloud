@@ -52,7 +52,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
 
-	certificateSummary, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
+	certificateSummary, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch AWS certificate ARN for tag %s:%s", aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
 	}

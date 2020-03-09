@@ -71,7 +71,7 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
 	dbClusterID := CloudID(d.installationID)
 
-	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
+	_, err := d.client.Service(logger).rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
 		DBClusterIdentifier:         aws.String(dbClusterID),
 		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", dbClusterID, time.Now().Nanosecond())),
 		Tags: []*rds.Tag{&rds.Tag{
@@ -93,12 +93,12 @@ func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
 func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	awsID := CloudID(d.installationID)
 
-	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID)
+	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	result, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	result, err := d.client.Service(logger).rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err != nil {
@@ -166,7 +166,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
 		},
 	}
-	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters)
+	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters, logger)
 	if err != nil {
 		return err
 	}

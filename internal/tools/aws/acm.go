@@ -3,16 +3,17 @@ package aws
 import (
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // GetCertificateSummaryByTag returns the certificate summary associated with a valid tag key and value in AWS.
-func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error) {
+func (a *Client) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error) {
 	key = trimTagPrefix(key)
 	tag := acm.Tag{Key: &key, Value: &value}
 
 	var next *string
 	for {
-		out, err := a.Service().acm.ListCertificates(&acm.ListCertificatesInput{
+		out, err := a.Service(logger).acm.ListCertificates(&acm.ListCertificatesInput{
 			NextToken: next,
 		})
 		if err != nil {
@@ -20,7 +21,7 @@ func (a *Client) GetCertificateSummaryByTag(key, value string) (*acm.Certificate
 		}
 
 		for _, cert := range out.CertificateSummaryList {
-			list, err := a.Service().acm.ListTagsForCertificate(&acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
+			list, err := a.Service(logger).acm.ListTagsForCertificate(&acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
 			if err != nil {
 				return nil, errors.Wrapf(err, "error listing tags for certificate %s", *cert.CertificateArn)
 			}
