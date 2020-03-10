@@ -18,8 +18,19 @@ func TestInstallations(t *testing.T) {
 
 	ownerID1 := model.NewID()
 	ownerID2 := model.NewID()
-	groupID1 := model.NewID()
 	groupID2 := model.NewID()
+
+	group1 := &model.Group{
+		Version: "group1-version",
+		MattermostEnv: model.EnvVarMap{
+			"Key1": model.EnvVar{Value: "Value1"},
+		},
+	}
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+	groupID1 := group1.ID
+
+	time.Sleep(1 * time.Millisecond)
 
 	installation1 := &model.Installation{
 		OwnerID:   ownerID1,
@@ -33,7 +44,7 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -88,38 +99,60 @@ func TestInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get unknown installation", func(t *testing.T) {
-		installation, err := sqlStore.GetInstallation("unknown")
+		installation, err := sqlStore.GetInstallation("unknown", false, false)
 		require.NoError(t, err)
 		require.Nil(t, installation)
 	})
 
 	t.Run("get installation 1", func(t *testing.T) {
-		installation, err := sqlStore.GetInstallation(installation1.ID)
+		installation, err := sqlStore.GetInstallation(installation1.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, installation1, installation)
 	})
 
 	t.Run("get installation 2", func(t *testing.T) {
-		installation, err := sqlStore.GetInstallation(installation2.ID)
+		installation, err := sqlStore.GetInstallation(installation2.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, installation2, installation)
 	})
 
 	t.Run("get installation 3", func(t *testing.T) {
-		installation, err := sqlStore.GetInstallation(installation3.ID)
+		installation, err := sqlStore.GetInstallation(installation3.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, installation3, installation)
 	})
 
 	t.Run("get and delete installation 4", func(t *testing.T) {
-		installation, err := sqlStore.GetInstallation(installation4.ID)
+		installation, err := sqlStore.GetInstallation(installation4.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, installation4, installation)
 
 		err = sqlStore.DeleteInstallation(installation4.ID)
 		require.NoError(t, err)
-		installation4, err = sqlStore.GetInstallation(installation4.ID)
+		installation4, err = sqlStore.GetInstallation(installation4.ID, false, false)
 		require.NoError(t, err)
+	})
+
+	t.Run("groups", func(t *testing.T) {
+		group, err := sqlStore.GetGroup(groupID1)
+		require.NoError(t, err)
+		require.Equal(t, group1, group)
+
+		t.Run("include group config and overrides", func(t *testing.T) {
+			installation, err := sqlStore.GetInstallation(installation1.ID, true, true)
+			require.NoError(t, err)
+			mergedInstallation := installation1.Clone()
+			mergedInstallation.MergeWithGroup(group, true)
+			require.Equal(t, mergedInstallation, installation)
+		})
+
+		t.Run("include group config, no overrides", func(t *testing.T) {
+			installation, err := sqlStore.GetInstallation(installation1.ID, true, false)
+			require.NoError(t, err)
+			mergedInstallation := installation1.Clone()
+			mergedInstallation.MergeWithGroup(group, false)
+			require.Equal(t, mergedInstallation, installation)
+		})
 	})
 
 	testCases := []struct {
@@ -351,12 +384,12 @@ func TestLockInstallation(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("installations should start unlocked", func(t *testing.T) {
-		installation1, err = sqlStore.GetInstallation(installation1.ID)
+		installation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, int64(0), installation1.LockAcquiredAt)
 		require.Nil(t, installation1.LockAcquiredBy)
 
-		installation2, err = sqlStore.GetInstallation(installation2.ID)
+		installation2, err = sqlStore.GetInstallation(installation2.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, int64(0), installation2.LockAcquiredAt)
 		require.Nil(t, installation2.LockAcquiredBy)
@@ -367,7 +400,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, locked)
 
-		installation1, err = sqlStore.GetInstallation(installation1.ID)
+		installation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 		require.NoError(t, err)
 		require.NotEqual(t, int64(0), installation1.LockAcquiredAt)
 		require.Equal(t, lockerID1, *installation1.LockAcquiredBy)
@@ -392,7 +425,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, locked)
 
-		installation2, err = sqlStore.GetInstallation(installation2.ID)
+		installation2, err = sqlStore.GetInstallation(installation2.ID, false, false)
 		require.NoError(t, err)
 		require.NotEqual(t, int64(0), installation2.LockAcquiredAt)
 		require.Equal(t, lockerID2, *installation2.LockAcquiredBy)
@@ -403,7 +436,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, unlocked)
 
-		installation1, err = sqlStore.GetInstallation(installation1.ID)
+		installation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, int64(0), installation1.LockAcquiredAt)
 		require.Nil(t, installation1.LockAcquiredBy)
@@ -414,7 +447,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, unlocked)
 
-		installation1, err = sqlStore.GetInstallation(installation1.ID)
+		installation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, int64(0), installation1.LockAcquiredAt)
 		require.Nil(t, installation1.LockAcquiredBy)
@@ -425,7 +458,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, unlocked)
 
-		installation1, err = sqlStore.GetInstallation(installation1.ID)
+		installation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, int64(0), installation1.LockAcquiredAt)
 		require.Nil(t, installation1.LockAcquiredBy)
@@ -436,7 +469,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, unlocked)
 
-		installation2, err = sqlStore.GetInstallation(installation2.ID)
+		installation2, err = sqlStore.GetInstallation(installation2.ID, false, false)
 		require.NoError(t, err)
 		require.NotEqual(t, int64(0), installation2.LockAcquiredAt)
 		require.Equal(t, lockerID2, *installation2.LockAcquiredBy)
@@ -447,7 +480,7 @@ func TestLockInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, unlocked)
 
-		installation2, err = sqlStore.GetInstallation(installation2.ID)
+		installation2, err = sqlStore.GetInstallation(installation2.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, int64(0), installation2.LockAcquiredAt)
 		require.Nil(t, installation2.LockAcquiredBy)
@@ -460,8 +493,19 @@ func TestUpdateInstallation(t *testing.T) {
 
 	ownerID1 := model.NewID()
 	ownerID2 := model.NewID()
-	groupID1 := model.NewID()
 	groupID2 := model.NewID()
+
+	group1 := &model.Group{
+		Version: "group1-version",
+		MattermostEnv: model.EnvVarMap{
+			"Key1": model.EnvVar{Value: "Value1"},
+		},
+	}
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+	groupID1 := group1.ID
+
+	time.Sleep(1 * time.Millisecond)
 
 	someBool := false
 
@@ -503,7 +547,7 @@ func TestUpdateInstallation(t *testing.T) {
 		State:    model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1)
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
@@ -532,13 +576,34 @@ func TestUpdateInstallation(t *testing.T) {
 	err = sqlStore.UpdateInstallation(installation1)
 	require.NoError(t, err)
 
-	actualInstallation1, err := sqlStore.GetInstallation(installation1.ID)
+	installation1.GroupID = &groupID1
+	err = sqlStore.UpdateInstallation(installation1)
+	require.NoError(t, err)
+
+	actualInstallation1, err := sqlStore.GetInstallation(installation1.ID, false, false)
 	require.NoError(t, err)
 	require.Equal(t, installation1, actualInstallation1)
 
-	actualInstallation2, err := sqlStore.GetInstallation(installation2.ID)
+	actualInstallation2, err := sqlStore.GetInstallation(installation2.ID, false, false)
 	require.NoError(t, err)
 	require.Equal(t, installation2, actualInstallation2)
+
+	t.Run("groups", func(t *testing.T) {
+		group, err := sqlStore.GetGroup(groupID1)
+		require.NoError(t, err)
+		require.Equal(t, group1, group)
+
+		t.Run("prevent saving merged installation", func(t *testing.T) {
+			installation, err := sqlStore.GetInstallation(installation1.ID, true, true)
+			require.NoError(t, err)
+			mergedInstallation := installation1.Clone()
+			mergedInstallation.MergeWithGroup(group, true)
+			require.Equal(t, mergedInstallation, installation)
+
+			err = sqlStore.UpdateInstallation(installation)
+			require.Error(t, err)
+		})
+	})
 }
 
 func TestDeleteInstallation(t *testing.T) {
@@ -583,13 +648,13 @@ func TestDeleteInstallation(t *testing.T) {
 	err = sqlStore.DeleteInstallation(installation1.ID)
 	require.NoError(t, err)
 
-	actualInstallation1, err := sqlStore.GetInstallation(installation1.ID)
+	actualInstallation1, err := sqlStore.GetInstallation(installation1.ID, false, false)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, actualInstallation1.DeleteAt)
 	installation1.DeleteAt = actualInstallation1.DeleteAt
 	require.Equal(t, installation1, actualInstallation1)
 
-	actualInstallation2, err := sqlStore.GetInstallation(installation2.ID)
+	actualInstallation2, err := sqlStore.GetInstallation(installation2.ID, false, false)
 	require.NoError(t, err)
 	require.Equal(t, installation2, actualInstallation2)
 
@@ -599,7 +664,7 @@ func TestDeleteInstallation(t *testing.T) {
 	err = sqlStore.DeleteInstallation(installation1.ID)
 	require.NoError(t, err)
 
-	actualInstallation1, err = sqlStore.GetInstallation(installation1.ID)
+	actualInstallation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 	require.NoError(t, err)
 	require.Equal(t, installation1, actualInstallation1)
 }

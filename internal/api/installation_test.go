@@ -32,7 +32,7 @@ func TestGetInstallations(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	t.Run("unknown installation", func(t *testing.T) {
-		installation, err := client.GetInstallation(model.NewID())
+		installation, err := client.GetInstallation(model.NewID(), nil)
 		require.NoError(t, err)
 		require.Nil(t, installation)
 
@@ -48,7 +48,39 @@ func TestGetInstallations(t *testing.T) {
 		require.Empty(t, installations)
 	})
 
-	t.Run("parameter handling", func(t *testing.T) {
+	t.Run("group parameter handling", func(t *testing.T) {
+		t.Run("invalid include group config", func(t *testing.T) {
+			resp, err := http.Get(fmt.Sprintf("%s/api/installation/%s?include_group_config=invalid&include_group_config_overrides=true", ts.URL, model.NewID()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+
+		t.Run("invalid include group config override", func(t *testing.T) {
+			resp, err := http.Get(fmt.Sprintf("%s/api/installation/%s?include_group_config=true&include_group_config_overrides=invalid", ts.URL, model.NewID()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+
+		t.Run("no group parameters", func(t *testing.T) {
+			resp, err := http.Get(fmt.Sprintf("%s/api/installation/%s", ts.URL, model.NewID()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		})
+
+		t.Run("missing include group config", func(t *testing.T) {
+			resp, err := http.Get(fmt.Sprintf("%s/api/installation/%s?include_group_config_overrides=true", ts.URL, model.NewID()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		})
+
+		t.Run("missing include group config overrides", func(t *testing.T) {
+			resp, err := http.Get(fmt.Sprintf("%s/api/installation/%s?include_group_config=true", ts.URL, model.NewID()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusNotFound, resp.StatusCode)
+		})
+	})
+
+	t.Run("page parameter handling", func(t *testing.T) {
 		t.Run("invalid page", func(t *testing.T) {
 			resp, err := http.Get(fmt.Sprintf("%s/api/installations?page=invalid&per_page=100", ts.URL))
 			require.NoError(t, err)
@@ -128,18 +160,18 @@ func TestGetInstallations(t *testing.T) {
 		require.NoError(t, err)
 		err = sqlStore.DeleteInstallation(installation4.ID)
 		require.NoError(t, err)
-		installation4, err = client.GetInstallation(installation4.ID)
+		installation4, err = client.GetInstallation(installation4.ID, nil)
 		require.NoError(t, err)
 
 		t.Run("get installation", func(t *testing.T) {
 			t.Run("installation 1", func(t *testing.T) {
-				installation, err := client.GetInstallation(installation1.ID)
+				installation, err := client.GetInstallation(installation1.ID, nil)
 				require.NoError(t, err)
 				require.Equal(t, installation1, installation)
 			})
 
 			t.Run("get deleted installation", func(t *testing.T) {
-				installation, err := client.GetInstallation(installation4.ID)
+				installation, err := client.GetInstallation(installation4.ID, nil)
 				require.NoError(t, err)
 				require.Equal(t, installation4, installation)
 			})
@@ -375,7 +407,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 		err = client.RetryCreateInstallation(installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateCreationRequested, installation1.State)
 	})
@@ -397,7 +429,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 		err = client.RetryCreateInstallation(installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateCreationRequested, installation1.State)
 	})
@@ -476,7 +508,7 @@ func TestUpdateInstallation(t *testing.T) {
 		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
@@ -494,7 +526,7 @@ func TestUpdateInstallation(t *testing.T) {
 		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
@@ -512,7 +544,7 @@ func TestUpdateInstallation(t *testing.T) {
 		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
@@ -556,7 +588,7 @@ func TestUpdateInstallation(t *testing.T) {
 		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 	})
@@ -573,7 +605,7 @@ func TestUpdateInstallation(t *testing.T) {
 		err = client.UpgradeInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
@@ -645,7 +677,7 @@ func TestJoinGroup(t *testing.T) {
 		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.NotNil(t, installation1.GroupID)
 		require.Equal(t, group1.ID, *installation1.GroupID)
@@ -655,7 +687,7 @@ func TestJoinGroup(t *testing.T) {
 		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.NotNil(t, installation1.GroupID)
 		require.Equal(t, group1.ID, *installation1.GroupID)
@@ -665,7 +697,7 @@ func TestJoinGroup(t *testing.T) {
 		err = client.JoinGroup(group2.ID, installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.NotNil(t, installation1.GroupID)
 		require.Equal(t, group2.ID, *installation1.GroupID)
@@ -729,7 +761,7 @@ func TestLeaveGroup(t *testing.T) {
 		err = client.LeaveGroup(installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Nil(t, installation1.GroupID)
 	})
@@ -738,7 +770,7 @@ func TestLeaveGroup(t *testing.T) {
 		err = client.LeaveGroup(installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Nil(t, installation1.GroupID)
 	})
@@ -787,7 +819,7 @@ func TestDeleteInstallation(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, unlocked)
 
-			installation1, err = client.GetInstallation(installation1.ID)
+			installation1, err = client.GetInstallation(installation1.ID, nil)
 			require.NoError(t, err)
 			require.Equal(t, int64(0), installation1.LockAcquiredAt)
 		}()
@@ -823,7 +855,7 @@ func TestDeleteInstallation(t *testing.T) {
 				err := client.DeleteInstallation(installation1.ID)
 				require.NoError(t, err)
 
-				installation1, err = client.GetInstallation(installation1.ID)
+				installation1, err = client.GetInstallation(installation1.ID, nil)
 				require.NoError(t, err)
 				require.Equal(t, model.InstallationStateDeletionRequested, installation1.State)
 			})
