@@ -15,6 +15,7 @@ import (
 type CreateInstallationRequest struct {
 	OwnerID       string
 	Version       string
+	Image         string
 	DNS           string
 	License       string
 	Size          string
@@ -28,6 +29,9 @@ type CreateInstallationRequest struct {
 func (request *CreateInstallationRequest) SetDefaults() {
 	if request.Version == "" {
 		request.Version = "stable"
+	}
+	if request.Image == "" {
+		request.Image = "mattermost/mattermost-enterprise-edition"
 	}
 	if request.Size == "" {
 		request.Size = InstallationDefaultSize
@@ -140,13 +144,16 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 // UpdateInstallationRequest specifies the parameters for an updated installation.
 type UpdateInstallationRequest struct {
 	Version       string
+	Image         string
 	License       string
 	MattermostEnv EnvVarMap
 }
 
 // SetDefaults sets the default values for an installation update request.
 func (request *UpdateInstallationRequest) SetDefaults() {
-	// Currently a no-op.
+	if request.Image == "" {
+		request.Image = "mattermost/mattermost-enterprise-edition"
+	}
 }
 
 // Validate validates the values of an installation update request.

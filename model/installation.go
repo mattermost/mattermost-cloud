@@ -13,6 +13,7 @@ type Installation struct {
 	GroupID        *string
 	GroupSequence  *int64 `json:"GroupSequence,omitempty"`
 	Version        string
+	Image          string
 	DNS            string
 	Database       string
 	Filestore      string

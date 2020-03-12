@@ -341,7 +341,29 @@ func TestCreateInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "owner", installation.OwnerID)
 		require.Equal(t, "version", installation.Version)
+		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation.Image)
 		require.Equal(t, "dns.example.com", installation.DNS)
+		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
+		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
+		require.Empty(t, installation.LockAcquiredBy)
+		require.EqualValues(t, 0, installation.LockAcquiredAt)
+		require.NotEqual(t, 0, installation.CreateAt)
+		require.EqualValues(t, 0, installation.DeleteAt)
+	})
+
+	t.Run("valid with custom image", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:  "owner1",
+			Version:  "version",
+			Image:    "custom-image",
+			DNS:      "dns1.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+		})
+		require.NoError(t, err)
+		require.Equal(t, "owner1", installation.OwnerID)
+		require.Equal(t, "version", installation.Version)
+		require.Equal(t, "custom-image", installation.Image)
+		require.Equal(t, "dns1.example.com", installation.DNS)
 		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
 		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
 		require.Empty(t, installation.LockAcquiredBy)
@@ -512,6 +534,7 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation1.Image)
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {

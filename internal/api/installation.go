@@ -104,6 +104,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installation := model.Installation{
 		OwnerID:       createInstallationRequest.OwnerID,
 		Version:       createInstallationRequest.Version,
+		Image:         createInstallationRequest.Image,
 		DNS:           createInstallationRequest.DNS,
 		Database:      createInstallationRequest.Database,
 		Filestore:     createInstallationRequest.Filestore,
@@ -236,6 +237,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installation.State = newState
 	installation.Version = updateInstallationRequest.Version
 	installation.License = updateInstallationRequest.License
+	installation.Image = updateInstallationRequest.Image
 	installation.MattermostEnv = updateInstallationRequest.MattermostEnv
 
 	err = c.Store.UpdateInstallation(installation)

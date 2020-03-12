@@ -52,6 +52,7 @@ func TestInstallations(t *testing.T) {
 	installation2 := &model.Installation{
 		OwnerID:   ownerID1,
 		Version:   "version2",
+		Image:     "custom-image",
 		DNS:       "dns2.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -554,6 +555,7 @@ func TestUpdateInstallation(t *testing.T) {
 		OwnerID:   ownerID1,
 		Version:   "version2",
 		DNS:       "dns4.example.com",
+		Image:     "custom-image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,

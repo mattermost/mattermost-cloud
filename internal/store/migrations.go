@@ -730,4 +730,159 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.15.0"), semver.MustParse("0.16.0"), func(e execer) error {
+		if e.DriverName() == driverPostgres {
+			// Add Mattermost Image for installations.
+			_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN Image TEXT NULL;
+		`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+				UPDATE Installation
+				SET Image = 'mattermost/mattermost-enterprise-edition';
+		 `)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Installation ALTER COLUMN Image SET NOT NULL;`)
+			if err != nil {
+				return err
+			}
+
+			// Add Mattermost Image for groups.
+			_, err = e.Exec(`
+				ALTER TABLE "Group"
+				ADD COLUMN Image TEXT NULL;
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+				UPDATE "Group"
+				SET Image = 'mattermost/mattermost-enterprise-edition';
+		 `)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE "Group" ALTER COLUMN Image SET NOT NULL;`)
+			if err != nil {
+				return err
+			}
+		} else if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					CREATE TABLE Installation (
+						ID TEXT PRIMARY KEY,
+						OwnerID TEXT NOT NULL,
+						Version TEXT NOT NULL,
+						Image TEXT NOT NULL,
+						DNS TEXT NOT NULL,
+						Database TEXT NOT NULL,
+						Filestore TEXT NOT NULL,
+						License TEXT NULL,
+						Size TEXT NOT NULL,
+						MattermostEnvRaw BYTEA NULL,
+						Affinity TEXT NOT NULL,
+						GroupID TEXT NULL,
+						State TEXT NOT NULL,
+						CreateAt BIGINT NOT NULL,
+						DeleteAt BIGINT NOT NULL,
+						LockAcquiredBy TEXT NULL,
+						LockAcquiredAt BIGINT NOT NULL
+					);
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					INSERT INTO Installation
+					SELECT
+						ID,
+						OwnerID,
+						Version,
+						"mattermost/mattermost-enterprise-edition",
+						DNS,
+						Database,
+						Filestore,
+						License,
+						Size,
+						MattermostEnvRaw,
+						Affinity,
+						GroupID,
+						State,
+						CreateAt,
+						DeleteAt,
+						LockAcquiredBy,
+						LockAcquiredAt
+					FROM
+					InstallationTemp;
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE "Group" RENAME TO "GroupTemp";`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+				CREATE TABLE "Group" (
+					ID TEXT PRIMARY KEY,
+					Name TEXT NOT NULL,
+					Description TEXT NOT NULL,
+					Version TEXT NOT NULL,
+					Image TEXT NOT NULL,
+					MattermostEnvRaw BYTEA NULL,
+					CreateAt BIGINT NOT NULL,
+					DeleteAt BIGINT NOT NULL
+				);
+			`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+						INSERT INTO "Group"
+						SELECT
+							ID,
+							Name,
+							Description,
+							Version,
+							"mattermost/mattermost-enterprise-edition",
+							MattermostEnvRaw,
+							CreateAt,
+							DeleteAt
+						FROM
+						"GroupTemp";
+					`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE GroupTemp;`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
 }
