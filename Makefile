@@ -109,13 +109,20 @@ mocks:
 	@if [ ! -f $(GOPATH)/pkg/mod ]; then \
 		$(GO) mod download;\
 	fi
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/ec2/ec2iface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/rds/rdsiface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/s3/s3iface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/acm/acmiface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/iam/iamiface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/route53/route53iface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface -all -output ./internal/mocks/aws-sdk/
-	$(GOPATH)/bin/mockery -dir $(LOGRUS_PATH)/ -all -output ./internal/mocks/logger/
-	$(GOPATH)/bin/mockery -dir ./internal/tools/aws -all -output ./internal/mocks/aws-tools/
-	$(GOPATH)/bin/mockery -dir ./model -all -output ./internal/mocks/model/
+	# env GO111MODULE=off $(GO) get github.com/sirupsen/logrus
+	
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/ec2/ec2iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/ec2.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/rds/rdsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/rds.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/s3/s3iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/s3.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/acm/acmiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/acm.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/iam/iamiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/iam.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/route53/route53iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/route53.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go
+	# $(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
+	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go
+	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go
+
+	@rm -rf $(GOPATH)/src/github.com/sirupsen/logrus/ && mkdir -p $(GOPATH)/src/github.com/sirupsen/logrus/
+	@cp -r $(LOGRUS_PATH)/* $(GOPATH)/src/github.com/sirupsen/logrus/
+	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
+

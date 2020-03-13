@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -18,6 +19,7 @@ import (
 // ClientTestSuite supplies tests for aws package Client.
 type ClientTestSuite struct {
 	suite.Suite
+
 	session *session.Session
 }
 
@@ -40,6 +42,9 @@ type Mocks struct {
 // should be added here.
 type AWSTestSuite struct {
 	suite.Suite
+
+	// GOMock controller.
+	ctrl *gomock.Controller
 
 	// Mocked client and services.
 	Mocks *Mocks
@@ -79,8 +84,10 @@ type AWSTestSuite struct {
 }
 
 // NewAWSTestSuite gives a new instance of the entire AWS testing suite.
-func NewAWSTestSuite() *AWSTestSuite {
+func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 	return &AWSTestSuite{
+		ctrl: gomock.NewController(t),
+
 		VPCa: "vpc-000000000000000a",
 		VPCb: "vpc-000000000000000b",
 
@@ -130,7 +137,7 @@ func NewAWSTestSuite() *AWSTestSuite {
 
 // This will take care of resetting the mocks on every run. Any new mocked library should be added here.
 func (a *AWSTestSuite) SetupTest() {
-	api := testlib.NewAWSMockedAPI()
+	api := testlib.NewAWSMockedAPI(a.ctrl)
 	a.Mocks = &Mocks{
 		API: api,
 		AWS: &Client{
@@ -146,9 +153,13 @@ func (a *AWSTestSuite) SetupTest() {
 			config: &aws.Config{},
 			mux:    &sync.Mutex{},
 		},
-		LOG:   testlib.NewMockedFieldLogger(),
-		Model: testlib.NewModelMockedAPI(),
+		LOG:   testlib.NewMockedFieldLogger(a.ctrl),
+		Model: testlib.NewModelMockedAPI(a.ctrl),
 	}
+}
+
+func (a *AWSTestSuite) TearDown() {
+	a.ctrl.Finish()
 }
 
 func (a *AWSTestSuite) TestNewClient() {
@@ -171,5 +182,5 @@ func (a *AWSTestSuite) TestNewClient() {
 }
 
 func TestAWSSuite(t *testing.T) {
-	suite.Run(t, NewAWSTestSuite())
+	suite.Run(t, NewAWSTestSuite(t))
 }

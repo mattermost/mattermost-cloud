@@ -44,3 +44,13 @@ func newRandomPassword(length int) string {
 
 	return string(b)
 }
+
+// DBSubnetGroupName formats the subnet group name used for RDS databases.
+func DBSubnetGroupName(vpcID string) string {
+	return fmt.Sprintf("mattermost-provisioner-db-%s", vpcID)
+}
+
+// RDSMasterInstanceID formats the name used for RDS database instances.
+func RDSMasterInstanceID(installationID string) string {
+	return fmt.Sprintf("%s-master", CloudID(installationID))
+}

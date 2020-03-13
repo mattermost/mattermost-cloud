@@ -1,17 +1,18 @@
 package testlib
 
 import (
+	"github.com/golang/mock/gomock"
 	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/model"
 )
 
 // ModelMockedAPI has all mocked interfaces defined in model.
 type ModelMockedAPI struct {
-	DatabaseInstallationStore *mocks.InstallationDatabaseStoreInterface
+	DatabaseInstallationStore *mocks.MockInstallationDatabaseStoreInterface
 }
 
 // NewModelMockedAPI returns an instance of ModelMockedAPI.
-func NewModelMockedAPI() *ModelMockedAPI {
+func NewModelMockedAPI(ctrl *gomock.Controller) *ModelMockedAPI {
 	return &ModelMockedAPI{
-		DatabaseInstallationStore: &mocks.InstallationDatabaseStoreInterface{},
+		DatabaseInstallationStore: mocks.NewMockInstallationDatabaseStoreInterface(ctrl),
 	}
 }
