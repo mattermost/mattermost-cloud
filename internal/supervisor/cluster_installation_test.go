@@ -27,7 +27,7 @@ type mockClusterInstallationStore struct {
 func (s *mockClusterInstallationStore) GetCluster(clusterID string) (*model.Cluster, error) {
 	return s.Cluster, nil
 }
-func (s *mockClusterInstallationStore) GetInstallation(installationID string) (*model.Installation, error) {
+func (s *mockClusterInstallationStore) GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
 	return s.Installation, nil
 }
 func (s *mockClusterInstallationStore) GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error) {

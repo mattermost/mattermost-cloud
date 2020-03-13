@@ -53,3 +53,17 @@ func parsePaging(u *url.URL) (int, int, bool, error) {
 
 	return page, perPage, includeDeleted, nil
 }
+
+func parseGroupConfig(u *url.URL) (bool, bool, error) {
+	includeGroupConfig, err := parseBool(u, "include_group_config", false)
+	if err != nil {
+		return false, false, err
+	}
+
+	includeGroupConfigOverrides, err := parseBool(u, "include_group_config_overrides", false)
+	if err != nil {
+		return false, false, err
+	}
+
+	return includeGroupConfig, includeGroupConfigOverrides, nil
+}

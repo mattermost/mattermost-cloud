@@ -11,7 +11,7 @@ import (
 var groupSelect sq.SelectBuilder
 
 type rawGroup struct {
-	model.Group
+	*model.Group
 	MattermostEnvRaw []byte
 }
 
@@ -21,25 +21,18 @@ func init() {
 		From(`"Group"`)
 }
 
-func rawGroupToGroup(raw *rawGroup) (*model.Group, error) {
+func rawGroupToGroup(r *rawGroup) (*model.Group, error) {
 	var err error
 	mattermostEnv := &model.EnvVarMap{}
-	if raw.MattermostEnvRaw != nil {
-		mattermostEnv, err = model.EnvVarFromJSON(raw.MattermostEnvRaw)
+	if r.MattermostEnvRaw != nil {
+		mattermostEnv, err = model.EnvVarFromJSON(r.MattermostEnvRaw)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &model.Group{
-		ID:            raw.ID,
-		Name:          raw.Name,
-		Description:   raw.Description,
-		Version:       raw.Version,
-		CreateAt:      raw.CreateAt,
-		DeleteAt:      raw.DeleteAt,
-		MattermostEnv: *mattermostEnv,
-	}, nil
+	r.Group.MattermostEnv = *mattermostEnv
+	return r.Group, nil
 }
 
 // GetGroup fetches the given group by id.

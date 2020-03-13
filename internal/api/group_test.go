@@ -419,7 +419,7 @@ func TestDeleteGroup(t *testing.T) {
 		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.NotNil(t, installation1.GroupID)
 		require.Equal(t, group1.ID, *installation1.GroupID)

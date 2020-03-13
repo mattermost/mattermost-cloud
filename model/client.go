@@ -306,8 +306,15 @@ func (c *Client) RetryCreateInstallation(installationID string) error {
 }
 
 // GetInstallation fetches the specified installation from the configured provisioning server.
-func (c *Client) GetInstallation(installationID string) (*Installation, error) {
-	resp, err := c.doGet(c.buildURL("/api/installation/%s", installationID))
+func (c *Client) GetInstallation(installationID string, request *GetInstallationRequest) (*Installation, error) {
+	u, err := url.Parse(c.buildURL("/api/installation/%s", installationID))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
 	if err != nil {
 		return nil, err
 	}

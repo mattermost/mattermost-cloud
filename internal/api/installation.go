@@ -34,7 +34,14 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, err := c.Store.GetInstallation(installationID)
+	includeGroupConfig, includeGroupConfigOverrides, err := parseGroupConfig(r.URL)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	installation, err := c.Store.GetInstallation(installationID, includeGroupConfig, includeGroupConfigOverrides)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installation")
 		w.WriteHeader(http.StatusInternalServerError)

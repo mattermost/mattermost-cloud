@@ -37,7 +37,7 @@ func (em *EnvVarMap) Validate() error {
 	return nil
 }
 
-// ToEnvList returns a list of standard corev1.EnvVars
+// ToEnvList returns a list of standard corev1.EnvVars.
 func (em *EnvVarMap) ToEnvList() []corev1.EnvVar {
 	envList := []corev1.EnvVar{}
 
@@ -52,14 +52,12 @@ func (em *EnvVarMap) ToEnvList() []corev1.EnvVar {
 	return envList
 }
 
-// ToJSON converts the EnvVarMap to a JSON object represented as a
-// []byte
+// ToJSON converts the EnvVarMap to a JSON object represented as a []byte.
 func (em *EnvVarMap) ToJSON() ([]byte, error) {
 	return json.Marshal(em)
 }
 
-// EnvVarFromJSON creates a EnvVarMap from the JSON represented as a
-// []byte
+// EnvVarFromJSON creates a EnvVarMap from the JSON represented as a []byte.
 func EnvVarFromJSON(raw []byte) (*EnvVarMap, error) {
 	e := &EnvVarMap{}
 	err := json.Unmarshal(raw, e)
