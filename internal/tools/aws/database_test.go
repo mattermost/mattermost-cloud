@@ -26,14 +26,20 @@ func (a *AWSTestSuite) TestSnapshot() {
 	}
 
 	gomock.InOrder(
-		a.Mocks.API.RDS.EXPECT().CreateDBClusterSnapshot(gomock.Any()).Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Do(func(input *rds.CreateDBClusterSnapshotInput) {
+		a.Mocks.API.RDS.EXPECT().CreateDBClusterSnapshot(gomock.Any()).
+			Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Do(func(input *rds.CreateDBClusterSnapshotInput) {
 			a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.ClusterA.ID))
 			a.Assert().True(strings.Contains(*input.DBClusterSnapshotIdentifier, fmt.Sprintf("%s-snapshot-", a.ClusterA.ID)))
 			a.Assert().Greater(len(input.Tags), 0)
 			a.Assert().Equal(*input.Tags[0].Key, DefaultClusterInstallationSnapshotTagKey)
 			a.Assert().Equal(*input.Tags[0].Value, RDSSnapshotTagValue(CloudID(a.ClusterA.ID)))
-		}).Times(1),
-		a.Mocks.LOG.Logger.EXPECT().WithField("installation-id", a.InstallationA.ID).Return(testlib.NewLoggerEntry()).Times(1),
+		}).
+			Times(1),
+
+		a.Mocks.LOG.Logger.EXPECT().
+			WithField("installation-id", a.InstallationA.ID).
+			Return(testlib.NewLoggerEntry()).
+			Times(1),
 	)
 
 	err := database.Snapshot(a.Mocks.LOG.Logger)
@@ -47,8 +53,15 @@ func (a *AWSTestSuite) TestSnapshotError() {
 	}
 
 	gomock.InOrder(
-		a.Mocks.API.RDS.EXPECT().CreateDBClusterSnapshot(gomock.Any()).Return(nil, errors.New("database is not stable")).Times(1),
-		a.Mocks.LOG.Logger.EXPECT().WithField("installation-id", a.InstallationA.ID).Return(testlib.NewLoggerEntry()).Times(1),
+		a.Mocks.API.RDS.EXPECT().
+			CreateDBClusterSnapshot(gomock.Any()).
+			Return(nil, errors.New("database is not stable")).
+			Times(1),
+
+		a.Mocks.LOG.Logger.EXPECT().
+			WithField("installation-id", a.InstallationA.ID).
+			Return(testlib.NewLoggerEntry()).
+			Times(1),
 	)
 
 	err := database.Snapshot(a.Mocks.LOG.Logger)
@@ -103,7 +116,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 			}, nil))
 
 	a.Mocks.LOG.Logger.EXPECT().
-		WithField("db-subnet-group-name", "mattermost-provisioner-db-vpc-000000000000000a").
+		WithField("db-subnet-group-name", DBSubnetGroupName(a.VPCa)).
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
 		After(a.Mocks.API.RDS.EXPECT().
@@ -153,31 +166,6 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.LOG.Logger)
 	a.Assert().NoError(err)
 }
-
-// // Helpers
-
-// func (a *AWSTestSuite) SetClusterInstallationFilter(installationID string) *mock.Call {
-// 	return a.Mocks.Model.DatabaseInstallationStore.On("GetClusterInstallations", mock.MatchedBy(
-// 		func(input *model.ClusterInstallationFilter) bool {
-// 			return input.InstallationID == installationID
-// 		}))
-// }
-
-// func (a *AWSTestSuite) SetDescribeVpcsExpectations(clusterID string) *mock.Call {
-// 	return a.Mocks.API.EC2.On("DescribeVpcs", mock.MatchedBy(
-// 		func(input *ec2.DescribeVpcsInput) bool {
-// 			return *input.Filters[0].Name == VpcClusterIDTagKey &&
-// 				*input.Filters[1].Name == VpcAvailableTagKey &&
-// 				*input.Filters[1].Values[0] == VpcAvailableTagValueFalse
-// 		}))
-// }
-
-// func (a *AWSTestSuite) SetGetSecretValueExpectations(installationID string) *mock.Call {
-// 	return a.Mocks.API.SecretsManager.On("GetSecretValue", mock.MatchedBy(
-// 		func(input *secretsmanager.GetSecretValueInput) bool {
-// 			return *input.SecretId == RDSSecretName(CloudID(installationID))
-// 		}))
-// }
 
 // WARNING:
 // This test is meant to exercise the provisioning and teardown of an AWS RDS

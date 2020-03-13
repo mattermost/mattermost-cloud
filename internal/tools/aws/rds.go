@@ -58,7 +58,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 
 	for _, subnetGroup := range result.DBSubnetGroups {
 		// AWS names are unique, so there will only be one that correctly matches.
-		if *subnetGroup.DBSubnetGroupName == fmt.Sprintf("mattermost-provisioner-db-%s", vpcID) {
+		if *subnetGroup.DBSubnetGroupName == DBSubnetGroupName(vpcID) {
 			name := *subnetGroup.DBSubnetGroupName
 			logger.WithField("db-subnet-group-name", name).Debugf("Found DB subnet group")
 
