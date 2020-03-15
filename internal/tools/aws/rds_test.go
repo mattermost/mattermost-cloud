@@ -204,8 +204,6 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceAlreadyExistError() {
 }
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreateError() {
-	// a.SetDescribeDBInstancesNotFoundExpectation(a.InstallationA.ID).Once()
-	// a.SetCreateDBInstanceExpectation(a.InstallationA.ID).Return(nil, errors.New("bad request"))
 	a.Mocks.LOG.Logger.EXPECT().
 		Infof("Provisioning AWS RDS database with ID %s", CloudID(a.InstallationA.ID)).
 		Return().
