@@ -33,8 +33,7 @@ func (a *AWSTestSuite) TestSnapshot() {
 			a.Assert().Greater(len(input.Tags), 0)
 			a.Assert().Equal(*input.Tags[0].Key, DefaultClusterInstallationSnapshotTagKey)
 			a.Assert().Equal(*input.Tags[0].Value, RDSSnapshotTagValue(CloudID(a.ClusterA.ID)))
-		}).
-			Times(1),
+		}).Times(1),
 
 		a.Mocks.LOG.Logger.EXPECT().
 			WithField("installation-id", a.InstallationA.ID).
@@ -104,7 +103,10 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 			Return(&secretsmanager.GetSecretValueOutput{SecretString: &a.SecretString}, nil).
 			Times(1))
 
-	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
+	a.Mocks.API.RDS.EXPECT().
+		DescribeDBClusters(gomock.Any()).
+		Return(nil, errors.New("db cluster does not exist")).
+		Times(1)
 
 	a.Mocks.LOG.Logger.EXPECT().
 		WithField("security-group-ids", []string{a.GroupID}).
@@ -129,7 +131,10 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 				},
 			}, nil))
 
-	a.Mocks.LOG.Logger.EXPECT().WithField("db-cluster-name", CloudID(a.InstallationA.ID)).Return(testlib.NewLoggerEntry()).Times(1)
+	a.Mocks.LOG.Logger.EXPECT().
+		WithField("db-cluster-name", CloudID(a.InstallationA.ID)).
+		Return(testlib.NewLoggerEntry()).
+		Times(1)
 
 	a.Mocks.API.RDS.EXPECT().
 		CreateDBCluster(gomock.Any()).
