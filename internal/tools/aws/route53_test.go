@@ -81,7 +81,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			}).
 			Return(&route53.ChangeResourceRecordSetsOutput{}, nil),
 
-		a.Mocks.LOG.Logger.EXPECT().WithFields(log.Fields{
+		a.Mocks.Log.Logger.EXPECT().WithFields(log.Fields{
 			"route53-dns-value":      "mattermost.com",
 			"route53-dns-endpoints":  []string{"example.mattermost.com"},
 			"route53-hosted-zone-id": a.HostedZoneID,
@@ -90,7 +90,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			Times(1),
 	)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.LOG.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -102,9 +102,9 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEListZonesError() {
 
 	a.Mocks.API.Route53.EXPECT().ListTagsForResource(gomock.Any()).Times(0)
 	a.Mocks.API.Route53.EXPECT().ChangeResourceRecordSets(gomock.Any()).Times(0)
-	a.Mocks.LOG.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
+	a.Mocks.Log.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.LOG.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal("unable to create a public CNAME: mattermost.com: listing hosted all zones: invalid input", err.Error())
 }
@@ -135,9 +135,9 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEListTagsError() {
 	)
 
 	a.Mocks.API.Route53.EXPECT().ChangeResourceRecordSets(gomock.Any()).Times(0)
-	a.Mocks.LOG.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
+	a.Mocks.Log.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.LOG.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal("unable to create a public CNAME: mattermost.com: region is not set", err.Error())
 }
@@ -185,9 +185,9 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEChangeRecordSetsError() {
 			Times(1),
 	)
 
-	a.Mocks.LOG.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
+	a.Mocks.Log.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.LOG.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal("unable to change recordsets", err.Error())
 }
@@ -225,7 +225,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMENoHostedZone() {
 			Times(1),
 	)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.LOG.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal("unable to create a public CNAME: mattermost.com: no hosted zone ID associated with tag: tag:MattermostCloudDNS:public", err.Error())
 }

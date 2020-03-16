@@ -109,7 +109,9 @@ mocks:
 	@if [ ! -f $(GOPATH)/pkg/mod ]; then \
 		$(GO) mod download;\
 	fi
-	# env GO111MODULE=off $(GO) get github.com/sirupsen/logrus
+
+	# Mockgen cannot generate mocks for logrus when reading it from modules.  
+	GO111MODULE=off $(GO) get github.com/sirupsen/logrus
 	
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/ec2/ec2iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/ec2.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/rds/rdsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/rds.go
@@ -118,11 +120,7 @@ mocks:
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/iam/iamiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/iam.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/route53/route53iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/route53.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go
-	# $(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
 	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go
 	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go
-
-	@rm -rf $(GOPATH)/src/github.com/sirupsen/logrus/ && mkdir -p $(GOPATH)/src/github.com/sirupsen/logrus/
-	@cp -r $(LOGRUS_PATH)/* $(GOPATH)/src/github.com/sirupsen/logrus/
 	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
 

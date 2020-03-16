@@ -34,7 +34,7 @@ func TestClientSuite(t *testing.T) {
 type Mocks struct {
 	AWS   *Client
 	API   *testlib.AWSMockedAPI
-	LOG   *testlib.MockedFieldLogger
+	Log   *testlib.MockedFieldLogger
 	Model *testlib.ModelMockedAPI
 }
 
@@ -157,7 +157,7 @@ func (a *AWSTestSuite) SetupTest() {
 			config: &aws.Config{},
 			mux:    &sync.Mutex{},
 		},
-		LOG:   testlib.NewMockedFieldLogger(a.ctrl),
+		Log:   testlib.NewMockedFieldLogger(a.ctrl),
 		Model: testlib.NewModelMockedAPI(a.ctrl),
 	}
 }

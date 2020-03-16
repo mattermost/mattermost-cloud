@@ -35,13 +35,13 @@ func (a *AWSTestSuite) TestSnapshot() {
 			a.Assert().Equal(*input.Tags[0].Value, RDSSnapshotTagValue(CloudID(a.ClusterA.ID)))
 		}).Times(1),
 
-		a.Mocks.LOG.Logger.EXPECT().
+		a.Mocks.Log.Logger.EXPECT().
 			WithField("installation-id", a.InstallationA.ID).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
 
-	err := database.Snapshot(a.Mocks.LOG.Logger)
+	err := database.Snapshot(a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -57,13 +57,13 @@ func (a *AWSTestSuite) TestSnapshotError() {
 			Return(nil, errors.New("database is not stable")).
 			Times(1),
 
-		a.Mocks.LOG.Logger.EXPECT().
+		a.Mocks.Log.Logger.EXPECT().
 			WithField("installation-id", a.InstallationA.ID).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
 
-	err := database.Snapshot(a.Mocks.LOG.Logger)
+	err := database.Snapshot(a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().Equal("failed to create a DB cluster snapshot: database is not stable", err.Error())
@@ -77,7 +77,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 		client:         a.Mocks.AWS,
 	}
 
-	a.Mocks.LOG.Logger.EXPECT().Infof("Provisioning AWS RDS database with ID %s", CloudID(a.InstallationA.ID)).Return().Times(1)
+	a.Mocks.Log.Logger.EXPECT().Infof("Provisioning AWS RDS database with ID %s", CloudID(a.InstallationA.ID)).Return().Times(1)
 
 	a.Mocks.Model.DatabaseInstallationStore.EXPECT().
 		GetClusterInstallations(gomock.Any()).
@@ -94,7 +94,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 		Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{&ec2.Vpc{VpcId: &a.VPCa}}}, nil).
 		Times(1)
 
-	a.Mocks.LOG.Logger.EXPECT().
+	a.Mocks.Log.Logger.EXPECT().
 		WithField("secret-name", RDSSecretName(CloudID(a.InstallationA.ID))).
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
@@ -108,7 +108,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 		Return(nil, errors.New("db cluster does not exist")).
 		Times(1)
 
-	a.Mocks.LOG.Logger.EXPECT().
+	a.Mocks.Log.Logger.EXPECT().
 		WithField("security-group-ids", []string{a.GroupID}).
 		Return(testlib.NewLoggerEntry()).Times(1).
 		After(a.Mocks.API.EC2.EXPECT().
@@ -117,7 +117,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 				SecurityGroups: []*ec2.SecurityGroup{&ec2.SecurityGroup{GroupId: &a.GroupID}},
 			}, nil))
 
-	a.Mocks.LOG.Logger.EXPECT().
+	a.Mocks.Log.Logger.EXPECT().
 		WithField("db-subnet-group-name", DBSubnetGroupName(a.VPCa)).
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
@@ -131,7 +131,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 				},
 			}, nil))
 
-	a.Mocks.LOG.Logger.EXPECT().
+	a.Mocks.Log.Logger.EXPECT().
 		WithField("db-cluster-name", CloudID(a.InstallationA.ID)).
 		Return(testlib.NewLoggerEntry()).
 		Times(1)
@@ -157,7 +157,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 			a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 		})
 
-	a.Mocks.LOG.Logger.EXPECT().WithField("db-instance-name", RDSMasterInstanceID(a.InstallationA.ID)).
+	a.Mocks.Log.Logger.EXPECT().WithField("db-instance-name", RDSMasterInstanceID(a.InstallationA.ID)).
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
 		After(a.Mocks.API.RDS.EXPECT().
@@ -168,7 +168,7 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 			}).
 			Times(1))
 
-	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.LOG.Logger)
+	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
