@@ -49,21 +49,24 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 	logger.Info("Tearing down AWS RDS database")
 	awsID := CloudID(d.installationID)
 
+	logger = logger.WithField("db-cluster-name", awsID)
+
 	err := d.client.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to delete RDS secret")
 	}
 
-	if !keepData {
-		err = d.client.rdsEnsureDBClusterDeleted(awsID, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to delete RDS DB cluster")
-		}
-		logger.WithField("db-cluster-name", awsID).Debug("AWS RDS DB cluster deleted")
-	} else {
+	if keepData {
 		logger.WithField("db-cluster-name", awsID).Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
+		return nil
 	}
 
+	err = d.client.rdsEnsureDBClusterDeleted(awsID, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete RDS DB cluster")
+	}
+
+	logger.WithField("db-cluster-name", awsID).Debug("AWS RDS DB cluster deleted")
 	return nil
 }
 

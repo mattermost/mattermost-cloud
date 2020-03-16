@@ -58,7 +58,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 
 	err = f.awsClient.s3EnsureBucketDeleted(awsID, logger)
 	if err != nil {
-		return errors.Wrap(err, "unable to teardown AWS S3 filestore")
+		return errors.Wrap(err, "unable to ensure that AWS S3 filestore was deleted")
 	}
 
 	logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket deleted")
