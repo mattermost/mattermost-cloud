@@ -74,6 +74,7 @@ type AWSTestSuite struct {
 	RDSParamGroup        string
 	DBName               string
 	ResourceID           string
+	HostedZoneID         string
 	CertifcateARN        string
 	RDSAvailabilityZones []string
 
@@ -128,6 +129,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		SecretStringUserErr:  `{"username":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		SecretStringPassErr:  `{"MasterUsername":"mmcloud","password":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		ResourceID:           "WSxqXCaZw1dC",
+		HostedZoneID:         "ZWI3O6O6N782C",
 		CertifcateARN:        "arn:aws:certificate::123456789012",
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
