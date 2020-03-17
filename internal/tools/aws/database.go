@@ -46,10 +46,10 @@ func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, 
 
 // Teardown removes all AWS resources related to a RDS database.
 func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
-	logger.Info("Tearing down AWS RDS database")
 	awsID := CloudID(d.installationID)
 
 	logger = logger.WithField("db-cluster-name", awsID)
+	logger.Info("Tearing down AWS RDS database")
 
 	err := d.client.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
 	if err != nil {
@@ -57,7 +57,7 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 	}
 
 	if keepData {
-		logger.WithField("db-cluster-name", awsID).Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
+		logger.Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
 		return nil
 	}
 
@@ -66,7 +66,7 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 		return errors.Wrap(err, "unable to delete RDS DB cluster")
 	}
 
-	logger.WithField("db-cluster-name", awsID).Debug("AWS RDS DB cluster deleted")
+	logger.Debug("AWS RDS DB cluster deleted")
 	return nil
 }
 
