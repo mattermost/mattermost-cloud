@@ -59,7 +59,7 @@ func (a *Client) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error
 }
 
 func (a *Client) getZoneDNS(hostedZoneID string, logger log.FieldLogger) (string, error) {
-	out, err := a.Service(logger).route53.GetHostedZone(&route53.GetHostedZoneInput{
+	out, err := a.Service().route53.GetHostedZone(&route53.GetHostedZoneInput{
 		Id: aws.String(hostedZoneID),
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 		})
 	}
 
-	resp, err := a.Service(logger).route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
+	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
 		ChangeBatch: &route53.ChangeBatch{
 			Changes: []*route53.Change{
 				{
@@ -158,7 +158,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	nextRecordName := dnsName
 	var recordsets []*route53.ResourceRecordSet
 	for {
-		recordList, err := a.Service(logger).route53.ListResourceRecordSets(
+		recordList, err := a.Service().route53.ListResourceRecordSets(
 			&route53.ListResourceRecordSetsInput{
 				HostedZoneId:    &hostedZoneID,
 				StartRecordName: &nextRecordName,
@@ -192,7 +192,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		return nil
 	}
 
-	resp, err := a.Service(logger).route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
+	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
 		ChangeBatch:  &route53.ChangeBatch{Changes: changes},
 		HostedZoneId: &hostedZoneID,
 	})
@@ -212,7 +212,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string, error) {
 	var next *string
 	for {
-		zoneList, err := a.Service(logger).route53.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
+		zoneList, err := a.Service().route53.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
 		if err != nil {
 			return "", errors.Wrapf(err, "listing hosted all zones")
 		}
@@ -223,7 +223,7 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string
 				return "", errors.Wrapf(err, "when parsing hosted zone: %s", zone.String())
 			}
 
-			tagList, err := a.Service(logger).route53.ListTagsForResource(&route53.ListTagsForResourceInput{
+			tagList, err := a.Service().route53.ListTagsForResource(&route53.ListTagsForResourceInput{
 				ResourceId:   aws.String(id),
 				ResourceType: aws.String(hostedZoneResourceType),
 			})

@@ -43,8 +43,9 @@ type AWS interface {
 }
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
-func NewAWSClientWithConfig(config *aws.Config) *Client {
+func NewAWSClientWithConfig(config *aws.Config, logger log.FieldLogger) *Client {
 	return &Client{
+		logger: logger,
 		config: config,
 		mux:    &sync.Mutex{},
 	}
@@ -77,17 +78,18 @@ func NewService(sess *session.Session) *Service {
 // Client is a client for interacting with AWS resources.
 type Client struct {
 	store   model.InstallationDatabaseStoreInterface
+	logger  log.FieldLogger
 	service *Service
 	config  *aws.Config
 	mux     *sync.Mutex
 }
 
 // Service contructs an AWS session if not yet successfully done and returns AWS clients.
-func (c *Client) Service(logger log.FieldLogger) *Service {
+func (c *Client) Service() *Service {
 	if c.service == nil {
-		sess, err := NewAWSSessionWithLogger(c.config, logger)
+		sess, err := NewAWSSessionWithLogger(c.config, c.logger.WithField("tools-aws", "client"))
 		if err != nil {
-			logger.WithError(err).Error("failed to initialize AWS session")
+			c.logger.WithError(err).Error("failed to initialize AWS session")
 			// Calls to AWS will fail until a healthy session is acquired.
 			return NewService(&session.Session{})
 		}

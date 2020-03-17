@@ -24,7 +24,7 @@ type policyStatementEntry struct {
 }
 
 func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*iam.User, error) {
-	getResult, err := a.Service(logger).iam.GetUser(&iam.GetUserInput{
+	getResult, err := a.Service().iam.GetUser(&iam.GetUserInput{
 		UserName: aws.String(awsID),
 	})
 	if err == nil {
@@ -39,7 +39,7 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ia
 		return nil, err
 	}
 
-	createResult, err := a.Service(logger).iam.CreateUser(&iam.CreateUserInput{
+	createResult, err := a.Service().iam.CreateUser(&iam.CreateUserInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {
@@ -52,7 +52,7 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ia
 }
 
 func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) error {
-	_, err := a.Service(logger).iam.GetUser(&iam.GetUserInput{
+	_, err := a.Service().iam.GetUser(&iam.GetUserInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {
@@ -67,14 +67,14 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		return err
 	}
 
-	policyResult, err := a.Service(logger).iam.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
+	policyResult, err := a.Service().iam.ListAttachedUserPolicies(&iam.ListAttachedUserPoliciesInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {
 		return err
 	}
 	for _, policy := range policyResult.AttachedPolicies {
-		_, err = a.Service(logger).iam.DetachUserPolicy(&iam.DetachUserPolicyInput{
+		_, err = a.Service().iam.DetachUserPolicy(&iam.DetachUserPolicyInput{
 			PolicyArn: policy.PolicyArn,
 			UserName:  aws.String(awsID),
 		})
@@ -87,7 +87,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 			"iam-policy-name": *policy.PolicyName,
 		}).Debug("AWS IAM policy detached from user")
 
-		_, err = a.Service(logger).iam.DeletePolicy(&iam.DeletePolicyInput{
+		_, err = a.Service().iam.DeletePolicy(&iam.DeletePolicyInput{
 			PolicyArn: policy.PolicyArn,
 		})
 		if err != nil {
@@ -100,14 +100,14 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		}).Debug("AWS IAM policy deleted")
 	}
 
-	accessKeyResult, err := a.Service(logger).iam.ListAccessKeys(&iam.ListAccessKeysInput{
+	accessKeyResult, err := a.Service().iam.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {
 		return err
 	}
 	for _, ak := range accessKeyResult.AccessKeyMetadata {
-		_, err = a.Service(logger).iam.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+		_, err = a.Service().iam.DeleteAccessKey(&iam.DeleteAccessKeyInput{
 			AccessKeyId: ak.AccessKeyId,
 			UserName:    aws.String(awsID),
 		})
@@ -121,7 +121,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 		}).Debug("AWS IAM user access key deleted")
 	}
 
-	_, err = a.Service(logger).iam.DeleteUser(&iam.DeleteUserInput{
+	_, err = a.Service().iam.DeleteUser(&iam.DeleteUserInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {
@@ -134,7 +134,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 }
 
 func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.FieldLogger) (*iam.Policy, error) {
-	getResult, err := a.Service(logger).iam.GetPolicy(&iam.GetPolicyInput{
+	getResult, err := a.Service().iam.GetPolicy(&iam.GetPolicyInput{
 		PolicyArn: aws.String(policyARN),
 	})
 	if err == nil {
@@ -179,7 +179,7 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 		return nil, errors.Wrap(err, "unable to marshal IAM policy")
 	}
 
-	createResult, err := a.Service(logger).iam.CreatePolicy(&iam.CreatePolicyInput{
+	createResult, err := a.Service().iam.CreatePolicy(&iam.CreatePolicyInput{
 		PolicyDocument: aws.String(string(b)),
 		PolicyName:     aws.String(awsID),
 	})
@@ -193,7 +193,7 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 }
 
 func (a *Client) iamEnsurePolicyAttached(awsID, policyARN string, logger log.FieldLogger) error {
-	_, err := a.Service(logger).iam.AttachUserPolicy(&iam.AttachUserPolicyInput{
+	_, err := a.Service().iam.AttachUserPolicy(&iam.AttachUserPolicyInput{
 		PolicyArn: aws.String(policyARN),
 		UserName:  aws.String(awsID),
 	})
@@ -205,14 +205,14 @@ func (a *Client) iamEnsurePolicyAttached(awsID, policyARN string, logger log.Fie
 }
 
 func (a *Client) iamEnsureAccessKeyCreated(awsID string, logger log.FieldLogger) (*iam.AccessKey, error) {
-	listResult, err := a.Service(logger).iam.ListAccessKeys(&iam.ListAccessKeysInput{
+	listResult, err := a.Service().iam.ListAccessKeys(&iam.ListAccessKeysInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {
 		return nil, err
 	}
 	for _, ak := range listResult.AccessKeyMetadata {
-		_, err = a.Service(logger).iam.DeleteAccessKey(&iam.DeleteAccessKeyInput{
+		_, err = a.Service().iam.DeleteAccessKey(&iam.DeleteAccessKeyInput{
 			AccessKeyId: ak.AccessKeyId,
 			UserName:    aws.String(awsID),
 		})
@@ -226,7 +226,7 @@ func (a *Client) iamEnsureAccessKeyCreated(awsID string, logger log.FieldLogger)
 		}).Info("AWS IAM user access key deleted")
 	}
 
-	createResult, err := a.Service(logger).iam.CreateAccessKey(&iam.CreateAccessKeyInput{
+	createResult, err := a.Service().iam.CreateAccessKey(&iam.CreateAccessKeyInput{
 		UserName: aws.String(awsID),
 	})
 	if err != nil {

@@ -168,20 +168,19 @@ func (a *AWSTestSuite) TearDown() {
 
 func (a *AWSTestSuite) TestNewClient() {
 	client := &Client{
-		mux: &sync.Mutex{},
+		logger: logrus.New(),
+		mux:    &sync.Mutex{},
 	}
 
-	logger := logrus.New()
-
 	a.Assert().NotNil(client)
-	a.Assert().NotNil(client.Service(logger).acm)
-	a.Assert().NotNil(client.Service(logger).iam)
-	a.Assert().NotNil(client.Service(logger).s3)
-	a.Assert().NotNil(client.Service(logger).route53)
-	a.Assert().NotNil(client.Service(logger).secretsManager)
-	a.Assert().NotNil(client.Service(logger).ec2)
+	a.Assert().NotNil(client.Service().acm)
+	a.Assert().NotNil(client.Service().iam)
+	a.Assert().NotNil(client.Service().s3)
+	a.Assert().NotNil(client.Service().route53)
+	a.Assert().NotNil(client.Service().secretsManager)
+	a.Assert().NotNil(client.Service().ec2)
 
-	_, err := client.Service(logger).acm.ListCertificates(&acm.ListCertificatesInput{})
+	_, err := client.Service().acm.ListCertificates(&acm.ListCertificatesInput{})
 	a.Assert().Error(err)
 }
 
