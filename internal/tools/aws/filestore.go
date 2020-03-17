@@ -37,9 +37,10 @@ func (f *S3Filestore) Provision(logger log.FieldLogger) error {
 
 // Teardown removes all AWS resources related to an S3 filestore.
 func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
-	logger.Info("Tearing down AWS S3 filestore")
-
 	awsID := CloudID(f.installationID)
+
+	logger = logger.WithField("s3-bucket-name", awsID)
+	logger.Info("Tearing down AWS S3 filestore")
 
 	err := f.awsClient.iamEnsureUserDeleted(awsID, logger)
 	if err != nil {
@@ -52,7 +53,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 	}
 
 	if keepData {
-		logger.WithField("s3-bucket-name", awsID).Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
+		logger.Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
 		return nil
 	}
 
@@ -61,7 +62,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 		return errors.Wrap(err, "unable to ensure that AWS S3 filestore was deleted")
 	}
 
-	logger.WithField("s3-bucket-name", awsID).Debug("AWS S3 bucket deleted")
+	logger.Debug("AWS S3 bucket was deleted")
 	return nil
 }
 
