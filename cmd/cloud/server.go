@@ -46,6 +46,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 }
 
 var serverCmd = &cobra.Command{
@@ -57,6 +58,11 @@ var serverCmd = &cobra.Command{
 		debug, _ := command.Flags().GetBool("debug")
 		if debug {
 			logger.SetLevel(logrus.DebugLevel)
+		}
+
+		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
+		if machineLogs {
+			logger.SetFormatter(&logrus.JSONFormatter{})
 		}
 
 		logger := logger.WithField("instance", instanceID)

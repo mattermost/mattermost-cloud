@@ -22,7 +22,7 @@ type Store interface {
 	DeleteCluster(clusterID string) error
 
 	CreateInstallation(installation *model.Installation) error
-	GetInstallation(installationID string) (*model.Installation, error)
+	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetInstallations(filter *model.InstallationFilter) ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)

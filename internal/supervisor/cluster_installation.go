@@ -16,7 +16,7 @@ import (
 type clusterInstallationStore interface {
 	GetCluster(clusterID string) (*model.Cluster, error)
 
-	GetInstallation(installationID string) (*model.Installation, error)
+	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 
 	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
 	GetUnlockedClusterInstallationsPendingWork() ([]*model.ClusterInstallation, error)
@@ -148,7 +148,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 		return failedClusterInstallationState(clusterInstallation.State)
 	}
 
-	installation, err := s.store.GetInstallation(clusterInstallation.InstallationID)
+	installation, err := s.store.GetInstallation(clusterInstallation.InstallationID, false, false)
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to query installation %s", clusterInstallation.InstallationID)
 		return clusterInstallation.State

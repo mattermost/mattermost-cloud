@@ -45,7 +45,7 @@ func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
 // lockInstallation synchronizes access to the given installation across potentially multiple provisioning
 // servers.
 func lockInstallation(c *Context, installationID string) (*model.Installation, int, func()) {
-	installation, err := c.Store.GetInstallation(installationID)
+	installation, err := c.Store.GetInstallation(installationID, false, false)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installation")
 		return nil, http.StatusInternalServerError, nil
