@@ -11,6 +11,7 @@ type Installation struct {
 	ID             string
 	OwnerID        string
 	GroupID        *string
+	GroupSequence  *int64 `json:"GroupSequence,omitempty"`
 	Version        string
 	DNS            string
 	Database       string

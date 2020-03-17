@@ -620,4 +620,114 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.14.0"), semver.MustParse("0.15.0"), func(e execer) error {
+		// Add Group Sequence column for installations and groups.
+		// Add Group MaxRolling column.
+		// Add Group lock columns.
+		// tl;dr we should get rid of SQLite
+
+		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN GroupSequence BIGINT NULL;`)
+		if err != nil {
+			return err
+		}
+
+		if e.DriverName() == driverPostgres {
+			_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN Sequence BIGINT NULL;`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`UPDATE "Group" SET Sequence = '0';`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`ALTER TABLE "Group" ALTER COLUMN Sequence SET NOT NULL; `)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN MaxRolling BIGINT NULL;`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`UPDATE "Group" SET MaxRolling = '1';`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`ALTER TABLE "Group" ALTER COLUMN MaxRolling SET NOT NULL; `)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN LockAcquiredBy TEXT NULL;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN LockAcquiredAt BIGINT NULL;`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`UPDATE "Group" SET LockAcquiredAt = '0';`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`ALTER TABLE "Group" ALTER COLUMN LockAcquiredAt SET NOT NULL; `)
+			if err != nil {
+				return err
+			}
+
+		} else if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`ALTER TABLE "Group" RENAME TO "GroupTemp";`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+				CREATE TABLE "Group" (
+					ID TEXT PRIMARY KEY,
+					Name TEXT,
+					Description TEXT,
+					Version TEXT,
+					MattermostEnvRaw BYTEA NULL,
+					MaxRolling BIGINT NOT NULL,
+					Sequence BIGINT NOT NULL,
+					CreateAt BIGINT NOT NULL,
+					DeleteAt BIGINT NOT NULL,
+					LockAcquiredBy TEXT NULL,
+					LockAcquiredAt BIGINT NOT NULL
+				);
+			`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					INSERT INTO "Group"
+					SELECT
+						ID,
+						Name,
+						Description,
+						Version,
+						MattermostEnvRaw,
+						1,
+						0,
+						CreateAt,
+						DeleteAt,
+						NULL,
+						0
+					FROM
+						"GroupTemp";
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE "GroupTemp";`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
 }
