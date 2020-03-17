@@ -170,7 +170,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
 		},
 	}
-	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters, logger)
+	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
 		return err
 	}

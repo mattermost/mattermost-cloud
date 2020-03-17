@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewAWSSessionWithLogger initialized an AWS session instance with logging handler for debuging only.
+// NewAWSSessionWithLogger initializes an AWS session instance with logging handler for debuging only.
 func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*session.Session, error) {
 	awsSession, err := session.NewSession(config)
 	if err != nil {

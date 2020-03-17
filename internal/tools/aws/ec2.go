@@ -68,42 +68,6 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 	return nil
 }
 
-// GetVpcsWithFilters returns VPCs matching a given filter.
-func (a *Client) GetVpcsWithFilters(filters []*ec2.Filter, logger log.FieldLogger) ([]*ec2.Vpc, error) {
-	vpcOutput, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{
-		Filters: filters,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return vpcOutput.Vpcs, nil
-}
-
-// GetSubnetsWithFilters returns subnets matching a given filter.
-func (a *Client) GetSubnetsWithFilters(filters []*ec2.Filter, logger log.FieldLogger) ([]*ec2.Subnet, error) {
-	subnetOutput, err := a.Service().ec2.DescribeSubnets(&ec2.DescribeSubnetsInput{
-		Filters: filters,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return subnetOutput.Subnets, nil
-}
-
-// GetSecurityGroupsWithFilters returns SGs matching a given filter.
-func (a *Client) GetSecurityGroupsWithFilters(filters []*ec2.Filter, logger log.FieldLogger) ([]*ec2.SecurityGroup, error) {
-	sgOutput, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-		Filters: filters,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return sgOutput.SecurityGroups, nil
-}
-
 // IsValidAMI check if the provided AMI exists
 func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error) {
 	// if AMI image is blank it will use the default KOPS image
@@ -127,6 +91,42 @@ func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, erro
 	}
 
 	return true, nil
+}
+
+// GetVpcsWithFilters returns VPCs matching a given filter.
+func (a *Client) GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
+	vpcOutput, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return vpcOutput.Vpcs, nil
+}
+
+// GetSubnetsWithFilters returns subnets matching a given filter.
+func (a *Client) GetSubnetsWithFilters(filters []*ec2.Filter) ([]*ec2.Subnet, error) {
+	subnetOutput, err := a.Service().ec2.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return subnetOutput.Subnets, nil
+}
+
+// GetSecurityGroupsWithFilters returns SGs matching a given filter.
+func (a *Client) GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, error) {
+	sgOutput, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+		Filters: filters,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return sgOutput.SecurityGroups, nil
 }
 
 func prettyCreateTagsResponse(resp *ec2.CreateTagsOutput) string {

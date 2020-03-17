@@ -57,7 +57,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID string, logger log.FieldLogger)
 		Values: []*string{aws.String("private")},
 	})
 
-	privateSubnets, err := a.GetSubnetsWithFilters(privateSubnetFilter, logger)
+	privateSubnets, err := a.GetSubnetsWithFilters(privateSubnetFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -71,7 +71,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID string, logger log.FieldLogger)
 		Values: []*string{aws.String("public")},
 	})
 
-	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter, logger)
+	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -85,7 +85,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID string, logger log.FieldLogger)
 		Values: []*string{aws.String("master")},
 	})
 
-	masterSecurityGroups, err := a.GetSecurityGroupsWithFilters(masterSGFilter, logger)
+	masterSecurityGroups, err := a.GetSecurityGroupsWithFilters(masterSGFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -99,7 +99,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID string, logger log.FieldLogger)
 		Values: []*string{aws.String("worker")},
 	})
 
-	workerSecurityGroups, err := a.GetSecurityGroupsWithFilters(workerSGFilter, logger)
+	workerSecurityGroups, err := a.GetSecurityGroupsWithFilters(workerSGFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -135,7 +135,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 			},
 		},
 	}
-	clusterAlreadyClaimedVpcs, err := a.GetVpcsWithFilters(clusterAlreadyClaimedFilter, logger)
+	clusterAlreadyClaimedVpcs, err := a.GetVpcsWithFilters(clusterAlreadyClaimedFilter)
 	if err != nil {
 		return ClusterResources{}, err
 	}
@@ -156,7 +156,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 			},
 		},
 	}
-	totalVpcs, err := a.GetVpcsWithFilters(totalVpcsFilter, logger)
+	totalVpcs, err := a.GetVpcsWithFilters(totalVpcsFilter)
 	if err != nil {
 		return ClusterResources{}, err
 	}
@@ -169,7 +169,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		},
 	}
 
-	vpcs, err := a.GetVpcsWithFilters(vpcFilters, logger)
+	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
 		return ClusterResources{}, err
 	}
@@ -223,7 +223,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 			Values: []*string{aws.String(VpcClusterIDTagValueNone)},
 		},
 	}
-	vpcs, err := a.GetVpcsWithFilters(vpcFilter, logger)
+	vpcs, err := a.GetVpcsWithFilters(vpcFilter)
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		},
 	}
 
-	vpcs, err := a.GetVpcsWithFilters(vpcFilters, logger)
+	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		},
 	}
 
-	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter, logger)
+	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
 	if err != nil {
 		return err
 	}
