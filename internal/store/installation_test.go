@@ -22,6 +22,7 @@ func TestInstallations(t *testing.T) {
 
 	group1 := &model.Group{
 		Version: "group1-version",
+		Image:   "custom/image",
 		MattermostEnv: model.EnvVarMap{
 			"Key1": model.EnvVar{Value: "Value1"},
 		},
@@ -498,6 +499,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	group1 := &model.Group{
 		Version: "group1-version",
+		Image:   "custom/image",
 		MattermostEnv: model.EnvVarMap{
 			"Key1": model.EnvVar{Value: "Value1"},
 		},
@@ -555,7 +557,7 @@ func TestUpdateInstallation(t *testing.T) {
 		OwnerID:   ownerID1,
 		Version:   "version2",
 		DNS:       "dns4.example.com",
-		Image:     "custom-image",
+		Image:     "custom/image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -569,6 +571,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	installation1.OwnerID = ownerID2
 	installation1.Version = "version3"
+	installation1.Version = "custom/image"
 	installation1.DNS = "dns5.example.com"
 	installation1.Size = mmv1alpha1.Size1000String
 	installation1.Affinity = model.InstallationAffinityIsolated

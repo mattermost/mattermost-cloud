@@ -736,7 +736,7 @@ var migrations = []migration{
 			_, err := e.Exec(`
 				ALTER TABLE Installation
 				ADD COLUMN Image TEXT NULL;
-		`)
+				`)
 			if err != nil {
 				return err
 			}
@@ -744,7 +744,7 @@ var migrations = []migration{
 			_, err = e.Exec(`
 				UPDATE Installation
 				SET Image = 'mattermost/mattermost-enterprise-edition';
-		 `)
+		 		`)
 			if err != nil {
 				return err
 			}
@@ -766,7 +766,7 @@ var migrations = []migration{
 			_, err = e.Exec(`
 				UPDATE "Group"
 				SET Image = 'mattermost/mattermost-enterprise-edition';
-		 `)
+		 		`)
 			if err != nil {
 				return err
 			}
@@ -794,6 +794,7 @@ var migrations = []migration{
 						Size TEXT NOT NULL,
 						MattermostEnvRaw BYTEA NULL,
 						Affinity TEXT NOT NULL,
+						GroupSequence BIGINT NULL,
 						GroupID TEXT NULL,
 						State TEXT NOT NULL,
 						CreateAt BIGINT NOT NULL,
@@ -820,6 +821,7 @@ var migrations = []migration{
 						Size,
 						MattermostEnvRaw,
 						Affinity,
+						GroupSequence,
 						GroupID,
 						State,
 						CreateAt,
@@ -846,13 +848,17 @@ var migrations = []migration{
 			_, err = e.Exec(`
 				CREATE TABLE "Group" (
 					ID TEXT PRIMARY KEY,
-					Name TEXT NOT NULL,
-					Description TEXT NOT NULL,
-					Version TEXT NOT NULL,
-					Image TEXT NOT NULL,
+					Name TEXT,
+					Description TEXT,
+					Version TEXT,
+					Image TEXT,
 					MattermostEnvRaw BYTEA NULL,
+					MaxRolling BIGINT NOT NULL,
+					Sequence BIGINT NOT NULL,
 					CreateAt BIGINT NOT NULL,
-					DeleteAt BIGINT NOT NULL
+					DeleteAt BIGINT NOT NULL,
+					LockAcquiredBy TEXT NULL,
+					LockAcquiredAt BIGINT NOT NULL
 				);
 			`)
 			if err != nil {
@@ -860,17 +866,21 @@ var migrations = []migration{
 			}
 
 			_, err = e.Exec(`
-						INSERT INTO "Group"
-						SELECT
-							ID,
-							Name,
-							Description,
-							Version,
-							"mattermost/mattermost-enterprise-edition",
-							MattermostEnvRaw,
-							CreateAt,
-							DeleteAt
-						FROM
+				INSERT INTO "Group"
+					SELECT
+						ID,
+						Name,
+						Description,
+						Version,
+						"mattermost/mattermost-enterprise-edition",
+						MattermostEnvRaw,
+						MaxRolling,
+						Sequence,
+						CreateAt,
+						DeleteAt,
+						LockAcquiredBy,
+						LockAcquiredAt
+					FROM
 						"GroupTemp";
 					`)
 			if err != nil {

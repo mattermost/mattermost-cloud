@@ -653,12 +653,14 @@ func TestJoinGroup(t *testing.T) {
 	group1, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:    "name1",
 		Version: "version1",
+		Image:   "sample/image1",
 	})
 	require.NoError(t, err)
 
 	group2, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:    "name2",
 		Version: "version2",
+		Image:   "sample/image2",
 	})
 	require.NoError(t, err)
 
@@ -745,6 +747,7 @@ func TestLeaveGroup(t *testing.T) {
 	group1, err := client.CreateGroup(&model.CreateGroupRequest{
 		Name:    "name1",
 		Version: "version1",
+		Image:   "sample/image1",
 	})
 	require.NoError(t, err)
 

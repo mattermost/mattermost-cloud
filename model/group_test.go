@@ -11,6 +11,7 @@ func TestGroupClone(t *testing.T) {
 	group := &Group{
 		ID:          "id",
 		Name:        "name",
+		Image:       "sample/image",
 		Description: "description",
 		Version:     "version",
 	}
@@ -44,6 +45,7 @@ func TestGroupFromReader(t *testing.T) {
 		group, err := GroupFromReader(bytes.NewReader([]byte(`{
 			"ID":"id",
 			"Name":"name",
+			"Image":"sample/image",
 			"Description":"description",
 			"Version":"version",
 			"CreateAt":10,
@@ -56,6 +58,7 @@ func TestGroupFromReader(t *testing.T) {
 			Name:        "name",
 			Description: "description",
 			Version:     "version",
+			Image:       "sample/image",
 			CreateAt:    10,
 			DeleteAt:    20,
 			MattermostEnv: EnvVarMap{
@@ -73,6 +76,7 @@ func TestGroupFromReader(t *testing.T) {
 			"Name":"name",
 			"Description":"description",
 			"Version":"version",
+			"Image":"sample/image",
 			"CreateAt":10,
 			"DeleteAt":20
 		}`)))
@@ -82,6 +86,7 @@ func TestGroupFromReader(t *testing.T) {
 			Name:          "name",
 			Description:   "description",
 			Version:       "version",
+			Image:         "sample/image",
 			CreateAt:      10,
 			DeleteAt:      20,
 			MattermostEnv: nil,
@@ -95,6 +100,7 @@ func TestGroupFromReader(t *testing.T) {
 			"Name":"name",
 			"Description":"description",
 			"Version":"version",
+			"Image":"sample/image",
 			"CreateAt":10,
 			"DeleteAt":20
 			"MattermostEnv": {
@@ -127,6 +133,7 @@ func TestGroupsFromReader(t *testing.T) {
 				"Name":"name1",
 				"Description":"description1",
 				"Version":"version1",
+				"Image":"sample/image1",
 				"CreateAt":10,
 				"DeleteAt":20
 			},
@@ -135,6 +142,7 @@ func TestGroupsFromReader(t *testing.T) {
 				"Name":"name2",
 				"Description":"description2",
 				"Version":"version2",
+				"Image":"sample/image2",
 				"CreateAt":30,
 				"DeleteAt":40
 			}
@@ -146,6 +154,7 @@ func TestGroupsFromReader(t *testing.T) {
 				Name:        "name1",
 				Description: "description1",
 				Version:     "version1",
+				Image:       "sample/image1",
 				CreateAt:    10,
 				DeleteAt:    20,
 			},
@@ -154,6 +163,7 @@ func TestGroupsFromReader(t *testing.T) {
 				Name:        "name2",
 				Description: "description2",
 				Version:     "version2",
+				Image:       "sample/image2",
 				CreateAt:    30,
 				DeleteAt:    40,
 			},

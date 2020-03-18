@@ -14,6 +14,7 @@ type CreateGroupRequest struct {
 	Name          string
 	Description   string
 	Version       string
+	Image         string
 	MattermostEnv EnvVarMap
 }
 
@@ -28,6 +29,9 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 	err = createGroupRequest.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid group create request")
+	}
+	if createGroupRequest.Image == "" {
+		return nil, errors.New("must specify image")
 	}
 
 	return &createGroupRequest, nil
@@ -55,6 +59,7 @@ type PatchGroupRequest struct {
 	Name          *string
 	Description   *string
 	Version       *string
+	Image         *string
 	MattermostEnv EnvVarMap
 }
 
@@ -89,6 +94,10 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 	if p.Version != nil && *p.Version != group.Version {
 		applied = true
 		group.Version = *p.Version
+	}
+	if p.Image != nil && *p.Image != group.Image {
+		applied = true
+		group.Image = *p.Image
 	}
 
 	if p.MattermostEnv != nil {

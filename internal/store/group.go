@@ -20,7 +20,7 @@ type rawGroups []*rawGroup
 
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "Sequence", "CreateAt",
+		Select("ID", "Name", "Description", "Version", "Image", "Sequence", "CreateAt",
 			"DeleteAt", "MattermostEnvRaw", "MaxRolling", "LockAcquiredBy",
 			"LockAcquiredAt").
 		From(`"Group"`)
@@ -232,6 +232,7 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 			"ID":               group.ID,
 			"Sequence":         0,
 			"Name":             group.Name,
+			"Image":            group.Image,
 			"Description":      group.Description,
 			"Version":          group.Version,
 			"MattermostEnvRaw": envVarMap,
@@ -273,6 +274,7 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
 			"Name":             group.Name,
 			"Description":      group.Description,
 			"Version":          group.Version,
+			"Image":            group.Image,
 			"MattermostEnvRaw": envVarMap,
 			"MaxRolling":       group.MaxRolling,
 		}).

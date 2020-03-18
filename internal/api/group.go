@@ -88,6 +88,7 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		Name:          createGroupRequest.Name,
 		Description:   createGroupRequest.Description,
 		Version:       createGroupRequest.Version,
+		Image:         createGroupRequest.Image,
 		MattermostEnv: createGroupRequest.MattermostEnv,
 	}
 
