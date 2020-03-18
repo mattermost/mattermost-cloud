@@ -13,7 +13,7 @@ func init() {
 
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
-	installationCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container iamge to use.")
+	installationCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
 	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
 	installationCreateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
@@ -26,6 +26,7 @@ func init() {
 
 	installationUpdateCmd.Flags().String("installation", "", "The id of the installation to be updated.")
 	installationUpdateCmd.Flags().String("version", "stable", "The Mattermost version to target.")
+	installationUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationUpdateCmd.MarkFlagRequired("installation")
