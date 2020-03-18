@@ -1,0 +1,34 @@
+image:
+  repository: quay.io/jetstack/cert-manager-controller
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name:
+  annotations: {}
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false
+    prometheusInstance: default
+    targetPort: 9402
+    path: /metrics
+    interval: 60s
+    scrapeTimeout: 30s
+
+webhook:
+  replicaCount: 1
+  serviceName: cert-manager-webhook
+  image:
+    repository: quay.io/jetstack/cert-manager-webhook
+    pullPolicy: IfNotPresent
+  injectAPIServerCA: true
+  securePort: 10250
+
+cainjector:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: quay.io/jetstack/cert-manager-cainjector
+    pullPolicy: IfNotPresent

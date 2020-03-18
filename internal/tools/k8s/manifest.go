@@ -18,6 +18,9 @@ import (
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apixv1beta1scheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1alpha3 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha3"
+	certmanagerscheme "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/scheme"
+
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -58,6 +61,7 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
 
 	apixv1beta1scheme.AddToScheme(scheme.Scheme)
 	mattermostscheme.AddToScheme(scheme.Scheme)
+	certmanagerscheme.AddToScheme(scheme.Scheme)
 
 	logger := kc.logger.WithFields(log.Fields{
 		"file": file.Basename(),
@@ -129,6 +133,8 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateService(deployNamespace, obj.(*apiv1.Service))
 	case *appsv1.StatefulSet:
 		return kc.createOrUpdateStatefulSet(deployNamespace, obj.(*appsv1.StatefulSet))
+	case *v1alpha3.ClusterIssuer: 
+		return kc.createOrUpdateClusterIssuer(obj.(*v1alpha3.ClusterIssuer))
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}
