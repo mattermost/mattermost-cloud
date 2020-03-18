@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -109,4 +110,48 @@ func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.F
 		case <-time.After(5 * time.Second):
 		}
 	}
+}
+
+// GetNGINXLoadBalancerEndpoint returns the load balancer endpoint of the NGINX service.
+func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":         cluster.ID,
+		"nginx-namespace": namespace,
+	})
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return "", err
+	}
+
+	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+	for _, service := range services.Items {
+		if service.Status.LoadBalancer.Ingress != nil {
+			endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+			if endpoint == "" {
+				return "", errors.New("loadbalancer endpoint value is empty")
+			}
+
+			return endpoint, nil
+		}
+	}
+	return "", errors.New("failed to get NGINX load balancer endpoint")
 }

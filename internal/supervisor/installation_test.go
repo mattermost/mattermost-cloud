@@ -148,6 +148,10 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 		nil
 }
 
+func (p *mockInstallationProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+	return "example.elb.us-east-1.amazonaws.com", nil
+}
+
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
 // can be tested.
 type mockAWS struct{}

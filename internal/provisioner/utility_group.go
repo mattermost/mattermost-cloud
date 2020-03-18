@@ -100,7 +100,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, fluentbit, certManager, publicNginx},
+		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit, certManager},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
