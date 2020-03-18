@@ -34,6 +34,8 @@ func init() {
 	installationDeleteCmd.MarkFlagRequired("installation")
 
 	installationGetCmd.Flags().String("installation", "", "The id of the installation to be fetched.")
+	installationGetCmd.Flags().Bool("include-group-config", false, "Whether to include group configuration in the installation or not.")
+	installationGetCmd.Flags().Bool("include-group-config-overrides", false, "Whether to include a group configuration override summary in the installation or not.")
 	installationGetCmd.MarkFlagRequired("installation")
 
 	installationListCmd.Flags().String("owner", "", "The owner by which to filter installations.")
@@ -166,7 +168,13 @@ var installationGetCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
-		installation, err := client.GetInstallation(installationID)
+		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
+		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
+
+		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{
+			IncludeGroupConfig:          includeGroupConfig,
+			IncludeGroupConfigOverrides: includeGroupConfigOverrides,
+		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query installation")
 		}

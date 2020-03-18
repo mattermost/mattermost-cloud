@@ -12,13 +12,14 @@ func init() {
 	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")
 	groupCreateCmd.Flags().String("version", "stable", "The Mattermost version for installations in this group to target.")
+	groupCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupCreateCmd.MarkFlagRequired("name")
-	groupCreateCmd.MarkFlagRequired("version")
 
 	groupUpdateCmd.Flags().String("group", "", "The id of the group to be updated.")
 	groupUpdateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupUpdateCmd.Flags().String("description", "", "An optional description for this group of installations.")
 	groupUpdateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
+	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupUpdateCmd.MarkFlagRequired("group")
 
 	groupDeleteCmd.Flags().String("group", "", "The id of the group to be deleted.")
@@ -65,12 +66,20 @@ var groupCreateCmd = &cobra.Command{
 		name, _ := command.Flags().GetString("name")
 		description, _ := command.Flags().GetString("description")
 		version, _ := command.Flags().GetString("version")
+		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+
+		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		if err != nil {
+			return err
+		}
 
 		group, err := client.CreateGroup(&model.CreateGroupRequest{
-			Name:        name,
-			Description: description,
-			Version:     version,
+			Name:          name,
+			Description:   description,
+			Version:       version,
+			MattermostEnv: envVarMap,
 		})
+
 		if err != nil {
 			return errors.Wrap(err, "failed to create group")
 		}
@@ -97,6 +106,12 @@ var groupUpdateCmd = &cobra.Command{
 		name, _ := command.Flags().GetString("name")
 		description, _ := command.Flags().GetString("description")
 		version, _ := command.Flags().GetString("version")
+		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+
+		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		if err != nil {
+			return err
+		}
 
 		patchPointer := func(s string) *string {
 			if s == "" {
@@ -106,11 +121,12 @@ var groupUpdateCmd = &cobra.Command{
 			return &s
 		}
 
-		err := client.UpdateGroup(&model.PatchGroupRequest{
-			ID:          groupID,
-			Name:        patchPointer(name),
-			Description: patchPointer(description),
-			Version:     patchPointer(version),
+		err = client.UpdateGroup(&model.PatchGroupRequest{
+			ID:            groupID,
+			Name:          patchPointer(name),
+			Description:   patchPointer(description),
+			Version:       patchPointer(version),
+			MattermostEnv: envVarMap,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to update group")

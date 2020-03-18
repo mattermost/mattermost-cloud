@@ -19,7 +19,7 @@ type installationStore interface {
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
 
-	GetInstallation(installationID string) (*model.Installation, error)
+	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetUnlockedInstallationsPendingWork() ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
@@ -107,7 +107,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 	newState := s.transitionInstallation(installation, s.instanceID, logger)
 
-	installation, err := s.store.GetInstallation(installation.ID)
+	installation, err := s.store.GetInstallation(installation.ID, false, false)
 	if err != nil {
 		logger.WithError(err).Warnf("failed to get installation and thus persist state %s", newState)
 		return
@@ -253,7 +253,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		if len(existingClusterInstallations) == 1 {
 			// This should be the only scenario where we need to check if the
 			// cluster installation running requires isolation or not.
-			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID)
+			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID, false, false)
 			if err != nil {
 				logger.WithError(err).Warn("Unable to find installation")
 				return nil
@@ -380,7 +380,7 @@ func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *
 	logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
 
 	if len(clusterInstallations) == stable {
-		logger.Infof("Finished creating installation")
+		logger.Info("Finished creating cluster installation")
 		return s.configureInstallationDNS(installation, logger)
 	}
 	if failed > 0 {

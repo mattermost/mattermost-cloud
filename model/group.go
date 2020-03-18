@@ -7,12 +7,13 @@ import (
 
 // Group represents a group of Mattermost installations.
 type Group struct {
-	ID          string
-	Name        string
-	Description string
-	Version     string
-	CreateAt    int64
-	DeleteAt    int64
+	ID            string
+	Name          string
+	Description   string
+	Version       string
+	CreateAt      int64
+	DeleteAt      int64
+	MattermostEnv EnvVarMap
 }
 
 // GroupFilter describes the parameters used to constrain a set of groups.

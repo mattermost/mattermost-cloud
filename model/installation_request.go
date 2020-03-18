@@ -96,6 +96,27 @@ func NewCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 	return &createInstallationRequest, nil
 }
 
+// GetInstallationRequest describes the parameters to request an installation.
+type GetInstallationRequest struct {
+	IncludeGroupConfig          bool `json:"include_group_config"`
+	IncludeGroupConfigOverrides bool
+}
+
+// ApplyToURL modifies the given url to include query string parameters for the request.
+func (request *GetInstallationRequest) ApplyToURL(u *url.URL) {
+	if request == nil {
+		return
+	}
+	q := u.Query()
+	if request.IncludeGroupConfig {
+		q.Add("include_group_config", "true")
+	}
+	if request.IncludeGroupConfigOverrides {
+		q.Add("include_group_config_overrides", "true")
+	}
+	u.RawQuery = q.Encode()
+}
+
 // GetInstallationsRequest describes the parameters to request a list of installations.
 type GetInstallationsRequest struct {
 	OwnerID        string

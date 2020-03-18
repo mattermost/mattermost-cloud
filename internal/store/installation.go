@@ -31,15 +31,15 @@ type rawInstallations []*rawInstallation
 func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 	// We only need to set values that are converted from a raw database format.
 	var err error
-	mattermostEnv := model.EnvVarMap{}
+	mattermostEnv := &model.EnvVarMap{}
 	if r.MattermostEnvRaw != nil {
-		mattermostEnv, err = envVarFromJSON(r.MattermostEnvRaw)
+		mattermostEnv, err = model.EnvVarFromJSON(r.MattermostEnvRaw)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	r.Installation.MattermostEnv = mattermostEnv
+	r.Installation.MattermostEnv = *mattermostEnv
 	return r.Installation, nil
 }
 
@@ -56,17 +56,8 @@ func (rs *rawInstallations) toInstallations() ([]*model.Installation, error) {
 	return installations, nil
 }
 
-func envVarFromJSON(raw []byte) (model.EnvVarMap, error) {
-	e := model.EnvVarMap{}
-	err := json.Unmarshal(raw, &e)
-	if err != nil {
-		return nil, err
-	}
-	return e, nil
-}
-
 // GetInstallation fetches the given installation by id.
-func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error) {
+func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
 	var rawInstallation rawInstallation
 	err := sqlStore.getBuilder(sqlStore.db, &rawInstallation,
 		installationSelect.Where("ID = ?", id),
@@ -77,7 +68,24 @@ func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error
 		return nil, errors.Wrap(err, "failed to get installation by id")
 	}
 
-	return rawInstallation.toInstallation()
+	installation, err := rawInstallation.toInstallation()
+	if err != nil {
+		return installation, err
+	}
+	if !installation.IsInGroup() || !includeGroupConfig {
+		return installation, nil
+	}
+
+	// Installation is in a group and the request is for the merged config,
+	// so get group config and perform a merge.
+	installation.GroupOverrides = make(map[string]string)
+	group, err := sqlStore.GetGroup(*installation.GroupID)
+	if err != nil {
+		return installation, err
+	}
+	installation.MergeWithGroup(group, includeGroupConfigOverrides)
+
+	return installation, nil
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
@@ -178,9 +186,12 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 
 // UpdateInstallation updates the given installation in the database.
 func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) error {
+	if installation.ConfigMergedWithGroup() {
+		return errors.New("unable to save installations that have merged group config")
+	}
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
-		errors.Wrap(err, "unable to marshal MattermostEnv")
+		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.

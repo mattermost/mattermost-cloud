@@ -41,7 +41,7 @@ func (s *mockInstallationStore) UnlockCluster(clusterID string, lockerID string,
 	return true, nil
 }
 
-func (s *mockInstallationStore) GetInstallation(installationID string) (*model.Installation, error) {
+func (s *mockInstallationStore) GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
 	return s.Installation, nil
 }
 
@@ -235,7 +235,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	expectInstallationState := func(t *testing.T, sqlStore *store.SQLStore, installation *model.Installation, expectedState string) {
 		t.Helper()
 
-		installation, err := sqlStore.GetInstallation(installation.ID)
+		installation, err := sqlStore.GetInstallation(installation.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, expectedState, installation.State)
 	}
