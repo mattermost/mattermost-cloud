@@ -378,6 +378,95 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 	require.Len(t, groups, 1)
 }
 
+func TestGetGroupRollingMetadata(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	group1 := &model.Group{
+		Name:        "group1",
+		Description: "description1",
+		Version:     "version1",
+		Sequence:    2,
+	}
+
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	group2 := &model.Group{
+		Name:        "group2",
+		Description: "description2",
+		Version:     "version2",
+	}
+
+	err = sqlStore.CreateGroup(group2)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		GroupID:   &group1.ID,
+		Version:   "version",
+		DNS:       "dns.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateInstallation(installation1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	t.Run("empty group", func(t *testing.T) {
+		expectedMetadata := &GroupRollingMetadata{
+			InstallationIDsToBeRolled:  []string{},
+			InstallationTotalCount:     0,
+			InstallationStableCount:    0,
+			InstallationNonStableCount: 0,
+		}
+		metadata, err := sqlStore.GetGroupRollingMetadata(group2.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedMetadata, metadata)
+	})
+
+	t.Run("group with work", func(t *testing.T) {
+		groups, err := sqlStore.GetUnlockedGroupsPendingWork()
+		require.NoError(t, err)
+		require.Len(t, groups, 1)
+
+		expectedMetadata := &GroupRollingMetadata{
+			InstallationIDsToBeRolled:  []string{},
+			InstallationTotalCount:     1,
+			InstallationStableCount:    0,
+			InstallationNonStableCount: 1,
+		}
+		metadata, err := sqlStore.GetGroupRollingMetadata(group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedMetadata, metadata)
+
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		expectedMetadata = &GroupRollingMetadata{
+			InstallationIDsToBeRolled:  []string{installation1.ID},
+			InstallationTotalCount:     1,
+			InstallationStableCount:    1,
+			InstallationNonStableCount: 0,
+		}
+		metadata, err = sqlStore.GetGroupRollingMetadata(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, expectedMetadata, metadata)
+	})
+}
+
 func TestUpdateGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)

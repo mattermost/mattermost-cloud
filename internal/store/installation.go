@@ -220,6 +220,44 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 	return nil
 }
 
+// UpdateInstallationGroupSequence updates the given installation GroupSequence
+// to the value stored in the merged group config. The provided installation must
+// have been merged with group config before passing it in.
+func (sqlStore *SQLStore) UpdateInstallationGroupSequence(installation *model.Installation) error {
+	if !installation.ConfigMergedWithGroup() {
+		return errors.New("installation is not merged with a group")
+	}
+
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"GroupSequence": installation.GroupSequence,
+		}).
+		Where("ID = ?", installation.ID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation")
+	}
+
+	return nil
+}
+
+// UpdateInstallationState updates the given installation to a new state.
+func (sqlStore *SQLStore) UpdateInstallationState(id, state string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"State": state,
+		}).
+		Where("ID = ?", id),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation state")
+	}
+
+	return nil
+}
+
 // DeleteInstallation marks the given installation as deleted, but does not remove the record from the
 // database.
 func (sqlStore *SQLStore) DeleteInstallation(id string) error {

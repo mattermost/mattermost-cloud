@@ -78,7 +78,7 @@ func (sqlStore *SQLStore) GetUnlockedGroupsPendingWork() ([]*model.Group, error)
 			Select("ID").
 			From("Installation").
 			Where("GroupID = ?", rawGroup.ID).
-			Where("GroupSequence IS NULL OR GroupSequence != ?", rawGroup.Sequence).
+			Where("(GroupSequence IS NULL OR GroupSequence != ?)", rawGroup.Sequence).
 			Where("DeleteAt = 0").
 			Limit(1)
 		err = sqlStore.selectBuilder(sqlStore.db, &installations, installationBuilder)
@@ -88,10 +88,94 @@ func (sqlStore *SQLStore) GetUnlockedGroupsPendingWork() ([]*model.Group, error)
 		if len(installations) > 0 {
 			rawGroupsPendingWork = append(rawGroupsPendingWork, rawGroup)
 		}
-
 	}
 
 	return rawGroupsPendingWork.toGroups()
+}
+
+// GroupRollingMetadata is a batch of information about a group where installatons
+// are being rolled to match a new config.
+type GroupRollingMetadata struct {
+	InstallationIDsToBeRolled  []string
+	InstallationTotalCount     int64
+	InstallationStableCount    int64
+	InstallationNonStableCount int64
+}
+
+// GetGroupRollingMetadata returns installation IDs and metadata related to
+// installation configuration reconciliation from group updates.
+//
+// Note: custom SQL queries are used here instead of calling GetInstallations().
+// This is done for performance as we don't need the actual installation objects
+// in most cases.
+//
+// TODO: currently the installations returned are only those that are in the
+// group AND not on the latest sequence AND are in stable state. This is a
+// best-case scenario that probably won't work in the long run. Other non-stable
+// states will probably need to be added once they have been properly tested.
+func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRollingMetadata, error) {
+	group, err := sqlStore.GetGroup(groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := &GroupRollingMetadata{InstallationIDsToBeRolled: []string{}}
+
+	var installations []*model.Installation
+	installationBuilder := sq.
+		Select("ID").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("(GroupSequence IS NULL OR GroupSequence != ?)", group.Sequence).
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &installations, installationBuilder)
+	if err != nil {
+		return nil, err
+	}
+	for _, installation := range installations {
+		metadata.InstallationIDsToBeRolled = append(metadata.InstallationIDsToBeRolled, installation.ID)
+	}
+
+	var totalResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &totalResult, installationBuilder)
+	if err != nil {
+		return nil, err
+	}
+	count, err := totalResult.value()
+	if err != nil {
+		return nil, err
+	}
+	metadata.InstallationTotalCount = count
+
+	var stableResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &stableResult, installationBuilder)
+	if err != nil {
+		return nil, err
+	}
+	count, err = stableResult.value()
+	if err != nil {
+		return nil, err
+	}
+	metadata.InstallationStableCount = count
+	metadata.InstallationNonStableCount = metadata.InstallationTotalCount - metadata.InstallationStableCount
+
+	if metadata.InstallationNonStableCount < 0 {
+		return nil, errors.Errorf("found more stable installations (%d) than total installations (%d)", metadata.InstallationStableCount, metadata.InstallationTotalCount)
+	}
+
+	return metadata, nil
 }
 
 // GetGroup fetches the given group by id.
