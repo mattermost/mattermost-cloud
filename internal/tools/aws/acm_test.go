@@ -1,55 +1,135 @@
 package aws
 
 import (
-	"testing"
-
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 )
 
-var (
-	testARNCertificate          = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
-	testParsedCertificateTagKey = "MattermostCloudInstallationCertificates"
-	testCertificateTagValue     = "true"
-)
+func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
+	gomock.InOrder(
+		a.Mocks.API.ACM.EXPECT().
+			ListCertificates(gomock.Any()).
+			Return(&acm.ListCertificatesOutput{
+				CertificateSummaryList: []*acm.CertificateSummary{
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN + "a"),
+					},
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN + "b"),
+					},
+				},
+				NextToken: aws.String("token"),
+			}, nil).
+			Times(1),
 
-func (api *mockAPI) listCertificates(*acm.ACM, *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error) {
-	return &acm.ListCertificatesOutput{
-		CertificateSummaryList: []*acm.CertificateSummary{&acm.CertificateSummary{
-			CertificateArn: &testARNCertificate,
-			DomainName:     &testDNSName,
-		}},
-	}, api.returnedError
+		a.Mocks.API.ACM.EXPECT().
+			ListTagsForCertificate(gomock.Any()).
+			Return(&acm.ListTagsForCertificateOutput{}, nil).
+			Times(2),
+
+		a.Mocks.API.ACM.EXPECT().
+			ListCertificates(gomock.Any()).
+			Return(&acm.ListCertificatesOutput{
+				CertificateSummaryList: []*acm.CertificateSummary{
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN),
+					},
+				},
+			}, nil).
+			Times(1),
+
+		a.Mocks.API.ACM.EXPECT().
+			ListTagsForCertificate(gomock.Any()).
+			Return(&acm.ListTagsForCertificateOutput{
+				Tags: []*acm.Tag{&acm.Tag{
+					Key:   aws.String("MattermostCloudInstallationCertificates"),
+					Value: aws.String("value"),
+				}},
+			}, nil).
+			Times(1),
+	)
+
+	summary, err := a.Mocks.AWS.GetCertificateSummaryByTag(DefaultInstallCertificatesTagKey, "value", a.Mocks.Log.Logger)
+	a.Assert().NoError(err)
+	a.Assert().NotNil(summary)
+	a.Assert().Equal(a.CertifcateARN, *summary.CertificateArn)
 }
 
-func (api *mockAPI) listTagsForCertificate(*acm.ACM, *acm.ListTagsForCertificateInput) (*acm.ListTagsForCertificateOutput, error) {
-	return &acm.ListTagsForCertificateOutput{
-		Tags: []*acm.Tag{&acm.Tag{Key: &testParsedCertificateTagKey, Value: &testCertificateTagValue}},
-	}, api.returnedError
+func (a *AWSTestSuite) TestGetCertificateSummaryByTagNotFound() {
+	gomock.InOrder(
+		a.Mocks.API.ACM.EXPECT().
+			ListCertificates(gomock.Any()).
+			Return(&acm.ListCertificatesOutput{
+				CertificateSummaryList: []*acm.CertificateSummary{
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN + "a"),
+					},
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN + "b"),
+					},
+				},
+			}, nil).
+			Times(1),
+
+		a.Mocks.API.ACM.EXPECT().
+			ListTagsForCertificate(gomock.Any()).
+			Return(&acm.ListTagsForCertificateOutput{
+				Tags: []*acm.Tag{&acm.Tag{
+					Key:   aws.String("MattermostCloudInstallationCertificates"),
+					Value: aws.String("value"),
+				}},
+			}, nil).
+			Times(2),
+	)
+
+	summary, err := a.Mocks.AWS.GetCertificateSummaryByTag(DefaultInstallCertificatesTagKey, "not_found", a.Mocks.Log.Logger)
+	a.Assert().Error(err)
+	a.Assert().Equal("no certificate was found under tag:MattermostCloudInstallationCertificates:not_found", err.Error())
+	a.Assert().Nil(summary)
 }
 
-func TestGetCertificateByTag(t *testing.T) {
-	a := Client{api: &mockAPI{}}
-	list, err := a.GetCertificateSummaryByTag(testParsedCertificateTagKey, testCertificateTagValue)
-	assert.NoError(t, err)
-	assert.Equal(t, *list.CertificateArn, testARNCertificate)
+func (a *AWSTestSuite) TestGetCertificateSummaryByTagCertListError() {
+	gomock.InOrder(
+		a.Mocks.API.ACM.EXPECT().
+			ListCertificates(gomock.Any()).
+			Return(nil, errors.New("list certificates error")).
+			Times(1),
+
+		a.Mocks.API.ACM.EXPECT().ListTagsForCertificate(gomock.Any()).Times(0),
+	)
+
+	summary, err := a.Mocks.AWS.GetCertificateSummaryByTag(DefaultInstallCertificatesTagKey, "not_found", a.Mocks.Log.Logger)
+	a.Assert().Error(err)
+	a.Assert().Equal("error fetching certificates: list certificates error", err.Error())
+	a.Assert().Nil(summary)
 }
 
-func TestGetCertificateByTagError(t *testing.T) {
-	a := Client{api: &mockAPI{returnedError: errors.New("something went wrong")}}
-	_, err := a.GetCertificateSummaryByTag(testParsedRoute53TagKey, testRoute53TagValue)
-	assert.Error(t, err)
-}
+func (a *AWSTestSuite) TestGetCertificateSummaryByTagListTagsError() {
+	gomock.InOrder(
+		a.Mocks.API.ACM.EXPECT().
+			ListCertificates(gomock.Any()).
+			Return(&acm.ListCertificatesOutput{
+				CertificateSummaryList: []*acm.CertificateSummary{
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN + "a"),
+					},
+					&acm.CertificateSummary{
+						CertificateArn: aws.String(a.CertifcateARN + "b"),
+					},
+				},
+			}, nil).
+			Times(1),
 
-func TestGetCertificateByTagWrongKey(t *testing.T) {
-	a := Client{api: &mockAPI{}}
-	_, err := a.GetCertificateSummaryByTag("banana", testRoute53TagValue)
-	assert.Error(t, err)
-}
+		a.Mocks.API.ACM.EXPECT().
+			ListTagsForCertificate(gomock.Any()).
+			Return(nil, errors.New("list tags error")).
+			Times(1),
+	)
 
-func TestGetCertificateByTagEmptyValue(t *testing.T) {
-	a := Client{api: &mockAPI{}}
-	_, err := a.GetCertificateSummaryByTag(testParsedRoute53TagKey, "")
-	assert.Error(t, err)
+	summary, err := a.Mocks.AWS.GetCertificateSummaryByTag(DefaultInstallCertificatesTagKey, "not_found", a.Mocks.Log.Logger)
+	a.Assert().Error(err)
+	a.Assert().Equal("error listing tags for certificate arn:aws:certificate::123456789012a: list tags error", err.Error())
+	a.Assert().Nil(summary)
 }

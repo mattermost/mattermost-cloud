@@ -8,7 +8,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
@@ -53,7 +52,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
 
-	certificateSummary, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
+	certificateSummary, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch AWS certificate ARN for tag %s:%s", aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
 	}
@@ -104,7 +103,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		logger.Debug("Cluster installation configured with a Mattermost license")
 	}
 
-	databaseSpec, databaseSecret, err := utils.GetDatabase(installation).GenerateDatabaseSpecAndSecret(logger)
+	databaseSpec, databaseSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSpecAndSecret(logger)
 	if err != nil {
 		return err
 	}
@@ -117,7 +116,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		mattermostInstallation.Spec.Database = *databaseSpec
 	}
 
-	filestoreSpec, filestoreSecret, err := utils.GetFilestore(installation).GenerateFilestoreSpecAndSecret(logger)
+	filestoreSpec, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(logger)
 	if err != nil {
 		return err
 	}

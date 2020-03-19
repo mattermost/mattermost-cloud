@@ -1,16 +1,31 @@
 package aws
 
 import (
+	"sync"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/aws-sdk-go/service/acm/acmiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
 
 // AWS interface for use by other packages.
 type AWS interface {
-	GetCertificateSummaryByTag(key, value string) (*acm.CertificateSummary, error)
+	GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error)
 
 	GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
@@ -24,43 +39,74 @@ type AWS interface {
 
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
-	IsValidAMI(AMIImage string) (bool, error)
+	IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error)
+}
+
+// NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
+func NewAWSClientWithConfig(config *aws.Config, logger log.FieldLogger) *Client {
+	return &Client{
+		logger: logger,
+		config: config,
+		mux:    &sync.Mutex{},
+	}
+}
+
+// Service hold AWS clients for each service.
+type Service struct {
+	acm            acmiface.ACMAPI
+	ec2            ec2iface.EC2API
+	iam            iamiface.IAMAPI
+	rds            rdsiface.RDSAPI
+	s3             s3iface.S3API
+	route53        route53iface.Route53API
+	secretsManager secretsmanageriface.SecretsManagerAPI
+}
+
+// NewService creates a new instance of Service.
+func NewService(sess *session.Session) *Service {
+	return &Service{
+		acm:            acm.New(sess),
+		iam:            iam.New(sess),
+		rds:            rds.New(sess),
+		s3:             s3.New(sess),
+		route53:        route53.New(sess),
+		secretsManager: secretsmanager.New(sess),
+		ec2:            ec2.New(sess),
+	}
 }
 
 // Client is a client for interacting with AWS resources.
 type Client struct {
-	api   api
-	store model.InstallationDatabaseStoreInterface
+	store   model.InstallationDatabaseStoreInterface
+	logger  log.FieldLogger
+	service *Service
+	config  *aws.Config
+	mux     *sync.Mutex
 }
 
-// api mocks out the AWS API calls for testing.
-type api interface {
-	getRoute53Client() (*route53.Route53, error)
-	changeResourceRecordSets(*route53.Route53, *route53.ChangeResourceRecordSetsInput) (*route53.ChangeResourceRecordSetsOutput, error)
-	listResourceRecordSets(*route53.Route53, *route53.ListResourceRecordSetsInput) (*route53.ListResourceRecordSetsOutput, error)
-	listHostedZones(*route53.Route53, *route53.ListHostedZonesInput) (*route53.ListHostedZonesOutput, error)
-	listTagsForResource(*route53.Route53, *route53.ListTagsForResourceInput) (*route53.ListTagsForResourceOutput, error)
+// Service contructs an AWS session if not yet successfully done and returns AWS clients.
+func (c *Client) Service() *Service {
+	if c.service == nil {
+		sess, err := NewAWSSessionWithLogger(c.config, c.logger.WithField("tools-aws", "client"))
+		if err != nil {
+			c.logger.WithError(err).Error("failed to initialize AWS session")
+			// Calls to AWS will fail until a healthy session is acquired.
+			return NewService(&session.Session{})
+		}
 
-	getEC2Client() (*ec2.EC2, error)
-	tagResource(*ec2.EC2, *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error)
-	untagResource(*ec2.EC2, *ec2.DeleteTagsInput) (*ec2.DeleteTagsOutput, error)
-	describeImages(svc *ec2.EC2, input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error)
-
-	getACMClient() (*acm.ACM, error)
-	listCertificates(*acm.ACM, *acm.ListCertificatesInput) (*acm.ListCertificatesOutput, error)
-	listTagsForCertificate(*acm.ACM, *acm.ListTagsForCertificateInput) (*acm.ListTagsForCertificateOutput, error)
-}
-
-// New returns a new AWS client.
-func New() *Client {
-	return &Client{
-		api: &apiInterface{},
+		c.mux.Lock()
+		c.service = NewService(sess)
+		c.mux.Unlock()
 	}
+
+	return c.service
 }
 
 // AddSQLStore adds SQLStore functionality to the AWS client.
 func (c *Client) AddSQLStore(store model.InstallationDatabaseStoreInterface) {
-	c.store = store
+	if !c.HasSQLStore() {
+		c.store = store
+	}
 }
 
 // HasSQLStore returns whether the AWS client has a SQL store or not.

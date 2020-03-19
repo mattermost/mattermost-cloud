@@ -40,7 +40,7 @@ func (cr *ClusterResources) IsValid() error {
 	return nil
 }
 
-func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
+func (a *Client) getClusterResourcesForVPC(vpcID string, logger log.FieldLogger) (ClusterResources, error) {
 	clusterResources := ClusterResources{
 		VpcID: vpcID,
 	}
@@ -57,7 +57,7 @@ func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
 		Values: []*string{aws.String("private")},
 	})
 
-	privateSubnets, err := GetSubnetsWithFilters(privateSubnetFilter)
+	privateSubnets, err := a.GetSubnetsWithFilters(privateSubnetFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -71,7 +71,7 @@ func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
 		Values: []*string{aws.String("public")},
 	})
 
-	publicSubnets, err := GetSubnetsWithFilters(publicSubnetFilter)
+	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -85,7 +85,7 @@ func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
 		Values: []*string{aws.String("master")},
 	})
 
-	masterSecurityGroups, err := GetSecurityGroupsWithFilters(masterSGFilter)
+	masterSecurityGroups, err := a.GetSecurityGroupsWithFilters(masterSGFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -99,7 +99,7 @@ func getClusterResourcesForVPC(vpcID string) (ClusterResources, error) {
 		Values: []*string{aws.String("worker")},
 	})
 
-	workerSecurityGroups, err := GetSecurityGroupsWithFilters(workerSGFilter)
+	workerSecurityGroups, err := a.GetSecurityGroupsWithFilters(workerSGFilter)
 	if err != nil {
 		return clusterResources, err
 	}
@@ -135,7 +135,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 			},
 		},
 	}
-	clusterAlreadyClaimedVpcs, err := GetVpcsWithFilters(clusterAlreadyClaimedFilter)
+	clusterAlreadyClaimedVpcs, err := a.GetVpcsWithFilters(clusterAlreadyClaimedFilter)
 	if err != nil {
 		return ClusterResources{}, err
 	}
@@ -143,7 +143,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), clusterID)
 	}
 	if len(clusterAlreadyClaimedVpcs) == 1 {
-		return getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId)
+		return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, logger)
 	}
 
 	// This cluster has not already claimed a VPC. Continue with claiming process.
@@ -156,7 +156,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 			},
 		},
 	}
-	totalVpcs, err := GetVpcsWithFilters(totalVpcsFilter)
+	totalVpcs, err := a.GetVpcsWithFilters(totalVpcsFilter)
 	if err != nil {
 		return ClusterResources{}, err
 	}
@@ -169,7 +169,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		},
 	}
 
-	vpcs, err := GetVpcsWithFilters(vpcFilters)
+	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
 		return ClusterResources{}, err
 	}
@@ -181,7 +181,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 	// valid so we will claim the first one. Before doing that a sanity check of
 	// the VPCs resources will occur.
 	for _, vpc := range vpcs {
-		clusterResources, err := getClusterResourcesForVPC(*vpc.VpcId)
+		clusterResources, err := a.getClusterResourcesForVPC(*vpc.VpcId, logger)
 		if err != nil {
 			logger.Warn(err)
 			continue
@@ -223,7 +223,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 			Values: []*string{aws.String(VpcClusterIDTagValueNone)},
 		},
 	}
-	vpcs, err := GetVpcsWithFilters(vpcFilter)
+	vpcs, err := a.GetVpcsWithFilters(vpcFilter)
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		},
 	}
 
-	vpcs, err := GetVpcsWithFilters(vpcFilters)
+	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		},
 	}
 
-	publicSubnets, err := GetSubnetsWithFilters(publicSubnetFilter)
+	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
 	if err != nil {
 		return err
 	}

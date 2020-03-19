@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	logrus "github.com/sirupsen/logrus"
@@ -129,23 +131,33 @@ var serverCmd = &cobra.Command{
 		// best-effort attempt to tag the VPC with a human's identity for dev purposes
 		owner := getHumanReadableID()
 
+		awsClient := toolsAWS.NewAWSClientWithConfig(&sdkAWS.Config{
+			Region: sdkAWS.String(toolsAWS.DefaultAWSRegion),
+			// TODO(gsagula): we should use Retryer for a more robust retry strategy.
+			// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
+			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
+		}, logger)
+
+		resourceUtil := utils.NewResourceUtil(awsClient)
+
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
 			owner,
 			useExistingResources,
+			resourceUtil,
 			logger,
 		)
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, resourceUtil, logger))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a

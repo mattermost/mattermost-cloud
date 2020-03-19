@@ -74,13 +74,25 @@ func copyFile(source string, dest string) error {
 	return nil
 }
 
+// ResourceUtil is used for calling any filestore type.
+type ResourceUtil struct {
+	awsClient *aws.Client
+}
+
+// NewResourceUtil returns a new instance of ResourceUtil.
+func NewResourceUtil(awsClient *aws.Client) *ResourceUtil {
+	return &ResourceUtil{
+		awsClient: awsClient,
+	}
+}
+
 // GetFilestore returns the Filestore interface that matches the installation.
-func GetFilestore(i *model.Installation) model.Filestore {
-	switch i.Filestore {
+func (r *ResourceUtil) GetFilestore(installation *model.Installation) model.Filestore {
+	switch installation.Filestore {
 	case model.InstallationFilestoreMinioOperator:
 		return model.NewMinioOperatorFilestore()
 	case model.InstallationFilestoreAwsS3:
-		return aws.NewS3Filestore(i.ID)
+		return aws.NewS3Filestore(installation.ID, r.awsClient)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match
@@ -89,12 +101,12 @@ func GetFilestore(i *model.Installation) model.Filestore {
 }
 
 // GetDatabase returns the Database interface that matches the installation.
-func GetDatabase(i *model.Installation) model.Database {
-	switch i.Database {
+func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Database {
+	switch installation.Database {
 	case model.InstallationDatabaseMysqlOperator:
 		return model.NewMysqlOperatorDatabase()
 	case model.InstallationDatabaseAwsRDS:
-		return aws.NewRDSDatabase(i.ID)
+		return aws.NewRDSDatabase(installation.ID, r.awsClient)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match

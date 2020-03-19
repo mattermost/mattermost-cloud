@@ -2,6 +2,7 @@ package aws
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -20,7 +21,9 @@ func TestFilestoreProvision(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	filestore := NewS3Filestore(id)
+	filestore := NewS3Filestore(id, &Client{
+		mux: &sync.Mutex{},
+	})
 
 	logger.Warnf("Provisioning down AWS filestore %s", id)
 
@@ -35,7 +38,9 @@ func TestFilestoreTeardown(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	filestore := NewS3Filestore(id)
+	filestore := NewS3Filestore(id, &Client{
+		mux: &sync.Mutex{},
+	})
 
 	logger.Warnf("Tearing down AWS filestore %s", id)
 

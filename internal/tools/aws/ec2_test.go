@@ -1,136 +1,141 @@
 package aws
 
 import (
-	"errors"
 	"os"
+	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/golang/mock/gomock"
+	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
-func (api *mockAPI) getEC2Client() (*ec2.EC2, error) {
-	return nil, api.returnedError
+func (a *AWSTestSuite) TestTagResource() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			CreateTags(gomock.Any()).
+			Return(&ec2.CreateTagsOutput{}, nil))
+
+	err := a.Mocks.AWS.TagResource(a.ResourceID, "tag-key", "tag-value", a.Mocks.Log.Logger)
+	a.Assert().NoError(err)
 }
 
-func (api *mockAPI) getACMClient() (*acm.ACM, error) {
-	return nil, api.returnedError
+func (a *AWSTestSuite) TestTagResourceError() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			CreateTags(gomock.Any()).
+			Return(nil, errors.New("invalid tag")))
+
+	err := a.Mocks.AWS.TagResource(a.ResourceID, "tag-key", "tag-value", a.Mocks.Log.Logger)
+	a.Assert().Error(err)
+	a.Assert().Equal("unable to tag resource id: WSxqXCaZw1dC: invalid tag", err.Error())
 }
 
-func (api *mockAPI) tagResource(svc *ec2.EC2, input *ec2.CreateTagsInput) (*ec2.CreateTagsOutput, error) {
-	return nil, api.returnedError
+func (a *AWSTestSuite) TestUntagResource() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DeleteTags(gomock.Any()).
+			Return(&ec2.DeleteTagsOutput{}, nil))
+
+	err := a.Mocks.AWS.UntagResource(a.ResourceID, "tag-key", "tag-value", a.Mocks.Log.Logger)
+	a.Assert().NoError(err)
 }
 
-func (api *mockAPI) untagResource(svc *ec2.EC2, input *ec2.DeleteTagsInput) (*ec2.DeleteTagsOutput, error) {
-	return nil, api.returnedError
+func (a *AWSTestSuite) TestUntagResourceEmptyResourceID() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DeleteTags(gomock.Any()).
+			Return(&ec2.DeleteTagsOutput{}, nil))
+
+	err := a.Mocks.AWS.UntagResource("", "tag-key", "tag-value", a.Mocks.Log.Logger)
+
+	a.Assert().Error(err)
+	a.Assert().Equal("unable to remove AWS tag from resource: missing resource ID", err.Error())
 }
 
-func (api *mockAPI) describeImages(svc *ec2.EC2, input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
-	return api.returnedDescribeImagesOutput, api.returnedError
+func (a *AWSTestSuite) TestUntagResourceError() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DeleteTags(gomock.Any()).
+			Return(nil, errors.New("tag not found")))
+
+	err := a.Mocks.AWS.UntagResource(a.ResourceID, "tag-key", "tag-value", a.Mocks.Log.Logger)
+
+	a.Assert().Error(err)
+	a.Assert().Equal("unable to remove AWS tag from resource: tag not found", err.Error())
 }
 
-func TestTagResource(t *testing.T) {
-	tests := []struct {
-		name        string
-		resourceID  string
-		key         string
-		value       string
-		mockError   error
-		expectError bool
-	}{
-		{
-			"set tag",
-			"resource1",
-			"key1",
-			"value1",
-			nil,
-			false,
-		},
-		{
-			"missing resource ID",
-			"",
-			"key1",
-			"value1",
-			nil,
-			true,
-		},
-		{
-			"bad resource ID",
-			"badid",
-			"key1",
-			"value1",
-			errors.New("mock bad resource id"),
-			true,
-		},
-	}
+func (a *AWSTestSuite) TestIsValidAMIEmptyResourceID() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DescribeImages(gomock.Any()).
+			Return(nil, errors.New("tag not found")))
 
-	logger := logrus.New()
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := Client{
-				api: &mockAPI{returnedError: tt.mockError},
-			}
-
-			err := a.TagResource(tt.resourceID, tt.key, tt.value, logger)
-			switch tt.expectError {
-			case true:
-				assert.Error(t, err)
-			case false:
-				assert.NoError(t, err)
-			}
-		})
-	}
+	ok, err := a.Mocks.AWS.IsValidAMI("", a.Mocks.Log.Logger)
+	a.Assert().NoError(err)
+	a.Assert().True(ok)
 }
 
-func TestUntagResource(t *testing.T) {
-	tests := []struct {
-		name        string
-		resourceID  string
-		key         string
-		value       string
-		mockError   error
-		expectError bool
-	}{
-		{
-			"unset tag",
-			"resource1",
-			"key1",
-			"value1",
-			nil,
-			false,
-		},
-		{
-			"missing resource ID",
-			"",
-			"key1",
-			"value1",
-			nil,
-			true,
-		},
-	}
+func (a *AWSTestSuite) TestIsValidAMI() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DescribeImages(gomock.Any()).
+			Return(&ec2.DescribeImagesOutput{
+				Images: make([]*ec2.Image, 2),
+			}, nil))
 
-	logger := logrus.New()
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.Log.Logger)
+	a.Assert().NoError(err)
+	a.Assert().True(ok)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := Client{
-				api: &mockAPI{returnedError: tt.mockError},
-			}
+func (a *AWSTestSuite) TestIsValidAMINoImages() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DescribeImages(gomock.Any()).
+			Return(&ec2.DescribeImagesOutput{
+				Images: make([]*ec2.Image, 0),
+			}, nil))
 
-			err := a.UntagResource(tt.resourceID, tt.key, tt.value, logger)
-			switch tt.expectError {
-			case true:
-				assert.Error(t, err)
-			case false:
-				assert.NoError(t, err)
-			}
-		})
-	}
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.Log.Logger)
+
+	a.Assert().NoError(err)
+	a.Assert().False(ok)
+}
+
+func (a *AWSTestSuite) TestIsValidAMIError() {
+	a.Mocks.Log.Logger.EXPECT().
+		WithFields(logrus.Fields{}).
+		Return(testlib.NewLoggerEntry()).Times(1).
+		After(a.Mocks.API.EC2.EXPECT().
+			DescribeImages(gomock.Any()).
+			Return(nil, errors.New("resource id not found")))
+
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, log.New())
+
+	a.Assert().Error(err)
+	a.Assert().False(ok)
+	a.Assert().Equal("resource id not found", err.Error())
 }
 
 func TestVPCReal(t *testing.T) {
@@ -139,63 +144,15 @@ func TestVPCReal(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	awsClient := New()
+	client := &Client{
+		mux: &sync.Mutex{},
+	}
 
 	clusterID := "testclusterID1"
 
-	_, err := awsClient.GetAndClaimVpcResources(clusterID, "testowner", logger)
+	_, err := client.GetAndClaimVpcResources(clusterID, "testowner", logger)
 	require.NoError(t, err)
 
-	err = awsClient.releaseVpc(clusterID, logger)
+	err = client.releaseVpc(clusterID, logger)
 	require.NoError(t, err)
-}
-
-func TestAMIs(t *testing.T) {
-	tests := []struct {
-		name           string
-		AMIID          string
-		mockError      error
-		mockResponse   *ec2.DescribeImagesOutput
-		expectResponse bool
-	}{
-		{
-			name:           "invalid AMI",
-			AMIID:          "invalid-AMI-ID",
-			mockError:      errors.New("invalid AMI ID"),
-			mockResponse:   &ec2.DescribeImagesOutput{},
-			expectResponse: false,
-		},
-		{
-			name:      "valid AMI",
-			AMIID:     "valid-AMI-ID",
-			mockError: nil,
-			mockResponse: &ec2.DescribeImagesOutput{
-				Images: []*ec2.Image{
-					{
-						ImageId:      aws.String("valid-AMI-ID"),
-						CreationDate: aws.String("2020-01-13T00:00:00.001Z"),
-					},
-				},
-			},
-			expectResponse: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := Client{
-				api: &mockAPI{returnedDescribeImagesOutput: tt.mockResponse, returnedError: tt.mockError},
-			}
-
-			isValid, err := a.IsValidAMI(tt.AMIID)
-			switch tt.expectResponse {
-			case true:
-				assert.True(t, isValid)
-				assert.Nil(t, err)
-			case false:
-				assert.False(t, isValid)
-				assert.NotNil(t, err)
-			}
-		})
-	}
 }

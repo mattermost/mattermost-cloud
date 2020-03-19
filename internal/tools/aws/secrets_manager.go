@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/pkg/errors"
@@ -49,9 +48,7 @@ func (s *RDSSecret) Validate() error {
 	return nil
 }
 
-func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iam.AccessKey) error {
-	svc := secretsmanager.New(session.New())
-
+func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iam.AccessKey, logger log.FieldLogger) error {
 	accessKeyPayload := &IAMAccessKey{
 		ID:     *ak.AccessKeyId,
 		Secret: *ak.SecretAccessKey,
@@ -67,7 +64,7 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 	}
 
 	secretName := IAMSecretName(awsID)
-	_, err = svc.CreateSecret(&secretsmanager.CreateSecretInput{
+	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
 		Name:         aws.String(secretName),
 		Description:  aws.String(fmt.Sprintf("IAM access key for user %s", awsID)),
 		SecretString: aws.String(string(b)),
@@ -80,15 +77,11 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 }
 
 func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
-	svc := secretsmanager.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
 	secretName := RDSSecretName(awsID)
 	rdsSecretPayload := &RDSSecret{}
 
 	// Check if we already have an RDS secret for this installation.
-	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 	if err == nil {
@@ -121,7 +114,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
 	}
 
-	_, err = svc.CreateSecret(&secretsmanager.CreateSecretInput{
+	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
 		Name:         aws.String(secretName),
 		Description:  aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
 		SecretString: aws.String(string(b)),
@@ -136,11 +129,9 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 }
 
 // secretsManagerGetIAMAccessKey returns the AccessKey for an IAM account.
-func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
-	svc := secretsmanager.New(session.New())
-
+func (a *Client) secretsManagerGetIAMAccessKey(awsID string, logger log.FieldLogger) (*IAMAccessKey, error) {
 	secretName := IAMSecretName(awsID)
-	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {
@@ -161,11 +152,9 @@ func secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
 	return iamAccessKey, nil
 }
 
-func secretsManagerGetRDSSecret(awsID string) (*RDSSecret, error) {
-	svc := secretsmanager.New(session.New())
-
+func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
 	secretName := RDSSecretName(awsID)
-	result, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {
@@ -195,11 +184,7 @@ func (a *Client) secretsManagerEnsureRDSSecretDeleted(awsID string, logger log.F
 }
 
 func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
-	svc := secretsmanager.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	_, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
+	_, err := a.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {

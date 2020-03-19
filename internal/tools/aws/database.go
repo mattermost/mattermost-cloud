@@ -2,36 +2,41 @@ package aws
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const connStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
 
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
+	client         *Client
 	installationID string
 }
 
 // NewRDSDatabase returns a new RDSDatabase interface.
-func NewRDSDatabase(installationID string) *RDSDatabase {
+func NewRDSDatabase(installationID string, client *Client) *RDSDatabase {
 	return &RDSDatabase{
+		client:         client,
 		installationID: installationID,
 	}
 }
 
 // Provision completes all the steps necessary to provision a RDS database.
 func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	awsClient := New()
-	awsClient.AddSQLStore(store)
+	d.client.AddSQLStore(store)
 
-	err := rdsDatabaseProvision(d.installationID, awsClient, logger)
+	err := d.rdsDatabaseProvision(d.installationID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to provision RDS database")
 	}
@@ -41,10 +46,48 @@ func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, 
 
 // Teardown removes all AWS resources related to a RDS database.
 func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
-	err := rdsDatabaseTeardown(d.installationID, keepData, logger)
+	awsID := CloudID(d.installationID)
+
+	logger = logger.WithField("db-cluster-name", awsID)
+	logger.Info("Tearing down AWS RDS database")
+
+	err := d.client.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
 	if err != nil {
-		return errors.Wrap(err, "unable to teardown RDS database")
+		return errors.Wrap(err, "unable to delete RDS secret")
 	}
+
+	if keepData {
+		logger.Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
+		return nil
+	}
+
+	err = d.client.rdsEnsureDBClusterDeleted(awsID, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete RDS DB cluster")
+	}
+
+	logger.Debug("AWS RDS DB cluster deleted")
+
+	return nil
+}
+
+// Snapshot creates a snapshot of the RDS database.
+func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
+	dbClusterID := CloudID(d.installationID)
+
+	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
+		DBClusterIdentifier:         aws.String(dbClusterID),
+		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", dbClusterID, time.Now().Nanosecond())),
+		Tags: []*rds.Tag{&rds.Tag{
+			Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
+			Value: aws.String(RDSSnapshotTagValue(dbClusterID)),
+		}},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create a DB cluster snapshot")
+	}
+
+	logger.WithField("installation-id", d.installationID).Info("RDS database snapshot in progress")
 
 	return nil
 }
@@ -54,28 +97,30 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	awsID := CloudID(d.installationID)
 
-	rdsSecret, err := secretsManagerGetRDSSecret(awsID)
+	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dbCluster, err := rdsGetDBCluster(awsID, logger)
+	result, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if len(result.DBClusters) != 1 {
+		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
-	databaseConnectionString := fmt.Sprintf(
-		"mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
-		rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbCluster.Endpoint,
-	)
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": databaseConnectionString,
+			"DB_CONNECTION_STRING": fmt.Sprintf(connStringTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint),
 		},
 	}
 
@@ -88,17 +133,17 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 	return databaseSpec, databaseSecret, nil
 }
 
-func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.FieldLogger) error {
+func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.FieldLogger) error {
 	awsID := CloudID(installationID)
 	logger.Infof("Provisioning AWS RDS database with ID %s", awsID)
 
 	// To properly provision the database we need a SQL client to lookup which
 	// cluster(s) the installation is running on.
-	if !awsClient.HasSQLStore() {
+	if !d.client.HasSQLStore() {
 		return errors.New("the provided AWS client does not have SQL store access")
 	}
 
-	clusterInstallations, err := awsClient.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+	clusterInstallations, err := d.client.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		PerPage:        model.AllPerPage,
 		InstallationID: installationID,
 	})
@@ -125,7 +170,7 @@ func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.F
 			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
 		},
 	}
-	vpcs, err := GetVpcsWithFilters(vpcFilters)
+	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
 		return err
 	}
@@ -133,46 +178,19 @@ func rdsDatabaseProvision(installationID string, awsClient *Client, logger log.F
 		return fmt.Errorf("expected 1 VPC for cluster %s, but got %d", clusterID, len(vpcs))
 	}
 
-	vpcID := *vpcs[0].VpcId
-
-	rdsSecret, err := awsClient.secretsManagerEnsureRDSSecretCreated(awsID, logger)
+	rdsSecret, err := d.client.secretsManagerEnsureRDSSecretCreated(awsID, logger)
 	if err != nil {
 		return err
 	}
 
-	err = awsClient.rdsEnsureDBClusterCreated(awsID, vpcID, rdsSecret.MasterUsername, rdsSecret.MasterPassword, logger)
+	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, logger)
 	if err != nil {
 		return err
 	}
 
-	masterInstanceName := fmt.Sprintf("%s-master", awsID)
-	err = awsClient.rdsEnsureDBClusterInstanceCreated(awsID, masterInstanceName, logger)
+	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), logger)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func rdsDatabaseTeardown(installationID string, keepData bool, logger log.FieldLogger) error {
-	logger.Info("Tearing down AWS RDS database")
-
-	a := New()
-	awsID := CloudID(installationID)
-
-	err := a.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to delete RDS secret")
-	}
-
-	if !keepData {
-		err = a.rdsEnsureDBClusterDeleted(awsID, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to delete RDS DB cluster")
-		}
-		logger.WithField("db-cluster-name", awsID).Debug("AWS RDS DB cluster deleted")
-	} else {
-		logger.WithField("db-cluster-name", awsID).Info("AWS RDS DB cluster was left intact due to the keep-data setting of this server")
 	}
 
 	return nil

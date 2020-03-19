@@ -101,4 +101,10 @@ const (
 	// changing this value will break the connection to AWS resources for
 	// existing installations.
 	rdsSuffix = "-rds"
+
+	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots of a cluster installation.
+	DefaultClusterInstallationSnapshotTagKey = "tag:ClusterInstallationSnapshot"
+
+	// DefaultAWSClientRetries supplies how many time the AWS client will retry a failed call.
+	DefaultAWSClientRetries = 3
 )
