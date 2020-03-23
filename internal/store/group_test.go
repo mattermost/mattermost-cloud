@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -175,6 +176,208 @@ func TestGroups(t *testing.T) {
 	}
 }
 
+func TestLockGroup(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	lockerID1 := model.NewID()
+	lockerID2 := model.NewID()
+
+	group1 := &model.Group{
+		Name: "group1",
+	}
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	group2 := &model.Group{
+		Name: "group2",
+	}
+	err = sqlStore.CreateGroup(group2)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	t.Run("groups should start unlocked", func(t *testing.T) {
+		group1, err = sqlStore.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group1.LockAcquiredAt)
+		require.Nil(t, group1.LockAcquiredBy)
+
+		group2, err = sqlStore.GetGroup(group2.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group2.LockAcquiredAt)
+		require.Nil(t, group2.LockAcquiredBy)
+	})
+
+	t.Run("lock an unlocked group", func(t *testing.T) {
+		locked, err := sqlStore.LockGroup(group1.ID, lockerID1)
+		require.NoError(t, err)
+		require.True(t, locked)
+
+		group1, err = sqlStore.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.NotEqual(t, int64(0), group1.LockAcquiredAt)
+		require.Equal(t, lockerID1, *group1.LockAcquiredBy)
+	})
+
+	t.Run("lock a previously locked group", func(t *testing.T) {
+		t.Run("by the same locker", func(t *testing.T) {
+			locked, err := sqlStore.LockGroup(group1.ID, lockerID1)
+			require.NoError(t, err)
+			require.False(t, locked)
+		})
+
+		t.Run("by a different locker", func(t *testing.T) {
+			locked, err := sqlStore.LockGroup(group1.ID, lockerID2)
+			require.NoError(t, err)
+			require.False(t, locked)
+		})
+	})
+
+	t.Run("lock a second group from a different locker", func(t *testing.T) {
+		locked, err := sqlStore.LockGroup(group2.ID, lockerID2)
+		require.NoError(t, err)
+		require.True(t, locked)
+
+		group2, err = sqlStore.GetGroup(group2.ID)
+		require.NoError(t, err)
+		require.NotEqual(t, int64(0), group2.LockAcquiredAt)
+		require.Equal(t, lockerID2, *group2.LockAcquiredBy)
+	})
+
+	t.Run("unlock the first group", func(t *testing.T) {
+		unlocked, err := sqlStore.UnlockGroup(group1.ID, lockerID1, false)
+		require.NoError(t, err)
+		require.True(t, unlocked)
+
+		group1, err = sqlStore.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group1.LockAcquiredAt)
+		require.Nil(t, group1.LockAcquiredBy)
+	})
+
+	t.Run("unlock the first group again", func(t *testing.T) {
+		unlocked, err := sqlStore.UnlockGroup(group1.ID, lockerID1, false)
+		require.NoError(t, err)
+		require.False(t, unlocked)
+
+		group1, err = sqlStore.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group1.LockAcquiredAt)
+		require.Nil(t, group1.LockAcquiredBy)
+	})
+
+	t.Run("force unlock the first group again", func(t *testing.T) {
+		unlocked, err := sqlStore.UnlockGroup(group1.ID, lockerID1, true)
+		require.NoError(t, err)
+		require.False(t, unlocked)
+
+		group1, err = sqlStore.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group1.LockAcquiredAt)
+		require.Nil(t, group1.LockAcquiredBy)
+	})
+
+	t.Run("unlock the second group from the wrong locker", func(t *testing.T) {
+		unlocked, err := sqlStore.UnlockGroup(group2.ID, lockerID1, false)
+		require.NoError(t, err)
+		require.False(t, unlocked)
+
+		group2, err = sqlStore.GetGroup(group2.ID)
+		require.NoError(t, err)
+		require.NotEqual(t, int64(0), group2.LockAcquiredAt)
+		require.Equal(t, lockerID2, *group2.LockAcquiredBy)
+	})
+
+	t.Run("force unlock the second group from the wrong locker", func(t *testing.T) {
+		unlocked, err := sqlStore.UnlockGroup(group2.ID, lockerID1, true)
+		require.NoError(t, err)
+		require.True(t, unlocked)
+
+		group2, err = sqlStore.GetGroup(group2.ID)
+		require.NoError(t, err)
+		require.Equal(t, int64(0), group2.LockAcquiredAt)
+		require.Nil(t, group2.LockAcquiredBy)
+	})
+}
+
+// TODO: better group checks than simply checking with Len().
+func TestGetUnlockedGroupsPendingWork(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	group1 := &model.Group{
+		Name:        "group1",
+		Description: "description1",
+		Version:     "version1",
+	}
+
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	group2 := &model.Group{
+		Name:        "group2",
+		Description: "description2",
+		Version:     "version2",
+	}
+
+	err = sqlStore.CreateGroup(group2)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		GroupID:   &group1.ID,
+		Version:   "version",
+		DNS:       "dns.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateInstallation(installation1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	groups, err := sqlStore.GetUnlockedGroupsPendingWork()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+
+	group1.Version = "new-version"
+	err = sqlStore.UpdateGroup(group1)
+	require.NoError(t, err)
+
+	groups, err = sqlStore.GetUnlockedGroupsPendingWork()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+
+	lockerID := model.NewID()
+
+	locked, err := sqlStore.LockGroup(group1.ID, lockerID)
+	require.NoError(t, err)
+	require.True(t, locked)
+
+	groups, err = sqlStore.GetUnlockedGroupsPendingWork()
+	require.NoError(t, err)
+	require.Len(t, groups, 0)
+
+	locked, err = sqlStore.UnlockGroup(group1.ID, lockerID, false)
+	require.NoError(t, err)
+	require.True(t, locked)
+
+	groups, err = sqlStore.GetUnlockedGroupsPendingWork()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+}
+
 func TestUpdateGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
@@ -201,8 +404,18 @@ func TestUpdateGroup(t *testing.T) {
 	group1.Description = "description3"
 	group1.Version = "version3"
 
+	oldSequence := group1.Sequence
+
 	err = sqlStore.UpdateGroup(group1)
 	require.NoError(t, err)
+	assert.Equal(t, oldSequence+1, group1.Sequence)
+
+	oldSequence = group1.Sequence
+	group1.Sequence = 9001
+
+	err = sqlStore.UpdateGroup(group1)
+	require.NoError(t, err)
+	assert.Equal(t, oldSequence+1, group1.Sequence)
 
 	actualGroup1, err := sqlStore.GetGroup(group1.ID)
 	require.NoError(t, err)
