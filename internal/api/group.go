@@ -21,54 +21,28 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupRouter.Handle("", addContext(handleGetGroup)).Methods("GET")
 	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
 	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
-
-	groupRouter.Handle("/mattermost/{version:[A-Za-z0-9.]+}", addContext(handleChangeGroupMattermostVersion)).Methods("PUT")
 }
 
-// handleChangeGroupMattermostVersion responds to PUT
-// /api/group/{group}/mattermost/{version}, upgrading or downgrading
-// the installation to the Mattermost version embedded in the request.
-func handleChangeGroupMattermostVersion(c *Context, w http.ResponseWriter, r *http.Request) {
+// handleGetGroup responds to GET /api/group/{group}, returning the group in question.
+func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-
-	groupID, ok := vars["group"]
-	if !ok {
-		c.Logger.Error("failed to get group ID from request parameters")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("group", groupID)
-
-	version, ok := vars["version"]
-	if !ok {
-		c.Logger.Error("failed to get version from request parameters")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	c.Logger = c.Logger.WithField("version", version)
 
 	group, err := c.Store.GetGroup(groupID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to find group with ID %s", groupID)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if group == nil {
-		c.Logger.Errorf("failed to find group with ID %s", groupID)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	group.Version = version
-	err = c.Store.UpdateGroup(group)
-	if err != nil {
-		c.Logger.WithError(err).Errorf("error writing group object to database %#v", group)
+		c.Logger.WithError(err).Error("failed to query group")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	if group == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
-	w.WriteHeader(http.StatusAccepted)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, group)
 }
 
 // handleGetGroups responds to GET /api/groups, returning the specified page of groups.
@@ -110,13 +84,6 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = createGroupRequest.Validate()
-	if err != nil {
-		c.Logger.WithError(err).Error("invalid create group request")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	group := model.Group{
 		Name:          createGroupRequest.Name,
 		Description:   createGroupRequest.Description,
@@ -138,28 +105,6 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, group)
 }
 
-// handleGetGroup responds to GET /api/group/{group}, returning the group in question.
-func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	groupID := vars["group"]
-	c.Logger = c.Logger.WithField("group", groupID)
-
-	group, err := c.Store.GetGroup(groupID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query group")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if group == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, group)
-}
-
 // handleUpdateGroup responds to PUT /api/group/{group}, updating the group.
 func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -173,22 +118,12 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = patchGroupRequest.Validate()
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		c.Logger.WithError(err).Error("invalid patch group request")
+	group, status, unlockOnce := lockGroup(c, groupID)
+	if status != 0 {
+		w.WriteHeader(status)
 		return
 	}
-
-	group, err := c.Store.GetGroup(groupID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to fetch group")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	} else if group == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+	defer unlockOnce()
 
 	if patchGroupRequest.Apply(group) {
 		err := c.Store.UpdateGroup(group)
@@ -206,22 +141,18 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteGroup responds to DELETE /api/group/{group}, marking the group as deleted.
 //
-// Installations will not automatically leave the group, but they will no longer consider the
-// group version as an upgrade target.
+// The group must contain no installations in order to be deleted.
 func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("group", groupID)
 
-	group, err := c.Store.GetGroup(groupID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to fetch group")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	} else if group == nil {
-		w.WriteHeader(http.StatusNotFound)
+	group, status, unlockOnce := lockGroup(c, groupID)
+	if status != 0 {
+		w.WriteHeader(status)
 		return
 	}
+	defer unlockOnce()
 
 	installations, err := c.Store.GetInstallations(&model.InstallationFilter{
 		GroupID:        groupID,

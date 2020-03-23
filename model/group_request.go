@@ -25,11 +25,9 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 		return nil, errors.Wrap(err, "failed to decode create group request")
 	}
 
-	if createGroupRequest.Name == "" {
-		return nil, errors.New("must specify name")
-	}
-	if createGroupRequest.Version == "" {
-		return nil, errors.New("must specify version")
+	err = createGroupRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid group create request")
 	}
 
 	return &createGroupRequest, nil
@@ -37,6 +35,12 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 
 // Validate validates the values of a group create request
 func (request *CreateGroupRequest) Validate() error {
+	if request.Name == "" {
+		return errors.New("must specify name")
+	}
+	if request.Version == "" {
+		return errors.New("must specify version")
+	}
 	err := request.MattermostEnv.Validate()
 	if err != nil {
 		return errors.Wrapf(err, "bad environment variable map in create group request")
@@ -60,6 +64,11 @@ func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error
 	err := json.NewDecoder(reader).Decode(&patchGroupRequest)
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode patch group request")
+	}
+
+	err = patchGroupRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid patch group request")
 	}
 
 	return &patchGroupRequest, nil
