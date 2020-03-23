@@ -39,7 +39,6 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
-	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
@@ -224,11 +223,6 @@ func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
 		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
 		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
-	}
-
-	privateDNS, _ := cmd.Flags().GetString("private-dns")
-	if privateDNS != "" {
-		logger.Warn("[Deprecation] The `private-dns` flag is deprecated and won't be used")
 	}
 }
 

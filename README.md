@@ -59,7 +59,7 @@ $ cloud schema migrate
 Run the server with:
 
 ```
-$ cloud server --state-store=<your-s3-bucket> --private-dns dev.cloud.internal.mattermost.com
+$ cloud server --state-store=<your-s3-bucket>
 ```
 
 ### Testing
