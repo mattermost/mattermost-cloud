@@ -1,6 +1,6 @@
 # Build the mattermost cloud
-ARG DOCKER_BUILD_IMAGE=golang:1.13
-ARG DOCKER_BASE_IMAGE=alpine:3.11.2
+ARG DOCKER_BUILD_IMAGE=golang:1.13.9
+ARG DOCKER_BASE_IMAGE=alpine:3.11.3
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /mattermost-cloud/
@@ -12,7 +12,7 @@ RUN make build
 # Final Image
 FROM ${DOCKER_BASE_IMAGE}
 LABEL name="Mattermost Cloud" \
-  maintainer="dev-ops@mattermost.com" \
+  maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
   distribution-scope="public" \
   architecture="x86_64" \
@@ -36,9 +36,6 @@ COPY --from=build /mattermost-cloud/build/_output/bin/cloud /mattermost-cloud/cl
 COPY --from=build /mattermost-cloud/build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 WORKDIR /mattermost-cloud/
-
-
-VOLUME [ "/mattermost-cloud/clusters" ]
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
