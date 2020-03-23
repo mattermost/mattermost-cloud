@@ -185,7 +185,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	return ugh.CreateUtilityGroup(kops)
+	return ugh.CreateUtilityGroup()
 }
 
 // ProvisionCluster installs all the baseline kubernetes resources needed for
@@ -339,7 +339,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
 
-	err = ugh.UpgradeUtilityGroup(kops)
+	err = ugh.UpgradeUtilityGroup()
 	if err != nil {
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}

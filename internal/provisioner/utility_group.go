@@ -110,10 +110,10 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 
 // CreateUtilityGroup  creates  and  starts  all of  the  third  party
 // services needed to run a cluster.
-func (group utilityGroup) CreateUtilityGroup(kops *kops.Cmd) error {
+func (group utilityGroup) CreateUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "DeployManifests")
 
-	err := deployCertManagerCRDS(kops, logger)
+	err := deployCertManagerCRDS(group.kops, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
@@ -136,7 +136,7 @@ func (group utilityGroup) CreateUtilityGroup(kops *kops.Cmd) error {
 		}
 	}
 
-	err = deployClusterIssuer(kops, logger)
+	err = deployClusterIssuer(group.kops, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy ClusterIssuer manifest")
 	}
@@ -163,10 +163,10 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 }
 
 // UpgradeUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
-func (group utilityGroup) UpgradeUtilityGroup(kops *kops.Cmd) error {
+func (group utilityGroup) UpgradeUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
 
-	err := deployCertManagerCRDS(kops, logger)
+	err := deployCertManagerCRDS(group.kops, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
@@ -189,7 +189,7 @@ func (group utilityGroup) UpgradeUtilityGroup(kops *kops.Cmd) error {
 		}
 	}
 
-	err = deployClusterIssuer(kops, logger)
+	err = deployClusterIssuer(group.kops, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy ClusterIssuer manifest")
 	}
