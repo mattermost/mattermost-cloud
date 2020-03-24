@@ -54,3 +54,8 @@ func DBSubnetGroupName(vpcID string) string {
 func RDSMasterInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-master", CloudID(installationID))
 }
+
+// RDSMigrationInstanceID formats the name used for migrated RDS database instances.
+func RDSMigrationInstanceID(installationID string) string {
+	return fmt.Sprintf("%s-migration", CloudID(installationID))
+}
