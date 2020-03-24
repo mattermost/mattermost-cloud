@@ -11,7 +11,7 @@ import (
 )
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationSetup() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -33,7 +33,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetup() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupAlreadyExist() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -55,7 +55,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupAlreadyExist() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupError() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -74,7 +74,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupError() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupSGNotFoundError() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -88,7 +88,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupSGNotFoundError() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardown() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -110,7 +110,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardown() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownRuleError() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -132,7 +132,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownRuleError() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownError() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
@@ -151,7 +151,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownError() {
 }
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownSGNotFoundError() {
-	database := NewRDSDatabaseMigration(a.InstallationA, a.ClusterInstallationB, a.Mocks.AWS)
+	database := NewRDSDatabaseMigration(a.InstallationA.ID, a.ClusterInstallationB.InstallationID, a.Mocks.AWS)
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("123-id-master").Times(1),

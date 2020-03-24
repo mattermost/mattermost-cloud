@@ -14,28 +14,28 @@ import (
 
 // RDSDatabaseMigration is a migrated database backed by AWS RDS.
 type RDSDatabaseMigration struct {
-	awsClient           *Client
-	installation        *model.Installation
-	clusterInstallation *model.ClusterInstallation
+	awsClient            *Client
+	masterInstallationID string
+	slaveInstallationID  string
 }
 
 // NewRDSDatabaseMigration returns a new RDSDatabaseMigration.
-func NewRDSDatabaseMigration(installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient *Client) *RDSDatabaseMigration {
+func NewRDSDatabaseMigration(masterInstallationID, slaveInstallationID string, awsClient *Client) *RDSDatabaseMigration {
 	return &RDSDatabaseMigration{
-		awsClient:           awsClient,
-		installation:        installation,
-		clusterInstallation: clusterInstallation,
+		awsClient:            awsClient,
+		masterInstallationID: masterInstallationID,
+		slaveInstallationID:  slaveInstallationID,
 	}
 }
 
 // Setup sets access from one RDS database to another and sets any configuration needed for replication.
 func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
-	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.installation.ID))
+	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.masterInstallationID))
 	if err != nil {
 		return "", err
 	}
 
-	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.clusterInstallation.InstallationID))
+	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.slaveInstallationID))
 	if err != nil {
 		return "", err
 	}
@@ -60,19 +60,19 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 		return "", err
 	}
 
-	logger.WithField("migration-installation-id", d.installation.ID).Info("database migration setup completed")
+	logger.WithField("migration-installation-id", d.masterInstallationID).Info("database migration setup completed")
 
 	return model.DatabaseMigrationStatusSetupComplete, nil
 }
 
 // Teardown removes access from one RDS database to another and rollback any previous database configuration.
 func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) {
-	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.installation.ID))
+	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.masterInstallationID))
 	if err != nil {
 		return "", err
 	}
 
-	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.clusterInstallation.InstallationID))
+	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.slaveInstallationID))
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 		return "", err
 	}
 
-	logger.WithField("migration-installation-id", d.installation.ID).Info("database migration teardown completed")
+	logger.WithField("migration-installation-id", d.masterInstallationID).Info("database migration teardown completed")
 
 	return model.DatabaseMigrationStatusTeardownComplete, nil
 }
