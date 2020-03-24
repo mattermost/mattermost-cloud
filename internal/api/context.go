@@ -36,6 +36,8 @@ type Store interface {
 	GetGroup(groupID string) (*model.Group, error)
 	GetGroups(filter *model.GroupFilter) ([]*model.Group, error)
 	UpdateGroup(group *model.Group) error
+	LockGroup(groupID, lockerID string) (bool, error)
+	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
 	DeleteGroup(groupID string) error
 
 	CreateWebhook(webhook *model.Webhook) error
