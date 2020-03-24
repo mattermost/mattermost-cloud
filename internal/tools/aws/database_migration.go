@@ -103,7 +103,7 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 
 // Replicate starts the process for replicating an master RDS database. This method must return an resplication status or an error.
 func (d *RDSDatabaseMigration) Replicate(logger log.FieldLogger) (string, error) {
-	return model.DatabaseMigrationStatusReplicationComplete, nil
+	return "", errors.New("not implemented")
 }
 
 func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string) (*ec2.SecurityGroup, error) {
