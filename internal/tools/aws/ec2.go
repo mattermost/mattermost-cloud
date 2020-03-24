@@ -93,33 +93,6 @@ func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, erro
 	return true, nil
 }
 
-// AddSubnetToSecurityGroup authorizes a CIDR block to a security group.
-func (a *Client) AddSubnetToSecurityGroup(groupID, cidrIP, ipProtocol string) error {
-	_, err := a.Service().ec2.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
-		GroupId:    aws.String(groupID),
-		CidrIp:     aws.String(cidrIP),
-		IpProtocol: aws.String(ipProtocol),
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RemoveSubnetOfSecurityGroup removes a CIDR block from a security group.
-func (a *Client) RemoveSubnetOfSecurityGroup(groupID, cidrIP string) error {
-	_, err := a.Service().ec2.RevokeSecurityGroupIngress(&ec2.RevokeSecurityGroupIngressInput{
-		GroupId: aws.String(groupID),
-		CidrIp:  aws.String(groupID),
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetVpcsWithFilters returns VPCs matching a given filter.
 func (a *Client) GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
 	vpcOutput, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{

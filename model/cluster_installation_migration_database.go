@@ -5,20 +5,23 @@ import (
 )
 
 const (
-	// DatabaseMigrationStatusError ...
-	DatabaseMigrationStatusError = "setup-error"
-	// DatabaseMigrationStatusSetupIP ...
+	// DatabaseMigrationStatusSetupIP indicates that database migration setup is still running.
 	DatabaseMigrationStatusSetupIP = "setup-in-progress"
-	// DatabaseMigrationStatusSetupComplete ...
+	// DatabaseMigrationStatusSetupComplete indicates that database migration setup is completed.
 	DatabaseMigrationStatusSetupComplete = "setup-complete"
-	// DatabaseMigrationStatusReplicationIP ...
+	// DatabaseMigrationStatusTeardownIP indicates that database migration teardown is still running.
+	DatabaseMigrationStatusTeardownIP = "teardown-ip"
+	// DatabaseMigrationStatusTeardownComplete indicates that database migration teardown is completed.
+	DatabaseMigrationStatusTeardownComplete = "teardown-complete"
+	// DatabaseMigrationStatusReplicationIP indicates that database migration replication process is still running.
 	DatabaseMigrationStatusReplicationIP = "replication-in-progress"
-	// DatabaseMigrationStatusReplicationComplete ...
+	// DatabaseMigrationStatusReplicationComplete indicates that database migration process is completed.
 	DatabaseMigrationStatusReplicationComplete = "replication-complete"
 )
 
 // CIMigrationDatabase is the interface for managing Mattermost databases migration process.
 type CIMigrationDatabase interface {
 	Setup(logger log.FieldLogger) (string, error)
+	Teardown(logger log.FieldLogger) (string, error)
 	Replicate(logger log.FieldLogger) (string, error)
 }
