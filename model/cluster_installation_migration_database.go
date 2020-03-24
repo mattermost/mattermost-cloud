@@ -10,7 +10,7 @@ const (
 	// DatabaseMigrationStatusSetupComplete indicates that database migration setup is completed.
 	DatabaseMigrationStatusSetupComplete = "setup-complete"
 	// DatabaseMigrationStatusTeardownIP indicates that database migration teardown is still running.
-	DatabaseMigrationStatusTeardownIP = "teardown-ip"
+	DatabaseMigrationStatusTeardownIP = "teardown-in-progress"
 	// DatabaseMigrationStatusTeardownComplete indicates that database migration teardown is completed.
 	DatabaseMigrationStatusTeardownComplete = "teardown-complete"
 	// DatabaseMigrationStatusReplicationIP indicates that database migration replication process is still running.
