@@ -8,3 +8,23 @@ controller:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 
+  extraVolumeMounts:
+  ## Additional volumeMounts to the controller main container.
+   - name: cache
+     mountPath: /cache/nginx
+   - name: mattermost-cache
+     mountPath: /cache/mattermost
+
+  extraVolumes: 
+  ## Additional volumes to the controller pod.
+   - name: cache
+     emptyDir: {}
+   - name: mattermost-cache
+     emptyDir: {}
+
+  config: 
+    http-snippet: |
+      proxy_cache_path /cache/nginx levels=1:2 keys_zone=mattermost_test_cache:10m max_size=10g inactive=120m use_temp_path=off;
+      proxy_cache_path /cache/mattermost levels=1:2 keys_zone=mattermost_cache:10m max_size=10g inactive=120m use_temp_path=off;
+    keep-alive: "3600"
+    proxy-max-temp-file-size: "0"
