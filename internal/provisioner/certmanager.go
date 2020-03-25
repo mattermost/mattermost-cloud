@@ -1,9 +1,9 @@
 package provisioner
 
 import (
-	"strings"
-	"fmt"
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -130,7 +130,7 @@ func deployClusterIssuer(kops *kops.Cmd, logger log.FieldLogger) error {
 	if err != nil {
 		return err
 	}
-	
+
 	wait := 300
 	pods, err := k8sClient.GetPodsFromDeployment("cert-manager", "cert-manager-webhook")
 	if err != nil {
@@ -151,8 +151,16 @@ func deployClusterIssuer(kops *kops.Cmd, logger log.FieldLogger) error {
 		logger.Infof("Successfully deployed cert-manager-webhook pod %q", pod.Name)
 	}
 
-	//After the webhook is up and running it needs ~2sec before being able to accept connections and being able to deploy the cluster issuer.
-	time.Sleep(5 * time.Second)
+	apiServiceName := "v1alpha2.cert-manager.io"
+	wait = 60
+	logger.Infof("Waiting up to %d seconds for cert manager api service %q to be available...", wait, apiServiceName)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+
+	_, err = k8sClient.WaitForAPIServiceAvailable(ctx, apiServiceName)
+	if err != nil {
+		return err
+	}
 
 	files := []k8s.ManifestFile{
 		{
@@ -167,4 +175,3 @@ func deployClusterIssuer(kops *kops.Cmd, logger log.FieldLogger) error {
 	}
 	return nil
 }
-

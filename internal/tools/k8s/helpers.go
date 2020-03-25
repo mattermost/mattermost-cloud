@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/remotecommand"
 	utilexec "k8s.io/client-go/util/exec"
+	apiregistration "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 )
 
 // WaitForPodRunning will poll a given kubernetes pod at a regular interval for
@@ -89,4 +90,24 @@ func (kc *KubeClient) RemoteCommand(method string, url *url.URL) ([]byte, error)
 	}
 
 	return output, nil
+}
+
+// WaitForAPIServiceAvailable checks if api service is available.
+func (kc *KubeClient) WaitForAPIServiceAvailable(ctx context.Context, serviceName string) (*apiregistration.APIService, error) {
+	for {
+		apiService, err := kc.KubeagClientSet.ApiregistrationV1().APIServices().Get(serviceName, metav1.GetOptions{})
+		if err == nil {
+			for _, condition := range apiService.Status.Conditions {
+				if condition.Status == apiregistration.ConditionTrue {
+					return apiService, nil
+				}
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, errors.Wrap(ctx.Err(), "timed out waiting for api service to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
