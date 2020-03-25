@@ -19,23 +19,25 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 	}
 
 	awsSession.Handlers.Complete.PushFront(func(r *request.Request) {
-		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("%s.%s %s %s: %s%s  ", r.ClientInfo.ServiceID, r.Operation.Name, r.HTTPRequest.Method,
-			r.HTTPResponse.Status, r.HTTPRequest.URL.Host, r.HTTPRequest.URL.RawPath))
+		if r.HTTPResponse != nil && r.HTTPRequest != nil {
+			var buffer bytes.Buffer
+			buffer.WriteString(fmt.Sprintf("%s.%s %s %s: %s%s  ", r.ClientInfo.ServiceID, r.Operation.Name, r.HTTPRequest.Method,
+				r.HTTPResponse.Status, r.HTTPRequest.URL.Host, r.HTTPRequest.URL.RawPath))
 
-		paramBytes, err := json.Marshal(r.Params)
-		if err != nil {
-			buffer.WriteString(err.Error())
-		} else {
-			buffer.Write(paramBytes)
-		}
+			paramBytes, err := json.Marshal(r.Params)
+			if err != nil {
+				buffer.WriteString(err.Error())
+			} else {
+				buffer.Write(paramBytes)
+			}
 
-		if r.HTTPResponse.StatusCode >= 400 {
-			logger.Error(buffer.String())
-		}
+			if r.HTTPResponse.StatusCode >= 400 {
+				logger.Error(buffer.String())
+			}
 
-		if r.HTTPResponse.StatusCode < 400 {
-			logger.Debug(buffer.String())
+			if r.HTTPResponse.StatusCode < 400 {
+				logger.Debug(buffer.String())
+			}
 		}
 	})
 
