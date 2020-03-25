@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -18,25 +19,25 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 	}
 
 	awsSession.Handlers.Complete.PushFront(func(r *request.Request) {
-		loggingMessage := fmt.Sprintf("%s.%s %s %s: %s%s  %q", r.ClientInfo.ServiceID, r.Operation.Name, r.HTTPRequest.Method,
-			r.HTTPResponse.Status, r.HTTPRequest.URL.Host, r.HTTPRequest.URL.RawPath, marshallParams(r.Params))
+		var buffer bytes.Buffer
+		buffer.WriteString(fmt.Sprintf("%s.%s %s %s: %s%s  ", r.ClientInfo.ServiceID, r.Operation.Name, r.HTTPRequest.Method,
+			r.HTTPResponse.Status, r.HTTPRequest.URL.Host, r.HTTPRequest.URL.RawPath))
+
+		paramBytes, err := json.Marshal(r.Params)
+		if err != nil {
+			buffer.WriteString(err.Error())
+		} else {
+			buffer.Write(paramBytes)
+		}
 
 		if r.HTTPResponse.StatusCode >= 400 {
-			logger.Error(loggingMessage)
+			logger.Error(buffer.String())
 		}
 
 		if r.HTTPResponse.StatusCode < 400 {
-			logger.Debug(loggingMessage)
+			logger.Debug(buffer.String())
 		}
 	})
 
 	return awsSession, nil
-}
-
-func marshallParams(v interface{}) string {
-	paramBytes, err := json.Marshal(v)
-	if err != nil {
-		return err.Error()
-	}
-	return string(paramBytes)
 }
