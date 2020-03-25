@@ -1,9 +1,8 @@
 package aws
 
 import (
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
@@ -32,12 +31,12 @@ func NewRDSDatabaseMigration(masterInstallationID, slaveInstallationID string, a
 func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.masterInstallationID))
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "unable to setup database migration for installation id: %s", d.masterInstallationID)
 	}
 
 	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.slaveInstallationID))
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "unable to setup database migration for installation id: %s", d.masterInstallationID)
 	}
 
 	_, err = d.awsClient.Service().ec2.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
@@ -56,11 +55,11 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 			},
 		},
 	})
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return "", err
+	if err != nil && !isSecurityGroupRuleDuplicate(err) {
+		return "", errors.Wrapf(err, "unable to setup database migration for installation id: %s", d.masterInstallationID)
 	}
 
-	logger.WithField("migration-installation-id", d.masterInstallationID).Info("database migration setup completed")
+	logger.WithField("migration-installation-id", d.masterInstallationID).Info("Database migration setup completed")
 
 	return model.DatabaseMigrationStatusSetupComplete, nil
 }
@@ -69,12 +68,12 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) {
 	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.masterInstallationID))
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "unable to teardown database migration for installation id: %s", d.masterInstallationID)
 	}
 
 	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.slaveInstallationID))
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "unable to teardown database migration for installation id: %s", d.masterInstallationID)
 	}
 
 	_, err = d.awsClient.Service().ec2.RevokeSecurityGroupIngress(&ec2.RevokeSecurityGroupIngressInput{
@@ -92,16 +91,17 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 			},
 		},
 	})
-	if err != nil && !strings.Contains(err.Error(), "rule does not exist") {
-		return "", err
+	if err != nil && !isSecurityGroupRuleNotFound(err) {
+		return "", errors.Wrapf(err, "unable to teardown database migration for installation id: %s", d.masterInstallationID)
 	}
 
-	logger.WithField("migration-installation-id", d.masterInstallationID).Info("database migration teardown completed")
+	logger.WithField("migration-installation-id", d.masterInstallationID).Info("Database migration teardown completed")
 
 	return model.DatabaseMigrationStatusTeardownComplete, nil
 }
 
-// Replicate starts the process for replicating an master RDS database. This method must return an resplication status or an error.
+// Replicate starts the process for replicating an master RDS database. This method must return an
+// resplication status or an error.
 func (d *RDSDatabaseMigration) Replicate(logger log.FieldLogger) (string, error) {
 	return "", errors.New("not implemented")
 }
@@ -122,11 +122,42 @@ func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string
 			if err != nil {
 				return nil, err
 			}
-			if len(sgOutput.SecurityGroups) == 1 && strings.Contains(*sgOutput.SecurityGroups[0].GroupName, "-db-sg") {
+			if len(sgOutput.SecurityGroups) == 1 && isRDSInstanceSecurityGroup(sgOutput.SecurityGroups[0]) {
 				return sgOutput.SecurityGroups[0], nil
 			}
 		}
 	}
 
 	return nil, errors.Errorf("security group for RDS DB instance %s not found", instanceID)
+}
+
+func isSecurityGroupRuleNotFound(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html#CommonErrors
+		case "InvalidPermission.NotFound":
+			return true
+		}
+	}
+	return false
+}
+
+func isSecurityGroupRuleDuplicate(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html#CommonErrors
+		case "InvalidPermission.Duplicate":
+			return true
+		}
+	}
+	return false
+}
+
+func isRDSInstanceSecurityGroup(securityGroup *ec2.SecurityGroup) bool {
+	for _, tag := range securityGroup.Tags {
+		if *tag.Key == trimTagPrefix(DefaultDBSecurityGroupTagKey) && *tag.Value == DefaultDBSecurityGroupTagValue {
+			return true
+		}
+	}
+	return false
 }
