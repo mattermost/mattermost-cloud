@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -78,11 +79,14 @@ type AWSTestSuite struct {
 	CertifcateARN        string
 	RDSAvailabilityZones []string
 
-	//Route53 fixtures
+	// Route53 fixtures
 	EndpointsA []string
 	EndpointsB []string
 	DNSNameA   string
 	DNSNameB   string
+
+	// AWS Tags
+	DefaultRDSTag *ec2.Tag
 }
 
 // NewAWSTestSuite gives a new instance of the entire AWS testing suite.
@@ -136,6 +140,11 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		EndpointsB: []string{"example1.mattermost.com"},
 		DNSNameA:   "mattermost.com",
 		DNSNameB:   "mattermost-cloud.com",
+
+		DefaultRDSTag: &ec2.Tag{
+			Key:   aws.String(trimTagPrefix(DefaultDBSecurityGroupTagKey)),
+			Value: aws.String(DefaultDBSecurityGroupTagValue),
+		},
 	}
 }
 

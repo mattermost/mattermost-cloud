@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 // CloudID returns the standard ID used for AWS resource names. This ID is used
@@ -53,4 +55,20 @@ func DBSubnetGroupName(vpcID string) string {
 // RDSMasterInstanceID formats the name used for RDS database instances.
 func RDSMasterInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-master", CloudID(installationID))
+}
+
+// RDSMigrationInstanceID formats the name used for migrated RDS database instances.
+func RDSMigrationInstanceID(installationID string) string {
+	return fmt.Sprintf("%s-migration", CloudID(installationID))
+}
+
+// IsErrorCode asserts that an AWS error has a certain code.
+func IsErrorCode(err error, code string) bool {
+	if err != nil {
+		awsErr, ok := err.(awserr.Error)
+		if ok {
+			return awsErr.Code() == code
+		}
+	}
+	return false
 }
