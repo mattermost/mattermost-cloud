@@ -22,6 +22,7 @@ type installationStore interface {
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetUnlockedInstallationsPendingWork() ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
+	UpdateInstallationGroupSequence(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 	DeleteInstallation(installationID string) error
@@ -119,6 +120,16 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 	oldState := installation.State
 	installation.State = newState
+
+	if installation.ConfigMergedWithGroup() {
+		installation.SyncGroupAndInstallationSequence()
+		err = s.store.UpdateInstallationGroupSequence(installation)
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to set installation sequence to %s", newState)
+			return
+		}
+	}
+
 	err = s.store.UpdateInstallation(installation)
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to set installation state to %s", newState)

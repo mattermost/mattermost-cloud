@@ -36,6 +36,7 @@ func init() {
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().Bool("cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
+	serverCmd.PersistentFlags().Bool("group-supervisor", false, "Whether this server will run an installation group supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
@@ -89,9 +90,10 @@ var serverCmd = &cobra.Command{
 		}
 
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
-		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		groupSupervisor, _ := command.Flags().GetBool("group-supervisor")
 		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
-		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor {
+		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -108,6 +110,7 @@ var serverCmd = &cobra.Command{
 
 		logger.WithFields(logrus.Fields{
 			"cluster-supervisor":              clusterSupervisor,
+			"group-supervisor":                groupSupervisor,
 			"installation-supervisor":         installationSupervisor,
 			"cluster-installation-supervisor": clusterInstallationSupervisor,
 			"store-version":                   currentVersion,
@@ -151,6 +154,9 @@ var serverCmd = &cobra.Command{
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
+		}
+		if groupSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, instanceID, logger))
 		}
 		if installationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, resourceUtil, logger))

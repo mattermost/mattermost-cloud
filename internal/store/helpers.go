@@ -31,3 +31,24 @@ func (sqlStore *SQLStore) tableExists(tableName string) (bool, error) {
 
 	return tableExists, nil
 }
+
+// countResult handles differences in how count queries can be returned.
+type countResult []struct {
+	Count         int64 `db:"count"`
+	CountWildcard int64 `db:"Count (*)"`
+}
+
+// value checks the countResult and returns the correct count value.
+func (c countResult) value() (int64, error) {
+	if len(c) == 0 {
+		return 0, errors.New("no count result returned")
+	}
+	if c[0].Count != 0 {
+		return c[0].Count, nil
+	}
+	if c[0].CountWildcard != 0 {
+		return c[0].CountWildcard, nil
+	}
+
+	return 0, nil
+}

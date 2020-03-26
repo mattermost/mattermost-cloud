@@ -32,6 +32,10 @@ type Installation struct {
 	// checked later to determine whether the installation is safe to save or
 	// not.
 	configMergedWithGroup bool
+
+	// configMergeGroupSequence is the Sequence value of the group at the time
+	// it was merged with the installation.
+	configMergeGroupSequence int64
 }
 
 // InstallationFilter describes the parameters used to constrain a set of installations.
@@ -63,6 +67,13 @@ func (i *Installation) ConfigMergedWithGroup() bool {
 	return i.configMergedWithGroup
 }
 
+// SyncGroupAndInstallationSequence updates the installation GroupSequence value
+// to reflect the hidden group Sequence value from the time the configuration
+// was origianlly merged.
+func (i *Installation) SyncGroupAndInstallationSequence() {
+	i.GroupSequence = &i.configMergeGroupSequence
+}
+
 // MergeWithGroup merges an installation's configuration with that of a group.
 // An option can be provided to include a group override summary to the
 // installation.
@@ -75,17 +86,19 @@ func (i *Installation) MergeWithGroup(group *Group, includeOverrides bool) {
 	}
 
 	i.configMergedWithGroup = true
+	i.configMergeGroupSequence = group.Sequence
+
 	i.GroupOverrides = make(map[string]string)
 	if group.MattermostEnv != nil && i.MattermostEnv == nil {
 		i.MattermostEnv = make(EnvVarMap)
 	}
 
 	if i.Version != group.Version {
-		i.Version = group.Version
 		if includeOverrides {
 			i.GroupOverrides["Installation Version"] = i.Version
 			i.GroupOverrides["Group Version"] = group.Version
 		}
+		i.Version = group.Version
 	}
 	for key, value := range group.MattermostEnv {
 		if includeOverrides {
