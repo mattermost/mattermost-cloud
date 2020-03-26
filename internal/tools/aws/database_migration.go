@@ -2,10 +2,10 @@ package aws
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -31,12 +31,12 @@ func NewRDSDatabaseMigration(masterInstallationID, slaveInstallationID string, a
 func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.masterInstallationID))
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to setup database migration for installation id: %s", d.masterInstallationID)
+		return "", d.toSetupError(err)
 	}
 
 	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.slaveInstallationID))
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to setup database migration for installation id: %s", d.masterInstallationID)
+		return "", d.toSetupError(err)
 	}
 
 	_, err = d.awsClient.Service().ec2.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
@@ -55,11 +55,15 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 			},
 		},
 	})
-	if err != nil && !isSecurityGroupRuleDuplicate(err) {
-		return "", errors.Wrapf(err, "unable to setup database migration for installation id: %s", d.masterInstallationID)
+	// Why "InvalidPermission.Duplicate" is hardcoded? https://github.com/aws/aws-sdk-go/issues/3235
+	if err != nil && !IsErrorCode(err, "InvalidPermission.Duplicate") {
+		return "", d.toSetupError(err)
 	}
 
-	logger.WithField("migration-installation-id", d.masterInstallationID).Info("Database migration setup completed")
+	logger.WithFields(logrus.Fields{
+		"master-installation-id": d.masterInstallationID,
+		"slave-installation-id":  d.slaveInstallationID,
+	}).Info("Database migration setup completed")
 
 	return model.DatabaseMigrationStatusSetupComplete, nil
 }
@@ -68,12 +72,12 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) {
 	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMasterInstanceID(d.masterInstallationID))
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to teardown database migration for installation id: %s", d.masterInstallationID)
+		return "", d.toTeardownError(err)
 	}
 
 	slaveInstanceSG, err := d.describeDBInstanceSecurityGroup(RDSMigrationInstanceID(d.slaveInstallationID))
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to teardown database migration for installation id: %s", d.masterInstallationID)
+		return "", d.toTeardownError(err)
 	}
 
 	_, err = d.awsClient.Service().ec2.RevokeSecurityGroupIngress(&ec2.RevokeSecurityGroupIngressInput{
@@ -91,11 +95,15 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 			},
 		},
 	})
-	if err != nil && !isSecurityGroupRuleNotFound(err) {
-		return "", errors.Wrapf(err, "unable to teardown database migration for installation id: %s", d.masterInstallationID)
+	// Why "InvalidPermission.NotFound" is hardcoded? https://github.com/aws/aws-sdk-go/issues/3235
+	if err != nil && !IsErrorCode(err, "InvalidPermission.NotFound") {
+		return "", d.toTeardownError(err)
 	}
 
-	logger.WithField("migration-installation-id", d.masterInstallationID).Info("Database migration teardown completed")
+	logger.WithFields(logrus.Fields{
+		"master-installation-id": d.masterInstallationID,
+		"slave-installation-id":  d.slaveInstallationID,
+	}).Info("Database migration teardown completed")
 
 	return model.DatabaseMigrationStatusTeardownComplete, nil
 }
@@ -131,26 +139,14 @@ func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string
 	return nil, errors.Errorf("security group for RDS DB instance %s not found", instanceID)
 }
 
-func isSecurityGroupRuleNotFound(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html#CommonErrors
-		case "InvalidPermission.NotFound":
-			return true
-		}
-	}
-	return false
+func (d *RDSDatabaseMigration) toSetupError(err error) error {
+	return errors.Wrapf(err, "unable to setup database migration for master installation id: %s and to slave installation id: %s",
+		d.masterInstallationID, d.masterInstallationID)
 }
 
-func isSecurityGroupRuleDuplicate(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html#CommonErrors
-		case "InvalidPermission.Duplicate":
-			return true
-		}
-	}
-	return false
+func (d *RDSDatabaseMigration) toTeardownError(err error) error {
+	return errors.Wrapf(err, "unable to setup database migration for master installation id: %s and to slave installation id: %s",
+		d.masterInstallationID, d.masterInstallationID)
 }
 
 func isRDSInstanceSecurityGroup(securityGroup *ec2.SecurityGroup) bool {

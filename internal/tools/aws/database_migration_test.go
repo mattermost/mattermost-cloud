@@ -9,6 +9,7 @@ import (
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func (a *AWSTestSuite) TestDatabaseRDSMigrationSetup() {
@@ -23,7 +24,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetup() {
 			Return(&ec2.AuthorizeSecurityGroupIngressOutput{}, nil).
 			Times(1),
 		a.Mocks.Log.Logger.EXPECT().
-			WithField("migration-installation-id", a.InstallationA.ID).
+			WithFields(logrus.Fields{"master-installation-id": a.InstallationA.ID, "slave-installation-id": a.ClusterInstallationB.InstallationID}).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
@@ -45,7 +46,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupAlreadyExist() {
 			Return(nil, awserr.New("InvalidPermission.Duplicate", "rule already exists", nil)).
 			Times(1),
 		a.Mocks.Log.Logger.EXPECT().
-			WithField("migration-installation-id", a.InstallationA.ID).
+			WithFields(logrus.Fields{"master-installation-id": a.InstallationA.ID, "slave-installation-id": a.ClusterInstallationB.InstallationID}).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
@@ -70,7 +71,8 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupError() {
 
 	status, err := database.Setup(a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("unable to setup database migration for installation id: id000000000000000000000000a: invalid group id", err.Error())
+	a.Assert().Equal("unable to setup database migration for master installation id: "+
+		"id000000000000000000000000a and to slave installation id: id000000000000000000000000a: invalid group id", err.Error())
 	a.Assert().Equal("", status)
 }
 
@@ -87,8 +89,8 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupSGNotFoundError() {
 
 	status, err := database.Setup(a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("unable to setup database migration for installation id: "+
-		"id000000000000000000000000a: security group for RDS DB instance cloud-id000000000000000000000000a-master not found", err.Error())
+	a.Assert().Equal("unable to setup database migration for master installation id: id000000000000000000000000a and "+
+		"to slave installation id: id000000000000000000000000a: security group for RDS DB instance cloud-id000000000000000000000000a-master not found", err.Error())
 	a.Assert().Equal("", status)
 }
 
@@ -104,7 +106,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardown() {
 			Return(&ec2.RevokeSecurityGroupIngressOutput{}, nil).
 			Times(1),
 		a.Mocks.Log.Logger.EXPECT().
-			WithField("migration-installation-id", a.InstallationA.ID).
+			WithFields(logrus.Fields{"master-installation-id": a.InstallationA.ID, "slave-installation-id": a.ClusterInstallationB.InstallationID}).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
@@ -126,7 +128,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownRuleError() {
 			Return(&ec2.RevokeSecurityGroupIngressOutput{}, awserr.New("InvalidPermission.NotFound", "rule not found", nil)).
 			Times(1),
 		a.Mocks.Log.Logger.EXPECT().
-			WithField("migration-installation-id", a.InstallationA.ID).
+			WithFields(logrus.Fields{"master-installation-id": a.InstallationA.ID, "slave-installation-id": a.ClusterInstallationB.InstallationID}).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
@@ -151,7 +153,8 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownError() {
 
 	status, err := database.Teardown(a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("unable to teardown database migration for installation id: id000000000000000000000000a: not enough permissions to revoke ingress rule", err.Error())
+	a.Assert().Equal("unable to setup database migration for master installation id: id000000000000000000000000a and "+
+		"to slave installation id: id000000000000000000000000a: not enough permissions to revoke ingress rule", err.Error())
 	a.Assert().Equal("", status)
 }
 
@@ -168,12 +171,12 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownSGNotFoundError() {
 
 	status, err := database.Teardown(a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("unable to teardown database migration for installation id: "+
-		"id000000000000000000000000a: security group for RDS DB instance cloud-id000000000000000000000000a-master not found", err.Error())
+	a.Assert().Equal("unable to setup database migration for master installation id: id000000000000000000000000a and to "+
+		"slave installation id: id000000000000000000000000a: security group for RDS DB instance cloud-id000000000000000000000000a-master not found", err.Error())
 	a.Assert().Equal("", status)
 }
 
-// // Helpers
+// Helpers
 
 func (a *AWSTestSuite) SetDescribeDBInstancesExpectation(vpcSecurityGroupID string) *gomock.Call {
 	return a.Mocks.API.RDS.EXPECT().DescribeDBInstances(gomock.Any()).
