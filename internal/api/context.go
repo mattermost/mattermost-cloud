@@ -23,7 +23,7 @@ type Store interface {
 
 	CreateInstallation(installation *model.Installation) error
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
-	GetInstallations(filter *model.InstallationFilter) ([]*model.Installation, error)
+	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)

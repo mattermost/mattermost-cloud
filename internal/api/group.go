@@ -160,7 +160,7 @@ func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		Page:           0,
 		PerPage:        model.AllPerPage,
 		IncludeDeleted: false,
-	})
+	}, false, false)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get installations in group")
 		w.WriteHeader(http.StatusInternalServerError)

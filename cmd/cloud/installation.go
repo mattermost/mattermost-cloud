@@ -12,6 +12,7 @@ func init() {
 	installationCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
 
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
+	installationCreateCmd.Flags().String("group", "", "The id of the group to join")
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
 	installationCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
 	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
@@ -36,11 +37,14 @@ func init() {
 	installationDeleteCmd.MarkFlagRequired("installation")
 
 	installationGetCmd.Flags().String("installation", "", "The id of the installation to be fetched.")
-	installationGetCmd.Flags().Bool("include-group-config", false, "Whether to include group configuration in the installation or not.")
-	installationGetCmd.Flags().Bool("include-group-config-overrides", false, "Whether to include a group configuration override summary in the installation or not.")
+	installationGetCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installation or not.")
+	installationGetCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installation or not.")
 	installationGetCmd.MarkFlagRequired("installation")
 
 	installationListCmd.Flags().String("owner", "", "The owner by which to filter installations.")
+	installationListCmd.Flags().String("group", "", "The group ID by which to filter installations.")
+	installationListCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installations or not.")
+	installationListCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
 	installationListCmd.Flags().Int("page", 0, "The page of installations to fetch, starting at 0.")
 	installationListCmd.Flags().Int("per-page", 100, "The number of installations to fetch per page.")
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
@@ -68,6 +72,7 @@ var installationCreateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		ownerID, _ := command.Flags().GetString("owner")
+		groupID, _ := command.Flags().GetString("group")
 		version, _ := command.Flags().GetString("version")
 		image, _ := command.Flags().GetString("image")
 		size, _ := command.Flags().GetString("size")
@@ -85,6 +90,7 @@ var installationCreateCmd = &cobra.Command{
 
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:       ownerID,
+			GroupID:       groupID,
 			Version:       version,
 			Image:         image,
 			Size:          size,
@@ -207,14 +213,20 @@ var installationListCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		owner, _ := command.Flags().GetString("owner")
+		group, _ := command.Flags().GetString("group")
+		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
+		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
 		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
-			OwnerID:        owner,
-			Page:           page,
-			PerPage:        perPage,
-			IncludeDeleted: includeDeleted,
+			OwnerID:                     owner,
+			GroupID:                     group,
+			IncludeGroupConfig:          includeGroupConfig,
+			IncludeGroupConfigOverrides: includeGroupConfigOverrides,
+			Page:                        page,
+			PerPage:                     perPage,
+			IncludeDeleted:              includeDeleted,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query installations")

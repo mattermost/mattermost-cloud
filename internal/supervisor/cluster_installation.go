@@ -148,7 +148,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 		return failedClusterInstallationState(clusterInstallation.State)
 	}
 
-	installation, err := s.store.GetInstallation(clusterInstallation.InstallationID, false, false)
+	installation, err := s.store.GetInstallation(clusterInstallation.InstallationID, true, false)
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to query installation %s", clusterInstallation.InstallationID)
 		return clusterInstallation.State

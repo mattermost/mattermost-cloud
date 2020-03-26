@@ -23,6 +23,7 @@ type installationStore interface {
 	GetUnlockedInstallationsPendingWork() ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
 	UpdateInstallationGroupSequence(installation *model.Installation) error
+	UpdateInstallationState(*model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 	DeleteInstallation(installationID string) error
@@ -108,7 +109,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 	newState := s.transitionInstallation(installation, s.instanceID, logger)
 
-	installation, err := s.store.GetInstallation(installation.ID, false, false)
+	installation, err := s.store.GetInstallation(installation.ID, true, false)
 	if err != nil {
 		logger.WithError(err).Warnf("failed to get installation and thus persist state %s", newState)
 		return
@@ -121,7 +122,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 	oldState := installation.State
 	installation.State = newState
 
-	if installation.ConfigMergedWithGroup() {
+	if installation.ConfigMergedWithGroup() && installation.State == model.InstallationStateStable {
 		installation.SyncGroupAndInstallationSequence()
 		err = s.store.UpdateInstallationGroupSequence(installation)
 		if err != nil {
@@ -130,7 +131,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		}
 	}
 
-	err = s.store.UpdateInstallation(installation)
+	err = s.store.UpdateInstallationState(installation)
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to set installation state to %s", newState)
 		return
@@ -264,7 +265,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		if len(existingClusterInstallations) == 1 {
 			// This should be the only scenario where we need to check if the
 			// cluster installation running requires isolation or not.
-			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID, false, false)
+			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID, true, false)
 			if err != nil {
 				logger.WithError(err).Warn("Unable to find installation")
 				return nil

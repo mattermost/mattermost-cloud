@@ -15,7 +15,7 @@ type groupStore interface {
 	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
 
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
-	UpdateInstallationState(id, state string) error
+	UpdateInstallationState(*model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 }
@@ -100,7 +100,14 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 			return
 		}
 
-		err = s.store.UpdateInstallationState(id, model.InstallationStateUpdateRequested)
+		installation, err := s.store.GetInstallation(id, true, false)
+		if err != nil {
+			logger.WithError(err).Error("Unable to get installation to set new state")
+			continue
+		}
+
+		installation.State = model.InstallationStateUpdateRequested
+		err = s.store.UpdateInstallationState(installation)
 		if err != nil {
 			logger.WithError(err).Error("Unable to set new installation state")
 		} else {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -158,5 +159,113 @@ func TestInstallationsFromReader(t *testing.T) {
 				LockAcquiredAt: 50,
 			},
 		}, installation)
+	})
+}
+
+func TestMergeWithGroup(t *testing.T) {
+	checkMergeValues := func(t *testing.T, installation *Installation, group *Group) {
+		t.Helper()
+
+		assert.Equal(t, installation.Version, group.Version)
+		assert.Equal(t, installation.Image, group.Image)
+
+		// TODO: check normal installation env settings that aren't overridden.
+		for key := range group.MattermostEnv {
+			assert.Equal(t, installation.MattermostEnv[key].Value, group.MattermostEnv[key].Value)
+		}
+	}
+
+	t.Run("without overrides", func(t *testing.T) {
+		installation := &Installation{
+			ID:       NewID(),
+			OwnerID:  "owner",
+			Version:  "iversion",
+			Image:    "iImage",
+			DNS:      "test.example.com",
+			License:  "this_is_my_license",
+			Affinity: InstallationAffinityIsolated,
+			GroupID:  sToP("group_id"),
+			State:    InstallationStateStable,
+		}
+
+		group := &Group{
+			ID:      NewID(),
+			Version: "gversion",
+			Image:   "gImage",
+			MattermostEnv: EnvVarMap{
+				"key1": EnvVar{
+					Value: "value1",
+				},
+			},
+		}
+
+		installation.MergeWithGroup(group, false)
+		checkMergeValues(t, installation, group)
+	})
+
+	t.Run("with overrides, no env overrides found", func(t *testing.T) {
+		installation := &Installation{
+			ID:       NewID(),
+			OwnerID:  "owner",
+			Version:  "iversion",
+			Image:    "iImage",
+			DNS:      "test.example.com",
+			License:  "this_is_my_license",
+			Affinity: InstallationAffinityIsolated,
+			GroupID:  sToP("group_id"),
+			State:    InstallationStateStable,
+		}
+
+		group := &Group{
+			ID:      NewID(),
+			Version: "gversion",
+			Image:   "gImage",
+			MattermostEnv: EnvVarMap{
+				"key1": EnvVar{
+					Value: "value1",
+				},
+			},
+		}
+
+		installation.MergeWithGroup(group, true)
+		checkMergeValues(t, installation, group)
+		assert.NotEmpty(t, installation.GroupOverrides)
+	})
+
+	t.Run("with overrides, env overrides found", func(t *testing.T) {
+		installation := &Installation{
+			ID:       NewID(),
+			OwnerID:  "owner",
+			Version:  "iversion",
+			Image:    "iImage",
+			DNS:      "test.example.com",
+			License:  "this_is_my_license",
+			Affinity: InstallationAffinityIsolated,
+			GroupID:  sToP("group_id"),
+			State:    InstallationStateStable,
+			MattermostEnv: EnvVarMap{
+				"key2": EnvVar{
+					Value: "ivalue1",
+				},
+			},
+		}
+
+		group := &Group{
+			ID:      NewID(),
+			Version: "gversion",
+			Image:   "gImage",
+			MattermostEnv: EnvVarMap{
+				"key1": EnvVar{
+					Value: "value1",
+				},
+				"key2": EnvVar{
+					Value: "value2",
+				},
+			},
+		}
+
+		installation.MergeWithGroup(group, true)
+		checkMergeValues(t, installation, group)
+		assert.NotEmpty(t, installation.GroupOverrides)
 	})
 }

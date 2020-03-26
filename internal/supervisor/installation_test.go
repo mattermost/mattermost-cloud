@@ -58,6 +58,11 @@ func (s *mockInstallationStore) UpdateInstallationGroupSequence(installation *mo
 	return nil
 }
 
+func (s *mockInstallationStore) UpdateInstallationState(installation *model.Installation) error {
+	s.UpdateInstallationCalls++
+	return nil
+}
+
 func (s *mockInstallationStore) LockInstallation(installationID, lockerID string) (bool, error) {
 	return true, nil
 }

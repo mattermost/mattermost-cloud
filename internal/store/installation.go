@@ -79,7 +79,6 @@ func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, include
 
 	// Installation is in a group and the request is for the merged config,
 	// so get group config and perform a merge.
-	installation.GroupOverrides = make(map[string]string)
 	group, err := sqlStore.GetGroup(*installation.GroupID)
 	if err != nil {
 		return installation, err
@@ -89,36 +88,8 @@ func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, include
 	return installation, nil
 }
 
-// GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
-func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Installation, error) {
-	builder := installationSelect.
-		Where(sq.Eq{
-			"State": model.AllInstallationStatesPendingWork,
-		}).
-		Where("LockAcquiredAt = 0").
-		OrderBy("CreateAt ASC")
-
-	var rawInstallations rawInstallations
-	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get installations pending work")
-	}
-
-	return rawInstallations.toInstallations()
-}
-
-// LockInstallation marks the installation as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockInstallation(installationID, lockerID string) (bool, error) {
-	return sqlStore.lockRows("Installation", []string{installationID}, lockerID)
-}
-
-// UnlockInstallation releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockInstallation(installationID, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("Installation", []string{installationID}, lockerID, force)
-}
-
 // GetInstallations fetches the given page of created installations. The first page is 0.
-func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter) ([]*model.Installation, error) {
+func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error) {
 	builder := installationSelect.
 		OrderBy("CreateAt ASC")
 
@@ -144,7 +115,71 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter) ([]
 		return nil, errors.Wrap(err, "failed to query for installations")
 	}
 
-	return rawInstallations.toInstallations()
+	installations, err := rawInstallations.toInstallations()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, installation := range installations {
+		if !installation.IsInGroup() || !includeGroupConfig {
+			continue
+		}
+
+		// Installation is in a group and the request is for the merged config,
+		// so get group config and perform a merge.
+		group, err := sqlStore.GetGroup(*installation.GroupID)
+		if err != nil {
+			return nil, err
+		}
+		installation.MergeWithGroup(group, includeGroupConfigOverrides)
+	}
+
+	return installations, nil
+}
+
+// GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
+func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Installation, error) {
+	builder := installationSelect.
+		Where(sq.Eq{
+			"State": model.AllInstallationStatesPendingWork,
+		}).
+		Where("LockAcquiredAt = 0").
+		OrderBy("CreateAt ASC")
+
+	var rawInstallations rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get installations pending work")
+	}
+
+	installations, err := rawInstallations.toInstallations()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, installation := range installations {
+		if !installation.IsInGroup() {
+			continue
+		}
+
+		group, err := sqlStore.GetGroup(*installation.GroupID)
+		if err != nil {
+			return nil, err
+		}
+		installation.MergeWithGroup(group, false)
+	}
+
+	return installations, nil
+}
+
+// LockInstallation marks the installation as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockInstallation(installationID, lockerID string) (bool, error) {
+	return sqlStore.lockRows("Installation", []string{installationID}, lockerID)
+}
+
+// UnlockInstallation releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockInstallation(installationID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("Installation", []string{installationID}, lockerID, force)
 }
 
 // CreateInstallation records the given installation to the database, assigning it a unique ID.
@@ -245,13 +280,13 @@ func (sqlStore *SQLStore) UpdateInstallationGroupSequence(installation *model.In
 }
 
 // UpdateInstallationState updates the given installation to a new state.
-func (sqlStore *SQLStore) UpdateInstallationState(id, state string) error {
+func (sqlStore *SQLStore) UpdateInstallationState(installation *model.Installation) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
-			"State": state,
+			"State": installation.State,
 		}).
-		Where("ID = ?", id),
+		Where("ID = ?", installation.ID),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update installation state")

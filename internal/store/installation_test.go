@@ -6,6 +6,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -263,7 +264,7 @@ func TestInstallations(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Description, func(t *testing.T) {
-			actual, err := sqlStore.GetInstallations(testCase.Filter)
+			actual, err := sqlStore.GetInstallations(testCase.Filter, false, false)
 			require.NoError(t, err)
 			require.Equal(t, testCase.Expected, actual)
 		})
@@ -609,6 +610,93 @@ func TestUpdateInstallation(t *testing.T) {
 			require.Error(t, err)
 		})
 	})
+}
+
+func TestUpdateInstallationSequence(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	group1 := &model.Group{
+		Version: "group1-version",
+		MattermostEnv: model.EnvVarMap{
+			"Key1": model.EnvVar{Value: "Value1"},
+		},
+	}
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &group1.ID,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateInstallation(installation1)
+	require.NoError(t, err)
+
+	t.Run("group config not merged", func(t *testing.T) {
+		installation, err := sqlStore.GetInstallation(installation1.ID, false, false)
+		require.NoError(t, err)
+
+		err = sqlStore.UpdateInstallationGroupSequence(installation)
+		require.Error(t, err)
+	})
+
+	t.Run("group config merged", func(t *testing.T) {
+		installation, err := sqlStore.GetInstallation(installation1.ID, true, false)
+		require.NoError(t, err)
+
+		oldSequence := installation.GroupSequence
+		installation.SyncGroupAndInstallationSequence()
+		err = sqlStore.UpdateInstallationGroupSequence(installation)
+		require.NoError(t, err)
+
+		installation, err = sqlStore.GetInstallation(installation1.ID, true, false)
+		require.NoError(t, err)
+		assert.NotEqual(t, oldSequence, installation.GroupSequence)
+	})
+}
+
+func TestUpdateInstallationState(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err := sqlStore.CreateInstallation(installation1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation1.State = model.InstallationStateStable
+	installation1.Version = "new-version-that-should-not-be-saved"
+
+	err = sqlStore.UpdateInstallationState(installation1)
+	require.NoError(t, err)
+
+	storedInstallation, err := sqlStore.GetInstallation(installation1.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, storedInstallation.State, installation1.State)
+	assert.NotEqual(t, storedInstallation.Version, installation1.Version)
 }
 
 func TestDeleteInstallation(t *testing.T) {
