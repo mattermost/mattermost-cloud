@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,8 +22,8 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 	awsSession.Handlers.Complete.PushFront(func(r *request.Request) {
 		if r.HTTPResponse != nil && r.HTTPRequest != nil {
 			var buffer bytes.Buffer
-			buffer.WriteString(fmt.Sprintf("%s.%s %s %s: %s%s  ", r.ClientInfo.ServiceID, r.Operation.Name, r.HTTPRequest.Method,
-				r.HTTPResponse.Status, r.HTTPRequest.URL.Host, r.HTTPRequest.URL.RawPath))
+
+			buffer.WriteString(fmt.Sprintf("[aws] %s %s %s ", r.HTTPRequest.Method, r.HTTPResponse.Status, r.HTTPResponse.Request.URL.String()))
 
 			paramBytes, err := json.Marshal(r.Params)
 			if err != nil {
@@ -31,10 +32,14 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 				buffer.Write(paramBytes)
 			}
 
+			logger = logger.WithFields(logrus.Fields{
+				"aws-service-id":     r.ClientInfo.ServiceID,
+				"aws-operation-name": r.Operation.Name,
+			})
+
 			if r.HTTPResponse.StatusCode >= 400 {
 				logger.Error(buffer.String())
 			}
-
 			if r.HTTPResponse.StatusCode < 400 {
 				logger.Debug(buffer.String())
 			}
