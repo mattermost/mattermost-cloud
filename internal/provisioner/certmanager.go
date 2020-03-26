@@ -8,6 +8,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -151,25 +152,22 @@ func deployClusterIssuer(kops *kops.Cmd, logger log.FieldLogger) error {
 		logger.Infof("Successfully deployed cert-manager-webhook pod %q", pod.Name)
 	}
 
-	apiServiceName := "v1alpha2.cert-manager.io"
-	wait = 60
-	logger.Infof("Waiting up to %d seconds for cert manager api service %q to be available...", wait, apiServiceName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
+	maxRetries := 5
+	logger.Infof("Trying up to %d times for cluster issuer to be deployed", maxRetries)
+	err = utils.Retry(maxRetries, time.Second, func() error {
+		files := []k8s.ManifestFile{
+			{
+				Path:            "certmanager-manifests/cluster-issuer.yaml",
+				DeployNamespace: "cert-manager",
+			},
+		}
 
-	_, err = k8sClient.WaitForAPIServiceAvailable(ctx, apiServiceName)
-	if err != nil {
-		return err
-	}
-
-	files := []k8s.ManifestFile{
-		{
-			Path:            "certmanager-manifests/cluster-issuer.yaml",
-			DeployNamespace: "cert-manager",
-		},
-	}
-
-	err = k8sClient.CreateFromFiles(files)
+		err = k8sClient.CreateFromFiles(files)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}
