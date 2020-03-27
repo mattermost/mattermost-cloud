@@ -77,10 +77,30 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
+	desiredVersion, err = cluster.DesiredUtilityVersion(model.CertManagerCanonicalName)
+	if err != nil {
+		return nil, err
+	}
+
+	certManager, err := newCertManagerHandle(desiredVersion, provisioner, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Cert Manager")
+	}
+
+	desiredVersion, err = cluster.DesiredUtilityVersion(model.PublicNginxCanonicalName)
+	if err != nil {
+		return nil, err
+	}
+
+	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Cert Manager")
+	}
+
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, fluentbit},
+		utilities:   []Utility{nginx, prometheus, fluentbit, certManager, publicNginx},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
@@ -91,8 +111,15 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 // CreateUtilityGroup  creates  and  starts  all of  the  third  party
 // services needed to run a cluster.
 func (group utilityGroup) CreateUtilityGroup() error {
+	logger := group.provisioner.logger.WithField("utility-group", "DeployManifests")
+
+	err := deployCertManagerCRDS(group.kops, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
+	}
+
 	// TODO remove this when Helm is removed as a dependency
-	err := installHelm(group.kops, group.provisioner.logger)
+	err = installHelm(group.kops, group.provisioner.logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
 	}
@@ -107,6 +134,11 @@ func (group utilityGroup) CreateUtilityGroup() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = deployClusterIssuer(group.kops, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to deploy ClusterIssuer manifest")
 	}
 
 	return nil
@@ -132,8 +164,15 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 
 // UpgradeUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
 func (group utilityGroup) UpgradeUtilityGroup() error {
-	logger := group.provisioner.logger.WithField("helm-init", "UpgradeUtilityGroup")
-	err := helmInit(logger, group.kops)
+	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
+
+	err := deployCertManagerCRDS(group.kops, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
+	}
+
+	logger = group.provisioner.logger.WithField("helm-init", "UpgradeUtilityGroup")
+	err = helmInit(logger, group.kops)
 	if err != nil {
 		logger.WithError(err).Error("couldn't re-initialize Helm in the cluster")
 	}
@@ -148,6 +187,11 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = deployClusterIssuer(group.kops, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to deploy ClusterIssuer manifest")
 	}
 
 	return nil

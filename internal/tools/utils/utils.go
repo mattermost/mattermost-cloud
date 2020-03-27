@@ -3,11 +3,17 @@ package utils
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 )
+
+type stop struct {
+	error
+}
 
 // CopyDirectory copy the entire directory to another destination
 func CopyDirectory(source string, dest string) error {
@@ -112,4 +118,21 @@ func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Datab
 	// Warning: we should never get here as it would mean that we didn't match
 	// our database type.
 	return model.NewMysqlOperatorDatabase()
+}
+
+// Retry is retrying a function for a maximum number of attempts and time
+func Retry(attempts int, sleep time.Duration, f func() error) error {
+	if err := f(); err != nil {
+		if attempts--; attempts > 0 {
+			// Add some randomness to prevent creating a Thundering Herd
+			jitter := time.Duration(rand.Int63n(int64(sleep)))
+			sleep = sleep + jitter/2
+
+			time.Sleep(sleep)
+			return Retry(attempts, 2*sleep, f)
+		}
+		return err
+	}
+
+	return nil
 }

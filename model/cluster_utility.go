@@ -14,6 +14,10 @@ const (
 	NginxCanonicalName = "nginx"
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
 	FluentbitCanonicalName = "fluentbit"
+	// CertManagerCanonicalName is the canonical string representation of cert manager
+	CertManagerCanonicalName = "certmanager"
+	// PublicNginxCanonicalName is the canonical string representation of public nginx
+	PublicNginxCanonicalName = "public-nginx"
 )
 
 const (
@@ -23,6 +27,10 @@ const (
 	NginxDefaultVersion = "1.30.0"
 	// FluentbitDefaultVersion defines the default version for the Helm chart
 	FluentbitDefaultVersion = "2.8.7"
+	// CertManagerDefaultVersion defines the default version for the Helm chart
+	CertManagerDefaultVersion = "v0.13.1"
+	// PublicNginxDefaultVersion defines the default version for the Helm chart
+	PublicNginxDefaultVersion = "1.30.0"
 )
 
 // UtilityMetadata is a container struct for any metadata related to
@@ -33,9 +41,11 @@ type UtilityMetadata struct {
 }
 
 type utilityVersions struct {
-	Prometheus string
-	Nginx      string
-	Fluentbit  string
+	Prometheus  string
+	Nginx       string
+	Fluentbit   string
+	CertManager string
+	PublicNginx string
 }
 
 // SetUtilityActualVersion stores the provided version for the
@@ -155,6 +165,10 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 		return versions.Nginx
 	case FluentbitCanonicalName:
 		return versions.Fluentbit
+	case CertManagerCanonicalName:
+		return versions.CertManager
+	case PublicNginxCanonicalName:
+		return versions.PublicNginx
 	}
 
 	return ""
@@ -172,5 +186,9 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 		versions.Nginx = desiredVersion
 	case FluentbitCanonicalName:
 		versions.Fluentbit = desiredVersion
+	case CertManagerCanonicalName:
+		versions.CertManager = desiredVersion
+	case PublicNginxCanonicalName:
+		versions.PublicNginx = desiredVersion
 	}
 }

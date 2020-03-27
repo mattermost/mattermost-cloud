@@ -5,6 +5,8 @@ import (
 
 	mmclient "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	jetstackclient "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
+	kubeagclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -16,6 +18,8 @@ type KubeClient struct {
 	Clientset           kubernetes.Interface
 	ApixClientset       apixclient.Interface
 	MattermostClientset mmclient.Interface
+	JetStackClientset   jetstackclient.Interface
+	KubeagClientSet     kubeagclient.Interface
 	logger              log.FieldLogger
 }
 
@@ -41,11 +45,23 @@ func New(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
 		return nil, err
 	}
 
+	jetstackClientset, err := jetstackclient.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeagClientset, err := kubeagclient.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
 	return &KubeClient{
 			config:              config,
 			Clientset:           clientset,
 			MattermostClientset: mattermostClientset,
 			ApixClientset:       apixClientset,
+			JetStackClientset:   jetstackClientset,
+			KubeagClientSet:     kubeagClientset,
 			logger:              logger,
 		},
 		nil
