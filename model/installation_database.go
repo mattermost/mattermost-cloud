@@ -2,6 +2,7 @@ package model
 
 import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -17,6 +18,7 @@ const (
 type Database interface {
 	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
 	Teardown(keepData bool, logger log.FieldLogger) error
+	Snapshot(logger log.FieldLogger) error
 	GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
 }
 
@@ -39,6 +41,13 @@ func (d *MysqlOperatorDatabase) Provision(store InstallationDatabaseStoreInterfa
 	logger.Info("MySQL operator database requires no pre-provisioning; skipping...")
 
 	return nil
+}
+
+// Snapshot is not supported by the operator and it should return an error.
+func (d *MysqlOperatorDatabase) Snapshot(logger log.FieldLogger) error {
+	logger.Error("Snapshotting is not supported by the MySQL operator.")
+
+	return errors.New("not implemented")
 }
 
 // Teardown removes all MySQL operator resources for a given installation.

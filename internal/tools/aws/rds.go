@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
@@ -13,11 +12,7 @@ import (
 )
 
 func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) ([]string, error) {
-	svc := ec2.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	input := &ec2.DescribeSecurityGroupsInput{
+	result, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		Filters: []*ec2.Filter{
 			{
 				Name:   aws.String("vpc-id"),
@@ -28,9 +23,7 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 				Values: []*string{aws.String(DefaultDBSecurityGroupTagValue)},
 			},
 		},
-	}
-
-	result, err := svc.DescribeSecurityGroups(input)
+	})
 	if err != nil {
 		return []string{}, err
 	}
@@ -50,10 +43,6 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 }
 
 func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (string, error) {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
 	// TODO:
 	// The subnet group describe functionality does not currently support
 	// filters. Instead, we look up all the subnet groups and match based on
@@ -62,15 +51,14 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	//
 	// We should periodically check if filters become supported and move to that
 	// when they do.
-
-	result, err := svc.DescribeDBSubnetGroups(nil)
+	result, err := a.Service().rds.DescribeDBSubnetGroups(nil)
 	if err != nil {
 		return "", err
 	}
 
 	for _, subnetGroup := range result.DBSubnetGroups {
 		// AWS names are unique, so there will only be one that correctly matches.
-		if *subnetGroup.DBSubnetGroupName == fmt.Sprintf("mattermost-provisioner-db-%s", vpcID) {
+		if *subnetGroup.DBSubnetGroupName == DBSubnetGroupName(vpcID) {
 			name := *subnetGroup.DBSubnetGroupName
 			logger.WithField("db-subnet-group-name", name).Debugf("Found DB subnet group")
 
@@ -82,11 +70,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 }
 
 func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password string, logger log.FieldLogger) error {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	_, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err == nil {
@@ -125,7 +109,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 	}
 
-	_, err = svc.CreateDBCluster(input)
+	_, err = a.Service().rds.CreateDBCluster(input)
 	if err != nil {
 		return err
 	}
@@ -136,11 +120,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 }
 
 func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	_, err := svc.DescribeDBInstances(&rds.DescribeDBInstancesInput{
+	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceName),
 	})
 	if err == nil {
@@ -149,7 +129,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 		return nil
 	}
 
-	_, err = svc.CreateDBInstance(&rds.CreateDBInstanceInput{
+	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
 		DBInstanceIdentifier: aws.String(instanceName),
 		DBInstanceClass:      aws.String("db.t3.small"),
@@ -165,31 +145,8 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 	return nil
 }
 
-func rdsGetDBCluster(awsID string, logger log.FieldLogger) (*rds.DBCluster, error) {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	result, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(result.DBClusters) != 1 {
-		return nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
-	}
-
-	return result.DBClusters[0], nil
-}
-
 func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger) error {
-	svc := rds.New(session.New(), &aws.Config{
-		Region: aws.String(DefaultAWSRegion),
-	})
-
-	result, err := svc.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	result, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err != nil {
@@ -208,7 +165,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 	}
 
 	for _, instance := range result.DBClusters[0].DBClusterMembers {
-		_, err = svc.DeleteDBInstance(&rds.DeleteDBInstanceInput{
+		_, err = a.Service().rds.DeleteDBInstance(&rds.DeleteDBInstanceInput{
 			DBInstanceIdentifier: instance.DBInstanceIdentifier,
 			SkipFinalSnapshot:    aws.Bool(true),
 		})
@@ -218,7 +175,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 		logger.WithField("db-instance-name", *instance.DBInstanceIdentifier).Debug("DB instance deleted")
 	}
 
-	_, err = svc.DeleteDBCluster(&rds.DeleteDBClusterInput{
+	_, err = a.Service().rds.DeleteDBCluster(&rds.DeleteDBClusterInput{
 		DBClusterIdentifier: aws.String(awsID),
 		SkipFinalSnapshot:   aws.Bool(true),
 	})

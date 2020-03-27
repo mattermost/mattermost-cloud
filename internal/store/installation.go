@@ -15,8 +15,9 @@ func init() {
 	installationSelect = sq.
 		Select(
 			"ID", "OwnerID", "Version", "DNS", "Database", "Filestore", "Size",
-			"Affinity", "GroupID", "State", "License", "MattermostEnvRaw",
-			"CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
+			"Affinity", "GroupID", "GroupSequence", "State", "License",
+			"MattermostEnvRaw", "CreateAt", "DeleteAt", "LockAcquiredBy",
+			"LockAcquiredAt",
 		).
 		From("Installation")
 }
@@ -31,15 +32,15 @@ type rawInstallations []*rawInstallation
 func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 	// We only need to set values that are converted from a raw database format.
 	var err error
-	mattermostEnv := model.EnvVarMap{}
+	mattermostEnv := &model.EnvVarMap{}
 	if r.MattermostEnvRaw != nil {
-		mattermostEnv, err = envVarFromJSON(r.MattermostEnvRaw)
+		mattermostEnv, err = model.EnvVarFromJSON(r.MattermostEnvRaw)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	r.Installation.MattermostEnv = mattermostEnv
+	r.Installation.MattermostEnv = *mattermostEnv
 	return r.Installation, nil
 }
 
@@ -56,17 +57,8 @@ func (rs *rawInstallations) toInstallations() ([]*model.Installation, error) {
 	return installations, nil
 }
 
-func envVarFromJSON(raw []byte) (model.EnvVarMap, error) {
-	e := model.EnvVarMap{}
-	err := json.Unmarshal(raw, &e)
-	if err != nil {
-		return nil, err
-	}
-	return e, nil
-}
-
 // GetInstallation fetches the given installation by id.
-func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error) {
+func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
 	var rawInstallation rawInstallation
 	err := sqlStore.getBuilder(sqlStore.db, &rawInstallation,
 		installationSelect.Where("ID = ?", id),
@@ -77,7 +69,24 @@ func (sqlStore *SQLStore) GetInstallation(id string) (*model.Installation, error
 		return nil, errors.Wrap(err, "failed to get installation by id")
 	}
 
-	return rawInstallation.toInstallation()
+	installation, err := rawInstallation.toInstallation()
+	if err != nil {
+		return installation, err
+	}
+	if !installation.IsInGroup() || !includeGroupConfig {
+		return installation, nil
+	}
+
+	// Installation is in a group and the request is for the merged config,
+	// so get group config and perform a merge.
+	installation.GroupOverrides = make(map[string]string)
+	group, err := sqlStore.GetGroup(*installation.GroupID)
+	if err != nil {
+		return installation, err
+	}
+	installation.MergeWithGroup(group, includeGroupConfigOverrides)
+
+	return installation, nil
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
@@ -160,6 +169,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"Size":             installation.Size,
 			"Affinity":         installation.Affinity,
 			"GroupID":          installation.GroupID,
+			"GroupSequence":    nil,
 			"State":            installation.State,
 			"CreateAt":         installation.CreateAt,
 			"License":          installation.License,
@@ -178,9 +188,12 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 
 // UpdateInstallation updates the given installation in the database.
 func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) error {
+	if installation.ConfigMergedWithGroup() {
+		return errors.New("unable to save installations that have merged group config")
+	}
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
-		errors.Wrap(err, "unable to marshal MattermostEnv")
+		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
@@ -202,6 +215,44 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update installation")
+	}
+
+	return nil
+}
+
+// UpdateInstallationGroupSequence updates the given installation GroupSequence
+// to the value stored in the merged group config. The provided installation must
+// have been merged with group config before passing it in.
+func (sqlStore *SQLStore) UpdateInstallationGroupSequence(installation *model.Installation) error {
+	if !installation.ConfigMergedWithGroup() {
+		return errors.New("installation is not merged with a group")
+	}
+
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"GroupSequence": installation.GroupSequence,
+		}).
+		Where("ID = ?", installation.ID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation")
+	}
+
+	return nil
+}
+
+// UpdateInstallationState updates the given installation to a new state.
+func (sqlStore *SQLStore) UpdateInstallationState(id, state string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"State": state,
+		}).
+		Where("ID = ?", id),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation state")
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -11,41 +12,176 @@ import (
 var groupSelect sq.SelectBuilder
 
 type rawGroup struct {
-	model.Group
+	*model.Group
 	MattermostEnvRaw []byte
 }
 
+type rawGroups []*rawGroup
+
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "CreateAt", "DeleteAt", "MattermostEnvRaw").
+		Select("ID", "Name", "Description", "Version", "Sequence", "CreateAt",
+			"DeleteAt", "MattermostEnvRaw", "MaxRolling", "LockAcquiredBy",
+			"LockAcquiredAt").
 		From(`"Group"`)
 }
 
-func rawGroupToGroup(raw *rawGroup) (*model.Group, error) {
+func (r *rawGroup) toGroup() (*model.Group, error) {
+	// We only need to set values that are converted from a raw database format.
 	var err error
 	mattermostEnv := &model.EnvVarMap{}
-	if raw.MattermostEnvRaw != nil {
-		mattermostEnv, err = model.EnvVarFromJSON(raw.MattermostEnvRaw)
+	if r.MattermostEnvRaw != nil {
+		mattermostEnv, err = model.EnvVarFromJSON(r.MattermostEnvRaw)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &model.Group{
-		ID:            raw.ID,
-		Name:          raw.Name,
-		Description:   raw.Description,
-		Version:       raw.Version,
-		CreateAt:      raw.CreateAt,
-		DeleteAt:      raw.DeleteAt,
-		MattermostEnv: *mattermostEnv,
-	}, nil
+	r.Group.MattermostEnv = *mattermostEnv
+	return r.Group, nil
+}
+
+func (rs *rawGroups) toGroups() ([]*model.Group, error) {
+	var groups []*model.Group
+	for _, rawGroup := range *rs {
+		group, err := rawGroup.toGroup()
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
+// GetUnlockedGroupsPendingWork returns unlocked groups that have installations
+// that require configuration reconciliation.
+func (sqlStore *SQLStore) GetUnlockedGroupsPendingWork() ([]*model.Group, error) {
+	groupBuilder := groupSelect.
+		Where("LockAcquiredAt = 0").
+		Where("DeleteAt = 0")
+
+	var allRawGroups rawGroups
+	err := sqlStore.selectBuilder(sqlStore.db, &allRawGroups, groupBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get groups pending work")
+	}
+
+	var rawGroupsPendingWork rawGroups
+	for _, rawGroup := range allRawGroups {
+		var installations []*model.Installation
+
+		// Look for a single non-deleted installation that is not on the group's
+		// sequence number. If even a single value is returned we know this
+		// group has work to be done.
+		installationBuilder := sq.
+			Select("ID").
+			From("Installation").
+			Where("GroupID = ?", rawGroup.ID).
+			Where("(GroupSequence IS NULL OR GroupSequence != ?)", rawGroup.Sequence).
+			Where("DeleteAt = 0").
+			Limit(1)
+		err = sqlStore.selectBuilder(sqlStore.db, &installations, installationBuilder)
+		if err != nil {
+			return nil, err
+		}
+		if len(installations) > 0 {
+			rawGroupsPendingWork = append(rawGroupsPendingWork, rawGroup)
+		}
+	}
+
+	return rawGroupsPendingWork.toGroups()
+}
+
+// GroupRollingMetadata is a batch of information about a group where installatons
+// are being rolled to match a new config.
+type GroupRollingMetadata struct {
+	InstallationIDsToBeRolled  []string
+	InstallationTotalCount     int64
+	InstallationStableCount    int64
+	InstallationNonStableCount int64
+}
+
+// GetGroupRollingMetadata returns installation IDs and metadata related to
+// installation configuration reconciliation from group updates.
+//
+// Note: custom SQL queries are used here instead of calling GetInstallations().
+// This is done for performance as we don't need the actual installation objects
+// in most cases.
+//
+// TODO: currently the installations returned are only those that are in the
+// group AND not on the latest sequence AND are in stable state. This is a
+// best-case scenario that probably won't work in the long run. Other non-stable
+// states will probably need to be added once they have been properly tested.
+func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRollingMetadata, error) {
+	group, err := sqlStore.GetGroup(groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := &GroupRollingMetadata{InstallationIDsToBeRolled: []string{}}
+
+	var installations []*model.Installation
+	installationBuilder := sq.
+		Select("ID").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("(GroupSequence IS NULL OR GroupSequence != ?)", group.Sequence).
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &installations, installationBuilder)
+	if err != nil {
+		return nil, err
+	}
+	for _, installation := range installations {
+		metadata.InstallationIDsToBeRolled = append(metadata.InstallationIDsToBeRolled, installation.ID)
+	}
+
+	var totalResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &totalResult, installationBuilder)
+	if err != nil {
+		return nil, err
+	}
+	count, err := totalResult.value()
+	if err != nil {
+		return nil, err
+	}
+	metadata.InstallationTotalCount = count
+
+	var stableResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &stableResult, installationBuilder)
+	if err != nil {
+		return nil, err
+	}
+	count, err = stableResult.value()
+	if err != nil {
+		return nil, err
+	}
+	metadata.InstallationStableCount = count
+	metadata.InstallationNonStableCount = metadata.InstallationTotalCount - metadata.InstallationStableCount
+
+	if metadata.InstallationNonStableCount < 0 {
+		return nil, errors.Errorf("found more stable installations (%d) than total installations (%d)", metadata.InstallationStableCount, metadata.InstallationTotalCount)
+	}
+
+	return metadata, nil
 }
 
 // GetGroup fetches the given group by id.
 func (sqlStore *SQLStore) GetGroup(id string) (*model.Group, error) {
-	var group rawGroup
-	err := sqlStore.getBuilder(sqlStore.db, &group,
+	var rawGroup rawGroup
+	err := sqlStore.getBuilder(sqlStore.db, &rawGroup,
 		groupSelect.Where("ID = ?", id),
 	)
 	if err == sql.ErrNoRows {
@@ -54,7 +190,7 @@ func (sqlStore *SQLStore) GetGroup(id string) (*model.Group, error) {
 		return nil, errors.Wrap(err, "failed to get group by id")
 	}
 
-	return rawGroupToGroup(&group)
+	return rawGroup.toGroup()
 }
 
 // GetGroups fetches the given page of created groups. The first page is 0.
@@ -72,22 +208,13 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 		builder = builder.Where("DeleteAt = 0")
 	}
 
-	var rawGroups []*rawGroup
+	var rawGroups rawGroups
 	err := sqlStore.selectBuilder(sqlStore.db, &rawGroups, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for groups")
 	}
 
-	var groups []*model.Group
-	for _, rg := range rawGroups {
-		group, err := rawGroupToGroup(rg)
-		if err != nil {
-			return nil, err
-		}
-		groups = append(groups, group)
-	}
-
-	return groups, nil
+	return rawGroups.toGroups()
 }
 
 // CreateGroup records the given group to the database, assigning it a unique ID.
@@ -103,12 +230,16 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 		Insert(`"Group"`).
 		SetMap(map[string]interface{}{
 			"ID":               group.ID,
+			"Sequence":         0,
 			"Name":             group.Name,
 			"Description":      group.Description,
 			"Version":          group.Version,
+			"MattermostEnvRaw": envVarMap,
+			"MaxRolling":       group.MaxRolling,
 			"CreateAt":         group.CreateAt,
 			"DeleteAt":         0,
-			"MattermostEnvRaw": envVarMap,
+			"LockAcquiredBy":   nil,
+			"LockAcquiredAt":   0,
 		}),
 	)
 	if err != nil {
@@ -118,8 +249,19 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 	return nil
 }
 
-// UpdateGroup updates the given group in the database.
+// UpdateGroup updates the given group in the database. If a value was updated
+// that will possibly affect installation config then update the group sequence
+// number.
 func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
+	originalGroup, err := sqlStore.GetGroup(group.ID)
+	if err != nil {
+		return err
+	}
+	if originalGroup.Version != group.Version || reflect.DeepEqual(originalGroup.MattermostEnv, group.MattermostEnv) {
+		// Update the sequence number, but don't trust the group sequence number
+		// that was passed in.
+		group.Sequence = originalGroup.Sequence + 1
+	}
 	envVarMap, err := group.MattermostEnv.ToJSON()
 	if err != nil {
 		return err
@@ -127,10 +269,12 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Update(`"Group"`).
 		SetMap(map[string]interface{}{
+			"Sequence":         group.Sequence,
 			"Name":             group.Name,
 			"Description":      group.Description,
 			"Version":          group.Version,
 			"MattermostEnvRaw": envVarMap,
+			"MaxRolling":       group.MaxRolling,
 		}).
 		Where("ID = ?", group.ID),
 	)
@@ -155,4 +299,14 @@ func (sqlStore *SQLStore) DeleteGroup(id string) error {
 	}
 
 	return nil
+}
+
+// LockGroup marks the group as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockGroup(groupID, lockerID string) (bool, error) {
+	return sqlStore.lockRows(`"Group"`, []string{groupID}, lockerID)
+}
+
+// UnlockGroup releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockGroup(groupID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows(`"Group"`, []string{groupID}, lockerID, force)
 }

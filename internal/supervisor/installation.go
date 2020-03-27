@@ -19,9 +19,10 @@ type installationStore interface {
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
 
-	GetInstallation(installationID string) (*model.Installation, error)
+	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetUnlockedInstallationsPendingWork() ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
+	UpdateInstallationGroupSequence(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 	DeleteInstallation(installationID string) error
@@ -57,11 +58,12 @@ type InstallationSupervisor struct {
 	clusterResourceThreshold int
 	keepDatabaseData         bool
 	keepFilestoreData        bool
+	resourceUtil             *utils.ResourceUtil
 	logger                   log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:                    store,
 		provisioner:              installationProvisioner,
@@ -70,6 +72,7 @@ func NewInstallationSupervisor(store installationStore, installationProvisioner 
 		clusterResourceThreshold: threshold,
 		keepDatabaseData:         keepDatabaseData,
 		keepFilestoreData:        keepFilestoreData,
+		resourceUtil:             resourceUtil,
 		logger:                   logger,
 	}
 }
@@ -105,7 +108,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 	newState := s.transitionInstallation(installation, s.instanceID, logger)
 
-	installation, err := s.store.GetInstallation(installation.ID)
+	installation, err := s.store.GetInstallation(installation.ID, false, false)
 	if err != nil {
 		logger.WithError(err).Warnf("failed to get installation and thus persist state %s", newState)
 		return
@@ -117,6 +120,16 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 	oldState := installation.State
 	installation.State = newState
+
+	if installation.ConfigMergedWithGroup() {
+		installation.SyncGroupAndInstallationSequence()
+		err = s.store.UpdateInstallationGroupSequence(installation)
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to set installation sequence to %s", newState)
+			return
+		}
+	}
+
 	err = s.store.UpdateInstallation(installation)
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to set installation state to %s", newState)
@@ -251,7 +264,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		if len(existingClusterInstallations) == 1 {
 			// This should be the only scenario where we need to check if the
 			// cluster installation running requires isolation or not.
-			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID)
+			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID, false, false)
 			if err != nil {
 				logger.WithError(err).Warn("Unable to find installation")
 				return nil
@@ -326,13 +339,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 }
 
 func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := utils.GetDatabase(installation).Provision(s.store, logger)
+	err := s.resourceUtil.GetDatabase(installation).Provision(s.store, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision installation database")
 		return model.InstallationStateCreationPreProvisioning
 	}
 
-	err = utils.GetFilestore(installation).Provision(logger)
+	err = s.resourceUtil.GetFilestore(installation).Provision(logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision installation filestore")
 		return model.InstallationStateCreationPreProvisioning
@@ -378,7 +391,7 @@ func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *
 	logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
 
 	if len(clusterInstallations) == stable {
-		logger.Infof("Finished creating installation")
+		logger.Info("Finished creating cluster installation")
 		return s.configureInstallationDNS(installation, logger)
 	}
 	if failed > 0 {
@@ -648,13 +661,13 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = utils.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
+	err = s.resourceUtil.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = utils.GetFilestore(installation).Teardown(s.keepFilestoreData, logger)
+	err = s.resourceUtil.GetFilestore(installation).Teardown(s.keepFilestoreData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete filestore")
 		return model.InstallationStateDeletionFinalCleanup

@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	logrus "github.com/sirupsen/logrus"
@@ -34,16 +36,17 @@ func init() {
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().Bool("cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
+	serverCmd.PersistentFlags().Bool("group-supervisor", false, "Whether this server will run an installation group supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
-	serverCmd.PersistentFlags().String("private-dns", "", "The DNS used for mattermost private Route53 records.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 }
 
 var serverCmd = &cobra.Command{
@@ -55,6 +58,11 @@ var serverCmd = &cobra.Command{
 		debug, _ := command.Flags().GetBool("debug")
 		if debug {
 			logger.SetLevel(logrus.DebugLevel)
+		}
+
+		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
+		if machineLogs {
+			logger.SetFormatter(&logrus.JSONFormatter{})
 		}
 
 		logger := logger.WithField("instance", instanceID)
@@ -82,9 +90,10 @@ var serverCmd = &cobra.Command{
 		}
 
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
-		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		groupSupervisor, _ := command.Flags().GetBool("group-supervisor")
 		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
-		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor {
+		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
+		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -101,6 +110,7 @@ var serverCmd = &cobra.Command{
 
 		logger.WithFields(logrus.Fields{
 			"cluster-supervisor":              clusterSupervisor,
+			"group-supervisor":                groupSupervisor,
 			"installation-supervisor":         installationSupervisor,
 			"cluster-installation-supervisor": clusterInstallationSupervisor,
 			"store-version":                   currentVersion,
@@ -123,23 +133,36 @@ var serverCmd = &cobra.Command{
 		// best-effort attempt to tag the VPC with a human's identity for dev purposes
 		owner := getHumanReadableID()
 
+		awsClient := toolsAWS.NewAWSClientWithConfig(&sdkAWS.Config{
+			Region: sdkAWS.String(toolsAWS.DefaultAWSRegion),
+			// TODO(gsagula): we should use Retryer for a more robust retry strategy.
+			// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
+			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
+		}, logger)
+
+		resourceUtil := utils.NewResourceUtil(awsClient)
+
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
 			owner,
 			useExistingResources,
+			resourceUtil,
 			logger,
 		)
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
+		}
+		if groupSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, resourceUtil, logger))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, aws.New(), instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -206,11 +229,6 @@ func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
 		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
 		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
 		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
-	}
-
-	privateDNS, _ := cmd.Flags().GetString("private-dns")
-	if privateDNS != "" {
-		logger.Warn("[Deprecation] The `private-dns` flag is deprecated and won't be used")
 	}
 }
 

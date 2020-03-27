@@ -22,7 +22,7 @@ type Store interface {
 	DeleteCluster(clusterID string) error
 
 	CreateInstallation(installation *model.Installation) error
-	GetInstallation(installationID string) (*model.Installation, error)
+	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetInstallations(filter *model.InstallationFilter) ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
@@ -36,6 +36,8 @@ type Store interface {
 	GetGroup(groupID string) (*model.Group, error)
 	GetGroups(filter *model.GroupFilter) ([]*model.Group, error)
 	UpdateGroup(group *model.Group) error
+	LockGroup(groupID, lockerID string) (bool, error)
+	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
 	DeleteGroup(groupID string) error
 
 	CreateWebhook(webhook *model.Webhook) error

@@ -39,7 +39,7 @@ spec:
         image: mattermost/mattermost-cloud:latest
         imagePullPolicy: Always
         terminationMessagePolicy: "FallbackToLogsOnError"
-        args: ["server", "--debug", "true", "--state-store", "mattermost-kops-state-test", "--private-dns", "$(PRIVATE_DNS)", "--private-subnets", "$(PRIVATE_SUBNETS)", "--public-subnets", "$(PUBLIC_SUBNETS)", "--database", "$(DATABASE)"]
+        args: ["server", "--debug", "--state-store", "mattermost-kops-state-test", "--database", "$(DATABASE)"]
         ports:
         - containerPort: 8075
           name: api
@@ -71,21 +71,6 @@ spec:
             secretKeyRef:
               name: mattermost-cloud-secret
               key: DATABASE
-        - name: PRIVATE_DNS
-          valueFrom:
-            secretKeyRef:
-              name: mattermost-cloud-secret
-              key: PRIVATE_DNS
-        - name: PRIVATE_SUBNETS
-          valueFrom:
-            secretKeyRef:
-              name: mattermost-cloud-secret
-              key: PRIVATE_SUBNETS
-        - name: PUBLIC_SUBNETS
-          valueFrom:
-            secretKeyRef:
-              name: mattermost-cloud-secret
-              key: PUBLIC_SUBNETS
         volumeMounts:
         - name: mattermost-cloud-ssh-volume
           mountPath: /.ssh

@@ -31,6 +31,8 @@ func init() {
 
 	clusterInstallationMattermostCLICmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
 	clusterInstallationMattermostCLICmd.Flags().String("command", "", "The Mattermost CLI subcommand to run.")
+	clusterInstallationMattermostCLICmd.MarkFlagRequired("cluster-installation")
+	clusterInstallationMattermostCLICmd.MarkFlagRequired("command")
 
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)

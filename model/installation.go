@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 )
 
@@ -10,6 +11,7 @@ type Installation struct {
 	ID             string
 	OwnerID        string
 	GroupID        *string
+	GroupSequence  *int64 `json:"GroupSequence,omitempty"`
 	Version        string
 	DNS            string
 	Database       string
@@ -23,6 +25,17 @@ type Installation struct {
 	DeleteAt       int64
 	LockAcquiredBy *string
 	LockAcquiredAt int64
+	GroupOverrides map[string]string `json:"GroupOverrides,omitempty"`
+
+	// configconfigMergedWithGroup is set when the installation configuration
+	// has been overridden with group configuration. This value can then be
+	// checked later to determine whether the installation is safe to save or
+	// not.
+	configMergedWithGroup bool
+
+	// configMergeGroupSequence is the Sequence value of the group at the time
+	// it was merged with the installation.
+	configMergeGroupSequence int64
 }
 
 // InstallationFilter describes the parameters used to constrain a set of installations.
@@ -35,12 +48,67 @@ type InstallationFilter struct {
 }
 
 // Clone returns a deep copy the installation.
-func (c *Installation) Clone() *Installation {
+func (i *Installation) Clone() *Installation {
 	var clone Installation
-	data, _ := json.Marshal(c)
+	data, _ := json.Marshal(i)
 	json.Unmarshal(data, &clone)
 
 	return &clone
+}
+
+// IsInGroup returns if the installation is in a group or not.
+func (i *Installation) IsInGroup() bool {
+	return i.GroupID != nil
+}
+
+// ConfigMergedWithGroup returns if the installation currently has inherited
+// group configuration values.
+func (i *Installation) ConfigMergedWithGroup() bool {
+	return i.configMergedWithGroup
+}
+
+// SyncGroupAndInstallationSequence updates the installation GroupSequence value
+// to reflect the hidden group Sequence value from the time the configuration
+// was origianlly merged.
+func (i *Installation) SyncGroupAndInstallationSequence() {
+	i.GroupSequence = &i.configMergeGroupSequence
+}
+
+// MergeWithGroup merges an installation's configuration with that of a group.
+// An option can be provided to include a group override summary to the
+// installation.
+func (i *Installation) MergeWithGroup(group *Group, includeOverrides bool) {
+	if i.ConfigMergedWithGroup() {
+		return
+	}
+	if group == nil {
+		return
+	}
+
+	i.configMergedWithGroup = true
+	i.configMergeGroupSequence = group.Sequence
+
+	i.GroupOverrides = make(map[string]string)
+	if group.MattermostEnv != nil && i.MattermostEnv == nil {
+		i.MattermostEnv = make(EnvVarMap)
+	}
+
+	if i.Version != group.Version {
+		if includeOverrides {
+			i.GroupOverrides["Installation Version"] = i.Version
+			i.GroupOverrides["Group Version"] = group.Version
+		}
+		i.Version = group.Version
+	}
+	for key, value := range group.MattermostEnv {
+		if includeOverrides {
+			if _, ok := i.MattermostEnv[key]; ok {
+				i.GroupOverrides[fmt.Sprintf("Installation MattermostEnv[%s]", key)] = i.MattermostEnv[key].Value
+				i.GroupOverrides[fmt.Sprintf("Group MattermostEnv[%s]", key)] = value.Value
+			}
+		}
+		i.MattermostEnv[key] = value
+	}
 }
 
 // InstallationFromReader decodes a json-encoded installation from the given io.Reader.

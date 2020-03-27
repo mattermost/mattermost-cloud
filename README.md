@@ -25,6 +25,7 @@ This repository houses the open-source components of Mattermost Private Cloud. O
 3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.15.X
 4. Install [Helm](https://helm.sh/docs/using_helm/) version 2.14.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+7. Install [mockgen](github.com/golang/mock/mockgen) version 1.4.x
 6. Specify the region in your AWS config, e.g. `~/.aws/config`:
 ```
 [profile mm-cloud]
@@ -58,7 +59,7 @@ $ cloud schema migrate
 Run the server with:
 
 ```
-$ cloud server --state-store=<your-s3-bucket> --private-dns dev.cloud.internal.mattermost.com
+$ cloud server --state-store=<your-s3-bucket>
 ```
 
 ### Testing

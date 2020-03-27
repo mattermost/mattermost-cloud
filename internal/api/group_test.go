@@ -256,51 +256,6 @@ func TestCreateGroup(t *testing.T) {
 	})
 }
 
-func TestChangeMattermostVersion(t *testing.T) {
-	logger := testlib.MakeLogger(t)
-	sqlStore := store.MakeTestSQLStore(t, logger)
-
-	router := mux.NewRouter()
-	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
-	})
-	ts := httptest.NewServer(router)
-	defer ts.Close()
-
-	client := model.NewClient(ts.URL)
-
-	group1, err := client.CreateGroup(&model.CreateGroupRequest{
-		Name:        "name",
-		Description: "description",
-		Version:     "version",
-	})
-	require.NoError(t, err)
-
-	t.Run("good request", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s/mattermost/%s", ts.URL, group1.ID, "5.18"), nil)
-		require.NoError(t, err)
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.Equal(t, http.StatusAccepted, resp.StatusCode)
-		require.NoError(t, err)
-	})
-	t.Run("bad version", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s/mattermost/%s", ts.URL, group1.ID, "@!#$@#"), nil)
-		require.NoError(t, err)
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.Equal(t, http.StatusNotFound, resp.StatusCode)
-		require.NoError(t, err)
-	})
-	t.Run("bad group", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s/mattermost/%s", ts.URL, group1.ID[:len(group1.ID)-2]+"XX", "5.17"), nil)
-		require.NoError(t, err)
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		require.NoError(t, err)
-	})
-}
-
 func TestUpdateGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
@@ -419,7 +374,7 @@ func TestDeleteGroup(t *testing.T) {
 		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID)
+		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.NotNil(t, installation1.GroupID)
 		require.Equal(t, group1.ID, *installation1.GroupID)
