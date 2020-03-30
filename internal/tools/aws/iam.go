@@ -168,6 +168,7 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 					"s3:PutObject",
 					"s3:ListBucket",
 					"s3:PutObjectAcl",
+					"s3:DeleteObject",
 				},
 				Resource: fmt.Sprintf("arn:aws:s3:::%s/*", awsID),
 			},
