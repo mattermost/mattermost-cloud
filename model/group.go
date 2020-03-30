@@ -12,6 +12,7 @@ type Group struct {
 	Name           string
 	Description    string
 	Version        string
+	Image          string
 	MaxRolling     int64
 	MattermostEnv  EnvVarMap
 	CreateAt       int64

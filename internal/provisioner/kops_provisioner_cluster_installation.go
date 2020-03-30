@@ -73,6 +73,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		Spec: mmv1alpha1.ClusterInstallationSpec{
 			Size:                   installation.Size,
 			Version:                translateMattermostVersion(installation.Version),
+			Image:                  installation.Image,
 			IngressName:            installation.DNS,
 			UseServiceLoadBalancer: true,
 			MattermostEnv:          installation.MattermostEnv.ToEnvList(),
@@ -187,6 +188,11 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		logger.Infof("Cluster installation already on version %s", version)
 	}
 	cr.Spec.Version = version
+
+	if cr.Spec.Image == installation.Image {
+		logger.Infof("Cluster installation already on Image %s", installation.Image)
+	}
+	cr.Spec.Image = installation.Image
 
 	cr.Spec.MattermostLicenseSecret = ""
 	secretName := fmt.Sprintf("%s-license", name)

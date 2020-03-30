@@ -12,6 +12,7 @@ func init() {
 	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")
 	groupCreateCmd.Flags().String("version", "stable", "The Mattermost version for installations in this group to target.")
+	groupCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
 	groupCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupCreateCmd.MarkFlagRequired("name")
 
@@ -19,6 +20,7 @@ func init() {
 	groupUpdateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupUpdateCmd.Flags().String("description", "", "An optional description for this group of installations.")
 	groupUpdateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
+	groupUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
 	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupUpdateCmd.MarkFlagRequired("group")
 
@@ -64,6 +66,7 @@ var groupCreateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		name, _ := command.Flags().GetString("name")
+		image, _ := command.Flags().GetString("image")
 		description, _ := command.Flags().GetString("description")
 		version, _ := command.Flags().GetString("version")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
@@ -77,6 +80,7 @@ var groupCreateCmd = &cobra.Command{
 			Name:          name,
 			Description:   description,
 			Version:       version,
+			Image:         image,
 			MattermostEnv: envVarMap,
 		})
 
@@ -106,6 +110,7 @@ var groupUpdateCmd = &cobra.Command{
 		name, _ := command.Flags().GetString("name")
 		description, _ := command.Flags().GetString("description")
 		version, _ := command.Flags().GetString("version")
+		image, _ := command.Flags().GetString("image")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv)
@@ -126,6 +131,7 @@ var groupUpdateCmd = &cobra.Command{
 			Name:          patchPointer(name),
 			Description:   patchPointer(description),
 			Version:       patchPointer(version),
+			Image:         patchPointer(image),
 			MattermostEnv: envVarMap,
 		})
 		if err != nil {

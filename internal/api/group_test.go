@@ -244,12 +244,14 @@ func TestCreateGroup(t *testing.T) {
 			Name:          "name",
 			Description:   "description",
 			Version:       "version",
+			Image:         "sample/image",
 			MattermostEnv: mattermostEnvFooBar,
 		})
 		require.NoError(t, err)
 		require.Equal(t, "name", group.Name)
 		require.Equal(t, "description", group.Description)
 		require.Equal(t, "version", group.Version)
+		require.Equal(t, "sample/image", group.Image)
 		require.NotEqual(t, 0, group.CreateAt)
 		require.EqualValues(t, 0, group.DeleteAt)
 		require.EqualValues(t, group.MattermostEnv, mattermostEnvFooBar)
@@ -277,6 +279,7 @@ func TestUpdateGroup(t *testing.T) {
 		Name:          "name",
 		Description:   "description",
 		Version:       "version",
+		Image:         "sample/image",
 		MattermostEnv: mattermostEnvFooBar,
 	})
 	require.NoError(t, err)
@@ -359,6 +362,7 @@ func TestDeleteGroup(t *testing.T) {
 		Name:        "name",
 		Description: "description",
 		Version:     "version",
+		Image:       "sample/image",
 	})
 	require.NoError(t, err)
 

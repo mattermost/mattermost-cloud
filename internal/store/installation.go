@@ -14,7 +14,7 @@ var installationSelect sq.SelectBuilder
 func init() {
 	installationSelect = sq.
 		Select(
-			"ID", "OwnerID", "Version", "DNS", "Database", "Filestore", "Size",
+			"ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
 			"MattermostEnvRaw", "CreateAt", "DeleteAt", "LockAcquiredBy",
 			"LockAcquiredAt",
@@ -163,6 +163,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"ID":               installation.ID,
 			"OwnerID":          installation.OwnerID,
 			"Version":          installation.Version,
+			"Image":            installation.Image,
 			"DNS":              installation.DNS,
 			"Database":         installation.Database,
 			"Filestore":        installation.Filestore,
@@ -201,6 +202,7 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 		SetMap(map[string]interface{}{
 			"OwnerID":          installation.OwnerID,
 			"Version":          installation.Version,
+			"Image":            installation.Image,
 			"DNS":              installation.DNS,
 			"Database":         installation.Database,
 			"Filestore":        installation.Filestore,
