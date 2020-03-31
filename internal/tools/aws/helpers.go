@@ -52,6 +52,12 @@ func DBSubnetGroupName(vpcID string) string {
 	return fmt.Sprintf("mattermost-provisioner-db-%s", vpcID)
 }
 
+// KMSAliasNameRDS formats the alias name associated with a KMS encryption key
+// used specifically for RDS databases.
+func KMSAliasNameRDS(awsID string) string {
+	return fmt.Sprintf("alias/%s-rds", awsID)
+}
+
 // RDSMasterInstanceID formats the name used for RDS database instances.
 func RDSMasterInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-master", CloudID(installationID))

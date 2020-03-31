@@ -11,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/route53"
@@ -60,6 +62,7 @@ type Service struct {
 	s3             s3iface.S3API
 	route53        route53iface.Route53API
 	secretsManager secretsmanageriface.SecretsManagerAPI
+	kms            kmsiface.KMSAPI
 }
 
 // NewService creates a new instance of Service.
@@ -72,6 +75,7 @@ func NewService(sess *session.Session) *Service {
 		route53:        route53.New(sess),
 		secretsManager: secretsmanager.New(sess),
 		ec2:            ec2.New(sess),
+		kms:            kms.New(sess),
 	}
 }
 

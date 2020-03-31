@@ -119,8 +119,8 @@ mocks:
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/acm/acmiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/acm.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/iam/iamiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/iam.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/route53/route53iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/route53.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/kms/kmsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/kms.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go
 	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go
 	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go
 	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
-

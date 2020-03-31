@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/golang/mock/gomock"
@@ -167,6 +168,26 @@ func (a *AWSTestSuite) TestProvisionRDS() {
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 			}).
 			Times(1))
+
+	a.Mocks.API.KMS.EXPECT().
+		CreateKey(gomock.Any()).
+		Return(&kms.CreateKeyOutput{
+			KeyMetadata: &kms.KeyMetadata{
+				KeyId: aws.String(a.RDSEncryptionKeyID),
+			},
+		}, nil).
+		Do(func(input *kms.CreateKeyInput) {
+			a.Assert().Equal(*input.Description, "Key used for encrypting RDS database")
+		}).
+		Times(1)
+
+	a.Mocks.API.KMS.EXPECT().
+		CreateAlias(gomock.Any()).
+		Return(nil, nil).
+		Do(func(input *kms.CreateAliasInput) {
+			a.Assert().Equal(*input.AliasName, KMSAliasNameRDS(CloudID(a.InstallationA.ID)))
+		}).
+		Times(1)
 
 	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)

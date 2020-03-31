@@ -69,7 +69,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	return "", fmt.Errorf("unable to find subnet group tagged for Mattermost DB usage: %s=%s", DefaultDBSubnetGroupTagKey, DefaultDBSubnetGroupTagValue)
 }
 
-func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password string, logger log.FieldLogger) error {
+func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID string, logger log.FieldLogger) error {
 	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
@@ -104,9 +104,10 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 		MasterUserPassword:    aws.String(password),
 		MasterUsername:        aws.String(username),
 		Port:                  aws.Int64(3306),
-		StorageEncrypted:      aws.Bool(false),
+		StorageEncrypted:      aws.Bool(true),
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
+		KmsKeyId:              aws.String(kmsKeyID),
 	}
 
 	_, err = a.Service().rds.CreateDBCluster(input)
@@ -153,7 +154,6 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == rds.ErrCodeDBClusterNotFoundFault {
 				logger.WithField("db-cluster-name", awsID).Warn("DBCluster could not be found; assuming already deleted")
-
 				return nil
 			}
 		}
