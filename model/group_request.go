@@ -154,3 +154,17 @@ func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	}
 	u.RawQuery = q.Encode()
 }
+
+// LeaveGroupRequest describes the parameters to leave a group.
+type LeaveGroupRequest struct {
+	RetainConfig bool
+}
+
+// ApplyToURL modifies the given url to include query string parameters for the request.
+func (request *LeaveGroupRequest) ApplyToURL(u *url.URL) {
+	q := u.Query()
+	if !request.RetainConfig {
+		q.Add("retain_config", "false")
+	}
+	u.RawQuery = q.Encode()
+}

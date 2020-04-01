@@ -605,8 +605,15 @@ func (c *Client) JoinGroup(groupID, installationID string) error {
 }
 
 // LeaveGroup removes an installation from its group, if any.
-func (c *Client) LeaveGroup(installationID string) error {
-	resp, err := c.doDelete(c.buildURL("/api/installation/%s/group", installationID))
+func (c *Client) LeaveGroup(installationID string, request *LeaveGroupRequest) error {
+	u, err := url.Parse(c.buildURL("/api/installation/%s/group", installationID))
+	if err != nil {
+		return err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doDelete(u.String())
 	if err != nil {
 		return err
 	}
