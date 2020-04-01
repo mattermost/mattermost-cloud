@@ -61,6 +61,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) {
 	var err error
 	owner := r.URL.Query().Get("owner")
+	group := r.URL.Query().Get("group")
 
 	page, perPage, includeDeleted, err := parsePaging(r.URL)
 	if err != nil {
@@ -69,14 +70,22 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	includeGroupConfig, includeGroupConfigOverrides, err := parseGroupConfig(r.URL)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	filter := &model.InstallationFilter{
 		OwnerID:        owner,
+		GroupID:        group,
 		Page:           page,
 		PerPage:        perPage,
 		IncludeDeleted: includeDeleted,
 	}
 
-	installations, err := c.Store.GetInstallations(filter)
+	installations, err := c.Store.GetInstallations(filter, includeGroupConfig, includeGroupConfigOverrides)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installations")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -101,8 +110,22 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if len(createInstallationRequest.GroupID) != 0 {
+		group, err := c.Store.GetGroup(createInstallationRequest.GroupID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to query group")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if group == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+
 	installation := model.Installation{
 		OwnerID:       createInstallationRequest.OwnerID,
+		GroupID:       &createInstallationRequest.GroupID,
 		Version:       createInstallationRequest.Version,
 		Image:         createInstallationRequest.Image,
 		DNS:           createInstallationRequest.DNS,

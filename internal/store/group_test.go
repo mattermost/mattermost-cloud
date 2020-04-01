@@ -463,7 +463,7 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		}
 		metadata, err = sqlStore.GetGroupRollingMetadata(group1.ID)
 		require.NoError(t, err)
-		require.Equal(t, expectedMetadata, metadata)
+		assert.Equal(t, expectedMetadata, metadata)
 	})
 }
 
@@ -501,6 +501,7 @@ func TestUpdateGroup(t *testing.T) {
 
 	oldSequence = group1.Sequence
 	group1.Sequence = 9001
+	group1.Version = "version4"
 
 	err = sqlStore.UpdateGroup(group1)
 	require.NoError(t, err)

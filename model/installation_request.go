@@ -14,6 +14,7 @@ import (
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
 	OwnerID       string
+	GroupID       string
 	Version       string
 	Image         string
 	DNS           string
@@ -102,7 +103,7 @@ func NewCreateInstallationRequestFromReader(reader io.Reader) (*CreateInstallati
 
 // GetInstallationRequest describes the parameters to request an installation.
 type GetInstallationRequest struct {
-	IncludeGroupConfig          bool `json:"include_group_config"`
+	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
 }
 
@@ -112,27 +113,37 @@ func (request *GetInstallationRequest) ApplyToURL(u *url.URL) {
 		return
 	}
 	q := u.Query()
-	if request.IncludeGroupConfig {
-		q.Add("include_group_config", "true")
+	if !request.IncludeGroupConfig {
+		q.Add("include_group_config", "false")
 	}
-	if request.IncludeGroupConfigOverrides {
-		q.Add("include_group_config_overrides", "true")
+	if !request.IncludeGroupConfigOverrides {
+		q.Add("include_group_config_overrides", "false")
 	}
 	u.RawQuery = q.Encode()
 }
 
 // GetInstallationsRequest describes the parameters to request a list of installations.
 type GetInstallationsRequest struct {
-	OwnerID        string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	OwnerID                     string
+	GroupID                     string
+	IncludeGroupConfig          bool
+	IncludeGroupConfigOverrides bool
+	Page                        int
+	PerPage                     int
+	IncludeDeleted              bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("owner", request.OwnerID)
+	q.Add("group", request.GroupID)
+	if !request.IncludeGroupConfig {
+		q.Add("include_group_config", "false")
+	}
+	if !request.IncludeGroupConfigOverrides {
+		q.Add("include_group_config_overrides", "false")
+	}
 	q.Add("page", strconv.Itoa(request.Page))
 	q.Add("per_page", strconv.Itoa(request.PerPage))
 	if request.IncludeDeleted {
