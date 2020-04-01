@@ -3,7 +3,7 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.13
+DOCKER_BUILD_IMAGE = golang:1.14.1
 DOCKER_BASE_IMAGE = alpine:3.11
 
 ## Tool Versions
@@ -110,9 +110,9 @@ mocks:
 		$(GO) mod download;\
 	fi
 
-	# Mockgen cannot generate mocks for logrus when reading it from modules.  
+	# Mockgen cannot generate mocks for logrus when reading it from modules.
 	GO111MODULE=off $(GO) get github.com/sirupsen/logrus
-	
+
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/ec2/ec2iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/ec2.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/rds/rdsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/rds.go
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/s3/s3iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/s3.go
