@@ -35,7 +35,7 @@ type helmDeployment struct {
 	logger          log.FieldLogger
 }
 
-func installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
+func installHelm(kops *kops.Cmd, repos map[string]string, logger log.FieldLogger) error {
 	logger.Info("Installing Helm")
 
 	err := helmSetup(logger, kops)
@@ -53,6 +53,13 @@ func installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
 	}
 
 	logger.Info("Updating all Helm repos.")
+	for repoName, repoURL := range repos {
+		err = helmRepoAdd(repoName, repoURL, logger)
+
+	}
+	if err != nil {
+		return errors.Wrap(err, "unable to add helm repos")
+	}
 	return helmRepoUpdate(logger)
 }
 
@@ -90,6 +97,30 @@ func waitForHelmRunning(ctx context.Context, configPath string) error {
 		case <-time.After(5 * time.Second):
 		}
 	}
+}
+
+// helmRepoAdd adds new helm repos
+func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
+	logger.Infof("Adding helm repo %s", repoName)
+	arguments := []string{
+		"repo",
+		"add",
+		repoName,
+		repoURL,
+	}
+
+	helmClient, err := helm.New(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to create helm wrapper")
+	}
+	defer helmClient.Close()
+
+	err = helmClient.RunGenericCommand(arguments...)
+	if err != nil {
+		return errors.Wrapf(err, "unable to add repo %s", repoName)
+	}
+
+	return nil
 }
 
 // helmRepoUpdate updates the helm repos to get latest available charts

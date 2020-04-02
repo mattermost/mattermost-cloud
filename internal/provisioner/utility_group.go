@@ -118,8 +118,13 @@ func (group utilityGroup) CreateUtilityGroup() error {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
 
+	// List of repos to add during helm setup
+	var helmRepos = map[string]string{
+		"jetstack": "https://charts.jetstack.io",
+	}
+
 	// TODO remove this when Helm is removed as a dependency
-	err = installHelm(group.kops, group.provisioner.logger)
+	err = installHelm(group.kops, helmRepos, group.provisioner.logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
 	}
