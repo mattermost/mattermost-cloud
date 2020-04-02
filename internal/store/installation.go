@@ -197,6 +197,8 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 		SetMap(map[string]interface{}{
 			"ID":               installation.ID,
 			"OwnerID":          installation.OwnerID,
+			"GroupID":          installation.GroupID,
+			"GroupSequence":    nil,
 			"Version":          installation.Version,
 			"Image":            installation.Image,
 			"DNS":              installation.DNS,
@@ -204,8 +206,6 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"Filestore":        installation.Filestore,
 			"Size":             installation.Size,
 			"Affinity":         installation.Affinity,
-			"GroupID":          installation.GroupID,
-			"GroupSequence":    nil,
 			"State":            installation.State,
 			"CreateAt":         installation.CreateAt,
 			"License":          installation.License,
@@ -236,6 +236,8 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 		Update("Installation").
 		SetMap(map[string]interface{}{
 			"OwnerID":          installation.OwnerID,
+			"GroupID":          installation.GroupID,
+			"GroupSequence":    installation.GroupSequence,
 			"Version":          installation.Version,
 			"Image":            installation.Image,
 			"DNS":              installation.DNS,
@@ -243,7 +245,6 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 			"Filestore":        installation.Filestore,
 			"Size":             installation.Size,
 			"Affinity":         installation.Affinity,
-			"GroupID":          installation.GroupID,
 			"License":          installation.License,
 			"MattermostEnvRaw": []byte(envJSON),
 			"State":            installation.State,

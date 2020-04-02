@@ -374,6 +374,10 @@ func TestDeleteGroup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	installation1.State = model.InstallationStateStable
+	err = sqlStore.UpdateInstallation(installation1)
+	require.NoError(t, err)
+
 	t.Run("join group", func(t *testing.T) {
 		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.NoError(t, err)
@@ -399,7 +403,7 @@ func TestDeleteGroup(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		err = client.LeaveGroup(installation1.ID)
+		err = client.LeaveGroup(installation1.ID, &model.LeaveGroupRequest{RetainConfig: true})
 		require.NoError(t, err)
 
 		err = client.DeleteGroup(group1.ID)
