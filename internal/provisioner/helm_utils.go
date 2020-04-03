@@ -55,7 +55,6 @@ func installHelm(kops *kops.Cmd, repos map[string]string, logger log.FieldLogger
 	logger.Info("Updating all Helm repos.")
 	for repoName, repoURL := range repos {
 		err = helmRepoAdd(repoName, repoURL, logger)
-
 	}
 	if err != nil {
 		return errors.Wrap(err, "unable to add helm repos")
