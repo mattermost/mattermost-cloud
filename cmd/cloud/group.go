@@ -11,8 +11,8 @@ func init() {
 
 	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")
-	groupCreateCmd.Flags().String("version", "stable", "The Mattermost version for installations in this group to target.")
-	groupCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
+	groupCreateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
+	groupCreateCmd.Flags().String("image", "", "The Mattermost container image to use.")
 	groupCreateCmd.Flags().Int64("max-rolling", 1, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupCreateCmd.MarkFlagRequired("name")
@@ -21,7 +21,7 @@ func init() {
 	groupUpdateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupUpdateCmd.Flags().String("description", "", "An optional description for this group of installations.")
 	groupUpdateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
-	groupUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
+	groupUpdateCmd.Flags().String("image", "", "The Mattermost container image to use.")
 	groupUpdateCmd.Flags().Int64("max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupUpdateCmd.MarkFlagRequired("group")
@@ -112,11 +112,6 @@ var groupUpdateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		groupID, _ := command.Flags().GetString("group")
-		name, _ := command.Flags().GetString("name")
-		description, _ := command.Flags().GetString("description")
-		version, _ := command.Flags().GetString("version")
-		image, _ := command.Flags().GetString("image")
-		maxRolling, _ := command.Flags().GetInt64("max-rolling")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv)
@@ -124,29 +119,30 @@ var groupUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		stringPatchPointer := func(s string) *string {
-			if s == "" {
-				return nil
+		getStringFlagPointer := func(s string) *string {
+			if command.Flags().Changed(s) {
+				val, _ := command.Flags().GetString(s)
+				return &val
 			}
 
-			return &s
+			return nil
 		}
-
-		int64PatchPointer := func(i int64) *int64 {
-			if i == 0 {
-				return nil
+		getInt64FlagPointer := func(s string) *int64 {
+			if command.Flags().Changed(s) {
+				val, _ := command.Flags().GetInt64(s)
+				return &val
 			}
 
-			return &i
+			return nil
 		}
 
 		err = client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            groupID,
-			Name:          stringPatchPointer(name),
-			Description:   stringPatchPointer(description),
-			Version:       stringPatchPointer(version),
-			Image:         stringPatchPointer(image),
-			MaxRolling:    int64PatchPointer(maxRolling),
+			Name:          getStringFlagPointer("name"),
+			Description:   getStringFlagPointer("description"),
+			Version:       getStringFlagPointer("version"),
+			Image:         getStringFlagPointer("image"),
+			MaxRolling:    getInt64FlagPointer("max-rolling"),
 			MattermostEnv: envVarMap,
 		})
 		if err != nil {

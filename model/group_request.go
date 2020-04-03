@@ -28,14 +28,8 @@ func (request *CreateGroupRequest) SetDefaults() {
 
 // Validate validates the values of a group create request.
 func (request *CreateGroupRequest) Validate() error {
-	if request.Name == "" {
+	if len(request.Name) == 0 {
 		return errors.New("must specify name")
-	}
-	if request.Version == "" {
-		return errors.New("must specify version")
-	}
-	if request.Image == "" {
-		return errors.New("must specify image")
 	}
 	if request.MaxRolling < 1 {
 		return errors.New("max rolling must be 1 or greater")
@@ -126,6 +120,9 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 
 // Validate validates the values of a group patch request
 func (p *PatchGroupRequest) Validate() error {
+	if p.Name != nil && len(*p.Name) == 0 {
+		return errors.New("must specify name")
+	}
 	if p.MaxRolling != nil && *p.MaxRolling < 1 {
 		return errors.New("max rolling must be 1 or greater")
 	}
