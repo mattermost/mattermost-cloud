@@ -52,14 +52,19 @@ func DBSubnetGroupName(vpcID string) string {
 	return fmt.Sprintf("mattermost-provisioner-db-%s", vpcID)
 }
 
-// RDSMasterInstanceID formats the name used for RDS database instances.
+// RDSMasterInstanceID formats the id used for RDS database instances.
 func RDSMasterInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-master", CloudID(installationID))
 }
 
-// RDSMigrationInstanceID formats the name used for migrated RDS database instances.
-func RDSMigrationInstanceID(installationID string) string {
+// RDSMigrationClusterID formats the id used for migrating RDS database cluster.
+func RDSMigrationClusterID(installationID string) string {
 	return fmt.Sprintf("%s-migration", CloudID(installationID))
+}
+
+// RDSMigrationMasterInstanceID formats the id used for migrating RDS database instances.
+func RDSMigrationMasterInstanceID(installationID string) string {
+	return fmt.Sprintf("%s-migrated-master", CloudID(installationID))
 }
 
 // IsErrorCode asserts that an AWS error has a certain code.
