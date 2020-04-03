@@ -121,6 +121,7 @@ func (group utilityGroup) CreateUtilityGroup() error {
 	// List of repos to add during helm setup
 	var helmRepos = map[string]string{
 		"jetstack": "https://charts.jetstack.io",
+		"stable":   "https://kubernetes-charts.storage.googleapis.com",
 	}
 
 	// TODO remove this when Helm is removed as a dependency
