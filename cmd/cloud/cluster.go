@@ -335,12 +335,12 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 		utilityVersions[model.NginxCanonicalName] = nginxVersion
 	}
 
-	if publicnginxVersion != "" {
-		utilityVersions[model.PublicNginxCanonicalName] = publicnginxVersion
+	if publicNginxVersion != "" {
+		utilityVersions[model.PublicNginxCanonicalName] = publicNginxVersion
 	}
 
-	if certmanagerVersion != "" {
-		utilityVersions[model.CertManagerCanonicalName] = certmanagerVersion
+	if certManagerVersion != "" {
+		utilityVersions[model.CertManagerCanonicalName] = certManagerVersion
 	}
 
 	return utilityVersions
