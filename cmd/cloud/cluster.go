@@ -318,7 +318,7 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
-	publicnginxVersion, _ := command.Flags().GetString("public-nginx-version")
+	publicNginxVersion, _ := command.Flags().GetString("public-nginx-version")
 	certManagerVersion, _ := command.Flags().GetString("cert-manager-version")
 
 	utilityVersions := make(map[string]string)
