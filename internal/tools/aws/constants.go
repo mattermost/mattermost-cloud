@@ -102,9 +102,48 @@ const (
 	// existing installations.
 	rdsSuffix = "-rds"
 
+	// DefaultDatabaseName is the default name used for Mattermost database.
+	DefaultDatabaseName = "mattermost"
+
+	// DefaultMySQLPort represents the default TCP port used for connecting to a MySQL database.
+	DefaultMySQLPort = 3306
+
 	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots of a cluster installation.
 	DefaultClusterInstallationSnapshotTagKey = "tag:ClusterInstallationSnapshot"
 
 	// DefaultAWSClientRetries supplies how many time the AWS client will retry a failed call.
 	DefaultAWSClientRetries = 3
+
+	// RDSDefaultSnapshotType represents the default RDS snapshot type.
+	RDSDefaultSnapshotType = "manual"
+
+	// RDSStatusAvailable represents the status of an RDS cluster, instance or snapshot that is ready to be used.
+	RDSStatusAvailable = "available"
+
+	// RDSStatusDeleting represents the status of an RDS cluster, instance or snapshot that is being deleted.
+	RDSStatusDeleting = "deleting"
+
+	// RDSStatusCreating represents the status of an RDS cluster, instance or snapshot that is being created.
+	RDSStatusCreating = "creating"
+
+	// RDSStatusModifying represents the status of an RDS cluster, instance or snapshot that is being modified.
+	RDSStatusModifying = "modifying"
+
+	// RDSAuroraMySQLEngineName ..
+	RDSAuroraMySQLEngineName = "aurora-mysql"
+
+	// RDSAuroraDefaultMySQLVersion represents the MySQL database engine version managed by RDS.
+	RDSAuroraDefaultMySQLVersion = "5.7"
+
+	// RDSCustomParamGroupClusterName represents a custom MySQL parameter group name used by the RDS DB cluster.
+	RDSCustomParamGroupClusterName = "mattermost-provisioner-rds-cluster-pg"
+
+	// RDSCustomParamGroupName represents a custom MySQL parameter group name used by the RDS.
+	RDSCustomParamGroupName = "mattermost-provisioner-rds-pg"
+
+	// RDSDefaultInstanceClass represents the default RDS instance class used by the provisioner.
+	RDSDefaultInstanceClass = "db.r5.large"
+
+	// RDSDefaultEngineMode represents the default RDS database mode used by the provisioner.
+	RDSDefaultEngineMode = "provisioned"
 )

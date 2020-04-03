@@ -187,3 +187,34 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 
 	return nil
 }
+
+func (a *Client) rdsEnsureRestoreDBClusterFromSnapshot(vpcID, awsID, snapshotID string, logger log.FieldLogger) error {
+	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(vpcID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to restore a DB cluster from snapshot in the vpc id: %s", vpcID)
+	}
+
+	dbSubnetGroupName, err := a.rdsGetDBSubnetGroupName(vpcID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to restore a DB cluster from snapshot in the vpc id: %s", vpcID)
+	}
+
+	_, err = a.Service().rds.RestoreDBClusterFromSnapshot(&rds.RestoreDBClusterFromSnapshotInput{
+		AvailabilityZones:           []*string{aws.String("us-east-1a"), aws.String("us-east-1b"), aws.String("us-east-1c")},
+		DBClusterIdentifier:         aws.String(awsID),
+		DBClusterParameterGroupName: aws.String(RDSCustomParamGroupClusterName),
+		DBSubnetGroupName:           aws.String(dbSubnetGroupName),
+		DatabaseName:                aws.String(DefaultDatabaseName),
+		EngineMode:                  aws.String(RDSDefaultEngineMode),
+		Engine:                      aws.String(RDSAuroraMySQLEngineName),
+		EngineVersion:               aws.String(RDSAuroraDefaultMySQLVersion),
+		Port:                        aws.Int64(DefaultMySQLPort),
+		VpcSecurityGroupIds:         aws.StringSlice(dbSecurityGroupIDs),
+		SnapshotIdentifier:          aws.String(snapshotID),
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create a DB cluster from snapshot in vpc id: %s", vpcID)
+	}
+
+	return nil
+}
