@@ -60,6 +60,7 @@ type AWSTestSuite struct {
 	ClusterInstallationA *model.ClusterInstallation
 	ClusterInstallationB *model.ClusterInstallation
 
+	VPC  string
 	VPCa string
 	VPCb string
 
@@ -77,6 +78,7 @@ type AWSTestSuite struct {
 	ResourceID           string
 	HostedZoneID         string
 	CertifcateARN        string
+	CIDRBlock            string
 	RDSAvailabilityZones []string
 
 	// Route53 fixtures
@@ -94,6 +96,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 	return &AWSTestSuite{
 		ctrl: gomock.NewController(t),
 
+		VPC:  "vpc-000000000000000",
 		VPCa: "vpc-000000000000000a",
 		VPCb: "vpc-000000000000000b",
 
@@ -135,6 +138,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		ResourceID:           "WSxqXCaZw1dC",
 		HostedZoneID:         "ZWI3O6O6N782C",
 		CertifcateARN:        "arn:aws:certificate::123456789012",
+		CIDRBlock:            "10.241.4.50/32",
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
 		EndpointsB: []string{"example1.mattermost.com"},

@@ -80,15 +80,15 @@ func (d *RDSDatabaseMigration) Restore(logger log.FieldLogger) (string, error) {
 	case RDSStatusCreating:
 		return model.DatabaseMigrationStatusRestoreIP, nil
 	case RDSStatusModifying:
-		err := newErrorWrap(&masterClusterID, &replicaClusterID, errors.Errorf("snapshot id %s should not be modified during migration", snapshot.DBClusterSnapshotIdentifier))
+		err := newErrorWrap(&masterClusterID, &replicaClusterID, errors.Errorf("snapshot id %s should not be modified during migration", *snapshot.DBClusterSnapshotIdentifier))
 		logger.WithError(err).Error("Restoring RDS database migration")
 		return "", err
 	case RDSStatusDeleting:
-		err := newErrorWrap(&masterClusterID, &replicaClusterID, errors.Errorf("snapshot id %s should not be deleted during migration", snapshot.DBClusterSnapshotIdentifier))
+		err := newErrorWrap(&masterClusterID, &replicaClusterID, errors.Errorf("snapshot id %s should not be deleted during migration", *snapshot.DBClusterSnapshotIdentifier))
 		logger.WithError(err).Error("Restoring RDS database migration")
 		return "", err
 	default:
-		err := newErrorWrap(&masterClusterID, &replicaClusterID, errors.Errorf("snapshot id %s has an unknown status %s", snapshot.DBClusterSnapshotIdentifier, snapshot.Status))
+		err := newErrorWrap(&masterClusterID, &replicaClusterID, errors.Errorf("snapshot id %s has an unknown status %s", *snapshot.DBClusterSnapshotIdentifier, *snapshot.Status))
 		logger.WithError(err).Error("Restoring RDS database migration")
 		return "", err
 	}
@@ -372,7 +372,7 @@ func (d *RDSDatabaseMigration) getMostRecentSnapshot(masterCloudID *string) (*rd
 		}
 	}
 	if len(snapshots) < 1 {
-		return nil, errors.Errorf("DB cluster %s has no snapshots", masterCloudID)
+		return nil, errors.Errorf("DB cluster %s has no snapshots", *masterCloudID)
 	}
 	sort.SliceStable(snapshots, func(i, j int) bool {
 		return snapshots[i].SnapshotCreateTime.After(*snapshots[j].SnapshotCreateTime)
