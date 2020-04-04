@@ -24,19 +24,19 @@ const (
 type RDSDatabaseMigration struct {
 	awsClient            *Client
 	masterInstallationID string
-	slaveClusterID       string
+	replicaClusterID     string
 }
 
 // NewRDSDatabaseMigration returns a new RDSDatabaseMigration.
-func NewRDSDatabaseMigration(masterInstallationID, slaveClusterID string, awsClient *Client) *RDSDatabaseMigration {
+func NewRDSDatabaseMigration(masterInstallationID, replicaClusterID string, awsClient *Client) *RDSDatabaseMigration {
 	return &RDSDatabaseMigration{
 		awsClient:            awsClient,
 		masterInstallationID: masterInstallationID,
-		slaveClusterID:       slaveClusterID,
+		replicaClusterID:     replicaClusterID,
 	}
 }
 
-// Restore restores database from the most recent snapshot.
+// Restore restores a RDS database instance in another VPC from the most recent snapshot.
 func (d *RDSDatabaseMigration) Restore(logger log.FieldLogger) (string, error) {
 	masterClusterID := CloudID(d.masterInstallationID)
 	replicaClusterID := RDSMigrationClusterID(d.masterInstallationID)
@@ -49,7 +49,7 @@ func (d *RDSDatabaseMigration) Restore(logger log.FieldLogger) (string, error) {
 	vpcs, err := d.awsClient.GetVpcsWithFilters([]*ec2.Filter{
 		{
 			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(d.slaveClusterID)},
+			Values: []*string{aws.String(d.replicaClusterID)},
 		},
 		{
 			Name:   aws.String(VpcAvailableTagKey),
