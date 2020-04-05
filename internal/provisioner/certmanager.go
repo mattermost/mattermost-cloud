@@ -152,9 +152,9 @@ func deployClusterIssuer(kops *kops.Cmd, logger log.FieldLogger) error {
 		logger.Infof("Successfully deployed cert-manager-webhook pod %q", pod.Name)
 	}
 
-	maxRetries := 5
+	maxRetries := 10
 	logger.Infof("Trying up to %d times for cluster issuer to be deployed", maxRetries)
-	err = utils.Retry(maxRetries, time.Second, func() error {
+	err = utils.Retry(maxRetries, time.Second*2, func() error {
 		files := []k8s.ManifestFile{
 			{
 				Path:            "certmanager-manifests/cluster-issuer.yaml",

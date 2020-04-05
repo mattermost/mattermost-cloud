@@ -745,9 +745,9 @@ func TestLeaveGroup(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	group1, err := client.CreateGroup(&model.CreateGroupRequest{
-		Name:    "name1",
-		Version: "version1",
-		Image:   "sample/image1",
+		Name:    "group-name",
+		Version: "group-version",
+		Image:   "sample/group-image",
 	})
 	require.NoError(t, err)
 
@@ -759,11 +759,15 @@ func TestLeaveGroup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	installation1.State = model.InstallationStateStable
+	err = sqlStore.UpdateInstallation(installation1)
+	require.NoError(t, err)
+
 	err = client.JoinGroup(group1.ID, installation1.ID)
 	require.NoError(t, err)
 
 	t.Run("unknown installation", func(t *testing.T) {
-		err := client.LeaveGroup(model.NewID())
+		err := client.LeaveGroup(model.NewID(), &model.LeaveGroupRequest{RetainConfig: false})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -779,21 +783,49 @@ func TestLeaveGroup(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.LeaveGroup(installation1.ID)
+		err = client.LeaveGroup(installation1.ID, &model.LeaveGroupRequest{RetainConfig: true})
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
 	t.Run("while in group 1", func(t *testing.T) {
-		err = client.LeaveGroup(installation1.ID)
+		t.Run("don't retain group config", func(t *testing.T) {
+			oldVersion := installation1.Version
+			oldImage := installation1.Image
+			oldEnv := installation1.MattermostEnv
+
+			err = client.LeaveGroup(installation1.ID, &model.LeaveGroupRequest{RetainConfig: false})
+			require.NoError(t, err)
+
+			installation1, err = client.GetInstallation(installation1.ID, nil)
+			require.NoError(t, err)
+			require.Nil(t, installation1.GroupID)
+			require.Nil(t, installation1.GroupSequence)
+			require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
+			require.Equal(t, oldVersion, installation1.Version)
+			require.Equal(t, oldImage, installation1.Image)
+			require.Equal(t, oldEnv, installation1.MattermostEnv)
+		})
+
+		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.NoError(t, err)
 
-		installation1, err = client.GetInstallation(installation1.ID, nil)
-		require.NoError(t, err)
-		require.Nil(t, installation1.GroupID)
+		t.Run("retain group config", func(t *testing.T) {
+			err = client.LeaveGroup(installation1.ID, &model.LeaveGroupRequest{RetainConfig: true})
+			require.NoError(t, err)
+
+			installation1, err = client.GetInstallation(installation1.ID, nil)
+			require.NoError(t, err)
+			require.Nil(t, installation1.GroupID)
+			require.Nil(t, installation1.GroupSequence)
+			require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
+			require.Equal(t, group1.Version, installation1.Version)
+			require.Equal(t, group1.Image, installation1.Image)
+			require.Equal(t, group1.MattermostEnv, installation1.MattermostEnv)
+		})
 	})
 
 	t.Run("while in no group", func(t *testing.T) {
-		err = client.LeaveGroup(installation1.ID)
+		err = client.LeaveGroup(installation1.ID, &model.LeaveGroupRequest{RetainConfig: true})
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)

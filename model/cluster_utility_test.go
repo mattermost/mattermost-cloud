@@ -88,14 +88,18 @@ func TestSetDesired(t *testing.T) {
 func TestGetActualVersion(t *testing.T) {
 	um := &UtilityMetadata{
 		DesiredVersions: utilityVersions{
-			Prometheus: "",
-			Nginx:      "10.3",
-			Fluentbit:  "1337",
+			Prometheus:  "",
+			Nginx:       "10.3",
+			Fluentbit:   "1337",
+			PublicNginx: "1234",
+			CertManager: "56.3",
 		},
 		ActualVersions: utilityVersions{
-			Prometheus: "prometheus-10.3",
-			Nginx:      "nginx-10.2",
-			Fluentbit:  "fluent-bit-0.9",
+			Prometheus:  "prometheus-10.3",
+			Nginx:       "nginx-10.2",
+			Fluentbit:   "fluent-bit-0.9",
+			PublicNginx: "nginx-10.2",
+			CertManager: "cert-manager-11.2",
 		},
 	}
 
@@ -126,6 +130,14 @@ func TestGetActualVersion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "fluent-bit-0.9", version)
 
+	version, err = c.ActualUtilityVersion(PublicNginxCanonicalName)
+	assert.NoError(t, err)
+	assert.Equal(t, "nginx-10.2", version)
+
+	version, err = c.ActualUtilityVersion(CertManagerCanonicalName)
+	assert.NoError(t, err)
+	assert.Equal(t, "cert-manager-11.2", version)
+
 	version, err = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.NoError(t, err)
 	assert.Equal(t, "", version)
@@ -134,14 +146,18 @@ func TestGetActualVersion(t *testing.T) {
 func TestGetDesiredVersion(t *testing.T) {
 	um := &UtilityMetadata{
 		DesiredVersions: utilityVersions{
-			Prometheus: "",
-			Nginx:      "10.3",
-			Fluentbit:  "1337",
+			Prometheus:  "",
+			Nginx:       "10.3",
+			Fluentbit:   "1337",
+			PublicNginx: "1234",
+			CertManager: "56.3",
 		},
 		ActualVersions: utilityVersions{
-			Prometheus: "prometheus-10.3",
-			Nginx:      "nginx-10.2",
-			Fluentbit:  "fluent-bit-0.9",
+			Prometheus:  "prometheus-10.3",
+			Nginx:       "nginx-10.2",
+			Fluentbit:   "fluent-bit-0.9",
+			PublicNginx: "nginx-10.2",
+			CertManager: "cert-manager-11.2",
 		},
 	}
 
@@ -171,6 +187,14 @@ func TestGetDesiredVersion(t *testing.T) {
 	version, err = c.DesiredUtilityVersion(FluentbitCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "1337", version)
+
+	version, err = c.DesiredUtilityVersion(PublicNginxCanonicalName)
+	assert.NoError(t, err)
+	assert.Equal(t, "1234", version)
+
+	version, err = c.DesiredUtilityVersion(CertManagerCanonicalName)
+	assert.NoError(t, err)
+	assert.Equal(t, "56.3", version)
 
 	version, err = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.NoError(t, err)

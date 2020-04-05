@@ -42,6 +42,7 @@ func init() {
 	groupJoinCmd.MarkFlagRequired("installation")
 
 	groupLeaveCmd.Flags().String("installation", "", "The id of the installation to leave its currently configured group.")
+	groupLeaveCmd.Flags().Bool("retain-config", true, "Whether to retain the group configuration values or not.")
 	groupLeaveCmd.MarkFlagRequired("installation")
 
 	groupCmd.AddCommand(groupCreateCmd)
@@ -261,11 +262,13 @@ var groupLeaveCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
+		retainConfig, _ := command.Flags().GetBool("retain-config")
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
+		request := &model.LeaveGroupRequest{RetainConfig: retainConfig}
 
-		err := client.LeaveGroup(installationID)
+		err := client.LeaveGroup(installationID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to leave group")
 		}
