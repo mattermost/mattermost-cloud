@@ -124,6 +124,8 @@ func (s *ClusterInstallationMigrationSupervisor) transitionClusterInstallationMi
 	case model.CIMigrationSetupDatabaseComplete:
 		return s.createClusterInstallation(migration, logger)
 
+	// UPDATE ClusterInstallationMigration SET State = 'restore-setup-complete' WHERE ID = 'qwefar3mjif6trk5natjwtpmic';
+
 	// case model.CIMigrationSnapshotCreationIP:
 	// 	return s.createClusterInstallation(migration, logger)
 	// case model.CIMigrationClusterInstallationCreationIP:

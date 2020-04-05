@@ -8,17 +8,16 @@ const (
 
 	// CIMigrationCreationRequested ...
 	CIMigrationCreationRequested = "creation-requested"
-	// CIMigrationCreationComplete ...
-	CIMigrationCreationComplete = "creation-complete"
 	// CIMigrationCreationFailed ...
 	CIMigrationCreationFailed = "creation-failed"
+	// CIMigrationCreationComplete ...
+	CIMigrationCreationComplete = "creation-complete"
 	// CIMigrationSnapshotCreationComplete indicates that the snapshot creation has started.
 	CIMigrationSnapshotCreationComplete = "snapshot-creation-complete"
 	// CIMigrationRestoreDatabaseComplete indicates that a database is being restored.
 	CIMigrationRestoreDatabaseComplete = "restore-database-complete"
 	// CIMigrationSetupDatabaseComplete indicates that a database has been configured.
 	CIMigrationSetupDatabaseComplete = "restore-setup-complete"
-
 	// CIMigrationClusterInstallationCreationComplete indicates that a new cluster installation creation has started.
 	CIMigrationClusterInstallationCreationComplete = "cluster-installation-creation-complete"
 
@@ -32,11 +31,12 @@ const (
 var AllCIMigrations = []string{
 	CIMigrationStable,
 	CIMigrationCreationRequested,
-	CIMigrationCreationComplete,
 	CIMigrationCreationFailed,
+	CIMigrationCreationComplete,
 	CIMigrationSnapshotCreationComplete,
 	CIMigrationRestoreDatabaseComplete,
 	CIMigrationSetupDatabaseComplete,
+	CIMigrationClusterInstallationCreationComplete,
 }
 
 // AllCIMigrationsPendingWork is a list of all InstallationMigration states that
@@ -47,8 +47,10 @@ var AllCIMigrations = []string{
 var AllCIMigrationsPendingWork = []string{
 	CIMigrationCreationRequested,
 	CIMigrationCreationComplete,
+	CIMigrationSnapshotCreationComplete,
 	CIMigrationRestoreDatabaseComplete,
 	CIMigrationSetupDatabaseComplete,
+	CIMigrationClusterInstallationCreationComplete,
 }
 
 // AllCMIRequestStates is a list of all states that an InstallationMigration can
