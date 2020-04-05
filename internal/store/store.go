@@ -75,7 +75,7 @@ func New(dsn string, logger logrus.FieldLogger) (*SQLStore, error) {
 		// Leave the default mapper as strings.ToLower.
 
 	default:
-		return nil, errors.Errorf("unsupported dsn scheme %s", url.Scheme)
+		return nil, errors.Errorf("unsupported dns scheme %s", url.Scheme)
 	}
 
 	return &SQLStore{

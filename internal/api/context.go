@@ -44,6 +44,12 @@ type Store interface {
 	GetWebhook(webhookID string) (*model.Webhook, error)
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 	DeleteWebhook(webhookID string) error
+
+	CreateClusterInstallationMigration(migration *model.ClusterInstallationMigration) error
+	GetClusterInstallationMigration(migrationID string) (*model.ClusterInstallationMigration, error)
+	GetClusterInstallationMigrations(filter *model.ClusterInstallationMigrationFilter) ([]*model.ClusterInstallationMigration, error)
+	LockClusterInstallationMigration(migrationID, lockerID string) (bool, error)
+	UnlockClusterInstallationMigration(migrationID, lockerID string, force bool) (bool, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.

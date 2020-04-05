@@ -698,3 +698,20 @@ func (c *Client) DeleteWebhook(webhookID string) error {
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// CreateClusterInstallationMigration requests the creation of a migration from the configured provisioning server.
+func (c *Client) CreateClusterInstallationMigration(request *CreateClusterInstallationMigrationRequest) (*ClusterInstallationMigration, error) {
+	resp, err := c.doPost(c.buildURL("/api/migrations"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return ClusterInstallationMigrationFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

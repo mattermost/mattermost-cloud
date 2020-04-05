@@ -120,6 +120,17 @@ func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Datab
 	return model.NewMysqlOperatorDatabase()
 }
 
+// GetDatabaseMigration returns a implementation of the DatabaseMigration interface that matches the installation.
+func (r *ResourceUtil) GetDatabaseMigration(installation *model.Installation, cluster *model.Cluster) model.CIMigrationDatabase {
+	switch installation.Database {
+	case model.InstallationDatabaseMysqlOperator:
+	case model.InstallationDatabaseAwsRDS:
+		return aws.NewRDSDatabaseMigration(installation.ID, cluster.ID, r.awsClient)
+	}
+
+	return &model.NotSupportedDatabaseMigration{}
+}
+
 // Retry is retrying a function for a maximum number of attempts and time
 func Retry(attempts int, sleep time.Duration, f func() error) error {
 	if err := f(); err != nil {

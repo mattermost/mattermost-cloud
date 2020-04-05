@@ -39,11 +39,12 @@ func init() {
 	serverCmd.PersistentFlags().Bool("group-supervisor", false, "Whether this server will run an installation group supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
+	serverCmd.PersistentFlags().Bool("cluster-installation-migration-supervisor", true, "Whether this server will run a cluster installation migration supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
-	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
+	serverCmd.PersistentFlags().Bool("keep-database-data", false, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
@@ -92,6 +93,7 @@ var serverCmd = &cobra.Command{
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
 		groupSupervisor, _ := command.Flags().GetBool("group-supervisor")
 		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
+		clusterInstallationMigrationSupervisor, _ := command.Flags().GetBool("cluster-installation-migration-supervisor")
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
 		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
@@ -152,17 +154,38 @@ var serverCmd = &cobra.Command{
 		)
 
 		var multiDoer supervisor.MultiDoer
-		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
-		}
 		if groupSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, instanceID, logger))
 		}
-		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, resourceUtil, logger))
+
+		var clusterSupervisorInstance *supervisor.ClusterSupervisor
+		var installationSupervisorInstance *supervisor.InstallationSupervisor
+		var clusterInstallSupervisorInstance *supervisor.ClusterInstallationSupervisor
+
+		if clusterSupervisor || clusterInstallationMigrationSupervisor {
+			clusterSupervisorInstance = supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger)
+			multiDoer = append(multiDoer, clusterSupervisorInstance)
 		}
-		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
+		if installationSupervisor || clusterInstallationMigrationSupervisor {
+			installationSupervisorInstance = supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, resourceUtil, logger)
+			multiDoer = append(multiDoer, installationSupervisorInstance)
+		}
+		if clusterInstallationSupervisor || clusterInstallationMigrationSupervisor {
+			clusterInstallSupervisorInstance = supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger)
+			multiDoer = append(multiDoer, clusterInstallSupervisorInstance)
+		}
+
+		if clusterInstallationMigrationSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationMigrationSupervisor(&supervisor.CIMSupervisorConfig{
+				Store:                         sqlStore,
+				ResourceUtil:                  resourceUtil,
+				ClusterSupervisorInstance:     clusterSupervisorInstance,
+				InstallationSupervisor:        installationSupervisorInstance,
+				ClusterInstallationSupervisor: clusterInstallSupervisorInstance,
+				AWSClient:                     awsClient,
+				InstanceID:                    instanceID,
+				Logger:                        logger,
+			}))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a

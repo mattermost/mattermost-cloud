@@ -27,6 +27,7 @@ func init() {
 	rootCmd.AddCommand(schemaCmd)
 	rootCmd.AddCommand(webhookCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(migrationCmd)
 }
 
 func main() {

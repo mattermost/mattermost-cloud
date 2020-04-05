@@ -9,6 +9,7 @@ func Register(rootRouter *mux.Router, context *Context) {
 	initCluster(apiRouter, context)
 	initInstallation(apiRouter, context)
 	initClusterInstallation(apiRouter, context)
+	initClusterInstallationMigration(apiRouter, context)
 	initGroup(apiRouter, context)
 	initWebhook(apiRouter, context)
 }

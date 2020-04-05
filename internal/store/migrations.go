@@ -895,4 +895,23 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.16.0"), semver.MustParse("0.16.1"), func(e execer) error {
+		_, err := e.Exec(`
+			CREATE TABLE ClusterInstallationMigration (
+				ID TEXT PRIMARY KEY,
+				ClusterID TEXT NOT NULL,
+				ClusterInstallationID TEXT NOT NULL,
+				State TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

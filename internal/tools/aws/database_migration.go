@@ -312,6 +312,12 @@ func (d *RDSDatabaseMigration) Replicate(logger log.FieldLogger) (string, error)
 	return "", errors.New("not implemented")
 }
 
+// Status gives the state of the master RDS database replication. This method must return an
+// resplication status or an error.
+func (d *RDSDatabaseMigration) Status(logger log.FieldLogger) (string, error) {
+	return "", errors.New("not implemented")
+}
+
 func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string) (*ec2.SecurityGroup, error) {
 	output, err := d.awsClient.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceID),
