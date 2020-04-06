@@ -64,7 +64,7 @@ func RDSMigrationClusterID(installationID string) string {
 
 // RDSMigrationMasterInstanceID formats the id used for migrating RDS database instances.
 func RDSMigrationMasterInstanceID(installationID string) string {
-	return fmt.Sprintf("%s-migrated-master", CloudID(installationID))
+	return fmt.Sprintf("%s-master", RDSMigrationClusterID(installationID))
 }
 
 // IsErrorCode asserts that an AWS error has a certain code.

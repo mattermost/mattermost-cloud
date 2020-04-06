@@ -124,8 +124,6 @@ func (s *ClusterInstallationMigrationSupervisor) transitionClusterInstallationMi
 	case model.CIMigrationSetupDatabaseComplete:
 		return s.createClusterInstallation(migration, logger)
 
-	// UPDATE ClusterInstallationMigration SET State = 'restore-setup-complete' WHERE ID = 'qwefar3mjif6trk5natjwtpmic';
-
 	// case model.CIMigrationSnapshotCreationIP:
 	// 	return s.createClusterInstallation(migration, logger)
 	// case model.CIMigrationClusterInstallationCreationIP:
@@ -389,19 +387,43 @@ func (s *ClusterInstallationMigrationSupervisor) createClusterInstallation(migra
 }
 
 // func (s *ClusterInstallationMigrationSupervisor) waitForDatabase(migration *model.ClusterInstallationMigration, logger log.FieldLogger) string {
+// 	cluster, err := s.clusterSupervisor.store.GetCluster(migration.ClusterID)
+// 	if err != nil {
+// 		logger.WithError(err).Errorf("Failed to get cluster ID %s", migration.ClusterID)
+// 		return model.CIMigrationCreationFailed
+// 	}
+// 	if cluster == nil {
+// 		logger.Errorf("Cannot find any cluster with ID %s", migration.ClusterID)
+// 		return model.CIMigrationCreationFailed
+// 	}
+// 	if cluster.State != model.ClusterStateStable {
+// 		logger.Errorf("Cluster %s is not stable (currently %s)", cluster.ID, cluster.State)
+// 		return model.CIMigrationCreationFailed
+// 	}
+
 // 	clusterInstallation, err := s.clusterInstallationSupervisor.store.GetClusterInstallation(migration.ClusterInstallationID)
 // 	if err != nil {
+// 		logger.WithError(err).Errorf("Failed to get cluster installation ID %s", migration.ClusterInstallationID)
+// 		return model.CIMigrationCreationFailed
+// 	}
+// 	if clusterInstallation == nil {
+// 		logger.Errorf("Cannot find any cluster installation with ID %s", migration.ClusterInstallationID)
 // 		return model.CIMigrationCreationFailed
 // 	}
 
-// 	installation, err := s.installationSupervisor.store.GetInstallation(clusterInstallation.InstallationID)
+// 	installation, err := s.installationSupervisor.store.GetInstallation(clusterInstallation.InstallationID, false, false)
 // 	if err != nil {
+// 		logger.WithError(err).Errorf("Failed to get installation ID %s", clusterInstallation.InstallationID)
+// 		return model.CIMigrationCreationFailed
+// 	}
+// 	if installation.Database != model.InstallationDatabaseAwsRDS {
+// 		logger.Errorf("Database type %s is not supported", installation.Database)
 // 		return model.CIMigrationCreationFailed
 // 	}
 
-// 	databaseStatus, err := utils.GetDatabaseMigration(s.awsClient, installation, clusterInstallation).Status(logger)
+// 	databaseStatus, err := s.resourceUtil.GetDatabaseMigration(installation, cluster).Status(logger)
 // 	if err != nil {
-// 		logger.Errorf("failed to restore database: %s", err.Error())
+// 		logger.Errorf("Failed to get cluster installation ID %s database status", migration.ClusterInstallationID)
 // 		return model.CIMigrationCreationFailed
 // 	}
 
