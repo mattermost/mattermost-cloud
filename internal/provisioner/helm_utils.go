@@ -52,14 +52,7 @@ func installHelm(kops *kops.Cmd, repos map[string]string, logger log.FieldLogger
 		return errors.Wrap(err, "helm didn't start as expected, or we couldn't detect it")
 	}
 
-	logger.Info("Updating all Helm repos.")
-	for repoName, repoURL := range repos {
-		err = helmRepoAdd(repoName, repoURL, logger)
-	}
-	if err != nil {
-		return errors.Wrap(err, "unable to add helm repos")
-	}
-	return helmRepoUpdate(logger)
+	return nil
 }
 
 func (d *helmDeployment) Update() error {
@@ -119,7 +112,7 @@ func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 		return errors.Wrapf(err, "unable to add repo %s", repoName)
 	}
 
-	return nil
+	return helmRepoUpdate(logger)
 }
 
 // helmRepoUpdate updates the helm repos to get latest available charts
