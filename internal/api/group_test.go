@@ -230,14 +230,6 @@ func TestCreateGroup(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
-	t.Run("missing version", func(t *testing.T) {
-		_, err := client.CreateGroup(&model.CreateGroupRequest{
-			Name:        "name",
-			Description: "description",
-		})
-		require.EqualError(t, err, "failed with status code 400")
-	})
-
 	mattermostEnvFooBar := model.EnvVarMap{"foo": model.EnvVar{Value: "bar"}}
 	t.Run("valid", func(t *testing.T) {
 		group, err := client.CreateGroup(&model.CreateGroupRequest{
@@ -245,6 +237,7 @@ func TestCreateGroup(t *testing.T) {
 			Description:   "description",
 			Version:       "version",
 			Image:         "sample/image",
+			MaxRolling:    2,
 			MattermostEnv: mattermostEnvFooBar,
 		})
 		require.NoError(t, err)
@@ -252,9 +245,10 @@ func TestCreateGroup(t *testing.T) {
 		require.Equal(t, "description", group.Description)
 		require.Equal(t, "version", group.Version)
 		require.Equal(t, "sample/image", group.Image)
+		require.Equal(t, int64(2), group.MaxRolling)
+		require.EqualValues(t, group.MattermostEnv, mattermostEnvFooBar)
 		require.NotEqual(t, 0, group.CreateAt)
 		require.EqualValues(t, 0, group.DeleteAt)
-		require.EqualValues(t, group.MattermostEnv, mattermostEnvFooBar)
 	})
 }
 

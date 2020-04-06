@@ -94,14 +94,14 @@ func (i *Installation) MergeWithGroup(group *Group, includeOverrides bool) {
 		i.MattermostEnv = make(EnvVarMap)
 	}
 
-	if i.Version != group.Version {
+	if len(group.Version) != 0 && i.Version != group.Version {
 		if includeOverrides {
 			i.GroupOverrides["Installation Version"] = i.Version
 			i.GroupOverrides["Group Version"] = group.Version
 		}
 		i.Version = group.Version
 	}
-	if i.Image != group.Image {
+	if len(group.Image) != 0 && i.Image != group.Image {
 		if includeOverrides {
 			i.GroupOverrides["Installation Image"] = i.Image
 			i.GroupOverrides["Group Image"] = group.Image
