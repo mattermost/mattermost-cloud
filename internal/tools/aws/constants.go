@@ -108,9 +108,6 @@ const (
 	// DefaultAWSClientRetries supplies how many time the AWS client will retry a failed call.
 	DefaultAWSClientRetries = 3
 
-	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an encryption key.
-	KMSMaxTimeEncryptionKeyDeletion = 30
-
 	// KMSMinTimeEncryptionKeyDeletion is the minimum number of days that AWS will take to delete an encryption key.
 	KMSMinTimeEncryptionKeyDeletion = 7
 )
