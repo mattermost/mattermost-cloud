@@ -7,7 +7,7 @@ import (
 )
 
 // kmsCreateSymmetricKey creates a symmetric encryption key with alias.
-func (a *Client) kmsCreateSymmetricKey(awsID, aliasName, keyDescription string) (*kms.KeyMetadata, error) {
+func (a *Client) kmsCreateSymmetricKeyWithAlias(awsID, aliasName, keyDescription string) (*kms.KeyMetadata, error) {
 	createKeyOut, err := a.Service().kms.CreateKey(&kms.CreateKeyInput{
 		Description: aws.String(keyDescription),
 	})
@@ -22,8 +22,32 @@ func (a *Client) kmsCreateSymmetricKey(awsID, aliasName, keyDescription string) 
 		TargetKeyId: createKeyOut.KeyMetadata.KeyId,
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unabled to create an alias name for encryption key %s", *createKeyOut.KeyMetadata.Arn)
+		return createKeyOut.KeyMetadata, errors.Wrapf(err, "unabled to create an alias name for encryption key %s", *createKeyOut.KeyMetadata.Arn)
 	}
 
 	return createKeyOut.KeyMetadata, nil
+}
+
+// kmsDisableSymmetricKey disable a symmetric encryption key with alias.
+func (a *Client) kmsDisableSymmetricKey(keyID string) error {
+	_, err := a.Service().kms.DisableKey(&kms.DisableKeyInput{
+		KeyId: aws.String(keyID),
+	})
+	if err != nil {
+		return errors.Wrapf(err, "unabled to disable encryption key %s", keyID)
+	}
+
+	return nil
+}
+
+// kmsGetSymmetricKey get a symmetric encryption key with alias.
+func (a *Client) kmsGetSymmetricKey(aliasName string) (*kms.KeyMetadata, error) {
+	describeKeyOut, err := a.Service().kms.DescribeKey(&kms.DescribeKeyInput{
+		KeyId: aws.String(aliasName),
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "unabled to describe encryption key for alias name %s", aliasName)
+	}
+
+	return describeKeyOut.KeyMetadata, nil
 }

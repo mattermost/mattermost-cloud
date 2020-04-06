@@ -184,9 +184,16 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return err
 	}
 
-	encryptionKey, err := d.client.kmsCreateSymmetricKey(awsID, KMSAliasNameRDS(awsID), "Key used for encrypting RDS database")
+	encryptionKey, err := d.client.kmsCreateSymmetricKeyWithAlias(awsID, KMSAliasNameRDS(awsID), "Key used for encrypting RDS database")
 	if err != nil && !IsErrorCode(err, kms.ErrCodeAlreadyExistsException) {
-		return err
+		// Attempt to disable the key if it was created.
+		if encryptionKey != nil {
+			disableKeyErr := d.client.kmsDisableSymmetricKey(*encryptionKey.KeyId)
+			if disableKeyErr != nil {
+				logger.WithError(disableKeyErr).Warnf("Failed to disable encryption key %s", *encryptionKey.KeyId)
+			}
+		}
+		return errors.Wrapf(err, "unable provision RDS database for installation %s", installationID)
 	}
 
 	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *encryptionKey.KeyId, logger)
