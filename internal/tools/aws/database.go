@@ -184,17 +184,19 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return err
 	}
 
-	encryptionKey, err := d.client.kmsCreateSymmetricKeyWithAlias(awsID, KMSAliasNameRDS(awsID), "Key used for encrypting RDS database")
+	encryptionKey, err := d.client.kmsCreateSymmetricKey(awsID, "Key used for encrypting RDS database")
+	if err != nil {
+		return errors.Wrapf(err, "unable to create RDS encryption key for installation %s", installationID)
+	}
+
+	err = d.client.kmsCreateAlias(*encryptionKey.KeyId, KMSAliasNameRDS(awsID))
 	if err != nil && !IsErrorCode(err, kms.ErrCodeAlreadyExistsException) {
-		// If key is created but alias did not, this key should be scheduled for deletion.
-		if encryptionKey != nil {
-			deletionKeyErr := d.client.kmsScheduleKeyDeletion(*encryptionKey.KeyId, 7)
-			if deletionKeyErr != nil {
-				logger.WithError(deletionKeyErr).Warnf("Failed to schedule encryption key %s for deletition", *encryptionKey.KeyId)
-			}
+		deletionKeyErr := d.client.kmsScheduleKeyDeletion(*encryptionKey.KeyId, KMSMinTimeEncryptionKeyDeletion)
+		if deletionKeyErr != nil {
+			logger.WithError(deletionKeyErr).Errorf("Failed to schedule encryption key %s for deletition", *encryptionKey.KeyId)
 		}
 
-		return errors.Wrapf(err, "unable provision RDS database for installation %s", installationID)
+		return errors.Wrapf(err, "unable to create a RDS encryption key alias name for installation %s", installationID)
 	}
 
 	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *encryptionKey.KeyId, logger)

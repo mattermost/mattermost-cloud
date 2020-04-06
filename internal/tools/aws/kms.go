@@ -7,7 +7,7 @@ import (
 )
 
 // kmsCreateSymmetricKey creates a symmetric encryption key with alias.
-func (a *Client) kmsCreateSymmetricKeyWithAlias(awsID, aliasName, keyDescription string) (*kms.KeyMetadata, error) {
+func (a *Client) kmsCreateSymmetricKey(awsID, keyDescription string) (*kms.KeyMetadata, error) {
 	createKeyOut, err := a.Service().kms.CreateKey(&kms.CreateKeyInput{
 		Description: aws.String(keyDescription),
 	})
@@ -15,17 +15,21 @@ func (a *Client) kmsCreateSymmetricKeyWithAlias(awsID, aliasName, keyDescription
 		return nil, errors.Wrapf(err, "unabled to create encryption key for %s", awsID)
 	}
 
-	// Allows retrieving the key ID in one call and without special permissions that would be necessary if
-	// we were using tags.
-	_, err = a.Service().kms.CreateAlias(&kms.CreateAliasInput{
+	return createKeyOut.KeyMetadata, nil
+}
+
+// kmsCreateAlias creates an alias for a symmetric encryption key. Alias allows retrieving the key ID in one call and
+// without special permissions that would be necessary if looking up it by tags for example.
+func (a *Client) kmsCreateAlias(keyID, aliasName string) error {
+	_, err := a.Service().kms.CreateAlias(&kms.CreateAliasInput{
 		AliasName:   aws.String(aliasName),
-		TargetKeyId: createKeyOut.KeyMetadata.KeyId,
+		TargetKeyId: aws.String(keyID),
 	})
 	if err != nil {
-		return createKeyOut.KeyMetadata, errors.Wrapf(err, "unabled to create an alias name for encryption key %s", *createKeyOut.KeyMetadata.Arn)
+		return errors.Wrapf(err, "unabled to create an alias name for encryption key %s", keyID)
 	}
 
-	return createKeyOut.KeyMetadata, nil
+	return nil
 }
 
 // kmsDisableSymmetricKey disable a symmetric encryption key with alias.
@@ -52,22 +56,16 @@ func (a *Client) kmsGetSymmetricKey(aliasName string) (*kms.KeyMetadata, error) 
 	return describeKeyOut.KeyMetadata, nil
 }
 
-// kmsScheduleKeyDeletion sets a supplied key for deletion in n days. If days is -1, this
-// method will set deletion to a contant default value. See tools/aws/contants.go
+// kmsScheduleKeyDeletion sets a supplied key for deletion in n days. The service will return an error
+// if scheduled time is are less than 7 or more than 30 days.
+// https://docs.aws.amazon.com/kms/latest/APIReference/API_ScheduleKeyDeletion.html#API_ScheduleKeyDeletion_RequestSyntax
 func (a *Client) kmsScheduleKeyDeletion(keyID string, days int64) error {
-	input := kms.ScheduleKeyDeletionInput{
-		KeyId: aws.String(keyID),
-	}
-
-	if days == -1 {
-		input.PendingWindowInDays = aws.Int64(DefaultScheduledEncryptionKeyDeletion)
-	} else {
-		input.PendingWindowInDays = aws.Int64(days)
-	}
-
-	_, err := a.Service().kms.ScheduleKeyDeletion(&input)
+	_, err := a.Service().kms.ScheduleKeyDeletion(&kms.ScheduleKeyDeletionInput{
+		KeyId:               aws.String(keyID),
+		PendingWindowInDays: aws.Int64(days),
+	})
 	if err != nil {
-		return errors.Wrapf(err, "unabled to describe encryption key ID %s", keyID)
+		return errors.Wrapf(err, "unable to schedule deletion of encryption key ID %s", keyID)
 	}
 
 	return nil
