@@ -186,13 +186,14 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 	encryptionKey, err := d.client.kmsCreateSymmetricKeyWithAlias(awsID, KMSAliasNameRDS(awsID), "Key used for encrypting RDS database")
 	if err != nil && !IsErrorCode(err, kms.ErrCodeAlreadyExistsException) {
-		// Attempt to disable the key if it was created.
+		// If key is created but alias did not, this key should be scheduled for deletion.
 		if encryptionKey != nil {
-			disableKeyErr := d.client.kmsDisableSymmetricKey(*encryptionKey.KeyId)
-			if disableKeyErr != nil {
-				logger.WithError(disableKeyErr).Warnf("Failed to disable encryption key %s", *encryptionKey.KeyId)
+			deletionKeyErr := d.client.kmsScheduleKeyDeletion(*encryptionKey.KeyId, 7)
+			if deletionKeyErr != nil {
+				logger.WithError(deletionKeyErr).Warnf("Failed to schedule encryption key %s for deletition", *encryptionKey.KeyId)
 			}
 		}
+
 		return errors.Wrapf(err, "unable provision RDS database for installation %s", installationID)
 	}
 

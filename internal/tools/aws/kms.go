@@ -51,3 +51,24 @@ func (a *Client) kmsGetSymmetricKey(aliasName string) (*kms.KeyMetadata, error) 
 
 	return describeKeyOut.KeyMetadata, nil
 }
+
+// kmsScheduleKeyDeletion sets a supplied key for deletion in n days. If days is -1, this
+// method will set deletion to a contant default value. See tools/aws/contants.go
+func (a *Client) kmsScheduleKeyDeletion(keyID string, days int64) error {
+	input := kms.ScheduleKeyDeletionInput{
+		KeyId: aws.String(keyID),
+	}
+
+	if days == -1 {
+		input.PendingWindowInDays = aws.Int64(DefaultScheduledEncryptionKeyDeletion)
+	} else {
+		input.PendingWindowInDays = aws.Int64(days)
+	}
+
+	_, err := a.Service().kms.ScheduleKeyDeletion(&input)
+	if err != nil {
+		return errors.Wrapf(err, "unabled to describe encryption key ID %s", keyID)
+	}
+
+	return nil
+}
