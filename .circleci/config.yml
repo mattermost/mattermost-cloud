@@ -81,7 +81,6 @@ jobs:
         docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
         docker push mattermost/mattermost-cloud:$TAG
 
-
   push-docker:
     executor:
       name: default
@@ -103,6 +102,25 @@ jobs:
         docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
         docker push mattermost/mattermost-cloud:$TAG
 
+  scan-image:
+    docker:
+    - image: registry.gitlab.com/gitlab-org/security-products/analyzers/klar:latest
+      environment:
+        GIT_STRATEGY: none
+        CI_APPLICATION_REPOSITORY: mattermost/mattermost-cloud
+        CLAIR_DB_CONNECTION_STRING: "postgresql://postgres:password@localhost:5432/postgres?sslmode=disable&statement_timeout=60000"
+        DOCKERFILE_PATH: "build/Dockerfile"
+    - image: arminc/clair-db:latest
+    steps:
+    - checkout
+    - run: |
+        export CI_APPLICATION_TAG="${CIRCLE_SHA1:0:7}"
+        export DOCKER_USER=$DOCKER_USERNAME
+        /analyzer run
+    - store_artifacts:
+        path: gl-container-scanning-report.json
+        destination: security-scan
+
 workflows:
   version: 2
   ci-build:
@@ -116,6 +134,10 @@ workflows:
         - check-style
         - test-sqlite
         - test-postgres
+    - scan-image:
+        context: matterbuild-docker
+        requires:
+        - push-docker-pr
   master-build:
     jobs:
     - check-style:
