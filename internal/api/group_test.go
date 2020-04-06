@@ -297,12 +297,13 @@ func TestUpdateGroup(t *testing.T) {
 	})
 
 	t.Run("unknown group", func(t *testing.T) {
-		err := client.UpdateGroup(&model.PatchGroupRequest{ID: model.NewID()})
+		group, err := client.UpdateGroup(&model.PatchGroupRequest{ID: model.NewID()})
 		require.EqualError(t, err, "failed with status code 404")
+		require.Nil(t, group)
 	})
 
 	t.Run("partial update", func(t *testing.T) {
-		err = client.UpdateGroup(&model.PatchGroupRequest{
+		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:      group1.ID,
 			Version: sToP("version2"),
 		})
@@ -314,11 +315,12 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, "description", group1.Description)
 		require.Equal(t, "version2", group1.Version)
 		require.EqualValues(t, group1.MattermostEnv, mattermostEnvFooBar)
+		require.Equal(t, updateResponseGroup, group1)
 	})
 
 	mattermostEnvBarBaz := model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}}
 	t.Run("full update", func(t *testing.T) {
-		err = client.UpdateGroup(&model.PatchGroupRequest{
+		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            group1.ID,
 			Name:          sToP("name2"),
 			Description:   sToP("description2"),
@@ -334,6 +336,7 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, "version2", group1.Version)
 		require.NotEqual(t, group1.MattermostEnv, mattermostEnvFooBar)
 		require.Equal(t, group1.MattermostEnv, mattermostEnvBarBaz)
+		require.Equal(t, updateResponseGroup, group1)
 	})
 }
 

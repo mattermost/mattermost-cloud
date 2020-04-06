@@ -121,14 +121,14 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 // Validate validates the values of a group patch request
 func (p *PatchGroupRequest) Validate() error {
 	if p.Name != nil && len(*p.Name) == 0 {
-		return errors.New("must specify name")
+		return errors.New("provided name update value was blank")
 	}
 	if p.MaxRolling != nil && *p.MaxRolling < 1 {
 		return errors.New("max rolling must be 1 or greater")
 	}
 	err := p.MattermostEnv.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "bad environment variable map in patch group request")
+		return errors.Wrap(err, "invalid env var settings")
 	}
 
 	return nil

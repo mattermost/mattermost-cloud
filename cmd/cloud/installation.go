@@ -31,7 +31,6 @@ func init() {
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationUpdateCmd.MarkFlagRequired("installation")
-	installationUpdateCmd.MarkFlagRequired("version")
 
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
 	installationDeleteCmd.MarkFlagRequired("installation")
@@ -105,12 +104,7 @@ var installationCreateCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to create installation")
 		}
 
-		err = printJSON(installation)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return printJSON(installation)
 	},
 }
 
@@ -124,9 +118,6 @@ var installationUpdateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
-		version, _ := command.Flags().GetString("version")
-		image, _ := command.Flags().GetString("image")
-		license, _ := command.Flags().GetString("license")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv)
@@ -134,19 +125,20 @@ var installationUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		updateRequest := &model.UpdateInstallationRequest{
-			Version:       version,
-			Image:         image,
-			License:       license,
-			MattermostEnv: envVarMap,
-		}
-
-		err = client.UpgradeInstallation(installationID, updateRequest)
+		installation, err := client.UpdateInstallation(
+			installationID,
+			&model.PatchInstallationRequest{
+				Version:       getStringFlagPointer(command, "version"),
+				Image:         getStringFlagPointer(command, "image"),
+				License:       getStringFlagPointer(command, "license"),
+				MattermostEnv: envVarMap,
+			},
+		)
 		if err != nil {
-			return errors.Wrap(err, "failed to change installation version")
+			return errors.Wrap(err, "failed to update installation")
 		}
 
-		return nil
+		return printJSON(installation)
 	},
 }
 
