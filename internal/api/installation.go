@@ -228,7 +228,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	updateInstallationRequest, err := model.NewUpdateInstallationRequestFromReader(r.Body)
+	patchInstallationRequest, err := model.NewPatchInstallationRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -250,35 +250,35 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  newState,
-		OldState:  installation.State,
-		Timestamp: time.Now().UnixNano(),
-	}
-	installation.State = newState
-	installation.Version = updateInstallationRequest.Version
-	installation.License = updateInstallationRequest.License
-	installation.Image = updateInstallationRequest.Image
-	installation.MattermostEnv = updateInstallationRequest.MattermostEnv
+	if patchInstallationRequest.Apply(installation) {
+		installation.State = newState
 
-	err = c.Store.UpdateInstallation(installation)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to mark installation for update")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		err = c.Store.UpdateInstallation(installation)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  newState,
+			OldState:  installation.State,
+			Timestamp: time.Now().UnixNano(),
+		}
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		}
 	}
 
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installation)
 }
 
 // handleJoinGroup responds to PUT /api/installation/{installation}/group/{group}, joining the group.

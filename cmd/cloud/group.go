@@ -93,12 +93,7 @@ var groupCreateCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to create group")
 		}
 
-		err = printJSON(group)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return printJSON(group)
 	},
 }
 
@@ -119,37 +114,20 @@ var groupUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		getStringFlagPointer := func(s string) *string {
-			if command.Flags().Changed(s) {
-				val, _ := command.Flags().GetString(s)
-				return &val
-			}
-
-			return nil
-		}
-		getInt64FlagPointer := func(s string) *int64 {
-			if command.Flags().Changed(s) {
-				val, _ := command.Flags().GetInt64(s)
-				return &val
-			}
-
-			return nil
-		}
-
-		err = client.UpdateGroup(&model.PatchGroupRequest{
+		group, err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            groupID,
-			Name:          getStringFlagPointer("name"),
-			Description:   getStringFlagPointer("description"),
-			Version:       getStringFlagPointer("version"),
-			Image:         getStringFlagPointer("image"),
-			MaxRolling:    getInt64FlagPointer("max-rolling"),
+			Name:          getStringFlagPointer(command, "name"),
+			Description:   getStringFlagPointer(command, "description"),
+			Version:       getStringFlagPointer(command, "version"),
+			Image:         getStringFlagPointer(command, "image"),
+			MaxRolling:    getInt64FlagPointer(command, "max-rolling"),
 			MattermostEnv: envVarMap,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to update group")
 		}
 
-		return nil
+		return printJSON(group)
 	},
 }
 

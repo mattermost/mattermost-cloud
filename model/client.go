@@ -356,20 +356,20 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 	}
 }
 
-// UpgradeInstallation upgrades an installation.
-func (c *Client) UpgradeInstallation(installationID string, request *UpdateInstallationRequest) error {
+// UpdateInstallation updates an installation.
+func (c *Client) UpdateInstallation(installationID string, request *PatchInstallationRequest) (*Installation, error) {
 	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost", installationID), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return nil
+		return InstallationFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -510,19 +510,19 @@ func (c *Client) CreateGroup(request *CreateGroupRequest) (*Group, error) {
 }
 
 // UpdateGroup updates the installation group.
-func (c *Client) UpdateGroup(request *PatchGroupRequest) error {
+func (c *Client) UpdateGroup(request *PatchGroupRequest) (*Group, error) {
 	resp, err := c.doPut(c.buildURL("/api/group/%s", request.ID), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return GroupFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
