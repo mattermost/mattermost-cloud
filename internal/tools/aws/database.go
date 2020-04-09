@@ -73,6 +73,38 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 
 // Snapshot creates a snapshot of the RDS database.
 func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
+	////////////////////////////////////////////////
+	// Prepare master and replica for replication //
+	////////////////////////////////////////////////
+	// masterSecret, masterConn, err := d.getRDSConnStringAndSecret(CloudID(d.masterInstallationID), logger)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.Connect(masterConn)
+	// defer d.sqlClient.Close()
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.SetBinlogRetention(144)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.CreateReplicationUser("replication", masterSecret.MasterPassword)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
 	dbClusterID := CloudID(d.installationID)
 
 	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{

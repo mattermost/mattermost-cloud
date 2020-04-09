@@ -6,8 +6,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
+
+// DefaultAWSRegions returns the default AWS regions used by the provisioner.
+var DefaultAWSRegions []*string
+
+func init() {
+	DefaultAWSRegions = []*string{
+		aws.String("us-east-1a"),
+		aws.String("us-east-1b"),
+		aws.String("us-east-1c"),
+	}
+}
 
 // CloudID returns the standard ID used for AWS resource names. This ID is used
 // to correlate installations to AWS resources.
@@ -76,4 +92,81 @@ func IsErrorCode(err error, code string) bool {
 		}
 	}
 	return false
+}
+
+// DatabaseStatus ..
+type DatabaseStatus struct {
+	TimeBehindMaster     int    `gorm:"column:Time_Behind_Master"`
+	ReadMasterLogPos     int    `gorm:"column:Read_Master_Log_Pos"`
+	RelayLogPos          int    `gorm:"column:Relay_Log_Pos"`
+	RelayLogFile         string `gorm:"column:Relay_Log_File"`
+	SlaveSQLRunningState string `gorm:"column:Slave_SQL_Running_State"`
+	SlaveIORunning       string `gorm:"column:Slave_IO_Running"`
+}
+
+// SQLClient ...
+type SQLClient interface {
+	Connect(connString string) error
+	Status() *DatabaseStatus
+	SetBinlogRetention(hours uint64) error
+	CreateReplicationUser(username, secret string) error
+	Close() error
+}
+
+// MySQLClient ..
+type MySQLClient struct {
+	db *gorm.DB
+}
+
+// Connect fmt.Sprintf("%s:%s@tcp(%s:3306)/?charset=utf8&parseTime=True", d.user, d.pass, d.address)
+func (d *MySQLClient) Connect(connString string) error {
+	db, err := gorm.Open("mysql", connString)
+	if err != nil {
+		return err
+	}
+	d.db = db
+
+	return nil
+}
+
+// Status ...
+func (d *MySQLClient) Status() *DatabaseStatus {
+	status := DatabaseStatus{}
+	d.db.Raw("SHOW SLAVE STATUS").Scan(&status)
+	return &status
+}
+
+// SetBinlogRetention ...
+func (d *MySQLClient) SetBinlogRetention(hours uint64) error {
+	_, err := d.db.DB().Query(fmt.Sprintf("CALL mysql.rds_set_configuration('binlog retention hours', %v)", hours))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateReplicationUser ...
+func (d *MySQLClient) CreateReplicationUser(username, secret string) error {
+	_, err := d.db.DB().Query("FLUSH PRIVILEGES")
+	if err != nil {
+		return err
+	}
+
+	_, err = d.db.DB().Query("CREATE USER '" + username + "'@'%' IDENTIFIED BY '" + secret + "'")
+	if err != nil {
+		return err
+	}
+
+	_, err = d.db.DB().Query("GRANT REPLICATION CLIENT, REPLICATION SLAVE ON *.* TO '" + username + "'@'%'")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Close ...
+func (d *MySQLClient) Close() error {
+	return d.db.Close()
 }

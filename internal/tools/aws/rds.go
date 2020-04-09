@@ -90,23 +90,20 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password stri
 	}
 
 	input := &rds.CreateDBClusterInput{
-		AvailabilityZones: []*string{
-			aws.String("us-east-1a"),
-			aws.String("us-east-1b"),
-			aws.String("us-east-1c"),
-		},
-		BackupRetentionPeriod: aws.Int64(7),
-		DBClusterIdentifier:   aws.String(awsID),
-		DatabaseName:          aws.String("mattermost"),
-		EngineMode:            aws.String("provisioned"),
-		Engine:                aws.String("aurora-mysql"),
-		EngineVersion:         aws.String("5.7"),
-		MasterUserPassword:    aws.String(password),
-		MasterUsername:        aws.String(username),
-		Port:                  aws.Int64(3306),
-		StorageEncrypted:      aws.Bool(false),
-		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
-		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
+		AvailabilityZones:           DefaultAWSRegions,
+		BackupRetentionPeriod:       aws.Int64(7),
+		DBClusterIdentifier:         aws.String(awsID),
+		DatabaseName:                aws.String(DefaultDatabaseName),
+		DBClusterParameterGroupName: aws.String(RDSCustomParamGroupClusterName),
+		EngineMode:                  aws.String(RDSDefaultEngineMode),
+		Engine:                      aws.String(RDSAuroraMySQLEngineName),
+		EngineVersion:               aws.String(RDSAuroraDefaultMySQLVersion),
+		MasterUserPassword:          aws.String(password),
+		MasterUsername:              aws.String(username),
+		Port:                        aws.Int64(DefaultMySQLPort),
+		StorageEncrypted:            aws.Bool(false),
+		DBSubnetGroupName:           aws.String(dbSubnetGroupName),
+		VpcSecurityGroupIds:         aws.StringSlice(dbSecurityGroupIDs),
 	}
 
 	_, err = a.Service().rds.CreateDBCluster(input)
@@ -131,6 +128,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 
 	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
+		DBParameterGroupName: aws.String(RDSCustomParamGroupName),
 		DBInstanceIdentifier: aws.String(instanceName),
 		DBInstanceClass:      aws.String("db.t3.small"),
 		Engine:               aws.String("aurora-mysql"),
@@ -200,7 +198,7 @@ func (a *Client) rdsEnsureRestoreDBClusterFromSnapshot(vpcID, awsID, snapshotID 
 	}
 
 	_, err = a.Service().rds.RestoreDBClusterFromSnapshot(&rds.RestoreDBClusterFromSnapshotInput{
-		AvailabilityZones:           []*string{aws.String("us-east-1a"), aws.String("us-east-1b"), aws.String("us-east-1c")},
+		AvailabilityZones:           DefaultAWSRegions,
 		DBClusterIdentifier:         aws.String(awsID),
 		DBClusterParameterGroupName: aws.String(RDSCustomParamGroupClusterName),
 		DBSubnetGroupName:           aws.String(dbSubnetGroupName),

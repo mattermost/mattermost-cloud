@@ -27,6 +27,7 @@ const (
 type CIMigrationDatabase interface {
 	Replicate(logger log.FieldLogger) (string, error)
 	Restore(logger log.FieldLogger) (string, error)
+	Status(logger log.FieldLogger) (string, error)
 	Setup(logger log.FieldLogger) (string, error)
 	Teardown(logger log.FieldLogger) (string, error)
 }

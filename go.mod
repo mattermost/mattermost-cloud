@@ -9,10 +9,12 @@ require (
 	github.com/emicklei/go-restful v2.11.2+incompatible // indirect
 	github.com/go-openapi/spec v0.19.6 // indirect
 	github.com/go-openapi/swag v0.19.7 // indirect
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.3.1
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/jetstack/cert-manager v0.14.0
+	github.com/jinzhu/gorm v1.9.12
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.3.0

@@ -22,6 +22,7 @@ const (
 
 // RDSDatabaseMigration is a migrated database backed by AWS RDS.
 type RDSDatabaseMigration struct {
+	sqlClient            SQLClient
 	awsClient            *Client
 	masterInstallationID string
 	replicaClusterID     string
@@ -184,6 +185,9 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 		"replica-db-instance": replicaInstanceID,
 	})
 
+	///////////////////////////////////////////////////////////
+	// Prepare master to accept connections from the replica //
+	///////////////////////////////////////////////////////////
 	masterInstanceSG, err := d.describeDBInstanceSecurityGroup(masterInstanceID)
 	if err != nil {
 		err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
@@ -222,9 +226,9 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 						Description: aws.String(fmt.Sprintf("Ingress Traffic from replica RDS instance %s", replicaInstanceID)),
 					},
 				},
-				FromPort:   aws.Int64(3306),
+				FromPort:   aws.Int64(DefaultMySQLPort),
 				IpProtocol: aws.String("tcp"),
-				ToPort:     aws.Int64(3306),
+				ToPort:     aws.Int64(DefaultMySQLPort),
 			},
 		},
 	})
@@ -235,8 +239,59 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 		return "", err
 	}
 
+	// ////////////////////////////////////////////////
+	// // Prepare master and replica for replication //
+	// ////////////////////////////////////////////////
+	// masterSecret, masterConn, err := d.getRDSConnStringAndSecret(CloudID(d.masterInstallationID), logger)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.Connect(masterConn)
+	// defer d.sqlClient.Close()
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.SetBinlogRetention(144)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.CreateReplicationUser("replication", masterSecret.MasterPassword)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
 	logger.Info("Database migration setup is completed")
 	return model.DatabaseMigrationStatusSetupComplete, nil
+}
+
+func (d *RDSDatabaseMigration) getRDSConnStringAndSecret(awsID string, logger log.FieldLogger) (*RDSSecret, string, error) {
+	secret, err := d.awsClient.secretsManagerGetRDSSecret(awsID, logger)
+	if err != nil {
+		return nil, "", err
+	}
+
+	dbClustersOut, err := d.awsClient.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	if len(dbClustersOut.DBClusters) != 1 {
+		return nil, "", fmt.Errorf("expected 1 DB cluster, but got %d", len(dbClustersOut.DBClusters))
+	}
+
+	return secret, fmt.Sprintf(connStringTemplate, secret.MasterUsername, secret.MasterPassword, *dbClustersOut.DBClusters[0].Endpoint), nil
 }
 
 // Teardown removes access from one RDS database to another and rollback any previous database configuration.
@@ -305,9 +360,41 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 
 // Replicate starts the process for replicating an master RDS database. This method must return an
 // resplication status or an error.
+// https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Replication.MySQL.html#AuroraMySQL.Replication.MySQL.EnableReplication
 func (d *RDSDatabaseMigration) Replicate(logger log.FieldLogger) (string, error) {
+	// masterInstanceID := RDSMasterInstanceID(d.masterInstallationID)
+	// replicaInstanceID := RDSMigrationMasterInstanceID(d.masterInstallationID)
+
+	// // 9. Procedure call on slave: CALL mysql.rds_set_external_master(‘MASTER_ADRESS', 3306, ‘REPL_USER', ‘REPL_PASS', ‘BINLOG_RECOVERY_FILE', BINLOG_RECOVERY_POSITION, 0);
+	// // 10. Procedure call on slave: CALL mysql.rds_start_replication;
+	// masterSecret, _, err := d.getRDSConnStringAndSecret(CloudID(d.masterInstallationID), logger)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// slaveSecret, slaveConn, err := d.getRDSConnStringAndSecret(CloudID(d.masterInstallationID), logger)
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
+	// err = d.sqlClient.Connect(slaveConn)
+	// defer d.sqlClient.Close()
+	// if err != nil {
+	// 	err = newErrorWrap(&masterInstanceID, &replicaInstanceID, err)
+	// 	logger.WithError(err).Error("Preparing RDS master database for replication")
+	// 	return "", err
+	// }
+
 	return "", errors.New("not implemented")
 }
+
+// func (d *RDSDatabaseMigration) Progress(logger log.FieldLogger) (int64, error) {
+// 	// 11. Procedure call on slave: CALL SHOW SLAVE STATUS; Check if status has any error. If it doesn’t, check if seconds behind master is 0.
+// }
 
 func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string) (*ec2.SecurityGroup, error) {
 	output, err := d.awsClient.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
