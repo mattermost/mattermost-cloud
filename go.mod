@@ -16,7 +16,7 @@ require (
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.3.0
-	github.com/mattermost/mattermost-operator v1.1.1
+	github.com/mattermost/mattermost-operator v1.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -24,7 +24,9 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200210222208-86ce3cb69678 // indirect
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
+	golang.org/x/tools v0.0.0-20200325203130-f53864d0dba1 // indirect
 	k8s.io/api v0.17.3
 	k8s.io/apiextensions-apiserver v0.17.3
 	k8s.io/apimachinery v0.17.3

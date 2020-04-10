@@ -52,11 +52,6 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
 	}
 
-	certificateSummary, err := awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, logger)
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch AWS certificate ARN for tag %s:%s", aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue)
-	}
-
 	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterInstallation",
@@ -71,17 +66,32 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
-			Size:                   installation.Size,
-			Version:                translateMattermostVersion(installation.Version),
-			Image:                  installation.Image,
-			IngressName:            installation.DNS,
-			UseServiceLoadBalancer: true,
-			MattermostEnv:          installation.MattermostEnv.ToEnvList(),
-			ServiceAnnotations: map[string]string{
-				"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":        "tcp",
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-cert":                *certificateSummary.CertificateArn,
-				"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":               "https",
-				"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout": "120",
+			Size:          installation.Size,
+			Version:       translateMattermostVersion(installation.Version),
+			Image:         installation.Image,
+			IngressName:   installation.DNS,
+			MattermostEnv: installation.MattermostEnv.ToEnvList(),
+			UseIngressTLS: true,
+			IngressAnnotations: map[string]string{
+				"cert-manager.io/cluster-issuer":                       "letsencrypt-prod",
+				"kubernetes.io/ingress.class":                          "nginx",
+				"kubernetes.io/tls-acme":                               "true",
+				"nginx.ingress.kubernetes.io/proxy-buffering":          "on",
+				"nginx.ingress.kubernetes.io/proxy-body-size":          "100m",
+				"nginx.ingress.kubernetes.io/proxy-send-timeout":       "600",
+				"nginx.ingress.kubernetes.io/proxy-read-timeout":       "600",
+				"nginx.ingress.kubernetes.io/proxy-max-temp-file-size": "0",
+				"nginx.ingress.kubernetes.io/ssl-redirect":             "true",
+				"nginx.ingress.kubernetes.io/configuration-snippet": `
+				  proxy_force_ranges on;
+				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+				  proxy_cache mattermost_cache;  
+				  proxy_cache_revalidate on; 
+				  proxy_cache_min_uses 2;
+				  proxy_cache_use_stale timeout; 
+				  proxy_cache_lock on;
+				  proxy_cache_key "$host$request_uri$cookie_user";`,
+				"nginx.org/server-snippets": "gzip on;",
 			},
 		},
 	}
