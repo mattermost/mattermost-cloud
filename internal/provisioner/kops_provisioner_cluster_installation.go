@@ -68,6 +68,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		Spec: mmv1alpha1.ClusterInstallationSpec{
 			Size:          installation.Size,
 			Version:       translateMattermostVersion(installation.Version),
+			Image:         installation.Image,
 			IngressName:   installation.DNS,
 			MattermostEnv: installation.MattermostEnv.ToEnvList(),
 			UseIngressTLS: true,
