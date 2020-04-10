@@ -152,6 +152,10 @@ func (p *mockInstallationProvisioner) GetNGINXLoadBalancerEndpoint(cluster *mode
 	return "example.elb.us-east-1.amazonaws.com", nil
 }
 
+func (p *mockInstallationProvisioner) WaitForCertApproved(cluster *model.Cluster, namespace, certName string) (string, error) {
+	return "False", nil
+}
+
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
 // can be tested.
 type mockAWS struct{}
