@@ -155,3 +155,37 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 	}
 	return "", errors.New("failed to get NGINX load balancer endpoint")
 }
+
+// WaitForCertApproved checks if installations certificate is approved.
+func (provisioner *KopsProvisioner) WaitForCertApproved(cluster *model.Cluster, namespace, certName string) (string, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":   cluster.ID,
+		"namespace": namespace,
+	})
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	err = kops.ExportKubecfg(kopsMetadata.Name)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return "", err
+	}
+
+	certificate, err := k8sClient.JetStackClientset.CertmanagerV1alpha3().Certificates(namespace).Get(certName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return string(certificate.Status.Conditions[0].Status), nil
+}

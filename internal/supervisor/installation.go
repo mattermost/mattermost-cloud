@@ -1,6 +1,8 @@
 package supervisor
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -46,6 +48,7 @@ type installationProvisioner interface {
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
 	GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
+	WaitForCertApproved(cluster *model.Cluster, namespace, certName string) (string, error)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -165,6 +168,9 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 
 	case model.InstallationStateCreationInProgress:
 		return s.waitForClusterInstallationStable(installation, instanceID, logger)
+
+	case model.InstallationStateCreationFinalTasks:
+		return s.finalCreationTasks(installation, logger)
 
 	case model.InstallationStateCreationDNS:
 		return s.configureInstallationDNS(installation, logger)
@@ -354,8 +360,7 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 	}
 
 	logger.Info("Installation pre-provisioning complete")
-
-	return s.waitForClusterInstallationStable(installation, instanceID, logger)
+	return model.InstallationStateCreationDNS
 }
 
 func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -394,7 +399,7 @@ func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *
 
 	if len(clusterInstallations) == stable {
 		logger.Info("Finished creating cluster installation")
-		return s.configureInstallationDNS(installation, logger)
+		return model.InstallationStateCreationFinalTasks
 	}
 	if failed > 0 {
 		logger.Infof("Found %d failed cluster installations", failed)
@@ -442,8 +447,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 	}
 
 	logger.Infof("Successfully configured DNS %s", installation.DNS)
-
-	return model.InstallationStateStable
+	return model.InstallationStateCreationInProgress
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -684,4 +688,37 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 	logger.Info("Finished deleting installation")
 
 	return model.InstallationStateDeleted
+}
+
+func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		InstallationID: installation.ID,
+		PerPage:        model.AllPerPage,
+	})
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find cluster installations")
+		return model.InstallationStateCreationFinalTasks
+	}
+
+	for _, clusterInstallation := range clusterInstallations {
+		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
+			return model.InstallationStateCreationFinalTasks
+		}
+
+		certName := fmt.Sprintf("%s-tls-cert", strings.Replace(installation.DNS, ".", "-", -1))
+		status, err := s.provisioner.WaitForCertApproved(cluster, installation.ID, certName)
+		if err != nil {
+			logger.WithError(err).Error("Couldn't get the certificate status")
+			return model.InstallationStateCreationFinalTasks
+		}
+		if status == "False" {
+			logger.Infof("Certificate %s not approved yet", certName)
+			return model.InstallationStateCreationFinalTasks
+		}
+		logger.Infof("Certificate %s approved", certName)
+	}
+	logger.Info("Finished final creation tasks")
+	return model.InstallationStateStable
 }

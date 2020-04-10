@@ -20,6 +20,8 @@ const (
 	// InstallationStateCreationNoCompatibleClusters is an installation that
 	// can't be fully created because there are no compatible clusters.
 	InstallationStateCreationNoCompatibleClusters = "creation-no-compatible-clusters"
+	// InstallationStateCreationFinalTasks is the final step of the installation creation
+	InstallationStateCreationFinalTasks = "creation-final-tasks"
 	// InstallationStateUpdateRequested is an installation that is about to undergo an update.
 	InstallationStateUpdateRequested = "update-requested"
 	// InstallationStateUpdateInProgress is an installation that is being updated.
@@ -54,6 +56,7 @@ var AllInstallationStates = []string{
 	InstallationStateCreationDNS,
 	InstallationStateCreationFailed,
 	InstallationStateCreationNoCompatibleClusters,
+	InstallationStateCreationFinalTasks,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateUpdateFailed,
@@ -74,6 +77,7 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateCreationPreProvisioning,
 	InstallationStateCreationInProgress,
 	InstallationStateCreationNoCompatibleClusters,
+	InstallationStateCreationFinalTasks,
 	InstallationStateCreationDNS,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
@@ -137,6 +141,7 @@ func validTransitionToInstallationStateDeletionRequested(currentState string) bo
 		InstallationStateCreationInProgress,
 		InstallationStateCreationDNS,
 		InstallationStateCreationNoCompatibleClusters,
+		InstallationStateCreationFinalTasks,
 		InstallationStateCreationFailed,
 		InstallationStateUpdateRequested,
 		InstallationStateUpdateInProgress,
