@@ -69,6 +69,10 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	return "", fmt.Errorf("unable to find subnet group tagged for Mattermost DB usage: %s=%s", DefaultDBSubnetGroupTagKey, DefaultDBSubnetGroupTagValue)
 }
 
+func (a *Client) RdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID string, logger log.FieldLogger) error {
+	return a.rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID, logger)
+}
+
 func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID string, logger log.FieldLogger) error {
 	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
@@ -98,7 +102,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		BackupRetentionPeriod: aws.Int64(7),
 		DBClusterIdentifier:   aws.String(awsID),
 		DatabaseName:          aws.String("mattermost"),
-		EngineMode:            aws.String("provisioned"),
+		EngineMode:            aws.String("multimaster"),
 		Engine:                aws.String("aurora-mysql"),
 		EngineVersion:         aws.String("5.7"),
 		MasterUserPassword:    aws.String(password),
@@ -118,6 +122,10 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 	logger.WithField("db-cluster-name", awsID).Debug("AWS DB cluster created")
 
 	return nil
+}
+
+func (a *Client) RdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {
+	return a.rdsEnsureDBClusterInstanceCreated(awsID, instanceName, logger)
 }
 
 func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {

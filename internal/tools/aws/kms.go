@@ -6,6 +6,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (a *Client) KmsCreateSymmetricKey(awsID, keyDescription string) (*kms.KeyMetadata, error) {
+	return a.kmsCreateSymmetricKey(awsID, keyDescription)
+}
+
 // kmsCreateSymmetricKey creates a symmetric encryption key with alias.
 func (a *Client) kmsCreateSymmetricKey(awsID, keyDescription string) (*kms.KeyMetadata, error) {
 	createKeyOut, err := a.Service().kms.CreateKey(&kms.CreateKeyInput{
@@ -16,6 +20,10 @@ func (a *Client) kmsCreateSymmetricKey(awsID, keyDescription string) (*kms.KeyMe
 	}
 
 	return createKeyOut.KeyMetadata, nil
+}
+
+func (a *Client) KmsCreateAlias(keyID, aliasName string) error {
+	return a.kmsCreateAlias(keyID, aliasName)
 }
 
 // kmsCreateAlias creates an alias for a symmetric encryption key. Alias allows retrieving the key ID in one call and
@@ -69,4 +77,8 @@ func (a *Client) kmsScheduleKeyDeletion(keyID string, days int64) error {
 	}
 
 	return nil
+}
+
+func (a *Client) KmsScheduleKeyDeletion(keyID string, days int64) error {
+	return a.kmsScheduleKeyDeletion(keyID, days)
 }

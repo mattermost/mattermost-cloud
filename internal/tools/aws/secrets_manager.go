@@ -75,6 +75,9 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 
 	return nil
 }
+func (a *Client) SecretsManagerEnsureRDSSecretCreated(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
+	return a.secretsManagerEnsureRDSSecretCreated(awsID, logger)
+}
 
 func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
 	secretName := RDSSecretName(awsID)
