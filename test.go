@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -33,17 +32,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		encryptionKey, err := client.KmsCreateSymmetricKey(*awsID, "Key used for encrypting RDS database")
+		encryptionKey, err := client.KmsGetSymmetricKey(toolsAWS.KMSAliasNameRDS(*awsID))
 		if err != nil {
-			panic(errors.Wrapf(err, "unable to create RDS encryption key for installation %s", *awsID))
-		}
-		err = client.KmsCreateAlias(*encryptionKey.KeyId, toolsAWS.KMSAliasNameRDS(*awsID))
-		if err != nil && !toolsAWS.IsErrorCode(err, kms.ErrCodeAlreadyExistsException) {
-			deletionKeyErr := client.KmsScheduleKeyDeletion(*encryptionKey.KeyId, toolsAWS.KMSMinTimeEncryptionKeyDeletion)
-			if deletionKeyErr != nil {
-				logger.WithError(deletionKeyErr).Errorf("Failed to schedule encryption key %s for deletition", *encryptionKey.KeyId)
-			}
-			panic(errors.Wrapf(err, "unable to create a RDS encryption key alias name for installation %s", *awsID))
+			panic(errors.Wrapf(err, "unable to find RDS encryption key for installation %s", *awsID))
 		}
 
 		err = client.RdsEnsureDBClusterCreated(*awsID, *vpcID, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *encryptionKey.KeyId, logger)
@@ -52,6 +43,16 @@ func main() {
 		}
 
 		err = client.RdsEnsureDBClusterInstanceCreated(*awsID, fmt.Sprintf("%s-master", *awsID), logger)
+		if err != nil {
+			panic(err)
+		}
+
+		err = client.RdsEnsureDBClusterInstanceCreated(*awsID, fmt.Sprintf("%s-second-master", *awsID), logger)
+		if err != nil {
+			panic(err)
+		}
+
+		err = client.RdsEnsureDBClusterInstanceCreated(*awsID, fmt.Sprintf("%s-third-master", *awsID), logger)
 		if err != nil {
 			panic(err)
 		}

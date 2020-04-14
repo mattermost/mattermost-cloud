@@ -101,10 +101,6 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		},
 		BackupRetentionPeriod: aws.Int64(7),
 		DBClusterIdentifier:   aws.String(awsID),
-		DatabaseName:          aws.String("mattermost"),
-		EngineMode:            aws.String("multimaster"),
-		Engine:                aws.String("aurora-mysql"),
-		EngineVersion:         aws.String("5.7"),
 		MasterUserPassword:    aws.String(password),
 		MasterUsername:        aws.String(username),
 		Port:                  aws.Int64(3306),
@@ -112,6 +108,12 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 		KmsKeyId:              aws.String(kmsKeyID),
+
+		// multi-master
+		EngineMode: aws.String("multimaster"),
+		// EngineVersion:      aws.String("5.6.10a"),
+		Engine:             aws.String("aurora"),
+		DeletionProtection: aws.Bool(false),
 	}
 
 	_, err = a.Service().rds.CreateDBCluster(input)
@@ -141,9 +143,11 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
 		DBInstanceIdentifier: aws.String(instanceName),
-		DBInstanceClass:      aws.String("db.t3.small"),
-		Engine:               aws.String("aurora-mysql"),
+		DBInstanceClass:      aws.String("db.r4.2xlarge"),
+		Engine:               aws.String("aurora"),
 		PubliclyAccessible:   aws.Bool(false),
+
+		// multi-master
 	})
 	if err != nil {
 		return err

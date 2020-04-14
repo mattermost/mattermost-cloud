@@ -53,6 +53,10 @@ func (a *Client) kmsDisableSymmetricKey(keyID string) error {
 }
 
 // kmsGetSymmetricKey get a symmetric encryption key with alias.
+func (a *Client) KmsGetSymmetricKey(aliasName string) (*kms.KeyMetadata, error) {
+	return a.kmsGetSymmetricKey(aliasName)
+}
+
 func (a *Client) kmsGetSymmetricKey(aliasName string) (*kms.KeyMetadata, error) {
 	describeKeyOut, err := a.Service().kms.DescribeKey(&kms.DescribeKeyInput{
 		KeyId: aws.String(aliasName),
