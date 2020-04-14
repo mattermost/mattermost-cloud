@@ -3,13 +3,13 @@ package k8s
 import (
 	log "github.com/sirupsen/logrus"
 
+	jetstackclient "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	mmclient "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	jetstackclient "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
-	kubeagclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	kubeagclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 // KubeClient interfaces with a Kubernetes cluster in the same way kubectl would.

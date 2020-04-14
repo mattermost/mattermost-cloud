@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -183,7 +184,22 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return err
 	}
 
-	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, logger)
+	encryptionKey, err := d.client.kmsCreateSymmetricKey(awsID, "Key used for encrypting RDS database")
+	if err != nil {
+		return errors.Wrapf(err, "unable to create RDS encryption key for installation %s", installationID)
+	}
+
+	err = d.client.kmsCreateAlias(*encryptionKey.KeyId, KMSAliasNameRDS(awsID))
+	if err != nil && !IsErrorCode(err, kms.ErrCodeAlreadyExistsException) {
+		deletionKeyErr := d.client.kmsScheduleKeyDeletion(*encryptionKey.KeyId, KMSMinTimeEncryptionKeyDeletion)
+		if deletionKeyErr != nil {
+			logger.WithError(deletionKeyErr).Errorf("Failed to schedule encryption key %s for deletition", *encryptionKey.KeyId)
+		}
+
+		return errors.Wrapf(err, "unable to create a RDS encryption key alias name for installation %s", installationID)
+	}
+
+	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *encryptionKey.KeyId, logger)
 	if err != nil {
 		return err
 	}

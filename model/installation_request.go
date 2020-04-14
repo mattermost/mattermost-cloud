@@ -152,28 +152,23 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	u.RawQuery = q.Encode()
 }
 
-// UpdateInstallationRequest specifies the parameters for an updated installation.
-type UpdateInstallationRequest struct {
-	Version       string
-	Image         string
-	License       string
+// PatchInstallationRequest specifies the parameters for an updated installation.
+type PatchInstallationRequest struct {
+	Version       *string
+	Image         *string
+	License       *string
 	MattermostEnv EnvVarMap
 }
 
-// SetDefaults sets the default values for an installation update request.
-func (request *UpdateInstallationRequest) SetDefaults() {
-	if request.Image == "" {
-		request.Image = "mattermost/mattermost-enterprise-edition"
+// Validate validates the values of a installation patch request.
+func (p *PatchInstallationRequest) Validate() error {
+	if p.Version != nil && len(*p.Version) == 0 {
+		return errors.New("provided version update value was blank")
 	}
-}
-
-// Validate validates the values of an installation update request.
-func (request *UpdateInstallationRequest) Validate() error {
-	// TODO: remove version check after verifying that nothing will break.
-	if request.Version == "" {
-		return errors.New("must specify version")
+	if p.Image != nil && len(*p.Image) == 0 {
+		return errors.New("provided image update value was blank")
 	}
-	err := request.MattermostEnv.Validate()
+	err := p.MattermostEnv.Validate()
 	if err != nil {
 		return errors.Wrap(err, "invalid env var settings")
 	}
@@ -181,19 +176,42 @@ func (request *UpdateInstallationRequest) Validate() error {
 	return nil
 }
 
-// NewUpdateInstallationRequestFromReader will create a UpdateInstallationRequest from an io.Reader with JSON data.
-func NewUpdateInstallationRequestFromReader(reader io.Reader) (*UpdateInstallationRequest, error) {
-	var updateInstallationRequest UpdateInstallationRequest
-	err := json.NewDecoder(reader).Decode(&updateInstallationRequest)
+// Apply applies the patch to the given installation.
+func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
+	var applied bool
+
+	if p.Version != nil && *p.Version != installation.Version {
+		applied = true
+		installation.Version = *p.Version
+	}
+	if p.Image != nil && *p.Image != installation.Image {
+		applied = true
+		installation.Image = *p.Image
+	}
+	if p.License != nil && *p.License != installation.License {
+		applied = true
+		installation.License = *p.License
+	}
+	if p.MattermostEnv != nil {
+		applied = true
+		installation.MattermostEnv = p.MattermostEnv
+	}
+
+	return applied
+}
+
+// NewPatchInstallationRequestFromReader will create a PatchInstallationRequest from an io.Reader with JSON data.
+func NewPatchInstallationRequestFromReader(reader io.Reader) (*PatchInstallationRequest, error) {
+	var patchInstallationRequest PatchInstallationRequest
+	err := json.NewDecoder(reader).Decode(&patchInstallationRequest)
 	if err != nil && err != io.EOF {
-		return nil, errors.Wrap(err, "failed to decode upgrade installation request")
+		return nil, errors.Wrap(err, "failed to decode patch installation request")
 	}
 
-	updateInstallationRequest.SetDefaults()
-	err = updateInstallationRequest.Validate()
+	err = patchInstallationRequest.Validate()
 	if err != nil {
-		return nil, errors.Wrap(err, "update installation request failed validation")
+		return nil, errors.Wrap(err, "invalid patch installation request")
 	}
 
-	return &updateInstallationRequest, nil
+	return &patchInstallationRequest, nil
 }

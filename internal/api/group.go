@@ -89,6 +89,7 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		Description:   createGroupRequest.Description,
 		Version:       createGroupRequest.Version,
 		Image:         createGroupRequest.Image,
+		MaxRolling:    createGroupRequest.MaxRolling,
 		MattermostEnv: createGroupRequest.MattermostEnv,
 	}
 
@@ -137,7 +138,9 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, group)
 }
 
 // handleDeleteGroup responds to DELETE /api/group/{group}, marking the group as deleted.

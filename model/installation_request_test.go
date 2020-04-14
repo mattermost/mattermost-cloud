@@ -149,29 +149,49 @@ func TestCreateInstallationRequestFromReader(t *testing.T) {
 	})
 }
 
-func TestUpdateInstallationRequestValid(t *testing.T) {
+func TestPatchInstallationRequestValid(t *testing.T) {
 	var testCases = []struct {
-		testName     string
-		requireError bool
-		request      *model.UpdateInstallationRequest
+		testName    string
+		expectError bool
+		request     *model.PatchInstallationRequest
 	}{
 		{
-			"defaults",
+			"empty",
 			false,
-			&model.UpdateInstallationRequest{
-				Version: "stable",
+			&model.PatchInstallationRequest{},
+		},
+		{
+			"version only",
+			false,
+			&model.PatchInstallationRequest{
+				Version: sToP("version1"),
 			},
 		},
 		{
-			"no version",
+			"invalid version only",
 			true,
-			&model.UpdateInstallationRequest{},
+			&model.PatchInstallationRequest{
+				Version: sToP(""),
+			},
+		},
+		{
+			"image only",
+			false,
+			&model.PatchInstallationRequest{
+				Image: sToP("image1"),
+			},
+		},
+		{
+			"invalid image only",
+			true,
+			&model.PatchInstallationRequest{
+				Image: sToP(""),
+			},
 		},
 		{
 			"invalid mattermost env",
 			true,
-			&model.UpdateInstallationRequest{
-				Version: "stable",
+			&model.PatchInstallationRequest{
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: ""},
 				},
@@ -181,49 +201,151 @@ func TestUpdateInstallationRequestValid(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			tc.request.SetDefaults()
-
-			if tc.requireError {
+			if tc.expectError {
 				assert.Error(t, tc.request.Validate())
-			} else {
-				assert.NoError(t, tc.request.Validate())
+				return
 			}
+
+			assert.NoError(t, tc.request.Validate())
 		})
 	}
 }
 
-func TestUpdateInstallationRequestFromReader(t *testing.T) {
+func TestPatchInstallationRequestApply(t *testing.T) {
+	var testCases = []struct {
+		testName             string
+		expectApply          bool
+		request              *model.PatchInstallationRequest
+		installation         *model.Installation
+		expectedInstallation *model.Installation
+	}{
+		{
+			"empty",
+			false,
+			&model.PatchInstallationRequest{},
+			&model.Installation{},
+			&model.Installation{},
+		},
+		{
+			"version only",
+			true,
+			&model.PatchInstallationRequest{
+				Version: sToP("version1"),
+			},
+			&model.Installation{},
+			&model.Installation{
+				Version: "version1",
+			},
+		},
+		{
+			"image only",
+			true,
+			&model.PatchInstallationRequest{
+				Image: sToP("image1"),
+			},
+			&model.Installation{},
+			&model.Installation{
+				Image: "image1",
+			},
+		},
+		{
+			"license only",
+			true,
+			&model.PatchInstallationRequest{
+				License: sToP("license1"),
+			},
+			&model.Installation{},
+			&model.Installation{
+				License: "license1",
+			},
+		},
+		{
+			"mattermost env only",
+			true,
+			&model.PatchInstallationRequest{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Installation{},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+		},
+		{
+			"complex",
+			true,
+			&model.PatchInstallationRequest{
+				Version: sToP("patch-version"),
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "patch-value-1"},
+				},
+			},
+			&model.Installation{
+				Version: "version1",
+				Image:   "image1",
+				License: "license1",
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Installation{
+				Version: "patch-version",
+				Image:   "image1",
+				License: "license1",
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "patch-value-1"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			apply := tc.request.Apply(tc.installation)
+			assert.Equal(t, tc.expectApply, apply)
+			assert.Equal(t, tc.expectedInstallation, tc.installation)
+		})
+	}
+}
+
+func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
-		request, err := model.NewUpdateInstallationRequestFromReader(bytes.NewReader([]byte(
+		request, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(
 			``,
+		)))
+		require.NoError(t, err)
+		require.Equal(t, &model.PatchInstallationRequest{}, request)
+	})
+
+	t.Run("invalid request", func(t *testing.T) {
+		request, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(
+			`{test`,
 		)))
 		require.Error(t, err)
 		require.Nil(t, request)
 	})
 
-	t.Run("invalid request", func(t *testing.T) {
-		installation, err := model.NewUpdateInstallationRequestFromReader(bytes.NewReader([]byte(
-			`{test`,
-		)))
-		require.Error(t, err)
-		require.Nil(t, installation)
-	})
-
 	t.Run("request", func(t *testing.T) {
-		request, err := model.NewUpdateInstallationRequestFromReader(bytes.NewReader([]byte(`{
+		request, err := model.NewPatchInstallationRequestFromReader(bytes.NewReader([]byte(`{
 			"Version":"version",
 			"License": "this_is_my_license",
 			"MattermostEnv": {"key1": {"Value": "value1"}}
 		}`)))
 		require.NoError(t, err)
 
-		expected := &model.UpdateInstallationRequest{
-			Version:       "version",
-			License:       "this_is_my_license",
+		expected := &model.PatchInstallationRequest{
+			Version:       sToP("version"),
+			License:       sToP("this_is_my_license"),
 			MattermostEnv: model.EnvVarMap{"key1": {Value: "value1"}},
 		}
-		expected.SetDefaults()
 		require.Equal(t, expected, request)
 		require.NoError(t, request.Validate())
 	})
+}
+
+func sToP(s string) *string {
+	return &s
 }

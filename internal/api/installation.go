@@ -228,7 +228,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	updateInstallationRequest, err := model.NewUpdateInstallationRequestFromReader(r.Body)
+	patchInstallationRequest, err := model.NewPatchInstallationRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
@@ -250,35 +250,35 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  newState,
-		OldState:  installation.State,
-		Timestamp: time.Now().UnixNano(),
-	}
-	installation.State = newState
-	installation.Version = updateInstallationRequest.Version
-	installation.License = updateInstallationRequest.License
-	installation.Image = updateInstallationRequest.Image
-	installation.MattermostEnv = updateInstallationRequest.MattermostEnv
+	if patchInstallationRequest.Apply(installation) {
+		installation.State = newState
 
-	err = c.Store.UpdateInstallation(installation)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to mark installation for update")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		err = c.Store.UpdateInstallation(installation)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  newState,
+			OldState:  installation.State,
+			Timestamp: time.Now().UnixNano(),
+		}
+		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		}
 	}
 
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installation)
 }
 
 // handleJoinGroup responds to PUT /api/installation/{installation}/group/{group}, joining the group.
@@ -325,11 +325,19 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleLeaveGroup responds to DELETE /api/installation/{installation}/group, leaving any existing group.
+// handleLeaveGroup responds to DELETE /api/installation/{installation}/group,
+// leaving any existing group.
 func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
+
+	retainConfig, err := parseBool(r.URL, "retain_config", true)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse retain_config setting")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	installation, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
@@ -338,8 +346,36 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
+	// TODO: does it make sense to enforce normal update-requested valid states?
+	// Should there be more or less valid states? Review this when necessary.
+	newState := model.InstallationStateUpdateRequested
+	if !installation.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to leave group while installation is in state %s", installation.State)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	if installation.GroupID != nil {
+		installation.State = newState
 		installation.GroupID = nil
+		installation.GroupSequence = nil
+
+		if retainConfig {
+			// The installation is leaving the group, but the config is being set
+			// to the group-merged version used while it was in the group. To do
+			// so, we will get a merged copy of the installation out and will
+			// manually update the necessary values.
+			mergedInstallation, err := c.Store.GetInstallation(installationID, true, false)
+			if err != nil {
+				c.Logger.WithError(err).Error("failed to get group-merged installation")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			installation.Version = mergedInstallation.Version
+			installation.Image = mergedInstallation.Image
+			installation.MattermostEnv = mergedInstallation.MattermostEnv
+		}
 
 		err := c.Store.UpdateInstallation(installation)
 		if err != nil {

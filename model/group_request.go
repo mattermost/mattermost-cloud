@@ -28,14 +28,8 @@ func (request *CreateGroupRequest) SetDefaults() {
 
 // Validate validates the values of a group create request.
 func (request *CreateGroupRequest) Validate() error {
-	if request.Name == "" {
+	if len(request.Name) == 0 {
 		return errors.New("must specify name")
-	}
-	if request.Version == "" {
-		return errors.New("must specify version")
-	}
-	if request.Image == "" {
-		return errors.New("must specify image")
 	}
 	if request.MaxRolling < 1 {
 		return errors.New("max rolling must be 1 or greater")
@@ -126,12 +120,15 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 
 // Validate validates the values of a group patch request
 func (p *PatchGroupRequest) Validate() error {
+	if p.Name != nil && len(*p.Name) == 0 {
+		return errors.New("provided name update value was blank")
+	}
 	if p.MaxRolling != nil && *p.MaxRolling < 1 {
 		return errors.New("max rolling must be 1 or greater")
 	}
 	err := p.MattermostEnv.Validate()
 	if err != nil {
-		return errors.Wrapf(err, "bad environment variable map in patch group request")
+		return errors.Wrap(err, "invalid env var settings")
 	}
 
 	return nil
@@ -151,6 +148,20 @@ func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	q.Add("per_page", strconv.Itoa(request.PerPage))
 	if request.IncludeDeleted {
 		q.Add("include_deleted", "true")
+	}
+	u.RawQuery = q.Encode()
+}
+
+// LeaveGroupRequest describes the parameters to leave a group.
+type LeaveGroupRequest struct {
+	RetainConfig bool
+}
+
+// ApplyToURL modifies the given url to include query string parameters for the request.
+func (request *LeaveGroupRequest) ApplyToURL(u *url.URL) {
+	q := u.Query()
+	if !request.RetainConfig {
+		q.Add("retain_config", "false")
 	}
 	u.RawQuery = q.Encode()
 }

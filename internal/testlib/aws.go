@@ -14,6 +14,7 @@ type AWSMockedAPI struct {
 	S3             *mocks.MockS3API
 	Route53        *mocks.MockRoute53API
 	SecretsManager *mocks.MockSecretsManagerAPI
+	KMS            *mocks.MockKMSAPI
 }
 
 // NewAWSMockedAPI returns an instance of AWSMockedAPI.
@@ -26,5 +27,6 @@ func NewAWSMockedAPI(ctrl *gomock.Controller) *AWSMockedAPI {
 		S3:             mocks.NewMockS3API(ctrl),
 		Route53:        mocks.NewMockRoute53API(ctrl),
 		SecretsManager: mocks.NewMockSecretsManagerAPI(ctrl),
+		KMS:            mocks.NewMockKMSAPI(ctrl),
 	}
 }

@@ -3,6 +3,7 @@ package aws
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/golang/mock/gomock"
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -51,7 +52,27 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		}).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.Mocks.Log.Logger)
+	a.Mocks.API.KMS.EXPECT().
+		CreateKey(gomock.Any()).
+		Return(&kms.CreateKeyOutput{
+			KeyMetadata: &kms.KeyMetadata{
+				KeyId: aws.String(a.RDSEncryptionKeyID),
+			},
+		}, nil).
+		Do(func(input *kms.CreateKeyInput) {
+			a.Assert().Equal(*input.Description, "Key used for encrypting RDS database")
+		}).
+		Times(1)
+
+	a.Mocks.API.KMS.EXPECT().
+		CreateAlias(gomock.Any()).
+		Return(nil, nil).
+		Do(func(input *kms.CreateAliasInput) {
+			a.Assert().Equal(*input.AliasName, KMSAliasNameRDS(CloudID(a.InstallationA.ID)))
+		}).
+		Times(1)
+
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -65,7 +86,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedAlreadyCreated() {
 			Return(nil, nil).
 			Times(1))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -83,7 +104,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedWithSGError() {
 			DescribeSecurityGroups(gomock.Any()).
 			Return(nil, errors.New("invalid group id")))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "invalid group id")
 }
@@ -110,7 +131,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
 				DBSubnetGroups: []*rds.DBSubnetGroup{},
 			}, errors.New("invalid cluster id")))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "invalid cluster id")
@@ -149,7 +170,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 		Return(nil, errors.New("invalid cluster name")).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "invalid cluster name")
 }

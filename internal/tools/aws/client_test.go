@@ -74,6 +74,7 @@ type AWSTestSuite struct {
 	GroupID              string
 	RDSParamGroupCluster string
 	RDSParamGroup        string
+	RDSEncryptionKeyID   string
 	DBName               string
 	ResourceID           string
 	HostedZoneID         string
@@ -135,6 +136,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		SecretString:         `{"MasterUsername":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		SecretStringUserErr:  `{"username":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		SecretStringPassErr:  `{"MasterUsername":"mmcloud","password":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
+		RDSEncryptionKeyID:   "rds-encryption-key-id-123",
 		ResourceID:           "WSxqXCaZw1dC",
 		HostedZoneID:         "ZWI3O6O6N782C",
 		CertifcateARN:        "arn:aws:certificate::123456789012",
@@ -166,6 +168,7 @@ func (a *AWSTestSuite) SetupTest() {
 				s3:             api.S3,
 				route53:        api.Route53,
 				secretsManager: api.SecretsManager,
+				kms:            api.KMS,
 			},
 			config: &aws.Config{},
 			mux:    &sync.Mutex{},

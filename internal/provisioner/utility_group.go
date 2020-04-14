@@ -49,6 +49,12 @@ type utilityGroup struct {
 	cluster     *model.Cluster
 }
 
+// List of repos to add during helm setup
+var helmRepos = map[string]string{
+	"jetstack": "https://charts.jetstack.io",
+	"stable":   "https://kubernetes-charts.storage.googleapis.com",
+}
+
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
@@ -100,7 +106,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, fluentbit, certManager, publicNginx},
+		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit, certManager},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
@@ -119,9 +125,17 @@ func (group utilityGroup) CreateUtilityGroup() error {
 	}
 
 	// TODO remove this when Helm is removed as a dependency
-	err = installHelm(group.kops, group.provisioner.logger)
+	err = installHelm(group.kops, helmRepos, group.provisioner.logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
+	}
+
+	logger.Info("Adding new Helm repos.")
+	for repoName, repoURL := range helmRepos {
+		err = helmRepoAdd(repoName, repoURL, logger)
+		if err != nil {
+			return errors.Wrap(err, "unable to add helm repos")
+		}
 	}
 
 	for _, utility := range group.utilities {
@@ -175,6 +189,14 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 	err = helmInit(logger, group.kops)
 	if err != nil {
 		logger.WithError(err).Error("couldn't re-initialize Helm in the cluster")
+	}
+
+	logger.Info("Adding new Helm repos.")
+	for repoName, repoURL := range helmRepos {
+		err = helmRepoAdd(repoName, repoURL, logger)
+		if err != nil {
+			return errors.Wrap(err, "unable to add helm repos")
+		}
 	}
 
 	for _, utility := range group.utilities {

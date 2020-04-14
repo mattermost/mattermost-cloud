@@ -14,7 +14,7 @@ func init() {
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
 	installationCreateCmd.Flags().String("group", "", "The id of the group to join")
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
-	installationCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
+	installationCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
 	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
 	installationCreateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
@@ -27,11 +27,10 @@ func init() {
 
 	installationUpdateCmd.Flags().String("installation", "", "The id of the installation to be updated.")
 	installationUpdateCmd.Flags().String("version", "stable", "The Mattermost version to target.")
-	installationUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
+	installationUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationUpdateCmd.MarkFlagRequired("installation")
-	installationUpdateCmd.MarkFlagRequired("version")
 
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
 	installationDeleteCmd.MarkFlagRequired("installation")
@@ -105,12 +104,7 @@ var installationCreateCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to create installation")
 		}
 
-		err = printJSON(installation)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return printJSON(installation)
 	},
 }
 
@@ -124,9 +118,6 @@ var installationUpdateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
-		version, _ := command.Flags().GetString("version")
-		image, _ := command.Flags().GetString("image")
-		license, _ := command.Flags().GetString("license")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv)
@@ -134,19 +125,20 @@ var installationUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		updateRequest := &model.UpdateInstallationRequest{
-			Version:       version,
-			Image:         image,
-			License:       license,
-			MattermostEnv: envVarMap,
-		}
-
-		err = client.UpgradeInstallation(installationID, updateRequest)
+		installation, err := client.UpdateInstallation(
+			installationID,
+			&model.PatchInstallationRequest{
+				Version:       getStringFlagPointer(command, "version"),
+				Image:         getStringFlagPointer(command, "image"),
+				License:       getStringFlagPointer(command, "license"),
+				MattermostEnv: envVarMap,
+			},
+		)
 		if err != nil {
-			return errors.Wrap(err, "failed to change installation version")
+			return errors.Wrap(err, "failed to update installation")
 		}
 
-		return nil
+		return printJSON(installation)
 	},
 }
 

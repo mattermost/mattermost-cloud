@@ -30,6 +30,7 @@ COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/helm /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kubectl /usr/local/bin/
 COPY --from=build /mattermost-cloud/operator-manifests /mattermost-cloud/operator-manifests
+COPY --from=build /mattermost-cloud/certmanager-manifests /mattermost-cloud/certmanager-manifests
 COPY --from=build /mattermost-cloud/helm-charts /mattermost-cloud/helm-charts
 COPY --from=build /mattermost-cloud/terraform /mattermost-cloud/terraform
 COPY --from=build /mattermost-cloud/build/_output/bin/cloud /mattermost-cloud/cloud

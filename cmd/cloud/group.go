@@ -11,8 +11,8 @@ func init() {
 
 	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")
-	groupCreateCmd.Flags().String("version", "stable", "The Mattermost version for installations in this group to target.")
-	groupCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
+	groupCreateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
+	groupCreateCmd.Flags().String("image", "", "The Mattermost container image to use.")
 	groupCreateCmd.Flags().Int64("max-rolling", 1, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupCreateCmd.MarkFlagRequired("name")
@@ -21,7 +21,7 @@ func init() {
 	groupUpdateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupUpdateCmd.Flags().String("description", "", "An optional description for this group of installations.")
 	groupUpdateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
-	groupUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost Container image to use.")
+	groupUpdateCmd.Flags().String("image", "", "The Mattermost container image to use.")
 	groupUpdateCmd.Flags().Int64("max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupUpdateCmd.MarkFlagRequired("group")
@@ -42,6 +42,7 @@ func init() {
 	groupJoinCmd.MarkFlagRequired("installation")
 
 	groupLeaveCmd.Flags().String("installation", "", "The id of the installation to leave its currently configured group.")
+	groupLeaveCmd.Flags().Bool("retain-config", true, "Whether to retain the group configuration values or not.")
 	groupLeaveCmd.MarkFlagRequired("installation")
 
 	groupCmd.AddCommand(groupCreateCmd)
@@ -92,12 +93,7 @@ var groupCreateCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to create group")
 		}
 
-		err = printJSON(group)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return printJSON(group)
 	},
 }
 
@@ -111,11 +107,6 @@ var groupUpdateCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		groupID, _ := command.Flags().GetString("group")
-		name, _ := command.Flags().GetString("name")
-		description, _ := command.Flags().GetString("description")
-		version, _ := command.Flags().GetString("version")
-		image, _ := command.Flags().GetString("image")
-		maxRolling, _ := command.Flags().GetInt64("max-rolling")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv)
@@ -123,36 +114,20 @@ var groupUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		stringPatchPointer := func(s string) *string {
-			if s == "" {
-				return nil
-			}
-
-			return &s
-		}
-
-		int64PatchPointer := func(i int64) *int64 {
-			if i == 0 {
-				return nil
-			}
-
-			return &i
-		}
-
-		err = client.UpdateGroup(&model.PatchGroupRequest{
+		group, err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            groupID,
-			Name:          stringPatchPointer(name),
-			Description:   stringPatchPointer(description),
-			Version:       stringPatchPointer(version),
-			Image:         stringPatchPointer(image),
-			MaxRolling:    int64PatchPointer(maxRolling),
+			Name:          getStringFlagPointer(command, "name"),
+			Description:   getStringFlagPointer(command, "description"),
+			Version:       getStringFlagPointer(command, "version"),
+			Image:         getStringFlagPointer(command, "image"),
+			MaxRolling:    getInt64FlagPointer(command, "max-rolling"),
 			MattermostEnv: envVarMap,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to update group")
 		}
 
-		return nil
+		return printJSON(group)
 	},
 }
 
@@ -261,11 +236,13 @@ var groupLeaveCmd = &cobra.Command{
 		command.SilenceUsage = true
 
 		serverAddress, _ := command.Flags().GetString("server")
+		retainConfig, _ := command.Flags().GetBool("retain-config")
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
+		request := &model.LeaveGroupRequest{RetainConfig: retainConfig}
 
-		err := client.LeaveGroup(installationID)
+		err := client.LeaveGroup(installationID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to leave group")
 		}

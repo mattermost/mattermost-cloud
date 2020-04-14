@@ -146,4 +146,7 @@ const (
 
 	// RDSDefaultEngineMode represents the default RDS database mode used by the provisioner.
 	RDSDefaultEngineMode = "provisioned"
+
+	// KMSMinTimeEncryptionKeyDeletion is the minimum number of days that AWS will take to delete an encryption key.
+	KMSMinTimeEncryptionKeyDeletion = 7
 )
