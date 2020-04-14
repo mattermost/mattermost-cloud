@@ -32,17 +32,10 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 				buffer.Write(paramBytes)
 			}
 
-			logger = logger.WithFields(logrus.Fields{
+			logger.WithFields(logrus.Fields{
 				"aws-service-id":     r.ClientInfo.ServiceID,
 				"aws-operation-name": r.Operation.Name,
-			})
-
-			if r.HTTPResponse.StatusCode >= 500 {
-				logger.Error(buffer.String())
-			}
-			if r.HTTPResponse.StatusCode < 500 {
-				logger.Debug(buffer.String())
-			}
+			}).Debug(buffer.String())
 		}
 	})
 
