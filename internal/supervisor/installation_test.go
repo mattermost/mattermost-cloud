@@ -152,7 +152,7 @@ func (p *mockInstallationProvisioner) GetNGINXLoadBalancerEndpoint(cluster *mode
 	return "example.elb.us-east-1.amazonaws.com", nil
 }
 
-func (p *mockInstallationProvisioner) WaitForCertApproved(cluster *model.Cluster, namespace, certName string) (string, error) {
+func (p *mockInstallationProvisioner) GetCertStatus(cluster *model.Cluster, namespace, certName string) (string, error) {
 	return "False", nil
 }
 

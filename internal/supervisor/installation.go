@@ -48,7 +48,7 @@ type installationProvisioner interface {
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
 	GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
-	WaitForCertApproved(cluster *model.Cluster, namespace, certName string) (string, error)
+	GetCertStatus(cluster *model.Cluster, namespace, certName string) (string, error)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -703,12 +703,12 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 	for _, clusterInstallation := range clusterInstallations {
 		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
 		if err != nil {
-			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
+			logger.WithError(err).Errorf("Failed to query cluster %s", clusterInstallation.ClusterID)
 			return model.InstallationStateCreationFinalTasks
 		}
 
 		certName := fmt.Sprintf("%s-tls-cert", strings.Replace(installation.DNS, ".", "-", -1))
-		status, err := s.provisioner.WaitForCertApproved(cluster, installation.ID, certName)
+		status, err := s.provisioner.GetCertStatus(cluster, installation.ID, certName)
 		if err != nil {
 			logger.WithError(err).Error("Couldn't get the certificate status")
 			return model.InstallationStateCreationFinalTasks

@@ -156,8 +156,8 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 	return "", errors.New("failed to get NGINX load balancer endpoint")
 }
 
-// WaitForCertApproved checks if installations certificate is approved.
-func (provisioner *KopsProvisioner) WaitForCertApproved(cluster *model.Cluster, namespace, certName string) (string, error) {
+// GetCertStatus gets the status of a CertManager Certificate.
+func (provisioner *KopsProvisioner) GetCertStatus(cluster *model.Cluster, namespace, certName string) (string, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":   cluster.ID,
 		"namespace": namespace,
