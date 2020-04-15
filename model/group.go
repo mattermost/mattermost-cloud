@@ -29,12 +29,17 @@ type GroupFilter struct {
 }
 
 // Clone returns a deep copy the group.
-func (c *Group) Clone() *Group {
+func (g *Group) Clone() *Group {
 	var clone Group
-	data, _ := json.Marshal(c)
+	data, _ := json.Marshal(g)
 	json.Unmarshal(data, &clone)
 
 	return &clone
+}
+
+// IsDeleted returns whether the group is deleted or not.
+func (g *Group) IsDeleted() bool {
+	return g.DeleteAt != 0
 }
 
 // GroupFromReader decodes a json-encoded group from the given io.Reader.
