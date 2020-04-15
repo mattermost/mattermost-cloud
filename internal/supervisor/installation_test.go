@@ -153,7 +153,7 @@ func (p *mockInstallationProvisioner) GetNGINXLoadBalancerEndpoint(cluster *mode
 }
 
 func (p *mockInstallationProvisioner) GetCertStatus(cluster *model.Cluster, namespace, certName string) (string, error) {
-	return "False", nil
+	return "True", nil
 }
 
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
@@ -452,11 +452,11 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationDNS)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
 	})
 
-	t.Run("creation DNS, cluster installations reconciling", func(t *testing.T) {
+	t.Run("creation requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, &utils.ResourceUtil{}, logger)
@@ -474,7 +474,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
-			State:    model.InstallationStateCreationDNS,
+			State:    model.InstallationStateCreationRequested,
 		}
 
 		err = sqlStore.CreateInstallation(installation)
@@ -532,7 +532,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 	})
 
-	t.Run("creation in progress, cluster installations stable", func(t *testing.T) {
+	t.Run("creation requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, &utils.ResourceUtil{}, logger)
@@ -550,7 +550,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
+			State:    model.InstallationStateCreationRequested,
 		}
 
 		err = sqlStore.CreateInstallation(installation)
@@ -566,7 +566,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationFinalTasks)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
 	})
 
@@ -604,11 +604,11 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationDNS)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 	})
 
-	t.Run("creation in progress, cluster installations failed", func(t *testing.T) {
+	t.Run("creation requested, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, &utils.ResourceUtil{}, logger)
@@ -626,7 +626,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
+			State:    model.InstallationStateCreationPreProvisioning,
 		}
 
 		err = sqlStore.CreateInstallation(installation)
@@ -718,7 +718,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationFinalTasks)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
 	})
 
@@ -794,7 +794,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationFinalTasks)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
 	})
 
@@ -886,7 +886,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
-		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationDNS)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 	})
 
@@ -1182,7 +1182,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
-			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationDNS)
+			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 			expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
 		})
@@ -1214,7 +1214,7 @@ func TestInstallationSupervisor(t *testing.T) {
 					require.NoError(t, err)
 
 					supervisor.Supervise(installation)
-					expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationDNS)
+					expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 					expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 					expectClusterInstallationsOnCluster(t, sqlStore, cluster, i)
 				})
@@ -1246,7 +1246,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			require.NoError(t, err)
 
 			supervisor.Supervise(isolatedInstallation)
-			expectInstallationState(t, sqlStore, isolatedInstallation, model.InstallationStateCreationDNS)
+			expectInstallationState(t, sqlStore, isolatedInstallation, model.InstallationStateCreationInProgress)
 			expectClusterInstallations(t, sqlStore, isolatedInstallation, 1, model.ClusterInstallationStateCreationRequested)
 			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
 

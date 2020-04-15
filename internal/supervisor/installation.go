@@ -173,7 +173,7 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 		return s.finalCreationTasks(installation, logger)
 
 	case model.InstallationStateCreationDNS:
-		return s.configureInstallationDNS(installation, logger)
+		return s.configureInstallationDNS(installation, instanceID, logger)
 
 	case model.InstallationStateUpdateRequested:
 		return s.updateInstallation(installation, instanceID, logger)
@@ -360,7 +360,7 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 	}
 
 	logger.Info("Installation pre-provisioning complete")
-	return model.InstallationStateCreationDNS
+	return s.configureInstallationDNS(installation, instanceID, logger)
 }
 
 func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -399,7 +399,7 @@ func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *
 
 	if len(clusterInstallations) == stable {
 		logger.Info("Finished creating cluster installation")
-		return model.InstallationStateCreationFinalTasks
+		return s.finalCreationTasks(installation, logger)
 	}
 	if failed > 0 {
 		logger.Infof("Found %d failed cluster installations", failed)
@@ -409,7 +409,7 @@ func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *
 	return model.InstallationStateCreationInProgress
 }
 
-func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, logger log.FieldLogger) string {
+func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
 		PerPage:        model.AllPerPage,
@@ -447,7 +447,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 	}
 
 	logger.Infof("Successfully configured DNS %s", installation.DNS)
-	return model.InstallationStateCreationInProgress
+	return s.waitForClusterInstallationStable(installation, instanceID, logger)
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -713,7 +713,7 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 			logger.WithError(err).Error("Couldn't get the certificate status")
 			return model.InstallationStateCreationFinalTasks
 		}
-		if status == "False" {
+		if status != "True" {
 			logger.Infof("Certificate %s not approved yet", certName)
 			return model.InstallationStateCreationFinalTasks
 		}
