@@ -136,6 +136,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mm
 
 func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.FieldLogger) error {
 	awsID := CloudID(installationID)
+
 	logger.Infof("Provisioning AWS RDS database with ID %s", awsID)
 
 	// To properly provision the database we need a SQL client to lookup which
@@ -184,22 +185,35 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return err
 	}
 
-	encryptionKey, err := d.client.kmsCreateSymmetricKey(awsID, "Key used for encrypting RDS database")
+	keyAliasName := KMSAliasNameRDS(awsID)
+	keyMetadata, err := d.client.kmsGetSymmetricKey(keyAliasName)
 	if err != nil {
-		return errors.Wrapf(err, "unable to create RDS encryption key for installation %s", installationID)
-	}
-
-	err = d.client.kmsCreateAlias(*encryptionKey.KeyId, KMSAliasNameRDS(awsID))
-	if err != nil && !IsErrorCode(err, kms.ErrCodeAlreadyExistsException) {
-		deletionKeyErr := d.client.kmsScheduleKeyDeletion(*encryptionKey.KeyId, KMSMinTimeEncryptionKeyDeletion)
-		if deletionKeyErr != nil {
-			logger.WithError(deletionKeyErr).Errorf("Failed to schedule encryption key %s for deletition", *encryptionKey.KeyId)
+		if !IsErrorCode(err, kms.ErrCodeNotFoundException) {
+			return errors.Wrapf(err, "unable to verify encryption key %s for the RDS cluster ID %s", keyAliasName, awsID)
 		}
 
-		return errors.Wrapf(err, "unable to create a RDS encryption key alias name for installation %s", installationID)
+		keyMetadata, err = d.client.kmsCreateSymmetricKey("Key used for encrypting RDS database")
+		if err != nil {
+			return errors.Wrapf(err, "unable to create an encryption key for the RDS cluster ID %s", awsID)
+		}
+
+		err = d.client.kmsCreateAlias(*keyMetadata.KeyId, keyAliasName)
+		if err != nil {
+			scheduleErr := d.client.kmsScheduleKeyDeletion(*keyMetadata.KeyId, KMSMinTimeEncryptionKeyDeletion)
+			if scheduleErr != nil {
+				logger.WithError(scheduleErr).Errorf("Failed to schedule deletion for the encryption key %s", keyAliasName)
+			}
+			return errors.Wrapf(err, "unable to create an encryption key alias name for the RDS cluster ID %s", awsID)
+		}
 	}
 
-	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *encryptionKey.KeyId, logger)
+	if *keyMetadata.KeyState != kms.KeyStateEnabled {
+		return errors.Errorf("expected encryption key %s state to be Enabled, but it was %s", keyAliasName, *keyMetadata.KeyState)
+	}
+
+	logger.Infof("Encrypting RDS database with key %s", keyAliasName)
+
+	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, logger)
 	if err != nil {
 		return err
 	}

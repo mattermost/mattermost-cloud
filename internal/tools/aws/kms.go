@@ -3,16 +3,15 @@ package aws
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/pkg/errors"
 )
 
 // kmsCreateSymmetricKey creates a symmetric encryption key with alias.
-func (a *Client) kmsCreateSymmetricKey(awsID, keyDescription string) (*kms.KeyMetadata, error) {
+func (a *Client) kmsCreateSymmetricKey(keyDescription string) (*kms.KeyMetadata, error) {
 	createKeyOut, err := a.Service().kms.CreateKey(&kms.CreateKeyInput{
 		Description: aws.String(keyDescription),
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unabled to create encryption key for %s", awsID)
+		return nil, err
 	}
 
 	return createKeyOut.KeyMetadata, nil
@@ -26,7 +25,7 @@ func (a *Client) kmsCreateAlias(keyID, aliasName string) error {
 		TargetKeyId: aws.String(keyID),
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unabled to create an alias name for encryption key %s", keyID)
+		return err
 	}
 
 	return nil
@@ -38,7 +37,7 @@ func (a *Client) kmsDisableSymmetricKey(keyID string) error {
 		KeyId: aws.String(keyID),
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unabled to disable encryption key %s", keyID)
+		return err
 	}
 
 	return nil
@@ -50,7 +49,7 @@ func (a *Client) kmsGetSymmetricKey(aliasName string) (*kms.KeyMetadata, error) 
 		KeyId: aws.String(aliasName),
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unabled to describe encryption key for alias name %s", aliasName)
+		return nil, err
 	}
 
 	return describeKeyOut.KeyMetadata, nil
@@ -65,7 +64,7 @@ func (a *Client) kmsScheduleKeyDeletion(keyID string, days int64) error {
 		PendingWindowInDays: aws.Int64(days),
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unable to schedule deletion of encryption key ID %s", keyID)
+		return err
 	}
 
 	return nil
