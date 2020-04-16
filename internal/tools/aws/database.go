@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -185,35 +184,35 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return err
 	}
 
-	keyAliasName := KMSAliasNameRDS(awsID)
-	keyMetadata, err := d.client.kmsGetSymmetricKey(keyAliasName)
-	if err != nil {
-		if !IsErrorCode(err, kms.ErrCodeNotFoundException) {
-			return errors.Wrapf(err, "unable to verify encryption key %s for the RDS cluster ID %s", keyAliasName, awsID)
-		}
+	// keyAliasName := KMSAliasNameRDS(awsID)
+	// keyMetadata, err := d.client.kmsGetSymmetricKey(keyAliasName)
+	// if err != nil {
+	// 	if !IsErrorCode(err, kms.ErrCodeNotFoundException) {
+	// 		return errors.Wrapf(err, "unable to verify encryption key %s for the RDS cluster ID %s", keyAliasName, awsID)
+	// 	}
 
-		keyMetadata, err = d.client.kmsCreateSymmetricKey("Key used for encrypting RDS database")
-		if err != nil {
-			return errors.Wrapf(err, "unable to create an encryption key for the RDS cluster ID %s", awsID)
-		}
+	// 	keyMetadata, err = d.client.kmsCreateSymmetricKey("Key used for encrypting RDS database")
+	// 	if err != nil {
+	// 		return errors.Wrapf(err, "unable to create an encryption key for the RDS cluster ID %s", awsID)
+	// 	}
 
-		err = d.client.kmsCreateAlias(*keyMetadata.KeyId, keyAliasName)
-		if err != nil {
-			scheduleErr := d.client.kmsScheduleKeyDeletion(*keyMetadata.KeyId, KMSMinTimeEncryptionKeyDeletion)
-			if scheduleErr != nil {
-				logger.WithError(scheduleErr).Errorf("Failed to schedule deletion for the encryption key %s", keyAliasName)
-			}
-			return errors.Wrapf(err, "unable to create an encryption key alias name for the RDS cluster ID %s", awsID)
-		}
-	}
+	// 	err = d.client.kmsCreateAlias(*keyMetadata.KeyId, keyAliasName)
+	// 	if err != nil {
+	// 		scheduleErr := d.client.kmsScheduleKeyDeletion(*keyMetadata.KeyId, KMSMinTimeEncryptionKeyDeletion)
+	// 		if scheduleErr != nil {
+	// 			logger.WithError(scheduleErr).Errorf("Failed to schedule deletion for the encryption key %s", keyAliasName)
+	// 		}
+	// 		return errors.Wrapf(err, "unable to create an encryption key alias name for the RDS cluster ID %s", awsID)
+	// 	}
+	// }
 
-	if *keyMetadata.KeyState != kms.KeyStateEnabled {
-		return errors.Errorf("expected encryption key %s state to be Enabled, but it was %s", keyAliasName, *keyMetadata.KeyState)
-	}
+	// if *keyMetadata.KeyState != kms.KeyStateEnabled {
+	// 	return errors.Errorf("expected encryption key %s state to be Enabled, but it was %s", keyAliasName, *keyMetadata.KeyState)
+	// }
 
-	logger.Infof("Encrypting RDS database with key %s", keyAliasName)
+	// logger.Infof("Encrypting RDS database with key %s", keyAliasName)
 
-	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, logger)
+	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, "", logger)
 	if err != nil {
 		return err
 	}
