@@ -15,6 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
+	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -55,27 +57,29 @@ func NewAWSClientWithConfig(config *aws.Config, logger log.FieldLogger) *Client 
 
 // Service hold AWS clients for each service.
 type Service struct {
-	acm            acmiface.ACMAPI
-	ec2            ec2iface.EC2API
-	iam            iamiface.IAMAPI
-	rds            rdsiface.RDSAPI
-	s3             s3iface.S3API
-	route53        route53iface.Route53API
-	secretsManager secretsmanageriface.SecretsManagerAPI
-	kms            kmsiface.KMSAPI
+	acm                   acmiface.ACMAPI
+	ec2                   ec2iface.EC2API
+	iam                   iamiface.IAMAPI
+	rds                   rdsiface.RDSAPI
+	s3                    s3iface.S3API
+	route53               route53iface.Route53API
+	secretsManager        secretsmanageriface.SecretsManagerAPI
+	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
+	kms                   kmsiface.KMSAPI
 }
 
 // NewService creates a new instance of Service.
 func NewService(sess *session.Session) *Service {
 	return &Service{
-		acm:            acm.New(sess),
-		iam:            iam.New(sess),
-		rds:            rds.New(sess),
-		s3:             s3.New(sess),
-		route53:        route53.New(sess),
-		secretsManager: secretsmanager.New(sess),
-		ec2:            ec2.New(sess),
-		kms:            kms.New(sess),
+		acm:                   acm.New(sess),
+		iam:                   iam.New(sess),
+		rds:                   rds.New(sess),
+		s3:                    s3.New(sess),
+		route53:               route53.New(sess),
+		secretsManager:        secretsmanager.New(sess),
+		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
+		ec2:                   ec2.New(sess),
+		kms:                   kms.New(sess),
 	}
 }
 

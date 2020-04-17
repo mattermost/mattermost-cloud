@@ -107,7 +107,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		StorageEncrypted:      aws.Bool(true),
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
-		// KmsKeyId:              aws.String(kmsKeyID),
+		KmsKeyId:              aws.String(kmsKeyID),
 	}
 
 	_, err = a.Service().rds.CreateDBCluster(input)

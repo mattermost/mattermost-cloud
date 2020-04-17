@@ -110,4 +110,7 @@ const (
 
 	// KMSMinTimeEncryptionKeyDeletion is the minimum number of days that AWS will take to delete an encryption key.
 	KMSMinTimeEncryptionKeyDeletion = 7
+
+	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
+	DefaultRDSEncryptionTagKey = "rds-encryption-key"
 )

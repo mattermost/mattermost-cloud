@@ -78,6 +78,7 @@ type AWSTestSuite struct {
 	ResourceID           string
 	HostedZoneID         string
 	CertifcateARN        string
+	ResourceARN          string
 	RDSAvailabilityZones []string
 
 	// Route53 fixtures
@@ -137,6 +138,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		ResourceID:           "WSxqXCaZw1dC",
 		HostedZoneID:         "ZWI3O6O6N782C",
 		CertifcateARN:        "arn:aws:certificate::123456789012",
+		ResourceARN:          "arn:aws:kms:us-east-1:526412419611:key/10cbe864-7411-4cda-bd28-3355218d0995",
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
 		EndpointsB: []string{"example1.mattermost.com"},
@@ -157,14 +159,15 @@ func (a *AWSTestSuite) SetupTest() {
 		API: api,
 		AWS: &Client{
 			service: &Service{
-				rds:            api.RDS,
-				ec2:            api.EC2,
-				iam:            api.IAM,
-				acm:            api.ACM,
-				s3:             api.S3,
-				route53:        api.Route53,
-				secretsManager: api.SecretsManager,
-				kms:            api.KMS,
+				rds:                   api.RDS,
+				ec2:                   api.EC2,
+				iam:                   api.IAM,
+				acm:                   api.ACM,
+				s3:                    api.S3,
+				route53:               api.Route53,
+				secretsManager:        api.SecretsManager,
+				resourceGroupsTagging: api.ResourceGroupsTagging,
+				kms:                   api.KMS,
 			},
 			config: &aws.Config{},
 			mux:    &sync.Mutex{},
@@ -190,6 +193,7 @@ func (a *AWSTestSuite) TestNewClient() {
 	a.Assert().NotNil(client.Service().s3)
 	a.Assert().NotNil(client.Service().route53)
 	a.Assert().NotNil(client.Service().secretsManager)
+	a.Assert().NotNil(client.Service().resourceGroupsTagging)
 	a.Assert().NotNil(client.Service().ec2)
 
 	_, err := client.Service().acm.ListCertificates(&acm.ListCertificatesInput{})
