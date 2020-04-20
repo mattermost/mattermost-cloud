@@ -37,7 +37,12 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 				"aws-operation-name": r.Operation.Name,
 			})
 
-			logger.Debug(buffer.String())
+			if r.HTTPResponse.StatusCode >= 400 {
+				logger.Error(buffer.String())
+			}
+			if r.HTTPResponse.StatusCode < 400 {
+				logger.Debug(buffer.String())
+			}
 		}
 	})
 
