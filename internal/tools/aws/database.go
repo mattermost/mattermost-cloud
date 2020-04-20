@@ -51,7 +51,7 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 	awsID := CloudID(d.installationID)
 
 	logger = logger.WithField("db-cluster-name", awsID)
-	logger.Info("Tearing down RDS db cluster")
+	logger.Info("Tearing down RDS DB cluster")
 
 	err := d.client.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
 	if err != nil {
@@ -68,21 +68,23 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 		return errors.Wrap(err, "unable to delete RDS DB cluster")
 	}
 
-	logger.Debug("AWS RDS db cluster deleted")
-
 	resourceNames, err := d.getKMSResourceNames(awsID)
 	if err != nil {
 		return errors.Wrapf(err, "unabled to get KMS resources associated with db cluster %s", awsID)
 	}
 
 	if len(resourceNames) > 0 {
-		enabledKeys := d.getEnabledEncryptionKeys(resourceNames, logger)
+		enabledKeys, err := d.getEnabledEncryptionKeys(resourceNames)
+		if err != nil {
+			return errors.Wrapf(err, "unabled to get encryption key associated with db cluster %s", awsID)
+		}
+
 		for _, keyMetadata := range enabledKeys {
-			err = d.client.kmsScheduleKeyDeletion(*keyMetadata.KeyId, KMSMinTimeEncryptionKeyDeletion)
+			err = d.client.kmsScheduleKeyDeletion(*keyMetadata.KeyId, KMSMaxTimeEncryptionKeyDeletion)
 			if err != nil {
 				return errors.Wrapf(err, "encryption key associated with db cluster %s could not be scheduled for deletion", awsID)
 			}
-			logger.Infof("Encryption key %s will be deleted in %d days", *keyMetadata.Arn, KMSMinTimeEncryptionKeyDeletion)
+			logger.Infof("Encryption key %s scheduled for deletion in %d days", *keyMetadata.Arn, KMSMaxTimeEncryptionKeyDeletion)
 		}
 	} else {
 		logger.Warn("Could not find any encryption key. It has been already deleted or never created.")
@@ -215,13 +217,16 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 	var keyMetadata *kms.KeyMetadata
 	if len(kmsResourceNames) > 0 {
-		enabledKeys := d.getEnabledEncryptionKeys(kmsResourceNames, logger)
-		switch len(enabledKeys) {
-		case 1:
-			keyMetadata = enabledKeys[0]
-		default:
+		enabledKeys, err := d.getEnabledEncryptionKeys(kmsResourceNames)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get encryption keys for db cluster %s", awsID)
+		}
+
+		if len(enabledKeys) != 1 {
 			return errors.Errorf("db cluster %s should have exactly one enabled/active encryption key (found %d)", awsID, len(enabledKeys))
 		}
+
+		keyMetadata = enabledKeys[0]
 	} else {
 		keyMetadata, err = d.client.kmsCreateSymmetricKey(KMSKeyDescriptionRDS(awsID), []*kms.Tag{
 			{
@@ -230,7 +235,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 			},
 		})
 		if err != nil {
-			return errors.Wrapf(err, "unable to create an encryption key for RDS db cluster %s", awsID)
+			return errors.Wrapf(err, "unable to create an encryption key for db cluster %s", awsID)
 		}
 	}
 
@@ -270,19 +275,18 @@ func (d *RDSDatabase) getKMSResourceNames(awsID string) ([]*string, error) {
 	return resourceNameList, nil
 }
 
-func (d *RDSDatabase) getEnabledEncryptionKeys(resourceNameList []*string, logger log.FieldLogger) []*kms.KeyMetadata {
+func (d *RDSDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*kms.KeyMetadata, error) {
 	var keys []*kms.KeyMetadata
 
 	for _, name := range resourceNameList {
 		keyMetadata, err := d.client.kmsGetSymmetricKey(*name)
 		if err != nil {
-			logger.WithError(err).Error("Failed get some of the encryption key")
-			continue
+			return nil, err
 		}
 		if keyMetadata != nil && *keyMetadata.KeyState == kms.KeyStateEnabled {
 			keys = append(keys, keyMetadata)
 		}
 	}
 
-	return keys
+	return keys, nil
 }
