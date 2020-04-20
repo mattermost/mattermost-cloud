@@ -271,18 +271,6 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	helmClient, err := helm.New(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
-	}
-	defer helmClient.Close()
-
-	logger.Info("Initializing Helm in the cluster")
-	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade")
-	if err != nil {
-		return errors.Wrap(err, "failed to initialize Helm in the cluster")
-	}
-
 	logger.Info("Creating Tiller service account")
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
