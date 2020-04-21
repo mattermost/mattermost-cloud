@@ -108,6 +108,9 @@ const (
 	// DefaultAWSClientRetries supplies how many time the AWS client will retry a failed call.
 	DefaultAWSClientRetries = 3
 
-	// KMSMinTimeEncryptionKeyDeletion is the minimum number of days that AWS will take to delete an encryption key.
-	KMSMinTimeEncryptionKeyDeletion = 7
+	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an encryption key.
+	KMSMaxTimeEncryptionKeyDeletion = 30
+
+	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
+	DefaultRDSEncryptionTagKey = "rds-encryption-key"
 )
