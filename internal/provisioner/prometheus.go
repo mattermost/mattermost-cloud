@@ -3,7 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
-
+	"net"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -59,9 +59,10 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 	}, nil
 }
 
-func (p *prometheus) Create() error {
+func (p *prometheus) CreateOrUpgrade() error {
+	logger := p.logger.WithField("prometheus-action", "create")
 	h := p.NewHelmDeployment()
-	err := h.Create()
+	err := h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Helm deployment")
 	}
@@ -71,8 +72,6 @@ func (p *prometheus) Create() error {
 		return err
 	}
 
-	logger := p.logger.WithField("prometheus-action", "create")
-
 	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to lookup private zone name")
@@ -80,6 +79,11 @@ func (p *prometheus) Create() error {
 
 	app := "prometheus"
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
+	_, err = net.LookupNS(dns)
+	if err == nil {
+		// if we can resolve this domain then the domain is already provisioned
+		return nil
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120)
 	defer cancel()
@@ -116,18 +120,6 @@ func (p *prometheus) Destroy() error {
 
 	p.actualVersion = ""
 	return nil
-}
-
-func (p *prometheus) Upgrade() error {
-	h := p.NewHelmDeployment()
-
-	err := p.NewHelmDeployment().Update()
-	if err != nil {
-		return err
-	}
-
-	err = p.updateVersion(h)
-	return err
 }
 
 func (p *prometheus) NewHelmDeployment() *helmDeployment {

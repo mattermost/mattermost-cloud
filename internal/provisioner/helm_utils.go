@@ -66,13 +66,6 @@ func (d *helmDeployment) Update() error {
 	return nil
 }
 
-// Create will install a given HelmDeployment in the cluster specified in that object.
-func (d *helmDeployment) Create() error {
-	logger := d.logger.WithField("helm-create", d.chartName)
-	logger.Infof("Installing helm chart %s", d.chartName)
-	return installHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
-}
-
 // waitForHelmRunning is used to check when Helm is ready to install charts.
 func waitForHelmRunning(ctx context.Context, configPath string) error {
 	for {

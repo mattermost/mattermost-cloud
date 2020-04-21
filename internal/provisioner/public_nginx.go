@@ -49,18 +49,7 @@ func (n *publicNginx) updateVersion(h *helmDeployment) error {
 	return nil
 }
 
-func (n *publicNginx) Create() error {
-	h := n.NewHelmDeployment()
-	err := h.Create()
-	if err != nil {
-		return err
-	}
-
-	err = n.updateVersion(h)
-	return err
-}
-
-func (n *publicNginx) Upgrade() error {
+func (n *publicNginx) CreateOrUpgrade() error {
 	h := n.NewHelmDeployment()
 	err := h.Update()
 	if err != nil {
