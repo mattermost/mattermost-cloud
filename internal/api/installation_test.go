@@ -371,6 +371,50 @@ func TestCreateInstallation(t *testing.T) {
 		require.NotEqual(t, 0, installation.CreateAt)
 		require.EqualValues(t, 0, installation.DeleteAt)
 	})
+
+	t.Run("groups", func(t *testing.T) {
+		t.Run("create with group", func(t *testing.T) {
+			group, err := client.CreateGroup(&model.CreateGroupRequest{
+				Name:    "name1",
+				Version: "version1",
+				Image:   "sample/image1",
+			})
+			require.NoError(t, err)
+
+			installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:  "owner",
+				GroupID:  group.ID,
+				Version:  "version",
+				Image:    "custom-image",
+				DNS:      "dns2.example.com",
+				Affinity: model.InstallationAffinityIsolated,
+			})
+			require.NoError(t, err)
+			require.Equal(t, group.ID, *installation.GroupID)
+		})
+
+		t.Run("create with deleted group", func(t *testing.T) {
+			group, err := client.CreateGroup(&model.CreateGroupRequest{
+				Name:    "name2",
+				Version: "version2",
+				Image:   "sample/image2",
+			})
+			require.NoError(t, err)
+
+			err = client.DeleteGroup(group.ID)
+			require.NoError(t, err)
+
+			_, err = client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:  "owner",
+				GroupID:  group.ID,
+				Version:  "version",
+				Image:    "custom-image",
+				DNS:      "dns3.example.com",
+				Affinity: model.InstallationAffinityIsolated,
+			})
+			require.EqualError(t, err, "failed with status code 400")
+		})
+	})
 }
 
 func TestRetryCreateInstallation(t *testing.T) {
@@ -735,6 +779,21 @@ func TestJoinGroup(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, installation1.GroupID)
 		require.Equal(t, group2.ID, *installation1.GroupID)
+	})
+
+	t.Run("to deleted group", func(t *testing.T) {
+		group3, err := client.CreateGroup(&model.CreateGroupRequest{
+			Name:    "name3",
+			Version: "version3",
+			Image:   "sample/image3",
+		})
+		require.NoError(t, err)
+
+		err = client.DeleteGroup(group3.ID)
+		require.NoError(t, err)
+
+		err = client.JoinGroup(group3.ID, installation1.ID)
+		require.EqualError(t, err, "failed with status code 400")
 	})
 }
 

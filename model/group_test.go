@@ -24,6 +24,22 @@ func TestGroupClone(t *testing.T) {
 	require.NotEqual(t, group, clone)
 }
 
+func TestGroupIsDeleted(t *testing.T) {
+	group := &Group{
+		DeleteAt: 0,
+	}
+
+	t.Run("not deleted", func(t *testing.T) {
+		require.False(t, group.IsDeleted())
+	})
+
+	group.DeleteAt = 1
+
+	t.Run("deleted", func(t *testing.T) {
+		require.True(t, group.IsDeleted())
+	})
+}
+
 func TestGroupFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
 		group, err := GroupFromReader(bytes.NewReader([]byte(
@@ -149,7 +165,7 @@ func TestGroupsFromReader(t *testing.T) {
 		]`)))
 		require.NoError(t, err)
 		require.Equal(t, []*Group{
-			&Group{
+			{
 				ID:          "id1",
 				Name:        "name1",
 				Description: "description1",
@@ -158,7 +174,7 @@ func TestGroupsFromReader(t *testing.T) {
 				CreateAt:    10,
 				DeleteAt:    20,
 			},
-			&Group{
+			{
 				ID:          "id2",
 				Name:        "name2",
 				Description: "description2",

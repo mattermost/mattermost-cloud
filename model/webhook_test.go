@@ -111,14 +111,14 @@ func TestWebhooksFromReader(t *testing.T) {
 		]`))
 		require.NoError(t, err)
 		require.Equal(t, []*Webhook{
-			&Webhook{
+			{
 				ID:       "id1",
 				OwnerID:  "owner1",
 				URL:      "https://domain1.com",
 				CreateAt: 10,
 				DeleteAt: 20,
 			},
-			&Webhook{
+			{
 				ID:       "id2",
 				OwnerID:  "owner2",
 				URL:      "https://domain2.com",

@@ -126,7 +126,7 @@ func TestClusterInstallationsFromReader(t *testing.T) {
 		]`)))
 		require.NoError(t, err)
 		require.Equal(t, []*ClusterInstallation{
-			&ClusterInstallation{
+			{
 				ID:             "id1",
 				ClusterID:      "cluster_id1",
 				InstallationID: "installation_id1",
@@ -137,7 +137,7 @@ func TestClusterInstallationsFromReader(t *testing.T) {
 				LockAcquiredBy: nil,
 				LockAcquiredAt: 0,
 			},
-			&ClusterInstallation{
+			{
 				ID:             "id2",
 				ClusterID:      "cluster_id2",
 				InstallationID: "installation_id2",

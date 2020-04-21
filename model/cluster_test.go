@@ -107,8 +107,8 @@ func TestClustersFromReader(t *testing.T) {
 		)))
 		require.NoError(t, err)
 		require.Equal(t, []*Cluster{
-			&Cluster{ID: "id1", Provider: "aws"},
-			&Cluster{ID: "id2", Provider: "aws"},
+			{ID: "id1", Provider: "aws"},
+			{ID: "id2", Provider: "aws"},
 		}, cluster)
 	})
 }

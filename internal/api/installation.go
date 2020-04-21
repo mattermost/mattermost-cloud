@@ -110,15 +110,19 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var group *model.Group
+	var status int
+	groupUnlockOnce := func() {}
 	if len(createInstallationRequest.GroupID) != 0 {
-		group, err := c.Store.GetGroup(createInstallationRequest.GroupID)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to query group")
-			w.WriteHeader(http.StatusInternalServerError)
+		group, status, groupUnlockOnce = lockGroup(c, createInstallationRequest.GroupID)
+		if status != 0 {
+			w.WriteHeader(status)
 			return
 		}
-		if group == nil {
-			w.WriteHeader(http.StatusNotFound)
+		defer groupUnlockOnce()
+		if group.IsDeleted() {
+			c.Logger.Errorf("cannot join installation to deleted group %s", createInstallationRequest.GroupID)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
@@ -157,6 +161,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		c.Logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
+	groupUnlockOnce()
 	c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -288,26 +293,27 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installation, status, installationUnlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
-	defer unlockOnce()
+	defer installationUnlockOnce()
 
-	group, err := c.Store.GetGroup(groupID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query group")
-		w.WriteHeader(http.StatusInternalServerError)
+	group, status, groupUnlockOnce := lockGroup(c, groupID)
+	if status != 0 {
+		w.WriteHeader(status)
 		return
 	}
-	if group == nil {
-		w.WriteHeader(http.StatusNotFound)
+	defer groupUnlockOnce()
+	if group.IsDeleted() {
+		c.Logger.Errorf("cannot join installation to deleted group %s", groupID)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Update the group, but don't directly modify the version. The supervisor
-	// will transition the installation to the appropriate version.
+	// Update the installation, but don't directly modify the configuration.
+	// The supervisor will manage this later.
 	if installation.GroupID == nil || *installation.GroupID != groupID {
 		installation.GroupID = &groupID
 
@@ -319,7 +325,8 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	unlockOnce()
+	installationUnlockOnce()
+	groupUnlockOnce()
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusOK)
