@@ -7,8 +7,10 @@ require (
 	github.com/aws/aws-sdk-go v1.29.31
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/emicklei/go-restful v2.11.2+incompatible // indirect
+	github.com/go-mysql/errors v0.0.0-20180603193453-03314bea68e0
 	github.com/go-openapi/spec v0.19.6 // indirect
 	github.com/go-openapi/swag v0.19.7 // indirect
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.3.1
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.7.4

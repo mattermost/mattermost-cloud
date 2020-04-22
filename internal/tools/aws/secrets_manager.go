@@ -115,8 +115,18 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 	}
 
 	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
-		Name:         aws.String(secretName),
-		Description:  aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
+		Name:        aws.String(secretName),
+		Description: aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
+		Tags: []*secretsmanager.Tag{
+			{
+				Key:   aws.String("rds-database-cloud-id"),
+				Value: aws.String(awsID),
+			},
+			{
+				Key:   aws.String("rds-db-cluster-id"),
+				Value: aws.String(awsID),
+			},
+		},
 		SecretString: aws.String(string(b)),
 	})
 	if err != nil {

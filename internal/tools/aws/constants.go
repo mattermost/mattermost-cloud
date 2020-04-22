@@ -113,4 +113,7 @@ const (
 
 	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
 	DefaultRDSEncryptionTagKey = "rds-encryption-key"
+
+	// MySQLConnStringTemplate takes db user, password, hostname and database name.
+	MySQLConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
 )
