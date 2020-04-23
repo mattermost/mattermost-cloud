@@ -47,6 +47,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
+	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
 }
 
 var serverCmd = &cobra.Command{
@@ -108,6 +109,23 @@ var serverCmd = &cobra.Command{
 			logger.WithError(err).Error("Unable to get current working directory")
 		}
 
+		dev, _ := command.Flags().GetBool("dev")
+		if dev {
+
+			if !command.Flags().Changed("debug") {
+				debug = true
+			}
+
+			if !command.Flags().Changed("keep-database-data") {
+				keepDatabaseData = false
+			}
+
+			if !command.Flags().Changed("keep-filestore-data") {
+				keepFilestoreData = false
+			}
+
+		}
+
 		logger.WithFields(logrus.Fields{
 			"cluster-supervisor":              clusterSupervisor,
 			"group-supervisor":                groupSupervisor,
@@ -121,6 +139,7 @@ var serverCmd = &cobra.Command{
 			"keep-database-data":              keepDatabaseData,
 			"keep-filestore-data":             keepFilestoreData,
 			"debug":                           debug,
+			"dev-mode":                        dev,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
