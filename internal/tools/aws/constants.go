@@ -116,4 +116,28 @@ const (
 
 	// MySQLConnStringTemplate takes db user, password, hostname and database name.
 	MySQLConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
+
+	// MySQLDefaultContextTimeout is the number of seconds that a SQL command will take before timing out.
+	MySQLDefaultContextTimeout = 30
+
+	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost RDS database schemas.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	rdsDatabaseNamePrefix = "cloud_"
+
+	rdsMultitenantMasterSecretName = "rds-db-cluster-master-secret"
+
+	rdsMultitenantDBCloudIDTagKey = "tag:RDSMultitenantCloudInstallationID"
+
+	rdsMultitenantDBClusterStatusTagKey = "tag:RDSMultitenantDBClusterStatus"
+
+	rdsMultitenantDBClusterIDTagKey = "tag:RDSMultitenantDBClusterID"
+
+	rdsMultitenantDBClusterStatusFull = "full"
+
+	rdsMultitenantDBClusterStatusAvailable = "available"
+
+	rdsMySQLConnStringTemplate = "%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
+
+	rdsMySQLSchemaInformationDatabase = "information_schema"
 )

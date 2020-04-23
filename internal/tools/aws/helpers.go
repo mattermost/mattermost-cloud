@@ -9,10 +9,22 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
+// RDSMySQLConnString ...
+func RDSMySQLConnString(schema, endpoint, username, password string) string {
+	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+		username, password, endpoint, rdsMySQLSchemaInformationDatabase)
+}
+
 // CloudID returns the standard ID used for AWS resource names. This ID is used
 // to correlate installations to AWS resources.
 func CloudID(id string) string {
 	return cloudIDPrefix + id
+}
+
+// MattermostRDSDatabaseName formats the name of a Mattermost RDS database schema.
+func MattermostRDSDatabaseName(installationID string) string {
+	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
+	// return "mattermost"
 }
 
 // RDSSnapshotTagValue returns the value for tagging a RDS snapshot.
@@ -28,6 +40,11 @@ func IAMSecretName(cloudID string) string {
 // RDSSecretName returns the RDS secret name for a given Cloud ID.
 func RDSSecretName(cloudID string) string {
 	return cloudID + rdsSuffix
+}
+
+// RDSMultitenantSecretName ...
+func RDSMultitenantSecretName(cloudID string) string {
+	return fmt.Sprintf("%s-multitenant%s", cloudID, rdsSuffix)
 }
 
 func trimTagPrefix(tag string) string {

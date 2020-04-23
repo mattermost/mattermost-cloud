@@ -187,3 +187,90 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 
 	return nil
 }
+
+func (a *Client) createRDSMultiDatabaseDBCluster(dbClusterID, vpcID, username, password, kmsKeyID string, logger log.FieldLogger) error {
+	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(dbClusterID),
+	})
+	if err == nil {
+		logger.WithField("db-cluster-name", dbClusterID).Debug("AWS DB cluster already created")
+		return nil
+	}
+
+	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(vpcID, logger)
+	if err != nil {
+		return err
+	}
+
+	dbSubnetGroupName, err := a.rdsGetDBSubnetGroupName(vpcID, logger)
+	if err != nil {
+		return err
+	}
+
+	input := &rds.CreateDBClusterInput{
+		AvailabilityZones: []*string{
+			aws.String("us-east-1a"),
+			aws.String("us-east-1b"),
+			aws.String("us-east-1c"),
+		},
+		BackupRetentionPeriod: aws.Int64(7),
+		DBClusterIdentifier:   aws.String(dbClusterID),
+		EngineMode:            aws.String("provisioned"),
+		Engine:                aws.String("aurora-mysql"),
+		EngineVersion:         aws.String("5.7"),
+		MasterUserPassword:    aws.String(password),
+		MasterUsername:        aws.String(username),
+		Port:                  aws.Int64(3306),
+		StorageEncrypted:      aws.Bool(true),
+		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
+		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
+		KmsKeyId:              aws.String(kmsKeyID),
+		DeletionProtection:    aws.Bool(true),
+		Tags: []*rds.Tag{
+			{
+				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterStatusTagKey)),
+				Value: aws.String(rdsMultitenantDBClusterStatusAvailable),
+			},
+			{
+				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterIDTagKey)),
+				Value: aws.String(dbClusterID),
+			},
+		},
+	}
+
+	_, err = a.Service().rds.CreateDBCluster(input)
+	if err != nil {
+		return err
+	}
+
+	logger.WithField("db-cluster-name", dbClusterID).Debug("AWS DB cluster created")
+
+	return nil
+}
+
+func (a *Client) createRDSMultiDatabaseDBClusterInstance(dbClusterID, instanceName string, logger log.FieldLogger) error {
+	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
+		DBInstanceIdentifier: aws.String(instanceName),
+	})
+	if err == nil {
+		logger.WithField("db-instance-name", instanceName).Debug("AWS DB instance already created")
+
+		return nil
+	}
+
+	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
+		DBClusterIdentifier:  aws.String(dbClusterID),
+		DBInstanceIdentifier: aws.String(instanceName),
+		DBInstanceClass:      aws.String("db.t3.small"),
+		Engine:               aws.String("aurora-mysql"),
+		PubliclyAccessible:   aws.Bool(false),
+		DeletionProtection:   aws.Bool(true),
+	})
+	if err != nil {
+		return err
+	}
+
+	logger.WithField("db-instance-name", instanceName).Debug("AWS DB instance created")
+
+	return nil
+}
