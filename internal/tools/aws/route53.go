@@ -167,7 +167,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 			return err
 		}
 
-		recordsets = append(recordsets, recordList.ResourceRecordSets...)
+		recordSets = append(recordSets, recordList.ResourceRecordSets...)
 
 		if !*recordList.IsTruncated {
 			break
@@ -179,11 +179,11 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	}
 
 	var changes []*route53.Change
-	for _, recordset := range recordsets {
-		if strings.Trim(*recordset.Name, ".") == dnsName {
+	for _, recordSet := range recordSets {
+		if strings.Trim(*recordSet.Name, ".") == dnsName {
 			changes = append(changes, &route53.Change{
 				Action:            aws.String("DELETE"),
-				ResourceRecordSet: recordset,
+				ResourceRecordSet: recordSet,
 			})
 		}
 	}
