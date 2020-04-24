@@ -128,6 +128,8 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 	return nil
 }
 
+// IsProvisionedPrivateCNAME returns true if a record has been
+// registered for the given CNAME (full FQDN required as input)
 func (a *Client) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool {
 	id, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,

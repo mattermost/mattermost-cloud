@@ -184,6 +184,10 @@ func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logge
 	return nil
 }
 
+func (a *mockAWS) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool {
+	return false
+}
+
 func (a *mockAWS) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error {
 	return nil
 }
