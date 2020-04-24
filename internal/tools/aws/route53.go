@@ -128,6 +128,20 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 	return nil
 }
 
+func (a *Client) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPrivateCloudDNSTagValue,
+	}, logger)
+
+	if err != nil {
+		logger.WithError(err).Debugf("couldn't look up zone ID for DNS name %s", dnsName)
+		return false
+	}
+
+	return a.isProvisionedCNAME(id, dnsName, logger)
+}
+
 // DeletePublicCNAME deletes a AWS route53 record for a public domain name.
 func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
 	id, err := a.getHostedZoneIDWithTag(Tag{
@@ -154,9 +168,40 @@ func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) erro
 	return a.deleteCNAME(id, dnsName, logger)
 }
 
+func (a *Client) isProvisionedCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) bool {
+	nextRecordName := dnsName
+	for {
+		recordList, err := a.Service().route53.ListResourceRecordSets(
+			&route53.ListResourceRecordSetsInput{
+				HostedZoneId:    &hostedZoneID,
+				StartRecordName: &nextRecordName,
+			})
+
+		if err != nil {
+			logger.WithError(err).Debugf("couldn't find record list for %s", dnsName)
+			return false
+		}
+
+		for _, recordSet := range recordList.ResourceRecordSets {
+			if recordSet.Name != nil && dnsName == strings.TrimRight(*recordSet.Name, ".") {
+				return true
+			}
+		}
+
+		if !*recordList.IsTruncated {
+			break
+		}
+
+		nextRecordName = *recordList.NextRecordName
+		logger.Debugf("DNS query found more than one page of records; running another query with record-name=%s", nextRecordName)
+	}
+
+	return false
+}
+
 func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
 	nextRecordName := dnsName
-	var recordsets []*route53.ResourceRecordSet
+	var recordSets []*route53.ResourceRecordSet
 	for {
 		recordList, err := a.Service().route53.ListResourceRecordSets(
 			&route53.ListResourceRecordSetsInput{
