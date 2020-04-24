@@ -121,20 +121,6 @@ func (group utilityGroup) CreateUtilityGroup() error {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
 
-	// TODO remove this when Helm is removed as a dependency
-	err = installHelm(group.kops, helmRepos, group.provisioner.logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
-	}
-
-	logger.Info("Adding new Helm repos.")
-	for repoName, repoURL := range helmRepos {
-		err = helmRepoAdd(repoName, repoURL, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to add helm repos")
-		}
-	}
-
 	return nil
 }
 
@@ -165,7 +151,12 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
 
-	logger = group.provisioner.logger.WithField("helm-init", "UpgradeUtilityGroup")
+	err = installHelm(group.kops, helmRepos, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
+	if err != nil {
+		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
+	}
+
+	logger = group.provisioner.logger.WithField("helm-init", "ProvisionUtilityGroup")
 	err = helmInit(logger, group.kops)
 	if err != nil {
 		logger.WithError(err).Error("couldn't re-initialize Helm in the cluster")
