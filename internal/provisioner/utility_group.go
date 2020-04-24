@@ -156,12 +156,6 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
 	}
 
-	logger = group.provisioner.logger.WithField("helm-init", "ProvisionUtilityGroup")
-	err = helmInit(logger, group.kops)
-	if err != nil {
-		logger.WithError(err).Error("couldn't re-initialize Helm in the cluster")
-	}
-
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {
 		err = helmRepoAdd(repoName, repoURL, logger)
