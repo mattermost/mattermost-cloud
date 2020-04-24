@@ -24,34 +24,34 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
-// RDSMultiDatabase is a database backed by AWS RDS that supports multi tenancy.
-type RDSMultiDatabase struct {
+// RDSMultitenantDatabase is a database backed by AWS RDS that supports multi tenancy.
+type RDSMultitenantDatabase struct {
 	client         *Client
 	db             *sql.DB
 	installationID string
 }
 
-// NewRDSMultiDatabase returns a new RDSDatabase interface.
-func NewRDSMultiDatabase(installationID string, client *Client) *RDSMultiDatabase {
-	return &RDSMultiDatabase{
+// NewRDSMultitenantDatabase returns a new RDSDatabase interface.
+func NewRDSMultitenantDatabase(installationID string, client *Client) *RDSMultitenantDatabase {
+	return &RDSMultitenantDatabase{
 		client:         client,
 		installationID: installationID,
 	}
 }
 
 // Teardown removes all AWS resources related to a multi-tenant RDS database.
-func (d *RDSMultiDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 	return nil
 }
 
 // Snapshot creates a snapshot of the multi-tenant multi-tenant RDS database..
-func (d *RDSMultiDatabase) Snapshot(logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) Snapshot(logger log.FieldLogger) error {
 	return nil
 }
 
 // GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
 // accessing the multi-tenant RDS database cluster.
-func (d *RDSMultiDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
+func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	awsID := CloudID(d.installationID)
 	databaseSecretName := RDSMultitenantSecretName(awsID)
 
@@ -60,23 +60,74 @@ func (d *RDSMultiDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger)
 		return nil, nil, err
 	}
 
+	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
+		// We create secrets with the following tags:
+		// {
+		// 	Key:   aws.String(trimTagPrefix(rdsMultitenantDBCloudIDTagKey)),
+		// 	Value: aws.String(cloudID),
+		// },
+		// {
+		// 	Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterIDTagKey)),
+		// 	Value: aws.String(dbClusterID),
+		// },
+		TagFilters: []*gt.TagFilter{
+			{
+				Key:    aws.String(trimTagPrefix(rdsMultitenantDBCloudIDTagKey)),
+				Values: []*string{aws.String(awsID)},
+			},
+			{
+				Key: aws.String(trimTagPrefix(rdsMultitenantDBClusterIDTagKey)),
+			},
+		},
+	})
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to get RDS secret resource that belong to cloud installation %s", awsID)
+	}
+
+	if len(resourceNames) != 1 {
+		return nil, nil, errors.Errorf("cloud installation %s should have one RDS secret (found %d)", awsID, len(resourceNames))
+	}
+
+	var rdsDBClusterID *string
+	for _, tag := range resourceNames[0].Tags {
+		if *tag.Key == trimTagPrefix(rdsMultitenantDBClusterIDTagKey) {
+			rdsDBClusterID = tag.Value
+			break
+		}
+	}
+
+	if rdsDBClusterID == nil {
+		return nil, nil, errors.Errorf("could not found a RDS DB cluster for cloud installation %s", awsID)
+	}
+
 	result, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
+		DBClusterIdentifier: rdsDBClusterID,
 	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(result.DBClusters) != 1 {
-		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
+	var rdsDBClusters []*rds.DBCluster
+	for _, cluster := range result.DBClusters {
+		if *cluster.Status == "available" && *cluster.DBClusterIdentifier == *rdsDBClusterID {
+			rdsDBClusters = append(rdsDBClusters, cluster)
+		}
 	}
+
+	if len(rdsDBClusters) != 1 {
+		return nil, nil, fmt.Errorf("expected one multitenant RDS cluster for installation %s (found %d): %v", awsID, len(result.DBClusters), result.DBClusters)
+	}
+
+	connString := RDSMySQLConnString(MattermostRDSDatabaseName(d.installationID), *rdsDBClusters[0].Endpoint, rdsSecret.MasterUsername, rdsSecret.MasterPassword)
+
+	logger.Debugf(">>>>> CONNECTION STRING: %s", connString)
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": RDSMySQLConnString(awsID, *result.DBClusters[0].Endpoint, rdsSecret.MasterUsername, rdsSecret.MasterPassword),
+			"DB_CONNECTION_STRING": connString,
 		},
 	}
 
@@ -90,7 +141,7 @@ func (d *RDSMultiDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger)
 }
 
 // Provision completes all the steps necessary to provision a multi-tenant RDS database.
-func (d *RDSMultiDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(MySQLDefaultContextTimeout*time.Second))
 	defer cancel()
 
@@ -123,6 +174,16 @@ func (d *RDSMultiDatabase) Provision(store model.InstallationDatabaseStoreInterf
 		}
 	}
 
+	err = d.closeDBConnection()
+	if err != nil {
+		return err
+	}
+
+	err = d.connectDBCluster(MattermostRDSDatabaseName(d.installationID), *rdsDBCluster.Endpoint, masterSecret.MasterUsername, masterSecret.MasterPassword)
+	if err != nil {
+		return err
+	}
+
 	installationSecret, err := d.secretsManagerEnsureRDSSecretCreated(*rdsDBCluster.DBClusterIdentifier, logger)
 	if err != nil {
 		return err
@@ -133,7 +194,17 @@ func (d *RDSMultiDatabase) Provision(store model.InstallationDatabaseStoreInterf
 		return err
 	}
 
-	err = d.grantUserPermissions(ctx, MattermostRDSDatabaseName(d.installationID), installationSecret.MasterUsername)
+	// err = d.grantUserReadOnlyPermissions(ctx, rdsMySQLSchemaInformationDatabase, installationSecret.MasterUsername)
+	// if err != nil {
+	// 	return err
+	// }
+
+	err = d.grantUserFullPermissions(ctx, MattermostRDSDatabaseName(d.installationID), installationSecret.MasterUsername)
+	if err != nil {
+		return err
+	}
+
+	err = d.closeDBConnection()
 	if err != nil {
 		return err
 	}
@@ -141,7 +212,7 @@ func (d *RDSMultiDatabase) Provision(store model.InstallationDatabaseStoreInterf
 	return nil
 }
 
-func (d *RDSMultiDatabase) secretsManagerGetRDSSecret(secretName string, logger log.FieldLogger) (*RDSSecret, error) {
+func (d *RDSMultitenantDatabase) secretsManagerGetRDSSecret(secretName string, logger log.FieldLogger) (*RDSSecret, error) {
 	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
@@ -163,7 +234,7 @@ func (d *RDSMultiDatabase) secretsManagerGetRDSSecret(secretName string, logger 
 	return rdsSecret, nil
 }
 
-func (d *RDSMultiDatabase) secretsManagerEnsureRDSSecretCreated(dbClusterID string, logger log.FieldLogger) (*RDSSecret, error) {
+func (d *RDSMultitenantDatabase) secretsManagerEnsureRDSSecretCreated(dbClusterID string, logger log.FieldLogger) (*RDSSecret, error) {
 	cloudID := CloudID(d.installationID)
 	rdsSecretName := RDSMultitenantSecretName(cloudID)
 	rdsSecretPayload := RDSSecret{}
@@ -229,7 +300,7 @@ func (d *RDSMultiDatabase) secretsManagerEnsureRDSSecretCreated(dbClusterID stri
 	return &rdsSecretPayload, nil
 }
 
-func (d *RDSMultiDatabase) findAvailableDBCluster() (*rds.DBCluster, error) {
+func (d *RDSMultitenantDatabase) findAvailableDBCluster() (*rds.DBCluster, error) {
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
 		TagFilters: []*gt.TagFilter{
 			{
@@ -275,8 +346,10 @@ func (d *RDSMultiDatabase) findAvailableDBCluster() (*rds.DBCluster, error) {
 	return nil, errors.New("not enough db clusters")
 }
 
-func (d *RDSMultiDatabase) connectDBCluster(schema, endpoint, username, password string) error {
-	db, err := sql.Open("mysql", RDSMySQLConnString(schema, endpoint, username, password))
+func (d *RDSMultitenantDatabase) connectDBCluster(schema, endpoint, username, password string) error {
+	connString := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+		username, password, endpoint, schema)
+	db, err := sql.Open("mysql", connString)
 	if err != nil {
 		return errors.Wrap(err, "connecting to RDS DB cluster")
 	}
@@ -285,7 +358,7 @@ func (d *RDSMultiDatabase) connectDBCluster(schema, endpoint, username, password
 	return nil
 }
 
-func (d *RDSMultiDatabase) createUserIfNotExist(ctx context.Context, username, password string) error {
+func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, username, password string) error {
 	query := fmt.Sprintf("CREATE USER IF NOT EXISTS '%s'@'%s' IDENTIFIED BY '%s'", username, "%", password)
 	_, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -295,7 +368,7 @@ func (d *RDSMultiDatabase) createUserIfNotExist(ctx context.Context, username, p
 	return nil
 }
 
-func (d *RDSMultiDatabase) createDatabaseIfNotExist(ctx context.Context, databaseName string) error {
+func (d *RDSMultitenantDatabase) createDatabaseIfNotExist(ctx context.Context, databaseName string) error {
 	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET 'utf8mb4'", databaseName)
 	_, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -305,7 +378,16 @@ func (d *RDSMultiDatabase) createDatabaseIfNotExist(ctx context.Context, databas
 	return nil
 }
 
-func (d *RDSMultiDatabase) grantUserPermissions(ctx context.Context, databaseName, username string) error {
+func (d *RDSMultitenantDatabase) closeDBConnection() error {
+	err := d.db.Close()
+	if err != nil {
+		return errors.Wrap(err, "closing connection")
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, databaseName, username string) error {
 	query := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'%s'", databaseName, username, "%")
 	_, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -315,7 +397,17 @@ func (d *RDSMultiDatabase) grantUserPermissions(ctx context.Context, databaseNam
 	return nil
 }
 
-func (d *RDSMultiDatabase) isDatabase(ctx context.Context, databaseName string) (bool, error) {
+func (d *RDSMultitenantDatabase) grantUserReadOnlyPermissions(ctx context.Context, databaseName, username string) error {
+	query := fmt.Sprintf("GRANT USAGE ON %s.* TO '%s'@'%s' WITH GRANT OPTION", databaseName, username, "%")
+	_, err := d.db.QueryContext(ctx, query)
+	if err != nil {
+		return errors.Wrapf(err, "granting permissions to user %s", username)
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) isDatabase(ctx context.Context, databaseName string) (bool, error) {
 	query := "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=?"
 	rows, err := d.db.QueryContext(ctx, query, databaseName)
 
@@ -334,7 +426,7 @@ func (d *RDSMultiDatabase) isDatabase(ctx context.Context, databaseName string) 
 	return count > 0, nil
 }
 
-func (d *RDSMultiDatabase) countDatabases(ctx context.Context) (int, error) {
+func (d *RDSMultitenantDatabase) countDatabases(ctx context.Context) (int, error) {
 	query := "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME LIKE ?"
 	param := fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, "%")
 
@@ -354,7 +446,7 @@ func (d *RDSMultiDatabase) countDatabases(ctx context.Context) (int, error) {
 	return count, nil
 }
 
-func (d *RDSMultiDatabase) createDBClusterRDS(logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) createDBClusterRDS(logger log.FieldLogger) error {
 	// To properly provision the database we need a SQL client to lookup which
 	// cluster(s) the installation is running on.
 	if !d.client.HasSQLStore() {
@@ -449,7 +541,7 @@ func (d *RDSMultiDatabase) createDBClusterRDS(logger log.FieldLogger) error {
 	return nil
 }
 
-func (d *RDSMultiDatabase) getKMSResourceNames(dbClusterID string) ([]*string, error) {
+func (d *RDSMultitenantDatabase) getKMSResourceNames(dbClusterID string) ([]*string, error) {
 	kmsResources, err := d.client.resourceTaggingGetAllResources(resourcegroupstaggingapi.GetResourcesInput{
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
@@ -470,7 +562,7 @@ func (d *RDSMultiDatabase) getKMSResourceNames(dbClusterID string) ([]*string, e
 	return resourceNameList, nil
 }
 
-func (d *RDSMultiDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*kms.KeyMetadata, error) {
+func (d *RDSMultitenantDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*kms.KeyMetadata, error) {
 	var keys []*kms.KeyMetadata
 
 	for _, name := range resourceNameList {
@@ -486,7 +578,7 @@ func (d *RDSMultiDatabase) getEnabledEncryptionKeys(resourceNameList []*string) 
 	return keys, nil
 }
 
-// func (d *RDSMultiDatabase) getConnectionString(filter []*gt.TagFilter) (string, error) {
+// func (d *RDSMultitenantDatabase) getConnectionString(filter []*gt.TagFilter) (string, error) {
 // 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
 // 		TagFilters: filter,
 // 	})

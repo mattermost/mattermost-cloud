@@ -11,8 +11,8 @@ import (
 
 // RDSMySQLConnString ...
 func RDSMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
-		username, password, endpoint, rdsMySQLSchemaInformationDatabase)
+	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+		username, password, endpoint, schema)
 }
 
 // CloudID returns the standard ID used for AWS resource names. This ID is used
@@ -24,7 +24,6 @@ func CloudID(id string) string {
 // MattermostRDSDatabaseName formats the name of a Mattermost RDS database schema.
 func MattermostRDSDatabaseName(installationID string) string {
 	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
-	// return "mattermost"
 }
 
 // RDSSnapshotTagValue returns the value for tagging a RDS snapshot.

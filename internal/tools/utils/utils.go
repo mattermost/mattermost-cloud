@@ -113,6 +113,8 @@ func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Datab
 		return model.NewMysqlOperatorDatabase()
 	case model.InstallationDatabaseAwsRDS:
 		return aws.NewRDSDatabase(installation.ID, r.awsClient)
+	case model.InstallationDatabaseMultitenantRDS:
+		return aws.NewRDSMultitenantDatabase(installation.ID, r.awsClient)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match
