@@ -3,7 +3,6 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -79,12 +78,12 @@ func (p *prometheus) CreateOrUpgrade() error {
 
 	app := "prometheus"
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
-	_, err = net.LookupNS(dns)
-	if err == nil {
-		// if we can resolve this domain then the domain is already provisioned
+	if p.awsClient.IsProvisionedPrivateCNAME(dns, p.logger) {
+		p.logger.Debugln("CNAME was already provisioned for prometheus")
 		return nil
 	}
 
+	p.logger.Debugln("CNAME was not provisioned for prometheus")
 	ctx, cancel := context.WithTimeout(context.Background(), 120)
 	defer cancel()
 
