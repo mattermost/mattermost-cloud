@@ -13,6 +13,7 @@ type AWSMockedAPI struct {
 	EC2                   *mocks.MockEC2API
 	KMS                   *mocks.MockKMSAPI
 	S3                    *mocks.MockS3API
+	STS                   *mocks.MockSTSAPI
 	Route53               *mocks.MockRoute53API
 	ResourceGroupsTagging *mocks.MockResourceGroupsTaggingAPIAPI
 	SecretsManager        *mocks.MockSecretsManagerAPI
@@ -26,6 +27,7 @@ func NewAWSMockedAPI(ctrl *gomock.Controller) *AWSMockedAPI {
 		IAM:                   mocks.NewMockIAMAPI(ctrl),
 		EC2:                   mocks.NewMockEC2API(ctrl),
 		KMS:                   mocks.NewMockKMSAPI(ctrl),
+		STS:                   mocks.NewMockSTSAPI(ctrl),
 		S3:                    mocks.NewMockS3API(ctrl),
 		Route53:               mocks.NewMockRoute53API(ctrl),
 		ResourceGroupsTagging: mocks.NewMockResourceGroupsTaggingAPIAPI(ctrl),

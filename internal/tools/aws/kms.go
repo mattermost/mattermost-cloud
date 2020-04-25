@@ -6,9 +6,10 @@ import (
 )
 
 // kmsCreateSymmetricKey creates a symmetric encryption key with alias.
-func (a *Client) kmsCreateSymmetricKey(keyDescription string, tags []*kms.Tag) (*kms.KeyMetadata, error) {
+func (a *Client) kmsCreateSymmetricKey(keyDescription string, tags []*kms.Tag, policyDocument *string) (*kms.KeyMetadata, error) {
 	createKeyOut, err := a.Service().kms.CreateKey(&kms.CreateKeyInput{
 		Description: aws.String(keyDescription),
+		Policy:      policyDocument,
 		Tags:        tags,
 	})
 	if err != nil {

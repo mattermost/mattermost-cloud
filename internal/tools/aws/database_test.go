@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/golang/mock/gomock"
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -71,11 +73,48 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 			}).
 			Times(1),
 
+		a.Mocks.API.STS.EXPECT().
+			GetCallerIdentity(gomock.Any()).
+			Return(&sts.GetCallerIdentityOutput{Arn: &a.UserARN}, nil).
+			Times(1),
+
 		a.Mocks.API.KMS.EXPECT().
 			CreateKey(gomock.Any()).
 			Do(func(input *kms.CreateKeyInput) {
 				a.Assert().Equal(*input.Tags[0].TagKey, DefaultRDSEncryptionTagKey)
 				a.Assert().Equal(*input.Tags[0].TagValue, CloudID(a.InstallationA.ID))
+
+				expectedPolicyDocument := model.PolicyDocument{
+					Version: model.PolicyDocumentVersion,
+					Statement: []model.StatementEntry{
+						{
+							Effect:    model.PolicyStatementEffectAllow,
+							Principal: map[string]string{"AWS": "arn:aws:iam::926412419614:root"},
+							Action:    []string{"kms:*"},
+							Resource:  model.PolicyStatementAllResources,
+						},
+						{
+							Effect:    model.PolicyStatementEffectAllow,
+							Principal: map[string]string{"AWS": a.UserARN},
+							Action: []string{
+								"kms:CreateKey",
+								"kms:Describe*",
+								"kms:List*",
+								"kms:Get*",
+								"kms:ScheduleKeyDeletion",
+								"kms:CreateAlias",
+								"kms:TagResource",
+							},
+							Resource: model.PolicyStatementAllResources,
+						},
+					},
+				}
+
+				actualPolicyDocument := model.PolicyDocument{}
+				err := json.Unmarshal([]byte(*input.Policy), &actualPolicyDocument)
+
+				a.Assert().NoError(err)
+				a.Assert().Equal(expectedPolicyDocument, actualPolicyDocument)
 			}).
 			Return(&kms.CreateKeyOutput{
 				KeyMetadata: &kms.KeyMetadata{
@@ -96,6 +135,66 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 
 	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
+}
+
+func (a *AWSTestSuite) TestProvisioningRDSCallerArnError() {
+	database := RDSDatabase{
+		installationID: a.InstallationA.ID,
+		client:         a.Mocks.AWS,
+	}
+
+	gomock.InOrder(
+		a.Mocks.Log.Logger.EXPECT().
+			Infof("Provisioning AWS RDS database with ID %s", CloudID(a.InstallationA.ID)).
+			Return().
+			Times(1),
+
+		// Get cluster installations from data store.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
+			GetClusterInstallations(gomock.Any()).
+			Do(func(input *model.ClusterInstallationFilter) {
+				a.Assert().Equal(input.InstallationID, a.InstallationA.ID)
+			}).
+			Return([]*model.ClusterInstallation{{ID: a.ClusterA.ID}}, nil).
+			Times(1),
+
+		// Find the VPC which the installation belongs to.
+		a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any()).
+			Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{{VpcId: &a.VPCa}}}, nil).
+			Times(1),
+
+		// Create a database secret.
+		a.Mocks.API.SecretsManager.EXPECT().
+			GetSecretValue(gomock.Any()).
+			Return(&secretsmanager.GetSecretValueOutput{SecretString: &a.SecretString}, nil).
+			Times(1),
+
+		a.Mocks.Log.Logger.EXPECT().
+			WithField("secret-name", RDSSecretName(CloudID(a.InstallationA.ID))).
+			Return(testlib.NewLoggerEntry()).
+			Times(1),
+
+		// Create encryption key since none has been created yet.
+		a.Mocks.API.ResourceGroupsTagging.EXPECT().
+			GetResources(gomock.Any()).
+			Return(&gt.GetResourcesOutput{}, nil).
+			Do(func(input *gt.GetResourcesInput) {
+				a.Assert().Equal(DefaultRDSEncryptionTagKey, *input.TagFilters[0].Key)
+				a.Assert().Equal(CloudID(a.InstallationA.ID), *input.TagFilters[0].Values[0])
+				a.Assert().Nil(input.PaginationToken)
+			}).
+			Times(1),
+
+		a.Mocks.API.STS.EXPECT().
+			GetCallerIdentity(gomock.Any()).
+			Return(&sts.GetCallerIdentityOutput{Arn: &a.UserARN}, errors.New("identity does not exist")).
+			Times(1),
+	)
+
+	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
+	a.Assert().Error(err)
+	a.Assert().Equal("unable to provision RDS database: unable to get caller identity when creating RDS "+
+		"DB cluster cloud-id000000000000000000000000a: identity does not exist", err.Error())
 }
 
 // Tests provisioning database assuming that an encryption key already exists.

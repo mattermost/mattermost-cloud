@@ -23,8 +23,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
-	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // AWS interface for use by other packages.
@@ -66,6 +69,7 @@ type Service struct {
 	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
 	kms                   kmsiface.KMSAPI
+	sts                   stsiface.STSAPI
 }
 
 // NewService creates a new instance of Service.
@@ -80,6 +84,7 @@ func NewService(sess *session.Session) *Service {
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
 		ec2:                   ec2.New(sess),
 		kms:                   kms.New(sess),
+		sts:                   sts.New(sess),
 	}
 }
 
