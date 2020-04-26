@@ -1,6 +1,8 @@
 package model
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 const (
 	// PolicyDocumentVersion supplies the default version for creating policy documents.
@@ -23,6 +25,7 @@ type PolicyDocument struct {
 
 // StatementEntry creates a statement in the policy document.
 type StatementEntry struct {
+	Sid       string
 	Effect    string
 	Principal map[string]string
 	Action    []string

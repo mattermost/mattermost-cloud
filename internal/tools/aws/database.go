@@ -240,6 +240,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 			return errors.Wrapf(err, "unable to parse caller ARN when creating RDS DB %s", awsID)
 		}
 
+		// This assumes that the root is at the same account of the caller.
 		rootARN := arn.ARN{
 			AccountID: callerARN.AccountID,
 			Service:   "iam",
@@ -247,14 +248,17 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 			Resource:  "root",
 		}
 
-		// CMKs have their access restricted to users defined in this policy. Add the root user to the policy prevents
-		// created keys to become unmanageable. It also enables IAM policies to allow access to the encryption keys when
-		// in combination with the user account statement. For more information on accessing keys:
-		// https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html#key-policy-default-allow-root-enable-iam
+		// CMKs have their access restricted to users and actions defined in the key itself. Adding the
+		// root user to the policy prevents keys to become unmanageable in the future. In the policy
+		// level we need to give full permissions to the root principal so it can manage the key at
+		// any time if necessary. To other principals, we only allow actions necessary for performing
+		// a designated task. Note that the caller (or provisioner in this case) requires writting
+		// permissions to the key even if this actions are not defined in the user's IAM policy.
 		policyDocument := model.PolicyDocument{
 			Version: model.PolicyDocumentVersion,
 			Statement: []model.StatementEntry{
 				{
+					Sid:    "Allow full control of the key",
 					Effect: model.PolicyStatementEffectAllow,
 					Principal: map[string]string{
 						"AWS": rootARN.String(),
@@ -265,18 +269,24 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 					Resource: model.PolicyStatementAllResources,
 				},
 				{
+					Sid:    "Allow administration of the key",
 					Effect: model.PolicyStatementEffectAllow,
 					Principal: map[string]string{
 						"AWS": callerARN.String(),
 					},
 					Action: []string{
-						"kms:CreateKey",
+						"kms:Create*",
 						"kms:Describe*",
+						"kms:Enable*",
 						"kms:List*",
+						"kms:Put*",
+						"kms:Update*",
+						"kms:Revoke*",
+						"kms:Disable*",
 						"kms:Get*",
+						"kms:Delete*",
 						"kms:ScheduleKeyDeletion",
-						"kms:CreateAlias",
-						"kms:TagResource",
+						"kms:CancelKeyDeletion",
 					},
 					Resource: model.PolicyStatementAllResources,
 				},
@@ -289,17 +299,16 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		}
 
 		keyPolicyDocument := string(policyDocumentBytes)
-
 		keyTags := []*kms.Tag{
 			{
 				TagKey:   aws.String(DefaultRDSEncryptionTagKey),
 				TagValue: aws.String(awsID),
 			},
 		}
-
 		keyMetadata, err = d.client.kmsCreateSymmetricKey(KMSKeyDescriptionRDS(awsID), keyTags, &keyPolicyDocument)
 		if err != nil {
-			return errors.Wrapf(err, "unable to create an encryption key for RDS DB cluster %s", awsID)
+			return errors.Wrapf(err,
+				"unable to create an encryption key for RDS DB cluster %s: key policy: %s", awsID, keyPolicyDocument)
 		}
 	}
 
