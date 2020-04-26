@@ -142,44 +142,61 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldL
 
 // Provision completes all the steps necessary to provision a multi-tenant RDS database.
 func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(MySQLDefaultContextTimeout*time.Second))
-	defer cancel()
+	clusterInstallations, err := store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		PerPage:        model.AllPerPage,
+		InstallationID: d.installationID,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "unable to lookup cluster installations for installation %s", d.installationID)
+	}
 
-	rdsDBCluster, err := d.findAvailableDBCluster()
+	clusterInstallationCount := len(clusterInstallations)
+	if clusterInstallationCount == 0 {
+		return fmt.Errorf("no cluster installations found for %s", d.installationID)
+	}
+	if clusterInstallationCount != 1 {
+		return fmt.Errorf("RDS provisioning is not currently supported for multiple cluster installations (found %d)", clusterInstallationCount)
+	}
+
+	clusterID := clusterInstallations[0].ClusterID
+	vpcFilters := []*ec2.Filter{
+		{
+			Name:   aws.String(VpcClusterIDTagKey),
+			Values: []*string{aws.String(clusterID)},
+		},
+		{
+			Name:   aws.String(VpcAvailableTagKey),
+			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+		},
+	}
+	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters)
+	if err != nil {
+		return err
+	}
+	if len(vpcs) != 1 {
+		return fmt.Errorf("expected 1 VPC for cluster %s (found %d)", clusterID, len(vpcs))
+	}
+
+	rdsDBCluster, err := d.findAvailableDBCluster(*vpcs[0].VpcId)
 	if err != nil {
 		return err
 	}
 
-	// Missing checking for the endpoint status
-
-	masterSecret, err := d.client.secretsManagerGetRDSSecret("rds-db-cluster-master-secret", logger)
+	masterSecret, err := d.secretsManagerGetRDSSecret(RDSMultitenantDBClusterID(*vpcs[0].VpcId), logger)
 	if err != nil {
 		return err
 	}
 
 	err = d.connectDBCluster(rdsMySQLSchemaInformationDatabase, *rdsDBCluster.Endpoint, masterSecret.MasterUsername, masterSecret.MasterPassword)
+	defer d.closeDBConnection(logger)
 	if err != nil {
 		return err
 	}
 
-	isDatabase, err := d.isDatabase(ctx, MattermostRDSDatabaseName(d.installationID))
-	if err != nil {
-		return err
-	}
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(MySQLDefaultContextTimeout*time.Second))
+	defer cancel()
 
-	if !isDatabase {
-		err = d.createDatabaseIfNotExist(ctx, MattermostRDSDatabaseName(d.installationID))
-		if err != nil {
-			return err
-		}
-	}
-
-	err = d.closeDBConnection()
-	if err != nil {
-		return err
-	}
-
-	err = d.connectDBCluster(MattermostRDSDatabaseName(d.installationID), *rdsDBCluster.Endpoint, masterSecret.MasterUsername, masterSecret.MasterPassword)
+	err = d.createDatabaseIfNotExist(ctx, MattermostRDSDatabaseName(d.installationID))
 	if err != nil {
 		return err
 	}
@@ -194,17 +211,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return err
 	}
 
-	// err = d.grantUserReadOnlyPermissions(ctx, rdsMySQLSchemaInformationDatabase, installationSecret.MasterUsername)
-	// if err != nil {
-	// 	return err
-	// }
-
 	err = d.grantUserFullPermissions(ctx, MattermostRDSDatabaseName(d.installationID), installationSecret.MasterUsername)
-	if err != nil {
-		return err
-	}
-
-	err = d.closeDBConnection()
 	if err != nil {
 		return err
 	}
@@ -217,7 +224,7 @@ func (d *RDSMultitenantDatabase) secretsManagerGetRDSSecret(secretName string, l
 		SecretId: aws.String(secretName),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get secrets manager secret")
+		return nil, errors.Wrapf(err, "unable to get secret %s", secretName)
 	}
 
 	var rdsSecret *RDSSecret
@@ -300,12 +307,16 @@ func (d *RDSMultitenantDatabase) secretsManagerEnsureRDSSecretCreated(dbClusterI
 	return &rdsSecretPayload, nil
 }
 
-func (d *RDSMultitenantDatabase) findAvailableDBCluster() (*rds.DBCluster, error) {
+func (d *RDSMultitenantDatabase) findAvailableDBCluster(vpcID string) (*rds.DBCluster, error) {
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
 		TagFilters: []*gt.TagFilter{
 			{
 				Key:    aws.String(trimTagPrefix(rdsMultitenantDBClusterStatusTagKey)),
 				Values: []*string{aws.String(rdsMultitenantDBClusterStatusAvailable)},
+			},
+			{
+				Key:    aws.String(trimTagPrefix(rdsMultitenantDBClusterVpcIDTagKey)),
+				Values: []*string{&vpcID},
 			},
 		},
 	})
@@ -378,13 +389,11 @@ func (d *RDSMultitenantDatabase) createDatabaseIfNotExist(ctx context.Context, d
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) closeDBConnection() error {
+func (d *RDSMultitenantDatabase) closeDBConnection(logger log.FieldLogger) {
 	err := d.db.Close()
 	if err != nil {
-		return errors.Wrap(err, "closing connection")
+		logger.WithError(err).Errorf("failed to close database connection with %s", CloudID(d.installationID))
 	}
-
-	return nil
 }
 
 func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, databaseName, username string) error {
@@ -446,62 +455,18 @@ func (d *RDSMultitenantDatabase) countDatabases(ctx context.Context) (int, error
 	return count, nil
 }
 
-func (d *RDSMultitenantDatabase) createDBClusterRDS(logger log.FieldLogger) error {
-	// To properly provision the database we need a SQL client to lookup which
-	// cluster(s) the installation is running on.
-	if !d.client.HasSQLStore() {
-		return errors.New("the provided AWS client does not have SQL store access")
-	}
-
-	clusterInstallations, err := d.client.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
-		InstallationID: d.installationID,
-	})
-	if err != nil {
-		return errors.Wrapf(err, "unable to lookup cluster installations for installation %s", d.installationID)
-	}
-
-	clusterInstallationCount := len(clusterInstallations)
-	if clusterInstallationCount == 0 {
-		return fmt.Errorf("no cluster installations found for %s", d.installationID)
-	}
-	if clusterInstallationCount != 1 {
-		return fmt.Errorf("RDS provisioning is not currently supported for multiple cluster installations (found %d)", clusterInstallationCount)
-	}
-
-	clusterID := clusterInstallations[0].ClusterID
-	vpcFilters := []*ec2.Filter{
-		{
-			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(clusterID)},
-		},
-		{
-			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
-		},
-	}
-	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters)
-	if err != nil {
-		return err
-	}
-	if len(vpcs) != 1 {
-		return fmt.Errorf("expected 1 VPC for cluster %s (found %d)", clusterID, len(vpcs))
-	}
-
-	// OK, we go the VPC which the installation belongs too. Let's create a db cluster then.
-	dbMasterSecret := "rds-db-cluster-master-secret"
-	rdsSecret, err := d.client.secretsManagerEnsureRDSSecretCreated(dbMasterSecret, logger)
+func (d *RDSMultitenantDatabase) CreateDBClusterRDS(vpcID string, logger log.FieldLogger) error {
+	dbClusterID := RDSMultitenantDBClusterID(vpcID)
+	rdsSecret, err := d.client.secretsManagerEnsureRDSSecretCreated(dbClusterID, logger)
 	if err != nil {
 		return err
 	}
 
-	dbMasterEncryptionKey := "rds-db-cluster-master-encryption-key"
-	kmsResourceNames, err := d.getKMSResourceNames(dbMasterEncryptionKey)
+	kmsResourceNames, err := d.getKMSResourceNames(dbClusterID)
 	if err != nil {
 		return err
 	}
 
-	dbClusterID := fmt.Sprintf("rds-%s-%d", *vpcs[0].VpcId, time.Now().Nanosecond())
 	var keyMetadata *kms.KeyMetadata
 	if len(kmsResourceNames) > 0 {
 		enabledKeys, err := d.getEnabledEncryptionKeys(kmsResourceNames)
@@ -515,7 +480,7 @@ func (d *RDSMultitenantDatabase) createDBClusterRDS(logger log.FieldLogger) erro
 
 		keyMetadata = enabledKeys[0]
 	} else {
-		keyMetadata, err = d.client.kmsCreateSymmetricKey(KMSKeyDescriptionRDS(dbMasterEncryptionKey), []*kms.Tag{
+		keyMetadata, err = d.client.kmsCreateSymmetricKey(KMSKeyDescriptionRDS(dbClusterID), []*kms.Tag{
 			{
 				TagKey:   aws.String(DefaultRDSEncryptionTagKey),
 				TagValue: aws.String(dbClusterID),
@@ -528,7 +493,7 @@ func (d *RDSMultitenantDatabase) createDBClusterRDS(logger log.FieldLogger) erro
 
 	logger.Infof("Encrypting RDS database with key %s", *keyMetadata.Arn)
 
-	err = d.client.createRDSMultiDatabaseDBCluster(dbClusterID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, logger)
+	err = d.client.createRDSMultiDatabaseDBCluster(dbClusterID, vpcID, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, logger)
 	if err != nil {
 		return err
 	}
@@ -577,63 +542,3 @@ func (d *RDSMultitenantDatabase) getEnabledEncryptionKeys(resourceNameList []*st
 
 	return keys, nil
 }
-
-// func (d *RDSMultitenantDatabase) getConnectionString(filter []*gt.TagFilter) (string, error) {
-// 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-// 		TagFilters: filter,
-// 	})
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	if len(resourceNames) < 1 {
-// 		return "", nil
-// 	}
-
-// 	for _, resource := range resourceNames {
-// 		secret, err := d.client.Service().secretsManager.DescribeSecret(&secretsmanager.DescribeSecretInput{
-// 			SecretId: resource.ResourceARN,
-// 		})
-// 		if err != nil {
-// 			return "", err
-// 		}
-// 		if secret.DeletedDate == nil {
-// 			result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-// 				SecretId: secret.ARN,
-// 			})
-// 			if err != nil {
-// 				return "", err
-// 			}
-
-// 			var rdsSecret *RDSSecret
-// 			err = json.Unmarshal([]byte(*result.SecretString), &rdsSecret)
-// 			if err != nil {
-// 				return "", errors.Wrap(err, "unable to marshal secrets manager payload")
-// 			}
-
-// 			err = rdsSecret.Validate()
-// 			if err != nil {
-// 				return "", err
-// 			}
-
-// 			for _, tag := range secret.Tags {
-// 				if *tag.Key == trimTagPrefix(rdsMultitenantDBClusterIDTagKey) {
-// 					out, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-// 						DBClusterIdentifier: tag.Value,
-// 					})
-// 					if err != nil {
-// 						return "", err
-// 					}
-// 					if len(out.DBClusters) != 1 {
-// 						return "", fmt.Errorf("expected 1 DB cluster, but got %d", len(out.DBClusters))
-// 					}
-
-// 					return RDSMySQLConnString(rdsMySQLSchemaInformationDatabase, *out.DBClusters[0].Endpoint, *rdsSecret), nil
-// 				}
-// 			}
-// 		}
-
-// 	}
-
-// 	return "", nil
-// }

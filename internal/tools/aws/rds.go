@@ -225,7 +225,7 @@ func (a *Client) createRDSMultiDatabaseDBCluster(dbClusterID, vpcID, username, p
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 		KmsKeyId:              aws.String(kmsKeyID),
-		DeletionProtection:    aws.Bool(true),
+		DeletionProtection:    aws.Bool(false),
 		Tags: []*rds.Tag{
 			{
 				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterStatusTagKey)),
@@ -234,6 +234,10 @@ func (a *Client) createRDSMultiDatabaseDBCluster(dbClusterID, vpcID, username, p
 			{
 				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterIDTagKey)),
 				Value: aws.String(dbClusterID),
+			},
+			{
+				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterVpcIDTagKey)),
+				Value: &vpcID,
 			},
 		},
 	}
@@ -264,7 +268,7 @@ func (a *Client) createRDSMultiDatabaseDBClusterInstance(dbClusterID, instanceNa
 		DBInstanceClass:      aws.String("db.t3.small"),
 		Engine:               aws.String("aurora-mysql"),
 		PubliclyAccessible:   aws.Bool(false),
-		DeletionProtection:   aws.Bool(true),
+		DeletionProtection:   aws.Bool(false),
 	})
 	if err != nil {
 		return err

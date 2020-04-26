@@ -89,6 +89,11 @@ func RDSMigrationInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-migration", CloudID(installationID))
 }
 
+// RDSMultitenantDBClusterID ..
+func RDSMultitenantDBClusterID(vpcID string) string {
+	return fmt.Sprintf("rds-multi-%s-%d", vpcID, time.Now().Nanosecond()) //fmt.Sprintf("%s-migration", CloudID(installationID))
+}
+
 // IsErrorCode asserts that an AWS error has a certain code.
 func IsErrorCode(err error, code string) bool {
 	if err != nil {

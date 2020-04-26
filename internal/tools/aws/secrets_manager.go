@@ -164,10 +164,10 @@ func (a *Client) secretsManagerGetIAMAccessKey(awsID string, logger log.FieldLog
 
 func (a *Client) secretsManagerGetRDSSecret(secretName string, logger log.FieldLogger) (*RDSSecret, error) {
 	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(RDSSecretName(secretName)),
+		SecretId: aws.String(secretName),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get secrets manager secret")
+		return nil, errors.Wrapf(err, "unable to get secret %s", secretName)
 	}
 
 	var rdsSecret *RDSSecret

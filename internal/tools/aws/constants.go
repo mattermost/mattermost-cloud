@@ -131,6 +131,8 @@ const (
 
 	rdsMultitenantDBClusterStatusTagKey = "tag:RDSMultitenantDBClusterStatus"
 
+	rdsMultitenantDBClusterVpcIDTagKey = "tag:RDSMultitenantDBClusterVpcID"
+
 	rdsMultitenantDBClusterIDTagKey = "tag:RDSMultitenantDBClusterID"
 
 	rdsMultitenantDBClusterStatusFull = "full"
