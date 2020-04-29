@@ -37,6 +37,13 @@ type installationStore interface {
 	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 
+	GetDatabaseCluster(id string) (*model.DatabaseCluster, error)
+	GetDatabaseClusters(filter *model.DatabaseClusterFilter) ([]*model.DatabaseCluster, error)
+	CreateDatabaseCluster(databaseCluster *model.DatabaseCluster) error
+	LockDatabaseCluster(databaseID, lockerID string) (bool, error)
+	UnlockDatabaseCluster(databaseID, lockerID string, force bool) (bool, error)
+	UpdateDatabaseCluster(databaseCluster *model.DatabaseCluster) error
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -667,7 +674,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = s.resourceUtil.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
+	err = s.resourceUtil.GetDatabase(installation).Teardown(s.store, s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")
 		return model.InstallationStateDeletionFinalCleanup

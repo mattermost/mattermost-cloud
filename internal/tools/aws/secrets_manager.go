@@ -41,11 +41,26 @@ func (s *RDSSecret) Validate() error {
 	if s.MasterUsername == "" {
 		return errors.New("RDS master username value is empty")
 	}
-	if s.MasterPassword == "" {
+	if s.MasterPassword == "" && len(s.MasterPassword) == 40 {
 		return errors.New("RDS master password value is empty")
 	}
 
 	return nil
+}
+
+func unmarshalSecretPayload(payload string) (*RDSSecret, error) {
+	var secret RDSSecret
+	err := json.Unmarshal([]byte(payload), &secret)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+	}
+
+	err = secret.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return &secret, nil
 }
 
 func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iam.AccessKey, logger log.FieldLogger) error {
@@ -86,18 +101,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 	})
 	if err == nil {
 		logger.WithField("secret-name", secretName).Debug("AWS RDS secret already created")
-
-		err = json.Unmarshal([]byte(*result.SecretString), &rdsSecretPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
-		}
-
-		err := rdsSecretPayload.Validate()
-		if err != nil {
-			return nil, err
-		}
-
-		return rdsSecretPayload, nil
+		return unmarshalSecretPayload(*result.SecretString)
 	}
 
 	// There is no existing secret, so we will create a new one with a strong

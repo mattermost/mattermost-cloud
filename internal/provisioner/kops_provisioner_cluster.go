@@ -31,17 +31,21 @@ type KopsProvisioner struct {
 	owner                   string
 	useExistingAWSResources bool
 	resourceUtil            *utils.ResourceUtil
+	store                   model.InstallationDatabaseStoreInterface
 	logger                  log.FieldLogger
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *KopsProvisioner {
+func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool,
+	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
+
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
 		useExistingAWSResources: useExistingAWSResources,
 		logger:                  logger,
 		resourceUtil:            resourceUtil,
 		owner:                   owner,
+		store:                   store,
 	}
 }
 

@@ -129,15 +129,35 @@ const (
 
 	rdsMultitenantDBCloudIDTagKey = "tag:RDSMultitenantCloudInstallationID"
 
-	rdsMultitenantDBClusterStatusTagKey = "tag:RDSMultitenantDBClusterStatus"
+	rdsMultitenantStateTagKey = "tag:AcceptingInstallations"
 
-	rdsMultitenantDBClusterVpcIDTagKey = "tag:RDSMultitenantDBClusterVpcID"
+	rdsMultitenantPurposeTagKey              = "tag:Purpose"
+	rdsMultitenantPurposeTagValueProvisioner = "provisioning"
+
+	rdsMultitenantOwnerTagKey            = "tag:Owner"
+	rdsMultitenantOwnerTagValueCloudTeam = "cloud team"
+
+	rdsMultitenantDatabaseCounterTagKey = "tag:Counter"
+
+	rdsMultitenantEnvironmentTagKey = "tag:Environment"
+
+	tagValueEnvironmentDev     = "dev"
+	tagValueEnvironmentTest    = "test"
+	tagValueEnvironmentStaging = "staging"
+	tagValueEnvironmentProd    = "prod"
+
+	tagValueTrue  = "true"
+	tagValueFalse = "false"
+
+	rdsMultitenantVPCIDTagKey = "tag:RDSMultitenantVPCID"
+
+	rdsMultitenantInstallationIDTagKey = "tag:InstallationId"
+
+	rdsMultitenantStateAvailable = "available"
 
 	rdsMultitenantDBClusterIDTagKey = "tag:RDSMultitenantDBClusterID"
 
 	rdsMultitenantDBClusterStatusFull = "full"
-
-	rdsMultitenantDBClusterStatusAvailable = "available"
 
 	rdsMySQLConnStringTemplate = "%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
 

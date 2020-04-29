@@ -9,9 +9,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
+// MattermostMySQLConnString ...
+func MattermostMySQLConnString(schema, endpoint, username, password string) string {
+	return fmt.Sprintf("mysql://%s", RDSMySQLConnString(username, password, endpoint, schema))
+}
+
 // RDSMySQLConnString ...
 func RDSMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
 		username, password, endpoint, schema)
 }
 
@@ -39,11 +44,6 @@ func IAMSecretName(cloudID string) string {
 // RDSSecretName returns the RDS secret name for a given Cloud ID.
 func RDSSecretName(cloudID string) string {
 	return cloudID + rdsSuffix
-}
-
-// RDSMultitenantSecretName ...
-func RDSMultitenantSecretName(cloudID string) string {
-	return fmt.Sprintf("%s-multitenant%s", cloudID, rdsSuffix)
 }
 
 func trimTagPrefix(tag string) string {
@@ -89,11 +89,6 @@ func RDSMigrationInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-migration", CloudID(installationID))
 }
 
-// RDSMultitenantDBClusterID ..
-func RDSMultitenantDBClusterID(vpcID string) string {
-	return fmt.Sprintf("rds-multi-%s-%d", vpcID, time.Now().Nanosecond()) //fmt.Sprintf("%s-migration", CloudID(installationID))
-}
-
 // IsErrorCode asserts that an AWS error has a certain code.
 func IsErrorCode(err error, code string) bool {
 	if err != nil {
@@ -103,4 +98,31 @@ func IsErrorCode(err error, code string) bool {
 		}
 	}
 	return false
+}
+
+// USED FROM HERE
+
+// RDSMultitenantClusterSecretName ...
+func RDSMultitenantClusterSecretName(id string) string {
+	return fmt.Sprintf("rds-multitenant-%s-cluster", id)
+}
+
+// RDSMultitenantSecretName ...
+func RDSMultitenantSecretName(id string) string {
+	return fmt.Sprintf("rds-multitenant-%s", id)
+}
+
+// RDSMultitenantMasterUsername ...
+func RDSMultitenantMasterUsername(id string) string {
+	return fmt.Sprintf("", id)
+}
+
+// RDSMultitenantUsername ...
+func RDSMultitenantUsername(id string) string {
+	return fmt.Sprintf("%s", id)
+}
+
+// RDSMultitenantDBClusterID ..
+func RDSMultitenantDBClusterID(randomID int) string {
+	return fmt.Sprintf("rds-multitenant-%d", randomID)
 }

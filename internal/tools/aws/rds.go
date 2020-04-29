@@ -226,18 +226,47 @@ func (a *Client) createRDSMultiDatabaseDBCluster(dbClusterID, vpcID, username, p
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 		KmsKeyId:              aws.String(kmsKeyID),
 		DeletionProtection:    aws.Bool(false),
+
+		// 	rdsMultitenantStateTagKey = "tag:AcceptingInstallations"
+
+		// rdsMultitenantPurposeTagKey              = "tag:Purpose"
+		// rdsMultitenantPurposeTagValueProvisioner = "provisioning"
+
+		// rdsMultitenantOwnerTagKey            = "tag:Owner"
+		// rdsMultitenantOwnerTagValueCloudTeam = "cloud team"
+
+		// rdsMultitenantEnvironmentTagKey = "tag:Environment"
+
+		// tagValueEnvironmentTest    = "test"
+		// tagValueEnvironmentStaging = "staging"
+		// tagValueEnvironmentProd    = "prod"
+
+		// tagValueTrue  = "true"
+		// tagValueFalse = "false"
 		Tags: []*rds.Tag{
 			{
-				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterStatusTagKey)),
-				Value: aws.String(rdsMultitenantDBClusterStatusAvailable),
+				Key:   aws.String(trimTagPrefix(rdsMultitenantVPCIDTagKey)),
+				Value: aws.String(vpcID),
 			},
 			{
 				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterIDTagKey)),
 				Value: aws.String(dbClusterID),
 			},
 			{
-				Key:   aws.String(trimTagPrefix(rdsMultitenantDBClusterVpcIDTagKey)),
-				Value: &vpcID,
+				Key:   aws.String(trimTagPrefix(rdsMultitenantStateTagKey)),
+				Value: aws.String(tagValueTrue),
+			},
+			{
+				Key:   aws.String(trimTagPrefix(rdsMultitenantPurposeTagKey)),
+				Value: aws.String(rdsMultitenantPurposeTagValueProvisioner),
+			},
+			{
+				Key:   aws.String(trimTagPrefix(rdsMultitenantOwnerTagKey)),
+				Value: aws.String(rdsMultitenantOwnerTagValueCloudTeam),
+			},
+			{
+				Key:   aws.String(trimTagPrefix(rdsMultitenantEnvironmentTagKey)),
+				Value: aws.String(tagValueEnvironmentDev),
 			},
 		},
 	}
@@ -248,7 +277,6 @@ func (a *Client) createRDSMultiDatabaseDBCluster(dbClusterID, vpcID, username, p
 	}
 
 	logger.WithField("db-cluster-name", dbClusterID).Debug("AWS DB cluster created")
-
 	return nil
 }
 
@@ -268,7 +296,7 @@ func (a *Client) createRDSMultiDatabaseDBClusterInstance(dbClusterID, instanceNa
 		DBInstanceClass:      aws.String("db.t3.small"),
 		Engine:               aws.String("aurora-mysql"),
 		PubliclyAccessible:   aws.Bool(false),
-		DeletionProtection:   aws.Bool(false),
+		DeletionProtection:   aws.Bool(true),
 	})
 	if err != nil {
 		return err
@@ -277,4 +305,55 @@ func (a *Client) createRDSMultiDatabaseDBClusterInstance(dbClusterID, instanceNa
 	logger.WithField("db-instance-name", instanceName).Debug("AWS DB instance created")
 
 	return nil
+}
+
+func (a *Client) TagRDSCluster(id string) error {
+	for i := 0; i < 200; i++ {
+		_, err := a.Service().rds.AddTagsToResource(&rds.AddTagsToResourceInput{
+			ResourceName: &id,
+			Tags: []*rds.Tag{
+				{
+					Key:   aws.String(fmt.Sprintf("ido9wzes%dbf%dzxpmpbrcbcsddy%d", i, i, i)),
+					Value: aws.String(fmt.Sprintf("%d", i)),
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		// out, _ := a.Service().rds.ListTagsForResource(&rds.ListTagsForResourceInput{
+		// 	ResourceName: &id,
+		// })
+
+		// for _, tag := range out.TagList {
+		// 	if *tag.Key == "counter" {
+		// 		v, err := strconv.ParseInt(*tag.Value, 10, 64)
+		// 		if err == nil {
+		// 			time.Sleep(time.Duration(rand.Int31n(100)) * time.Millisecond)
+		// 			a.Service().rds.RemoveTagsFromResource(&rds.RemoveTagsFromResourceInput{
+		// 				ResourceName: &id,
+		// 				TagKeys:      []*string{aws.String("counter")},
+		// 			})
+
+		// 			v = v + 1
+		// 			fmt.Println("index:", i, "val:", v)
+		// 			a.Service().rds.AddTagsToResource(&rds.AddTagsToResourceInput{
+		// 				ResourceName: &id,
+		// 				Tags: []*rds.Tag{
+		// 					{
+		// 						Key:   aws.String("counter"),
+		// 						Value: aws.String(fmt.Sprintf("%d", v)),
+		// 					},
+		// 				},
+		// 			})
+
+		// 		}
+		// 	}
+		// }
+
+	}
+
+	return nil
+	// a.Service().rds.AddTagsToResource()
 }
