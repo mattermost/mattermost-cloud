@@ -66,13 +66,6 @@ func (d *helmDeployment) Update() error {
 	return nil
 }
 
-// Create will install a given HelmDeployment in the cluster specified in that object.
-func (d *helmDeployment) Create() error {
-	logger := d.logger.WithField("helm-create", d.chartName)
-	logger.Infof("Installing helm chart %s", d.chartName)
-	return installHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
-}
-
 // waitForHelmRunning is used to check when Helm is ready to install charts.
 func waitForHelmRunning(ctx context.Context, configPath string) error {
 	for {
@@ -271,40 +264,33 @@ func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	helmClient, err := helm.New(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
-	}
-	defer helmClient.Close()
-
-	logger.Info("Initializing Helm in the cluster")
-	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--upgrade")
-	if err != nil {
-		return errors.Wrap(err, "failed to initialize Helm in the cluster")
-	}
-
 	logger.Info("Creating Tiller service account")
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
 	}
 
-	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(serviceAccount)
+	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Get("tiller", metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrap(err, "failed to set up Tiller service account for Helm")
-	}
+		// need to create cluster role bindings for Tiller since they couldn't be found
 
-	logger.Info("Creating Tiller cluster role bind")
-	roleBinding := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
-		Subjects: []rbacv1.Subject{
-			{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
-		},
-		RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
-	}
+		_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(serviceAccount)
+		if err != nil {
+			return errors.Wrap(err, "failed to set up Tiller service account for Helm")
+		}
 
-	_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(roleBinding)
-	if err != nil {
-		return errors.Wrap(err, "failed to create cluster role bindings")
+		logger.Info("Creating Tiller cluster role bind")
+		roleBinding := &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
+			Subjects: []rbacv1.Subject{
+				{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
+			},
+			RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
+		}
+
+		_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(roleBinding)
+		if err != nil {
+			return errors.Wrap(err, "failed to create cluster role bindings")
+		}
 	}
 
 	err = helmInit(logger, kops)

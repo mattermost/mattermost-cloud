@@ -12,12 +12,9 @@ import (
 // k8s itself, nor is it part of a ClusterInstallation or an
 // Installation
 type Utility interface {
-	// Create is responsible for deploying the utility in the cluster
-	Create() error
-
-	// Upgrade is responsible for handling changes to an existing
-	// utility
-	Upgrade() error
+	// CreateOrUpgrade is responsible for deploying the utility in the
+	// cluster and then for updating it if it already exists when called
+	CreateOrUpgrade() error
 
 	// Destroy can be used if special care must be taken for deleting a
 	// utility from a cluster
@@ -124,37 +121,6 @@ func (group utilityGroup) CreateUtilityGroup() error {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
 
-	// TODO remove this when Helm is removed as a dependency
-	err = installHelm(group.kops, helmRepos, group.provisioner.logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
-	}
-
-	logger.Info("Adding new Helm repos.")
-	for repoName, repoURL := range helmRepos {
-		err = helmRepoAdd(repoName, repoURL, logger)
-		if err != nil {
-			return errors.Wrap(err, "unable to add helm repos")
-		}
-	}
-
-	for _, utility := range group.utilities {
-		err := utility.Create()
-		if err != nil {
-			return errors.Wrap(err, "failed to provision one of the cluster utilities")
-		}
-
-		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
-		if err != nil {
-			return err
-		}
-	}
-
-	err = deployClusterIssuer(group.kops, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to deploy ClusterIssuer manifest")
-	}
-
 	return nil
 }
 
@@ -176,8 +142,8 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 	return nil
 }
 
-// UpgradeUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
-func (group utilityGroup) UpgradeUtilityGroup() error {
+// ProvisionUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
+func (group utilityGroup) ProvisionUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
 
 	err := deployCertManagerCRDS(group.kops, logger)
@@ -185,10 +151,9 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
 	}
 
-	logger = group.provisioner.logger.WithField("helm-init", "UpgradeUtilityGroup")
-	err = helmInit(logger, group.kops)
+	err = installHelm(group.kops, helmRepos, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
 	if err != nil {
-		logger.WithError(err).Error("couldn't re-initialize Helm in the cluster")
+		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
 	}
 
 	logger.Info("Adding new Helm repos.")
@@ -200,7 +165,7 @@ func (group utilityGroup) UpgradeUtilityGroup() error {
 	}
 
 	for _, utility := range group.utilities {
-		err := utility.Upgrade()
+		err := utility.CreateOrUpgrade()
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
 		}

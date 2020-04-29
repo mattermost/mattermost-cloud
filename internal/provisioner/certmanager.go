@@ -54,18 +54,7 @@ func (n *certManager) updateVersion(h *helmDeployment) error {
 	return nil
 }
 
-func (n *certManager) Create() error {
-	h := n.NewHelmDeployment()
-	err := h.Create()
-	if err != nil {
-		return err
-	}
-
-	err = n.updateVersion(h)
-	return err
-}
-
-func (n *certManager) Upgrade() error {
+func (n *certManager) CreateOrUpgrade() error {
 	h := n.NewHelmDeployment()
 	err := h.Update()
 	if err != nil {
