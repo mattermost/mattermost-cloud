@@ -12,20 +12,28 @@ const (
 	InstallationDatabaseMysqlOperator = "mysql-operator"
 	// InstallationDatabaseAwsRDS is a database hosted via Amazon RDS.
 	InstallationDatabaseAwsRDS = "aws-rds"
+	// InstallationDatabaseMultitenantRDS is a multitenant database hosted via Amazon RDS.
+	InstallationDatabaseMultitenantRDS = "aws-multitenant-rds"
 )
 
 // Database is the interface for managing Mattermost databases.
 type Database interface {
 	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
-	Teardown(keepData bool, logger log.FieldLogger) error
-	Snapshot(logger log.FieldLogger) error
-	GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
+	Teardown(store InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error
+	Snapshot(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
+	GenerateDatabaseSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
 }
 
 // InstallationDatabaseStoreInterface is the interface necessary for SQLStore
 // functionality to correlate an installation to a cluster for database creation.
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
+	GetDatabaseCluster(id string) (*DatabaseCluster, error)
+	GetDatabaseClusters() ([]*DatabaseCluster, error)
+	CreateDatabaseCluster(databaseCluster *DatabaseCluster) error
+	LockDatabaseCluster(databaseID, lockerID string) (bool, error)
+	UnlockDatabaseCluster(databaseID, lockerID string, force bool) (bool, error)
+	UpdateDatabaseCluster(databaseCluster *DatabaseCluster) error
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.
@@ -44,14 +52,14 @@ func (d *MysqlOperatorDatabase) Provision(store InstallationDatabaseStoreInterfa
 }
 
 // Snapshot is not supported by the operator and it should return an error.
-func (d *MysqlOperatorDatabase) Snapshot(logger log.FieldLogger) error {
+func (d *MysqlOperatorDatabase) Snapshot(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger.Error("Snapshotting is not supported by the MySQL operator.")
 
 	return errors.New("not implemented")
 }
 
 // Teardown removes all MySQL operator resources for a given installation.
-func (d *MysqlOperatorDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
+func (d *MysqlOperatorDatabase) Teardown(store InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error {
 	logger.Info("MySQL operator database requires no teardown; skipping...")
 	if keepData {
 		logger.Warn("Database preservation was requested, but isn't currently possible with the MySQL operator")
@@ -62,7 +70,7 @@ func (d *MysqlOperatorDatabase) Teardown(keepData bool, logger log.FieldLogger) 
 
 // GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
 // accessing the MySQL operator database.
-func (d *MysqlOperatorDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
+func (d *MysqlOperatorDatabase) GenerateDatabaseSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	return nil, nil, nil
 }
 
@@ -74,5 +82,13 @@ func (i *Installation) InternalDatabase() bool {
 
 // IsSupportedDatabase returns true if the given database string is supported.
 func IsSupportedDatabase(database string) bool {
-	return database == InstallationDatabaseMysqlOperator || database == InstallationDatabaseAwsRDS
+	switch database {
+	case InstallationDatabaseMysqlOperator:
+	case InstallationDatabaseMultitenantRDS:
+	case InstallationDatabaseAwsRDS:
+	default:
+		return false
+	}
+
+	return true
 }

@@ -102,6 +102,18 @@ const (
 	// existing installations.
 	rdsSuffix = "-rds"
 
+	// rdsMySQLSchemaInformationDatabase is the schema the name given to a MySQL database information's table.
+	rdsMySQLSchemaInformationDatabase = "information_schema"
+
+	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost RDS database schemas.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	rdsDatabaseNamePrefix = "cloud_"
+
+	// DefaultMultitenantDatabaseCounterTagKey is the default key used to identify the counter tag used
+	// in RDS multitenant database clusters.
+	DefaultMultitenantDatabaseCounterTagKey = "tag:Counter"
+
 	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots of a cluster installation.
 	DefaultClusterInstallationSnapshotTagKey = "tag:ClusterInstallationSnapshot"
 
@@ -111,6 +123,40 @@ const (
 	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an encryption key.
 	KMSMaxTimeEncryptionKeyDeletion = 30
 
+	// DefaultMySQLDefaultContextTimeout is the number of seconds that a SQL client will take before cancel a
+	// call to the database.
+	DefaultMySQLDefaultContextTimeout = 30
+
+	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant RDS database
+	// cluster.
+	DefaultRDSMultitenantDatabaseCountLimit = 20
+
 	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
 	DefaultRDSEncryptionTagKey = "rds-encryption-key"
+
+	// DefaultRDSMultitenantVPCIDTagKey is the key used to identify the VPC ID used for multitenant RDS
+	// database clusters.
+	DefaultRDSMultitenantVPCIDTagKey = "tag:RDSMultitenantVPCID"
+
+	// DefaultRDSMultitenantDBClusterIDTagKey is the key used to identify the ID used for a multitenant RDS
+	// database clusters.
+	DefaultRDSMultitenantDBClusterIDTagKey = "tag:RDSMultitenantDBClusterID"
+
+	// RDSMultitenantPurposeTagKey is the key used to identify the purpose of an RDS cluster.
+	RDSMultitenantPurposeTagKey = "tag:Purpose"
+
+	// RDSMultitenantPurposeTagValueProvisioning is one of the purposes of an RDS cluster.
+	RDSMultitenantPurposeTagValueProvisioning = "provisioning"
+
+	// RDSMultitenantAcceptingInstallationsTagKey is the key used to indicate the state of an RDS cluster.
+	RDSMultitenantAcceptingInstallationsTagKey = "tag:AcceptingInstallations"
+
+	// RDSMultitenantAcceptingInstallationsTagValueTrue indicates that the RDS cluster is taking new databases.
+	RDSMultitenantAcceptingInstallationsTagValueTrue = "true"
+
+	// RDSMultitenantOwnerTagKey identifies who owns the RDS cluster.
+	RDSMultitenantOwnerTagKey = "Owner"
+
+	// RDSMultitenantOwnerTagValueCloudTeam identifies that cloud team owns the RDS cluster.
+	RDSMultitenantOwnerTagValueCloudTeam = "cloud team"
 )

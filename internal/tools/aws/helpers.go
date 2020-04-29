@@ -83,3 +83,29 @@ func IsErrorCode(err error, code string) bool {
 	}
 	return false
 }
+
+// RDSMultitenantSecretName formats the name of a secret used in a multitenant RDS database.
+func RDSMultitenantSecretName(id string) string {
+	return fmt.Sprintf("rds-multitenant-%s", id)
+}
+
+// MattermostRDSDatabaseName formats the name of a Mattermost RDS database schema.
+func MattermostRDSDatabaseName(installationID string) string {
+	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
+}
+
+// MattermostMySQLConnString ...
+func MattermostMySQLConnString(schema, endpoint, username, password string) string {
+	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s", username, password, endpoint, schema)
+}
+
+// RDSMySQLConnString ...
+func RDSMySQLConnString(schema, endpoint, username, password string) string {
+	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+		username, password, endpoint, schema)
+}
+
+// RDSMultitenantClusterSecretName ...
+func RDSMultitenantClusterSecretName(id string) string {
+	return fmt.Sprintf("rds-multitenant-%s-cluster", id)
+}
