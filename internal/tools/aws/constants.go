@@ -102,6 +102,17 @@ const (
 	// existing installations.
 	rdsSuffix = "-rds"
 
+	// rdsMySQLSchemaInformationDatabase is the schema the name given to a MySQL database information's table.
+	rdsMySQLSchemaInformationDatabase = "information_schema"
+
+	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost RDS database schemas.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	rdsDatabaseNamePrefix = "cloud_"
+	// DefaultMultitenantDatabaseCounterTagKey is the default key used to identify the counter tag used
+	// in RDS multitenant database clusters.
+	DefaultMultitenantDatabaseCounterTagKey = "tag:Counter"
+
 	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots of a cluster installation.
 	DefaultClusterInstallationSnapshotTagKey = "tag:ClusterInstallationSnapshot"
 
@@ -111,6 +122,61 @@ const (
 	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an encryption key.
 	KMSMaxTimeEncryptionKeyDeletion = 30
 
+	// DefaultMySQLDefaultContextTimeout is the number of seconds that a SQL client will take before cancel a
+	// call to the database.
+	DefaultMySQLDefaultContextTimeout = 30
+
+	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant RDS database
+	// cluster.
+	DefaultRDSMultitenantDatabaseCountLimit = 20
+
+	// DefaultMattermostInstallationIDTagKey is the default name used for tagging resources with an installation ID.
+	DefaultMattermostInstallationIDTagKey = "tag:InstallationId"
+
+	// DefaultMattermostDatabaseUsername is the default username used for connectting to a Mattermost database.
+	// Warning:
+	// changing this value may break the connection to existing installations.
+	DefaultMattermostDatabaseUsername = "mmcloud"
+
 	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSEncryptionTagKey = "rds-encryption-key"
+
+	// DefaultRDSMultitenantVPCIDTagKey is the key used to identify the VPC ID used for multitenant RDS
+	// database clusters.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultRDSMultitenantVPCIDTagKey = "tag:RDSMultitenantVPCID"
+
+	// DefaultRDSMultitenantDBClusterIDTagKey is the key used to identify the ID used for a multitenant RDS
+	// database clusters.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultRDSMultitenantDBClusterIDTagKey = "tag:RDSMultitenantDBClusterID"
+
+	// RDSMultitenantPurposeTagKey is the key used to identify the purpose of an RDS cluster.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	RDSMultitenantPurposeTagKey = "tag:Purpose"
+
+	// RDSMultitenantPurposeTagValueProvisioning is one of the purposes of an RDS cluster.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	RDSMultitenantPurposeTagValueProvisioning = "provisioning"
+
+	// RDSMultitenantOwnerTagKey identifies who owns the RDS cluster.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	RDSMultitenantOwnerTagKey = "tag:Owner"
+
+	// RDSMultitenantInstallationCounterTagKey identifies the number of installations in the RDS cluster.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	RDSMultitenantInstallationCounterTagKey = "tag:Counter"
+
+	// RDSMultitenantOwnerTagValueCloudTeam identifies that cloud team owns the RDS cluster.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	RDSMultitenantOwnerTagValueCloudTeam = "cloud-team"
 )
