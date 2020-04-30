@@ -59,7 +59,8 @@ var serverCmd = &cobra.Command{
 		devMode, _ := command.Flags().GetBool("dev")
 
 		debug, _ := command.Flags().GetBool("debug")
-		if debug || (devMode && flagIsUnset(command, "debug")) {
+		debugMode := debug || (devMode && flagIsUnset(command, "debug"))
+		if debugMode {
 			logger.SetLevel(logrus.DebugLevel)
 		}
 
@@ -135,7 +136,7 @@ var serverCmd = &cobra.Command{
 			"use-existing-aws-resources":      useExistingResources,
 			"keep-database-data":              keepDatabaseData,
 			"keep-filestore-data":             keepFilestoreData,
-			"debug":                           debug,
+			"debug":                           debugMode,
 			"dev-mode":                        devMode,
 		}).Info("Starting Mattermost Provisioning Server")
 
