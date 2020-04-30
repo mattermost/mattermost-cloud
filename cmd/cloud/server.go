@@ -56,8 +56,10 @@ var serverCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 
+		devMode, _ := command.Flags().GetBool("dev")
+
 		debug, _ := command.Flags().GetBool("debug")
-		if debug {
+		if debug || (devMode && flagIsUnset(command, "debug")) {
 			logger.SetLevel(logrus.DebugLevel)
 		}
 
@@ -109,18 +111,13 @@ var serverCmd = &cobra.Command{
 			logger.WithError(err).Error("Unable to get current working directory")
 		}
 
-		dev, _ := command.Flags().GetBool("dev")
-		if dev {
+		if devMode {
 
-			if !command.Flags().Changed("debug") {
-				debug = true
-			}
-
-			if !command.Flags().Changed("keep-database-data") {
+			if flagIsUnset(command, "keep-database-data") {
 				keepDatabaseData = false
 			}
 
-			if !command.Flags().Changed("keep-filestore-data") {
+			if flagIsUnset(command, "keep-filestore-data") {
 				keepFilestoreData = false
 			}
 
@@ -139,7 +136,7 @@ var serverCmd = &cobra.Command{
 			"keep-database-data":              keepDatabaseData,
 			"keep-filestore-data":             keepFilestoreData,
 			"debug":                           debug,
-			"dev-mode":                        dev,
+			"dev-mode":                        devMode,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -274,4 +271,8 @@ func getHumanReadableID() string {
 	}
 
 	return strings.TrimSpace(string(output))
+}
+
+func flagIsUnset(cmd *cobra.Command, flagName string) bool {
+	return !cmd.Flags().Changed(flagName)
 }
