@@ -154,6 +154,9 @@ const (
 	// RDSMultitenantAcceptingInstallationsTagValueTrue indicates that the RDS cluster is taking new databases.
 	RDSMultitenantAcceptingInstallationsTagValueTrue = "true"
 
+	// RDSMultitenantAcceptingInstallationsTagValueFalse indicates that the RDS cluster is not taking new databases.
+	RDSMultitenantAcceptingInstallationsTagValueFalse = "false"
+
 	// RDSMultitenantOwnerTagKey identifies who owns the RDS cluster.
 	RDSMultitenantOwnerTagKey = "Owner"
 

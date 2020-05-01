@@ -86,7 +86,7 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 				return errors.Wrap(err, "could not describe RDS cluster")
 			}
 
-			err = d.updateRDSClusterCounterTag(rdsCluster.DBClusterArn, dbInstallations.Size())
+			err = d.updateCounterTag(rdsCluster.DBClusterArn, dbInstallations.Size())
 			if err != nil {
 				return errors.Wrapf(err, "failed to update counter tag in RDS cluster id %s", databaseCluster.ID)
 			}
@@ -100,7 +100,7 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(databaseSecretName),
 	})
-	if err != nil {
+	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
 		return errors.Wrapf(err, "failed to delete RDS database secret name %s", databaseSecretName)
 	}
 
@@ -202,9 +202,18 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "unable to get VPC ID when provisioning database %s", databaseName)
 	}
 
-	rdsDBCluster, err := d.findAvailableDBCluster(*vpcID.VpcId, logger)
+	lockedRDSCluster, err := d.findAndLockRDSCluster(*vpcID.VpcId, store, logger)
+	defer lockedRDSCluster.unlockDatabaseCluster(logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to find an available RDS cluster to provision database %s", databaseName)
+		return errors.Wrapf(err, "unable to find a RDS cluster for installating database %s", databaseName)
+	}
+
+	if lockedRDSCluster.isFirstInstallation() {
+		err = d.updateAcceptingInstallationsTag(lockedRDSCluster.dbCluster.DBClusterArn, RDSMultitenantAcceptingInstallationsTagValueTrue)
+		if err != nil {
+			return errors.Wrapf(err, "could not update %s for RDS cluster %s",
+				RDSMultitenantAcceptingInstallationsTagValueTrue, *lockedRDSCluster.dbCluster.DBClusterIdentifier)
+		}
 	}
 
 	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -219,7 +228,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "failed to unmarshal master secret payload in order to provision database %s", databaseName)
 	}
 
-	close, err := d.connectDBCluster(rdsMySQLSchemaInformationDatabase, *rdsDBCluster.Endpoint, masterSecret.MasterUsername, masterSecret.MasterPassword)
+	close, err := d.connectDBCluster(rdsMySQLSchemaInformationDatabase, *lockedRDSCluster.dbCluster.Endpoint, masterSecret.MasterUsername, masterSecret.MasterPassword)
 	defer close(logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to connect to the RDS cluster in order to provision database %s", databaseName)
@@ -248,7 +257,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		}
 	} else {
 		secreteName := RDSMultitenantSecretName(d.installationID)
-		description := fmt.Sprintf("Multitenant database for RDS cluster %s", *rdsDBCluster.DBClusterIdentifier)
+		description := fmt.Sprintf("Multitenant database for RDS cluster %s", *lockedRDSCluster.dbCluster.DBClusterIdentifier)
 		installationSecret, err = d.createSecret(secreteName, d.installationID, description, nil)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create an installation secret in order to provision database %s", databaseName)
@@ -265,14 +274,14 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "failed to grant permissions to Mattermost user for database %s", databaseName)
 	}
 
-	databaseCluster, err := store.GetDatabaseCluster(*rdsDBCluster.DBClusterIdentifier)
+	databaseCluster, err := store.GetDatabaseCluster(*lockedRDSCluster.dbCluster.DBClusterIdentifier)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get cluster database schema from the store in order to register database %s", databaseName)
 	}
 
 	if databaseCluster == nil {
 		err := store.CreateDatabaseCluster(&model.DatabaseCluster{
-			ID: *rdsDBCluster.DBClusterIdentifier,
+			ID: *lockedRDSCluster.dbCluster.DBClusterIdentifier,
 		})
 		if err != nil {
 			return errors.Wrapf(err, "failed to create cluster database schema strore in order to register database %s", databaseName)
@@ -304,7 +313,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		}
 	}
 
-	err = d.updateRDSClusterCounterTag(rdsDBCluster.DBClusterArn, dbInstallations.Size())
+	err = d.updateCounterTag(lockedRDSCluster.dbCluster.DBClusterArn, dbInstallations.Size())
 	if err != nil {
 		return errors.Wrapf(err, "could not update RDS cluster counter tag to register database %s", databaseName)
 	}
@@ -353,7 +362,7 @@ func (d *RDSMultitenantDatabase) getClaimedVPC(store model.InstallationDatabaseS
 	return vpcs[0], nil
 }
 
-func (d *RDSMultitenantDatabase) updateRDSClusterCounterTag(resourceARN *string, counter int) error {
+func (d *RDSMultitenantDatabase) updateCounterTag(resourceARN *string, counter int) error {
 	_, err := d.client.Service().rds.AddTagsToResource(&rds.AddTagsToResourceInput{
 		ResourceName: resourceARN,
 		Tags: []*rds.Tag{
@@ -364,7 +373,24 @@ func (d *RDSMultitenantDatabase) updateRDSClusterCounterTag(resourceARN *string,
 		},
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unable to update counter tag for RDS cluster %s", resourceARN)
+		return errors.Wrap(err, "failed to update RDS cluster counter's tag")
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) updateAcceptingInstallationsTag(resourceARN *string, tagValue string) error {
+	_, err := d.client.Service().rds.AddTagsToResource(&rds.AddTagsToResourceInput{
+		ResourceName: resourceARN,
+		Tags: []*rds.Tag{
+			{
+				Key:   aws.String(trimTagPrefix(DefaultMultitenantDatabaseCounterTagKey)),
+				Value: aws.String(tagValue),
+			},
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to update RDS cluster accepting installations' tag")
 	}
 
 	return nil
@@ -420,7 +446,25 @@ func (d *RDSMultitenantDatabase) createSecret(secretName, username, description 
 	return &rdsSecretPayload, nil
 }
 
-func (d *RDSMultitenantDatabase) findAvailableDBCluster(vpcID string, logger log.FieldLogger) (*rds.DBCluster, error) {
+type findAndLockRDSClusterOutput struct {
+	unlockDatabaseCluster  func(logger log.FieldLogger)
+	dbCluster              *rds.DBCluster
+	dbClusterID            *string
+	acceptingInstallations *string
+	databaseCounter        *int
+}
+
+func (f *findAndLockRDSClusterOutput) isClusterAvailable() bool {
+	return f.dbClusterID != nil && f.databaseCounter != nil &&
+		*f.databaseCounter < DefaultRDSMultitenantDatabaseCountLimit && f.isClusterAvailable()
+}
+
+func (f *findAndLockRDSClusterOutput) isFirstInstallation() bool {
+	return f.acceptingInstallations != nil && *f.acceptingInstallations == RDSMultitenantAcceptingInstallationsTagValueFalse &&
+		f.databaseCounter != nil && *f.databaseCounter != 0
+}
+
+func (d *RDSMultitenantDatabase) findAndLockRDSCluster(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*findAndLockRDSClusterOutput, error) {
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
 		TagFilters: []*gt.TagFilter{
 			{
@@ -445,34 +489,47 @@ func (d *RDSMultitenantDatabase) findAvailableDBCluster(vpcID string, logger log
 		return nil, errors.Wrapf(err, "failed to get available RDS cluster resources for VPC ID %s", vpcID)
 	}
 
-	for _, resourceName := range resourceNames {
-		var dbClusterID *string
-		var databaseCounter *int
+	var output findAndLockRDSClusterOutput
 
+	for _, resourceName := range resourceNames {
 		for _, tag := range resourceName.Tags {
 			if *tag.Key == trimTagPrefix(DefaultRDSMultitenantDBClusterIDTagKey) && tag.Value != nil {
-				dbClusterID = tag.Value
+				unlockFN, err := d.lockDatabaseStore(*tag.Value, store)
+				if err != nil {
+					return nil, errors.Wrapf(err, "could not lock cluster database ID %s", *tag.Value)
+				}
+
+				output.dbClusterID = tag.Value
+				output.unlockDatabaseCluster = unlockFN
+			}
+
+			if *tag.Key == trimTagPrefix(RDSMultitenantAcceptingInstallationsTagKey) && tag.Value != nil {
+				output.acceptingInstallations = tag.Value
 			}
 
 			if *tag.Key == trimTagPrefix(DefaultMultitenantDatabaseCounterTagKey) && tag.Value != nil {
 				value, err := strconv.Atoi(*tag.Value)
-				if err == nil {
-					databaseCounter = &value
+				if err != nil {
+					continue
 				}
+
+				output.databaseCounter = &value
 			}
 
-			if dbClusterID != nil && databaseCounter != nil && *databaseCounter < DefaultRDSMultitenantDatabaseCountLimit {
-				dbCluster, err := d.getRDSCluster(*dbClusterID)
+			if output.isClusterAvailable() {
+				dbCluster, err := d.getRDSCluster(*output.dbClusterID)
 				if err != nil {
-					logger.WithError(err).Errorf("failed to get RDS DB cluster ID %s", *dbClusterID)
+					logger.WithError(err).Errorf("failed to get RDS DB cluster ID %s", *output.dbClusterID)
+					output.unlockDatabaseCluster(logger)
 					continue
 				}
-				if *dbCluster.Status != "available" {
-					logger.WithError(err).Errorf("expected db cluster to be 'available' but it is '%s'", *dbCluster.Status)
+				if *output.dbCluster.Status != "available" {
+					logger.Errorf("expected db cluster to be 'available' but it is '%s'", *dbCluster.Status)
+					output.unlockDatabaseCluster(logger)
 					continue
 				}
 
-				return dbCluster, nil
+				return &output, nil
 			}
 		}
 	}
