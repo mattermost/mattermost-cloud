@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/pkg/errors"
@@ -28,6 +30,7 @@ type RDSMultitenantDatabase struct {
 	client         *Client
 	db             *sql.DB
 	installationID string
+	cm             *rdsClusterManager
 }
 
 // NewRDSMultitenantDatabase returns a new RDSDatabase interface.
@@ -197,27 +200,63 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 	databaseName := MattermostRDSDatabaseName(d.installationID)
 	logger = logger.WithField("multitenant-rds-database", databaseName)
 
-	vpcID, err := d.getClaimedVPC(store)
+	vpc, err := d.getClaimedVPC(store)
 	if err != nil {
 		return errors.Wrapf(err, "unable to get VPC ID when provisioning database %s", databaseName)
 	}
 
-	lockedRDSCluster, err := d.findAndLockRDSCluster(*vpcID.VpcId, store, logger)
-	defer lockedRDSCluster.unlockDatabaseCluster(logger)
+	resources, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
+		TagFilters: []*gt.TagFilter{
+			{
+				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
+				Values: []*string{aws.String(RDSMultitenantPurposeTagValueProvisioning)},
+			},
+			{
+				Key:    aws.String(trimTagPrefix(RDSMultitenantAcceptingInstallationsTagKey)),
+				Values: []*string{aws.String(RDSMultitenantAcceptingInstallationsTagValueTrue)},
+			},
+			{
+				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
+				Values: []*string{aws.String(RDSMultitenantOwnerTagValueCloudTeam)},
+			},
+			{
+				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
+				Values: []*string{vpc.VpcId},
+			},
+		},
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get available RDS cluster resources for VPC ID %s", *vpc.VpcId)
+	}
+
+	cm := rdsClusterManager{
+		installationID: &d.installationID,
+		service:        d.client.service.rds,
+		store:          store,
+		logger:         logger,
+	}
+
+	err = cm.addClusters(resources)
+	if err != nil {
+		return errors.Wrapf(err, "RDS cluster manager was unable to load resources for VPC ID %s", *vpc.VpcId)
+	}
+
+	rdsCluster, err := cm.getCluster()
 	if err != nil {
 		return errors.Wrapf(err, "unable to find a RDS cluster for installating database %s", databaseName)
 	}
+	defer rdsCluster.unlock()
 
-	if lockedRDSCluster.isFirstInstallation() {
-		err = d.updateAcceptingInstallationsTag(lockedRDSCluster.dbCluster.DBClusterArn, RDSMultitenantAcceptingInstallationsTagValueTrue)
-		if err != nil {
-			return errors.Wrapf(err, "could not update %s for RDS cluster %s",
-				RDSMultitenantAcceptingInstallationsTagValueTrue, *lockedRDSCluster.dbCluster.DBClusterIdentifier)
-		}
-	}
+	// if lockedRDSCluster.isFirstInstallation() {
+	// 	err = d.updateAcceptingInstallationsTag(lockedRDSCluster.dbCluster.DBClusterArn, RDSMultitenantAcceptingInstallationsTagValueTrue)
+	// 	if err != nil {
+	// 		return errors.Wrapf(err, "could not update %s for RDS cluster %s",
+	// 			RDSMultitenantAcceptingInstallationsTagValueTrue, *lockedRDSCluster.dbCluster.DBClusterIdentifier)
+	// 	}
+	// }
 
 	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(RDSMultitenantClusterSecretName(*vpcID.VpcId)),
+		SecretId: aws.String(RDSMultitenantClusterSecretName(*vpc.VpcId)),
 	})
 	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
 		return errors.Wrapf(err, "unable to get a RDS cluster master secret in order to provision database %s", databaseName)
@@ -446,96 +485,150 @@ func (d *RDSMultitenantDatabase) createSecret(secretName, username, description 
 	return &rdsSecretPayload, nil
 }
 
-type findAndLockRDSClusterOutput struct {
-	unlockDatabaseCluster  func(logger log.FieldLogger)
-	dbCluster              *rds.DBCluster
-	dbClusterID            *string
-	acceptingInstallations *string
-	databaseCounter        *int
+// Finding cluster process:
+//
+// * Fetch all qualified RDS clusters by tag
+// * Check which one has the least amount of installations and acquire lock
+// 		* Create a map <rds_cluster_id> <accepting_installation_value, counter_value>
+// * Asynchronously, check if (total installations capacity) - total installations / (total installations capacity) is
+// 	 equal to some constant ratio. If not, find a cluster with (tags Counter=0, AcceptingInstallation=false),
+//   lock the cluster and modify AcceptingInstallation to true.
+type rdsCluster struct {
+	numOfInstallations float64
+	clusterID          string
+	clusterEndpoint    string
+	unlock             func()
 }
 
-func (f *findAndLockRDSClusterOutput) isClusterAvailable() bool {
-	return f.dbClusterID != nil && f.databaseCounter != nil &&
-		*f.databaseCounter < DefaultRDSMultitenantDatabaseCountLimit && f.isClusterAvailable()
+type rdsClusterManager struct {
+	service rdsiface.RDSAPI
+	logger  log.FieldLogger
+	store   model.InstallationDatabaseStoreInterface
+
+	installationID *string
+
+	totalCapacity      float64
+	totalInstallations float64
+
+	spareClusters    []*rdsCluster
+	caditateClusters []*rdsCluster
 }
 
-func (f *findAndLockRDSClusterOutput) isFirstInstallation() bool {
-	return f.acceptingInstallations != nil && *f.acceptingInstallations == RDSMultitenantAcceptingInstallationsTagValueFalse &&
-		f.databaseCounter != nil && *f.databaseCounter != 0
-}
-
-func (d *RDSMultitenantDatabase) findAndLockRDSCluster(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*findAndLockRDSClusterOutput, error) {
-	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []*gt.TagFilter{
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
-				Values: []*string{aws.String(RDSMultitenantPurposeTagValueProvisioning)},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantAcceptingInstallationsTagKey)),
-				Values: []*string{aws.String(RDSMultitenantAcceptingInstallationsTagValueTrue)},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
-				Values: []*string{aws.String(RDSMultitenantOwnerTagValueCloudTeam)},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
-				Values: []*string{&vpcID},
-			},
-		},
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get available RDS cluster resources for VPC ID %s", vpcID)
+func (m *rdsClusterManager) getCluster() (*rdsCluster, error) {
+	if len(m.caditateClusters) > 0 {
+		sort.SliceStable(m.caditateClusters, func(i, j int) bool {
+			return m.caditateClusters[i].numOfInstallations < m.caditateClusters[j].numOfInstallations
+		})
+	} else {
+		spareClustersLen := len(m.spareClusters)
+		if spareClustersLen < 1 {
+			return nil, errors.New("no RDS clusters available")
+		}
+		m.caditateClusters = append(m.caditateClusters, m.spareClusters[spareClustersLen-1])
+		m.spareClusters[spareClustersLen-1] = nil
 	}
 
-	var output findAndLockRDSClusterOutput
+	if m.caditateClusters[0] != nil {
+		err := m.lockCluster(m.caditateClusters[0])
+		if err != nil {
+			return nil, err
+		}
 
-	for _, resourceName := range resourceNames {
-		for _, tag := range resourceName.Tags {
+		// We should check a couple things before returning the locked resource:
+		// 	1. Is cluster status available?
+		//	2. Are mutable tags still the same?
+		return m.caditateClusters[0], nil
+	}
+
+	return nil, errors.New("there is no RDS cluster available")
+}
+
+func (m *rdsClusterManager) addClusters(resources []*gt.ResourceTagMapping) error {
+	var rdsClusterID *string
+	var numOfInstallations *float64
+	var acceptingInstallations *bool
+
+	for _, resource := range resources {
+		for _, tag := range resource.Tags {
 			if *tag.Key == trimTagPrefix(DefaultRDSMultitenantDBClusterIDTagKey) && tag.Value != nil {
-				unlockFN, err := d.lockDatabaseStore(*tag.Value, store)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not lock cluster database ID %s", *tag.Value)
-				}
-
-				output.dbClusterID = tag.Value
-				output.unlockDatabaseCluster = unlockFN
+				rdsClusterID = tag.Value
 			}
 
 			if *tag.Key == trimTagPrefix(RDSMultitenantAcceptingInstallationsTagKey) && tag.Value != nil {
-				output.acceptingInstallations = tag.Value
+				acceptingInstallations = aws.Bool(*tag.Value == RDSMultitenantAcceptingInstallationsTagValueTrue)
 			}
 
 			if *tag.Key == trimTagPrefix(DefaultMultitenantDatabaseCounterTagKey) && tag.Value != nil {
-				value, err := strconv.Atoi(*tag.Value)
+				value, err := strconv.ParseFloat(*tag.Value, 32)
 				if err != nil {
-					continue
+					return err
 				}
-
-				output.databaseCounter = &value
+				numOfInstallations = &value
 			}
+		}
 
-			if output.isClusterAvailable() {
-				dbCluster, err := d.getRDSCluster(*output.dbClusterID)
-				if err != nil {
-					logger.WithError(err).Errorf("failed to get RDS DB cluster ID %s", *output.dbClusterID)
-					output.unlockDatabaseCluster(logger)
-					continue
-				}
-				if *output.dbCluster.Status != "available" {
-					logger.Errorf("expected db cluster to be 'available' but it is '%s'", *dbCluster.Status)
-					output.unlockDatabaseCluster(logger)
-					continue
-				}
+		var missingTags []string
+		if rdsClusterID != nil {
+			missingTags = append(missingTags, DefaultRDSMultitenantDBClusterIDTagKey)
+		}
+		if numOfInstallations != nil {
+			missingTags = append(missingTags, RDSMultitenantAcceptingInstallationsTagKey)
+		}
+		if acceptingInstallations != nil {
+			missingTags = append(missingTags, DefaultMultitenantDatabaseCounterTagKey)
+		}
 
-				return &output, nil
-			}
+		if len(missingTags) > 0 {
+			return errors.Errorf("resource %s has missing tag(s): %v", *resource.ResourceARN, missingTags)
+		}
+
+		m.totalCapacity += DefaultRDSMultitenantDatabaseCountLimit
+		m.totalInstallations += *numOfInstallations
+
+		if m.caditateClusters != nil && *acceptingInstallations {
+			m.caditateClusters = append(m.caditateClusters, &rdsCluster{
+				numOfInstallations: *numOfInstallations,
+				clusterID:          *rdsClusterID,
+			})
+		}
+
+		if m.caditateClusters != nil && !*acceptingInstallations && *numOfInstallations == 0 {
+			m.caditateClusters = append(m.caditateClusters, &rdsCluster{
+				clusterID: *rdsClusterID,
+			})
 		}
 	}
 
-	return nil, errors.Errorf("could not find a RDS cluster available in the vpc ID %s", vpcID)
+	return nil
 }
+
+func (m *rdsClusterManager) lockCluster(cluster *rdsCluster) error {
+	locked, err := m.store.LockDatabaseCluster(cluster.clusterID, *m.installationID)
+	if err != nil {
+		return errors.Wrapf(err, "could not acquire lock for database cluster %s", cluster.clusterID)
+	}
+	if !locked {
+		return errors.Errorf("could not acquire lock for database cluster %s", cluster.clusterID
+	}
+
+	cluster.unlock = func() {
+		unlocked, err := m.store.UnlockDatabaseCluster(cluster.clusterID, *m.installationID, true)
+		if err != nil {
+			m.logger.WithError(err).Errorf("provisioner store failed to release locker for database id %s", cluster.clusterID)
+		}
+		if !unlocked {
+			m.logger.Warnf("database id %s and locker id %s is still locked", cluster.rdsClusterID, *m.installationID)
+		}
+	}
+
+	return nil
+}
+
+func (m *rdsClusterManager) isCapacityTreshold() bool {
+	return (m.totalCapacity-m.totalInstallations/m.totalCapacity)*100 < DefaultRDSMultitenantCapacityTreshold
+}
+
+// *******************************************
 
 func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, username, password string) error {
 	// TODO(gsagula): replace string format with proper query.

@@ -131,6 +131,10 @@ const (
 	// cluster.
 	DefaultRDSMultitenantDatabaseCountLimit = 20
 
+	// DefaultRDSMultitenantCapacityTreshold is the number installations per total capacity of installations ratio before
+	// promoting a spare RDS cluster to start receiving new installations.
+	DefaultRDSMultitenantCapacityTreshold = 20
+
 	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
 	DefaultRDSEncryptionTagKey = "rds-encryption-key"
 
