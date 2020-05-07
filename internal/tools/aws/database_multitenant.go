@@ -372,7 +372,7 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 
 					if counter < DefaultRDSMultitenantDatabaseCountLimit {
 						cluster := model.DatabaseCluster{
-							ID: *tag.Value,
+							ID: *rdsClusterID,
 						}
 
 						err := store.CreateDatabaseCluster(&cluster)
