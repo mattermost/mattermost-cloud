@@ -81,7 +81,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	cluster := model.Cluster{
 		Provider:           createClusterRequest.Provider,
 		Provisioner:        "kops",
-		Version:            createClusterRequest.Version,
+		Version:            "0.0.0",
 		Size:               createClusterRequest.Size,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		State:              model.ClusterStateCreationRequested,
