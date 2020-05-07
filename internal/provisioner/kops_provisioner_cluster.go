@@ -345,7 +345,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
 
-	err = ugh.UpgradeUtilityGroup()
+	err = ugh.ProvisionUtilityGroup()
 	if err != nil {
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}

@@ -47,23 +47,11 @@ func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient 
 	}, nil
 }
 
-func (f *fluentbit) Create() error {
-	logger := f.logger.WithField("fluentbit-action", "create")
-	h := f.NewHelmDeployment(logger)
-	err := h.Create()
-	if err != nil {
-		return err
-	}
-
-	err = f.updateVersion(h)
-	return err
-}
-
 func (f *fluentbit) Destroy() error {
 	return nil
 }
 
-func (f *fluentbit) Upgrade() error {
+func (f *fluentbit) CreateOrUpgrade() error {
 	logger := f.logger.WithField("fluentbit-action", "upgrade")
 	h := f.NewHelmDeployment(logger)
 	err := h.Update()
