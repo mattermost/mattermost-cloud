@@ -26,6 +26,7 @@ import (
 // the connection with a database.
 type SQLDatabaseManager interface {
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	Close() error
 }
 
@@ -59,6 +60,63 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	if len(databaseClusters) < 1 {
 		return errors.Errorf("data store has no database clusters")
 	}
+
+	// BACKUP STUFF
+	var rdsCluster *rds.DBCluster
+	for _, databaseCluster := range databaseClusters {
+		dbInstallations, err := databaseCluster.GetInstallations()
+		if err != nil {
+			return errors.Wrapf(err, "could not get installation id %", d.installationID)
+		}
+
+		if dbInstallations.Contains(d.installationID) {
+			unlocked, err := d.acquireLock(databaseCluster.ID, store)
+			if err != nil {
+				return errors.Wrapf(err, "could not lock database installation id %", d.installationID)
+			}
+			defer unlocked(logger)
+
+			rdsCluster, err = d.describeRDSCluster(databaseCluster.ID)
+			if err != nil {
+				return errors.Wrap(err, "could not describe RDS cluster")
+			}
+
+			break
+		}
+	}
+
+	installationDBName := MattermostRDSDatabaseName(d.installationID)
+	installationSecreteName := RDSMultitenantSecretName(d.installationID)
+
+	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: &installationSecreteName,
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to generate databa spec and secret")
+	}
+
+	installationSecret, err := unmarshalSecretPayload(*result.SecretString)
+	if err != nil {
+		return errors.Wrap(err, "unable to generate databa spec and secret")
+	}
+
+	close, err := d.connectRDSCluster(installationDBName, *rdsCluster.Endpoint, installationSecret.MasterUsername, installationSecret.MasterPassword)
+	if err != nil {
+		return errors.Wrap(err, "unable to connect to installation's RDS database")
+	}
+	defer close(logger)
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLDefaultContextTimeout*time.Second))
+	defer cancel()
+
+	tables, err := d.listTables(ctx)
+	if err != nil {
+		return errors.Wrap(err, "unable to list tables for installation's RDS database")
+	}
+
+	logger.Infof("DATABASE %s TABLES: %v", installationDBName, tables)
+
+	// DELETE STUFF!!!
 
 	for _, databaseCluster := range databaseClusters {
 		dbInstallations, err := databaseCluster.GetInstallations()
@@ -101,13 +159,11 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 		}
 	}
 
-	databaseSecretName := RDSMultitenantSecretName(d.installationID)
-
 	_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
-		SecretId: aws.String(databaseSecretName),
+		SecretId: aws.String(installationSecreteName),
 	})
 	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
-		return errors.Wrapf(err, "failed to delete RDS database secret name %s", databaseSecretName)
+		return errors.Wrapf(err, "failed to delete RDS database secret name %s", installationSecreteName)
 	}
 
 	logger.Info("RDS database installation teardown complete")
@@ -634,4 +690,27 @@ func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, d
 	}
 
 	return nil
+}
+
+func (d *RDSMultitenantDatabase) listTables(ctx context.Context) ([]string, error) {
+	rows, err := d.db.QueryContext(ctx, "show tables")
+	if err != nil {
+		return nil, errors.Wrap(err, "listing tables")
+	}
+	defer rows.Close()
+
+	tables := make([]string, 0)
+
+	for rows.Next() {
+		var table string
+
+		err := rows.Scan(&table)
+		if err != nil {
+			return nil, errors.Wrap(err, "listing tables")
+		}
+
+		tables = append(tables, table)
+	}
+
+	return tables, nil
 }
