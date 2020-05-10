@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -12,7 +13,7 @@ var databaseClusterSelect sq.SelectBuilder
 
 func init() {
 	databaseClusterSelect = sq.
-		Select("ID", "RawInstallations", "LockAcquiredBy", "LockAcquiredAt").
+		Select("ID", "RawInstallationIDs", "LockAcquiredBy", "LockAcquiredAt").
 		From("DatabaseCluster")
 }
 
@@ -30,11 +31,31 @@ func (sqlStore *SQLStore) GetDatabaseCluster(id string) (*model.DatabaseCluster,
 }
 
 // GetDatabaseClusters fetches the given page of created database clusters. The first page is 0.
-func (sqlStore *SQLStore) GetDatabaseClusters() ([]*model.DatabaseCluster, error) {
+func (sqlStore *SQLStore) GetDatabaseClusters(filter *model.DatabaseClusterFilter) ([]*model.DatabaseCluster, error) {
+	builder := databaseClusterSelect
+
+	if filter != nil && len(filter.InstallationID) > 0 {
+		builder = builder.Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
+	}
+
 	var databaseClusters []*model.DatabaseCluster
-	err := sqlStore.selectBuilder(sqlStore.db, &databaseClusters, databaseClusterSelect)
+
+	err := sqlStore.selectBuilder(sqlStore.db, &databaseClusters, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for database clusters")
+	}
+
+	if filter != nil && filter.NumOfInstallationsLimit > 0 {
+		for i, cluster := range databaseClusters {
+			installations, err := cluster.GetInstallations()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to query for database clusters installations")
+			}
+
+			if len(installations) > int(filter.NumOfInstallationsLimit) {
+				databaseClusters = append(databaseClusters[:i], databaseClusters[i+1:]...)
+			}
+		}
 	}
 
 	return databaseClusters, nil
@@ -50,17 +71,17 @@ func (sqlStore *SQLStore) CreateDatabaseCluster(databaseCluster *model.DatabaseC
 		return errors.New("database cluster ID cannot be nil")
 	}
 
-	if len(databaseCluster.RawInstallations) < 1 {
-		databaseCluster.RawInstallations = make([]byte, 0)
+	if len(databaseCluster.RawInstallationIDs) < 1 {
+		databaseCluster.RawInstallationIDs = make([]byte, 0)
 	}
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("DatabaseCluster").
 		SetMap(map[string]interface{}{
-			"ID":               databaseCluster.ID,
-			"RawInstallations": databaseCluster.RawInstallations,
-			"LockAcquiredBy":   nil,
-			"LockAcquiredAt":   0,
+			"ID":                 databaseCluster.ID,
+			"RawInstallationIDs": databaseCluster.RawInstallationIDs,
+			"LockAcquiredBy":     nil,
+			"LockAcquiredAt":     0,
 		}),
 	)
 	if err != nil {
@@ -76,14 +97,14 @@ func (sqlStore *SQLStore) UpdateDatabaseCluster(databaseCluster *model.DatabaseC
 		return errors.New("database cluster cannot be nil")
 	}
 
-	if len(databaseCluster.RawInstallations) < 1 {
-		databaseCluster.RawInstallations = make([]byte, 0)
+	if len(databaseCluster.RawInstallationIDs) < 1 {
+		databaseCluster.RawInstallationIDs = make([]byte, 0)
 	}
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("DatabaseCluster").
 		SetMap(map[string]interface{}{
-			"RawInstallations": databaseCluster.RawInstallations,
+			"RawInstallationIDs": databaseCluster.RawInstallationIDs,
 		}).
 		Where("ID = ?", databaseCluster.ID),
 	)

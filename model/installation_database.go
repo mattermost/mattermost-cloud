@@ -12,8 +12,8 @@ const (
 	InstallationDatabaseMysqlOperator = "mysql-operator"
 	// InstallationDatabaseAwsRDS is a database hosted via Amazon RDS.
 	InstallationDatabaseAwsRDS = "aws-rds"
-	// InstallationDatabaseMultitenantRDS is a multitenant database hosted via Amazon RDS.
-	InstallationDatabaseMultitenantRDS = "aws-multitenant-rds"
+	// InstallationDatabaseMultitenantAwsRDS is a multitenant database hosted via Amazon RDS.
+	InstallationDatabaseMultitenantAwsRDS = "aws-multitenant-rds"
 )
 
 // Database is the interface for managing Mattermost databases.
@@ -29,7 +29,7 @@ type Database interface {
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
 	GetDatabaseCluster(id string) (*DatabaseCluster, error)
-	GetDatabaseClusters() ([]*DatabaseCluster, error)
+	GetDatabaseClusters(filter *DatabaseClusterFilter) ([]*DatabaseCluster, error)
 	CreateDatabaseCluster(databaseCluster *DatabaseCluster) error
 	LockDatabaseCluster(databaseID, lockerID string) (bool, error)
 	UnlockDatabaseCluster(databaseID, lockerID string, force bool) (bool, error)
@@ -84,7 +84,7 @@ func (i *Installation) InternalDatabase() bool {
 func IsSupportedDatabase(database string) bool {
 	switch database {
 	case InstallationDatabaseMysqlOperator:
-	case InstallationDatabaseMultitenantRDS:
+	case InstallationDatabaseMultitenantAwsRDS:
 	case InstallationDatabaseAwsRDS:
 	default:
 		return false

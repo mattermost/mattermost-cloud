@@ -38,7 +38,7 @@ type installationStore interface {
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 
 	GetDatabaseCluster(id string) (*model.DatabaseCluster, error)
-	GetDatabaseClusters() ([]*model.DatabaseCluster, error)
+	GetDatabaseClusters(filter *model.DatabaseClusterFilter) ([]*model.DatabaseCluster, error)
 	CreateDatabaseCluster(databaseCluster *model.DatabaseCluster) error
 	LockDatabaseCluster(databaseID, lockerID string) (bool, error)
 	UnlockDatabaseCluster(databaseID, lockerID string, force bool) (bool, error)

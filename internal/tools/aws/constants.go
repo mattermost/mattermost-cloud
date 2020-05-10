@@ -102,15 +102,18 @@ const (
 	// existing installations.
 	rdsSuffix = "-rds"
 
-	// rdsMySQLSchemaInformationDatabase is the schema the name given to a MySQL database information's table.
+	// rdsMySQLSchemaInformationDatabase is the schema the name given to a MySQL database
+	// information's table.
 	rdsMySQLSchemaInformationDatabase = "information_schema"
 
-	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost RDS database schemas.
+	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost RDS database
+	// schemas.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	rdsDatabaseNamePrefix = "cloud_"
-	// DefaultMultitenantDatabaseCounterTagKey is the default key used to identify the counter tag used
-	// in RDS multitenant database clusters.
+
+	// DefaultMultitenantDatabaseCounterTagKey is the default key used to identify the counter
+	// tag used in RDS multitenant database clusters.
 	DefaultMultitenantDatabaseCounterTagKey = "tag:Counter"
 
 	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots of a cluster installation.
@@ -119,16 +122,24 @@ const (
 	// DefaultAWSClientRetries supplies how many time the AWS client will retry a failed call.
 	DefaultAWSClientRetries = 3
 
-	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an encryption key.
+	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an
+	// encryption key.
 	KMSMaxTimeEncryptionKeyDeletion = 30
 
-	// DefaultMySQLDefaultContextTimeout is the number of seconds that a SQL client will take before cancel a
-	// call to the database.
+	// DefaultMySQLDefaultContextTimeout is the number of seconds that a SQL client will take before
+	// cancel a call to the database.
 	DefaultMySQLDefaultContextTimeout = 30
 
-	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant RDS database
-	// cluster.
+	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant
+	// RDS database cluster.
 	DefaultRDSMultitenantDatabaseCountLimit = 20
+
+	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix used for naming multitenant RDS DB
+	// cluster resources.
+	// For example: "rds-cluster-multinenant-00000000000000000-a0000000"
+	// Warning:
+	// changing this value may cause the provisioner to not find some AWS resources.
+	RDSMultitenantDBClusterResourceNamePrefix = "rds-cluster-multinenant"
 
 	// DefaultMattermostInstallationIDTagKey is the default name used for tagging resources with an installation ID.
 	DefaultMattermostInstallationIDTagKey = "tag:InstallationId"
@@ -179,4 +190,14 @@ const (
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	RDSMultitenantOwnerTagValueCloudTeam = "cloud-team"
+
+	// DefaultAWSTerraformProvisionedKey identifies wether or not a AWS resource has been provisioned via Terraform.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultAWSTerraformProvisionedKey = "Terraform"
+
+	// DefaultAWSTerraformProvisionedValueTrue indicates that the AWS resource has been provisioned via Terraform.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultAWSTerraformProvisionedValueTrue = "true"
 )

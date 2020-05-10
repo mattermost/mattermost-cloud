@@ -895,11 +895,11 @@ var migrations = []migration{
 
 		return nil
 	}},
-	{semver.MustParse("0.16.0"), semver.MustParse("0.16.1"), func(e execer) error {
+	{semver.MustParse("0.16.0"), semver.MustParse("0.17.0"), func(e execer) error {
 		_, err := e.Exec(`
 			CREATE TABLE DatabaseCluster (
 				ID TEXT PRIMARY KEY,
-				RawInstallations byte[] NOT NULL,               
+				RawInstallationIDs byte[] NOT NULL,               
 				LockAcquiredBy CHAR(26) NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);

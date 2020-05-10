@@ -43,16 +43,16 @@ func (d *DatabaseClusterInstallations) Remove(installationID string) bool {
 
 // DatabaseCluster represents a cluster that manages multiple databases.
 type DatabaseCluster struct {
-	ID               string
-	RawInstallations []byte `json:",omitempty"`
-	LockAcquiredBy   *string
-	LockAcquiredAt   int64
+	ID                 string
+	RawInstallationIDs []byte `json:",omitempty"`
+	LockAcquiredBy     *string
+	LockAcquiredAt     int64
 }
 
 // SetInstallations is a helper method to encode an interface{} as the corresponding bytes.
 func (c *DatabaseCluster) SetInstallations(dbInstallations DatabaseClusterInstallations) error {
 	if dbInstallations.Size() == 0 {
-		c.RawInstallations = nil
+		c.RawInstallationIDs = nil
 		return nil
 	}
 
@@ -61,22 +61,28 @@ func (c *DatabaseCluster) SetInstallations(dbInstallations DatabaseClusterInstal
 		return errors.Wrap(err, "failed to set installations in the database cluster")
 	}
 
-	c.RawInstallations = installations
+	c.RawInstallationIDs = installations
 	return nil
 }
 
 // GetInstallations is a helper method to encode an interface{} as the corresponding bytes.
 func (c *DatabaseCluster) GetInstallations() (DatabaseClusterInstallations, error) {
-	if len(c.RawInstallations) < 1 {
+	if len(c.RawInstallationIDs) < 1 {
 		return DatabaseClusterInstallations{}, nil
 	}
 
 	installations := DatabaseClusterInstallations{}
 
-	err := json.Unmarshal(c.RawInstallations, &installations)
+	err := json.Unmarshal(c.RawInstallationIDs, &installations)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations in the database cluster")
 	}
 
 	return installations, nil
+}
+
+// DatabaseClusterFilter filter results based on a specific installation ID.
+type DatabaseClusterFilter struct {
+	InstallationID          string
+	NumOfInstallationsLimit uint32
 }
