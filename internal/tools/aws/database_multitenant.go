@@ -28,7 +28,7 @@ import (
 // the connection with a database.
 type SQLDatabaseManager interface {
 	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	Close() error
 }
 
@@ -53,9 +53,6 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 
 	logger.Info("Tearing down installation's database and secret")
 
-	// TODO(gsagula): We currently keep the database intact and delete the local data store record. In the future we
-	// may prefer to snapshot database to S3 and then also delete the schema from the RDS cluster.
-
 	databaseClusters, err := store.GetDatabaseClusters(&model.DatabaseClusterFilter{
 		InstallationID: d.installationID,
 	})
@@ -67,23 +64,51 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	}
 
 	for _, databaseCluster := range databaseClusters {
-		dbInstallations, err := databaseCluster.GetInstallations()
+		dbInstallationIDs, err := databaseCluster.GetInstallationIDs()
 		if err != nil {
 			return errors.Wrapf(err, "could not get installations from database cluster ID %s", databaseCluster.ID)
 		}
 
-		if dbInstallations.Contains(d.installationID) {
+		if dbInstallationIDs.Contains(d.installationID) {
+			// Locks RDS.
 			unlocked, err := d.acquireLock(databaseCluster.ID, store)
 			if err != nil {
 				return errors.Wrapf(err, "could not lock database cluster ID %s", databaseCluster.ID)
 			}
 			defer unlocked(logger)
 
-			if !dbInstallations.Remove(d.installationID) {
+			rdsCluster, err := d.describeRDSCluster(databaseCluster.ID)
+			if err != nil {
+				return errors.Wrap(err, "could not describe RDS cluster")
+			}
+
+			// Drops database.
+			masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+				SecretId: &databaseCluster.ID,
+			})
+			if err != nil {
+				return errors.Wrapf(err, "unable to find the master secret for RDS cluster ID %s", databaseCluster.ID)
+			}
+
+			close, err := d.connectRDSCluster(rdsMySQLSchemaInformationDatabase, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+			if err != nil {
+				return errors.Wrapf(err, "unable to connect to RDS cluster ID %s", databaseCluster.ID)
+			}
+			defer close(logger)
+
+			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLDefaultContextTimeout*time.Second))
+			defer cancel()
+
+			err = d.dropDatabaseIfExists(ctx, MattermostRDSDatabaseName(d.installationID))
+			if err != nil {
+				return errors.Wrapf(err, "failed to teardown database installation %s", MattermostRDSDatabaseName(d.installationID))
+			}
+
+			if !dbInstallationIDs.Remove(d.installationID) {
 				return errors.Errorf("could not remove installation id %s from database cluster installations", d.installationID)
 			}
 
-			err = databaseCluster.SetInstallations(dbInstallations)
+			err = databaseCluster.SetInstallationIDs(dbInstallationIDs)
 			if err != nil {
 				return errors.Wrapf(err, "could not set installations in database cluster %s", databaseCluster.ID)
 			}
@@ -93,27 +118,16 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 				return errors.Wrapf(err, "could not set update database cluster %s", databaseCluster.ID)
 			}
 
-			rdsCluster, err := d.describeRDSCluster(databaseCluster.ID)
-			if err != nil {
-				return errors.Wrap(err, "could not describe RDS cluster")
-			}
-
-			err = d.updateCounterTag(rdsCluster.DBClusterArn, dbInstallations.Size())
-			if err != nil {
-				return errors.Wrapf(err, "failed to update counter tag in RDS cluster id %s", databaseCluster.ID)
+			// Delete secret.
+			_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
+				SecretId: aws.String(RDSMultitenantSecretName(d.installationID)),
+			})
+			if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+				return errors.Wrapf(err, "failed to delete RDS database secret name %s", RDSMultitenantSecretName(d.installationID))
 			}
 
 			return nil
 		}
-	}
-
-	databaseSecretName := RDSMultitenantSecretName(d.installationID)
-
-	_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
-		SecretId: aws.String(databaseSecretName),
-	})
-	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
-		return errors.Wrapf(err, "failed to delete RDS database secret name %s", databaseSecretName)
 	}
 
 	logger.Info("RDS database installation teardown complete")
@@ -168,14 +182,13 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 	}
 
 	installationDBName := MattermostRDSDatabaseName(d.installationID)
-	installationDBConnString := MattermostMySQLConnString(installationDBName, *rdsCluster.Endpoint, installationSecret.MasterUsername, installationSecret.MasterPassword)
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: installationSecreteName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": installationDBConnString,
+			"DB_CONNECTION_STRING": MattermostMySQLConnString(installationDBName, *rdsCluster.Endpoint, installationSecret.MasterUsername, installationSecret.MasterPassword),
 		},
 	}
 
@@ -184,7 +197,6 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 	}
 
 	logger.Infof("Finish to set up spec and secret for database %s", installationDBName)
-	logger.Debugf("RDS DB cluster %s configured to use connection string %s", *rdsCluster.DBClusterIdentifier, installationDBConnString)
 
 	return databaseSpec, databaseSecret, nil
 }
@@ -278,15 +290,15 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "failed to get database cluster for RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 	}
 
-	databaseClusterInstallations, err := databaseCluster.GetInstallations()
+	databaseClusterInstallationIDs, err := databaseCluster.GetInstallationIDs()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get database cluster installations for RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 	}
 
-	if !databaseClusterInstallations.Contains(d.installationID) {
-		databaseClusterInstallations.Add(d.installationID)
+	if !databaseClusterInstallationIDs.Contains(d.installationID) {
+		databaseClusterInstallationIDs.Add(d.installationID)
 
-		err = databaseCluster.SetInstallations(databaseClusterInstallations)
+		err = databaseCluster.SetInstallationIDs(databaseClusterInstallationIDs)
 		if err != nil {
 			return errors.Wrapf(err, "failed to set installations in database cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 		}
@@ -297,12 +309,12 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		}
 	}
 
-	err = d.updateCounterTag(lockedCluster.cluster.DBClusterArn, databaseClusterInstallations.Size())
+	err = d.updateCounterTag(lockedCluster.cluster.DBClusterArn, len(databaseClusterInstallationIDs))
 	if err != nil {
 		return errors.Wrapf(err, "failed to set update counter tag for RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 	}
 
-	logger.Infof("Updated counter tag multitenant RDS cluster to %d", databaseClusterInstallations.Size())
+	logger.Infof("Updated counter tag multitenant RDS cluster to %d", len(databaseClusterInstallationIDs))
 
 	return nil
 }
@@ -446,12 +458,12 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 	}
 
 	for _, cluster := range clusters {
-		installations, err := cluster.GetInstallations()
+		installations, err := cluster.GetInstallationIDs()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get installations for database cluster ID %s", cluster.ID)
 		}
 
-		if installations.Size() < DefaultRDSMultitenantDatabaseCountLimit {
+		if len(installations) < DefaultRDSMultitenantDatabaseCountLimit {
 			unlockFn, err := d.acquireLock(cluster.ID, store)
 			if err != nil {
 				logger.WithError(err).Errorf("failed to lock rds cluster %s", cluster.ID)
@@ -618,14 +630,14 @@ func (d *RDSMultitenantDatabase) acquireLock(dbClusterID string, store model.Ins
 	return unlockFN, nil
 }
 
-func (d *RDSMultitenantDatabase) validateDatabaseClusterInstallations(installations model.DatabaseClusterInstallations, databaseCluster *model.DatabaseCluster) error {
-	expectedInstallations, err := databaseCluster.GetInstallations()
+func (d *RDSMultitenantDatabase) validateDatabaseClusterInstallations(installations model.DatabaseClusterInstallationIDs, databaseCluster *model.DatabaseCluster) error {
+	expectedInstallations, err := databaseCluster.GetInstallationIDs()
 	if err != nil {
 		return errors.Errorf("failed to get installations from database cluster ID %s", databaseCluster.ID)
 	}
 
-	if installations.Size() != expectedInstallations.Size() {
-		return errors.Errorf("supplied %s installations, but the cluster ID %s has %s", installations.Size(), expectedInstallations.Size(), databaseCluster.ID)
+	if len(installations) != len(expectedInstallations) {
+		return errors.Errorf("supplied %s installations, but the cluster ID %s has %s", len(installations), len(expectedInstallations), databaseCluster.ID)
 	}
 
 	for _, installation := range installations {
@@ -645,8 +657,6 @@ func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, p
 			return nil, errors.Wrap(err, "connecting to RDS DB cluster")
 		}
 
-		db.Prepare("CREATE DATABASE IF NOT EXISTS ?")
-
 		d.db = db
 	}
 
@@ -661,7 +671,7 @@ func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, p
 }
 
 func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, username, password string) error {
-	_, err := d.db.ExecContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?", username, "%", password)
+	_, err := d.db.QueryContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?", username, "%", password)
 	if err != nil {
 		return errors.Wrapf(err, "creating user %s", username)
 	}
@@ -672,7 +682,7 @@ func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, usern
 func (d *RDSMultitenantDatabase) createDatabaseIfNotExist(ctx context.Context, databaseName string) error {
 	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET ?", databaseName)
 
-	_, err := d.db.ExecContext(ctx, query, "utf8mb4")
+	_, err := d.db.QueryContext(ctx, query, "utf8mb4")
 	if err != nil {
 		return errors.Wrapf(err, "creating database name %s", databaseName)
 	}
@@ -683,9 +693,20 @@ func (d *RDSMultitenantDatabase) createDatabaseIfNotExist(ctx context.Context, d
 func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, databaseName, username string) error {
 	query := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO ?@?", databaseName)
 
-	_, err := d.db.ExecContext(ctx, query, username, "%")
+	_, err := d.db.QueryContext(ctx, query, username, "%")
 	if err != nil {
 		return errors.Wrapf(err, "granting permissions to user %s", username)
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) dropDatabaseIfExists(ctx context.Context, databaseName string) error {
+	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
+
+	_, err := d.db.QueryContext(ctx, query)
+	if err != nil {
+		return errors.Wrapf(err, "failed to drop database %s", databaseName)
 	}
 
 	return nil

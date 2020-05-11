@@ -47,12 +47,12 @@ func (sqlStore *SQLStore) GetDatabaseClusters(filter *model.DatabaseClusterFilte
 
 	if filter != nil && filter.NumOfInstallationsLimit > 0 {
 		for i, cluster := range databaseClusters {
-			installations, err := cluster.GetInstallations()
+			installationIDs, err := cluster.GetInstallationIDs()
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to query for database clusters installations")
 			}
 
-			if len(installations) > int(filter.NumOfInstallationsLimit) {
+			if len(installationIDs) > int(filter.NumOfInstallationsLimit) {
 				databaseClusters = append(databaseClusters[:i], databaseClusters[i+1:]...)
 			}
 		}

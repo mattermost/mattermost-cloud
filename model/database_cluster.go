@@ -6,23 +6,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DatabaseClusterInstallations is a container that holds a collection of installation IDs.
-type DatabaseClusterInstallations []string
-
-// Size returns the number of installations in the container.
-func (d *DatabaseClusterInstallations) Size() int {
-	return len(*d)
-}
+// DatabaseClusterInstallationIDs is a container that holds a collection of installation IDs.
+type DatabaseClusterInstallationIDs []string
 
 // Add inserts a new installation in the container.
-func (d *DatabaseClusterInstallations) Add(installationID string) {
+func (d *DatabaseClusterInstallationIDs) Add(installationID string) {
 	*d = append(*d, installationID)
 }
 
 // Contains checks if the supplied installation ID exists in the container.
-func (d *DatabaseClusterInstallations) Contains(installationID string) bool {
-	for _, installation := range *d {
-		if installation == installationID {
+func (d *DatabaseClusterInstallationIDs) Contains(installationID string) bool {
+	for _, id := range *d {
+		if id == installationID {
 			return true
 		}
 	}
@@ -31,7 +26,7 @@ func (d *DatabaseClusterInstallations) Contains(installationID string) bool {
 }
 
 // Remove deletes the installation from the container.
-func (d *DatabaseClusterInstallations) Remove(installationID string) bool {
+func (d *DatabaseClusterInstallationIDs) Remove(installationID string) bool {
 	for i, installation := range *d {
 		if installation == installationID {
 			(*d) = append((*d)[:i], (*d)[i+1:]...)
@@ -49,14 +44,14 @@ type DatabaseCluster struct {
 	LockAcquiredAt     int64
 }
 
-// SetInstallations is a helper method to encode an interface{} as the corresponding bytes.
-func (c *DatabaseCluster) SetInstallations(dbInstallations DatabaseClusterInstallations) error {
-	if dbInstallations.Size() == 0 {
+// SetInstallationIDs is a helper method to parse DatabaseClusterInstallationIDs to the corresponding JSON-encoded bytes.
+func (c *DatabaseCluster) SetInstallationIDs(installationIDs DatabaseClusterInstallationIDs) error {
+	if len(installationIDs) == 0 {
 		c.RawInstallationIDs = nil
 		return nil
 	}
 
-	installations, err := json.Marshal(dbInstallations)
+	installations, err := json.Marshal(installationIDs)
 	if err != nil {
 		return errors.Wrap(err, "failed to set installations in the database cluster")
 	}
@@ -65,23 +60,24 @@ func (c *DatabaseCluster) SetInstallations(dbInstallations DatabaseClusterInstal
 	return nil
 }
 
-// GetInstallations is a helper method to encode an interface{} as the corresponding bytes.
-func (c *DatabaseCluster) GetInstallations() (DatabaseClusterInstallations, error) {
+// GetInstallationIDs is a helper method to parse JSON-encoded bytes to DatabaseClusterInstallationIDs.
+func (c *DatabaseCluster) GetInstallationIDs() (DatabaseClusterInstallationIDs, error) {
+	installationIDs := DatabaseClusterInstallationIDs{}
+
 	if len(c.RawInstallationIDs) < 1 {
-		return DatabaseClusterInstallations{}, nil
+		return installationIDs, nil
 	}
 
-	installations := DatabaseClusterInstallations{}
-
-	err := json.Unmarshal(c.RawInstallationIDs, &installations)
+	err := json.Unmarshal(c.RawInstallationIDs, &installationIDs)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations in the database cluster")
 	}
 
-	return installations, nil
+	return installationIDs, nil
 }
 
-// DatabaseClusterFilter filter results based on a specific installation ID.
+// DatabaseClusterFilter filter results based on a specific installation ID and a number of
+// installation's limit.
 type DatabaseClusterFilter struct {
 	InstallationID          string
 	NumOfInstallationsLimit uint32
