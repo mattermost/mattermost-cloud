@@ -37,14 +37,14 @@ type installationStore interface {
 	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 
-	AddDatabaseInstallationID(rdsClusterID, installationID string) (model.DatabaseClusterInstallationIDs, error)
-	RemoveDatabaseInstallationID(rdsClusterID, installationID string) (model.DatabaseClusterInstallationIDs, error)
-	GetDatabaseCluster(id string) (*model.DatabaseCluster, error)
-	GetDatabaseClusters(filter *model.DatabaseClusterFilter) ([]*model.DatabaseCluster, error)
-	CreateDatabaseCluster(databaseCluster *model.DatabaseCluster) error
-	LockDatabaseCluster(databaseID, lockerID string) (bool, error)
-	UnlockDatabaseCluster(databaseID, lockerID string, force bool) (bool, error)
-	UpdateDatabaseCluster(databaseCluster *model.DatabaseCluster) error
+	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error)
+	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error)
+	GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error)
+	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
+	CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
+	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
+	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
 
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }

@@ -40,7 +40,7 @@ type RDSMultitenantDatabase struct {
 	installationID string
 }
 
-// NewRDSMultitenantDatabase returns a new RDSDatabase interface.
+// NewRDSMultitenantDatabase returns a new instance of RDSMultitenantDatabase that implements database interface.
 func NewRDSMultitenantDatabase(installationID string, client *Client) *RDSMultitenantDatabase {
 	return &RDSMultitenantDatabase{
 		client:         client,
@@ -62,17 +62,17 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 
 	logger.Info("Tearing down RDS database and database secret")
 
-	rdsDatabaseClusters, err := store.GetDatabaseClusters(&model.DatabaseClusterFilter{
+	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID: d.installationID,
 	})
 	if err != nil {
 		return errors.Wrapf(err, "cannot teardown RDS cluster for installation ID %s", d.installationID)
 	}
-	if len(rdsDatabaseClusters) != 1 {
-		return errors.Errorf("expect exactly one RDS cluster for installation ID %s (found %d)", d.installationID, len(rdsDatabaseClusters))
+	if len(multitenantDatabases) != 1 {
+		return errors.Errorf("expect exactly one RDS cluster for installation ID %s (found %d)", d.installationID, len(multitenantDatabases))
 	}
 
-	err = d.removeRDSDatabase(rdsDatabaseClusters[0], databaseName, store, logger)
+	err = d.removeRDSDatabase(multitenantDatabases[0], databaseName, store, logger)
 	if err != nil {
 		return errors.Wrapf(err, "cannot teardown RDS cluster for installation ID %s", d.installationID)
 	}
@@ -101,23 +101,23 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 
 	logger = logger.WithField("rds-multitenant-database", databaseName)
 
-	rdsDatabaseClusters, err := store.GetDatabaseClusters(&model.DatabaseClusterFilter{
+	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID: d.installationID,
 	})
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not get installation id %", d.installationID)
 	}
-	if len(rdsDatabaseClusters) != 1 {
-		return nil, nil, errors.Errorf("expect exactly one RDS cluster for installation ID %s (found %d)", d.installationID, len(rdsDatabaseClusters))
+	if len(multitenantDatabases) != 1 {
+		return nil, nil, errors.Errorf("expect exactly one RDS cluster for installation ID %s (found %d)", d.installationID, len(multitenantDatabases))
 	}
 
-	unlocked, err := d.acquireLock(rdsDatabaseClusters[0].ID, store)
+	unlocked, err := d.acquireLock(multitenantDatabases[0].ID, store)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to lock RDS database cluster %s", rdsDatabaseClusters[0].ID)
+		return nil, nil, errors.Wrapf(err, "failed to lock RDS database cluster %s", multitenantDatabases[0].ID)
 	}
 	defer unlocked(logger)
 
-	rdsCluster, err := d.describeRDSCluster(rdsDatabaseClusters[0].ID)
+	rdsCluster, err := d.describeRDSCluster(multitenantDatabases[0].ID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed get database cluster information from AWS RDS service")
 	}
@@ -209,7 +209,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "failed to grant permissions to Mattermost database user for installation ID %s", d.installationID)
 	}
 
-	databaseInstallationIDs, err := store.AddDatabaseInstallationID(*lockedCluster.cluster.DBClusterIdentifier, d.installationID)
+	databaseInstallationIDs, err := store.AddMultitenantDatabaseInstallationID(*lockedCluster.cluster.DBClusterIdentifier, d.installationID)
 	if err != nil {
 		return errors.Wrapf(err, "failed to database installation ID %s to the datastore", d.installationID)
 	}
@@ -234,27 +234,27 @@ type lockRDSClusterOutput struct {
 func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*lockRDSClusterOutput, error) {
 	// We get clusters with filter. Found it? Lock and return, otherwise get all clusters and see if there is one available and lockable.
 	// If not, got to RDS and find one that is not in the datastore and has less databases than the limit.
-	clusters, err := store.GetDatabaseClusters(&model.DatabaseClusterFilter{
+	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID: d.installationID,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if clusters != nil && len(clusters) == 1 {
-		unlockFn, err := d.acquireLock(clusters[0].ID, store)
+	if multitenantDatabases != nil && len(multitenantDatabases) == 1 {
+		unlockFn, err := d.acquireLock(multitenantDatabases[0].ID, store)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to lock cluster ID %s", clusters[0].ID)
+			return nil, errors.Wrapf(err, "failed to lock cluster ID %s", multitenantDatabases[0].ID)
 		}
 
-		rdsCluster, err := d.describeRDSCluster(clusters[0].ID)
+		rdsCluster, err := d.describeRDSCluster(multitenantDatabases[0].ID)
 		if err != nil {
 			unlockFn(logger)
-			return nil, errors.Wrapf(err, "failed to get RDS cluster %s", clusters[0].ID)
+			return nil, errors.Wrapf(err, "failed to get RDS cluster %s", multitenantDatabases[0].ID)
 		}
 
 		if *rdsCluster.Status != "available" {
 			unlockFn(logger)
-			return nil, errors.Wrapf(err, "expected RDS cluster %s to be 'available', but is '%s'", clusters[0].ID, *rdsCluster.Status)
+			return nil, errors.Wrapf(err, "expected RDS cluster %s to be 'available', but is '%s'", multitenantDatabases[0].ID, *rdsCluster.Status)
 		}
 
 		return &lockRDSClusterOutput{
@@ -269,14 +269,14 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 	// - there are clusters but they all exceeded capacity.
 	// - there are still clusters that didn't exceeded the cap, so let's try to lock one.
 	// validateCLusters := func() string, error {
-	clusters, err = store.GetDatabaseClusters(&model.DatabaseClusterFilter{
+	multitenantDatabases, err = store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		NumOfInstallationsLimit: DefaultRDSMultitenantDatabaseCountLimit,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if len(clusters) < 1 {
+	if len(multitenantDatabases) < 1 {
 		resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
 			TagFilters: []*gt.TagFilter{
 				{
@@ -330,8 +330,6 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 			return nil, nil
 		}
 
-		// logger.Infof("RESOURCE NAMEs: %v", resourceNames)
-
 		for _, resource := range resourceNames {
 			resourceARN, err := arn.Parse(*resource.ResourceARN)
 			if err != nil {
@@ -347,59 +345,59 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 			}
 
 			if id != nil {
-				cluster := model.DatabaseCluster{
+				multitenantDatabase := model.MultitenantDatabase{
 					ID: *id,
 				}
 
-				err := store.CreateDatabaseCluster(&cluster)
+				err := store.CreateMultitenantDatabase(&multitenantDatabase)
 				if err != nil {
-					logger.WithError(err).Errorf("failed to create database cluster for installation ID %s", d.installationID)
+					logger.WithError(err).Errorf("failed to create a multitenant database for installation ID %s", d.installationID)
 					continue
 				}
 
-				clusters = append(clusters, &cluster)
+				multitenantDatabases = append(multitenantDatabases, &multitenantDatabase)
 			}
 		}
 	}
 
-	for _, cluster := range clusters {
-		installations, err := cluster.GetInstallationIDs()
+	for _, multitenantDatabase := range multitenantDatabases {
+		installations, err := multitenantDatabase.GetInstallationIDs()
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get installations for database cluster ID %s", cluster.ID)
+			return nil, errors.Wrapf(err, "failed to get installations for multitenant database ID %s", multitenantDatabase.ID)
 		}
 
 		if len(installations) < DefaultRDSMultitenantDatabaseCountLimit {
-			unlockFn, err := d.acquireLock(cluster.ID, store)
+			unlockFn, err := d.acquireLock(multitenantDatabase.ID, store)
 			if err != nil {
-				logger.WithError(err).Errorf("failed to lock rds cluster %s", cluster.ID)
+				logger.WithError(err).Errorf("failed to lock rds cluster %s", multitenantDatabase.ID)
 				continue
 			}
 
-			cluster, err = store.GetDatabaseCluster(cluster.ID)
+			multitenantDatabase, err = store.GetMultitenantDatabase(multitenantDatabase.ID)
 			if err != nil {
-				logger.WithError(err).Errorf("failed to get database cluster ID %s", cluster.ID)
+				logger.WithError(err).Errorf("failed to get database cluster ID %s", multitenantDatabase.ID)
 				continue
 			}
 
 			// Since clusters can be sourced from either the datastore or AWS resources,
 			// we make sure that nothing has changed prior to the locking has been acquired.
-			err = d.validateDatabaseClusterInstallations(installations, cluster)
+			err = d.validateDatabaseClusterInstallations(installations, multitenantDatabase)
 			if err != nil {
 				unlockFn(logger)
-				logger.WithError(err).Error("database cluster validation failed")
+				logger.WithError(err).Error("multitenant database validation failed")
 				continue
 			}
 
-			rdsCluster, err := d.describeRDSCluster(cluster.ID)
+			rdsCluster, err := d.describeRDSCluster(multitenantDatabase.ID)
 			if err != nil {
 				unlockFn(logger)
-				logger.WithError(err).Errorf("failed to get RDS cluster %s", cluster.ID)
+				logger.WithError(err).Errorf("failed to get RDS cluster %s", multitenantDatabase.ID)
 				continue
 			}
 
 			if *rdsCluster.Status != "available" {
 				unlockFn(logger)
-				logger.WithError(err).Errorf("failed to get RDS cluster %s", cluster.ID)
+				logger.WithError(err).Errorf("failed to get RDS cluster %s", multitenantDatabase.ID)
 				continue
 			}
 
@@ -514,47 +512,47 @@ func (d *RDSMultitenantDatabase) describeRDSCluster(dbClusterID string) (*rds.DB
 	return dbClusterOutput.DBClusters[0], nil
 }
 
-func (d *RDSMultitenantDatabase) acquireLock(dbClusterID string, store model.InstallationDatabaseStoreInterface) (func(logger log.FieldLogger), error) {
-	locked, err := store.LockDatabaseCluster(dbClusterID, d.installationID)
+func (d *RDSMultitenantDatabase) acquireLock(multitenantDatabaseID string, store model.InstallationDatabaseStoreInterface) (func(logger log.FieldLogger), error) {
+	locked, err := store.LockMultitenantDatabase(multitenantDatabaseID, d.installationID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not acquire lock for database cluster %s", dbClusterID)
+		return nil, errors.Wrapf(err, "could not acquire lock for multitenant database %s", multitenantDatabaseID)
 	}
 	if !locked {
-		return nil, errors.Errorf("could not acquire lock for database cluster %s", dbClusterID)
+		return nil, errors.Errorf("could not acquire lock for multitenant database %s", multitenantDatabaseID)
 	}
 	unlockFN := func(logger log.FieldLogger) {
-		unlocked, err := store.UnlockDatabaseCluster(dbClusterID, d.installationID, true)
+		unlocked, err := store.UnlockMultitenantDatabase(multitenantDatabaseID, d.installationID, true)
 		if err != nil {
-			logger.WithError(err).Errorf("provisioner datastore failed to release locker for database cluster ID %s", dbClusterID)
+			logger.WithError(err).Errorf("provisioner datastore failed to release locker for multitenant database ID %s", multitenantDatabaseID)
 		}
 		if !unlocked {
-			logger.Warnf("database ID %s and locker ID %s is still locked", dbClusterID, d.installationID)
+			logger.Warnf("multitenant database ID %s and installation ID %s is still locked", multitenantDatabaseID, d.installationID)
 		}
 	}
 
 	return unlockFN, nil
 }
 
-func (d *RDSMultitenantDatabase) validateDatabaseClusterInstallations(installations model.DatabaseClusterInstallationIDs, databaseCluster *model.DatabaseCluster) error {
-	expectedInstallations, err := databaseCluster.GetInstallationIDs()
+func (d *RDSMultitenantDatabase) validateDatabaseClusterInstallations(installations model.MultitenantDatabaseInstallationIDs, multitenantDatabase *model.MultitenantDatabase) error {
+	expectedInstallations, err := multitenantDatabase.GetInstallationIDs()
 	if err != nil {
-		return errors.Errorf("failed to get installations from database cluster ID %s", databaseCluster.ID)
+		return errors.Errorf("failed to get installations from multitenant database ID %s", multitenantDatabase.ID)
 	}
 
 	if len(installations) != len(expectedInstallations) {
-		return errors.Errorf("supplied %s installations, but the cluster ID %s has %s", len(installations), len(expectedInstallations), databaseCluster.ID)
+		return errors.Errorf("supplied %s installations, but the multitenant database ID %s has %s", len(installations), len(expectedInstallations), multitenantDatabase.ID)
 	}
 
 	for _, installation := range installations {
 		if !expectedInstallations.Contains(installation) {
-			return errors.Errorf("unable to find installation ID %s in cluster ID %s", installation, databaseCluster.ID)
+			return errors.Errorf("unable to find installation ID %s in the multitenant database ID %s", installation, multitenantDatabase.ID)
 		}
 	}
 
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) removeRDSDatabase(rdsDatabaseCluster *model.DatabaseCluster, rdsDatabaseName string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) removeRDSDatabase(rdsDatabaseCluster *model.MultitenantDatabase, rdsDatabaseName string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger = logger.WithField("rds-cluster-id", rdsDatabaseCluster.ID)
 
 	unlocked, err := d.acquireLock(rdsDatabaseCluster.ID, store)
@@ -589,7 +587,7 @@ func (d *RDSMultitenantDatabase) removeRDSDatabase(rdsDatabaseCluster *model.Dat
 		return errors.Wrapf(err, "failed to drop RDS database name %s", rdsDatabaseName)
 	}
 
-	databaseInstallationIDs, err := store.RemoveDatabaseInstallationID(rdsDatabaseCluster.ID, d.installationID)
+	databaseInstallationIDs, err := store.RemoveMultitenantDatabaseInstallationID(rdsDatabaseCluster.ID, d.installationID)
 	if err != nil {
 		return errors.Wrapf(err, "failed to remove installation ID %s from datasore", d.installationID)
 	}
@@ -691,6 +689,8 @@ func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, d
 	if err != nil {
 		return errors.Wrapf(err, "granting permissions to user %s", username)
 	}
+
+	// TODO(gsagula): need to flush privileges.
 
 	return nil
 }

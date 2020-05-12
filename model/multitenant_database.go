@@ -6,16 +6,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DatabaseClusterInstallationIDs is a container that holds a collection of installation IDs.
-type DatabaseClusterInstallationIDs []string
+// MultitenantDatabaseInstallationIDs is a container that holds a collection of installation IDs.
+type MultitenantDatabaseInstallationIDs []string
 
 // Add inserts a new installation in the container.
-func (d *DatabaseClusterInstallationIDs) Add(installationID string) {
+func (d *MultitenantDatabaseInstallationIDs) Add(installationID string) {
 	*d = append(*d, installationID)
 }
 
 // Contains checks if the supplied installation ID exists in the container.
-func (d *DatabaseClusterInstallationIDs) Contains(installationID string) bool {
+func (d *MultitenantDatabaseInstallationIDs) Contains(installationID string) bool {
 	for _, id := range *d {
 		if id == installationID {
 			return true
@@ -26,7 +26,7 @@ func (d *DatabaseClusterInstallationIDs) Contains(installationID string) bool {
 }
 
 // Remove deletes the installation from the container.
-func (d *DatabaseClusterInstallationIDs) Remove(installationID string) {
+func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
 	for i, installation := range *d {
 		if installation == installationID {
 			(*d) = append((*d)[:i], (*d)[i+1:]...)
@@ -34,8 +34,8 @@ func (d *DatabaseClusterInstallationIDs) Remove(installationID string) {
 	}
 }
 
-// DatabaseCluster represents a cluster that manages multiple databases.
-type DatabaseCluster struct {
+// MultitenantDatabase represents a cluster that manages multiple databases.
+type MultitenantDatabase struct {
 	ID                 string
 	RawInstallationIDs []byte `json:",omitempty"`
 	LockAcquiredBy     *string
@@ -43,7 +43,7 @@ type DatabaseCluster struct {
 }
 
 // SetInstallationIDs is a helper method to parse DatabaseClusterInstallationIDs to the corresponding JSON-encoded bytes.
-func (c *DatabaseCluster) SetInstallationIDs(installationIDs DatabaseClusterInstallationIDs) error {
+func (c *MultitenantDatabase) SetInstallationIDs(installationIDs MultitenantDatabaseInstallationIDs) error {
 	if len(installationIDs) == 0 {
 		c.RawInstallationIDs = nil
 		return nil
@@ -59,8 +59,8 @@ func (c *DatabaseCluster) SetInstallationIDs(installationIDs DatabaseClusterInst
 }
 
 // GetInstallationIDs is a helper method to parse JSON-encoded bytes to DatabaseClusterInstallationIDs.
-func (c *DatabaseCluster) GetInstallationIDs() (DatabaseClusterInstallationIDs, error) {
-	installationIDs := DatabaseClusterInstallationIDs{}
+func (c *MultitenantDatabase) GetInstallationIDs() (MultitenantDatabaseInstallationIDs, error) {
+	installationIDs := MultitenantDatabaseInstallationIDs{}
 
 	if len(c.RawInstallationIDs) < 1 {
 		return installationIDs, nil
@@ -74,9 +74,9 @@ func (c *DatabaseCluster) GetInstallationIDs() (DatabaseClusterInstallationIDs, 
 	return installationIDs, nil
 }
 
-// DatabaseClusterFilter filter results based on a specific installation ID and a number of
+// MultitenantDatabaseFilter filters results based on a specific installation ID and a number of
 // installation's limit.
-type DatabaseClusterFilter struct {
+type MultitenantDatabaseFilter struct {
 	InstallationID          string
 	NumOfInstallationsLimit uint32
 }

@@ -28,14 +28,14 @@ type Database interface {
 // functionality to correlate an installation to a cluster for database creation.
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
-	AddDatabaseInstallationID(rdsClusterID, installationID string) (DatabaseClusterInstallationIDs, error)
-	RemoveDatabaseInstallationID(rdsClusterID, installationID string) (DatabaseClusterInstallationIDs, error)
-	GetDatabaseCluster(id string) (*DatabaseCluster, error)
-	GetDatabaseClusters(filter *DatabaseClusterFilter) ([]*DatabaseCluster, error)
-	CreateDatabaseCluster(databaseCluster *DatabaseCluster) error
-	LockDatabaseCluster(databaseID, lockerID string) (bool, error)
-	UnlockDatabaseCluster(databaseID, lockerID string, force bool) (bool, error)
-	UpdateDatabaseCluster(databaseCluster *DatabaseCluster) error
+	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
+	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
+	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
+	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
+	CreateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
+	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
+	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	UpdateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.

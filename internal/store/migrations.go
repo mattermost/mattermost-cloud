@@ -897,7 +897,7 @@ var migrations = []migration{
 	}},
 	{semver.MustParse("0.16.0"), semver.MustParse("0.17.0"), func(e execer) error {
 		_, err := e.Exec(`
-			CREATE TABLE DatabaseCluster (
+			CREATE TABLE MultitenantDatabase (
 				ID TEXT PRIMARY KEY,
 				RawInstallationIDs byte[] NOT NULL,               
 				LockAcquiredBy CHAR(26) NULL,
