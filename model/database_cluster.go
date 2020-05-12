@@ -26,14 +26,12 @@ func (d *DatabaseClusterInstallationIDs) Contains(installationID string) bool {
 }
 
 // Remove deletes the installation from the container.
-func (d *DatabaseClusterInstallationIDs) Remove(installationID string) bool {
+func (d *DatabaseClusterInstallationIDs) Remove(installationID string) {
 	for i, installation := range *d {
 		if installation == installationID {
 			(*d) = append((*d)[:i], (*d)[i+1:]...)
-			return true
 		}
 	}
-	return false
 }
 
 // DatabaseCluster represents a cluster that manages multiple databases.

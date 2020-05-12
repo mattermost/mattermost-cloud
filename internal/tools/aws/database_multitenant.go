@@ -27,7 +27,6 @@ import (
 // SQLDatabaseManager is an interface that describes operations to execute a SQL commands and close the
 // the connection with a database.
 type SQLDatabaseManager interface {
-	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	Close() error
 }
@@ -49,88 +48,41 @@ func NewRDSMultitenantDatabase(installationID string, client *Client) *RDSMultit
 
 // Teardown removes all AWS resources related to a multitenant RDS database.
 func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error {
-	logger = logger.WithField("rds-multitenant-database", MattermostRDSDatabaseName(d.installationID))
+	databaseName := MattermostRDSDatabaseName(d.installationID)
 
-	logger.Info("Tearing down installation's database and secret")
+	logger = logger.WithField("rds-multitenant-database", databaseName)
 
-	databaseClusters, err := store.GetDatabaseClusters(&model.DatabaseClusterFilter{
+	if keepData {
+		logger.Infof("Keep data was requested - leaving RDS database for installation ID %s intacted", d.installationID)
+
+		return nil
+	}
+
+	logger.Info("Tearing down RDS database and dependencies")
+
+	rdsDatabaseClusters, err := store.GetDatabaseClusters(&model.DatabaseClusterFilter{
 		InstallationID: d.installationID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to fetch database clusters from data store")
+		return errors.Wrapf(err, "cannot teardown RDS cluster for installation ID %s", d.installationID)
 	}
-	if len(databaseClusters) < 1 {
-		return errors.New("data store has no database clusters")
-	}
-
-	for _, databaseCluster := range databaseClusters {
-		dbInstallationIDs, err := databaseCluster.GetInstallationIDs()
-		if err != nil {
-			return errors.Wrapf(err, "could not get installations from database cluster ID %s", databaseCluster.ID)
-		}
-
-		if dbInstallationIDs.Contains(d.installationID) {
-			// Locks RDS.
-			unlocked, err := d.acquireLock(databaseCluster.ID, store)
-			if err != nil {
-				return errors.Wrapf(err, "could not lock database cluster ID %s", databaseCluster.ID)
-			}
-			defer unlocked(logger)
-
-			rdsCluster, err := d.describeRDSCluster(databaseCluster.ID)
-			if err != nil {
-				return errors.Wrap(err, "could not describe RDS cluster")
-			}
-
-			// Drops database.
-			masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-				SecretId: &databaseCluster.ID,
-			})
-			if err != nil {
-				return errors.Wrapf(err, "unable to find the master secret for RDS cluster ID %s", databaseCluster.ID)
-			}
-
-			close, err := d.connectRDSCluster(rdsMySQLSchemaInformationDatabase, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
-			if err != nil {
-				return errors.Wrapf(err, "unable to connect to RDS cluster ID %s", databaseCluster.ID)
-			}
-			defer close(logger)
-
-			ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLDefaultContextTimeout*time.Second))
-			defer cancel()
-
-			err = d.dropDatabaseIfExists(ctx, MattermostRDSDatabaseName(d.installationID))
-			if err != nil {
-				return errors.Wrapf(err, "failed to teardown database installation %s", MattermostRDSDatabaseName(d.installationID))
-			}
-
-			if !dbInstallationIDs.Remove(d.installationID) {
-				return errors.Errorf("could not remove installation id %s from database cluster installations", d.installationID)
-			}
-
-			err = databaseCluster.SetInstallationIDs(dbInstallationIDs)
-			if err != nil {
-				return errors.Wrapf(err, "could not set installations in database cluster %s", databaseCluster.ID)
-			}
-
-			err = store.UpdateDatabaseCluster(databaseCluster)
-			if err != nil {
-				return errors.Wrapf(err, "could not set update database cluster %s", databaseCluster.ID)
-			}
-
-			// Delete secret.
-			_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
-				SecretId: aws.String(RDSMultitenantSecretName(d.installationID)),
-			})
-			if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
-				return errors.Wrapf(err, "failed to delete RDS database secret name %s", RDSMultitenantSecretName(d.installationID))
-			}
-
-			return nil
-		}
+	if len(rdsDatabaseClusters) != 1 {
+		return errors.Errorf("expect exactly one RDS cluster for installation ID %s (found %d)", d.installationID, len(rdsDatabaseClusters))
 	}
 
-	logger.Info("RDS database installation teardown complete")
+	err = d.removeRDSDatabase(rdsDatabaseClusters[0], databaseName, store, logger)
+	if err != nil {
+		return errors.Wrapf(err, "cannot teardown RDS cluster for installation ID %s", d.installationID)
+	}
+
+	_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
+		SecretId: aws.String(RDSMultitenantSecretName(d.installationID)),
+	})
+	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+		return errors.Wrapf(err, "failed to delete RDS database secret name %s", RDSMultitenantSecretName(d.installationID))
+	}
+
+	logger.Infof("RDS database teardown successfully completed")
 
 	return nil
 }
@@ -644,6 +596,71 @@ func (d *RDSMultitenantDatabase) validateDatabaseClusterInstallations(installati
 		if !expectedInstallations.Contains(installation) {
 			return errors.Errorf("unable to find installation ID %s in cluster ID %s", installation, databaseCluster.ID)
 		}
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) removeRDSDatabase(databaseCluster *model.DatabaseCluster, databaseName string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	logger = logger.WithField("rds-cluster-id", databaseCluster.ID)
+
+	// Locks RDS cluster.
+	unlocked, err := d.acquireLock(databaseCluster.ID, store)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lock RDS database cluster %s", databaseCluster.ID)
+	}
+	defer unlocked(logger)
+
+	databaseInstallationIDs, err := databaseCluster.GetInstallationIDs()
+	if err != nil {
+		return errors.Wrapf(err, "could not get installations from database cluster ID %s", databaseCluster.ID)
+	}
+
+	rdsCluster, err := d.describeRDSCluster(databaseCluster.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed get database cluster information from RDS service")
+	}
+
+	// Drops RDS database.
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: &databaseCluster.ID,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get master secret by ID %s", databaseCluster.ID)
+	}
+
+	close, err := d.connectRDSCluster(rdsMySQLSchemaInformationDatabase, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	if err != nil {
+		return errors.Wrapf(err, "unable to connect to RDS database cluster %s", databaseCluster.ID)
+	}
+	defer close(logger)
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLDefaultContextTimeout*time.Second))
+	defer cancel()
+
+	err = d.dropDatabaseIfExists(ctx, databaseName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to drop RDS database name %s", databaseName)
+	}
+
+	// Remove the installation ID from the object but do not update the datastore yet.
+	databaseInstallationIDs.Remove(d.installationID)
+	err = databaseCluster.SetInstallationIDs(databaseInstallationIDs)
+	if err != nil {
+		return errors.Wrap(err, "failed to update datasore installations")
+	}
+
+	// Since this operation can fail, first try to update tag so the installation ID is still in the datastore
+	// to allow the retry.
+	err = d.updateCounterTag(rdsCluster.DBClusterArn, len(databaseInstallationIDs))
+	if err != nil {
+		return errors.Wrapf(err, "failed to update counter tag for RDS cluster %s", databaseCluster.ID)
+	}
+
+	// Finally update the datastore without the installation ID.
+	err = store.UpdateDatabaseCluster(databaseCluster)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update datastore database ID %s", databaseCluster.ID)
 	}
 
 	return nil
