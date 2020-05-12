@@ -115,6 +115,64 @@ func (sqlStore *SQLStore) UpdateDatabaseCluster(databaseCluster *model.DatabaseC
 	return nil
 }
 
+// AddDatabaseInstallationID adds an installation ID to the datastore.
+func (sqlStore *SQLStore) AddDatabaseInstallationID(rdsClusterID, installationID string) (model.DatabaseClusterInstallationIDs, error) {
+	databaseCluster, err := sqlStore.GetDatabaseCluster(rdsClusterID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+	}
+
+	databaseClusterInstallationIDs, err := databaseCluster.GetInstallationIDs()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+	}
+
+	if !databaseClusterInstallationIDs.Contains(installationID) {
+		databaseClusterInstallationIDs.Add(installationID)
+
+		err = databaseCluster.SetInstallationIDs(databaseClusterInstallationIDs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+		}
+
+		err = sqlStore.UpdateDatabaseCluster(databaseCluster)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+		}
+	}
+
+	return databaseClusterInstallationIDs, nil
+}
+
+// RemoveDatabaseInstallationID removes an installation ID from the datastore.
+func (sqlStore *SQLStore) RemoveDatabaseInstallationID(rdsClusterID, installationID string) (model.DatabaseClusterInstallationIDs, error) {
+	databaseCluster, err := sqlStore.GetDatabaseCluster(rdsClusterID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to remove installation ID %s", installationID)
+	}
+
+	databaseClusterInstallationIDs, err := databaseCluster.GetInstallationIDs()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to remove installation ID %s", installationID)
+	}
+
+	if databaseClusterInstallationIDs.Contains(installationID) {
+		databaseClusterInstallationIDs.Remove(installationID)
+
+		err = databaseCluster.SetInstallationIDs(databaseClusterInstallationIDs)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to remove installation ID %s", installationID)
+		}
+
+		err = sqlStore.UpdateDatabaseCluster(databaseCluster)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to remove installation ID %s", installationID)
+		}
+	}
+
+	return databaseClusterInstallationIDs, nil
+}
+
 // LockDatabaseCluster marks the database cluster as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockDatabaseCluster(installationID, lockerID string) (bool, error) {
 	return sqlStore.lockRows("DatabaseCluster", []string{installationID}, lockerID)

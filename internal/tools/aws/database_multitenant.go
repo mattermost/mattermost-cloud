@@ -186,7 +186,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "unable to connect to RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 	}
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLDefaultContextTimeout*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
 	err = d.createDatabaseIfNotExist(ctx, databaseName)
@@ -194,41 +194,9 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "unable to create schema in RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 	}
 
-	installationSecretName := RDSMultitenantSecretName(d.installationID)
-
-	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(installationSecretName),
-	})
-	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
-		return errors.Wrapf(err, "failed to get RDS database secret for installation ID %s", d.installationID)
-	}
-
-	var installationSecret *RDSSecret
-	if installationSecretValue != nil && installationSecretValue.SecretString != nil {
-		installationSecret, err = unmarshalSecretPayload(*installationSecretValue.SecretString)
-		if err != nil {
-			return errors.Wrapf(err, "failed to unmarshal RDS database secret for installation ID %s", d.installationID)
-		}
-	} else {
-		description := RDSMultitenantClusterSecretDescription(d.installationID, *lockedCluster.cluster.DBClusterIdentifier)
-		tags := []*secretsmanager.Tag{
-			{
-				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDBClusterIDTagKey)),
-				Value: lockedCluster.cluster.DBClusterIdentifier,
-			},
-			{
-				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
-				Value: aws.String(*vpc.VpcId),
-			},
-			{
-				Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
-				Value: aws.String(d.installationID),
-			},
-		}
-		installationSecret, err = d.createInstallationSecret(installationSecretName, d.installationID, description, tags)
-		if err != nil {
-			return errors.Wrapf(err, "failed to create a RDS database secret for installation ID %s", d.installationID)
-		}
+	installationSecret, err := d.ensureMultitenantDatabaseSecretIsCreated(lockedCluster.cluster.DBClusterIdentifier, vpc.VpcId)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get a database secrete for installation ID %s", d.installationID)
 	}
 
 	err = d.createUserIfNotExist(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
@@ -241,36 +209,17 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "failed to grant permissions to Mattermost database user for installation ID %s", d.installationID)
 	}
 
-	databaseCluster, err := store.GetDatabaseCluster(*lockedCluster.cluster.DBClusterIdentifier)
+	databaseInstallationIDs, err := store.AddDatabaseInstallationID(*lockedCluster.cluster.DBClusterIdentifier, d.installationID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get database cluster for RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
+		return errors.Wrapf(err, "failed to database installation ID %s to the datastore", d.installationID)
 	}
 
-	databaseClusterInstallationIDs, err := databaseCluster.GetInstallationIDs()
-	if err != nil {
-		return errors.Wrapf(err, "failed to get database cluster installations for RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
-	}
-
-	if !databaseClusterInstallationIDs.Contains(d.installationID) {
-		databaseClusterInstallationIDs.Add(d.installationID)
-
-		err = databaseCluster.SetInstallationIDs(databaseClusterInstallationIDs)
-		if err != nil {
-			return errors.Wrapf(err, "failed to set installations in database cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
-		}
-
-		err = store.UpdateDatabaseCluster(databaseCluster)
-		if err != nil {
-			return errors.Wrapf(err, "failed to update database cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
-		}
-	}
-
-	err = d.updateCounterTag(lockedCluster.cluster.DBClusterArn, len(databaseClusterInstallationIDs))
+	err = d.updateCounterTag(lockedCluster.cluster.DBClusterArn, len(databaseInstallationIDs))
 	if err != nil {
 		return errors.Wrapf(err, "failed to set update counter tag for RDS cluster ID %s", *lockedCluster.cluster.DBClusterIdentifier)
 	}
 
-	logger.Infof("Updated counter tag multitenant RDS cluster to %d", len(databaseClusterInstallationIDs))
+	logger.Infof("Multitenant RDS cluster %s has %d installations", *lockedCluster.cluster.DBClusterIdentifier, len(databaseInstallationIDs))
 
 	return nil
 }
@@ -608,24 +557,17 @@ func (d *RDSMultitenantDatabase) validateDatabaseClusterInstallations(installati
 func (d *RDSMultitenantDatabase) removeRDSDatabase(rdsDatabaseCluster *model.DatabaseCluster, rdsDatabaseName string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger = logger.WithField("rds-cluster-id", rdsDatabaseCluster.ID)
 
-	// Locks RDS cluster.
 	unlocked, err := d.acquireLock(rdsDatabaseCluster.ID, store)
 	if err != nil {
 		return errors.Wrapf(err, "failed to lock RDS database cluster %s", rdsDatabaseCluster.ID)
 	}
 	defer unlocked(logger)
 
-	databaseInstallationIDs, err := rdsDatabaseCluster.GetInstallationIDs()
-	if err != nil {
-		return errors.Wrapf(err, "could not get installations from database cluster ID %s", rdsDatabaseCluster.ID)
-	}
-
 	rdsCluster, err := d.describeRDSCluster(rdsDatabaseCluster.ID)
 	if err != nil {
 		return errors.Wrap(err, "failed get database cluster information from AWS RDS service")
 	}
 
-	// Drops RDS database.
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: &rdsDatabaseCluster.ID,
 	})
@@ -639,7 +581,7 @@ func (d *RDSMultitenantDatabase) removeRDSDatabase(rdsDatabaseCluster *model.Dat
 	}
 	defer close(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLDefaultContextTimeout*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
 	err = d.dropDatabaseIfExists(ctx, rdsDatabaseName)
@@ -647,27 +589,58 @@ func (d *RDSMultitenantDatabase) removeRDSDatabase(rdsDatabaseCluster *model.Dat
 		return errors.Wrapf(err, "failed to drop RDS database name %s", rdsDatabaseName)
 	}
 
-	// Remove the installation ID from the object but do not update the datastore yet.
-	databaseInstallationIDs.Remove(d.installationID)
-	err = rdsDatabaseCluster.SetInstallationIDs(databaseInstallationIDs)
+	databaseInstallationIDs, err := store.RemoveDatabaseInstallationID(rdsDatabaseCluster.ID, d.installationID)
 	if err != nil {
-		return errors.Wrap(err, "failed to update datasore installations")
+		return errors.Wrapf(err, "failed to remove installation ID %s from datasore", d.installationID)
 	}
 
-	// Since this operation can fail, first try to update tag so the installation ID is still in the datastore
-	// to allow the retry.
 	err = d.updateCounterTag(rdsCluster.DBClusterArn, len(databaseInstallationIDs))
 	if err != nil {
 		return errors.Wrapf(err, "failed to update counter tag for RDS cluster %s", rdsDatabaseCluster.ID)
 	}
 
-	// Finally update the datastore without the installation ID.
-	err = store.UpdateDatabaseCluster(rdsDatabaseCluster)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update datastore database ID %s", rdsDatabaseCluster.ID)
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
+	installationSecretName := RDSMultitenantSecretName(d.installationID)
+
+	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(installationSecretName),
+	})
+	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
 
-	return nil
+	var installationSecret *RDSSecret
+	if installationSecretValue != nil && installationSecretValue.SecretString != nil {
+		installationSecret, err = unmarshalSecretPayload(*installationSecretValue.SecretString)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
+		}
+	} else {
+		description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
+		tags := []*secretsmanager.Tag{
+			{
+				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDBClusterIDTagKey)),
+				Value: rdsClusterID,
+			},
+			{
+				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
+				Value: VpcID,
+			},
+			{
+				Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
+				Value: aws.String(d.installationID),
+			},
+		}
+		installationSecret, err = d.createInstallationSecret(installationSecretName, d.installationID, description, tags)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create a RDS database secret %s", installationSecretName)
+		}
+	}
+
+	return installationSecret, nil
 }
 
 func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, password string) (func(logger log.FieldLogger), error) {

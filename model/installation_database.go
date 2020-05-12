@@ -28,6 +28,8 @@ type Database interface {
 // functionality to correlate an installation to a cluster for database creation.
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
+	AddDatabaseInstallationID(rdsClusterID, installationID string) (DatabaseClusterInstallationIDs, error)
+	RemoveDatabaseInstallationID(rdsClusterID, installationID string) (DatabaseClusterInstallationIDs, error)
 	GetDatabaseCluster(id string) (*DatabaseCluster, error)
 	GetDatabaseClusters(filter *DatabaseClusterFilter) ([]*DatabaseCluster, error)
 	CreateDatabaseCluster(databaseCluster *DatabaseCluster) error

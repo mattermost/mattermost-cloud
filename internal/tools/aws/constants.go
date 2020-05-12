@@ -126,9 +126,9 @@ const (
 	// encryption key.
 	KMSMaxTimeEncryptionKeyDeletion = 30
 
-	// DefaultMySQLDefaultContextTimeout is the number of seconds that a SQL client will take before
+	// DefaultMySQLContextTimeSeconds is the number of seconds that a SQL client will take before
 	// cancel a call to the database.
-	DefaultMySQLDefaultContextTimeout = 30
+	DefaultMySQLContextTimeSeconds = 15
 
 	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant
 	// RDS database cluster.
