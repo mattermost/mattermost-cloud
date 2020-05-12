@@ -53,13 +53,6 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	databaseName := MattermostRDSDatabaseName(d.installationID)
 
 	logger = logger.WithField("rds-multitenant-database", databaseName)
-
-	if keepData {
-		logger.Infof("Keep data was requested - leaving RDS database for installation ID %s intacted", d.installationID)
-
-		return nil
-	}
-
 	logger.Info("Tearing down RDS database and database secret")
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
@@ -68,8 +61,13 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	if err != nil {
 		return errors.Wrapf(err, "cannot teardown RDS cluster for installation ID %s", d.installationID)
 	}
-	if len(multitenantDatabases) != 1 {
-		return errors.Errorf("expect exactly one RDS cluster for installation ID %s (found %d)", d.installationID, len(multitenantDatabases))
+	if len(multitenantDatabases) > 1 {
+		return errors.Errorf("more than one RDS cluster per installation is not supported (found %d)", len(multitenantDatabases))
+	}
+	if len(multitenantDatabases) == 0 {
+		logger.Warnf("Installation ID %s does not belong to any of the multitenant RDS databases. Nothing to be torn down.", d.installationID)
+
+		return nil
 	}
 
 	err = d.removeRDSDatabase(multitenantDatabases[0], databaseName, store, logger)
@@ -292,16 +290,21 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 					Values: []*string{aws.String(DefaultAWSTerraformProvisionedValueTrue)},
 				},
 				{
-					Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
-					Values: []*string{&vpcID},
+					Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
+					Values: []*string{aws.String(DefaultRDSMultitenantDatabaseTypeTagValue)},
 				},
 				{
 					Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
 				},
+				{
+					Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
+				},
+				{
+					Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
+					Values: []*string{&vpcID},
+				},
 			},
-
-			// TODO(gsagula): create a constant for this ARN type.
-			ResourceTypeFilters: []*string{aws.String("rds:cluster")},
+			ResourceTypeFilters: []*string{aws.String(DefaultResourceTypeClusterRDS)},
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get available RDS cluster resources")
@@ -314,7 +317,7 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 				if *tag.Key == trimTagPrefix(RDSMultitenantInstallationCounterTagKey) && tag.Value != nil {
 					installationCounter = tag.Value
 				}
-				if *tag.Key == trimTagPrefix(DefaultRDSMultitenantDBClusterIDTagKey) && tag.Value != nil {
+				if *tag.Key == trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey) && tag.Value != nil {
 					rdsClusterID = tag.Value
 				}
 				if rdsClusterID != nil && installationCounter != nil {
@@ -330,7 +333,9 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 			return nil, nil
 		}
 
+		// We add to the store whatever RDS cluster is available in the VPC.
 		for _, resource := range resourceNames {
+			// We need to make sure that we have the correct cluster.
 			resourceARN, err := arn.Parse(*resource.ResourceARN)
 			if err != nil {
 				return nil, err
@@ -360,6 +365,7 @@ func (d *RDSMultitenantDatabase) lockRDSCluster(vpcID string, store model.Instal
 		}
 	}
 
+	// After adding all, we try to lock one of them.
 	for _, multitenantDatabase := range multitenantDatabases {
 		installations, err := multitenantDatabase.GetInstallationIDs()
 		if err != nil {
@@ -620,7 +626,7 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 		description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
 		tags := []*secretsmanager.Tag{
 			{
-				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDBClusterIDTagKey)),
+				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
 				Value: rdsClusterID,
 			},
 			{
@@ -642,7 +648,7 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 }
 
 func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, password string) (func(logger log.FieldLogger), error) {
-	// This condition allows injecting our own driver for testing.
+	// This condition allows injecting a mocked driver for testing.
 	if d.db == nil {
 		db, err := sql.Open("mysql", RDSMySQLConnString(schema, endpoint, username, password))
 		if err != nil {

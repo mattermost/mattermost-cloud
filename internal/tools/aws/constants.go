@@ -132,14 +132,14 @@ const (
 
 	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant
 	// RDS database cluster.
-	DefaultRDSMultitenantDatabaseCountLimit = 20
+	DefaultRDSMultitenantDatabaseCountLimit = 2
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix used for naming multitenant RDS DB
 	// cluster resources.
-	// For example: "rds-cluster-multinenant-00000000000000000-a0000000"
+	// For example: "rds-cluster-multitenant-00000000000000000-a0000000"
 	// Warning:
 	// changing this value may cause the provisioner to not find some AWS resources.
-	RDSMultitenantDBClusterResourceNamePrefix = "rds-cluster-multinenant"
+	RDSMultitenantDBClusterResourceNamePrefix = "rds-cluster-multitenant"
 
 	// DefaultMattermostInstallationIDTagKey is the default name used for tagging resources with an installation ID.
 	DefaultMattermostInstallationIDTagKey = "tag:InstallationId"
@@ -148,6 +148,9 @@ const (
 	// Warning:
 	// changing this value may break the connection to existing installations.
 	DefaultMattermostDatabaseUsername = "mmcloud"
+
+	// DefaultResourceTypeClusterRDS is the default resource type used by AWS to identify an RDS cluster.
+	DefaultResourceTypeClusterRDS = "rds:cluster"
 
 	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
 	// Warning:
@@ -158,13 +161,22 @@ const (
 	// database clusters.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
-	DefaultRDSMultitenantVPCIDTagKey = "tag:RDSMultitenantVPCID"
+	DefaultRDSMultitenantVPCIDTagKey = "tag:VpcID"
 
-	// DefaultRDSMultitenantDBClusterIDTagKey is the key used to identify the ID used for a multitenant RDS
-	// database clusters.
+	// DefaultRDSMultitenantDatabaseIDTagKey is the key used to identify a multitenant RDS database clusters.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
-	DefaultRDSMultitenantDBClusterIDTagKey = "tag:RDSMultitenantDBClusterID"
+	DefaultRDSMultitenantDatabaseIDTagKey = "tag:MultitenantDatabaseID"
+
+	// DefaultRDSMultitenantDatabaseTypeTagKey is the key used to identify a multitenant RDS database clusters.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultRDSMultitenantDatabaseTypeTagKey = "tag:DatabaseType"
+
+	// DefaultRDSMultitenantDatabaseTypeTagValue key used to identify a multitenant database cluster of type multitenant-rds.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultRDSMultitenantDatabaseTypeTagValue = "multitenant-rds"
 
 	// RDSMultitenantPurposeTagKey is the key used to identify the purpose of an RDS cluster.
 	// Warning:
