@@ -16,6 +16,10 @@ const (
 	ClusterStateUpgradeRequested = "upgrade-requested"
 	// ClusterStateUpgradeFailed is a cluster that failed to upgrade.
 	ClusterStateUpgradeFailed = "upgrade-failed"
+	// ClusterStateResizeRequested is a cluster in the process of resizing.
+	ClusterStateResizeRequested = "resize-requested"
+	// ClusterStateResizeFailed is a cluster that failed to resize.
+	ClusterStateResizeFailed = "resize-failed"
 	// ClusterStateDeletionRequested is a cluster in the process of being deleted.
 	ClusterStateDeletionRequested = "deletion-requested"
 	// ClusterStateDeletionFailed is a cluster that failed deletion.
@@ -35,6 +39,8 @@ var AllClusterStates = []string{
 	ClusterStateProvisioningFailed,
 	ClusterStateUpgradeRequested,
 	ClusterStateUpgradeFailed,
+	ClusterStateResizeRequested,
+	ClusterStateResizeFailed,
 	ClusterStateDeletionRequested,
 	ClusterStateDeletionFailed,
 	ClusterStateDeleted,
@@ -49,6 +55,7 @@ var AllClusterStatesPendingWork = []string{
 	ClusterStateCreationRequested,
 	ClusterStateProvisioningRequested,
 	ClusterStateUpgradeRequested,
+	ClusterStateResizeRequested,
 	ClusterStateDeletionRequested,
 }
 
@@ -61,6 +68,7 @@ var AllClusterRequestStates = []string{
 	ClusterStateCreationRequested,
 	ClusterStateProvisioningRequested,
 	ClusterStateUpgradeRequested,
+	ClusterStateResizeRequested,
 	ClusterStateDeletionRequested,
 }
 
@@ -74,6 +82,8 @@ func (c *Cluster) ValidTransitionState(newState string) bool {
 		return validTransitionToClusterStateProvisioningRequested(c.State)
 	case ClusterStateUpgradeRequested:
 		return validTransitionToClusterStateUpgradeRequested(c.State)
+	case ClusterStateResizeRequested:
+		return validTransitionToClusterStateResizeRequested(c.State)
 	case ClusterStateDeletionRequested:
 		return validTransitionToClusterStateDeletionRequested(c.State)
 	}
@@ -107,6 +117,17 @@ func validTransitionToClusterStateUpgradeRequested(currentState string) bool {
 	case ClusterStateStable,
 		ClusterStateUpgradeRequested,
 		ClusterStateUpgradeFailed:
+		return true
+	}
+
+	return false
+}
+
+func validTransitionToClusterStateResizeRequested(currentState string) bool {
+	switch currentState {
+	case ClusterStateStable,
+		ClusterStateResizeRequested,
+		ClusterStateResizeFailed:
 		return true
 	}
 

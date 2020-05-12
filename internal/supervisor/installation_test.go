@@ -236,7 +236,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		mockStore.UnlockedInstallationsPendingWork = []*model.Installation{&model.Installation{
+		mockStore.UnlockedInstallationsPendingWork = []*model.Installation{{
 			ID:    model.NewID(),
 			State: model.InstallationStateDeletionRequested,
 		}}
