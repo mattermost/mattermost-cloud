@@ -3,7 +3,6 @@ package k8s
 import (
 	log "github.com/sirupsen/logrus"
 
-	jetstackclient "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	mmclient "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -18,7 +17,6 @@ type KubeClient struct {
 	Clientset           kubernetes.Interface
 	ApixClientset       apixclient.Interface
 	MattermostClientset mmclient.Interface
-	JetStackClientset   jetstackclient.Interface
 	KubeagClientSet     kubeagclient.Interface
 	logger              log.FieldLogger
 }
@@ -45,11 +43,6 @@ func New(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
 		return nil, err
 	}
 
-	jetstackClientset, err := jetstackclient.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
 	kubeagClientset, err := kubeagclient.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -60,7 +53,6 @@ func New(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
 			Clientset:           clientset,
 			MattermostClientset: mattermostClientset,
 			ApixClientset:       apixClientset,
-			JetStackClientset:   jetstackClientset,
 			KubeagClientSet:     kubeagClientset,
 			logger:              logger,
 		},
