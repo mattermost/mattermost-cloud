@@ -83,7 +83,7 @@ func TestGroupSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockGroupStore{}
 
-		mockStore.UnlockedGroupsPendingWork = []*model.Group{&model.Group{
+		mockStore.UnlockedGroupsPendingWork = []*model.Group{{
 			ID: model.NewID(),
 		}}
 		mockStore.Group = mockStore.UnlockedGroupsPendingWork[0]

@@ -43,6 +43,11 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 	}, nil
 }
 
+// GetTempDir returns the root temporary directory used by kops.
+func (c *Cmd) GetTempDir() string {
+	return c.tempDir
+}
+
 // GetOutputDirectory returns the temporary output directory used by kops.
 func (c *Cmd) GetOutputDirectory() string {
 	return path.Join(c.tempDir, outputDirName)

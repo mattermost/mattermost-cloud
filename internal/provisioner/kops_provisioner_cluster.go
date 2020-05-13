@@ -3,6 +3,8 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path"
 	"strings"
 	"time"
 
@@ -36,8 +38,12 @@ type KopsProvisioner struct {
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
+// TODO(gsagula): Consider place all this paramaters in a struct for readability.
 func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool,
 	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
+
+	logger = logger.WithField("provisioner", "kops")
+
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
 		useExistingAWSResources: useExistingAWSResources,
@@ -440,6 +446,105 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 
 	logger.Info("Successfully upgraded cluster")
+
+	return nil
+}
+
+// ResizeCluster resizes a cluster.
+func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error {
+	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse provisioner metadata")
+	}
+
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	clusterSize, err := kops.GetSize(cluster.Size)
+	if err != nil {
+		return err
+	}
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+	if err != nil {
+		return err
+	}
+
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	if err != nil {
+		return err
+	}
+	defer terraformClient.Close()
+
+	err = terraformClient.Init(kopsMetadata.Name)
+	if err != nil {
+		return err
+	}
+
+	err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Resizing cluster")
+
+	igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, "nodes")
+	if err != nil {
+		return err
+	}
+	igManifest, err = grossKopsReplaceSize(igManifest, clusterSize.NodeSize, string(clusterSize.NodeCount), string(clusterSize.NodeCount))
+	if err != nil {
+		return err
+	}
+
+	igFilename := "ig-nodes.yaml"
+	err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
+	if err != nil {
+		return err
+	}
+	_, err = kops.Replace(igFilename)
+	if err != nil {
+		return err
+	}
+
+	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+	if err != nil {
+		return err
+	}
+
+	err = terraformClient.Plan()
+	if err != nil {
+		return err
+	}
+	err = terraformClient.Apply()
+	if err != nil {
+		return err
+	}
+
+	err = kops.RollingUpdateCluster(kopsMetadata.Name)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Rework this as we make the API calls asynchronous.
+	wait := 1000
+	if wait > 0 {
+		logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
+		err = kops.WaitForKubernetesReadiness(kopsMetadata.Name, wait)
+		if err != nil {
+			// Run non-silent validate one more time to log final cluster state
+			// and return original timeout error.
+			kops.ValidateCluster(kopsMetadata.Name, false)
+			return err
+		}
+	}
+
+	logger.Info("Successfully resized cluster")
 
 	return nil
 }

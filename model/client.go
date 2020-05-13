@@ -254,6 +254,23 @@ func (c *Client) UpgradeCluster(clusterID, version string) error {
 	}
 }
 
+// ResizeCluster resizes a cluster with a new size value.
+func (c *Client) ResizeCluster(clusterID, size string) error {
+	resp, err := c.doPut(c.buildURL("/api/cluster/%s/size/%s", clusterID, size), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // DeleteCluster deletes the given cluster and all resources contained therein.
 func (c *Client) DeleteCluster(clusterID string) error {
 	resp, err := c.doDelete(c.buildURL("/api/cluster/%s", clusterID))

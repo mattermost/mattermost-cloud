@@ -24,14 +24,12 @@ func init() {
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("public-nginx-version", model.PublicNginxDefaultVersion, "The version of Public Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("cert-manager-version", model.CertManagerDefaultVersion, "The version of Cert Manager to provision. Use 'stable' to provision the latest stable version published upstream.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("public-nginx-version", "", "The version of Public Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("cert-manager-version", "", "The version of Cert Manager to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -42,6 +40,11 @@ func init() {
 	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 	clusterUpgradeCmd.MarkFlagRequired("version")
+
+	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
+	clusterResizeCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
+	clusterResizeCmd.MarkFlagRequired("cluster")
+	clusterResizeCmd.MarkFlagRequired("size")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
@@ -60,6 +63,7 @@ func init() {
 	clusterCmd.AddCommand(clusterProvisionCmd)
 	clusterCmd.AddCommand(clusterUpdateCmd)
 	clusterCmd.AddCommand(clusterUpgradeCmd)
+	clusterCmd.AddCommand(clusterResizeCmd)
 	clusterCmd.AddCommand(clusterDeleteCmd)
 	clusterCmd.AddCommand(clusterGetCmd)
 	clusterCmd.AddCommand(clusterListCmd)
@@ -186,6 +190,27 @@ var clusterUpgradeCmd = &cobra.Command{
 		err := client.UpgradeCluster(clusterID, version)
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade cluster")
+		}
+
+		return nil
+	},
+}
+
+var clusterResizeCmd = &cobra.Command{
+	Use:   "resize",
+	Short: "Resize a k8s cluster",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		clusterID, _ := command.Flags().GetString("cluster")
+		size, _ := command.Flags().GetString("size")
+
+		err := client.ResizeCluster(clusterID, size)
+		if err != nil {
+			return errors.Wrap(err, "failed to resize cluster")
 		}
 
 		return nil
@@ -319,7 +344,6 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
 	publicNginxVersion, _ := command.Flags().GetString("public-nginx-version")
-	certManagerVersion, _ := command.Flags().GetString("cert-manager-version")
 
 	utilityVersions := make(map[string]string)
 
@@ -337,10 +361,6 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 
 	if publicNginxVersion != "" {
 		utilityVersions[model.PublicNginxCanonicalName] = publicNginxVersion
-	}
-
-	if certManagerVersion != "" {
-		utilityVersions[model.CertManagerCanonicalName] = certManagerVersion
 	}
 
 	return utilityVersions

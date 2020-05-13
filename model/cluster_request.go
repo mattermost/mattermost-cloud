@@ -46,6 +46,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[FluentbitCanonicalName]; !ok {
 		request.DesiredUtilityVersions[FluentbitCanonicalName] = FluentbitDefaultVersion
 	}
+	if _, ok := request.DesiredUtilityVersions[PublicNginxCanonicalName]; !ok {
+		request.DesiredUtilityVersions[PublicNginxCanonicalName] = PublicNginxDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.

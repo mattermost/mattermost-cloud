@@ -102,7 +102,7 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		mockStore := &mockClusterInstallationStore{
 			Cluster:      cluster,
 			Installation: installation,
-			UnlockedClusterInstallationsPendingWork: []*model.ClusterInstallation{&model.ClusterInstallation{
+			UnlockedClusterInstallationsPendingWork: []*model.ClusterInstallation{{
 				ID:             model.NewID(),
 				ClusterID:      cluster.ID,
 				InstallationID: installation.ID,

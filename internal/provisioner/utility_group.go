@@ -80,22 +80,12 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.CertManagerCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	certManager, err := newCertManagerHandle(desiredVersion, provisioner, kops, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Cert Manager")
-	}
-
 	desiredVersion, err = cluster.DesiredUtilityVersion(model.PublicNginxCanonicalName)
 	if err != nil {
 		return nil, err
 	}
 
-	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, kops, logger)
+	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Cert Manager")
 	}
@@ -103,7 +93,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit, certManager},
+		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
@@ -114,13 +104,6 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 // CreateUtilityGroup  creates  and  starts  all of  the  third  party
 // services needed to run a cluster.
 func (group utilityGroup) CreateUtilityGroup() error {
-	logger := group.provisioner.logger.WithField("utility-group", "DeployManifests")
-
-	err := deployCertManagerCRDS(group.kops, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
-	}
-
 	return nil
 }
 
@@ -146,12 +129,7 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 func (group utilityGroup) ProvisionUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
 
-	err := deployCertManagerCRDS(group.kops, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to deploy Cert Manager manifests")
-	}
-
-	err = installHelm(group.kops, helmRepos, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
+	err := installHelm(group.kops, helmRepos, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
 	if err != nil {
 		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
 	}
@@ -174,11 +152,6 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		if err != nil {
 			return err
 		}
-	}
-
-	err = deployClusterIssuer(group.kops, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to deploy ClusterIssuer manifest")
 	}
 
 	return nil

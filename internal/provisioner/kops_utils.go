@@ -3,6 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -156,36 +157,39 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 	return "", errors.New("failed to get NGINX load balancer endpoint")
 }
 
-// GetCertStatus gets the status of a CertManager Certificate.
-func (provisioner *KopsProvisioner) GetCertStatus(cluster *model.Cluster, namespace, certName string) (string, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
-		"cluster":   cluster.ID,
-		"namespace": namespace,
-	})
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to create kops wrapper")
+// grossKopsReplaceSize is a manual find-and-replace flow for updating a raw
+// kops instance group YAML manifest with new sizing values.
+// TODO: remove once new `kops set instancegroup` functionality is available.
+//
+// Example Manifest:
+//
+// apiVersion: kops.k8s.io/v1alpha2
+// kind: InstanceGroup
+// spec:
+//   machineType: m5.large
+//   maxSize: 2
+//   minSize: 2
+func grossKopsReplaceSize(input, machineType, min, max string) (string, error) {
+	machineTypeRE := regexp.MustCompile(`  machineType: .*\n`)
+	machineTypeMatches := len(machineTypeRE.FindAllStringIndex(input, -1))
+	if machineTypeMatches != 1 {
+		return "", errors.Errorf("expected to find one machineType match, but found %d", machineTypeMatches)
 	}
-	defer kops.Close()
+	input = machineTypeRE.ReplaceAllString(input, fmt.Sprintf("  machineType: %s\n", machineType))
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to parse provisioner metadata")
+	minRE := regexp.MustCompile(`  minSize: ?\d+\n`)
+	minMatches := len(minRE.FindAllStringIndex(input, -1))
+	if minMatches != 1 {
+		return "", errors.Errorf("expected to find one minSize match, but found %d", minMatches)
 	}
+	input = minRE.ReplaceAllString(input, fmt.Sprintf("  minSize: %s\n", min))
 
-	err = kops.ExportKubecfg(kopsMetadata.Name)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to export kubecfg")
+	maxRE := regexp.MustCompile(`  maxSize: ?\d+\n`)
+	maxMatches := len(maxRE.FindAllStringIndex(input, -1))
+	if maxMatches != 1 {
+		return "", errors.Errorf("expected to find one maxSize match, but found %d", maxMatches)
 	}
+	input = maxRE.ReplaceAllString(input, fmt.Sprintf("  maxSize: %s\n", max))
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return "", err
-	}
-
-	certificate, err := k8sClient.JetStackClientset.CertmanagerV1alpha3().Certificates(namespace).Get(certName, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-	return string(certificate.Status.Conditions[0].Status), nil
+	return input, nil
 }

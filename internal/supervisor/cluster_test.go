@@ -74,6 +74,10 @@ func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
+func (p *mockClusterProvisioner) ResizeCluster(cluster *model.Cluster) error {
+	return nil
+}
+
 func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }
@@ -98,7 +102,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockClusterStore{}
 
-		mockStore.UnlockedClustersPendingWork = []*model.Cluster{&model.Cluster{
+		mockStore.UnlockedClustersPendingWork = []*model.Cluster{{
 			ID:    model.NewID(),
 			State: model.ClusterStateCreationRequested,
 		}}
@@ -124,6 +128,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		{"creation requested", model.ClusterStateCreationRequested, model.ClusterStateStable},
 		{"provision requested", model.ClusterStateProvisioningRequested, model.ClusterStateStable},
 		{"upgrade requested", model.ClusterStateUpgradeRequested, model.ClusterStateStable},
+		{"resize requested", model.ClusterStateResizeRequested, model.ClusterStateStable},
 		{"deletion requested", model.ClusterStateDeletionRequested, model.ClusterStateDeleted},
 	}
 

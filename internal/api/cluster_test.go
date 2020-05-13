@@ -650,6 +650,129 @@ func TestUpgradeCluster(t *testing.T) {
 	})
 }
 
+func TestResizeCluster(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
+		Provider: model.ProviderAWS,
+		Size:     model.SizeAlef1000,
+		Zones:    []string{"zone"},
+	})
+	require.NoError(t, err)
+
+	t.Run("unknown cluster", func(t *testing.T) {
+		err := client.ResizeCluster(model.NewID(), "SizeAlef500")
+		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, err)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, err)
+			require.True(t, unlocked)
+		}()
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("while resizing", func(t *testing.T) {
+		cluster1.State = model.ClusterStateResizeRequested
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
+	})
+
+	t.Run("after resize failed", func(t *testing.T) {
+		cluster1.State = model.ClusterStateResizeFailed
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
+	})
+
+	t.Run("while stable", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
+	})
+
+	t.Run("while stable, to invalid size", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "invalid")
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("while stable, to valid size but different HA count", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500-HA3")
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("while upgrading", func(t *testing.T) {
+		cluster1.State = model.ClusterStateUpgradeRequested
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("while deleting", func(t *testing.T) {
+		cluster1.State = model.ClusterStateDeletionRequested
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		require.EqualError(t, err, "failed with status code 400")
+	})
+}
+
 func TestDeleteCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)

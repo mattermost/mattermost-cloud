@@ -129,7 +129,7 @@ func TestInstallationsFromReader(t *testing.T) {
 		]`)))
 		require.NoError(t, err)
 		require.Equal(t, []*Installation{
-			&Installation{
+			{
 				ID:             "id1",
 				OwnerID:        "owner1",
 				GroupID:        sToP("group_id1"),
@@ -142,8 +142,7 @@ func TestInstallationsFromReader(t *testing.T) {
 				DeleteAt:       20,
 				LockAcquiredBy: nil,
 				LockAcquiredAt: 0,
-			},
-			&Installation{
+			}, {
 				ID:             "id2",
 				OwnerID:        "owner2",
 				GroupID:        sToP("group_id2"),
