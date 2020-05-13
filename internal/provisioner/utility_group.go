@@ -85,7 +85,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, err
 	}
 
-	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, kops, logger)
+	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Cert Manager")
 	}

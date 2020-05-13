@@ -1,8 +1,10 @@
 package provisioner
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -10,6 +12,7 @@ import (
 )
 
 type publicNginx struct {
+	awsClient      aws.AWS
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
 	logger         log.FieldLogger
@@ -17,7 +20,7 @@ type publicNginx struct {
 	actualVersion  string
 }
 
-func newPublicNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*publicNginx, error) {
+func newPublicNginxHandle(desiredVersion string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*publicNginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Public NGINX handle with nil logger")
 	}
@@ -26,11 +29,16 @@ func newPublicNginxHandle(desiredVersion string, provisioner *KopsProvisioner, k
 		return nil, errors.New("cannot create a connection to Public Nginx if the provisioner provided is nil")
 	}
 
+	if awsClient == nil {
+		return nil, errors.New("cannot create a connection to Prometheus if the awsClient provided is nil")
+	}
+
 	if kops == nil {
 		return nil, errors.New("cannot create a connection to Public Nginx if the Kops command provided is nil")
 	}
 
 	return &publicNginx{
+		awsClient:      awsClient,
 		provisioner:    provisioner,
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.PublicNginxCanonicalName),
@@ -73,11 +81,17 @@ func (n *publicNginx) Destroy() error {
 }
 
 func (n *publicNginx) NewHelmDeployment() *helmDeployment {
+	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultCloudDNSTagKey, aws.DefaultPublicCloudDNSTagValue, n.logger)
+	if err != nil {
+		n.logger.WithError(err).Error("unable to retrive the AWS ACM")
+		return nil
+	}
+
 	return &helmDeployment{
 		chartDeploymentName: "public-nginx",
 		chartName:           "stable/nginx-ingress",
 		namespace:           "public-nginx",
-		setArgument:         "",
+		setArgument:         fmt.Sprintf("controller.service.annotations.\"service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert\"=\"%s\"", *awsACMCert.CertificateArn),
 		valuesPath:          "helm-charts/public-nginx_values.yaml",
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
