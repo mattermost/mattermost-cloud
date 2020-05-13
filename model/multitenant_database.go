@@ -79,4 +79,6 @@ func (c *MultitenantDatabase) GetInstallationIDs() (MultitenantDatabaseInstallat
 type MultitenantDatabaseFilter struct {
 	InstallationID          string
 	NumOfInstallationsLimit uint32
+	Page                    int
+	PerPage                 int
 }

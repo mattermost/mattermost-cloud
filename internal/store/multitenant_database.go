@@ -34,6 +34,12 @@ func (sqlStore *SQLStore) GetMultitenantDatabase(id string) (*model.MultitenantD
 func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error) {
 	builder := multitenantDatabaseSelect
 
+	if filter.PerPage != model.AllPerPage {
+		builder = builder.
+			Limit(uint64(filter.PerPage)).
+			Offset(uint64(filter.Page * filter.PerPage))
+	}
+
 	if filter != nil && len(filter.InstallationID) > 0 {
 		builder = builder.Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
 	}
