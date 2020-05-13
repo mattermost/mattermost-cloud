@@ -76,12 +76,12 @@ const (
 	// zone IDs in AWS Route53.
 	DefaultCloudDNSTagKey = "tag:MattermostCloudDNS"
 
-	// DefaultPrivateCloudDNSTagValue is the default value used to find private hosted zone ID
-	// in AWS Route53.
+	// DefaultPrivateCloudDNSTagValue is the default value used to find private hosted
+	// zone ID in AWS Route53.
 	DefaultPrivateCloudDNSTagValue = "private"
 
-	// DefaultPublicCloudDNSTagValue is the default value used to find public hosted zone ID
-	// in AWS Route53.
+	// DefaultPublicCloudDNSTagValue is the default value used to find public hosted
+	// zone ID in AWS Route53.
 	DefaultPublicCloudDNSTagValue = "public"
 
 	// cloudIDPrefix is the prefix value used when creating AWS resource names.
@@ -102,91 +102,105 @@ const (
 	// existing installations.
 	rdsSuffix = "-rds"
 
-	// rdsMySQLSchemaInformationDatabase is the schema the name given to a MySQL database
-	// information's table.
+	// rdsMySQLSchemaInformationDatabase is the schema the name given to a
+	// MySQL database information's table.
 	rdsMySQLSchemaInformationDatabase = "information_schema"
 
-	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost RDS database
-	// schemas.
+	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost
+	// RDS database schemas.
 	// Warning:
-	// changing this value will break the connection to AWS resources for existing installations.
+	// changing this value will break the connection to AWS resources for
+	// existing installations.
 	rdsDatabaseNamePrefix = "cloud_"
 
-	// DefaultMultitenantDatabaseCounterTagKey is the default key used to identify the counter
-	// tag used in RDS multitenant database clusters.
+	// DefaultMultitenantDatabaseCounterTagKey is the default key used to
+	// identify the counter tag used in RDS multitenant database clusters.
 	DefaultMultitenantDatabaseCounterTagKey = "tag:Counter"
 
-	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots of a cluster installation.
+	// DefaultClusterInstallationSnapshotTagKey is used for tagging snapshots
+	// of a cluster installation.
 	DefaultClusterInstallationSnapshotTagKey = "tag:ClusterInstallationSnapshot"
 
-	// DefaultAWSClientRetries supplies how many time the AWS client will retry a failed call.
+	// DefaultAWSClientRetries supplies how many time the AWS client will
+	// retry a failed call.
 	DefaultAWSClientRetries = 3
 
-	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that AWS will take to delete an
-	// encryption key.
+	// KMSMaxTimeEncryptionKeyDeletion is the maximum number of days that
+	// AWS will take to delete an encryption key.
 	KMSMaxTimeEncryptionKeyDeletion = 30
 
-	// DefaultMySQLContextTimeSeconds is the number of seconds that a SQL client will take before
-	// cancel a call to the database.
+	// DefaultMySQLContextTimeSeconds is the number of seconds that a SQL
+	// client will take before cancel a call to the database.
 	DefaultMySQLContextTimeSeconds = 15
 
-	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant
-	// RDS database cluster.
+	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of
+	// schemas allowed in a multitenant RDS database cluster.
 	DefaultRDSMultitenantDatabaseCountLimit = 10
 
-	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix used for naming multitenant RDS DB
-	// cluster resources.
+	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
+	// used for naming multitenant RDS DB cluster resources.
 	// For example: "rds-cluster-multitenant-00000000000000000-a0000000"
 	// Warning:
 	// changing this value may cause the provisioner to not find some AWS resources.
 	RDSMultitenantDBClusterResourceNamePrefix = "rds-cluster-multitenant"
 
-	// DefaultMattermostInstallationIDTagKey is the default name used for tagging resources with an installation ID.
+	// DefaultMattermostInstallationIDTagKey is the default name used for
+	// tagging resources with an installation ID.
 	DefaultMattermostInstallationIDTagKey = "tag:InstallationId"
 
-	// DefaultMattermostDatabaseUsername is the default username used for connectting to a Mattermost database.
+	// DefaultMattermostDatabaseUsername is the default username used for
+	// connectting to a Mattermost database.
 	// Warning:
 	// changing this value may break the connection to existing installations.
 	DefaultMattermostDatabaseUsername = "mmcloud"
 
-	// DefaultResourceTypeClusterRDS is the default resource type used by AWS to identify an RDS cluster.
+	// DefaultResourceTypeClusterRDS is the default resource type used by
+	// AWS to identify an RDS cluster.
 	DefaultResourceTypeClusterRDS = "rds:cluster"
 
-	// DefaultRDSStatusAvailable identify that a RDS cluster is in available state.
+	// DefaultRDSStatusAvailable identify that a RDS cluster is in available
+	// state.
 	DefaultRDSStatusAvailable = "available"
 
-	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
+	// DefaultRDSEncryptionTagKey in the default tag key used for tagging
+	// RDS encryption keys
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSEncryptionTagKey = "rds-encryption-key"
 
-	// DefaultRDSMultitenantVPCIDTagKey is the key used to identify the VPC ID used for multitenant RDS
+	// DefaultRDSMultitenantVPCIDTagKey is the key used to identify the VPC ID
+	// used for multitenant RDS
 	// database clusters.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantVPCIDTagKey = "tag:VpcID"
 
-	// DefaultRDSMultitenantDatabaseIDTagKey is the key used to identify a multitenant RDS database clusters.
+	// DefaultRDSMultitenantDatabaseIDTagKey is the key used to identify a
+	// multitenant RDS database clusters.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantDatabaseIDTagKey = "tag:MultitenantDatabaseID"
 
-	// DefaultRDSMultitenantDatabaseTypeTagKey is the key used to identify a multitenant RDS database clusters.
+	// DefaultRDSMultitenantDatabaseTypeTagKey is the key used to identify a
+	// multitenant RDS database clusters.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantDatabaseTypeTagKey = "tag:DatabaseType"
 
-	// DefaultRDSMultitenantDatabaseTypeTagValue key used to identify a multitenant database cluster of type multitenant-rds.
+	// DefaultRDSMultitenantDatabaseTypeTagValue key used to identify a
+	// multitenant database cluster of type multitenant-rds.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantDatabaseTypeTagValue = "multitenant-rds"
 
-	// RDSMultitenantPurposeTagKey is the key used to identify the purpose of an RDS cluster.
+	// RDSMultitenantPurposeTagKey is the key used to identify the purpose
+	// of an RDS cluster.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	RDSMultitenantPurposeTagKey = "tag:Purpose"
 
-	// RDSMultitenantPurposeTagValueProvisioning is one of the purposes of an RDS cluster.
+	// RDSMultitenantPurposeTagValueProvisioning is one of the purposes of
+	// an RDS cluster.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	RDSMultitenantPurposeTagValueProvisioning = "provisioning"
@@ -196,22 +210,26 @@ const (
 	// changing this value will break the connection to AWS resources for existing installations.
 	RDSMultitenantOwnerTagKey = "tag:Owner"
 
-	// RDSMultitenantInstallationCounterTagKey identifies the number of installations in the RDS cluster.
+	// RDSMultitenantInstallationCounterTagKey identifies the number of
+	// installations in the RDS cluster.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	RDSMultitenantInstallationCounterTagKey = "tag:Counter"
 
-	// RDSMultitenantOwnerTagValueCloudTeam identifies that cloud team owns the RDS cluster.
+	// RDSMultitenantOwnerTagValueCloudTeam identifies that cloud team
+	// owns the RDS cluster.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	RDSMultitenantOwnerTagValueCloudTeam = "cloud-team"
 
-	// DefaultAWSTerraformProvisionedKey identifies wether or not a AWS resource has been provisioned via Terraform.
+	// DefaultAWSTerraformProvisionedKey identifies wether or not a AWS
+	// resource has been provisioned via Terraform.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultAWSTerraformProvisionedKey = "Terraform"
 
-	// DefaultAWSTerraformProvisionedValueTrue indicates that the AWS resource has been provisioned via Terraform.
+	// DefaultAWSTerraformProvisionedValueTrue indicates that the AWS
+	// resource has been provisioned via Terraform.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultAWSTerraformProvisionedValueTrue = "true"

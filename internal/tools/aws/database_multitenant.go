@@ -28,7 +28,8 @@ import (
 )
 
 // SQLDatabaseManager is an interface that describes operations to query and to
-// close connection with a database.
+// close connection with a database. It's used mainly to implement a client that
+// needs to perform non-complex queries in a SQL database instance.
 type SQLDatabaseManager interface {
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	Close() error
@@ -227,12 +228,16 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 
 // Helpers
 
-type validatedAndLockedRDSCluster struct {
+// An instance of this object holds a locked multitenant RDS cluster and an unlock function. Locked RDS clusters
+// are ready to receive a new database installation.
+type rdsClusterOutput struct {
 	unlock  func(log.FieldLogger)
 	cluster *rds.DBCluster
 }
 
-func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases []*model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*validatedAndLockedRDSCluster, error) {
+// Ensure that an RDS cluster is in available state and validates cluster attributes before and after locking
+// the resource for an installation.
+func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases []*model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*rdsClusterOutput, error) {
 	for _, multitenantDatabase := range multitenantDatabases {
 		installations, err := multitenantDatabase.GetInstallationIDs()
 		if err != nil {
@@ -272,17 +277,60 @@ func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases 
 				continue
 			}
 
-			return &validatedAndLockedRDSCluster{
+			rdsClusterOutput := rdsClusterOutput{
 				unlock:  unlockFn,
 				cluster: rdsCluster,
-			}, nil
+			}
+
+			return &rdsClusterOutput, nil
 		}
 	}
 
 	return nil, errors.New("unable to find and lock a available multitenant database")
 }
 
-func (d *RDSMultitenantDatabase) getMultitenantDatabasesRDSResourceTags(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) ([]*model.MultitenantDatabase, error) {
+// This helper method finds a multitenant RDS cluster that is ready for receiving a database installation. The lookup
+// for multitenant databases will happen in order:
+// 	1. a multitenant databases by installation ID.
+// 	2. all multitenant databases in the store that are under the max number of installations allowed.
+// 	3. all multitenant databases in the RDS cluster that are under the max number of installations allowed.
+func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*rdsClusterOutput, error) {
+	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		InstallationID: d.installationID,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable get multitenant database for installation ID %s", d.installationID)
+	}
+
+	logger.Infof("Could not find a multitenant database for installation ID %s. Fetching all available resources in the datastore.")
+
+	if len(multitenantDatabases) == 0 {
+		multitenantDatabases, err = store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+			NumOfInstallationsLimit: DefaultRDSMultitenantDatabaseCountLimit,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	logger.Infof("Could not find any multitenant database with less than %d installations in the datastore. Fetching all available resources in AWS.", DefaultRDSMultitenantDatabaseCountLimit)
+
+	if len(multitenantDatabases) == 0 {
+		multitenantDatabases, err = d.getMultitenantDatabasesFromResourceTags(vpcID, store, logger)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lockedRDSCluster, err := d.validateAndLockRDSCluster(multitenantDatabases, store, logger)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not find a multitenant RDS cluster available in vpc %s", vpcID)
+	}
+
+	return lockedRDSCluster, nil
+}
+
+func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) ([]*model.MultitenantDatabase, error) {
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
 		TagFilters: []*gt.TagFilter{
 			{
@@ -379,42 +427,6 @@ func (d *RDSMultitenantDatabase) getRDSClusterIDFromResourceTags(resourceTags []
 	}
 
 	return nil, nil
-}
-
-func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*validatedAndLockedRDSCluster, error) {
-	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		InstallationID: d.installationID,
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable get multitenant database for installation ID %s", d.installationID)
-	}
-
-	logger.Infof("Could not find a multitenant database for installation ID %s. Fetching all available resources in the datastore.")
-
-	if len(multitenantDatabases) == 0 {
-		multitenantDatabases, err = store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-			NumOfInstallationsLimit: DefaultRDSMultitenantDatabaseCountLimit,
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	logger.Infof("Could not find any multitenant database with less than %d installations in the datastore. Fetching all available resources in AWS.", DefaultRDSMultitenantDatabaseCountLimit)
-
-	if len(multitenantDatabases) == 0 {
-		multitenantDatabases, err = d.getMultitenantDatabasesRDSResourceTags(vpcID, store, logger)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	lockedRDSCluster, err := d.validateAndLockRDSCluster(multitenantDatabases, store, logger)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not find a multitenant RDS cluster available in vpc %s", vpcID)
-	}
-
-	return lockedRDSCluster, nil
 }
 
 func (d *RDSMultitenantDatabase) getClusterInstallationVPC(store model.InstallationDatabaseStoreInterface) (*ec2.Vpc, error) {
@@ -526,6 +538,7 @@ func (d *RDSMultitenantDatabase) lockMultitenantDatabase(multitenantDatabaseID s
 	if !locked {
 		return nil, errors.Errorf("could not acquire lock for multitenant database ID %s", multitenantDatabaseID)
 	}
+
 	unlockFN := func(logger log.FieldLogger) {
 		unlocked, err := store.UnlockMultitenantDatabase(multitenantDatabaseID, d.installationID, true)
 		if err != nil {
@@ -678,7 +691,7 @@ func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, usern
 }
 
 func (d *RDSMultitenantDatabase) createDatabaseIfNotExist(ctx context.Context, databaseName string) error {
-	// String interpolation is not possible for this query.
+	// Query placeholders don't seem to work with argument database.
 	// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
 	query := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET ?", databaseName)
 
@@ -691,7 +704,7 @@ func (d *RDSMultitenantDatabase) createDatabaseIfNotExist(ctx context.Context, d
 }
 
 func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, databaseName, username string) error {
-	// String interpolation is not possible for this query.
+	// Query placeholders don't seem to work with argument database.
 	// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
 	query := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO ?@?", databaseName)
 
@@ -704,7 +717,7 @@ func (d *RDSMultitenantDatabase) grantUserFullPermissions(ctx context.Context, d
 }
 
 func (d *RDSMultitenantDatabase) dropDatabaseIfExists(ctx context.Context, databaseName string) error {
-	// String interpolation is not possible for this query.
+	// Query placeholders don't seem to work with argument database.
 	// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
 	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
 
