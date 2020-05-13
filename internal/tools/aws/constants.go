@@ -132,7 +132,7 @@ const (
 
 	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of schemas allowed in a multitenant
 	// RDS database cluster.
-	DefaultRDSMultitenantDatabaseCountLimit = 2
+	DefaultRDSMultitenantDatabaseCountLimit = 10
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix used for naming multitenant RDS DB
 	// cluster resources.
@@ -151,6 +151,9 @@ const (
 
 	// DefaultResourceTypeClusterRDS is the default resource type used by AWS to identify an RDS cluster.
 	DefaultResourceTypeClusterRDS = "rds:cluster"
+
+	// DefaultRDSStatusAvailable identify that a RDS cluster is in available state.
+	DefaultRDSStatusAvailable = "available"
 
 	// DefaultRDSEncryptionTagKey in the default tag key used for tagging RDS encryption keys
 	// Warning:
