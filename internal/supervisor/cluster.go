@@ -28,6 +28,7 @@ type clusterProvisioner interface {
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster) error
+	ResizeCluster(cluster *model.Cluster) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
 	GetClusterVersion(cluster *model.Cluster) (string, error)
 }
@@ -128,6 +129,8 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateUpgradeRequested:
 		return s.upgradeCluster(cluster, logger)
+	case model.ClusterStateResizeRequested:
+		return s.resizeCluster(cluster, logger)
 	case model.ClusterStateDeletionRequested:
 		return s.deleteCluster(cluster, logger)
 	default:
@@ -231,6 +234,17 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 	}
 
 	logger.Info("Finished upgrading cluster")
+	return model.ClusterStateStable
+}
+
+func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
+	err := s.provisioner.ResizeCluster(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to resize cluster")
+		return model.ClusterStateResizeFailed
+	}
+
+	logger.Info("Finished resizing cluster")
 	return model.ClusterStateStable
 }
 

@@ -3,6 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
@@ -154,4 +155,41 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 		}
 	}
 	return "", errors.New("failed to get NGINX load balancer endpoint")
+}
+
+// grossKopsReplaceSize is a manual find-and-replace flow for updating a raw
+// kops instance group YAML manifest with new sizing values.
+// TODO: remove once new `kops set instancegroup` functionality is available.
+//
+// Example Manifest:
+//
+// apiVersion: kops.k8s.io/v1alpha2
+// kind: InstanceGroup
+// spec:
+//   machineType: m5.large
+//   maxSize: 2
+//   minSize: 2
+func grossKopsReplaceSize(input, machineType, min, max string) (string, error) {
+	machineTypeRE := regexp.MustCompile(`  machineType: .*\n`)
+	machineTypeMatches := len(machineTypeRE.FindAllStringIndex(input, -1))
+	if machineTypeMatches != 1 {
+		return "", errors.Errorf("expected to find one machineType match, but found %d", machineTypeMatches)
+	}
+	input = machineTypeRE.ReplaceAllString(input, fmt.Sprintf("  machineType: %s\n", machineType))
+
+	minRE := regexp.MustCompile(`  minSize: ?\d+\n`)
+	minMatches := len(minRE.FindAllStringIndex(input, -1))
+	if minMatches != 1 {
+		return "", errors.Errorf("expected to find one minSize match, but found %d", minMatches)
+	}
+	input = minRE.ReplaceAllString(input, fmt.Sprintf("  minSize: %s\n", min))
+
+	maxRE := regexp.MustCompile(`  maxSize: ?\d+\n`)
+	maxMatches := len(maxRE.FindAllStringIndex(input, -1))
+	if maxMatches != 1 {
+		return "", errors.Errorf("expected to find one maxSize match, but found %d", maxMatches)
+	}
+	input = maxRE.ReplaceAllString(input, fmt.Sprintf("  maxSize: %s\n", max))
+
+	return input, nil
 }

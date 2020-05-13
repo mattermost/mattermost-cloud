@@ -41,6 +41,11 @@ func init() {
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 	clusterUpgradeCmd.MarkFlagRequired("version")
 
+	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
+	clusterResizeCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
+	clusterResizeCmd.MarkFlagRequired("cluster")
+	clusterResizeCmd.MarkFlagRequired("size")
+
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
 
@@ -58,6 +63,7 @@ func init() {
 	clusterCmd.AddCommand(clusterProvisionCmd)
 	clusterCmd.AddCommand(clusterUpdateCmd)
 	clusterCmd.AddCommand(clusterUpgradeCmd)
+	clusterCmd.AddCommand(clusterResizeCmd)
 	clusterCmd.AddCommand(clusterDeleteCmd)
 	clusterCmd.AddCommand(clusterGetCmd)
 	clusterCmd.AddCommand(clusterListCmd)
@@ -184,6 +190,27 @@ var clusterUpgradeCmd = &cobra.Command{
 		err := client.UpgradeCluster(clusterID, version)
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade cluster")
+		}
+
+		return nil
+	},
+}
+
+var clusterResizeCmd = &cobra.Command{
+	Use:   "resize",
+	Short: "Resize a k8s cluster",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		clusterID, _ := command.Flags().GetString("cluster")
+		size, _ := command.Flags().GetString("size")
+
+		err := client.ResizeCluster(clusterID, size)
+		if err != nil {
+			return errors.Wrap(err, "failed to resize cluster")
 		}
 
 		return nil
