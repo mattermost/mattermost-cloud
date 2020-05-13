@@ -71,9 +71,8 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			Image:         installation.Image,
 			IngressName:   installation.DNS,
 			MattermostEnv: installation.MattermostEnv.ToEnvList(),
-			UseIngressTLS: true,
+			UseIngressTLS: false,
 			IngressAnnotations: map[string]string{
-				"cert-manager.io/cluster-issuer":                       "letsencrypt-prod",
 				"kubernetes.io/ingress.class":                          "nginx",
 				"kubernetes.io/tls-acme":                               "true",
 				"nginx.ingress.kubernetes.io/proxy-buffering":          "on",
@@ -85,10 +84,10 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 				"nginx.ingress.kubernetes.io/configuration-snippet": `
 				  proxy_force_ranges on;
 				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-				  proxy_cache mattermost_cache;  
-				  proxy_cache_revalidate on; 
+				  proxy_cache mattermost_cache;
+				  proxy_cache_revalidate on;
 				  proxy_cache_min_uses 2;
-				  proxy_cache_use_stale timeout; 
+				  proxy_cache_use_stale timeout;
 				  proxy_cache_lock on;
 				  proxy_cache_key "$host$request_uri$cookie_user";`,
 				"nginx.org/server-snippets": "gzip on;",

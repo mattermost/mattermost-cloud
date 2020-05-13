@@ -1,8 +1,6 @@
 package supervisor
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -48,7 +46,6 @@ type installationProvisioner interface {
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
 	GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
-	GetCertStatus(cluster *model.Cluster, namespace, certName string) (string, error)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -691,34 +688,6 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 }
 
 func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
-	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
-	})
-	if err != nil {
-		logger.WithError(err).Warn("Failed to find cluster installations")
-		return model.InstallationStateCreationFinalTasks
-	}
-
-	for _, clusterInstallation := range clusterInstallations {
-		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
-		if err != nil {
-			logger.WithError(err).Errorf("Failed to query cluster %s", clusterInstallation.ClusterID)
-			return model.InstallationStateCreationFinalTasks
-		}
-
-		certName := fmt.Sprintf("%s-tls-cert", strings.Replace(installation.DNS, ".", "-", -1))
-		status, err := s.provisioner.GetCertStatus(cluster, installation.ID, certName)
-		if err != nil {
-			logger.WithError(err).Error("Couldn't get the certificate status")
-			return model.InstallationStateCreationFinalTasks
-		}
-		if status != "True" {
-			logger.Infof("Certificate %s not approved yet", certName)
-			return model.InstallationStateCreationFinalTasks
-		}
-		logger.Infof("Certificate %s approved", certName)
-	}
 	logger.Info("Finished final creation tasks")
 	return model.InstallationStateStable
 }
