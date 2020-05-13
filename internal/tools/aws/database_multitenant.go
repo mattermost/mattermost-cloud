@@ -66,15 +66,12 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	if len(multitenantDatabases) > 1 {
 		return errors.Errorf("more than one multitenant database per installation is not supported by this database (found %d)", len(multitenantDatabases))
 	}
-	if len(multitenantDatabases) == 0 {
-		logger.Warnf("Installation ID %s does not belong to any of the multitenant databases. Nothing to be torn down.", d.installationID)
 
-		return nil
-	}
-
-	err = d.removeRDSDatabase(multitenantDatabases[0], databaseName, store, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to finish teardown of multitenant database name %s", databaseName)
+	if len(multitenantDatabases) == 1 {
+		err = d.removeRDSDatabase(multitenantDatabases[0], databaseName, store, logger)
+		if err != nil {
+			return errors.Wrapf(err, "unable to finish teardown of multitenant database name %s", databaseName)
+		}
 	}
 
 	multitenantDatabaseSecretName := RDSMultitenantSecretName(d.installationID)
