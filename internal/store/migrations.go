@@ -896,16 +896,30 @@ var migrations = []migration{
 		return nil
 	}},
 	{semver.MustParse("0.16.0"), semver.MustParse("0.17.0"), func(e execer) error {
-		_, err := e.Exec(`
-			CREATE TABLE MultitenantDatabase (
-				ID TEXT PRIMARY KEY,
-				RawInstallationIDs byte[] NOT NULL,               
-				LockAcquiredBy CHAR(26) NULL,
-				LockAcquiredAt BIGINT NOT NULL
-			);
-		`)
-		if err != nil {
-			return err
+		if e.DriverName() == driverPostgres {
+			_, err := e.Exec(`
+				CREATE TABLE MultitenantDatabase (
+					ID TEXT PRIMARY KEY,
+					RawInstallationIDs bytea NOT NULL,               
+					LockAcquiredBy CHAR(26) NULL,
+					LockAcquiredAt BIGINT NOT NULL
+				);
+			`)
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err := e.Exec(`
+				CREATE TABLE MultitenantDatabase (
+					ID TEXT PRIMARY KEY,
+					RawInstallationIDs byte[] NOT NULL,               
+					LockAcquiredBy CHAR(26) NULL,
+					LockAcquiredAt BIGINT NOT NULL
+				);
+			`)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
