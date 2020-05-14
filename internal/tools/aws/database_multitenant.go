@@ -22,7 +22,6 @@ import (
 	// MySQL implementation of database/sql
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,39 +52,37 @@ func NewRDSMultitenantDatabase(installationID string, client *Client) *RDSMultit
 
 // Teardown removes all AWS resources related to a RDS multitenant database.
 func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error {
-	logger.Info("Tearing down RDS database and database secret")
-
 	databaseName := MattermostRDSDatabaseName(d.installationID)
+	logger = logger.WithField("rds-multitenant-database", databaseName)
+
+	logger.Info("Tearing down RDS database and database secret")
 
 	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
 	if err != nil {
 		return errors.Wrapf(err, "unable to find multitenant database for installation ID %s", d.installationID)
 	}
 
-	logger = logger.WithFields(logrus.Fields{
-		"rds-multitenant-database": databaseName,
-		"rds-cluster-id":           multitenantDatabase.ID,
-	})
-
 	unlocked, err := d.lockMultitenantDatabase(multitenantDatabase.ID, store)
 	if err != nil {
-		return errors.Wrapf(err, "failed to lock multitenant RDS cluster ID %s", multitenantDatabase.ID)
+		return errors.Wrapf(err, "failed to lock multitenant database ID %s", multitenantDatabase.ID)
 	}
 	defer unlocked(logger)
 
 	rdsCluster, err := d.describeRDSCluster(multitenantDatabase.ID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to describe multitenant RDS cluster ID %s", multitenantDatabase.ID)
+		return errors.Wrapf(err, "failed to describe multitenant database ID %s", multitenantDatabase.ID)
 	}
+
+	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
 	err = d.dropDatabaseAndDeleteSecret(multitenantDatabase.ID, *rdsCluster.Endpoint, databaseName, store, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to finish teardown of multitenant database name %s", databaseName)
+		return errors.Wrap(err, "unable to finish teardown of multitenant database")
 	}
 
 	err = d.updateTagCounterAndRemoveInstallationID(rdsCluster.DBClusterArn, multitenantDatabase, store, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to finish teardown of multitenant database name %s", databaseName)
+		return errors.Wrap(err, "unable to finish teardown of multitenant database")
 	}
 
 	logger.Infof("Multitenant RDS database teardown complete")
@@ -120,6 +117,8 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to describe RDS cluster ID %s", multitenantDatabase.ID)
 	}
+
+	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
@@ -172,11 +171,13 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 	}
 	defer lockedRDSCluster.unlock(logger)
 
+	logger = logger.WithField("rds-cluster-id", *lockedRDSCluster.cluster.DBClusterIdentifier)
+
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: lockedRDSCluster.cluster.DBClusterIdentifier,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unable to find the master secret for the multitenant database ID %s", *lockedRDSCluster.cluster.DBClusterIdentifier)
+		return errors.Wrapf(err, "unable to find the master secret for the multitenant RDS cluster ID %s", *lockedRDSCluster.cluster.DBClusterIdentifier)
 	}
 
 	close, err := d.connectRDSCluster(rdsMySQLSchemaInformationDatabase, *lockedRDSCluster.cluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
