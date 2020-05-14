@@ -27,9 +27,9 @@ func TestMultitenantDatabase(t *testing.T) {
 	err := sqlStore.CreateMultitenantDatabase(&database1)
 	require.NoError(t, err)
 
+	// Tests duplicated key
 	err = sqlStore.CreateMultitenantDatabase(&database1)
 	require.Error(t, err)
-	require.Equal(t, "failed to create multitenant database: UNIQUE constraint failed: MultitenantDatabase.ID", err.Error())
 
 	time.Sleep(1 * time.Millisecond)
 
