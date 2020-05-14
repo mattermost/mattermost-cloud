@@ -81,7 +81,7 @@ func (n *publicNginx) Destroy() error {
 }
 
 func (n *publicNginx) NewHelmDeployment() *helmDeployment {
-	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultCloudDNSTagKey, aws.DefaultPublicCloudDNSTagValue, n.logger)
+	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {
 		n.logger.WithError(err).Error("unable to retrive the AWS ACM")
 		return nil
@@ -91,7 +91,7 @@ func (n *publicNginx) NewHelmDeployment() *helmDeployment {
 		chartDeploymentName: "public-nginx",
 		chartName:           "stable/nginx-ingress",
 		namespace:           "public-nginx",
-		setArgument:         fmt.Sprintf("controller.service.annotations.\"service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert\"=\"%s\"", *awsACMCert.CertificateArn),
+		setArgument:         fmt.Sprintf("controller.service.annotations.\"service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert\"=%s", *awsACMCert.CertificateArn),
 		valuesPath:          "helm-charts/public-nginx_values.yaml",
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
