@@ -138,6 +138,10 @@ func (s *mockInstallationStore) UpdateMultitenantDatabase(multitenantDatabase *m
 	return nil
 }
 
+func (s *mockInstallationStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources

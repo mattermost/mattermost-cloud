@@ -162,6 +162,21 @@ func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) RemoveMultitenantD
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveMultitenantDatabaseInstallationID", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).RemoveMultitenantDatabaseInstallationID), rdsClusterID, installationID)
 }
 
+// GetMultitenantDatabaseForInstallationID mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMultitenantDatabaseForInstallationID", installationID)
+	ret0, _ := ret[0].(*model.MultitenantDatabase)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMultitenantDatabaseForInstallationID indicates an expected call of GetMultitenantDatabaseForInstallationID
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetMultitenantDatabaseForInstallationID(installationID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantDatabaseForInstallationID", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetMultitenantDatabaseForInstallationID), installationID)
+}
+
 // GetMultitenantDatabase mocks base method
 func (m *MockInstallationDatabaseStoreInterface) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
 	m.ctrl.T.Helper()
