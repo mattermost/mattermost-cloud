@@ -80,7 +80,7 @@ func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
 // installation's limit.
 type MultitenantDatabaseFilter struct {
 	InstallationID          string
-	NumOfInstallationsLimit uint32
+	NumOfInstallationsLimit int
 	Page                    int
 	PerPage                 int
 }

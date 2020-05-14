@@ -46,27 +46,29 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 			Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
 	}
 
-	var multitenantDatabases []*model.MultitenantDatabase
+	var databases []*model.MultitenantDatabase
 
-	err := sqlStore.selectBuilder(sqlStore.db, &multitenantDatabases, builder)
+	err := sqlStore.selectBuilder(sqlStore.db, &databases, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query multitenant databases")
 	}
 
-	if filter != nil && filter.NumOfInstallationsLimit > 0 {
-		for i, database := range multitenantDatabases {
+	if filter.NumOfInstallationsLimit != model.NoInstallationsLimit {
+		filteredDatabases := databases[:0]
+		for _, database := range databases {
 			installationIDs, err := database.GetInstallationIDs()
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to query multitenant databases")
 			}
 
-			if len(installationIDs) > int(filter.NumOfInstallationsLimit) {
-				multitenantDatabases = append(multitenantDatabases[:i], multitenantDatabases[i+1:]...)
+			if len(installationIDs) <= int(filter.NumOfInstallationsLimit) {
+				filteredDatabases = append(filteredDatabases, database)
 			}
 		}
+		databases = filteredDatabases
 	}
 
-	return multitenantDatabases, nil
+	return databases, nil
 }
 
 // CreateMultitenantDatabase records the supplied multitenant database to the datastore.
@@ -189,8 +191,9 @@ func (sqlStore *SQLStore) RemoveMultitenantDatabaseInstallationID(multitenantID,
 // If more than one multitenant database per installation exists, this function returns an error.
 func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
 	multitenantDatabases, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		InstallationID: installationID,
-		PerPage:        model.AllPerPage,
+		InstallationID:          installationID,
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to find multitenant database for installation ID %s", installationID)

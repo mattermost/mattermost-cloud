@@ -263,8 +263,9 @@ func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases 
 // 	3. all multitenant databases in the RDS cluster that are under the max number of installations allowed.
 func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*rdsClusterOutput, error) {
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		InstallationID: d.installationID,
-		PerPage:        model.AllPerPage,
+		InstallationID:          d.installationID,
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable get multitenant database for installation ID %s", d.installationID)

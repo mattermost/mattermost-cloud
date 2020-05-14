@@ -2,58 +2,132 @@ package store
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
+// TestMultitenantDatabase supplies tests for aws package Client.
+type TestMultitenantDatabaseSuite struct {
+	suite.Suite
+
+	t *testing.T
+
+	installationID0 string
+	installationID1 string
+	installationID2 string
+	installationID3 string
+	installationID4 string
+
+	database1 *model.MultitenantDatabase
+	database2 *model.MultitenantDatabase
+
+	sqlStore *SQLStore
+}
+
+func (s *TestMultitenantDatabaseSuite) SetupTest() {
+	s.sqlStore = MakeTestSQLStore(s.t, testlib.MakeLogger(s.t))
+
+	s.installationID0 = "intalllation_id0"
+	s.installationID1 = "intalllation_id1"
+	s.installationID2 = "intalllation_id2"
+	s.installationID3 = "intalllation_id3"
+	s.installationID4 = "intalllation_id4"
+
+	s.database1 = &model.MultitenantDatabase{
+		ID: "database_id0",
+	}
+
+	s.database2 = &model.MultitenantDatabase{
+		ID: "database_id1",
+	}
+
+	s.database1.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID0, s.installationID1})
+	s.database2.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID2, s.installationID3, s.installationID4})
+
+	err := s.sqlStore.CreateMultitenantDatabase(s.database1)
+	s.Assert().NoError(err)
+
+	err = s.sqlStore.CreateMultitenantDatabase(s.database2)
+	s.Assert().NoError(err)
+
+}
+
 func TestMultitenantDatabase(t *testing.T) {
-	logger := testlib.MakeLogger(t)
-	sqlStore := MakeTestSQLStore(t, logger)
+	suite.Run(t, &TestMultitenantDatabaseSuite{t: t})
+}
 
-	installationID1 := model.NewID()
-	installationID2 := model.NewID()
-	installationID3 := model.NewID()
-	installationID4 := model.NewID()
-	installationID5 := model.NewID()
-
-	database1 := model.MultitenantDatabase{
+func (s *TestMultitenantDatabaseSuite) TestCreateMultitenantDatabase() {
+	db := model.MultitenantDatabase{
 		ID: model.NewID(),
 	}
-	database1.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{installationID1, installationID2})
+	err := s.sqlStore.CreateMultitenantDatabase(&db)
+	s.Assert().NoError(err)
 
-	err := sqlStore.CreateMultitenantDatabase(&database1)
-	require.NoError(t, err)
+	err = s.sqlStore.CreateMultitenantDatabase(&db)
+	s.Assert().Error(err)
+}
 
-	// Tests duplicated key
-	err = sqlStore.CreateMultitenantDatabase(&database1)
-	require.Error(t, err)
+func (s *TestMultitenantDatabaseSuite) TestGet() {
+	database, err := s.sqlStore.GetMultitenantDatabase(s.database1.ID)
+	s.Assert().NoError(err)
+	s.Assert().NotNil(database)
+	s.Assert().Equal(*s.database1, *database)
+}
 
-	time.Sleep(1 * time.Millisecond)
+func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		NumOfInstallationsLimit: 2,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(1, len(databases))
+	s.Assert().Equal(s.database1.ID, databases[0].ID)
+}
 
-	database2 := model.MultitenantDatabase{
-		ID: model.NewID(),
+func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintZero() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		NumOfInstallationsLimit: 1,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintFilterNotNil() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		NumOfInstallationsLimit: 0,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintAll() {
+	db := model.MultitenantDatabase{
+		ID: "database_id5",
 	}
-	database2.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{installationID3, installationID4, installationID5})
+	err := s.sqlStore.CreateMultitenantDatabase(&db)
+	s.Assert().NoError(err)
 
-	err = sqlStore.CreateMultitenantDatabase(&database2)
-	require.NoError(t, err)
-
-	t.Run("get multitenant database", func(t *testing.T) {
-		database, err := sqlStore.GetMultitenantDatabase(database1.ID)
-		require.NoError(t, err)
-		require.NotNil(t, database)
-		require.Equal(t, database1, *database)
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
 	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(3, len(databases))
+}
 
-	t.Run("get multitenant databases", func(t *testing.T) {
-		databases, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-			PerPage: model.AllPerPage,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, databases)
-		require.Equal(t, 2, len(databases))
+func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		PerPage: model.AllPerPage,
 	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(0, len(databases))
 }
