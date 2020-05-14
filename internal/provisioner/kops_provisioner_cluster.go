@@ -38,7 +38,7 @@ type KopsProvisioner struct {
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-// TODO(gsagula): Consider place all this paramaters in a struct for readability.
+// TODO(gsagula): Consider replacing all these paramaters with a struct for readability.
 func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool,
 	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
 

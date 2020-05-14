@@ -13,11 +13,11 @@ var multitenantDatabaseSelect sq.SelectBuilder
 
 func init() {
 	multitenantDatabaseSelect = sq.
-		Select("ID", "RawInstallationIDs", "LockAcquiredBy", "LockAcquiredAt").
+		Select("ID", "RawInstallationIDs", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt").
 		From("MultitenantDatabase")
 }
 
-// GetMultitenantDatabase fetches the given database cluster by id.
+// GetMultitenantDatabase fetches the given multitenant database by id.
 func (sqlStore *SQLStore) GetMultitenantDatabase(id string) (*model.MultitenantDatabase, error) {
 	var multitenantDatabase model.MultitenantDatabase
 	err := sqlStore.getBuilder(sqlStore.db, &multitenantDatabase, multitenantDatabaseSelect.Where("ID = ?", id))
@@ -30,9 +30,10 @@ func (sqlStore *SQLStore) GetMultitenantDatabase(id string) (*model.MultitenantD
 	return &multitenantDatabase, nil
 }
 
-// GetMultitenantDatabases fetches the given page of created database clusters. The first page is 0.
+// GetMultitenantDatabases fetches the given page of created multitenant database. The first page is 0.
 func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error) {
-	builder := multitenantDatabaseSelect
+	builder := multitenantDatabaseSelect.
+		OrderBy("CreateAt ASC")
 
 	if filter.PerPage != model.AllPerPage {
 		builder = builder.
@@ -41,7 +42,8 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 	}
 
 	if filter != nil && len(filter.InstallationID) > 0 {
-		builder = builder.Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
+		builder = builder.
+			Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
 	}
 
 	var multitenantDatabases []*model.MultitenantDatabase
@@ -69,12 +71,14 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 
 // CreateMultitenantDatabase records the supplied multitenant database to the datastore.
 func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
+	multitenantDatabase.CreateAt = GetMillis()
+
 	if multitenantDatabase == nil {
-		return errors.New("multitenant database cannot be nil")
+		return errors.New("multitenant database must not be nil")
 	}
 
-	if len(multitenantDatabase.ID) < 1 {
-		return errors.New("multitenant database ID cannot be nil")
+	if multitenantDatabase.ID == "" {
+		return errors.New("multitenant database ID must not be empty")
 	}
 
 	if len(multitenantDatabase.RawInstallationIDs) < 1 {
@@ -88,6 +92,8 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 			"LockAcquiredBy":     nil,
 			"LockAcquiredAt":     0,
+			"CreateAt":           multitenantDatabase.CreateAt,
+			"DeleteAt":           0,
 		}),
 	)
 	if err != nil {
@@ -125,12 +131,12 @@ func (sqlStore *SQLStore) UpdateMultitenantDatabase(multitenantDatabase *model.M
 func (sqlStore *SQLStore) AddMultitenantDatabaseInstallationID(multitenantID, installationID string) (model.MultitenantDatabaseInstallationIDs, error) {
 	multitenantDatabase, err := sqlStore.GetMultitenantDatabase(multitenantID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+		return nil, errors.Wrap(err, "failed to get installations from database")
 	}
 
 	multitenantDatabaseInstallationIDs, err := multitenantDatabase.GetInstallationIDs()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+		return nil, errors.Wrap(err, "failed to get installations from database")
 	}
 
 	if !multitenantDatabaseInstallationIDs.Contains(installationID) {
@@ -138,12 +144,12 @@ func (sqlStore *SQLStore) AddMultitenantDatabaseInstallationID(multitenantID, in
 
 		err = multitenantDatabase.SetInstallationIDs(multitenantDatabaseInstallationIDs)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+			return nil, errors.Wrap(err, "failed to get installations from database")
 		}
 
 		err = sqlStore.UpdateMultitenantDatabase(multitenantDatabase)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to add installation ID %s", installationID)
+			return nil, errors.Wrap(err, "failed to get installations from database")
 		}
 	}
 
@@ -177,6 +183,23 @@ func (sqlStore *SQLStore) RemoveMultitenantDatabaseInstallationID(multitenantID,
 	}
 
 	return multitenantDatabaseInstallationIDs, nil
+}
+
+// GetMultitenantDatabaseForInstallationID fetches the multitenant database associated with an installation ID.
+// If more than one multitenant database per installation exists, this function returns an error.
+func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
+	multitenantDatabases, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		InstallationID: installationID,
+		PerPage:        model.AllPerPage,
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to find multitenant database for installation ID %s", installationID)
+	}
+	if len(multitenantDatabases) != 1 {
+		return nil, errors.Errorf("expected exactly one multitenant database per installation (found %d)", len(multitenantDatabases))
+	}
+
+	return multitenantDatabases[0], nil
 }
 
 // LockMultitenantDatabase marks the database cluster as locked for exclusive use by the caller.

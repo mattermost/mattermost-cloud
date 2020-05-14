@@ -11,7 +11,7 @@ const (
 	// InstallationDatabaseMysqlOperator is a database hosted in kubernetes via the operator.
 	InstallationDatabaseMysqlOperator = "mysql-operator"
 	// InstallationDatabaseSingleTenantRDS is a database hosted via Amazon RDS.
-	InstallationDatabaseSingleTenantRDS = "aws-singletenant-rds"
+	InstallationDatabaseSingleTenantRDS = "aws-rds"
 	// InstallationDatabaseMultiTenantRDS is a multitenant database hosted via Amazon RDS.
 	InstallationDatabaseMultiTenantRDS = "aws-multitenant-rds"
 )
@@ -26,10 +26,13 @@ type Database interface {
 
 // InstallationDatabaseStoreInterface is the interface necessary for SQLStore
 // functionality to correlate an installation to a cluster for database creation.
+// TODO(gsagula): Consider renaming this interface to InstallationDatabaseInterface. For reference,
+// https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r424597373
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
 	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
 	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
+	GetMultitenantDatabaseForInstallationID(installationID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
 	CreateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error

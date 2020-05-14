@@ -57,21 +57,14 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	logger = logger.WithField("rds-multitenant-database", databaseName)
 	logger.Info("Tearing down RDS database and database secret")
 
-	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		InstallationID: d.installationID,
-	})
+	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
 	if err != nil {
-		return errors.Wrapf(err, "cannot teardown multitenant database for installation ID %s", d.installationID)
-	}
-	if len(multitenantDatabases) > 1 {
-		return errors.Errorf("more than one multitenant database per installation is not supported by this database (found %d)", len(multitenantDatabases))
+		return errors.Wrapf(err, "unable to find multitenant database for installation ID %s", d.installationID)
 	}
 
-	if len(multitenantDatabases) == 1 {
-		err = d.removeRDSDatabase(multitenantDatabases[0], databaseName, store, logger)
-		if err != nil {
-			return errors.Wrapf(err, "unable to finish teardown of multitenant database name %s", databaseName)
-		}
+	err = d.removeRDSDatabase(multitenantDatabase, databaseName, store, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to finish teardown of multitenant database name %s", databaseName)
 	}
 
 	multitenantDatabaseSecretName := RDSMultitenantSecretName(d.installationID)
@@ -102,6 +95,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID: d.installationID,
+		PerPage:        model.AllPerPage,
 	})
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "unable to get multitenant databases for installation ID %s", d.installationID)
@@ -263,6 +257,7 @@ func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases 
 func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*rdsClusterOutput, error) {
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID: d.installationID,
+		PerPage:        model.AllPerPage,
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable get multitenant database for installation ID %s", d.installationID)
@@ -273,6 +268,7 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 	if len(multitenantDatabases) == 0 {
 		multitenantDatabases, err = store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 			NumOfInstallationsLimit: DefaultRDSMultitenantDatabaseCountLimit,
+			PerPage:                 model.AllPerPage,
 		})
 		if err != nil {
 			return nil, err

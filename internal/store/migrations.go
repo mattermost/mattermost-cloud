@@ -899,7 +899,9 @@ var migrations = []migration{
 		_, err := e.Exec(`
 				CREATE TABLE MultitenantDatabase (
 					ID TEXT PRIMARY KEY,
-					RawInstallationIDs BYTEA NOT NULL,               
+					RawInstallationIDs BYTEA NOT NULL,
+					CreateAt BIGINT NOT NULL,
+					DeleteAt BIGINT NOT NULL,             
 					LockAcquiredBy CHAR(26) NULL,
 					LockAcquiredAt BIGINT NOT NULL
 				);

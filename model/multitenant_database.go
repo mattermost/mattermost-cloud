@@ -6,39 +6,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// MultitenantDatabaseInstallationIDs is a container that holds a collection of installation IDs.
-type MultitenantDatabaseInstallationIDs []string
-
-// Add inserts a new installation in the container.
-func (d *MultitenantDatabaseInstallationIDs) Add(installationID string) {
-	*d = append(*d, installationID)
-}
-
-// Contains checks if the supplied installation ID exists in the container.
-func (d *MultitenantDatabaseInstallationIDs) Contains(installationID string) bool {
-	for _, id := range *d {
-		if id == installationID {
-			return true
-		}
-	}
-
-	return false
-}
-
-// Remove deletes the installation from the container.
-func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
-	for i, installation := range *d {
-		if installation == installationID {
-			(*d) = append((*d)[:i], (*d)[i+1:]...)
-		}
-	}
-}
-
 // MultitenantDatabase represents a cluster that manages multiple databases.
 type MultitenantDatabase struct {
 	ID                 string
 	RawInstallationIDs []byte `json:",omitempty"`
 	LockAcquiredBy     *string
+	CreateAt           int64
+	DeleteAt           int64
 	LockAcquiredAt     int64
 }
 
@@ -72,6 +46,34 @@ func (c *MultitenantDatabase) GetInstallationIDs() (MultitenantDatabaseInstallat
 	}
 
 	return installationIDs, nil
+}
+
+// MultitenantDatabaseInstallationIDs is a container that holds a collection of installation IDs.
+type MultitenantDatabaseInstallationIDs []string
+
+// Add inserts a new installation in the container.
+func (d *MultitenantDatabaseInstallationIDs) Add(installationID string) {
+	*d = append(*d, installationID)
+}
+
+// Contains checks if the supplied installation ID exists in the container.
+func (d *MultitenantDatabaseInstallationIDs) Contains(installationID string) bool {
+	for _, id := range *d {
+		if id == installationID {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Remove deletes the installation from the container.
+func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
+	for i, installation := range *d {
+		if installation == installationID {
+			(*d) = append((*d)[:i], (*d)[i+1:]...)
+		}
+	}
 }
 
 // MultitenantDatabaseFilter filters results based on a specific installation ID and a number of

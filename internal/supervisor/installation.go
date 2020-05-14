@@ -37,6 +37,7 @@ type installationStore interface {
 
 	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error)
 	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error)
+	GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error)
 	GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
 	CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
