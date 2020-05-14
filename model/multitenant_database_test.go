@@ -36,8 +36,8 @@ func TestGetAndSetInstallationIDs(t *testing.T) {
 		}
 		ids, err := database.GetInstallationIDs()
 		require.Error(t, err)
-		require.Equal(t, "failed to get installations in the database cluster: "+
-			"invalid character 'a' looking for beginning of value", err.Error())
+		require.Equal(t, "failed to get installation ids: invalid character "+
+			"'a' looking for beginning of value", err.Error())
 		require.Nil(t, ids)
 	})
 }

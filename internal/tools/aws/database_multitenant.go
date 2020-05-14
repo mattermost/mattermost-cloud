@@ -59,18 +59,18 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 
 	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
 	if err != nil {
-		return errors.Wrapf(err, "unable to find multitenant database for installation ID %s", d.installationID)
+		return errors.Wrapf(err, "unable to find multitenant database for installation ID %s when tearing the multitenant database down", d.installationID)
 	}
 
 	unlocked, err := d.lockMultitenantDatabase(multitenantDatabase.ID, store)
 	if err != nil {
-		return errors.Wrapf(err, "failed to lock multitenant database ID %s", multitenantDatabase.ID)
+		return errors.Wrapf(err, "failed to lock multitenant database ID %s when tearing the multitenant database down", multitenantDatabase.ID)
 	}
 	defer unlocked(logger)
 
 	rdsCluster, err := d.describeRDSCluster(multitenantDatabase.ID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to describe multitenant database ID %s", multitenantDatabase.ID)
+		return errors.Wrapf(err, "failed to describe multitenant database ID %s when tearing the multitenant database down", multitenantDatabase.ID)
 	}
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
@@ -104,18 +104,18 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 
 	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "unable to find multitenant database for installation ID %s", d.installationID)
+		return nil, nil, errors.Wrapf(err, "unable to find multitenant database for installation ID %s during database secret and spec creation", d.installationID)
 	}
 
 	unlocked, err := d.lockMultitenantDatabase(multitenantDatabase.ID, store)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to lock multitenant database ID %s", multitenantDatabase.ID)
+		return nil, nil, errors.Wrapf(err, "failed to lock multitenant database ID %s during database secret and spec creation", multitenantDatabase.ID)
 	}
 	defer unlocked(logger)
 
 	rdsCluster, err := d.describeRDSCluster(multitenantDatabase.ID)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to describe RDS cluster ID %s", multitenantDatabase.ID)
+		return nil, nil, errors.Wrapf(err, "failed to describe RDS cluster ID %s during database secret and spec creation", multitenantDatabase.ID)
 	}
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
@@ -196,7 +196,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 
 	installationSecret, err := d.ensureMultitenantDatabaseSecretIsCreated(lockedRDSCluster.cluster.DBClusterIdentifier, vpc.VpcId)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get a database secrete for installation ID %s", d.installationID)
+		return errors.Wrapf(err, "failed to get a secret for installation ID %s", d.installationID)
 	}
 
 	err = d.createUserIfNotExist(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
@@ -211,7 +211,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 
 	databaseInstallationIDs, err := store.AddMultitenantDatabaseInstallationID(*lockedRDSCluster.cluster.DBClusterIdentifier, d.installationID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to add the installation ID %s to multitenant database ID %s", d.installationID, *lockedRDSCluster.cluster.DBClusterIdentifier)
+		return errors.Wrapf(err, "failed to add installation ID %s to the multitenant database ID %s", d.installationID, *lockedRDSCluster.cluster.DBClusterIdentifier)
 	}
 
 	err = d.updateCounterTag(lockedRDSCluster.cluster.DBClusterArn, len(databaseInstallationIDs))
@@ -245,7 +245,7 @@ func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases 
 		if len(installationIDs) < DefaultRDSMultitenantDatabaseCountLimit || installationIDs.Contains(d.installationID) {
 			rdsClusterOutput, err := d.multitenantDatabaseToRDSClusterLock(multitenantDatabase.ID, installationIDs, store, logger)
 			if err != nil {
-				logger.WithError(err).Errorf("Failed to lock multitenant database ID %s", multitenantDatabase.ID)
+				logger.WithError(err).Errorf("failed to lock multitenant database ID %s", multitenantDatabase.ID)
 				continue
 			}
 
@@ -253,7 +253,7 @@ func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases 
 		}
 	}
 
-	return nil, errors.New("unable to find and lock a available multitenant database")
+	return nil, errors.New("unable to find an available multitenant database")
 }
 
 // This helper method finds a multitenant RDS cluster that is ready for receiving a database installation. The lookup

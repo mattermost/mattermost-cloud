@@ -73,8 +73,6 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 
 // CreateMultitenantDatabase records the supplied multitenant database to the datastore.
 func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
-	multitenantDatabase.CreateAt = GetMillis()
-
 	if multitenantDatabase == nil {
 		return errors.New("multitenant database must not be nil")
 	}
@@ -82,6 +80,8 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 	if multitenantDatabase.ID == "" {
 		return errors.New("multitenant database ID must not be empty")
 	}
+
+	multitenantDatabase.CreateAt = GetMillis()
 
 	if len(multitenantDatabase.RawInstallationIDs) < 1 {
 		multitenantDatabase.RawInstallationIDs = make([]byte, 0)
@@ -110,20 +110,37 @@ func (sqlStore *SQLStore) UpdateMultitenantDatabase(multitenantDatabase *model.M
 	if multitenantDatabase == nil {
 		return errors.New("multitenant database cannot be nil")
 	}
+	if multitenantDatabase.LockAcquiredBy == nil {
+		return errors.New("multitenant database is not locked")
+	}
 
 	if len(multitenantDatabase.RawInstallationIDs) < 1 {
 		multitenantDatabase.RawInstallationIDs = make([]byte, 0)
+	} else {
+		_, err := multitenantDatabase.GetInstallationIDs()
+		if err != nil {
+			return errors.Wrap(err, "failed to parse raw installation ids")
+		}
 	}
 
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+	res, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("MultitenantDatabase").
 		SetMap(map[string]interface{}{
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 		}).
-		Where("ID = ?", multitenantDatabase.ID),
+		Where("ID = ?", multitenantDatabase.ID).
+		Where("LockAcquiredBy = ?", *multitenantDatabase.LockAcquiredBy),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update multitenant database")
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "failed to update multitenant database")
+	}
+	if rowsAffected < 1 {
+		return errors.New("failed to update multitenant database: no rows affected")
 	}
 
 	return nil
@@ -134,6 +151,9 @@ func (sqlStore *SQLStore) AddMultitenantDatabaseInstallationID(multitenantID, in
 	multitenantDatabase, err := sqlStore.GetMultitenantDatabase(multitenantID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations from database")
+	}
+	if multitenantDatabase == nil {
+		return nil, errors.Errorf("unable to find multitenant database ID %s", multitenantID)
 	}
 
 	multitenantDatabaseInstallationIDs, err := multitenantDatabase.GetInstallationIDs()
@@ -163,6 +183,9 @@ func (sqlStore *SQLStore) RemoveMultitenantDatabaseInstallationID(multitenantID,
 	multitenantDatabase, err := sqlStore.GetMultitenantDatabase(multitenantID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to remove installation ID %s", installationID)
+	}
+	if multitenantDatabase == nil {
+		return nil, errors.Errorf("unable to find multitenant database ID %s", multitenantID)
 	}
 
 	multitenantDatabaseInstallationIDs, err := multitenantDatabase.GetInstallationIDs()
@@ -196,7 +219,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 		PerPage:                 model.AllPerPage,
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to find multitenant database for installation ID %s", installationID)
+		return nil, errors.Wrapf(err, "unable to get multitenant database for installation ID %s in sql store", installationID)
 	}
 	if len(multitenantDatabases) != 1 {
 		return nil, errors.Errorf("expected exactly one multitenant database per installation (found %d)", len(multitenantDatabases))

@@ -2,6 +2,7 @@ package store
 
 import (
 	"testing"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -13,6 +14,8 @@ type TestMultitenantDatabaseSuite struct {
 	suite.Suite
 
 	t *testing.T
+
+	lockerID string
 
 	installationID0 string
 	installationID1 string
@@ -35,6 +38,8 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.installationID3 = "intalllation_id3"
 	s.installationID4 = "intalllation_id4"
 
+	s.lockerID = s.installationID0
+
 	s.database1 = &model.MultitenantDatabase{
 		ID: "database_id0",
 	}
@@ -52,20 +57,33 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	err = s.sqlStore.CreateMultitenantDatabase(s.database2)
 	s.Assert().NoError(err)
 
+	time.Sleep(1 * time.Millisecond)
 }
 
 func TestMultitenantDatabase(t *testing.T) {
 	suite.Run(t, &TestMultitenantDatabaseSuite{t: t})
 }
 
-func (s *TestMultitenantDatabaseSuite) TestCreateMultitenantDatabase() {
+func (s *TestMultitenantDatabaseSuite) TestCreate() {
 	db := model.MultitenantDatabase{
-		ID: model.NewID(),
+		ID: "database_some_id",
 	}
 	err := s.sqlStore.CreateMultitenantDatabase(&db)
 	s.Assert().NoError(err)
+	s.Assert().Greater(db.CreateAt, int64(0))
 
 	err = s.sqlStore.CreateMultitenantDatabase(&db)
+	s.Assert().Error(err)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestCreateNilIDError() {
+	db := model.MultitenantDatabase{}
+	err := s.sqlStore.CreateMultitenantDatabase(&db)
+	s.Assert().Error(err)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestCreateNilInputError() {
+	err := s.sqlStore.CreateMultitenantDatabase(nil)
 	s.Assert().Error(err)
 }
 
@@ -74,6 +92,12 @@ func (s *TestMultitenantDatabaseSuite) TestGet() {
 	s.Assert().NoError(err)
 	s.Assert().NotNil(database)
 	s.Assert().Equal(*s.database1, *database)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetNotFound() {
+	database, err := s.sqlStore.GetMultitenantDatabase("not_found_id")
+	s.Assert().NoError(err)
+	s.Assert().Nil(database)
 }
 
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
@@ -130,4 +154,135 @@ func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
 	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabase() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		PerPage: model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestUpdate() {
+	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
+	s.Assert().NoError(err)
+	s.Assert().True(locked)
+
+	s.database1.RawInstallationIDs = nil
+	s.database1.LockAcquiredBy = &s.lockerID
+
+	err = s.sqlStore.UpdateMultitenantDatabase(s.database1)
+	s.Assert().NoError(err)
+
+	database, err := s.sqlStore.GetMultitenantDatabase(s.database1.ID)
+	s.Assert().NoError(err)
+	s.Assert().NotNil(database)
+	s.Assert().Equal(s.database1.RawInstallationIDs, database.RawInstallationIDs)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestUpdateNilInputError() {
+	err := s.sqlStore.UpdateMultitenantDatabase(nil)
+	s.Assert().Error(err)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestUpdateNoRowsAffectedError() {
+	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
+	s.Assert().NoError(err)
+	s.Assert().True(locked)
+
+	err = s.sqlStore.UpdateMultitenantDatabase(&model.MultitenantDatabase{
+		ID:             "banana",
+		LockAcquiredBy: &s.lockerID,
+	})
+	s.Assert().Error(err)
+	s.Assert().Equal("failed to update multitenant database: no rows affected", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestUpdateInvalidRawInstallations() {
+	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
+	s.Assert().NoError(err)
+	s.Assert().True(locked)
+
+	err = s.sqlStore.UpdateMultitenantDatabase(&model.MultitenantDatabase{
+		ID:                 "banana",
+		RawInstallationIDs: []byte{'b', 'a', 'n', 'a', 'n', 'a'},
+		LockAcquiredBy:     &s.lockerID,
+	})
+	s.Assert().Error(err)
+	s.Assert().Equal("failed to parse raw installation ids: failed to get installation ids:"+
+		" invalid character 'b' looking for beginning of value", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestUpdateNotLockedError() {
+	err := s.sqlStore.UpdateMultitenantDatabase(&model.MultitenantDatabase{
+		ID: s.database1.ID,
+	})
+	s.Assert().Error(err)
+	s.Assert().Equal("multitenant database is not locked", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestAddInstallationID() {
+	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
+	s.Assert().NoError(err)
+	s.Assert().True(locked)
+
+	installationIDs, err := s.sqlStore.AddMultitenantDatabaseInstallationID(s.database1.ID, "some_id")
+	s.Assert().NoError(err)
+	s.Assert().NotNil(installationIDs)
+	s.Assert().Contains(installationIDs, "some_id")
+}
+
+func (s *TestMultitenantDatabaseSuite) TestAddInstallationNotFoundDatabaseID() {
+	installationIDs, err := s.sqlStore.AddMultitenantDatabaseInstallationID("banana", "some_id")
+	s.Assert().Error(err)
+	s.Assert().Nil(installationIDs)
+	s.Assert().Equal("unable to find multitenant database ID banana", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestRemoveInstallationID() {
+	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
+	s.Assert().NoError(err)
+	s.Assert().True(locked)
+
+	installationIDs, err := s.sqlStore.RemoveMultitenantDatabaseInstallationID(s.database1.ID, s.installationID0)
+	s.Assert().NoError(err)
+	s.Assert().NotNil(installationIDs)
+	s.Assert().NotContains(installationIDs, s.installationID0)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestRemoveInstallationNotFoundDatabaseID() {
+	installationIDs, err := s.sqlStore.RemoveMultitenantDatabaseInstallationID("banana", "some_id")
+	s.Assert().Error(err)
+	s.Assert().Nil(installationIDs)
+	s.Assert().Equal("unable to find multitenant database ID banana", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallationID() {
+	database, err := s.sqlStore.GetMultitenantDatabaseForInstallationID(s.installationID0)
+	s.Assert().NoError(err)
+	s.Assert().NotNil(database)
+	s.Assert().Equal(s.database1.ID, database.ID)
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallationIDErrorOne() {
+	database, err := s.sqlStore.GetMultitenantDatabaseForInstallationID("banana")
+	s.Assert().Error(err)
+	s.Assert().Nil(database)
+	s.Assert().Equal("expected exactly one multitenant database per installation (found 0)", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallationIDErrorMany() {
+	db := model.MultitenantDatabase{
+		ID: "database_some_id",
+	}
+	db.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID0})
+	err := s.sqlStore.CreateMultitenantDatabase(&db)
+	s.Assert().NoError(err)
+
+	database, err := s.sqlStore.GetMultitenantDatabaseForInstallationID(s.installationID0)
+	s.Assert().Error(err)
+	s.Assert().Nil(database)
+	s.Assert().Equal("expected exactly one multitenant database per installation (found 2)", err.Error())
 }
