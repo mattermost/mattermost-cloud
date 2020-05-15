@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
+
+	sq "github.com/Masterminds/squirrel"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +45,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 	if filter != nil {
 		if len(filter.InstallationID) > 0 {
 			builder = builder.
-				Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
+				Where(sq.Like{"RawInstallationIDs": fmt.Sprint("%", filter.InstallationID, "%")})
 		}
 
 		if len(filter.LockerID) > 0 {
@@ -135,8 +136,8 @@ func (sqlStore *SQLStore) UpdateMultitenantDatabase(multitenantDatabase *model.M
 		SetMap(map[string]interface{}{
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 		}).
-		Where("ID = ?", multitenantDatabase.ID).
-		Where("LockAcquiredBy = ?", *multitenantDatabase.LockAcquiredBy),
+		Where(sq.Eq{"ID": multitenantDatabase.ID}).
+		Where(sq.Eq{"LockAcquiredBy": *multitenantDatabase.LockAcquiredBy}),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update multitenant database")
@@ -236,11 +237,11 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 }
 
 // LockMultitenantDatabase marks the database cluster as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockMultitenantDatabase(multitenantDatabaseID, installationID string) (bool, error) {
-	return sqlStore.lockRows("MultitenantDatabase", []string{multitenantDatabaseID}, installationID)
+func (sqlStore *SQLStore) LockMultitenantDatabase(multitenantDatabaseID, instanceID string) (bool, error) {
+	return sqlStore.lockRows("MultitenantDatabase", []string{multitenantDatabaseID}, instanceID)
 }
 
 // UnlockMultitenantDatabase releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockMultitenantDatabase(multitenantDatabaseID, installationID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("MultitenantDatabase", []string{multitenantDatabaseID}, installationID, force)
+func (sqlStore *SQLStore) UnlockMultitenantDatabase(multitenantDatabaseID, instanceID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("MultitenantDatabase", []string{multitenantDatabaseID}, instanceID, force)
 }

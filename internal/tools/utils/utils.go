@@ -82,13 +82,15 @@ func copyFile(source string, dest string) error {
 
 // ResourceUtil is used for calling any filestore type.
 type ResourceUtil struct {
-	awsClient *aws.Client
+	awsClient  *aws.Client
+	instanceID string
 }
 
 // NewResourceUtil returns a new instance of ResourceUtil.
-func NewResourceUtil(awsClient *aws.Client) *ResourceUtil {
+func NewResourceUtil(instanceID string, awsClient *aws.Client) *ResourceUtil {
 	return &ResourceUtil{
-		awsClient: awsClient,
+		awsClient:  awsClient,
+		instanceID: instanceID,
 	}
 }
 
@@ -114,7 +116,7 @@ func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Datab
 	case model.InstallationDatabaseSingleTenantRDS:
 		return aws.NewRDSDatabase(installation.ID, r.awsClient)
 	case model.InstallationDatabaseMultiTenantRDS:
-		return aws.NewRDSMultitenantDatabase(installation.ID, r.awsClient)
+		return aws.NewRDSMultitenantDatabase(r.instanceID, installation.ID, r.awsClient)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match

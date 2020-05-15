@@ -157,7 +157,7 @@ var serverCmd = &cobra.Command{
 			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
 		}, logger)
 
-		resourceUtil := utils.NewResourceUtil(awsClient)
+		resourceUtil := utils.NewResourceUtil(instanceID, awsClient)
 
 		// Setup the provisioner for actually effecting changes to clusters.
 		kopsProvisioner := provisioner.NewKopsProvisioner(
