@@ -19,7 +19,11 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		After(a.Mocks.API.EC2.EXPECT().
 			DescribeSecurityGroups(gomock.Any()).
 			Return(&ec2.DescribeSecurityGroupsOutput{
-				SecurityGroups: []*ec2.SecurityGroup{&ec2.SecurityGroup{GroupId: &a.GroupID}},
+				SecurityGroups: []*ec2.SecurityGroup{
+					{
+						GroupId: &a.GroupID,
+					},
+				},
 			}, nil))
 
 	a.Mocks.Log.Logger.EXPECT().
@@ -30,7 +34,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 			DescribeDBSubnetGroups(gomock.Any()).
 			Return(&rds.DescribeDBSubnetGroupsOutput{
 				DBSubnetGroups: []*rds.DBSubnetGroup{
-					&rds.DBSubnetGroup{
+					{
 						DBSubnetGroupName: aws.String(DBSubnetGroupName(a.VPCa)),
 					},
 				},
@@ -157,7 +161,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 			DescribeDBSubnetGroups(gomock.Any()).
 			Return(&rds.DescribeDBSubnetGroupsOutput{
 				DBSubnetGroups: []*rds.DBSubnetGroup{
-					&rds.DBSubnetGroup{
+					{
 						DBSubnetGroupName: aws.String(DBSubnetGroupName(a.VPCa)),
 					},
 				},

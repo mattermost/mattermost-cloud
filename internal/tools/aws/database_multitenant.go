@@ -57,8 +57,8 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 
 	logger.Info("Tearing down RDS database and database secret")
 
-	// This prevents the installation to get stuck in case of an unintentionally
-	// locked state of the multitenant database.
+	// This prevents the installation of getting stuck if the provisioner still have locked resources
+	// during a not graceful termination (which is very unlike to happen).
 	err := d.releaseMultitenantDatabasesIfLocked(store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to release previous locked databases")
@@ -172,8 +172,8 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "unable to find a VPC that hosts the installation ID %s", d.installationID)
 	}
 
-	// This prevents the installation to get stuck in case of an unintentionally
-	// locked state of the multitenant database.
+	// This prevents the installation of getting stuck if the provisioner still have locked resources
+	// during a not graceful termination (which is very unlike to happen).
 	err = d.releaseMultitenantDatabasesIfLocked(store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to release previous locked databases")
@@ -328,6 +328,7 @@ func (d *RDSMultitenantDatabase) releaseMultitenantDatabasesIfLocked(store model
 		unlock, err := store.UnlockMultitenantDatabase(database.ID, d.installationID, false)
 		if err != nil {
 			logger.WithError(err).Warnf("failed to unlock multitenant database ID %s held by the installation ID %s", database.ID, d.installationID)
+			continue
 		}
 		if !unlock {
 			logger.WithError(err).Warnf("failed to unlock multitenant database ID %s held by the installation ID %s", database.ID, d.installationID)

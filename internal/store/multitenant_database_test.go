@@ -147,6 +147,22 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintAll() {
 	s.Assert().Equal(3, len(databases))
 }
 
+func (s *TestMultitenantDatabaseSuite) TestGetLockerIDConstraintAll() {
+	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.installationID0)
+	s.Assert().NoError(err)
+	s.Assert().True(locked)
+
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		LockerID:                s.installationID0,
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(1, len(databases))
+	s.Assert().Equal(s.database1.ID, databases[0].ID)
+}
+
 func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		PerPage: model.AllPerPage,
