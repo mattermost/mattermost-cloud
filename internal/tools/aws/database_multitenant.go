@@ -57,6 +57,13 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 
 	logger.Info("Tearing down RDS database and database secret")
 
+	// This prevents the installation to get stuck in case of an unintentionally
+	// locked state of the multitenant database.
+	err := d.releaseMultitenantDatabasesIfLocked(store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to release previous locked databases")
+	}
+
 	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
 	if err != nil {
 		return errors.Wrapf(err, "unable to find multitenant database for installation ID %s when tearing the multitenant database down", d.installationID)
@@ -165,6 +172,13 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrapf(err, "unable to find a VPC that hosts the installation ID %s", d.installationID)
 	}
 
+	// This prevents the installation to get stuck in case of an unintentionally
+	// locked state of the multitenant database.
+	err = d.releaseMultitenantDatabasesIfLocked(store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to release previous locked databases")
+	}
+
 	lockedRDSCluster, err := d.findRDSClusterForInstallation(*vpc.VpcId, store, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to lock a multitenant database for installation ID %s", d.installationID)
@@ -258,9 +272,9 @@ func (d *RDSMultitenantDatabase) validateAndLockRDSCluster(multitenantDatabases 
 
 // This helper method finds a multitenant RDS cluster that is ready for receiving a database installation. The lookup
 // for multitenant databases will happen in order:
-// 	1. a multitenant databases by installation ID.
-// 	2. all multitenant databases in the store that are under the max number of installations allowed.
-// 	3. all multitenant databases in the RDS cluster that are under the max number of installations allowed.
+//	1. fetch a multitenant database by installation ID.
+//	2. fetch all multitenant databases in the store which are under the max number of installations limit.
+//	3. fetch all multitenant databases in the RDS cluster that are under the max number of installations limit.
 func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*rdsClusterOutput, error) {
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID:          d.installationID,
@@ -271,7 +285,7 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 		return nil, errors.Wrapf(err, "unable get multitenant database for installation ID %s", d.installationID)
 	}
 
-	logger.Infof("Could not find a multitenant database for installation ID %s. Fetching all available resources in the datastore.")
+	logger.Infof("Could not find a multitenant database for installation ID %s. Fetching all available resources in the datastore.", d.installationID)
 
 	if len(multitenantDatabases) == 0 {
 		multitenantDatabases, err = store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
@@ -298,6 +312,29 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 	}
 
 	return lockedRDSCluster, nil
+}
+
+func (d *RDSMultitenantDatabase) releaseMultitenantDatabasesIfLocked(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		LockerID:                d.installationID,
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed get multitenant databases with locker ID %s", d.installationID)
+	}
+
+	for _, database := range multitenantDatabases {
+		unlock, err := store.UnlockMultitenantDatabase(database.ID, d.installationID, false)
+		if err != nil {
+			logger.WithError(err).Warnf("failed to unlock multitenant database ID %s held by the installation ID %s", database.ID, d.installationID)
+		}
+		if !unlock {
+			logger.WithError(err).Warnf("failed to unlock multitenant database ID %s held by the installation ID %s", database.ID, d.installationID)
+		}
+	}
+
+	return nil
 }
 
 func (d *RDSMultitenantDatabase) multitenantDatabaseToRDSClusterLock(multitenantDatabaseID string, databaseInstallationIDs model.MultitenantDatabaseInstallationIDs, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*rdsClusterOutput, error) {

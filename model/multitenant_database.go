@@ -79,6 +79,7 @@ func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
 // MultitenantDatabaseFilter filters results based on a specific installation ID and a number of
 // installation's limit.
 type MultitenantDatabaseFilter struct {
+	LockerID                string
 	InstallationID          string
 	NumOfInstallationsLimit int
 	Page                    int

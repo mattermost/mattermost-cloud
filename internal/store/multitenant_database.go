@@ -41,9 +41,16 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 			Offset(uint64(filter.Page * filter.PerPage))
 	}
 
-	if filter != nil && len(filter.InstallationID) > 0 {
-		builder = builder.
-			Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
+	if filter != nil {
+		if len(filter.InstallationID) > 0 {
+			builder = builder.
+				Where("RawInstallationIDs LIKE ?", fmt.Sprint("%", filter.InstallationID, "%"))
+		}
+
+		if len(filter.LockerID) > 0 {
+			builder = builder.
+				Where(sq.Eq{"LockAcquiredBy": filter.LockerID})
+		}
 	}
 
 	var databases []*model.MultitenantDatabase
@@ -229,11 +236,11 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 }
 
 // LockMultitenantDatabase marks the database cluster as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockMultitenantDatabase(installationID, lockerID string) (bool, error) {
-	return sqlStore.lockRows("MultitenantDatabase", []string{installationID}, lockerID)
+func (sqlStore *SQLStore) LockMultitenantDatabase(multitenantDatabaseID, installationID string) (bool, error) {
+	return sqlStore.lockRows("MultitenantDatabase", []string{multitenantDatabaseID}, installationID)
 }
 
 // UnlockMultitenantDatabase releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockMultitenantDatabase(installationID, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("MultitenantDatabase", []string{installationID}, lockerID, force)
+func (sqlStore *SQLStore) UnlockMultitenantDatabase(multitenantDatabaseID, installationID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("MultitenantDatabase", []string{multitenantDatabaseID}, installationID, force)
 }
