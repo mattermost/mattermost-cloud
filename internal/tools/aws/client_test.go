@@ -54,6 +54,8 @@ type AWSTestSuite struct {
 	InstallationA *model.Installation
 	InstallationB *model.Installation
 
+	InstanceID string
+
 	ClusterA *model.Cluster
 	ClusterB *model.Cluster
 
@@ -143,6 +145,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		CertifcateARN:        "arn:aws:certificate::123456789012",
 		ResourceARN:          "arn:aws:kms:us-east-1:526412419611:key/10cbe864-7411-4cda-bd28-3355218d0995",
 		RDSResourceARN:       "arn:aws:rds:us-east-1:926412419614:cluster:rds-cluster-multitenant-09d44077df9934f96-97670d43",
+		InstanceID:           "WSxaaqafXCgeaZers2qergasdgsw1dC",
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
 		EndpointsB: []string{"example1.mattermost.com"},

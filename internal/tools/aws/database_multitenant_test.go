@@ -20,6 +20,7 @@ import (
 func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 	database := RDSMultitenantDatabase{
 		installationID: a.InstallationA.ID,
+		instanceID:     a.InstanceID,
 		client:         a.Mocks.AWS,
 	}
 
@@ -42,16 +43,6 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 		a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any()).
 			Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{{VpcId: &a.VPCa}}}, nil).
 			Times(1),
-
-		// Get multitenant databases from the datastore to check if any is locked.
-		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
-			GetMultitenantDatabases(gomock.Any()).
-			Do(func(input *model.MultitenantDatabaseFilter) {
-				a.Assert().Equal(input.LockerID, a.InstallationA.ID)
-				a.Assert().Equal(input.NumOfInstallationsLimit, model.NoInstallationsLimit)
-				a.Assert().Equal(input.PerPage, model.AllPerPage)
-			}).
-			Return(make([]*model.MultitenantDatabase, 0), nil),
 
 		// Get multitenant databases from the datastore to check if any belongs to the installation ID.
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
@@ -159,7 +150,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
-			LockMultitenantDatabase(a.RDSClusterID, a.InstallationA.ID).
+			LockMultitenantDatabase(a.RDSClusterID, a.InstanceID).
 			Return(true, nil).
 			Times(1),
 
@@ -202,7 +193,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
-			UnlockMultitenantDatabase(a.RDSClusterID, a.InstallationA.ID, true).
+			UnlockMultitenantDatabase(a.RDSClusterID, a.InstanceID, true).
 			Return(true, nil).
 			Times(1),
 	)

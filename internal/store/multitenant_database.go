@@ -236,11 +236,11 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 }
 
 // LockMultitenantDatabase marks the database cluster as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockMultitenantDatabase(multitenantDatabaseID, installationID string) (bool, error) {
-	return sqlStore.lockRows("MultitenantDatabase", []string{multitenantDatabaseID}, installationID)
+func (sqlStore *SQLStore) LockMultitenantDatabase(multitenantDatabaseID, instanceID string) (bool, error) {
+	return sqlStore.lockRows("MultitenantDatabase", []string{multitenantDatabaseID}, instanceID)
 }
 
 // UnlockMultitenantDatabase releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockMultitenantDatabase(multitenantDatabaseID, installationID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("MultitenantDatabase", []string{multitenantDatabaseID}, installationID, force)
+func (sqlStore *SQLStore) UnlockMultitenantDatabase(multitenantDatabaseID, instanceID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("MultitenantDatabase", []string{multitenantDatabaseID}, instanceID, force)
 }
