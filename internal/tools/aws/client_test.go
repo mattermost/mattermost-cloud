@@ -65,6 +65,7 @@ type AWSTestSuite struct {
 
 	// RDS database fixtures.
 	RDSSecretID          string
+	RDSClusterID         string
 	SecretString         string
 	SecretStringUserErr  string
 	SecretStringPassErr  string
@@ -79,6 +80,7 @@ type AWSTestSuite struct {
 	HostedZoneID         string
 	CertifcateARN        string
 	ResourceARN          string
+	RDSResourceARN       string
 	RDSAvailabilityZones []string
 
 	// Route53 fixtures
@@ -129,6 +131,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		DBPassword:           "secret",
 		RDSParamGroupCluster: "mattermost-provisioner-rds-cluster-pg",
 		RDSParamGroup:        "mattermost-provisioner-rds-pg",
+		RDSClusterID:         "rds-cluster-multitenant-09d44077df9934f96-97670d43",
 		RDSAvailabilityZones: []string{"us-east-1a", "us-east-1b", "us-east-1c"},
 		GroupID:              "id-0000000000000000",
 		SecretString:         `{"MasterUsername":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
@@ -139,6 +142,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		HostedZoneID:         "ZWI3O6O6N782C",
 		CertifcateARN:        "arn:aws:certificate::123456789012",
 		ResourceARN:          "arn:aws:kms:us-east-1:526412419611:key/10cbe864-7411-4cda-bd28-3355218d0995",
+		RDSResourceARN:       "arn:aws:rds:us-east-1:926412419614:cluster:rds-cluster-multitenant-09d44077df9934f96-97670d43",
 
 		EndpointsA: []string{"example1.mattermost.com", "example2.mattermost.com"},
 		EndpointsB: []string{"example1.mattermost.com"},

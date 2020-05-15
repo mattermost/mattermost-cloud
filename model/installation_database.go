@@ -10,22 +10,35 @@ import (
 const (
 	// InstallationDatabaseMysqlOperator is a database hosted in kubernetes via the operator.
 	InstallationDatabaseMysqlOperator = "mysql-operator"
-	// InstallationDatabaseAwsRDS is a database hosted via Amazon RDS.
-	InstallationDatabaseAwsRDS = "aws-rds"
+	// InstallationDatabaseSingleTenantRDS is a database hosted via Amazon RDS.
+	InstallationDatabaseSingleTenantRDS = "aws-rds"
+	// InstallationDatabaseMultiTenantRDS is a multitenant database hosted via Amazon RDS.
+	InstallationDatabaseMultiTenantRDS = "aws-multitenant-rds"
 )
 
 // Database is the interface for managing Mattermost databases.
 type Database interface {
 	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
-	Teardown(keepData bool, logger log.FieldLogger) error
-	Snapshot(logger log.FieldLogger) error
-	GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
+	Teardown(store InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error
+	Snapshot(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
+	GenerateDatabaseSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
 }
 
 // InstallationDatabaseStoreInterface is the interface necessary for SQLStore
 // functionality to correlate an installation to a cluster for database creation.
+// TODO(gsagula): Consider renaming this interface to InstallationDatabaseInterface. For reference,
+// https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r424597373
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
+	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
+	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
+	GetMultitenantDatabaseForInstallationID(installationID string) (*MultitenantDatabase, error)
+	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
+	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
+	CreateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
+	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
+	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	UpdateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.
@@ -44,14 +57,14 @@ func (d *MysqlOperatorDatabase) Provision(store InstallationDatabaseStoreInterfa
 }
 
 // Snapshot is not supported by the operator and it should return an error.
-func (d *MysqlOperatorDatabase) Snapshot(logger log.FieldLogger) error {
+func (d *MysqlOperatorDatabase) Snapshot(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger.Error("Snapshotting is not supported by the MySQL operator.")
 
 	return errors.New("not implemented")
 }
 
 // Teardown removes all MySQL operator resources for a given installation.
-func (d *MysqlOperatorDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
+func (d *MysqlOperatorDatabase) Teardown(store InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error {
 	logger.Info("MySQL operator database requires no teardown; skipping...")
 	if keepData {
 		logger.Warn("Database preservation was requested, but isn't currently possible with the MySQL operator")
@@ -62,7 +75,7 @@ func (d *MysqlOperatorDatabase) Teardown(keepData bool, logger log.FieldLogger) 
 
 // GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
 // accessing the MySQL operator database.
-func (d *MysqlOperatorDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
+func (d *MysqlOperatorDatabase) GenerateDatabaseSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	return nil, nil, nil
 }
 
@@ -74,5 +87,13 @@ func (i *Installation) InternalDatabase() bool {
 
 // IsSupportedDatabase returns true if the given database string is supported.
 func IsSupportedDatabase(database string) bool {
-	return database == InstallationDatabaseMysqlOperator || database == InstallationDatabaseAwsRDS
+	switch database {
+	case InstallationDatabaseSingleTenantRDS:
+	case InstallationDatabaseMultiTenantRDS:
+	case InstallationDatabaseMysqlOperator:
+	default:
+		return false
+	}
+
+	return true
 }

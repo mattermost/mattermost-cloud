@@ -15,7 +15,7 @@ func TestInternalDatabase(t *testing.T) {
 		{"", false},
 		{"unknown", false},
 		{model.InstallationDatabaseMysqlOperator, true},
-		{model.InstallationDatabaseAwsRDS, false},
+		{model.InstallationDatabaseSingleTenantRDS, false},
 	}
 
 	for _, tc := range testCases {
@@ -37,7 +37,7 @@ func TestIsSupportedDatabase(t *testing.T) {
 		{"", false},
 		{"unknown", false},
 		{model.InstallationDatabaseMysqlOperator, true},
-		{model.InstallationDatabaseAwsRDS, true},
+		{model.InstallationDatabaseSingleTenantRDS, true},
 	}
 
 	for _, tc := range testCases {

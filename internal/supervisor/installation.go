@@ -35,6 +35,16 @@ type installationStore interface {
 	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 
+	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error)
+	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error)
+	GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error)
+	GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error)
+	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
+	CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
+	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
+	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -664,7 +674,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = s.resourceUtil.GetDatabase(installation).Teardown(s.keepDatabaseData, logger)
+	err = s.resourceUtil.GetDatabase(installation).Teardown(s.store, s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")
 		return model.InstallationStateDeletionFinalCleanup

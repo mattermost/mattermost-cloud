@@ -202,7 +202,7 @@ func (a *AWSTestSuite) TestSnapshot() {
 			Times(1),
 	)
 
-	err := database.Snapshot(a.Mocks.Log.Logger)
+	err := database.Snapshot(a.Mocks.AWS.store, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -224,7 +224,7 @@ func (a *AWSTestSuite) TestSnapshotError() {
 			Times(1),
 	)
 
-	err := database.Snapshot(a.Mocks.Log.Logger)
+	err := database.Snapshot(a.Mocks.AWS.store, a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().Equal("failed to create a DB cluster snapshot: database is not stable", err.Error())
@@ -343,6 +343,6 @@ func TestDatabaseTeardown(t *testing.T) {
 		mux: &sync.Mutex{},
 	})
 
-	err := database.Teardown(false, logger)
+	err := database.Teardown(nil, false, logger)
 	require.NoError(t, err)
 }

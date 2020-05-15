@@ -106,6 +106,42 @@ func (s *mockInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*mod
 	return nil, nil
 }
 
+func (s *mockInstallationStore) AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
+	return nil
+}
+
+func (s *mockInstallationStore) LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
+	return nil
+}
+
+func (s *mockInstallationStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources

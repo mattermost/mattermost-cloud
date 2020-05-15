@@ -44,6 +44,9 @@ func (s *RDSSecret) Validate() error {
 	if s.MasterPassword == "" {
 		return errors.New("RDS master password value is empty")
 	}
+	if len(s.MasterPassword) != 40 {
+		return errors.New("RDS master password length should be equal to 40")
+	}
 
 	return nil
 }
@@ -102,7 +105,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 
 	// There is no existing secret, so we will create a new one with a strong
 	// random username and password.
-	rdsSecretPayload.MasterUsername = "mmcloud"
+	rdsSecretPayload.MasterUsername = DefaultMattermostDatabaseUsername
 	rdsSecretPayload.MasterPassword = newRandomPassword(40)
 	err = rdsSecretPayload.Validate()
 	if err != nil {
@@ -201,4 +204,19 @@ func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log
 	logger.WithField("secret-name", secretName).Debug("Secret Manager secret deleted")
 
 	return nil
+}
+
+func unmarshalSecretPayload(payload string) (*RDSSecret, error) {
+	var secret RDSSecret
+	err := json.Unmarshal([]byte(payload), &secret)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+	}
+
+	err = secret.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return &secret, nil
 }

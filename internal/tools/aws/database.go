@@ -47,7 +47,7 @@ func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, 
 }
 
 // Teardown removes all AWS resources related to a RDS database.
-func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
+func (d *RDSDatabase) Teardown(store model.InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error {
 	awsID := CloudID(d.installationID)
 
 	logger = logger.WithField("db-cluster-name", awsID)
@@ -96,7 +96,7 @@ func (d *RDSDatabase) Teardown(keepData bool, logger log.FieldLogger) error {
 }
 
 // Snapshot creates a snapshot of the RDS database.
-func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
+func (d *RDSDatabase) Snapshot(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	dbClusterID := CloudID(d.installationID)
 
 	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
@@ -120,7 +120,7 @@ func (d *RDSDatabase) Snapshot(logger log.FieldLogger) error {
 
 // GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
 // accessing the RDS database.
-func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
+func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	awsID := CloudID(d.installationID)
 
 	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)

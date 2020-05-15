@@ -166,6 +166,7 @@ var serverCmd = &cobra.Command{
 			useExistingResources,
 			resourceUtil,
 			logger,
+			sqlStore,
 		)
 
 		var multiDoer supervisor.MultiDoer
