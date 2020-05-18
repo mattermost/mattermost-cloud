@@ -156,6 +156,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 type PatchInstallationRequest struct {
 	Version       *string
 	Image         *string
+	Size          *string
 	License       *string
 	MattermostEnv EnvVarMap
 }
@@ -167,6 +168,12 @@ func (p *PatchInstallationRequest) Validate() error {
 	}
 	if p.Image != nil && len(*p.Image) == 0 {
 		return errors.New("provided image update value was blank")
+	}
+	if p.Size != nil {
+		_, err := mmv1alpha1.GetClusterSize(*p.Size)
+		if err != nil {
+			return errors.Wrap(err, "invalid size")
+		}
 	}
 	err := p.MattermostEnv.Validate()
 	if err != nil {
@@ -187,6 +194,10 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	if p.Image != nil && *p.Image != installation.Image {
 		applied = true
 		installation.Image = *p.Image
+	}
+	if p.Size != nil && *p.Size != installation.Size {
+		applied = true
+		installation.Size = *p.Size
 	}
 	if p.License != nil && *p.License != installation.License {
 		applied = true

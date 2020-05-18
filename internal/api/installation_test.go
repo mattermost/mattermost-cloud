@@ -525,8 +525,18 @@ func TestUpdateInstallation(t *testing.T) {
 	require.NoError(t, err)
 
 	ensureInstallationMatchesRequest := func(t *testing.T, installation *model.Installation, request *model.PatchInstallationRequest) {
-		require.Equal(t, *request.Version, installation.Version)
-		require.Equal(t, *request.License, installation.License)
+		if request.Version != nil {
+			require.Equal(t, *request.Version, installation.Version)
+		}
+		if request.Version != nil {
+			require.Equal(t, *request.License, installation.License)
+		}
+		if request.Size != nil {
+			require.Equal(t, *request.Size, installation.Size)
+		}
+		if request.MattermostEnv != nil {
+			require.Equal(t, request.MattermostEnv, installation.MattermostEnv)
+		}
 	}
 
 	t.Run("unknown installation", func(t *testing.T) {
@@ -650,24 +660,6 @@ func TestUpdateInstallation(t *testing.T) {
 		require.Nil(t, installationReponse)
 	})
 
-	t.Run("installation record updated", func(t *testing.T) {
-		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
-		require.NoError(t, err)
-
-		upgradeRequest := &model.PatchInstallationRequest{
-			Version: sToP(model.NewID()),
-			License: sToP(model.NewID()),
-		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
-		require.NoError(t, err)
-
-		installation1, err = client.GetInstallation(installation1.ID, nil)
-		require.NoError(t, err)
-		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
-		require.Equal(t, installationReponse, installation1)
-	})
-
 	t.Run("to version with embedded slash", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
 		err = sqlStore.UpdateInstallation(installation1)
@@ -684,6 +676,55 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		require.Equal(t, installationReponse, installation1)
+	})
+
+	t.Run("to invalid size", func(t *testing.T) {
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		upgradeRequest := &model.PatchInstallationRequest{
+			Size: sToP(model.NewID()),
+		}
+		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		require.EqualError(t, err, "failed with status code 400")
+		require.Nil(t, installationReponse)
+	})
+
+	t.Run("installation record updated", func(t *testing.T) {
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		upgradeRequest := &model.PatchInstallationRequest{
+			Version: sToP(model.NewID()),
+			License: sToP(model.NewID()),
+			Size:    sToP("miniSingleton"),
+		}
+		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID, nil)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
+		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		require.Equal(t, installationReponse, installation1)
+	})
+
+	t.Run("empty update request", func(t *testing.T) {
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		updateRequest := &model.PatchInstallationRequest{}
+		installationReponse, err := client.UpdateInstallation(installation1.ID, updateRequest)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID, nil)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateStable, installation1.State)
+		ensureInstallationMatchesRequest(t, installation1, updateRequest)
 		require.Equal(t, installationReponse, installation1)
 	})
 }

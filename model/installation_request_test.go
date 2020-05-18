@@ -249,6 +249,17 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			},
 		},
 		{
+			"size only",
+			true,
+			&model.PatchInstallationRequest{
+				Size: sToP("miniSingleton"),
+			},
+			&model.Installation{},
+			&model.Installation{
+				Size: "miniSingleton",
+			},
+		},
+		{
 			"license only",
 			true,
 			&model.PatchInstallationRequest{
@@ -279,6 +290,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			true,
 			&model.PatchInstallationRequest{
 				Version: sToP("patch-version"),
+				Size:    sToP("miniSingleton"),
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 				},
@@ -295,6 +307,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				Version: "patch-version",
 				Image:   "image1",
 				License: "license1",
+				Size:    "miniSingleton",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
 				},

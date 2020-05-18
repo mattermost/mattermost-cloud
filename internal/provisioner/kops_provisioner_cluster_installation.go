@@ -194,14 +194,43 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 
 	version := translateMattermostVersion(installation.Version)
 	if cr.Spec.Version == version {
-		logger.Infof("Cluster installation already on version %s", version)
+		logger.Debugf("Cluster installation already on version %s", version)
+	} else {
+		logger.Debugf("Cluster installation version updated from %s to %s", cr.Spec.Version, installation.Version)
+		cr.Spec.Version = version
 	}
-	cr.Spec.Version = version
 
 	if cr.Spec.Image == installation.Image {
-		logger.Infof("Cluster installation already on Image %s", installation.Image)
+		logger.Debugf("Cluster installation already on image %s", installation.Image)
+	} else {
+		logger.Debugf("Cluster installation image updated from %s to %s", cr.Spec.Image, installation.Image)
+		cr.Spec.Image = installation.Image
 	}
-	cr.Spec.Image = installation.Image
+
+	if cr.Spec.Size == installation.Size {
+		logger.Debugf("Cluster installation already on size %s", installation.Size)
+	} else {
+		// A few notes on installation sizing changes:
+		//  - Resource and replica changes are currently targeting the Mattermost
+		//    app pod only. Other pods such as those managed by the MinIO and
+		//    MySQL operator won't be updated with the current Mattermost
+		//    Operator logic. This is intentional as those apps can have replica
+		//    scaling issues.
+		//  - Resizing currently ignores the installation scheduling algorithm.
+		//    There is no good interface to determine if the new installation
+		//    size will safely fit on the cluster. This could, in theory, be done
+		//    when the size request change comes in on the API, but would require
+		//    new scheduling logic. For now, take care when resizing.
+		//    TODO: address these issue.
+		logger.Debugf("Cluster installation size updated from %s to %s", cr.Spec.Size, installation.Size)
+		sizeTemplate, err := mmv1alpha1.GetClusterSize(installation.Size)
+		if err != nil {
+			return errors.Wrap(err, "failed to get size requirements")
+		}
+		cr.Spec.Size = installation.Size
+		cr.Spec.Replicas = sizeTemplate.App.Replicas
+		cr.Spec.Resources = sizeTemplate.App.Resources
+	}
 
 	cr.Spec.MattermostLicenseSecret = ""
 	secretName := fmt.Sprintf("%s-license", name)
