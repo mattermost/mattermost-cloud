@@ -3,28 +3,28 @@ module github.com/mattermost/mattermost-cloud
 go 1.14
 
 require (
-	github.com/Masterminds/squirrel v1.2.0
-	github.com/aws/aws-sdk-go v1.29.31
+	github.com/Masterminds/squirrel v1.4.0
+	github.com/aws/aws-sdk-go v1.31.0
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/emicklei/go-restful v2.11.2+incompatible // indirect
 	github.com/go-openapi/spec v0.19.6 // indirect
 	github.com/go-openapi/swag v0.19.7 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang/mock v1.3.1
+	github.com/golang/mock v1.4.3
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.7.4
-	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
-	github.com/lib/pq v1.3.0
-	github.com/mattermost/mattermost-operator v1.3.0
+	github.com/lib/pq v1.5.2
+	github.com/mattermost/mattermost-operator v1.4.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/onsi/ginkgo v1.11.0 // indirect
+	github.com/onsi/gomega v1.8.1 // indirect
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.4.2
-	github.com/spf13/cobra v0.0.5
+	github.com/sirupsen/logrus v1.6.0
+	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200210222208-86ce3cb69678 // indirect
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	k8s.io/api v0.17.3
 	k8s.io/apiextensions-apiserver v0.17.3
