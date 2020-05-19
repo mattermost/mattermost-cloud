@@ -1,0 +1,59 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-from-other-namespaces
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - podSelector: {}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-prom
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: prometheus
+    ports:
+    - protocol: TCP
+      port: 8067 # MM
+    - protocol: TCP
+      port: 9125 # MySQL
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: external-mm-allow
+spec:
+  podSelector: {}
+  ingress:
+  - ports:
+    - port: 8065
+      protocol: TCP
+    from:
+      - namespaceSelector:
+          matchLabels:
+            name: public-nginx
+
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: operator-db-allow
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: database
+      app.kubernetes.io/name: mysql
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            name: mysql-operator
