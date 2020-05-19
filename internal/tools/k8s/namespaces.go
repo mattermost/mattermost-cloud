@@ -31,7 +31,12 @@ func (kc *KubeClient) CreateNamespaceIfDoesNotExist(namespaceName string) (*core
 		return ns, nil
 	}
 
-	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
+	nsSpec := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: namespaceName,
+		Annotations: map[string]string{
+			"sidecar.jaegertracing.io/inject": "true",
+		},
+	}}
 	return kc.Clientset.CoreV1().Namespaces().Create(nsSpec)
 }
 

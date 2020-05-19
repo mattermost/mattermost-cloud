@@ -233,10 +233,12 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	mysqlOperatorNamespace := "mysql-operator"
 	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
+	jaegerOperatorNamespace := "jaeger-operator"
 	namespaces := []string{
 		mysqlOperatorNamespace,
 		minioOperatorNamespace,
 		mattermostOperatorNamespace,
+		jaegerOperatorNamespace,
 	}
 
 	// Remove all previously-installed operator namespaces and resources.
@@ -291,6 +293,24 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}, {
 			Path:            "operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
+		}, {
+			Path:            "operator-manifests/jaeger/crds/jaegertracing.io_jaegers_crd.yaml",
+			DeployNamespace: jaegerOperatorNamespace,
+		}, {
+			Path:            "operator-manifests/jaeger/cluster_role_binding.yaml",
+			DeployNamespace: jaegerOperatorNamespace,
+		}, {
+			Path:            "operator-manifests/jaeger/cluster_role.yaml",
+			DeployNamespace: jaegerOperatorNamespace,
+		}, {
+			Path:            "operator-manifests/jaeger/role_binding.yaml",
+			DeployNamespace: jaegerOperatorNamespace,
+		}, {
+			Path:            "operator-manifests/jaeger/service_account.yaml",
+			DeployNamespace: jaegerOperatorNamespace,
+		}, {
+			Path:            "operator-manifests/jaeger/operator.yaml",
+			DeployNamespace: jaegerOperatorNamespace,
 		},
 	}
 	err = k8sClient.CreateFromFiles(files)

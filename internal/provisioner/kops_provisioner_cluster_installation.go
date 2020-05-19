@@ -64,6 +64,9 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 				"installation":         installation.ID,
 				"cluster-installation": clusterInstallation.ID,
 			},
+			Annotations: map[string]string{
+				"sidecar.jaegertracing.io/inject": "jaeger-dev",
+			},
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
 			Size:          installation.Size,
@@ -81,6 +84,9 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 				"nginx.ingress.kubernetes.io/proxy-read-timeout":       "600",
 				"nginx.ingress.kubernetes.io/proxy-max-temp-file-size": "0",
 				"nginx.ingress.kubernetes.io/ssl-redirect":             "true",
+				"nginx.ingress.kubernetes.io/enable-opentracing":       "true",
+				"sidecar.jaegertracing.io/inject":                      "jaeger-dev",
+				"jaeger-collector-host":                                "jaeger-agent.default.svc.cluster.local",
 				"nginx.ingress.kubernetes.io/configuration-snippet": `
 				  proxy_force_ranges on;
 				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -94,6 +100,18 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			},
 		},
 	}
+
+	// MORE OR LESS, THIS IS HOW WE GOING TO ADD THE ANNOTATION.
+	//
+	// if env, ok := installation.MattermostEnv["MM_SERVICESETTINGS_ENABLETRACING"]; ok {
+	// 	err := env.Validate()
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "enable enable tracing env validatin failed")
+	// 	}
+	// 	mattermostInstallation.ObjectMeta.Annotations = map[string]string{
+	// 		"sidecar.jaegertracing.io/inject": "jaeger-dev",
+	// 	}
+	// }
 
 	if installation.License != "" {
 		licenseSecretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))

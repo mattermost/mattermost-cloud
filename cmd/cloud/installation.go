@@ -22,6 +22,7 @@ func init() {
 	installationCreateCmd.Flags().String("database", model.InstallationDatabaseMysqlOperator, "The Mattermost server database type. Accepts mysql-operator, aws-rds or aws-multitenant-rds")
 	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator or aws-s3")
 	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationCreateCmd.Flags().Bool("enable-tracing", false, "When true this flag will enable jaeger tracing.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
@@ -81,6 +82,15 @@ var installationCreateCmd = &cobra.Command{
 		database, _ := command.Flags().GetString("database")
 		filestore, _ := command.Flags().GetString("filestore")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		isTracingEnabled, _ := command.Flags().GetBool("enable-tracing")
+
+		if isTracingEnabled {
+			mattermostEnv = append(mattermostEnv, []string{
+				"MM_SERVICESETTINGS_ENABLEOPENTRACING=true",
+				"JAEGER_AGENT_HOST=localhost",
+				"JAEGER_AGENT_PORT=6831",
+			}...)
+		}
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv)
 		if err != nil {
