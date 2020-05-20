@@ -188,15 +188,6 @@ func TestPatchInstallationRequestValid(t *testing.T) {
 				Image: sToP(""),
 			},
 		},
-		{
-			"invalid mattermost env",
-			true,
-			&model.PatchInstallationRequest{
-				MattermostEnv: model.EnvVarMap{
-					"key1": {Value: ""},
-				},
-			},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -271,7 +262,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			},
 		},
 		{
-			"mattermost env only",
+			"mattermost env only, no installation env",
 			true,
 			&model.PatchInstallationRequest{
 				MattermostEnv: model.EnvVarMap{
@@ -286,6 +277,64 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			},
 		},
 		{
+			"mattermost env only, patch installation env with no changes",
+			false,
+			&model.PatchInstallationRequest{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+		},
+		{
+			"mattermost env only, patch installation env with changes",
+			true,
+			&model.PatchInstallationRequest{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value2"},
+				},
+			},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+		},
+		{
+			"mattermost env only, patch installation env with new key",
+			true,
+			&model.PatchInstallationRequest{
+				MattermostEnv: model.EnvVarMap{
+					"key2": {Value: "value1"},
+				},
+			},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Installation{
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+					"key2": {Value: "value1"},
+				},
+			},
+		},
+		{
 			"complex",
 			true,
 			&model.PatchInstallationRequest{
@@ -293,6 +342,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				Size:    sToP("miniSingleton"),
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
+					"key3": {Value: "patch-value-3"},
 				},
 			},
 			&model.Installation{
@@ -301,6 +351,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				License: "license1",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "value1"},
+					"key2": {Value: "value2"},
 				},
 			},
 			&model.Installation{
@@ -310,6 +361,8 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				Size:    "miniSingleton",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: "patch-value-1"},
+					"key2": {Value: "value2"},
+					"key3": {Value: "patch-value-3"},
 				},
 			},
 		},

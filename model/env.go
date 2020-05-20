@@ -25,6 +25,11 @@ func (e *EnvVar) Validate() error {
 	return nil
 }
 
+// HasValue returns wheather the env var has any value configuration or not.
+func (e *EnvVar) HasValue() bool {
+	return len(e.Value) != 0 || e.ValueFrom != nil
+}
+
 // Validate returns wheather the env var map has valid value configuration.
 func (em *EnvVarMap) Validate() error {
 	for name, env := range *em {
@@ -35,6 +40,64 @@ func (em *EnvVarMap) Validate() error {
 	}
 
 	return nil
+}
+
+// ClearOrPatch takes a new EnvVarMap and patches changes into the existing
+// EnvVarMap with the following logic:
+//  - If the new EnvVarMap is empty, clear the existing EnvVarMap completely.
+//  - If the new EnvVarMap is not empty, apply normal patch logic.
+func (em *EnvVarMap) ClearOrPatch(new *EnvVarMap) bool {
+	if len(*new) == 0 {
+		orginalEmpty := len(*em) != 0
+		*em = nil
+
+		if orginalEmpty {
+			return true
+		}
+
+		return false
+	}
+
+	return em.Patch(*new)
+}
+
+// Patch takes a new EnvVarMap and patches changes into the existing EnvVarMap
+// with the following logic:
+//  - If the new EnvVar has the same key as an old EnvVar, update the value.
+//  - If the new EnvVar is a new key, add the EnvVar.
+//  - If the new EnvVar has no value(is blank), clear the old EnvVar if there
+//    was one.
+func (em EnvVarMap) Patch(new EnvVarMap) bool {
+	if new == nil {
+		return false
+	}
+
+	var wasPatched bool
+	for newName, newEnv := range new {
+		if oldEnv, ok := em[newName]; ok {
+			// This EnVar exists already. Delete it or update it if the patch
+			// value is different.
+			if !newEnv.HasValue() {
+				wasPatched = true
+				delete(em, newName)
+				continue
+			}
+
+			if oldEnv != newEnv {
+				wasPatched = true
+				em[newName] = newEnv
+			}
+		} else {
+			// This EnvVar doesn't exist in the original map. Add it if the
+			// patch has a value.
+			if newEnv.HasValue() {
+				wasPatched = true
+				em[newName] = newEnv
+			}
+		}
+	}
+
+	return wasPatched
 }
 
 // ToEnvList returns a list of standard corev1.EnvVars.

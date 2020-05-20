@@ -59,6 +59,211 @@ func TestEnvValid(t *testing.T) {
 	}
 }
 
+func TestEnvClearOrPatch(t *testing.T) {
+	var testCases = []struct {
+		testName          string
+		expectPatch       bool
+		old               model.EnvVarMap
+		new               model.EnvVarMap
+		expectedEnvVarMap model.EnvVarMap
+	}{
+		{
+			"nil new EnvVarMap",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			nil,
+			nil,
+		},
+		{
+			"empty old and nil new EnvVarMap",
+			false,
+			model.EnvVarMap{},
+			nil,
+			nil,
+		},
+		{
+			"empty old EnvVarMap",
+			true,
+			model.EnvVarMap{},
+			model.EnvVarMap{
+				"key1": {Value: "patch1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "patch1"},
+			},
+		},
+		{
+			"complex",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+				"key3": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key2": {Value: "patch1"},
+				"key3": {Value: "patch1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+				"key2": {Value: "patch1"},
+				"key3": {Value: "patch1"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			patched := tc.old.ClearOrPatch(&tc.new)
+			assert.Equal(t, tc.expectPatch, patched)
+			assert.Equal(t, tc.expectedEnvVarMap, tc.old)
+		})
+	}
+}
+
+func TestEnvPatch(t *testing.T) {
+	var testCases = []struct {
+		testName          string
+		expectPatch       bool
+		old               model.EnvVarMap
+		new               model.EnvVarMap
+		expectedEnvVarMap model.EnvVarMap
+	}{
+		{
+			"nil new EnvVarMap",
+			false,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			nil,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+		},
+		{
+			"no changes",
+			false,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+		},
+		{
+			"patch only old keys",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "patch1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "patch1"},
+			},
+		},
+		{
+			"patch only new keys",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key2": {Value: "patch2"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+				"key2": {Value: "patch2"},
+			},
+		},
+		{
+			"patch new and old keys",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+				"key2": {Value: "value2"},
+				"key3": {Value: "value3"},
+				"key5": {Value: "value5"},
+			},
+			model.EnvVarMap{
+				"key2": {Value: "patch2"},
+				"key3": {Value: "patch3"},
+				"key4": {Value: "patch4"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+				"key2": {Value: "patch2"},
+				"key3": {Value: "patch3"},
+				"key4": {Value: "patch4"},
+				"key5": {Value: "value5"},
+			},
+		},
+		{
+			"delete keys",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key1": {},
+			},
+			model.EnvVarMap{},
+		},
+		{
+			"delete nonexistant keys",
+			false,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key2": {},
+				"key3": {},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+		},
+		{
+			"complex",
+			true,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+				"key2": {Value: "value2"},
+				"key5": {Value: "value5"},
+				"key6": {Value: "value6"},
+				"key7": {Value: "value7"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "patch1"},
+				"key3": {Value: "patch3"},
+				"key4": {},
+				"key5": {},
+				"key7": {Value: "patch7"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "patch1"},
+				"key2": {Value: "value2"},
+				"key3": {Value: "patch3"},
+				"key6": {Value: "value6"},
+				"key7": {Value: "patch7"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			patched := tc.old.Patch(tc.new)
+			assert.Equal(t, tc.expectPatch, patched)
+			assert.Equal(t, tc.expectedEnvVarMap, tc.old)
+		})
+	}
+}
+
 func TestEnvToEnvList(t *testing.T) {
 	var testCases = []struct {
 		testName  string
