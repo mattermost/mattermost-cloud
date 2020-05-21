@@ -376,6 +376,55 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 	defer kops.Close()
 
+	switch kopsMetadata.Version {
+	case "latest", "":
+		err = kops.UpgradeCluster(kopsMetadata.Name)
+		if err != nil {
+			return err
+		}
+	default:
+		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.Version)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return err
+		}
+	}
+
+	instanceGroups, err := kops.GetInstanceGroupsJSON(kopsMetadata.Name)
+	if err != nil {
+		return err
+	}
+	for _, ig := range instanceGroups {
+		if ig.Spec.Image != kopsMetadata.AMI {
+			if len(kopsMetadata.AMI) == 0 {
+				// Setting the image value to "" leads kops to autoreplace it with
+				// the default image for that kubernetes release.
+				logger.Infof("Updating instance group '%s' image value the default kops image", ig.Metadata.Name)
+			} else {
+				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, kopsMetadata.AMI)
+			}
+
+			igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, ig.Metadata.Name)
+			if err != nil {
+				return err
+			}
+			igManifest, err = grossKopsReplaceImage(igManifest, kopsMetadata.AMI)
+			if err != nil {
+				return err
+			}
+
+			igFilename := fmt.Sprintf("%s-ig.yaml", ig.Metadata.Name)
+			err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
+			if err != nil {
+				return err
+			}
+			_, err = kops.Replace(igFilename)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
@@ -398,25 +447,6 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 
 	logger.Info("Upgrading cluster")
-
-	switch kopsMetadata.Version {
-	case "latest", "":
-		err = kops.UpgradeCluster(kopsMetadata.Name)
-		if err != nil {
-			return err
-		}
-	default:
-		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.Version)
-		err = kops.SetCluster(kopsMetadata.Name, setValue)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
-	if err != nil {
-		return err
-	}
 
 	err = terraformClient.Plan()
 	if err != nil {

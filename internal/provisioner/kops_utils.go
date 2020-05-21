@@ -193,3 +193,24 @@ func grossKopsReplaceSize(input, machineType, min, max string) (string, error) {
 
 	return input, nil
 }
+
+// grossKopsReplaceImage is a manual find-and-replace flow for updating a raw
+// kops instance group YAML manifest with a new image value.
+// TODO: remove once new `kops set instancegroup` functionality is available.
+//
+// Example Manifest:
+//
+// apiVersion: kops.k8s.io/v1alpha2
+// kind: InstanceGroup
+// spec:
+//   image: kope.io/k8s-1.15-debian-stretch-amd64-hvm-ebs-2020-01-17
+func grossKopsReplaceImage(input, image string) (string, error) {
+	imageRE := regexp.MustCompile(`  image: .*\n`)
+	imageMatches := len(imageRE.FindAllStringIndex(input, -1))
+	if imageMatches != 1 {
+		return "", errors.Errorf("expected to find one image match, but found %d", imageMatches)
+	}
+	input = imageRE.ReplaceAllString(input, fmt.Sprintf("  image: %s\n", image))
+
+	return input, nil
+}

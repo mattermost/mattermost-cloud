@@ -25,7 +25,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
 	clusterRouter.Handle("", addContext(handleUpdateClusterConfiguration)).Methods("PUT")
 	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
-	clusterRouter.Handle("/kubernetes/{version}", addContext(handleUpgradeKubernetes)).Methods("PUT")
+	clusterRouter.Handle("/kubernetes", addContext(handleUpgradeKubernetes)).Methods("PUT")
 	clusterRouter.Handle("/size/{size}", addContext(handleResizeCluster)).Methods("PUT")
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
@@ -327,16 +327,16 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 	outputJSON(c, w, cluster)
 }
 
-// handleUpgradeKubernetes responds to PUT /api/cluster/{cluster}/kubernetes/{version},
-// upgrading the cluster to the given Kubernetes version.
+// handleUpgradeKubernetes responds to PUT /api/cluster/{cluster}/kubernetes,
+// upgrading the cluster to the given Kubernetes version and AMI image.
 func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
-	version := vars["version"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	if !model.ValidClusterVersion(version) {
-		c.Logger.Warnf("unsupported kubernetes version %s", version)
+	upgradeClusterRequest, err := model.NewUpgradeClusterRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -362,8 +362,9 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if kopsMetadata.Version != version {
-		kopsMetadata.Version = version
+	if kopsMetadata.Version != upgradeClusterRequest.Version || kopsMetadata.AMI != upgradeClusterRequest.KopsAMI {
+		kopsMetadata.Version = upgradeClusterRequest.Version
+		kopsMetadata.AMI = upgradeClusterRequest.KopsAMI
 		err = cluster.SetProvisionerMetadata(kopsMetadata)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to set provisioner metadata")

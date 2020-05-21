@@ -188,25 +188,6 @@ func (c *Cmd) GetCluster(name string) (string, error) {
 	return trimmed, nil
 }
 
-// GetInstanceGroupYAML invokes kops get instancegroup, using the context of the
-// created Cmd, and returns the YAML stdout.
-func (c *Cmd) GetInstanceGroupYAML(clusterName, igName string) (string, error) {
-	stdout, _, err := c.run(
-		"get",
-		"instancegroup",
-		arg("name", clusterName),
-		arg("state", "s3://", c.s3StateStore),
-		igName,
-		arg("output", "yaml"),
-	)
-	trimmed := strings.TrimSuffix(string(stdout), "\n")
-	if err != nil {
-		return trimmed, errors.Wrap(err, "failed to invoke kops get instancegroup")
-	}
-
-	return trimmed, nil
-}
-
 // Replace invokes kops replace, using the context of the created Cmd, and
 // returns the stdout. The filename passed in is expected to be in the root temp
 // dir of this kops command.

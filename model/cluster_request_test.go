@@ -31,3 +31,25 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		})
 	}
 }
+
+func TestUpgradeClusterRequestValid(t *testing.T) {
+	var testCases = []struct {
+		testName     string
+		request      *model.UpgradeClusterRequest
+		requireError bool
+	}{
+		{"valid version", &model.UpgradeClusterRequest{Version: "1.15.2"}, false},
+		{"invalid version", &model.UpgradeClusterRequest{Version: "invalid"}, true},
+		{"blank version", &model.UpgradeClusterRequest{}, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			if tc.requireError {
+				assert.Error(t, tc.request.Validate())
+			} else {
+				assert.NoError(t, tc.request.Validate())
+			}
+		})
+	}
+}
