@@ -3,6 +3,8 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path"
 	"regexp"
 	"time"
 
@@ -157,6 +159,45 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 	return "", errors.New("failed to get NGINX load balancer endpoint")
 }
 
+func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadata, logger log.FieldLogger) error {
+	instanceGroups, err := kops.GetInstanceGroupsJSON(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to get instance groups")
+	}
+	for _, ig := range instanceGroups {
+		if ig.Spec.Image != kopsMetadata.AMI {
+			if len(kopsMetadata.AMI) == 0 {
+				// Setting the image value to "" leads kops to autoreplace it with
+				// the default image for that kubernetes release.
+				logger.Infof("Updating instance group '%s' image value the default kops image", ig.Metadata.Name)
+			} else {
+				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, kopsMetadata.AMI)
+			}
+
+			igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, ig.Metadata.Name)
+			if err != nil {
+				return errors.Wrap(err, "failed to get YAML output for instance group")
+			}
+			igManifest, err = grossKopsReplaceImage(igManifest, kopsMetadata.AMI)
+			if err != nil {
+				return errors.Wrap(err, "failed to replace image value in YAML")
+			}
+
+			igFilename := fmt.Sprintf("%s-ig.yaml", ig.Metadata.Name)
+			err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
+			if err != nil {
+				return errors.Wrap(err, "failed to write new YAML file")
+			}
+			_, err = kops.Replace(igFilename)
+			if err != nil {
+				return errors.Wrap(err, "failed to update instance group")
+			}
+		}
+	}
+
+	return nil
+}
+
 // grossKopsReplaceSize is a manual find-and-replace flow for updating a raw
 // kops instance group YAML manifest with new sizing values.
 // TODO: remove once new `kops set instancegroup` functionality is available.
@@ -190,6 +231,27 @@ func grossKopsReplaceSize(input, machineType, min, max string) (string, error) {
 		return "", errors.Errorf("expected to find one maxSize match, but found %d", maxMatches)
 	}
 	input = maxRE.ReplaceAllString(input, fmt.Sprintf("  maxSize: %s\n", max))
+
+	return input, nil
+}
+
+// grossKopsReplaceImage is a manual find-and-replace flow for updating a raw
+// kops instance group YAML manifest with a new image value.
+// TODO: remove once new `kops set instancegroup` functionality is available.
+//
+// Example Manifest:
+//
+// apiVersion: kops.k8s.io/v1alpha2
+// kind: InstanceGroup
+// spec:
+//   image: kope.io/k8s-1.15-debian-stretch-amd64-hvm-ebs-2020-01-17
+func grossKopsReplaceImage(input, image string) (string, error) {
+	imageRE := regexp.MustCompile(`  image: .*\n`)
+	imageMatches := len(imageRE.FindAllStringIndex(input, -1))
+	if imageMatches != 1 {
+		return "", errors.Errorf("expected to find one image match, but found %d", imageMatches)
+	}
+	input = imageRE.ReplaceAllString(input, fmt.Sprintf("  image: %s\n", image))
 
 	return input, nil
 }
