@@ -13,7 +13,6 @@ require (
 	github.com/golang/mock v1.3.1
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.7.4
-	github.com/jetstack/cert-manager v0.14.0
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.3.0

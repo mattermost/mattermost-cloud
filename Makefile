@@ -125,3 +125,9 @@ mocks:
 	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go
 	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go
 	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
+
+.PHONY: check-modules
+check-modules: ## Check outdated modules
+	@echo Checking outdated modules
+	$(GO) get -u github.com/psampaz/go-mod-outdated
+	$(GO) list -u -m -json all | go-mod-outdated -update -direct
