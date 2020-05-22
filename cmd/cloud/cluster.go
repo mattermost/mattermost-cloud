@@ -187,12 +187,10 @@ var clusterUpgradeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		version, _ := command.Flags().GetString("version")
-		kopsAMI, _ := command.Flags().GetString("kops-ami")
 
-		err := client.UpgradeCluster(clusterID, &model.UpgradeClusterRequest{
-			Version: version,
-			KopsAMI: kopsAMI,
+		err := client.UpgradeCluster(clusterID, &model.PatchUpgradeClusterRequest{
+			Version: getStringFlagPointer(command, "version"),
+			KopsAMI: getStringFlagPointer(command, "kops-ami"),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade cluster")

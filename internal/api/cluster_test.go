@@ -555,7 +555,7 @@ func TestUpgradeCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.UpgradeCluster(model.NewID(), &model.UpgradeClusterRequest{Version: "latest"})
+		err := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -575,7 +575,7 @@ func TestUpgradeCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: "latest"})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
@@ -585,7 +585,7 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "latest"
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: version})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -604,7 +604,7 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "latest"
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: version})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -623,7 +623,7 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "latest"
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: version})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -642,7 +642,7 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "1.14.1"
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: version})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
@@ -660,7 +660,7 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: "invalid"})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
@@ -671,9 +671,9 @@ func TestUpgradeCluster(t *testing.T) {
 
 		version := "1.14.1"
 		ami := "mattermost-os"
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{
-			Version: version,
-			KopsAMI: ami,
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
+			Version: &version,
+			KopsAMI: &ami,
 		})
 		require.NoError(t, err)
 
@@ -692,7 +692,7 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, &model.UpgradeClusterRequest{Version: "latest"})
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 }

@@ -362,9 +362,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if kopsMetadata.Version != upgradeClusterRequest.Version || kopsMetadata.AMI != upgradeClusterRequest.KopsAMI {
-		kopsMetadata.Version = upgradeClusterRequest.Version
-		kopsMetadata.AMI = upgradeClusterRequest.KopsAMI
+	if upgradeClusterRequest.Apply(kopsMetadata) {
 		err = cluster.SetProvisionerMetadata(kopsMetadata)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to set provisioner metadata")

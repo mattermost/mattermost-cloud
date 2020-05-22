@@ -238,7 +238,7 @@ func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) 
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func (c *Client) UpgradeCluster(clusterID string, request *UpgradeClusterRequest) error {
+func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRequest) error {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s/kubernetes", clusterID), request)
 	if err != nil {
 		return err
