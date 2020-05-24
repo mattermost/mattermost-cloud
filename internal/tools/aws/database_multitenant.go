@@ -2,6 +2,8 @@ package aws
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -19,6 +21,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 
+	"github.com/go-sql-driver/mysql"
 	// MySQL implementation of database/sql
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
@@ -26,6 +29,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func init() {
+	certPool := x509.NewCertPool()
+
+	if !certPool.AppendCertsFromPEM([]byte(RDSRootCertificate2019)) {
+		log.Error("failed to parse 2019 RDS root certificate")
+	}
+
+	mysql.RegisterTLSConfig("custom", &tls.Config{
+		RootCAs: certPool,
+	})
+}
 
 // SQLDatabaseManager is an interface that describes operations to query and to
 // close connection with a database. It's used mainly to implement a client that
@@ -704,7 +719,7 @@ func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, p
 }
 
 func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, username, password string) error {
-	_, err := d.db.QueryContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?", username, "%", password)
+	_, err := d.db.QueryContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ? REQUIRE SSL", username, "%", password)
 	if err != nil {
 		return errors.Wrapf(err, "creating user %s", username)
 	}

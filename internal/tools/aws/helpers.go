@@ -9,6 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
+const (
+	passwordBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+)
+
 // CloudID returns the standard ID used for AWS resource names. This ID is used
 // to correlate installations to AWS resources.
 func CloudID(id string) string {
@@ -33,8 +37,6 @@ func RDSSecretName(cloudID string) string {
 func trimTagPrefix(tag string) string {
 	return strings.TrimLeft(tag, "tag:")
 }
-
-const passwordBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 
 func newRandomPassword(length int) string {
 	rand.Seed(time.Now().UnixNano())
@@ -96,14 +98,12 @@ func MattermostRDSDatabaseName(installationID string) string {
 
 // MattermostMySQLConnString formats the connection string used for accessing a Mattermost database.
 func MattermostMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
-		username, password, endpoint, schema)
+	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=true", username, password, endpoint, schema)
 }
 
-// RDSMySQLConnString formats the connection string used for accessing a MySql RDS cluster.
+// RDSMySQLConnString formats the connection string used for accessing a MySQL RDS cluster.
 func RDSMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
-		username, password, endpoint, schema)
+	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=custom", username, password, endpoint, schema)
 }
 
 // RDSMultitenantClusterSecretDescription formats the text used for the describing a multitenant database's secret key.

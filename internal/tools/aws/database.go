@@ -18,8 +18,6 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
-const connStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
-
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
 	client         *Client
@@ -140,13 +138,14 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
+	databaseConnString := MattermostMySQLConnString("mattermost", *result.DBClusters[0].Endpoint, rdsSecret.MasterUsername, rdsSecret.MasterPassword)
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": fmt.Sprintf(connStringTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint),
+			"DB_CONNECTION_STRING": databaseConnString,
 		},
 	}
 
