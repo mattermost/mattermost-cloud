@@ -376,6 +376,25 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 	defer kops.Close()
 
+	switch kopsMetadata.Version {
+	case "latest", "":
+		err = kops.UpgradeCluster(kopsMetadata.Name)
+		if err != nil {
+			return err
+		}
+	default:
+		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.Version)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = updateKopsInstanceGroupAMIs(kops, kopsMetadata, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update kops instance group AMIs")
+	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
@@ -398,25 +417,6 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 
 	logger.Info("Upgrading cluster")
-
-	switch kopsMetadata.Version {
-	case "latest", "":
-		err = kops.UpgradeCluster(kopsMetadata.Name)
-		if err != nil {
-			return err
-		}
-	default:
-		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.Version)
-		err = kops.SetCluster(kopsMetadata.Name, setValue)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
-	if err != nil {
-		return err
-	}
 
 	err = terraformClient.Plan()
 	if err != nil {

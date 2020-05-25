@@ -118,6 +118,53 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 	return &updateClusterRequest, nil
 }
 
+// PatchUpgradeClusterRequest specifies the parameters upgrading a cluster.
+type PatchUpgradeClusterRequest struct {
+	Version *string `json:"version,omitempty"`
+	KopsAMI *string `json:"kops-ami,omitempty"`
+}
+
+// Validate validates the values of a cluster upgrade request.
+func (p *PatchUpgradeClusterRequest) Validate() error {
+	if p.Version != nil && !ValidClusterVersion(*p.Version) {
+		return errors.Errorf("unsupported cluster version %s", *p.Version)
+	}
+
+	return nil
+}
+
+// Apply applies the patch to the given installation.
+func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
+	var applied bool
+
+	if p.Version != nil && *p.Version != metadata.Version {
+		applied = true
+		metadata.Version = *p.Version
+	}
+	if p.KopsAMI != nil && *p.KopsAMI != metadata.AMI {
+		applied = true
+		metadata.AMI = *p.KopsAMI
+	}
+
+	return applied
+}
+
+// NewUpgradeClusterRequestFromReader will create an UpgradeClusterRequest from an io.Reader with JSON data.
+func NewUpgradeClusterRequestFromReader(reader io.Reader) (*PatchUpgradeClusterRequest, error) {
+	var upgradeClusterRequest PatchUpgradeClusterRequest
+	err := json.NewDecoder(reader).Decode(&upgradeClusterRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode upgrade cluster request")
+	}
+
+	err = upgradeClusterRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "upgrade cluster request failed validation")
+	}
+
+	return &upgradeClusterRequest, nil
+}
+
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`

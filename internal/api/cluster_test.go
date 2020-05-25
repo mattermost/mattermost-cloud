@@ -555,7 +555,7 @@ func TestUpgradeCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.UpgradeCluster(model.NewID(), "latest")
+		err := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -575,7 +575,7 @@ func TestUpgradeCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.UpgradeCluster(cluster1.ID, "latest")
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
@@ -584,12 +584,18 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, "latest")
+		version := "latest"
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+
+		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
+		require.NoError(t, err)
+		assert.Equal(t, version, metadata.Version)
+		assert.Empty(t, metadata.AMI)
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
@@ -597,12 +603,18 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, "latest")
+		version := "latest"
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+
+		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
+		require.NoError(t, err)
+		assert.Equal(t, version, metadata.Version)
+		assert.Empty(t, metadata.AMI)
 	})
 
 	t.Run("while stable, to latest", func(t *testing.T) {
@@ -610,12 +622,18 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, "latest")
+		version := "latest"
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+
+		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
+		require.NoError(t, err)
+		assert.Equal(t, version, metadata.Version)
+		assert.Empty(t, metadata.AMI)
 	})
 
 	t.Run("while stable, to valid version", func(t *testing.T) {
@@ -623,12 +641,18 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, "1.14.1")
+		version := "1.14.1"
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+
+		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
+		require.NoError(t, err)
+		assert.Equal(t, version, metadata.Version)
+		assert.Empty(t, metadata.AMI)
 	})
 
 	t.Run("while stable, to invalid version", func(t *testing.T) {
@@ -636,8 +660,31 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, "invalid")
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
 		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("while stable, to valid version and new AMI", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		version := "1.14.1"
+		ami := "mattermost-os"
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
+			Version: &version,
+			KopsAMI: &ami,
+		})
+		require.NoError(t, err)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+
+		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
+		require.NoError(t, err)
+		assert.Equal(t, version, metadata.Version)
+		assert.Equal(t, ami, metadata.AMI)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
@@ -645,7 +692,7 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, "latest")
+		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 }

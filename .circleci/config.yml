@@ -24,6 +24,15 @@ jobs:
     - run: make check-style
     - *save_cache
 
+  check-modules:
+    executor:
+      name: default
+    steps:
+    - checkout
+    - *restore_cache
+    - run: make check-modules
+    - *save_cache
+
   test-sqlite:
     executor:
       name: default
@@ -126,6 +135,7 @@ workflows:
   ci-build:
     jobs:
     - check-style
+    - check-modules
     - test-sqlite
     - test-postgres
     - push-docker-pr:
@@ -141,6 +151,11 @@ workflows:
   master-build:
     jobs:
     - check-style:
+        filters:
+          branches:
+            only:
+            - master
+    - check-modules:
         filters:
           branches:
             only:
@@ -168,6 +183,12 @@ workflows:
   tag-builds:
     jobs:
     - check-style:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
+    - check-modules:
         filters:
           tags:
             only: /^v.*/

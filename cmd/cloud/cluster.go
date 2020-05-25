@@ -38,8 +38,10 @@ func init() {
 
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
 	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
+	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Leave empty for the default kops image.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 	clusterUpgradeCmd.MarkFlagRequired("version")
+	clusterUpgradeCmd.MarkFlagRequired("kops-ami")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
 	clusterResizeCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
@@ -185,9 +187,11 @@ var clusterUpgradeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		version, _ := command.Flags().GetString("version")
 
-		err := client.UpgradeCluster(clusterID, version)
+		err := client.UpgradeCluster(clusterID, &model.PatchUpgradeClusterRequest{
+			Version: getStringFlagPointer(command, "version"),
+			KopsAMI: getStringFlagPointer(command, "kops-ami"),
+		})
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade cluster")
 		}
