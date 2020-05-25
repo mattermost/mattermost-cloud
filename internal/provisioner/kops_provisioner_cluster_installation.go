@@ -129,19 +129,18 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 	certificateFiles := make(map[string]string, 0)
 	if installation.Database == model.InstallationDatabaseSingleTenantRDS || installation.Database == model.InstallationDatabaseMultiTenantRDS {
 		certificateFiles["rds-ca-2019-root.pem"] = aws.RDSRootCertificate2019
+		certificateFiles["rds-combined-ca-bundle.pem"] = aws.RDSCombinedCABundle
 	}
+
+	mattermostInstallation.Spec.SecretNameCertificates = "ca-certificate-files"
 
 	_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			// TODO(gsagula): replace "ca-certificate-files" with the operator's constant value (CertificateFilesSecretName)
-			// when changes get merged in.
 			Name: "ca-certificate-files",
 		},
 		StringData: certificateFiles,
 	})
 	if err != nil {
-		// TODO(gsagula): replace "ca-certificate-files" with the operator's constant value (CertificateFilesSecretName)
-		// when changes get merged in.
 		return errors.Wrapf(err, "failed to create a secret for the root certificate files %s/%s", clusterInstallation.Namespace, "ca-certificate-files")
 	}
 
