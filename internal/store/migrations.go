@@ -914,7 +914,7 @@ var migrations = []migration{
 	}},
 	{semver.MustParse("0.17.0"), semver.MustParse("0.18.0"), func(e execer) error {
 		_, err := e.Exec(`
-			ALTER TABLE "MultitenantDatabase"
+			ALTER TABLE MultitenantDatabase
 			ADD COLUMN VpcID TEXT NULL;
 		`)
 		if err != nil {
