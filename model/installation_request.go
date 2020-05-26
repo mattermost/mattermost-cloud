@@ -202,13 +202,8 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 		installation.License = *p.License
 	}
 	if p.MattermostEnv != nil {
-		if installation.MattermostEnv != nil {
-			if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
-				applied = true
-			}
-		} else {
+		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
-			installation.MattermostEnv = p.MattermostEnv
 		}
 	}
 

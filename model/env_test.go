@@ -68,6 +68,24 @@ func TestEnvClearOrPatch(t *testing.T) {
 		expectedEnvVarMap model.EnvVarMap
 	}{
 		{
+			"nil old and new EnvVarMap",
+			false,
+			nil,
+			nil,
+			nil,
+		},
+		{
+			"nil old EnvVarMap",
+			true,
+			nil,
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+			model.EnvVarMap{
+				"key1": {Value: "value1"},
+			},
+		},
+		{
 			"nil new EnvVarMap",
 			true,
 			model.EnvVarMap{
@@ -215,7 +233,7 @@ func TestEnvPatch(t *testing.T) {
 			model.EnvVarMap{},
 		},
 		{
-			"delete nonexistant keys",
+			"delete nonexistent keys",
 			false,
 			model.EnvVarMap{
 				"key1": {Value: "value1"},

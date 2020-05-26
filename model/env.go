@@ -47,15 +47,20 @@ func (em *EnvVarMap) Validate() error {
 //  - If the new EnvVarMap is empty, clear the existing EnvVarMap completely.
 //  - If the new EnvVarMap is not empty, apply normal patch logic.
 func (em *EnvVarMap) ClearOrPatch(new *EnvVarMap) bool {
+	if *em == nil {
+		if len(*new) == 0 {
+			return false
+		}
+
+		*em = *new
+		return true
+	}
+
 	if len(*new) == 0 {
 		orginalEmpty := len(*em) != 0
 		*em = nil
 
-		if orginalEmpty {
-			return true
-		}
-
-		return false
+		return orginalEmpty
 	}
 
 	return em.Patch(*new)

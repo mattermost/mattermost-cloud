@@ -95,13 +95,8 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 		group.MaxRolling = *p.MaxRolling
 	}
 	if p.MattermostEnv != nil {
-		if group.MattermostEnv != nil {
-			if group.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
-				applied = true
-			}
-		} else {
+		if group.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
-			group.MattermostEnv = p.MattermostEnv
 		}
 	}
 
