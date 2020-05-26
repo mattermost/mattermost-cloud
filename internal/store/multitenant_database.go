@@ -14,7 +14,7 @@ var multitenantDatabaseSelect sq.SelectBuilder
 
 func init() {
 	multitenantDatabaseSelect = sq.
-		Select("ID", "RawInstallationIDs", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt").
+		Select("ID", "VpcID", "RawInstallationIDs", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt").
 		From("MultitenantDatabase")
 }
 
@@ -51,6 +51,11 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 		if len(filter.LockerID) > 0 {
 			builder = builder.
 				Where(sq.Eq{"LockAcquiredBy": filter.LockerID})
+		}
+
+		if len(filter.VpcID) > 0 {
+			builder = builder.
+				Where(sq.Eq{"VpcID": filter.VpcID})
 		}
 	}
 
@@ -99,6 +104,7 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 		Insert("MultitenantDatabase").
 		SetMap(map[string]interface{}{
 			"ID":                 multitenantDatabase.ID,
+			"VpcID":              multitenantDatabase.VpcID,
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 			"LockAcquiredBy":     nil,
 			"LockAcquiredAt":     0,
@@ -137,6 +143,7 @@ func (sqlStore *SQLStore) UpdateMultitenantDatabase(multitenantDatabase *model.M
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 		}).
 		Where(sq.Eq{"ID": multitenantDatabase.ID}).
+		Where(sq.Eq{"VpcID": multitenantDatabase.VpcID}).
 		Where(sq.Eq{"LockAcquiredBy": *multitenantDatabase.LockAcquiredBy}),
 	)
 	if err != nil {
