@@ -140,6 +140,17 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 				},
 			}, nil),
 
+		a.Mocks.API.RDS.EXPECT().
+			DescribeDBClusterEndpoints(gomock.Any()).
+			Return(&rds.DescribeDBClusterEndpointsOutput{
+				DBClusterEndpoints: []*rds.DBClusterEndpoint{
+					{
+						Status: aws.String("available"),
+					},
+				},
+			}, nil).
+			Times(1),
+
 		// Create the multitenant database.
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
 			CreateMultitenantDatabase(gomock.Any()).

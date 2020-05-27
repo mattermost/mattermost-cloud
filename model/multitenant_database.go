@@ -9,6 +9,7 @@ import (
 // MultitenantDatabase represents a cluster that manages multiple databases.
 type MultitenantDatabase struct {
 	ID                 string
+	VpcID              string
 	RawInstallationIDs []byte `json:",omitempty"`
 	LockAcquiredBy     *string
 	CreateAt           int64
@@ -76,11 +77,12 @@ func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
 	}
 }
 
-// MultitenantDatabaseFilter filters results based on a specific installation ID and a number of
+// MultitenantDatabaseFilter filters results based on a specific installation ID, Vpc ID and a number of
 // installation's limit.
 type MultitenantDatabaseFilter struct {
 	LockerID                string
 	InstallationID          string
+	VpcID                   string
 	NumOfInstallationsLimit int
 	Page                    int
 	PerPage                 int
