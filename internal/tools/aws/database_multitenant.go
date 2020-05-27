@@ -300,7 +300,7 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 		}
 	}
 
-	logger.Infof("Could not find any multitenant database with less than %d installations in the datastore. Fetching all available resources in AWS.", DefaultRDSMultitenantDatabaseCountLimit)
+	logger.Infof("Could not find any multitenant database with less than %d installations in the datastore. Fetching all available resources from AWS.", DefaultRDSMultitenantDatabaseCountLimit)
 
 	if len(multitenantDatabases) == 0 {
 		multitenantDatabases, err = d.getMultitenantDatabasesFromResourceTags(vpcID, store, logger)
@@ -311,7 +311,7 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 
 	lockedRDSCluster, err := d.validateAndLockRDSCluster(multitenantDatabases, store, logger)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not find a multitenant RDS cluster available in vpc %s", vpcID)
+		return nil, errors.Wrapf(err, "could not find a multitenant RDS cluster available in vpc ID %s", vpcID)
 	}
 
 	return lockedRDSCluster, nil
@@ -323,6 +323,8 @@ func (d *RDSMultitenantDatabase) multitenantDatabaseToRDSClusterLock(multitenant
 		return nil, errors.Wrapf(err, "failed to lock multitenant database ID %s", multitenantDatabaseID)
 	}
 
+	// Since there is time between finding a RDS cluster and locking it, this method ensures that
+	// no modifications where made to the multitenant database prior to the lock.
 	err = d.validateMultitenantDatabaseInstallations(multitenantDatabaseID, databaseInstallationIDs, store)
 	if err != nil {
 		unlockFn(logger)
@@ -337,7 +339,7 @@ func (d *RDSMultitenantDatabase) multitenantDatabaseToRDSClusterLock(multitenant
 
 	if *rdsCluster.Status != DefaultRDSStatusAvailable {
 		unlockFn(logger)
-		return nil, errors.Wrapf(err, "multitenant RDS cluster ID %s is not available (status: %s)", multitenantDatabaseID, *rdsCluster.Status)
+		return nil, errors.Errorf("multitenant RDS cluster ID %s is not available (status: %s)", multitenantDatabaseID, *rdsCluster.Status)
 	}
 
 	rdsClusterOutput := rdsClusterOutput{
@@ -407,9 +409,18 @@ func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID s
 				VpcID: vpcID,
 			}
 
-			err := store.CreateMultitenantDatabase(&multitenantDatabase)
+			ready, err := d.isRDSClusterEndpointsReady(*rdsClusterID)
 			if err != nil {
-				logger.WithError(err).Errorf("Failed to create a multitenant database for installation ID %s. Skipping RDS cluster ID %s", d.installationID, *rdsClusterID)
+				logger.WithError(err).Errorf("Failed to check RDS cluster status. Skipping RDS cluster ID %s", *rdsClusterID)
+				continue
+			}
+			if !ready {
+				continue
+			}
+
+			err = store.CreateMultitenantDatabase(&multitenantDatabase)
+			if err != nil {
+				logger.WithError(err).Errorf("Failed to create a multitenant database. Skipping RDS cluster ID %s", *rdsClusterID)
 				continue
 			}
 
@@ -696,6 +707,23 @@ func (d *RDSMultitenantDatabase) updateTagCounterAndRemoveInstallationID(dbClust
 	}
 
 	return nil
+}
+
+func (d *RDSMultitenantDatabase) isRDSClusterEndpointsReady(rdsClusterID string) (bool, error) {
+	output, err := d.client.service.rds.DescribeDBClusterEndpoints(&rds.DescribeDBClusterEndpointsInput{
+		DBClusterIdentifier: aws.String(rdsClusterID),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check rds cluster endpoint")
+	}
+
+	for _, endpoint := range output.DBClusterEndpoints {
+		if *endpoint.Status != DefaultRDSStatusAvailable {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, password string) (func(logger log.FieldLogger), error) {

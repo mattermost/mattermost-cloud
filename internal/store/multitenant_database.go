@@ -143,7 +143,6 @@ func (sqlStore *SQLStore) UpdateMultitenantDatabase(multitenantDatabase *model.M
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 		}).
 		Where(sq.Eq{"ID": multitenantDatabase.ID}).
-		Where(sq.Eq{"VpcID": multitenantDatabase.VpcID}).
 		Where(sq.Eq{"LockAcquiredBy": *multitenantDatabase.LockAcquiredBy}),
 	)
 	if err != nil {
