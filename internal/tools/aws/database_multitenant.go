@@ -235,7 +235,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 	}
 	logger.Debugf("Multitenant database ID %s counter value updated to %d", *lockedRDSCluster.cluster.DBClusterIdentifier, len(databaseInstallationIDs))
 
-	logger.Info("Installation %s assigned to multitenant database %s", d.installationID, *lockedRDSCluster.cluster.DBClusterIdentifier)
+	logger.Infof("Installation %s assigned to multitenant database %s", d.installationID, *lockedRDSCluster.cluster.DBClusterIdentifier)
 
 	return nil
 }
