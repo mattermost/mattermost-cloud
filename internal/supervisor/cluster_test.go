@@ -153,4 +153,29 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			require.Equal(t, tc.ExpectedState, cluster.State)
 		})
 	}
+
+	t.Run("state has changed since cluster was selected to be worked on", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
+
+		cluster := &model.Cluster{
+			Provider: model.ProviderAWS,
+			Size:     model.SizeAlef500,
+			State:    model.ClusterStateDeletionRequested,
+		}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		// The stored cluster is ClusterStateDeletionRequested, so we will pass
+		// in a cluster with state of ClusterStateCreationRequested to simulate
+		// stale state.
+		cluster.State = model.ClusterStateCreationRequested
+
+		supervisor.Supervise(cluster)
+
+		cluster, err = sqlStore.GetCluster(cluster.ID)
+		require.NoError(t, err)
+		require.Equal(t, model.ClusterStateDeletionRequested, cluster.State)
+	})
 }
