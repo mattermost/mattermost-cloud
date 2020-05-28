@@ -86,11 +86,26 @@ func (s *ClusterInstallationSupervisor) Supervise(clusterInstallation *model.Clu
 	}
 	defer lock.Unlock()
 
+	// Before working on the cluster installation, it is crucial that we ensure
+	// that it was not updated to a new state by another provisioning server.
+	originalState := clusterInstallation.State
+	clusterInstallation, err := s.store.GetClusterInstallation(clusterInstallation.ID)
+	if err != nil {
+		logger.WithError(err).Errorf("Failed to get refreshed cluster installation")
+		return
+	}
+	if clusterInstallation.State != originalState {
+		logger.WithField("oldClusterInstallationState", originalState).
+			WithField("newClusterInstallationState", clusterInstallation.State).
+			Warn("Another provisioner has worked on this cluster installation; skipping...")
+		return
+	}
+
 	logger.Debugf("Supervising cluster installation in state %s", clusterInstallation.State)
 
 	newState := s.transitionClusterInstallation(clusterInstallation, logger)
 
-	clusterInstallation, err := s.store.GetClusterInstallation(clusterInstallation.ID)
+	clusterInstallation, err = s.store.GetClusterInstallation(clusterInstallation.ID)
 	if err != nil {
 		logger.WithError(err).Warnf("failed to get cluster installation and thus persist state %s", newState)
 		return

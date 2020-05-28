@@ -83,11 +83,26 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 	}
 	defer lock.Unlock()
 
+	// Before working on the cluster, it is crucial that we ensure that it was
+	// not updated to a new state by another provisioning server.
+	originalState := cluster.State
+	cluster, err := s.store.GetCluster(cluster.ID)
+	if err != nil {
+		logger.WithError(err).Errorf("Failed to get refreshed cluster")
+		return
+	}
+	if cluster.State != originalState {
+		logger.WithField("oldClusterState", originalState).
+			WithField("newClusterState", cluster.State).
+			Warn("Another provisioner has worked on this cluster; skipping...")
+		return
+	}
+
 	logger.Debugf("Supervising cluster in state %s", cluster.State)
 
 	newState := s.transitionCluster(cluster, logger)
 
-	cluster, err := s.store.GetCluster(cluster.ID)
+	cluster, err = s.store.GetCluster(cluster.ID)
 	if err != nil {
 		logger.WithError(err).Warnf("failed to get cluster and thus persist state %s", newState)
 		return
