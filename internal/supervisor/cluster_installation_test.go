@@ -240,4 +240,35 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("state has changed since cluster installation was selected to be worked on", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+
+		cluster := &model.Cluster{}
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		installation := &model.Installation{}
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateReconciling,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		// The stored cluster installation is ClusterInstallationStateReconciling,
+		// so we will pass in a cluster installation with state of
+		// ClusterInstallationStateCreationRequested to simulate stale state.
+		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
+
+		supervisor.Supervise(clusterInstallation)
+		expectClusterInstallationState(t, sqlStore, clusterInstallation, model.ClusterInstallationStateReconciling)
+	})
 }
