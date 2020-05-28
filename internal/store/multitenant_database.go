@@ -164,7 +164,7 @@ func (sqlStore *SQLStore) UpdateMultitenantDatabase(multitenantDatabase *model.M
 func (sqlStore *SQLStore) AddMultitenantDatabaseInstallationID(multitenantID, installationID string) (model.MultitenantDatabaseInstallationIDs, error) {
 	multitenantDatabase, err := sqlStore.GetMultitenantDatabase(multitenantID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get installations from database")
+		return nil, errors.Wrapf(err, "failed to get multitenant database ID %s", multitenantID)
 	}
 	if multitenantDatabase == nil {
 		return nil, errors.Errorf("unable to find multitenant database ID %s", multitenantID)
@@ -172,7 +172,7 @@ func (sqlStore *SQLStore) AddMultitenantDatabaseInstallationID(multitenantID, in
 
 	multitenantDatabaseInstallationIDs, err := multitenantDatabase.GetInstallationIDs()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get installations from database")
+		return nil, errors.Wrapf(err, "failed to get installations for multitenant database ID %s", multitenantID)
 	}
 
 	if !multitenantDatabaseInstallationIDs.Contains(installationID) {
@@ -180,12 +180,12 @@ func (sqlStore *SQLStore) AddMultitenantDatabaseInstallationID(multitenantID, in
 
 		err = multitenantDatabase.SetInstallationIDs(multitenantDatabaseInstallationIDs)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get installations from database")
+			return nil, errors.Wrapf(err, "failed to set installation IDs in multitenant database ID %s", multitenantID)
 		}
 
 		err = sqlStore.UpdateMultitenantDatabase(multitenantDatabase)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get installations from database")
+			return nil, errors.Wrapf(err, "failed to update installations for multitenant database ID %s", multitenantID)
 		}
 	}
 
@@ -233,7 +233,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 		PerPage:                 model.AllPerPage,
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to get multitenant database for installation ID %s in sql store", installationID)
+		return nil, errors.Wrapf(err, "failed to retrieve a multitenant database for the installation ID %s", installationID)
 	}
 	if len(multitenantDatabases) != 1 {
 		return nil, errors.Errorf("expected exactly one multitenant database per installation (found %d)", len(multitenantDatabases))
