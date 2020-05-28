@@ -253,7 +253,7 @@ func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string, logger lo
 }
 
 func TestInstallationSupervisorDo(t *testing.T) {
-	t.Run("no clusters pending work", func(t *testing.T) {
+	t.Run("no installations pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
@@ -264,7 +264,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		require.Equal(t, 0, mockStore.UpdateInstallationCalls)
 	})
 
-	t.Run("mock cluster creation", func(t *testing.T) {
+	t.Run("mock installation creation", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
@@ -359,6 +359,39 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
+	})
+
+	t.Run("state has changed since installation was selected to be worked on", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, false, false, &utils.ResourceUtil{}, logger)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationInProgress,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		// The stored installation is InstallationStateCreationInProgress, so we
+		// will pass in an installation with state of
+		// InstallationStateCreationRequested to simulate stale state.
+		installation.State = model.InstallationStateCreationRequested
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 	})
 
 	t.Run("creation requested, cluster installations not yet created, no clusters", func(t *testing.T) {

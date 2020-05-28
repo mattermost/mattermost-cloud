@@ -164,7 +164,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 		Secret: installationSecretName,
 	}
 
-	logger.Infof("Finished to set up spec and secret for multitenant database name %s", installationDatabaseName)
+	logger.Debug("Cluster installation configured to use an AWS RDS Multitenant Database")
 
 	return databaseSpec, databaseSecret, nil
 }
@@ -233,8 +233,9 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 	if err != nil {
 		return errors.Wrapf(err, "failed to update tag:counter in RDS cluster ID %s", *lockedRDSCluster.cluster.DBClusterIdentifier)
 	}
+	logger.Debugf("Multitenant database ID %s counter value updated to %d", *lockedRDSCluster.cluster.DBClusterIdentifier, len(databaseInstallationIDs))
 
-	logger.Infof("Multitenant database ID %s has %d installations", *lockedRDSCluster.cluster.DBClusterIdentifier, len(databaseInstallationIDs))
+	logger.Infof("Installation %s assigned to multitenant database %s", d.installationID, *lockedRDSCluster.cluster.DBClusterIdentifier)
 
 	return nil
 }
@@ -287,9 +288,9 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 		return nil, errors.Wrapf(err, "unable get multitenant database for installation ID %s", d.installationID)
 	}
 
-	logger.Infof("Could not find a multitenant database for installation ID %s. Fetching all available resources in the datastore.", d.installationID)
-
 	if len(multitenantDatabases) == 0 {
+		logger.Infof("Installation %s is not yet assigned to a multitenant database; fetching available RDS clusters from datastore", d.installationID)
+
 		multitenantDatabases, err = store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 			NumOfInstallationsLimit: DefaultRDSMultitenantDatabaseCountLimit,
 			VpcID:                   vpcID,
@@ -300,9 +301,9 @@ func (d *RDSMultitenantDatabase) findRDSClusterForInstallation(vpcID string, sto
 		}
 	}
 
-	logger.Infof("Could not find any multitenant database with less than %d installations in the datastore. Fetching all available resources from AWS.", DefaultRDSMultitenantDatabaseCountLimit)
-
 	if len(multitenantDatabases) == 0 {
+		logger.Infof("No multitenant databases with less than %d installations found in the datastore; fetching all available resources from AWS.", DefaultRDSMultitenantDatabaseCountLimit)
+
 		multitenantDatabases, err = d.getMultitenantDatabasesFromResourceTags(vpcID, store, logger)
 		if err != nil {
 			return nil, err
