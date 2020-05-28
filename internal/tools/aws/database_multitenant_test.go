@@ -211,6 +211,6 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 
 	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("unable to create schema in multitenant RDS cluster ID rds-cluster-multitenant-09d44077df9934f96-97670d43: "+
-		"creating database name cloud_id000000000000000000000000a: dial tcp: lookup aws.rds.com/mattermost: no such host", err.Error())
+	a.Assert().Equal("failed to provision multitenant database: failed to create database "+
+		"cloud_id000000000000000000000000a: dial tcp: lookup aws.rds.com/mattermost: no such host", err.Error())
 }
