@@ -175,10 +175,8 @@ func (p *PatchInstallationRequest) Validate() error {
 			return errors.Wrap(err, "invalid size")
 		}
 	}
-	err := p.MattermostEnv.Validate()
-	if err != nil {
-		return errors.Wrap(err, "invalid env var settings")
-	}
+	// EnvVarMap validation is skipped as all configurations of this now imply
+	// a specific patch action should be taken.
 
 	return nil
 }
@@ -204,8 +202,9 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 		installation.License = *p.License
 	}
 	if p.MattermostEnv != nil {
-		applied = true
-		installation.MattermostEnv = p.MattermostEnv
+		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
+			applied = true
+		}
 	}
 
 	return applied

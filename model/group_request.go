@@ -70,22 +70,6 @@ type PatchGroupRequest struct {
 	MattermostEnv EnvVarMap
 }
 
-// NewPatchGroupRequestFromReader will create a PatchGroupRequest from an io.Reader with JSON data.
-func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error) {
-	var patchGroupRequest PatchGroupRequest
-	err := json.NewDecoder(reader).Decode(&patchGroupRequest)
-	if err != nil && err != io.EOF {
-		return nil, errors.Wrap(err, "failed to decode patch group request")
-	}
-
-	err = patchGroupRequest.Validate()
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid patch group request")
-	}
-
-	return &patchGroupRequest, nil
-}
-
 // Apply applies the patch to the given group.
 func (p *PatchGroupRequest) Apply(group *Group) bool {
 	var applied bool
@@ -111,8 +95,9 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 		group.MaxRolling = *p.MaxRolling
 	}
 	if p.MattermostEnv != nil {
-		applied = true
-		group.MattermostEnv = p.MattermostEnv
+		if group.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
+			applied = true
+		}
 	}
 
 	return applied
@@ -126,12 +111,26 @@ func (p *PatchGroupRequest) Validate() error {
 	if p.MaxRolling != nil && *p.MaxRolling < 1 {
 		return errors.New("max rolling must be 1 or greater")
 	}
-	err := p.MattermostEnv.Validate()
-	if err != nil {
-		return errors.Wrap(err, "invalid env var settings")
-	}
+	// EnvVarMap validation is skipped as all configurations of this now imply
+	// a specific patch action should be taken.
 
 	return nil
+}
+
+// NewPatchGroupRequestFromReader will create a PatchGroupRequest from an io.Reader with JSON data.
+func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error) {
+	var patchGroupRequest PatchGroupRequest
+	err := json.NewDecoder(reader).Decode(&patchGroupRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode patch group request")
+	}
+
+	err = patchGroupRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid patch group request")
+	}
+
+	return &patchGroupRequest, nil
 }
 
 // GetGroupsRequest describes the parameters to request a list of groups.

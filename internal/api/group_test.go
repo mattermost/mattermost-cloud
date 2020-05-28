@@ -334,8 +334,8 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, "name2", group1.Name)
 		require.Equal(t, "description2", group1.Description)
 		require.Equal(t, "version2", group1.Version)
-		require.NotEqual(t, group1.MattermostEnv, mattermostEnvFooBar)
-		require.Equal(t, group1.MattermostEnv, mattermostEnvBarBaz)
+		require.True(t, mattermostEnvFooBar.ClearOrPatch(&mattermostEnvBarBaz))
+		require.Equal(t, group1.MattermostEnv, mattermostEnvFooBar)
 		require.Equal(t, updateResponseGroup, group1)
 	})
 }
