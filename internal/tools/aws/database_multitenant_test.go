@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -27,28 +28,138 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 	}
 
 	gomock.InOrder(
-		a.ExpectGetMultitenantDatabases(a.InstallationA.ID, a.VPCa, model.NoInstallationsLimit).
+		a.Mocks.Log.Logger.EXPECT().
+			WithField("multitenant-rds-database", MattermostRDSDatabaseName(a.InstallationA.ID)).
+			Return(testlib.NewLoggerEntry()).
+			Times(1),
+
+		// Get cluster installations from data store.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
+			GetClusterInstallations(gomock.Any()).
+			Do(func(input *model.ClusterInstallationFilter) {
+				a.Assert().Equal(input.InstallationID, a.InstallationA.ID)
+			}).
+			Return([]*model.ClusterInstallation{{ID: a.ClusterA.ID}}, nil).
+			Times(1),
+
+		// Find the VPC which the installation belongs to.
+		a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any()).
+			Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{{VpcId: &a.VPCa}}}, nil).
+			Times(1),
+
+		// Get multitenant databases from the datastore to check if any belongs to the installation ID.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
+			GetMultitenantDatabases(gomock.Any()).
+			Do(func(input *model.MultitenantDatabaseFilter) {
+				a.Assert().Equal(input.InstallationID, a.InstallationA.ID)
+				a.Assert().Equal(model.NoInstallationsLimit, input.NumOfInstallationsLimit)
+				a.Assert().Equal(input.PerPage, model.AllPerPage)
+			}).
 			Return(make([]*model.MultitenantDatabase, 0), nil),
 
-		a.Mocks.Log.Logger.
-			EXPECT().
-			Infof("Installation %s is not yet assigned to a multitenant database; fetching available RDS clusters from datastore", a.InstallationA.ID).
-			Times(1),
-
-		a.ExpectGetMultitenantDatabases("", a.VPCa, DefaultRDSMultitenantDatabaseCountLimit).
+		// Get multitenant databases from the datastore to check if any belongs to the installation ID.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
+			GetMultitenantDatabases(gomock.Any()).
+			Do(func(input *model.MultitenantDatabaseFilter) {
+				a.Assert().Equal(DefaultRDSMultitenantDatabaseCountLimit, input.NumOfInstallationsLimit)
+				a.Assert().Equal(input.PerPage, model.AllPerPage)
+			}).
 			Return(make([]*model.MultitenantDatabase, 0), nil),
 
-		a.Mocks.Log.Logger.
-			EXPECT().
-			Infof("No multitenant databases with less than %d installations found in the datastore; fetching all available resources from AWS.", DefaultRDSMultitenantDatabaseCountLimit).
+		// Get resources from AWS and try to find a RDS cluster that the database can be created.
+		a.Mocks.API.ResourceGroupsTagging.EXPECT().
+			GetResources(gomock.Any()).
+			Do(func(input *gt.GetResourcesInput) {
+				a.Assert().Equal(input.ResourceTypeFilters, []*string{aws.String(DefaultResourceTypeClusterRDS)})
+				tagFilter := []*gt.TagFilter{
+					{
+						Key:    aws.String("Purpose"),
+						Values: []*string{aws.String("provisioning")},
+					},
+					{
+						Key:    aws.String("Owner"),
+						Values: []*string{aws.String("cloud-team")},
+					},
+					{
+						Key:    aws.String("Terraform"),
+						Values: []*string{aws.String("true")},
+					},
+					{
+						Key:    aws.String("DatabaseType"),
+						Values: []*string{aws.String("multitenant-rds")},
+					},
+					{
+						Key:    aws.String("VpcID"),
+						Values: []*string{aws.String(a.VPCa)},
+					},
+					{
+						Key: aws.String("Counter"),
+					},
+					{
+						Key: aws.String("MultitenantDatabaseID"),
+					},
+				}
+				a.Assert().Equal(input.TagFilters, tagFilter)
+			}).
+			Return(&gt.GetResourcesOutput{
+				ResourceTagMappingList: []*gt.ResourceTagMapping{
+					{
+						ResourceARN: aws.String(a.RDSResourceARN),
+
+						// WARNING: If you ever find the need to change some of the hardcoded values such as
+						// Owner, Terraform or any of the keys here, make sure that an E2e system's test still
+						// passes.
+						Tags: []*gt.Tag{
+							{
+								Key:   aws.String("Purpose"),
+								Value: aws.String("provisioning"),
+							},
+							{
+								Key:   aws.String("Owner"),
+								Value: aws.String("cloud-team"),
+							},
+							{
+								Key:   aws.String("Terraform"),
+								Value: aws.String("true"),
+							},
+							{
+								Key:   aws.String("DatabaseType"),
+								Value: aws.String("multitenant-rds"),
+							},
+							{
+								Key:   aws.String("VpcID"),
+								Value: aws.String(a.VPCa),
+							},
+							{
+								Key:   aws.String("Counter"),
+								Value: aws.String("0"),
+							},
+							{
+								Key:   aws.String("MultitenantDatabaseID"),
+								Value: aws.String(a.RDSClusterID),
+							},
+						},
+					},
+				},
+			}, nil),
+
+		a.Mocks.API.RDS.EXPECT().
+			DescribeDBClusterEndpoints(gomock.Any()).
+			Return(&rds.DescribeDBClusterEndpointsOutput{
+				DBClusterEndpoints: []*rds.DBClusterEndpoint{
+					{
+						Status: aws.String("available"),
+					},
+				},
+			}, nil).
 			Times(1),
 
-		a.ExpectGetRDSClusterResourcesFromTags(a.VPCa, []string{a.RDSClusterID}),
-
-		a.ExpectRDSEndpointStatus(DefaultRDSStatusAvailable, nil).
-			Times(1),
-
-		a.ExpectCreateMultiTenantDatabase(a.RDSClusterID, a.VPCa).
+		// Create the multitenant database.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
+			CreateMultitenantDatabase(gomock.Any()).
+			Do(func(input *model.MultitenantDatabase) {
+				a.Assert().Equal(input.ID, a.RDSClusterID)
+			}).
 			Return(nil).
 			Times(1),
 
@@ -64,21 +175,25 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			}, nil).
 			Times(1),
 
-		a.ExpectDescribeRDSCluster(a.RDSClusterID).
+		a.Mocks.API.RDS.EXPECT().
+			DescribeDBClusters(gomock.Any()).
+			Do(func(input *rds.DescribeDBClustersInput) {
+				a.Assert().Equal(input.Filters, []*rds.Filter{
+					{
+						Name:   aws.String("db-cluster-id"),
+						Values: []*string{&a.RDSClusterID},
+					},
+				})
+			}).
 			Return(&rds.DescribeDBClustersOutput{
 				DBClusters: []*rds.DBCluster{
 					{
 						DBClusterIdentifier: &a.RDSClusterID,
-						Status:              aws.String(DefaultRDSStatusAvailable),
+						Status:              aws.String("available"),
 						Endpoint:            aws.String("aws.rds.com/mattermost"),
 					},
 				},
 			}, nil).
-			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("multitenant-rds-database", MattermostRDSDatabaseName(a.InstallationA.ID)).
-			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
 		a.Mocks.API.SecretsManager.EXPECT().
