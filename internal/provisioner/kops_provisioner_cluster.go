@@ -115,6 +115,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		}
 	}
 
+	logger = logger.WithField("vpc-id", clusterResources.VpcID)
+
 	err = kops.CreateCluster(
 		kopsMetadata.Name,
 		kopsMetadata.Version,

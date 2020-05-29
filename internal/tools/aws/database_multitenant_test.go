@@ -29,7 +29,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 
 	gomock.InOrder(
 		a.Mocks.Log.Logger.EXPECT().
-			WithField("multitenant-rds-database", MattermostRDSDatabaseName(a.InstallationA.ID)).
+			WithField(MultitenantDatabaseNameLogField, MattermostRDSDatabaseName(a.InstallationA.ID)).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
@@ -214,8 +214,8 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 
 	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("failed to provision multitenant database: failed to create database "+
-		"cloud_id000000000000000000000000a: dial tcp: lookup aws.rds.com/mattermost: no such host", err.Error())
+	a.Assert().Equal("failed to provision multitenant database because provisioner is unable to create a installation database: "+
+		"failed to create database cloud_id000000000000000000000000a: dial tcp: lookup aws.rds.com/mattermost: no such host", err.Error())
 }
 
 func (a *AWSTestSuite) TestFindRDSClusterForInstallation() {
