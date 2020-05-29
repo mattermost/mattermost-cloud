@@ -110,6 +110,16 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
+	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		NumOfInstallationsLimit: 3,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
 	s.Assert().Equal(1, len(databases))
 	s.Assert().Equal(s.database1.ID, databases[0].ID)
 }

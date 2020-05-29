@@ -74,7 +74,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 				return nil, errors.Wrap(err, "failed to query multitenant databases")
 			}
 
-			if len(installationIDs) <= int(filter.NumOfInstallationsLimit) {
+			if len(installationIDs) < int(filter.NumOfInstallationsLimit) {
 				filteredDatabases = append(filteredDatabases, database)
 			}
 		}
