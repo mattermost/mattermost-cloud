@@ -710,7 +710,7 @@ func (d *RDSMultitenantDatabase) updateTagCounterAndRemoveInstallationID(dbClust
 			logger.WithError(err).Warnf("Failed to reset %s. Value is still %d", RDSMultitenantInstallationCounterTagKey, numOfInstallations-1)
 		}
 
-		return errors.Wrap(err, "failed to remove multitenant")
+		return errors.Wrap(err, "failed to remove multitenant database")
 	}
 
 	return nil
