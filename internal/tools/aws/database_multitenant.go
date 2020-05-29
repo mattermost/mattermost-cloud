@@ -588,6 +588,9 @@ func (d *RDSMultitenantDatabase) validateMultitenantDatabaseInstallations(multit
 	if err != nil {
 		return errors.Wrapf(err, "failed to get multitenant database ID %s", multitenantDatabaseID)
 	}
+	if multitenantDatabase == nil {
+		return errors.Errorf("unable to find a multitenant database ID %s", multitenantDatabaseID)
+	}
 
 	expectedInstallations, err := multitenantDatabase.GetInstallationIDs()
 	if err != nil {
