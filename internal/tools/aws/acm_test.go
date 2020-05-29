@@ -13,10 +13,10 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
 			ListCertificates(gomock.Any()).
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []*acm.CertificateSummary{
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN + "a"),
 					},
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN + "b"),
 					},
 				},
@@ -33,7 +33,7 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
 			ListCertificates(gomock.Any()).
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []*acm.CertificateSummary{
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN),
 					},
 				},
@@ -43,10 +43,12 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTag() {
 		a.Mocks.API.ACM.EXPECT().
 			ListTagsForCertificate(gomock.Any()).
 			Return(&acm.ListTagsForCertificateOutput{
-				Tags: []*acm.Tag{&acm.Tag{
-					Key:   aws.String("MattermostCloudInstallationCertificates"),
-					Value: aws.String("value"),
-				}},
+				Tags: []*acm.Tag{
+					{
+						Key:   aws.String("MattermostCloudInstallationCertificates"),
+						Value: aws.String("value"),
+					},
+				},
 			}, nil).
 			Times(1),
 	)
@@ -63,10 +65,10 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTagNotFound() {
 			ListCertificates(gomock.Any()).
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []*acm.CertificateSummary{
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN + "a"),
 					},
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN + "b"),
 					},
 				},
@@ -76,10 +78,12 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTagNotFound() {
 		a.Mocks.API.ACM.EXPECT().
 			ListTagsForCertificate(gomock.Any()).
 			Return(&acm.ListTagsForCertificateOutput{
-				Tags: []*acm.Tag{&acm.Tag{
-					Key:   aws.String("MattermostCloudInstallationCertificates"),
-					Value: aws.String("value"),
-				}},
+				Tags: []*acm.Tag{
+					{
+						Key:   aws.String("MattermostCloudInstallationCertificates"),
+						Value: aws.String("value"),
+					},
+				},
 			}, nil).
 			Times(2),
 	)
@@ -112,10 +116,10 @@ func (a *AWSTestSuite) TestGetCertificateSummaryByTagListTagsError() {
 			ListCertificates(gomock.Any()).
 			Return(&acm.ListCertificatesOutput{
 				CertificateSummaryList: []*acm.CertificateSummary{
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN + "a"),
 					},
-					&acm.CertificateSummary{
+					{
 						CertificateArn: aws.String(a.CertifcateARN + "b"),
 					},
 				},
