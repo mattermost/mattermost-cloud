@@ -3,6 +3,7 @@ package supervisor
 // Doer describes an action to be done.
 type Doer interface {
 	Do() error
+	Shutdown()
 }
 
 // MultiDoer is a slice of doers.
@@ -18,4 +19,11 @@ func (md MultiDoer) Do() error {
 	}
 
 	return nil
+}
+
+// Shutdown tells each doer to perform shutdown tasks.
+func (md MultiDoer) Shutdown() {
+	for _, doer := range md {
+		doer.Shutdown()
+	}
 }

@@ -223,13 +223,20 @@ var serverCmd = &cobra.Command{
 		}()
 
 		c := make(chan os.Signal, 1)
-		// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
-		// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+		// We'll accept graceful shutdowns when quit via:
+		//  - SIGINT (Ctrl+C)
+		//  - SIGTERM (Ctrl+/) (Kubernetes pod rolling termination)
+		// SIGKILL and SIGQUIT will not be caught.
 		signal.Notify(c, os.Interrupt)
+		// Important:
+		// There are long-lived serial processes in the supervisors (especially
+		// the cluster supervisor). It is quite possible that these will still
+		// be terminated before completion if the k8s rolling grace period is
+		// too low. Handling this will require further improvements.
 
-		// Block until we receive our signal.
-		<-c
-		logger.Info("Shutting down")
+		// Block until we receive a valid signal.
+		sig := <-c
+		logger.WithField("shutdown-signal", sig.String()).Info("Shutting down")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
