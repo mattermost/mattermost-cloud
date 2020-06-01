@@ -89,6 +89,11 @@ func NewInstallationSupervisor(store installationStore, installationProvisioner 
 	}
 }
 
+// Shutdown performs graceful shutdown tasks for the installation supervisor.
+func (s *InstallationSupervisor) Shutdown() {
+	s.logger.Debug("Shutting down installation supervisor")
+}
+
 // Do looks for work to be done on any pending installations and attempts to schedule the required work.
 func (s *InstallationSupervisor) Do() error {
 	installations, err := s.store.GetUnlockedInstallationsPendingWork()

@@ -59,6 +59,11 @@ func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterIns
 	}
 }
 
+// Shutdown performs graceful shutdown tasks for the cluster installation supervisor.
+func (s *ClusterInstallationSupervisor) Shutdown() {
+	s.logger.Debug("Shutting down cluster installation supervisor")
+}
+
 // Do looks for work to be done on any pending cluster installations and attempts to schedule the required work.
 func (s *ClusterInstallationSupervisor) Do() error {
 	clusterInstallations, err := s.store.GetUnlockedClusterInstallationsPendingWork()

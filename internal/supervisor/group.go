@@ -40,6 +40,11 @@ func NewGroupSupervisor(store groupStore, instanceID string, logger log.FieldLog
 	}
 }
 
+// Shutdown performs graceful shutdown tasks for the group supervisor.
+func (s *GroupSupervisor) Shutdown() {
+	s.logger.Debug("Shutting down group supervisor")
+}
+
 // Do looks for work to be done on any pending groups and attempts to schedule
 // the required work.
 func (s *GroupSupervisor) Do() error {

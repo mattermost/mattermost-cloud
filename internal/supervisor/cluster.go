@@ -56,6 +56,11 @@ func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisio
 	}
 }
 
+// Shutdown performs graceful shutdown tasks for the cluster supervisor.
+func (s *ClusterSupervisor) Shutdown() {
+	s.logger.Debug("Shutting down cluster supervisor")
+}
+
 // Do looks for work to be done on any pending clusters and attempts to schedule the required work.
 func (s *ClusterSupervisor) Do() error {
 	clusters, err := s.store.GetUnlockedClustersPendingWork()
