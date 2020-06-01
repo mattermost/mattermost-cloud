@@ -47,15 +47,58 @@ func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logge
 
 // GetPrivateZoneDomainName gets the private Route53 domain name.
 func (a *Client) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error) {
-	id, err := a.getHostedZoneIDWithTag(Tag{
+	id, err := a.GetPrivateZoneID(logger)
+	if err != nil {
+		return "", err
+	}
+	return a.getZoneDNS(id, logger)
+}
+
+// GetPrivateZoneID returns the R53 hosted zone ID for a given tag or if not provided for the default one
+func (a *Client) GetPrivateZoneID(logger log.FieldLogger, tags ...Tag) (string, error) {
+	if len(tags) > 1 {
+		return "", errors.New("does not support more than 1 tag yet")
+	}
+	tag := Tag{
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPrivateCloudDNSTagValue,
-	}, logger)
+	}
+	if len(tags) > 0 {
+		tag = tags[0]
+	}
+	id, err := a.getHostedZoneIDWithTag(tag, logger)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to get private domain name")
 	}
+	return id, nil
+}
 
-	return a.getZoneDNS(id, logger)
+// GetTagByKeyAndZoneID returns a Tag of a given tag:key and of a given route53 id
+func (a *Client) GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error) {
+	tagList, err := a.Service().route53.ListTagsForResource(&route53.ListTagsForResourceInput{
+		ResourceId:   aws.String(id),
+		ResourceType: aws.String(hostedZoneResourceType),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to get tag list")
+	}
+
+	for _, resourceTag := range tagList.ResourceTagSet.Tags {
+		if resourceTag != nil {
+			resourceTagKey := resourceTag.Key
+			if resourceTagKey != nil && *resourceTagKey == trimTagPrefix(key) {
+				logger.WithFields(log.Fields{
+					"route53-tag-key":        *resourceTag.Key,
+					"route53-hosted-zone-id": id,
+				}).Debug("AWS Route53 Hosted Zone Tag found")
+				return &Tag{
+					Key:   *resourceTag.Key,
+					Value: *resourceTag.Value,
+				}, nil
+			}
+		}
+	}
+	return nil, nil
 }
 
 func (a *Client) getZoneDNS(hostedZoneID string, logger log.FieldLogger) (string, error) {
@@ -256,6 +299,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	return nil
 }
 
+// getHostedZoneIDWithTag returns R53 hosted zone ID for a given tag
 func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string, error) {
 	var next *string
 	for {

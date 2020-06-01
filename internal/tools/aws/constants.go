@@ -76,6 +76,12 @@ const (
 	// zone IDs in AWS Route53.
 	DefaultCloudDNSTagKey = "tag:MattermostCloudDNS"
 
+	// DefaultAuditLogsCoreSecurityTagKey is the default key used to find its value which
+	// has the format URL:port in which we send audit logs for each environment.
+	// This URL is in Core Account and port is different for each environment
+	//This tag exists in the Route53 Private hosted zones
+	DefaultAuditLogsCoreSecurityTagKey = "tag:AuditLogsCoreSecurity"
+
 	// DefaultPrivateCloudDNSTagValue is the default value used to find private hosted
 	// zone ID in AWS Route53.
 	DefaultPrivateCloudDNSTagValue = "private"

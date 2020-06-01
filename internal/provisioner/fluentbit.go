@@ -2,7 +2,6 @@ package provisioner
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -80,17 +79,53 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	if err != nil {
 		logger.WithError(err).Error("unable to lookup private zone name")
 	}
+
+	zoneID, err := f.awsClient.GetPrivateZoneID(logger)
+	if err != nil {
+		logger.WithError(err).Error("unable to find Zone ID")
+	}
+
+	tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, zoneID, logger)
+	if err != nil {
+		logger.WithError(err).Error("failed to find Tag:AuditLogsCoreSecurity")
+	}
+	if tag == nil {
+		logger.Info("unable to find tag")
+		tag = &aws.Tag{}
+	}
+
+	hostPort := strings.Split(tag.Value, ":")
+	var auditLogsConf string
+	if len(hostPort) == 2 {
+		auditLogsConf = fmt.Sprintf(`[OUTPUT]
+	Name  forward
+	Match  *
+	Host  %s
+	Port  %s
+	tls  On
+	tls.verify  Off`, hostPort[0], hostPort[1])
+	} else {
+		logger.Info("AuditLogsCoreSecurity tag is missing from R53 hosted zone, " +
+			"fluent-bit will be configured without forwarding to audit logs to Security")
+	}
+
 	elasticSearchDNS := fmt.Sprintf("elasticsearch.%s", privateDomainName)
 	return &helmDeployment{
 		chartDeploymentName: "fluent-bit",
 		chartName:           "stable/fluent-bit",
 		namespace:           "fluent-bit",
-		setArgument:         fmt.Sprintf("backend.es.host=%s", elasticSearchDNS),
-		valuesPath:          "helm-charts/fluent-bit_values.yaml",
-		kopsProvisioner:     f.provisioner,
-		kops:                f.kops,
-		logger:              f.logger,
-		desiredVersion:      f.desiredVersion,
+		setArgument: fmt.Sprintf(`backend.es.host=%s,rawConfig=
+@INCLUDE fluent-bit-service.conf
+@INCLUDE fluent-bit-input.conf
+@INCLUDE fluent-bit-filter.conf
+@INCLUDE fluent-bit-output.conf
+%s
+`, elasticSearchDNS, auditLogsConf),
+		valuesPath:      "helm-charts/fluent-bit_values.yaml",
+		kopsProvisioner: f.provisioner,
+		kops:            f.kops,
+		logger:          f.logger,
+		desiredVersion:  f.desiredVersion,
 	}
 }
 
