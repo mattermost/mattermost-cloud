@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -31,6 +29,7 @@ func init() {
 	installationUpdateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
 	installationUpdateCmd.MarkFlagRequired("installation")
 
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
@@ -83,7 +82,7 @@ var installationCreateCmd = &cobra.Command{
 		filestore, _ := command.Flags().GetString("filestore")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
-		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
 		if err != nil {
 			return err
 		}
@@ -120,8 +119,9 @@ var installationUpdateCmd = &cobra.Command{
 
 		installationID, _ := command.Flags().GetString("installation")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
 
-		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
 		if err != nil {
 			return err
 		}
@@ -251,29 +251,4 @@ var installationShowStateReport = &cobra.Command{
 
 		return nil
 	},
-}
-
-func parseEnvVarInput(rawInput []string) (model.EnvVarMap, error) {
-	if len(rawInput) == 0 {
-		return nil, nil
-	}
-
-	envVarMap := make(model.EnvVarMap)
-
-	for _, env := range rawInput {
-		// Split the input once by "=" to allow for multiple "="s to be in the
-		// value. Expect there to still be one key and value.
-		kv := strings.SplitN(env, "=", 2)
-		if len(kv) != 2 || len(kv[0]) == 0 || len(kv[1]) == 0 {
-			return nil, errors.Errorf("%s is not in a valid env format; expecting KEY_NAME=VALUE", env)
-		}
-
-		if _, ok := envVarMap[kv[0]]; ok {
-			return nil, errors.Errorf("env var %s was defined more than once", kv[0])
-		}
-
-		envVarMap[kv[0]] = model.EnvVar{Value: kv[1]}
-	}
-
-	return envVarMap, nil
 }

@@ -89,6 +89,11 @@ func NewInstallationSupervisor(store installationStore, installationProvisioner 
 	}
 }
 
+// Shutdown performs graceful shutdown tasks for the installation supervisor.
+func (s *InstallationSupervisor) Shutdown() {
+	s.logger.Debug("Shutting down installation supervisor")
+}
+
 // Do looks for work to be done on any pending installations and attempts to schedule the required work.
 func (s *InstallationSupervisor) Do() error {
 	installations, err := s.store.GetUnlockedInstallationsPendingWork()
@@ -116,13 +121,28 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 	}
 	defer lock.Unlock()
 
+	// Before working on the installation, it is crucial that we ensure that it
+	// was not updated to a new state by another provisioning server.
+	originalState := installation.State
+	installation, err := s.store.GetInstallation(installation.ID, true, false)
+	if err != nil {
+		logger.WithError(err).Errorf("Failed to get refreshed installation")
+		return
+	}
+	if installation.State != originalState {
+		logger.WithField("oldInstallationState", originalState).
+			WithField("newInstallationState", installation.State).
+			Warn("Another provisioner has worked on this installation; skipping...")
+		return
+	}
+
 	logger.Debugf("Supervising installation in state %s", installation.State)
 
 	newState := s.transitionInstallation(installation, s.instanceID, logger)
 
-	installation, err := s.store.GetInstallation(installation.ID, true, false)
+	installation, err = s.store.GetInstallation(installation.ID, true, false)
 	if err != nil {
-		logger.WithError(err).Warnf("failed to get installation and thus persist state %s", newState)
+		logger.WithError(err).Errorf("Failed to get installation and thus persist state %s", newState)
 		return
 	}
 

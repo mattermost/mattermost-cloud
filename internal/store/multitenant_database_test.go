@@ -41,11 +41,13 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.lockerID = s.installationID0
 
 	s.database1 = &model.MultitenantDatabase{
-		ID: "database_id0",
+		ID:    "database_id0",
+		VpcID: "vpc_id0",
 	}
 
 	s.database2 = &model.MultitenantDatabase{
-		ID: "database_id1",
+		ID:    "database_id1",
+		VpcID: "vpc_id1",
 	}
 
 	s.database1.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID0, s.installationID1})
@@ -66,7 +68,8 @@ func TestMultitenantDatabase(t *testing.T) {
 
 func (s *TestMultitenantDatabaseSuite) TestCreate() {
 	db := model.MultitenantDatabase{
-		ID: "database_some_id",
+		ID:    "database_some_id",
+		VpcID: "database_vpc_id",
 	}
 	err := s.sqlStore.CreateMultitenantDatabase(&db)
 	s.Assert().NoError(err)
@@ -103,6 +106,16 @@ func (s *TestMultitenantDatabaseSuite) TestGetNotFound() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		NumOfInstallationsLimit: 2,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		NumOfInstallationsLimit: 3,
 		PerPage:                 model.AllPerPage,
 	})
 	s.Assert().NoError(err)
@@ -301,4 +314,24 @@ func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallation
 	s.Assert().Error(err)
 	s.Assert().Nil(database)
 	s.Assert().Equal("expected exactly one multitenant database per installation (found 2)", err.Error())
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
+	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		VpcID:                   "vpc_id0",
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().NotNil(databases)
+	s.Assert().Equal(1, len(databases))
+
+	databases, err = s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		VpcID:                   "does_not_exist",
+		NumOfInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:                 model.AllPerPage,
+	})
+	s.Assert().NoError(err)
+	s.Assert().Nil(databases)
+	s.Assert().Equal(0, len(databases))
 }

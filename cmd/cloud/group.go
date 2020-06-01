@@ -24,6 +24,7 @@ func init() {
 	groupUpdateCmd.Flags().String("image", "", "The Mattermost container image to use.")
 	groupUpdateCmd.Flags().Int64("max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	groupUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
 	groupUpdateCmd.MarkFlagRequired("group")
 
 	groupDeleteCmd.Flags().String("group", "", "The id of the group to be deleted.")
@@ -75,7 +76,7 @@ var groupCreateCmd = &cobra.Command{
 		maxRolling, _ := command.Flags().GetInt64("max-rolling")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 
-		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
 		if err != nil {
 			return err
 		}
@@ -108,8 +109,9 @@ var groupUpdateCmd = &cobra.Command{
 
 		groupID, _ := command.Flags().GetString("group")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
 
-		envVarMap, err := parseEnvVarInput(mattermostEnv)
+		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
 		if err != nil {
 			return err
 		}

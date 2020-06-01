@@ -62,6 +62,7 @@ func (s *Scheduler) run() {
 		case <-notify:
 			_ = s.doer.Do()
 		case <-s.stop:
+			s.doer.Shutdown()
 			close(s.done)
 			return
 		}

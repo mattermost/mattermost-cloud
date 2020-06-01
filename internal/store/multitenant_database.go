@@ -14,7 +14,7 @@ var multitenantDatabaseSelect sq.SelectBuilder
 
 func init() {
 	multitenantDatabaseSelect = sq.
-		Select("ID", "RawInstallationIDs", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt").
+		Select("ID", "VpcID", "RawInstallationIDs", "CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt").
 		From("MultitenantDatabase")
 }
 
@@ -52,6 +52,11 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 			builder = builder.
 				Where(sq.Eq{"LockAcquiredBy": filter.LockerID})
 		}
+
+		if len(filter.VpcID) > 0 {
+			builder = builder.
+				Where(sq.Eq{"VpcID": filter.VpcID})
+		}
 	}
 
 	var databases []*model.MultitenantDatabase
@@ -69,7 +74,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 				return nil, errors.Wrap(err, "failed to query multitenant databases")
 			}
 
-			if len(installationIDs) <= int(filter.NumOfInstallationsLimit) {
+			if len(installationIDs) < int(filter.NumOfInstallationsLimit) {
 				filteredDatabases = append(filteredDatabases, database)
 			}
 		}
@@ -99,6 +104,7 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 		Insert("MultitenantDatabase").
 		SetMap(map[string]interface{}{
 			"ID":                 multitenantDatabase.ID,
+			"VpcID":              multitenantDatabase.VpcID,
 			"RawInstallationIDs": multitenantDatabase.RawInstallationIDs,
 			"LockAcquiredBy":     nil,
 			"LockAcquiredAt":     0,

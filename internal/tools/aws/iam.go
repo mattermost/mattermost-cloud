@@ -152,15 +152,14 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 	policy := policyDocument{
 		Version: "2012-10-17",
 		Statement: []policyStatementEntry{
-			policyStatementEntry{
+			{
 				Sid:    "ListObjectsInBucket",
 				Effect: "Allow",
 				Action: []string{
 					"s3:ListBucket",
 				},
 				Resource: fmt.Sprintf("arn:aws:s3:::%s", awsID),
-			},
-			policyStatementEntry{
+			}, {
 				Sid:    "AllObjectActions",
 				Effect: "Allow",
 				Action: []string{
