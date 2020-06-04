@@ -16,6 +16,8 @@ const (
 	FluentbitCanonicalName = "fluentbit"
 	// PublicNginxCanonicalName is the canonical string representation of public nginx
 	PublicNginxCanonicalName = "public-nginx"
+	// TeleportCanonicalName is the canonical string representation of teleport
+	TeleportCanonicalName = "teleport"
 )
 
 const (
@@ -27,6 +29,8 @@ const (
 	FluentbitDefaultVersion = "2.8.7"
 	// PublicNginxDefaultVersion defines the default version for the Helm chart
 	PublicNginxDefaultVersion = "1.30.0"
+	// TeleportDefaultVersion defines the default version for the Helm chart
+	TeleportDefaultVersion = "0.2.0"
 )
 
 // UtilityMetadata is a container struct for any metadata related to
@@ -41,6 +45,7 @@ type utilityVersions struct {
 	Nginx       string
 	Fluentbit   string
 	PublicNginx string
+	Teleport    string
 }
 
 // SetUtilityActualVersion stores the provided version for the
@@ -162,6 +167,8 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 		return versions.Fluentbit
 	case PublicNginxCanonicalName:
 		return versions.PublicNginx
+	case TeleportCanonicalName:
+		return versions.Teleport
 	}
 
 	return ""
@@ -181,5 +188,7 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 		versions.Fluentbit = desiredVersion
 	case PublicNginxCanonicalName:
 		versions.PublicNginx = desiredVersion
+	case TeleportCanonicalName:
+		versions.Teleport = desiredVersion
 	}
 }

@@ -48,8 +48,9 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"jetstack": "https://charts.jetstack.io",
-	"stable":   "https://kubernetes-charts.storage.googleapis.com",
+	"jetstack":    "https://charts.jetstack.io",
+	"stable":      "https://kubernetes-charts.storage.googleapis.com",
+	"chartmuseum": "https://chartmuseum.internal.core.cloud.mattermost.com",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -87,13 +88,23 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 
 	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Cert Manager")
+		return nil, errors.Wrap(err, "failed to get handle for Public Nginx")
+	}
+
+	desiredVersion, err = cluster.DesiredUtilityVersion(model.TeleportCanonicalName)
+	if err != nil {
+		return nil, err
+	}
+
+	teleport, err := newTeleportHandle(cluster, desiredVersion, provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
 
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit},
+		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
