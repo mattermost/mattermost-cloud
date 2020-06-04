@@ -10,52 +10,20 @@ import (
 
 func TestClusterClone(t *testing.T) {
 	cluster := &Cluster{
-		Provider:            "aws",
-		Provisioner:         "kops",
-		ProviderMetadata:    []byte(`{"provider": "test1"}`),
-		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
-		AllowInstallations:  false,
+		Provider:                "aws",
+		Provisioner:             "kops",
+		ProviderMetadataAWS:     &AWSMetadata{Zones: []string{"zone1"}},
+		ProvisionerMetadataKops: &KopsMetadata{Version: "version1"},
+		AllowInstallations:      false,
 	}
 
 	clone := cluster.Clone()
 	require.Equal(t, cluster, clone)
 
 	// Verify changing pointers in the clone doesn't affect the original.
-	clone.ProviderMetadata = []byte("override")
-	clone.ProvisionerMetadata = []byte("override")
+	clone.ProviderMetadataAWS = &AWSMetadata{Zones: []string{"zone2"}}
+	clone.ProvisionerMetadataKops = &KopsMetadata{Version: "version2"}
 	require.NotEqual(t, cluster, clone)
-}
-
-func TestSetProviderMetadata(t *testing.T) {
-	t.Run("set nil", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProviderMetadata(nil)
-		require.NoError(t, err)
-		require.Nil(t, cluster.ProviderMetadata)
-	})
-
-	t.Run("set data", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProviderMetadata(struct{ Test string }{"test"})
-		require.NoError(t, err)
-		require.Equal(t, `{"Test":"test"}`, string(cluster.ProviderMetadata))
-	})
-}
-
-func TestSetProvisionerMetadata(t *testing.T) {
-	t.Run("set nil", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProvisionerMetadata(nil)
-		require.NoError(t, err)
-		require.Nil(t, cluster.ProvisionerMetadata)
-	})
-
-	t.Run("set data", func(t *testing.T) {
-		cluster := Cluster{}
-		err := cluster.SetProvisionerMetadata(struct{ Test string }{"test"})
-		require.NoError(t, err)
-		require.Equal(t, `{"Test":"test"}`, string(cluster.ProvisionerMetadata))
-	})
 }
 
 func TestClusterFromReader(t *testing.T) {

@@ -3,8 +3,6 @@ package model
 import (
 	"encoding/json"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -32,8 +30,8 @@ const (
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
-	DesiredVersions utilityVersions `json:"desiredVersions"`
-	ActualVersions  utilityVersions `json:"actualVersions"`
+	DesiredVersions utilityVersions
+	ActualVersions  utilityVersions
 }
 
 type utilityVersions struct {
@@ -43,27 +41,37 @@ type utilityVersions struct {
 	PublicNginx string
 }
 
+// NewUtilityMetadata creates an instance of UtilityMetadata given the raw
+// utility metadata.
+func NewUtilityMetadata(metadataBytes []byte) (*UtilityMetadata, error) {
+	// Check if length of metadata is 0 as opposed to if the value is nil. This
+	// is done to avoid an issue encountered where the metadata value provided
+	// had a length of 0, but had non-zero capacity.
+	if len(metadataBytes) == 0 || string(metadataBytes) == "null" {
+		// TODO: remove "null" check after sqlite is gone.
+		return nil, nil
+	}
+
+	utilityMetadata := UtilityMetadata{}
+	err := json.Unmarshal(metadataBytes, &utilityMetadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return &utilityMetadata, nil
+}
+
 // SetUtilityActualVersion stores the provided version for the
 // provided utility in the UtilityMetadata JSON []byte in this Cluster
 func (c *Cluster) SetUtilityActualVersion(utility string, version string) error {
-	oldMetadata := &UtilityMetadata{}
-	if len(c.UtilityMetadata) != 0 {
-		err := json.Unmarshal(c.UtilityMetadata, oldMetadata)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal existing utility metadata")
-		}
+	metadata := &UtilityMetadata{}
+	if c.UtilityMetadata != nil {
+		metadata = c.UtilityMetadata
 	}
 
-	setUtilityVersion(&oldMetadata.ActualVersions, utility, version)
+	setUtilityVersion(&metadata.ActualVersions, utility, version)
 
-	// reserialize and write it back to the object
-	var utilityMetadata []byte
-	utilityMetadata, err := json.Marshal(oldMetadata)
-	if err != nil {
-		return errors.Wrapf(err, "failed to store actual version info for %s", utility)
-	}
-
-	c.UtilityMetadata = utilityMetadata
+	c.UtilityMetadata = metadata
 	return nil
 }
 
@@ -81,28 +89,17 @@ func (c *Cluster) SetUtilityDesiredVersions(versions map[string]string) error {
 		}
 	}
 
-	oldMetadata := &UtilityMetadata{}
-	if len(c.UtilityMetadata) != 0 {
-		// if existing data is present, unmarshal it
-		err := json.Unmarshal(c.UtilityMetadata, oldMetadata)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal existing utility metadata")
-		}
+	metadata := &UtilityMetadata{}
+	if c.UtilityMetadata != nil {
+		metadata = c.UtilityMetadata
 	}
 
 	// assign new desired versions to the object
 	for utility, version := range versions {
-		setUtilityVersion(&oldMetadata.DesiredVersions, utility, version)
+		setUtilityVersion(&metadata.DesiredVersions, utility, version)
 	}
 
-	// reserialize and write it back to the object
-	var utilityMetadata []byte
-	utilityMetadata, err := json.Marshal(oldMetadata)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal provided utility metadata map %#v", versions)
-	}
-
-	c.UtilityMetadata = utilityMetadata
+	c.UtilityMetadata = metadata
 	return nil
 }
 
@@ -112,29 +109,17 @@ func (c *Cluster) DesiredUtilityVersion(utility string) (string, error) {
 	// some clusters may only be using pinned stable version, so an
 	// empty UtilityMetadata field is possible; in this context it means
 	// "utility"'s desired version is nothing
-	if len(c.UtilityMetadata) == 0 {
+	if c.UtilityMetadata == nil {
 		return "", nil
 	}
 
-	output := &UtilityMetadata{}
-	err := json.Unmarshal(c.UtilityMetadata, output)
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
-	}
-
-	return getUtilityVersion(&output.DesiredVersions, utility), nil
+	return getUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility), nil
 }
 
 // ActualUtilityVersion fetches the desired version of a utility from the
 // Cluster object
 func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
-	output := &UtilityMetadata{}
-	err := json.Unmarshal(c.UtilityMetadata, output)
-	if err != nil {
-		return "", errors.Wrap(err, "couldn't unmarshal stored utility metadata json")
-	}
-
-	return getUtilityVersion(&output.ActualVersions, utility), nil
+	return getUtilityVersion(&c.UtilityMetadata.ActualVersions, utility), nil
 }
 
 // UtilityMetadataFromReader produces a UtilityMetadata object from

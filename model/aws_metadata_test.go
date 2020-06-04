@@ -11,7 +11,7 @@ func TestNewAWSMetadata(t *testing.T) {
 	t.Run("nil payload", func(t *testing.T) {
 		awsMetadata, err := model.NewAWSMetadata(nil)
 		require.NoError(t, err)
-		require.Empty(t, awsMetadata.Zones)
+		require.Nil(t, awsMetadata)
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {

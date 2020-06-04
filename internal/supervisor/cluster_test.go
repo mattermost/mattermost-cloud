@@ -58,8 +58,8 @@ func (s *mockClusterStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.We
 
 type mockClusterProvisioner struct{}
 
-func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) (bool, error) {
-	return true, nil
+func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
+	return true
 }
 
 func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {

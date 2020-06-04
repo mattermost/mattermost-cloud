@@ -127,12 +127,7 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to export kubecfg")
 	}

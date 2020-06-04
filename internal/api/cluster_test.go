@@ -591,11 +591,8 @@ func TestUpgradeCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-
-		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
-		require.NoError(t, err)
-		assert.Equal(t, version, metadata.Version)
-		assert.Empty(t, metadata.AMI)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
@@ -610,11 +607,8 @@ func TestUpgradeCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-
-		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
-		require.NoError(t, err)
-		assert.Equal(t, version, metadata.Version)
-		assert.Empty(t, metadata.AMI)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while stable, to latest", func(t *testing.T) {
@@ -629,11 +623,8 @@ func TestUpgradeCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-
-		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
-		require.NoError(t, err)
-		assert.Equal(t, version, metadata.Version)
-		assert.Empty(t, metadata.AMI)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while stable, to valid version", func(t *testing.T) {
@@ -648,11 +639,8 @@ func TestUpgradeCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-
-		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
-		require.NoError(t, err)
-		assert.Equal(t, version, metadata.Version)
-		assert.Empty(t, metadata.AMI)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while stable, to invalid version", func(t *testing.T) {
@@ -680,11 +668,8 @@ func TestUpgradeCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-
-		metadata, err := model.NewKopsMetadata(cluster1.ProvisionerMetadata)
-		require.NoError(t, err)
-		assert.Equal(t, version, metadata.Version)
-		assert.Equal(t, ami, metadata.AMI)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Equal(t, ami, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
