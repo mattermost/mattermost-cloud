@@ -99,7 +99,7 @@ func TestGetActualVersion(t *testing.T) {
 			Nginx:       "nginx-10.2",
 			Fluentbit:   "fluent-bit-0.9",
 			PublicNginx: "nginx-10.2",
-			Teleport:    "teleport-0.1.0",
+			Teleport:    "teleport-0.2.0",
 		},
 	}
 
@@ -136,7 +136,7 @@ func TestGetActualVersion(t *testing.T) {
 
 	version, err = c.ActualUtilityVersion(TeleportCanonicalName)
 	assert.NoError(t, err)
-	assert.Equal(t, "teleport-0.1.0", version)
+	assert.Equal(t, "teleport-0.2.0", version)
 
 	version, err = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.NoError(t, err)
@@ -157,7 +157,7 @@ func TestGetDesiredVersion(t *testing.T) {
 			Nginx:       "nginx-10.2",
 			Fluentbit:   "fluent-bit-0.9",
 			PublicNginx: "nginx-10.2",
-			Teleport:    "teleport-0.1.0",
+			Teleport:    "teleport-0.2.0",
 		},
 	}
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -193,6 +194,10 @@ func (p *mockInstallationProvisioner) GetNGINXLoadBalancerEndpoint(cluster *mode
 type mockAWS struct{}
 
 func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error) {
+	return nil, nil
+}
+
+func (a *mockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
 	return nil, nil
 }
 

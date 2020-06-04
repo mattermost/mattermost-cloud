@@ -16,7 +16,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Version:                "latest",
 			Size:                   "SizeAlef500",
 			Zones:                  []string{"us-east-1a"},
-			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "1.30.0", "prometheus": "10.4.0", "public-nginx": "1.30.0", "teleport": "0.1.0"},
+			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "1.30.0", "prometheus": "10.4.0", "public-nginx": "1.30.0", "teleport": "0.2.0"},
 		}
 	}
 
@@ -69,7 +69,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"nginx":        "1.30.0",
 				"prometheus":   "10.4.0",
 				"public-nginx": "1.30.0",
-				"teleport":     "0.1.0"},
+				"teleport":     "0.2.0"},
 		}, clusterRequest)
 	})
 }
