@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -15,9 +16,13 @@ func init() {
 	clusterCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
 
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
-	clusterCreateCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
+	clusterCreateCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	clusterCreateCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Leave empty for the default kops image.")
-	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster. Add '-HA2' or '-HA3' to the size for multiple master nodes.")
+	clusterCreateCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster")
+	clusterCreateCmd.Flags().String("size-master-instance-type", "", "The instance type describing the k8s master nodes. Overwrites value from 'size'.")
+	clusterCreateCmd.Flags().Int64("size-master-count", 0, "The number of k8s master nodes. Overwrites value from 'size'.")
+	clusterCreateCmd.Flags().String("size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
+	clusterCreateCmd.Flags().Int64("size-node-count", 0, "The number of k8s worker nodes. Overwrites value from 'size'.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 	clusterCreateCmd.Flags().String("prometheus-version", model.PrometheusDefaultVersion, "The version of Prometheus to provision. Use 'stable' to provision the latest stable version published upstream.")
@@ -25,6 +30,7 @@ func init() {
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("public-nginx-version", model.PublicNginxDefaultVersion, "The version of Public Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion, "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().Bool("dry-run", false, "When set to true, only print the cluster creation request without sending it.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
@@ -39,16 +45,17 @@ func init() {
 	clusterUpdateCmd.MarkFlagRequired("cluster")
 
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
-	clusterUpgradeCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.14.1'.")
-	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Leave empty for the default kops image.")
+	clusterUpgradeCmd.Flags().String("version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
+	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
-	clusterUpgradeCmd.MarkFlagRequired("version")
-	clusterUpgradeCmd.MarkFlagRequired("kops-ami")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
-	clusterResizeCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
+	clusterResizeCmd.Flags().String("size", "", "The size constant describing the cluster")
+	clusterResizeCmd.Flags().String("size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
+	clusterResizeCmd.Flags().Int64("size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
+	clusterResizeCmd.Flags().Int64("size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
+	clusterResizeCmd.Flags().Bool("dry-run", false, "When set to true, only print the cluster creation request without sending it.")
 	clusterResizeCmd.MarkFlagRequired("cluster")
-	clusterResizeCmd.MarkFlagRequired("size")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
 	clusterDeleteCmd.MarkFlagRequired("cluster")
@@ -74,6 +81,7 @@ func init() {
 	clusterCmd.AddCommand(clusterInstallationCmd)
 	clusterCmd.AddCommand(clusterShowStateReport)
 	clusterCmd.AddCommand(clusterUtilitiesCmd)
+	clusterCmd.AddCommand(clusterShowSizeDictionary)
 }
 
 var clusterCmd = &cobra.Command{
@@ -99,26 +107,61 @@ var clusterCreateCmd = &cobra.Command{
 		provider, _ := command.Flags().GetString("provider")
 		version, _ := command.Flags().GetString("version")
 		kopsAMI, _ := command.Flags().GetString("kops-ami")
-		size, _ := command.Flags().GetString("size")
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 
-		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
+		request := &model.CreateClusterRequest{
 			Provider:               provider,
 			Version:                version,
 			KopsAMI:                kopsAMI,
-			Size:                   size,
 			Zones:                  strings.Split(zones, ","),
 			AllowInstallations:     allowInstallations,
 			DesiredUtilityVersions: processUtilityFlags(command),
-		})
+		}
+
+		size, _ := command.Flags().GetString("size")
+		err := clusterdictionary.ApplyToCreateClusterRequest(size, request)
+		if err != nil {
+			return errors.Wrap(err, "failed to apply size values")
+		}
+		masterInstanceType, _ := command.Flags().GetString("size-master-instance-type")
+		if len(masterInstanceType) != 0 {
+			request.NodeInstanceType = masterInstanceType
+		}
+		nodeMaxCount, _ := command.Flags().GetInt64("size-master-count")
+		if nodeMaxCount != 0 {
+			request.NodeMaxCount = nodeMaxCount
+		}
+		nodeInstanceType, _ := command.Flags().GetString("size-node-instance-type")
+		if len(nodeInstanceType) != 0 {
+			request.NodeInstanceType = nodeInstanceType
+		}
+		nodeCount, _ := command.Flags().GetInt64("size-node-count")
+		if nodeCount != 0 {
+			// Setting different min and max counts in currently not supported
+			// with the kops create cluster flag.
+			request.NodeMinCount = nodeCount
+			request.NodeMaxCount = nodeCount
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err = printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print cluster creation request")
+			}
+
+			return nil
+		}
+
+		cluster, err := client.CreateCluster(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster")
 		}
 
 		err = printJSON(cluster)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -127,7 +170,7 @@ var clusterCreateCmd = &cobra.Command{
 
 var clusterProvisionCmd = &cobra.Command{
 	Use:   "provision",
-	Short: "Provision/Reprovision a cluster's k8s operators.",
+	Short: "Provision/Reprovision a cluster's k8s resources.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 
@@ -142,9 +185,14 @@ var clusterProvisionCmd = &cobra.Command{
 			}
 		}
 
-		err := client.ProvisionCluster(clusterID, pcr)
+		cluster, err := client.ProvisionCluster(clusterID, pcr)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
+		}
+
+		err = printJSON(cluster)
+		if err != nil {
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -172,7 +220,7 @@ var clusterUpdateCmd = &cobra.Command{
 
 		err = printJSON(cluster)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -190,12 +238,17 @@ var clusterUpgradeCmd = &cobra.Command{
 
 		clusterID, _ := command.Flags().GetString("cluster")
 
-		err := client.UpgradeCluster(clusterID, &model.PatchUpgradeClusterRequest{
+		cluster, err := client.UpgradeCluster(clusterID, &model.PatchUpgradeClusterRequest{
 			Version: getStringFlagPointer(command, "version"),
 			KopsAMI: getStringFlagPointer(command, "kops-ami"),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade cluster")
+		}
+
+		err = printJSON(cluster)
+		if err != nil {
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -212,11 +265,45 @@ var clusterResizeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		size, _ := command.Flags().GetString("size")
 
-		err := client.ResizeCluster(clusterID, size)
+		// Apply values from 'size' constant and then apply overrides.
+		request := &model.PatchClusterSizeRequest{}
+		size, _ := command.Flags().GetString("size")
+		err := clusterdictionary.ApplyToPatchClusterSizeRequest(size, request)
+		if err != nil {
+			return errors.Wrap(err, "failed to apply size values")
+		}
+		nodeInstanceType, _ := command.Flags().GetString("size-node-instance-type")
+		if len(nodeInstanceType) != 0 {
+			request.NodeInstanceType = &nodeInstanceType
+		}
+		nodeMinCount, _ := command.Flags().GetInt64("size-node-min-count")
+		if nodeMinCount != 0 {
+			request.NodeMinCount = &nodeMinCount
+		}
+		nodeMaxCount, _ := command.Flags().GetInt64("size-node-max-count")
+		if nodeMaxCount != 0 {
+			request.NodeMaxCount = &nodeMaxCount
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err = printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print cluster resize request")
+			}
+
+			return nil
+		}
+
+		cluster, err := client.ResizeCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to resize cluster")
+		}
+
+		err = printJSON(cluster)
+		if err != nil {
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -263,7 +350,7 @@ var clusterGetCmd = &cobra.Command{
 
 		err = printJSON(cluster)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -293,7 +380,7 @@ var clusterListCmd = &cobra.Command{
 
 		err = printJSON(clusters)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to print cluster response")
 		}
 
 		return nil
@@ -321,6 +408,21 @@ var clusterUtilitiesCmd = &cobra.Command{
 		err = printJSON(metadata)
 		if err != nil {
 			return err
+		}
+
+		return nil
+	},
+}
+
+var clusterShowSizeDictionary = &cobra.Command{
+	Use:   "dictionary",
+	Short: "Shows predefined cluster size templates.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		err := printJSON(clusterdictionary.ValidSizes)
+		if err != nil {
+			return errors.Wrap(err, "failed to print cluster dictionary")
 		}
 
 		return nil

@@ -83,20 +83,17 @@ func TestClusters(t *testing.T) {
 	t.Run("clusters", func(t *testing.T) {
 		cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
-			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, cluster1)
 		require.Equal(t, model.ProviderAWS, cluster1.Provider)
-		require.Equal(t, model.SizeAlef500, cluster1.Size)
 		// require.Equal(t, []string{"zone"}, cluster1.Zones)
 
 		actualCluster1, err := client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.Equal(t, cluster1.ID, actualCluster1.ID)
 		require.Equal(t, model.ProviderAWS, actualCluster1.Provider)
-		require.Equal(t, model.SizeAlef500, actualCluster1.Size)
 		// require.Equal(t, []string{"zone"}, actualCluster1.Zones)
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster1.State)
 
@@ -104,20 +101,17 @@ func TestClusters(t *testing.T) {
 
 		cluster2, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
-			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, cluster2)
 		require.Equal(t, model.ProviderAWS, cluster2.Provider)
-		require.Equal(t, model.SizeAlef500, cluster2.Size)
 		// require.Equal(t, []string{"zone"}, cluster2.Zones)
 
 		actualCluster2, err := client.GetCluster(cluster2.ID)
 		require.NoError(t, err)
 		require.Equal(t, cluster2.ID, actualCluster2.ID)
 		require.Equal(t, model.ProviderAWS, actualCluster2.Provider)
-		require.Equal(t, model.SizeAlef500, actualCluster2.Size)
 		// require.Equal(t, []string{"zone"}, actualCluster2.Zones)
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster2.State)
 
@@ -125,20 +119,17 @@ func TestClusters(t *testing.T) {
 
 		cluster3, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
-			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, cluster3)
 		require.Equal(t, model.ProviderAWS, cluster3.Provider)
-		require.Equal(t, model.SizeAlef500, cluster3.Size)
 		// require.Equal(t, []string{"zone"}, cluster3.Zones)
 
 		actualCluster3, err := client.GetCluster(cluster3.ID)
 		require.NoError(t, err)
 		require.Equal(t, cluster3.ID, actualCluster3.ID)
 		require.Equal(t, model.ProviderAWS, actualCluster3.Provider)
-		require.Equal(t, model.SizeAlef500, actualCluster3.Size)
 		// require.Equal(t, []string{"zone"}, actualCluster3.Zones)
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster3.State)
 
@@ -298,16 +289,6 @@ func TestCreateCluster(t *testing.T) {
 	t.Run("invalid provider", func(t *testing.T) {
 		_, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: "invalid",
-			Size:     model.SizeAlef500,
-			Zones:    []string{"zone"},
-		})
-		require.EqualError(t, err, "failed with status code 400")
-	})
-
-	t.Run("invalid size", func(t *testing.T) {
-		_, err := client.CreateCluster(&model.CreateClusterRequest{
-			Provider: model.ProviderAWS,
-			Size:     "invalid",
 			Zones:    []string{"zone"},
 		})
 		require.EqualError(t, err, "failed with status code 400")
@@ -316,12 +297,10 @@ func TestCreateCluster(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
-			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
 		})
 		require.NoError(t, err)
 		require.Equal(t, model.ProviderAWS, cluster.Provider)
-		require.Equal(t, model.SizeAlef500, cluster.Size)
 		require.Equal(t, model.ClusterStateCreationRequested, cluster.State)
 		// TODO: more fields...
 	})
@@ -344,7 +323,6 @@ func TestRetryCreateCluster(t *testing.T) {
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
-		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
 	})
 	require.NoError(t, err)
@@ -427,14 +405,14 @@ func TestProvisionCluster(t *testing.T) {
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
-		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
 	})
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.ProvisionCluster(model.NewID(), nil)
+		clusterResp, err := client.ProvisionCluster(model.NewID(), nil)
 		require.EqualError(t, err, "failed with status code 404")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
@@ -453,8 +431,9 @@ func TestProvisionCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 409")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while provisioning", func(t *testing.T) {
@@ -462,8 +441,9 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
@@ -475,8 +455,9 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
@@ -488,8 +469,9 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
@@ -501,8 +483,9 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
@@ -514,8 +497,9 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
@@ -527,8 +511,9 @@ func TestProvisionCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ProvisionCluster(cluster1.ID, nil)
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 }
 
@@ -549,14 +534,14 @@ func TestUpgradeCluster(t *testing.T) {
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
-		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
 	})
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		clusterResp, err := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 404")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
@@ -575,8 +560,9 @@ func TestUpgradeCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 409")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while upgrading", func(t *testing.T) {
@@ -585,13 +571,14 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "latest"
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
 		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
@@ -601,13 +588,14 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "latest"
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
 		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
@@ -617,13 +605,14 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "latest"
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
 		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
@@ -633,13 +622,14 @@ func TestUpgradeCluster(t *testing.T) {
 		require.NoError(t, err)
 
 		version := "1.14.1"
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
 		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
 	})
 
@@ -648,8 +638,9 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while stable, to valid version and new AMI", func(t *testing.T) {
@@ -659,17 +650,18 @@ func TestUpgradeCluster(t *testing.T) {
 
 		version := "1.14.1"
 		ami := "mattermost-os"
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
 			Version: &version,
 			KopsAMI: &ami,
 		})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.Version)
-		assert.Equal(t, ami, cluster1.ProvisionerMetadataKops.AMI)
+		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
+		assert.Equal(t, ami, cluster1.ProvisionerMetadataKops.ChangeRequest.AMI)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
@@ -677,8 +669,9 @@ func TestUpgradeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 }
 
@@ -699,14 +692,18 @@ func TestResizeCluster(t *testing.T) {
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
-		Size:     model.SizeAlef1000,
 		Zones:    []string{"zone"},
 	})
 	require.NoError(t, err)
 
+	cluster1.ProvisionerMetadataKops.NodeMinCount = 5
+	err = sqlStore.UpdateCluster(cluster1)
+	require.NoError(t, err)
+
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.ResizeCluster(model.NewID(), "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(model.NewID(), &model.PatchClusterSizeRequest{})
 		require.EqualError(t, err, "failed with status code 404")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
@@ -725,8 +722,9 @@ func TestResizeCluster(t *testing.T) {
 			require.True(t, unlocked)
 		}()
 
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
 		require.EqualError(t, err, "failed with status code 409")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while resizing", func(t *testing.T) {
@@ -734,12 +732,14 @@ func TestResizeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
+		assert.Equal(t, "test1", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
 	})
 
 	t.Run("after resize failed", func(t *testing.T) {
@@ -747,12 +747,14 @@ func TestResizeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test2")})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
+		assert.Equal(t, "test2", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
@@ -760,12 +762,25 @@ func TestResizeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test3")})
 		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
 
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
+		assert.Equal(t, "test3", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
+	})
+
+	t.Run("while stable, to max node count lower than cluster min", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		max := int64(1)
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMaxCount: &max})
+		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while stable, to invalid size", func(t *testing.T) {
@@ -773,17 +788,11 @@ func TestResizeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ResizeCluster(cluster1.ID, "invalid")
+		min := int64(10)
+		max := int64(5)
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMinCount: &min, NodeMaxCount: &max})
 		require.EqualError(t, err, "failed with status code 400")
-	})
-
-	t.Run("while stable, to valid size but different HA count", func(t *testing.T) {
-		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
-		require.NoError(t, err)
-
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500-HA3")
-		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while upgrading", func(t *testing.T) {
@@ -791,8 +800,9 @@ func TestResizeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
@@ -800,8 +810,9 @@ func TestResizeCluster(t *testing.T) {
 		err = sqlStore.UpdateCluster(cluster1)
 		require.NoError(t, err)
 
-		err = client.ResizeCluster(cluster1.ID, "SizeAlef500")
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
 		require.EqualError(t, err, "failed with status code 400")
+		assert.Nil(t, clusterResp)
 	})
 }
 
@@ -822,7 +833,6 @@ func TestDeleteCluster(t *testing.T) {
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
-		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
 	})
 	require.NoError(t, err)
@@ -830,7 +840,6 @@ func TestDeleteCluster(t *testing.T) {
 	// cluster2 will have a cluster installation running on it
 	cluster2, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider: model.ProviderAWS,
-		Size:     model.SizeAlef500,
 		Zones:    []string{"zone"},
 	})
 	require.NoError(t, err)
@@ -932,7 +941,6 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	c, err := client.CreateCluster(
 		&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
-			Size:     model.SizeAlef500,
 			Zones:    []string{"zone"},
 			DesiredUtilityVersions: map[string]string{
 				"prometheus": "10.3.0",

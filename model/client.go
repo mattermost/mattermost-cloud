@@ -144,19 +144,19 @@ func (c *Client) RetryCreateCluster(clusterID string) error {
 
 // ProvisionCluster provisions k8s operators and Helm charts on a
 // cluster from the configured provisioning server.
-func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) error {
+func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) (*Cluster, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster/%s/provision", clusterID), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return nil
+		return ClusterFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -215,6 +215,7 @@ func (c *Client) GetClusterUtilities(clusterID string) (*UtilityMetadata, error)
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return UtilityMetadataFromReader(resp.Body)
+
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
@@ -238,36 +239,36 @@ func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) 
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRequest) error {
+func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRequest) (*Cluster, error) {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s/kubernetes", clusterID), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return nil
+		return ClusterFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
 // ResizeCluster resizes a cluster with a new size value.
-func (c *Client) ResizeCluster(clusterID, size string) error {
-	resp, err := c.doPut(c.buildURL("/api/cluster/%s/size/%s", clusterID, size), nil)
+func (c *Client) ResizeCluster(clusterID string, request *PatchClusterSizeRequest) (*Cluster, error) {
+	resp, err := c.doPut(c.buildURL("/api/cluster/%s/size", clusterID), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return nil
+		return ClusterFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

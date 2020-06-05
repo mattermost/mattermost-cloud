@@ -5,11 +5,12 @@ import (
 	"path"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, version, ami, cloud string, clusterSize ClusterSize, zones, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups []string) error {
+func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataRequestedState, zones, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups []string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -20,22 +21,22 @@ func (c *Cmd) CreateCluster(name, version, ami, cloud string, clusterSize Cluste
 		arg("cloud", cloud),
 		arg("state", "s3://", c.s3StateStore),
 		commaArg("zones", zones),
-		arg("node-count", clusterSize.NodeCount),
-		arg("node-size", clusterSize.NodeSize),
-		arg("master-count", clusterSize.MasterCount),
-		arg("master-size", clusterSize.MasterSize),
+		arg("node-count", fmt.Sprintf("%d", kopsRequest.NodeMinCount)),
+		arg("node-size", kopsRequest.NodeInstanceType),
+		arg("master-count", fmt.Sprintf("%d", kopsRequest.MasterCount)),
+		arg("master-size", kopsRequest.MasterInstanceType),
 		arg("target", "terraform"),
 		arg("out", c.GetOutputDirectory()),
 		arg("output", "json"),
 	}
 
-	if version != "latest" && version != "" {
+	if kopsRequest.Version != "latest" && kopsRequest.Version != "" {
 		args = append(args,
-			arg("kubernetes-version", version),
+			arg("kubernetes-version", kopsRequest.Version),
 		)
 	}
-	if ami != "" {
-		args = append(args, arg("image", ami))
+	if kopsRequest.AMI != "" {
+		args = append(args, arg("image", kopsRequest.AMI))
 	}
 	if cloud == "aws" {
 		args = append(args, arg("networking", "amazon-vpc-routed-eni"))

@@ -155,25 +155,34 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 }
 
 func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadata, logger log.FieldLogger) error {
+	if len(kopsMetadata.ChangeRequest.AMI) == 0 {
+		logger.Info("Skipping cluster AMI update")
+		return nil
+	}
+
 	instanceGroups, err := kops.GetInstanceGroupsJSON(kopsMetadata.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to get instance groups")
 	}
+
+	var ami string
 	for _, ig := range instanceGroups {
-		if ig.Spec.Image != kopsMetadata.AMI {
-			if len(kopsMetadata.AMI) == 0 {
+		if ig.Spec.Image != kopsMetadata.ChangeRequest.AMI {
+			if kopsMetadata.ChangeRequest.AMI == "latest" {
 				// Setting the image value to "" leads kops to autoreplace it with
 				// the default image for that kubernetes release.
 				logger.Infof("Updating instance group '%s' image value the default kops image", ig.Metadata.Name)
+				ami = ""
 			} else {
-				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, kopsMetadata.AMI)
+				logger.Infof("Updating instance group '%s' image value to '%s'", ig.Metadata.Name, kopsMetadata.ChangeRequest.AMI)
+				ami = kopsMetadata.ChangeRequest.AMI
 			}
 
 			igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, ig.Metadata.Name)
 			if err != nil {
 				return errors.Wrap(err, "failed to get YAML output for instance group")
 			}
-			igManifest, err = grossKopsReplaceImage(igManifest, kopsMetadata.AMI)
+			igManifest, err = grossKopsReplaceImage(igManifest, ami)
 			if err != nil {
 				return errors.Wrap(err, "failed to replace image value in YAML")
 			}
@@ -206,26 +215,32 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 //   maxSize: 2
 //   minSize: 2
 func grossKopsReplaceSize(input, machineType, min, max string) (string, error) {
-	machineTypeRE := regexp.MustCompile(`  machineType: .*\n`)
-	machineTypeMatches := len(machineTypeRE.FindAllStringIndex(input, -1))
-	if machineTypeMatches != 1 {
-		return "", errors.Errorf("expected to find one machineType match, but found %d", machineTypeMatches)
+	if len(machineType) != 0 {
+		machineTypeRE := regexp.MustCompile(`  machineType: .*\n`)
+		machineTypeMatches := len(machineTypeRE.FindAllStringIndex(input, -1))
+		if machineTypeMatches != 1 {
+			return "", errors.Errorf("expected to find one machineType match, but found %d", machineTypeMatches)
+		}
+		input = machineTypeRE.ReplaceAllString(input, fmt.Sprintf("  machineType: %s\n", machineType))
 	}
-	input = machineTypeRE.ReplaceAllString(input, fmt.Sprintf("  machineType: %s\n", machineType))
 
-	minRE := regexp.MustCompile(`  minSize: ?\d+\n`)
-	minMatches := len(minRE.FindAllStringIndex(input, -1))
-	if minMatches != 1 {
-		return "", errors.Errorf("expected to find one minSize match, but found %d", minMatches)
+	if len(min) != 0 && min != "0" {
+		minRE := regexp.MustCompile(`  minSize: ?\d+\n`)
+		minMatches := len(minRE.FindAllStringIndex(input, -1))
+		if minMatches != 1 {
+			return "", errors.Errorf("expected to find one minSize match, but found %d", minMatches)
+		}
+		input = minRE.ReplaceAllString(input, fmt.Sprintf("  minSize: %s\n", min))
 	}
-	input = minRE.ReplaceAllString(input, fmt.Sprintf("  minSize: %s\n", min))
 
-	maxRE := regexp.MustCompile(`  maxSize: ?\d+\n`)
-	maxMatches := len(maxRE.FindAllStringIndex(input, -1))
-	if maxMatches != 1 {
-		return "", errors.Errorf("expected to find one maxSize match, but found %d", maxMatches)
+	if len(max) != 0 && max != "0" {
+		maxRE := regexp.MustCompile(`  maxSize: ?\d+\n`)
+		maxMatches := len(maxRE.FindAllStringIndex(input, -1))
+		if maxMatches != 1 {
+			return "", errors.Errorf("expected to find one maxSize match, but found %d", maxMatches)
+		}
+		input = maxRE.ReplaceAllString(input, fmt.Sprintf("  maxSize: %s\n", max))
 	}
-	input = maxRE.ReplaceAllString(input, fmt.Sprintf("  maxSize: %s\n", max))
 
 	return input, nil
 }
