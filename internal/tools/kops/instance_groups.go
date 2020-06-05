@@ -20,7 +20,10 @@ type InstanceGroupMetadata struct {
 
 // InstanceGroupSpec is the spec of a kops instance group.
 type InstanceGroupSpec struct {
-	Image string `json:"image"`
+	Image       string `json:"image"`
+	MachineType string `json:"machineType"`
+	MinSize     int64  `json:"minSize"`
+	MaxSize     int64  `json:"maxSize"`
 }
 
 // GetInstanceGroupsJSON invokes kops get instancegroup, using the context of the
