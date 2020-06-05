@@ -4,26 +4,24 @@ import (
 	"encoding/json"
 	"io"
 	"regexp"
-
-	"github.com/pkg/errors"
 )
 
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
-	ID                  string
-	Provider            string
-	Provisioner         string
-	ProviderMetadata    []byte `json:",omitempty"`
-	ProvisionerMetadata []byte `json:",omitempty"`
-	AllowInstallations  bool
-	Version             string
-	Size                string
-	State               string
-	CreateAt            int64
-	DeleteAt            int64
-	LockAcquiredBy      *string
-	LockAcquiredAt      int64
-	UtilityMetadata     []byte `json:",omitempty"`
+	ID                      string
+	State                   string
+	Provider                string
+	ProviderMetadataAWS     *AWSMetadata
+	Provisioner             string
+	ProvisionerMetadataKops *KopsMetadata
+	UtilityMetadata         *UtilityMetadata
+	AllowInstallations      bool
+	Version                 string
+	Size                    string
+	CreateAt                int64
+	DeleteAt                int64
+	LockAcquiredBy          *string
+	LockAcquiredAt          int64
 }
 
 // Clone returns a deep copy the cluster.
@@ -33,38 +31,6 @@ func (c *Cluster) Clone() *Cluster {
 	json.Unmarshal(data, &clone)
 
 	return &clone
-}
-
-// SetProviderMetadata is a helper method to encode an interface{} as the corresponding bytes.
-func (c *Cluster) SetProviderMetadata(data interface{}) error {
-	if data == nil {
-		c.ProviderMetadata = nil
-		return nil
-	}
-
-	providerMetadata, err := json.Marshal(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to set provider metadata")
-	}
-
-	c.ProviderMetadata = providerMetadata
-	return nil
-}
-
-// SetProvisionerMetadata is a helper method to encode an interface{} as the corresponding bytes.
-func (c *Cluster) SetProvisionerMetadata(data interface{}) error {
-	if data == nil {
-		c.ProvisionerMetadata = nil
-		return nil
-	}
-
-	provisionerMetadata, err := json.Marshal(data)
-	if err != nil {
-		return errors.Wrap(err, "failed to set provisioner metadata")
-	}
-
-	c.ProvisionerMetadata = provisionerMetadata
-	return nil
 }
 
 // ClusterFromReader decodes a json-encoded cluster from the given io.Reader.

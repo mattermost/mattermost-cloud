@@ -24,7 +24,7 @@ type clusterStore interface {
 
 // clusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
 type clusterProvisioner interface {
-	PrepareCluster(cluster *model.Cluster) (bool, error)
+	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster) error
@@ -160,13 +160,9 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 }
 
 func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	changed, err := s.provisioner.PrepareCluster(cluster)
-	if err != nil {
-		logger.WithError(err).Error("Failed to prepare cluster")
-		return model.ClusterStateCreationFailed
-	}
+	var err error
 
-	if changed {
+	if s.provisioner.PrepareCluster(cluster) {
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
 			logger.WithError(err).Error("Failed to record updated cluster after creation")

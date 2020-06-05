@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,39 +40,27 @@ func TestGetUtilityVersion(t *testing.T) {
 }
 
 func TestSetActualVersion(t *testing.T) {
-	c := &Cluster{
-		Provider:            "aws",
-		Provisioner:         "kops",
-		ProviderMetadata:    []byte(`{"provider": "test1"}`),
-		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
-		AllowInstallations:  false,
-	}
+	c := &Cluster{}
 
-	assert.Equal(t, c.UtilityMetadata, []byte(nil))
+	assert.Nil(t, c.UtilityMetadata)
 	err := c.SetUtilityActualVersion(NginxCanonicalName, "1.9.9")
 	require.NoError(t, err)
-	assert.NotEqual(t, []byte(nil), c.UtilityMetadata)
+	assert.NotNil(t, c.UtilityMetadata)
 	version, err := c.ActualUtilityVersion(NginxCanonicalName)
 	require.NoError(t, err)
 	assert.Equal(t, "1.9.9", version)
 }
 
 func TestSetDesired(t *testing.T) {
-	c := &Cluster{
-		Provider:            "aws",
-		Provisioner:         "kops",
-		ProviderMetadata:    []byte(`{"provider": "test1"}`),
-		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
-		AllowInstallations:  false,
-	}
+	c := &Cluster{}
 
-	assert.Equal(t, c.UtilityMetadata, []byte(nil))
+	assert.Nil(t, c.UtilityMetadata)
 	err := c.SetUtilityDesiredVersions(map[string]string{
 		NginxCanonicalName: "1.9.9",
 	})
 	require.NoError(t, err)
 
-	assert.NotEqual(t, []byte(nil), c.UtilityMetadata)
+	assert.NotNil(t, c.UtilityMetadata)
 
 	version, err := c.DesiredUtilityVersion(NginxCanonicalName)
 	require.NoError(t, err)
@@ -82,39 +69,25 @@ func TestSetDesired(t *testing.T) {
 	version, err = c.DesiredUtilityVersion(PrometheusCanonicalName)
 	require.NoError(t, err)
 	assert.Equal(t, "", version)
-
 }
 
 func TestGetActualVersion(t *testing.T) {
-	um := &UtilityMetadata{
-		DesiredVersions: utilityVersions{
-			Prometheus:  "",
-			Nginx:       "10.3",
-			Fluentbit:   "1337",
-			PublicNginx: "1234",
-		},
-		ActualVersions: utilityVersions{
-			Prometheus:  "prometheus-10.3",
-			Nginx:       "nginx-10.2",
-			Fluentbit:   "fluent-bit-0.9",
-			PublicNginx: "nginx-10.2",
-		},
-	}
-
-	b, err := json.Marshal(um)
-	require.NoError(t, err)
-	assert.NotEqual(t, 0, len(b))
-
 	c := &Cluster{
-		Provider:            "aws",
-		Provisioner:         "kops",
-		ProviderMetadata:    []byte(`{"provider": "test1"}`),
-		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
-		AllowInstallations:  false,
-		UtilityMetadata:     b,
+		UtilityMetadata: &UtilityMetadata{
+			DesiredVersions: utilityVersions{
+				Prometheus:  "",
+				Nginx:       "10.3",
+				Fluentbit:   "1337",
+				PublicNginx: "1234",
+			},
+			ActualVersions: utilityVersions{
+				Prometheus:  "prometheus-10.3",
+				Nginx:       "nginx-10.2",
+				Fluentbit:   "fluent-bit-0.9",
+				PublicNginx: "nginx-10.2",
+			},
+		},
 	}
-
-	require.NotEqual(t, 0, len(c.UtilityMetadata))
 
 	version, err := c.ActualUtilityVersion(PrometheusCanonicalName)
 	assert.NoError(t, err)
@@ -138,35 +111,22 @@ func TestGetActualVersion(t *testing.T) {
 }
 
 func TestGetDesiredVersion(t *testing.T) {
-	um := &UtilityMetadata{
-		DesiredVersions: utilityVersions{
-			Prometheus:  "",
-			Nginx:       "10.3",
-			Fluentbit:   "1337",
-			PublicNginx: "1234",
-		},
-		ActualVersions: utilityVersions{
-			Prometheus:  "prometheus-10.3",
-			Nginx:       "nginx-10.2",
-			Fluentbit:   "fluent-bit-0.9",
-			PublicNginx: "nginx-10.2",
-		},
-	}
-
-	b, err := json.Marshal(um)
-	require.NoError(t, err)
-	assert.NotEqual(t, 0, len(b))
-
 	c := &Cluster{
-		Provider:            "aws",
-		Provisioner:         "kops",
-		ProviderMetadata:    []byte(`{"provider": "test1"}`),
-		ProvisionerMetadata: []byte(`{"provisioner": "test1"}`),
-		AllowInstallations:  false,
-		UtilityMetadata:     b,
+		UtilityMetadata: &UtilityMetadata{
+			DesiredVersions: utilityVersions{
+				Prometheus:  "",
+				Nginx:       "10.3",
+				Fluentbit:   "1337",
+				PublicNginx: "1234",
+			},
+			ActualVersions: utilityVersions{
+				Prometheus:  "prometheus-10.3",
+				Nginx:       "nginx-10.2",
+				Fluentbit:   "fluent-bit-0.9",
+				PublicNginx: "nginx-10.2",
+			},
+		},
 	}
-
-	assert.NotEqual(t, 0, len(c.UtilityMetadata))
 
 	version, err := c.DesiredUtilityVersion(PrometheusCanonicalName)
 	assert.NoError(t, err)

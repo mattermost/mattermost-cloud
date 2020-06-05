@@ -81,39 +81,25 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	cluster := model.Cluster{
-		Provider:           createClusterRequest.Provider,
-		Provisioner:        "kops",
+		Provider: createClusterRequest.Provider,
+		ProviderMetadataAWS: &model.AWSMetadata{
+			Zones: createClusterRequest.Zones,
+		},
+		Provisioner: "kops",
+		ProvisionerMetadataKops: &model.KopsMetadata{
+			Version: createClusterRequest.Version,
+			AMI:     createClusterRequest.KopsAMI,
+		},
 		Version:            "0.0.0",
 		Size:               createClusterRequest.Size,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		State:              model.ClusterStateCreationRequested,
 	}
 
-	err = cluster.SetProviderMetadata(model.AWSMetadata{
-		Zones: createClusterRequest.Zones,
-	})
-
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to set provider metadata")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	err = cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	err = cluster.SetProvisionerMetadata(model.KopsMetadata{
-		Version: createClusterRequest.Version,
-		AMI:     createClusterRequest.KopsAMI,
-	})
-
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to set provisioner metadata")
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -356,23 +342,10 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to parse existing provisioner metadata")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if upgradeClusterRequest.Apply(kopsMetadata) {
-		err = cluster.SetProvisionerMetadata(kopsMetadata)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to set provisioner metadata")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
+	if upgradeClusterRequest.Apply(cluster.ProvisionerMetadataKops) {
 		err := c.Store.UpdateCluster(cluster)
 		if err != nil {
-			c.Logger.WithError(err).Error("failed to cluster version")
+			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -575,5 +548,5 @@ func handleGetAllUtilityMetadata(c *Context, w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(cluster.UtilityMetadata)
+	outputJSON(c, w, cluster.UtilityMetadata)
 }

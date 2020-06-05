@@ -189,7 +189,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
-		errors.Wrap(err, "unable to marshal MattermostEnv")
+		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
