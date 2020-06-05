@@ -82,13 +82,13 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: |
-        set -e
-        set -u
-        export TAG="${CIRCLE_SHA1:0:7}"
-        echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
-        docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
-        docker push mattermost/mattermost-cloud:$TAG
+    - run: ./hacks/push-docker-pr.sh
+    - run:
+        name: Re-run Docker Push if fail
+        command: |
+            sleep 20
+            ./hacks/push-docker-pr.sh
+        when: on_fail
 
   push-docker:
     executor:
@@ -97,19 +97,13 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: |
-        set -e
-        set -u
-        if [[ -z "${CIRCLE_TAG:-}" ]]; then
-          echo "Pushing lastest for $CIRCLE_BRANCH..."
-          TAG=latest
-        else
-          echo "Pushing release $CIRCLE_TAG..."
-          TAG="$CIRCLE_TAG"
-        fi
-        echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
-        docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
-        docker push mattermost/mattermost-cloud:$TAG
+    - run: ./hacks/push-docker.sh
+    - run:
+        name: Re-run Docker Push if fail
+        command: |
+            sleep 20
+            ./hacks/push-docker.sh
+        when: on_fail
 
   scan-image:
     docker:
