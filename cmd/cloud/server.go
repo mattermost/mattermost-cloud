@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
@@ -228,6 +229,8 @@ var serverCmd = &cobra.Command{
 		//  - SIGTERM (Ctrl+/) (Kubernetes pod rolling termination)
 		// SIGKILL and SIGQUIT will not be caught.
 		signal.Notify(c, os.Interrupt)
+		// SIGTERM signal sent from kubernetes
+		signal.Notify(c, syscall.SIGTERM)
 		// Important:
 		// There are long-lived serial processes in the supervisors (especially
 		// the cluster supervisor). It is quite possible that these will still
