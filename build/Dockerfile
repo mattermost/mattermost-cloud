@@ -11,6 +11,7 @@ RUN make build
 
 # Final Image
 FROM ${DOCKER_BASE_IMAGE}
+
 LABEL name="Mattermost Cloud" \
   maintainer="cloud-team@mattermost.com" \
   vendor="Mattermost" \
@@ -37,6 +38,8 @@ COPY --from=build /mattermost-cloud/build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 WORKDIR /mattermost-cloud/
 
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
-
 USER ${USER_UID}
+
+EXPOSE 8075
+
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
