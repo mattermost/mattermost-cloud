@@ -28,8 +28,7 @@ type InstanceGroupSpec struct {
 	MaxSize     int64  `json:"maxSize"`
 }
 
-// GetInstanceGroupsJSON invokes kops get instancegroup, using the context of the
-// created Cmd, and returns the unmarshaled response as []InstanceGroup.
+// UpdateMetadata updates KopsMetadata with the current values from kops state store.
 func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	instanceGroups, err := c.GetInstanceGroupsJSON(metadata.Name)
 	if err != nil {

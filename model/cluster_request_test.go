@@ -66,8 +66,12 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"empty",
 			false,
 			&model.PatchUpgradeClusterRequest{},
-			&model.KopsMetadata{},
-			&model.KopsMetadata{},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
 		},
 		{
 			"version only",
@@ -75,9 +79,13 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			&model.PatchUpgradeClusterRequest{
 				Version: sToP("version1"),
 			},
-			&model.KopsMetadata{},
 			&model.KopsMetadata{
-				Version: "version1",
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					Version: "version1",
+				},
 			},
 		},
 		{
@@ -86,9 +94,13 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			&model.PatchUpgradeClusterRequest{
 				KopsAMI: sToP("image1"),
 			},
-			&model.KopsMetadata{},
 			&model.KopsMetadata{
-				AMI: "image1",
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					AMI: "image1",
+				},
 			},
 		},
 		{
@@ -99,11 +111,15 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 				KopsAMI: sToP("image1"),
 			},
 			&model.KopsMetadata{
-				Version: "old-version",
+				Version:       "old-version",
+				ChangeRequest: &model.KopsMetadataRequestedState{},
 			},
 			&model.KopsMetadata{
-				Version: "version1",
-				AMI:     "image1",
+				Version: "old-version",
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					Version: "version1",
+					AMI:     "image1",
+				},
 			},
 		},
 	}

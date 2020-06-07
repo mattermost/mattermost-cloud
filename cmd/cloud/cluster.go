@@ -47,7 +47,10 @@ func init() {
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
-	clusterResizeCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster.")
+	clusterResizeCmd.Flags().String("size", "SizeAlef500", "The size constant describing the cluster")
+	clusterResizeCmd.Flags().String("size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
+	clusterResizeCmd.Flags().Int64("size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
+	clusterResizeCmd.Flags().Int64("size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
 	clusterResizeCmd.MarkFlagRequired("cluster")
 	clusterResizeCmd.MarkFlagRequired("size")
 
@@ -116,6 +119,25 @@ var clusterCreateCmd = &cobra.Command{
 		err := clusterdictionary.ApplyToCreateClusterRequest(size, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to apply size values")
+		}
+		masterInstanceType, _ := command.Flags().GetString("master-instance-type")
+		if len(masterInstanceType) != 0 {
+			request.NodeInstanceType = masterInstanceType
+		}
+		nodeMaxCount, _ := command.Flags().GetInt64("master-count")
+		if nodeMaxCount != 0 {
+			request.NodeMaxCount = nodeMaxCount
+		}
+		nodeInstanceType, _ := command.Flags().GetString("node-instance-type")
+		if len(nodeInstanceType) != 0 {
+			request.NodeInstanceType = nodeInstanceType
+		}
+		nodeCount, _ := command.Flags().GetInt64("node-count")
+		if nodeCount != 0 {
+			// Setting different min and max counts in currently not supported
+			// with the kops create cluster flag.
+			request.NodeMinCount = nodeCount
+			request.NodeMaxCount = nodeCount
 		}
 
 		cluster, err := client.CreateCluster(request)
@@ -229,13 +251,28 @@ var clusterResizeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		// size, _ := command.Flags().GetString("size")
 
-		it := "m5.large"
+		// Apply values from 'size' constant and then apply overrides.
+		request := &model.PatchClusterSizeRequest{}
+		size, _ := command.Flags().GetString("size")
+		err := clusterdictionary.ApplyToPatchClusterSizeRequest(size, request)
+		if err != nil {
+			return errors.Wrap(err, "failed to apply size values")
+		}
+		nodeInstanceType, _ := command.Flags().GetString("node-instance-type")
+		if len(nodeInstanceType) != 0 {
+			request.NodeInstanceType = &nodeInstanceType
+		}
+		nodeMinCount, _ := command.Flags().GetInt64("node-min-count")
+		if nodeMinCount != 0 {
+			request.NodeMinCount = &nodeMinCount
+		}
+		nodeMaxCount, _ := command.Flags().GetInt64("node-max-count")
+		if nodeMaxCount != 0 {
+			request.NodeMaxCount = &nodeMaxCount
+		}
 
-		cluster, err := client.ResizeCluster(clusterID, &model.PatchClusterSizeRequest{
-			NodeInstanceType: &it,
-		})
+		cluster, err := client.ResizeCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to resize cluster")
 		}

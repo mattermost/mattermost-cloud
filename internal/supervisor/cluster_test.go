@@ -83,7 +83,7 @@ func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.A
 }
 
 func (p *mockClusterProvisioner) RefreshKopsMetadata(cluster *model.Cluster) (bool, error) {
-	return false, nil
+	return true, nil
 }
 
 func TestClusterSupervisorDo(t *testing.T) {
@@ -139,8 +139,9 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
 
 			cluster := &model.Cluster{
-				Provider: model.ProviderAWS,
-				State:    tc.InitialState,
+				Provider:                model.ProviderAWS,
+				ProvisionerMetadataKops: &model.KopsMetadata{},
+				State:                   tc.InitialState,
 			}
 			err := sqlStore.CreateCluster(cluster)
 			require.NoError(t, err)

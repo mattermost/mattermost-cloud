@@ -14,11 +14,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 		return &model.CreateClusterRequest{
 			Provider:               "aws",
 			Version:                "latest",
-			MasterInstanceType:     "m5.large",
-			MasterCount:            3,
-			NodeInstanceType:       "t3.large",
-			NodeMinCount:           6,
-			NodeMaxCount:           6,
+			MasterInstanceType:     "t3.medium",
+			MasterCount:            1,
+			NodeInstanceType:       "m5.large",
+			NodeMinCount:           2,
+			NodeMaxCount:           2,
 			Zones:                  []string{"us-east-1a"},
 			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "1.30.0", "prometheus": "10.4.0", "public-nginx": "1.30.0"},
 		}
@@ -50,11 +50,12 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 
 	t.Run("partial request", func(t *testing.T) {
 		clusterRequest, err := model.NewCreateClusterRequestFromReader(bytes.NewReader([]byte(
-			`{"MasterCount": 1337}`,
+			`{"node-min-count": 1337}`,
 		)))
 		require.NoError(t, err)
 		modifiedDefaultCreateClusterRequest := defaultCreateClusterRequest()
-		modifiedDefaultCreateClusterRequest.MasterCount = 1337
+		modifiedDefaultCreateClusterRequest.NodeMinCount = 1337
+		modifiedDefaultCreateClusterRequest.NodeMaxCount = 1337
 		require.Equal(t, modifiedDefaultCreateClusterRequest, clusterRequest)
 	})
 
@@ -64,10 +65,14 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 		)))
 		require.NoError(t, err)
 		require.Equal(t, &model.CreateClusterRequest{
-			Provider: model.ProviderAWS,
-			Version:  "1.12.4",
-			Size:     model.SizeAlef1000,
-			Zones:    []string{"zone1", "zone2"},
+			Provider:           model.ProviderAWS,
+			Version:            "1.12.4",
+			MasterInstanceType: "t3.medium",
+			MasterCount:        1,
+			NodeInstanceType:   "m5.large",
+			NodeMinCount:       2,
+			NodeMaxCount:       2,
+			Zones:              []string{"zone1", "zone2"},
 			DesiredUtilityVersions: map[string]string{
 				"fluentbit":    "2.8.7",
 				"nginx":        "1.30.0",

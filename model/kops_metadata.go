@@ -17,6 +17,7 @@ type KopsMetadata struct {
 	ChangeRequest      *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
 }
 
+// KopsMetadataRequestedState is the requested state for kops metadata.
 type KopsMetadataRequestedState struct {
 	Version            string `json:"Version,omitempty"`
 	AMI                string `json:"AMI,omitempty"`
@@ -27,6 +28,7 @@ type KopsMetadataRequestedState struct {
 	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
 }
 
+// ClearChangeRequest clears the kops metadata change request.
 func (km *KopsMetadata) ClearChangeRequest() {
 	km.ChangeRequest = nil
 }
