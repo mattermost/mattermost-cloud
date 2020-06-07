@@ -14,7 +14,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 		return &model.CreateClusterRequest{
 			Provider:               "aws",
 			Version:                "latest",
-			Size:                   "SizeAlef500",
+			MasterInstanceType:     "m5.large",
+			MasterCount:            3,
+			NodeInstanceType:       "t3.large",
+			NodeMinCount:           6,
+			NodeMaxCount:           6,
 			Zones:                  []string{"us-east-1a"},
 			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "1.30.0", "prometheus": "10.4.0", "public-nginx": "1.30.0"},
 		}
@@ -38,7 +42,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 
 	t.Run("unsupported provider", func(t *testing.T) {
 		clusterRequest, err := model.NewCreateClusterRequestFromReader(bytes.NewReader([]byte(
-			`{"Provider": "azure", "Size": "SizeAlef1000", "Zones":["zone1", "zone2"]}`,
+			`{"Provider": "azure", "Zones":["zone1", "zone2"]}`,
 		)))
 		require.EqualError(t, err, "create cluster request failed validation: unsupported provider azure")
 		require.Nil(t, clusterRequest)
@@ -46,11 +50,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 
 	t.Run("partial request", func(t *testing.T) {
 		clusterRequest, err := model.NewCreateClusterRequestFromReader(bytes.NewReader([]byte(
-			`{"Size": "SizeAlef1000"}`,
+			`{"MasterCount": 1337}`,
 		)))
 		require.NoError(t, err)
 		modifiedDefaultCreateClusterRequest := defaultCreateClusterRequest()
-		modifiedDefaultCreateClusterRequest.Size = "SizeAlef1000"
+		modifiedDefaultCreateClusterRequest.MasterCount = 1337
 		require.Equal(t, modifiedDefaultCreateClusterRequest, clusterRequest)
 	})
 

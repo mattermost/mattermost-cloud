@@ -86,15 +86,15 @@ func IsValidClusterSize(size string) bool {
 	return ok
 }
 
-// GetClusterSize takes a size keyword and returns the matching kops cluster
-// configuration.
+// ApplyToCreateClusterRequest takes a size keyword and applies the corresponding
+// cluster values to a CreateClusterRequest.
 func ApplyToCreateClusterRequest(size string, request *model.CreateClusterRequest) error {
 	if len(size) == 0 {
 		return nil
 	}
 
 	if !IsValidClusterSize(size) {
-		return errors.Errorf("%s is not a valid size")
+		return errors.Errorf("%s is not a valid size", size)
 	}
 
 	values := validSizes[size]
@@ -103,6 +103,25 @@ func ApplyToCreateClusterRequest(size string, request *model.CreateClusterReques
 	request.NodeInstanceType = values.NodeInstanceType
 	request.NodeMinCount = values.NodeMinCount
 	request.NodeMaxCount = values.NodeMaxCount
+
+	return nil
+}
+
+// ApplyToPatchClusterSizeRequest takes a size keyword and applies the
+// corresponding cluster values to a PatchClusterSizeRequest.
+func ApplyToPatchClusterSizeRequest(size string, request *model.PatchClusterSizeRequest) error {
+	if len(size) == 0 {
+		return nil
+	}
+
+	if !IsValidClusterSize(size) {
+		return errors.Errorf("%s is not a valid size", size)
+	}
+
+	values := validSizes[size]
+	request.NodeInstanceType = &values.NodeInstanceType
+	request.NodeMinCount = &values.NodeMinCount
+	request.NodeMaxCount = &values.NodeMaxCount
 
 	return nil
 }

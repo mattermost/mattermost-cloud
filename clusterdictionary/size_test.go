@@ -3,6 +3,7 @@ package clusterdictionary
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,58 +25,162 @@ func TestCheckSize(t *testing.T) {
 	}
 }
 
-func TestGetSize(t *testing.T) {
+func TestApplyToCreateClusterRequest(t *testing.T) {
 	var sizeTests = []struct {
 		size        string
-		clusterSize size
+		request     *model.CreateClusterRequest
 		expectError bool
 	}{
-		{"SizeAlefDev", sizeAlefDev, false},
-		{"SizeAlef500", sizeAlef500, false},
-		{"SizeAlef1000", sizeAlef1000, false},
-		{"SizeAlef5000", sizeAlef5000, false},
-		{"SizeAlef10000", sizeAlef10000, false},
-		{"IncorrectSize", size{}, true},
+		{
+			"",
+			&model.CreateClusterRequest{},
+			false,
+		}, {
+			"InvalidSize",
+			&model.CreateClusterRequest{},
+			true,
+		}, {
+			SizeAlefDev,
+			&model.CreateClusterRequest{
+				MasterInstanceType: "t3.medium",
+				MasterCount:        1,
+				NodeInstanceType:   "t3.medium",
+				NodeMinCount:       2,
+				NodeMaxCount:       2,
+			},
+			false,
+		}, {
+			SizeAlef500,
+			&model.CreateClusterRequest{
+				MasterInstanceType: "t3.medium",
+				MasterCount:        1,
+				NodeInstanceType:   "m5.large",
+				NodeMinCount:       2,
+				NodeMaxCount:       2,
+			},
+			false,
+		}, {
+			SizeAlef1000,
+			&model.CreateClusterRequest{
+				MasterInstanceType: "t3.large",
+				MasterCount:        1,
+				NodeInstanceType:   "m5.large",
+				NodeMinCount:       4,
+				NodeMaxCount:       4,
+			},
+			false,
+		}, {
+			SizeAlef5000,
+			&model.CreateClusterRequest{
+				MasterInstanceType: "t3.large",
+				MasterCount:        1,
+				NodeInstanceType:   "m5.large",
+				NodeMinCount:       6,
+				NodeMaxCount:       6,
+			},
+			false,
+		}, {
+			SizeAlef10000,
+			&model.CreateClusterRequest{
+				MasterInstanceType: "t3.large",
+				MasterCount:        3,
+				NodeInstanceType:   "m5.large",
+				NodeMinCount:       10,
+				NodeMaxCount:       10,
+			},
+			false,
+		},
 	}
 
 	for _, tt := range sizeTests {
 		t.Run(tt.size, func(t *testing.T) {
-			clusterSize, err := GetSize(tt.size)
+			request := &model.CreateClusterRequest{}
+			err := ApplyToCreateClusterRequest(tt.size, request)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, clusterSize, tt.clusterSize)
+			assert.Equal(t, tt.request, request)
 		})
 	}
+}
 
-	var haSizeTests = []struct {
+func TestApplyToPatchClusterSizeRequest(t *testing.T) {
+	var sizeTests = []struct {
 		size        string
-		clusterSize ClusterSize
-		masterCount string
+		request     *model.PatchClusterSizeRequest
 		expectError bool
 	}{
-		{"SizeAlef500-HA3", sizeAlef500, "3", false},
-		{"SizeAlef1000-HA2", sizeAlef1000, "2", false},
-		{"SizeAlef5000-HA3", sizeAlef5000, "3", false},
-		{"SizeAlef500-HA4", size{}, "", true},
-		{"SizeAlef500-HA", size{}, "", true},
-		{"SizeAlef500-HA3-HA2", size{}, "", true},
+		{
+			"",
+			&model.PatchClusterSizeRequest{},
+			false,
+		}, {
+			"InvalidSize",
+			&model.PatchClusterSizeRequest{},
+			true,
+		}, {
+			SizeAlefDev,
+			&model.PatchClusterSizeRequest{
+				NodeInstanceType: stringToPointer("t3.medium"),
+				NodeMinCount:     int64ToPointer(2),
+				NodeMaxCount:     int64ToPointer(2),
+			},
+			false,
+		}, {
+			SizeAlef500,
+			&model.PatchClusterSizeRequest{
+				NodeInstanceType: stringToPointer("m5.large"),
+				NodeMinCount:     int64ToPointer(2),
+				NodeMaxCount:     int64ToPointer(2),
+			},
+			false,
+		}, {
+			SizeAlef1000,
+			&model.PatchClusterSizeRequest{
+				NodeInstanceType: stringToPointer("m5.large"),
+				NodeMinCount:     int64ToPointer(4),
+				NodeMaxCount:     int64ToPointer(4),
+			},
+			false,
+		}, {
+			SizeAlef5000,
+			&model.PatchClusterSizeRequest{
+				NodeInstanceType: stringToPointer("m5.large"),
+				NodeMinCount:     int64ToPointer(6),
+				NodeMaxCount:     int64ToPointer(6),
+			},
+			false,
+		}, {
+			SizeAlef10000,
+			&model.PatchClusterSizeRequest{
+				NodeInstanceType: stringToPointer("m5.large"),
+				NodeMinCount:     int64ToPointer(10),
+				NodeMaxCount:     int64ToPointer(10),
+			},
+			false,
+		},
 	}
 
-	for _, tt := range haSizeTests {
+	for _, tt := range sizeTests {
 		t.Run(tt.size, func(t *testing.T) {
-			clusterSize, err := GetSize(tt.size)
+			request := &model.PatchClusterSizeRequest{}
+			err := ApplyToPatchClusterSizeRequest(tt.size, request)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-
-			haClusterSize := tt.clusterSize
-			haClusterSize.MasterCount = tt.masterCount
-			assert.Equal(t, clusterSize, haClusterSize)
+			assert.Equal(t, tt.request, request)
 		})
 	}
+}
+
+func stringToPointer(s string) *string {
+	return &s
+}
+
+func int64ToPointer(i int64) *int64 {
+	return &i
 }
