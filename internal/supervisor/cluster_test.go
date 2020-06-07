@@ -82,8 +82,8 @@ func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.A
 	return nil
 }
 
-func (p *mockClusterProvisioner) GetClusterVersion(cluster *model.Cluster) (string, error) {
-	return "0.0.0", nil
+func (p *mockClusterProvisioner) RefreshKopsMetadata(cluster *model.Cluster) (bool, error) {
+	return false, nil
 }
 
 func TestClusterSupervisorDo(t *testing.T) {
@@ -140,7 +140,6 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 
 			cluster := &model.Cluster{
 				Provider: model.ProviderAWS,
-				Size:     model.SizeAlef500,
 				State:    tc.InitialState,
 			}
 			err := sqlStore.CreateCluster(cluster)
@@ -161,7 +160,6 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 
 		cluster := &model.Cluster{
 			Provider: model.ProviderAWS,
-			Size:     model.SizeAlef500,
 			State:    model.ClusterStateDeletionRequested,
 		}
 		err := sqlStore.CreateCluster(cluster)

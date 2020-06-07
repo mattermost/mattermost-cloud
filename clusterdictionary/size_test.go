@@ -1,4 +1,4 @@
-package kops
+package clusterdictionary
 
 import (
 	"testing"
@@ -6,10 +6,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCheckSize(t *testing.T) {
+	var testCases = []struct {
+		size            string
+		expectSupported bool
+	}{
+		{"", false},
+		{"unknown", false},
+		{SizeAlef500, true},
+		{SizeAlef1000, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.size, func(t *testing.T) {
+			assert.Equal(t, tc.expectSupported, IsValidClusterSize(tc.size))
+		})
+	}
+}
+
 func TestGetSize(t *testing.T) {
 	var sizeTests = []struct {
 		size        string
-		clusterSize ClusterSize
+		clusterSize size
 		expectError bool
 	}{
 		{"SizeAlefDev", sizeAlefDev, false},
@@ -17,7 +35,7 @@ func TestGetSize(t *testing.T) {
 		{"SizeAlef1000", sizeAlef1000, false},
 		{"SizeAlef5000", sizeAlef5000, false},
 		{"SizeAlef10000", sizeAlef10000, false},
-		{"IncorrectSize", ClusterSize{}, true},
+		{"IncorrectSize", size{}, true},
 	}
 
 	for _, tt := range sizeTests {
@@ -41,9 +59,9 @@ func TestGetSize(t *testing.T) {
 		{"SizeAlef500-HA3", sizeAlef500, "3", false},
 		{"SizeAlef1000-HA2", sizeAlef1000, "2", false},
 		{"SizeAlef5000-HA3", sizeAlef5000, "3", false},
-		{"SizeAlef500-HA4", ClusterSize{}, "", true},
-		{"SizeAlef500-HA", ClusterSize{}, "", true},
-		{"SizeAlef500-HA3-HA2", ClusterSize{}, "", true},
+		{"SizeAlef500-HA4", size{}, "", true},
+		{"SizeAlef500-HA", size{}, "", true},
+		{"SizeAlef500-HA3-HA2", size{}, "", true},
 	}
 
 	for _, tt := range haSizeTests {

@@ -30,7 +30,7 @@ type clusterProvisioner interface {
 	UpgradeCluster(cluster *model.Cluster) error
 	ResizeCluster(cluster *model.Cluster) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
-	GetClusterVersion(cluster *model.Cluster) (string, error)
+	RefreshKopsMetadata(cluster *model.Cluster) (bool, error)
 }
 
 // ClusterSupervisor finds clusters pending work and effects the required changes.
@@ -147,6 +147,8 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.createCluster(cluster, logger)
 	case model.ClusterStateProvisioningRequested:
 		return s.provisionCluster(cluster, logger)
+	case model.ClusterStateRefreshRequested:
+		return s.refreshClusterMetadata(cluster, logger)
 	case model.ClusterStateUpgradeRequested:
 		return s.upgradeCluster(cluster, logger)
 	case model.ClusterStateResizeRequested:
@@ -176,29 +178,15 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 		return model.ClusterStateCreationFailed
 	}
 
+	logger.Info("Finished creating cluster")
+
 	err = s.provisioner.ProvisionCluster(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster")
 		return model.ClusterStateProvisioningFailed
 	}
 
-	// Update the cluster version in the database. Log errors, but do not
-	// prevent creation from finishing cleanly.
-	version, err := s.provisioner.GetClusterVersion(cluster)
-	if err != nil {
-		logger.WithError(err).Error("Failed to get cluster version")
-	} else {
-		if cluster.Version != version {
-			cluster.Version = version
-		}
-		err = s.store.UpdateCluster(cluster)
-		if err != nil {
-			logger.WithError(err).Warnf("failed to persist updated cluster %#v to database", cluster)
-		}
-	}
-
-	logger.Info("Finished creating cluster")
-	return model.ClusterStateStable
+	return s.refreshClusterMetadata(cluster, logger)
 }
 
 func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
@@ -208,22 +196,24 @@ func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.
 		return model.ClusterStateProvisioningFailed
 	}
 
-	// Update the cluster version in the database. Log errors, but do not
-	// prevent provisioning from finishing cleanly.
-	version, err := s.provisioner.GetClusterVersion(cluster)
+	logger.Info("Finished provisioning cluster")
+	return model.ClusterStateStable
+}
+
+func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logger log.FieldLogger) string {
+	updated, err := s.provisioner.RefreshKopsMetadata(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get cluster version")
-	} else {
-		if cluster.Version != version {
-			cluster.Version = version
-		}
+		logger.WithError(err).Error("Failed to refresh cluster")
+		return model.ClusterStateRefreshRequested
+	}
+	if updated {
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
-			logger.WithError(err).Warnf("failed to persist updated cluster %#v to database", cluster)
+			logger.WithError(err).Error("Failed to save updated cluster kops metadata")
+			return model.ClusterStateRefreshRequested
 		}
 	}
 
-	logger.Info("Finished provisioning cluster")
 	return model.ClusterStateStable
 }
 
@@ -234,17 +224,16 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 		return model.ClusterStateUpgradeFailed
 	}
 
-	// Update the cluster version in the database. Log errors, but do not
-	// prevent the upgrade from finishing cleanly.
-	version, err := s.provisioner.GetClusterVersion(cluster)
+	cluster.ProvisionerMetadataKops.ClearChangeRequest()
+
+	updated, err := s.provisioner.RefreshKopsMetadata(cluster)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get cluster version")
+		logger.WithError(err).Error("Failed to refresh kops metadata")
 	} else {
-		if cluster.Version != version {
-			cluster.Version = version
+		if updated {
 			err = s.store.UpdateCluster(cluster)
 			if err != nil {
-				logger.WithError(err).Warnf("failed to set cluster version to %s", version)
+				logger.WithError(err).Error("Failed to save updated cluster kops metadata")
 			}
 		}
 	}
@@ -258,6 +247,20 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 	if err != nil {
 		logger.WithError(err).Error("Failed to resize cluster")
 		return model.ClusterStateResizeFailed
+	}
+
+	cluster.ProvisionerMetadataKops.ClearChangeRequest()
+
+	updated, err := s.provisioner.RefreshKopsMetadata(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to refresh kops metadata")
+	} else {
+		if updated {
+			err = s.store.UpdateCluster(cluster)
+			if err != nil {
+				logger.WithError(err).Error("Failed to save updated cluster kops metadata")
+			}
+		}
 	}
 
 	logger.Info("Finished resizing cluster")

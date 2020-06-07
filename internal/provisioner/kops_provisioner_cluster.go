@@ -79,11 +79,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrapf(err, "invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
 
-	clusterSize, err := kops.GetSize(cluster.Size)
-	if err != nil {
-		return err
-	}
-
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
@@ -103,10 +98,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	err = kops.CreateCluster(
 		kopsMetadata.Name,
-		kopsMetadata.Version,
-		kopsMetadata.AMI,
 		cluster.Provider,
-		clusterSize,
+		kopsMetadata.ChangeRequest,
 		cluster.ProviderMetadataAWS.Zones,
 		clusterResources.PrivateSubnetIDs,
 		clusterResources.PublicSubnetsIDs,
@@ -434,11 +427,6 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
-	clusterSize, err := kops.GetSize(cluster.Size)
-	if err != nil {
-		return err
-	}
-
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
@@ -472,7 +460,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-	igManifest, err = grossKopsReplaceSize(igManifest, clusterSize.NodeSize, string(clusterSize.NodeCount), string(clusterSize.NodeCount))
+	igManifest, err = grossKopsReplaceSize(
+		igManifest, kopsMetadata.ChangeRequest.NodeInstanceType,
+		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMinCount),
+		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMaxCount),
+	)
 	if err != nil {
 		return err
 	}
@@ -673,36 +665,50 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}, nil
 }
 
-// GetClusterVersion returns the version of kubernetes running on the cluster.
-func (provisioner *KopsProvisioner) GetClusterVersion(cluster *model.Cluster) (string, error) {
+// RefreshKopsMetadata updates the kops metadata of a cluster with the current
+// values of the running cluster.
+func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	logger.Info("Getting cluster kubernetes version")
+	logger.Info("Refreshing kops metadata")
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to create kops wrapper")
+		return false, errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
 
 	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to export kubecfg")
+		return false, errors.Wrap(err, "failed to export kubecfg")
 	}
 
 	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to construct k8s client")
+		return false, errors.Wrap(err, "failed to construct k8s client")
 	}
 
 	versionInfo, err := k8sClient.Clientset.Discovery().ServerVersion()
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to get kubernetes version")
+		return false, errors.Wrap(err, "failed to get kubernetes version")
 	}
 
 	// The GitVersion string usually looks like v1.14.2 so we trim the "v" off
 	// to match the version syntax used in kops.
 	version := strings.TrimLeft(versionInfo.GitVersion, "v")
 
-	return version, nil
+	var updated bool
+	if cluster.ProvisionerMetadataKops.Version != version {
+		cluster.ProvisionerMetadataKops.Version = version
+		updated = true
+	}
+
+	err = kops.UpdateMetadata(cluster.ProvisionerMetadataKops)
+	if err != nil {
+		return false, err
+	}
+
+	updated = true
+
+	return updated, nil
 }

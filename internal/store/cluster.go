@@ -15,8 +15,8 @@ func init() {
 	clusterSelect = sq.
 		Select(
 			"ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
-			"UtilityMetadataRaw", "Version", "Size", "State", "AllowInstallations",
-			"CreateAt", "DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
+			"UtilityMetadataRaw", "State", "AllowInstallations", "CreateAt", "DeleteAt",
+			"LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Cluster")
 }
@@ -172,13 +172,13 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 			"Provisioner":            cluster.Provisioner,
 			"ProvisionerMetadataRaw": rawMetadata.ProvisionerMetadataRaw,
 			"UtilityMetadataRaw":     rawMetadata.UtilityMetadataRaw,
-			"Version":                cluster.Version,
-			"Size":                   cluster.Size,
 			"AllowInstallations":     cluster.AllowInstallations,
 			"CreateAt":               cluster.CreateAt,
 			"DeleteAt":               0,
 			"LockAcquiredBy":         nil,
 			"LockAcquiredAt":         0,
+			"Size":                   "DEPRECATED",
+			"Version":                "DEPRECATED",
 		}),
 	)
 	if err != nil {
@@ -204,8 +204,6 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 			"Provisioner":            cluster.Provisioner,
 			"ProvisionerMetadataRaw": rawMetadata.ProvisionerMetadataRaw,
 			"UtilityMetadataRaw":     rawMetadata.UtilityMetadataRaw,
-			"Version":                cluster.Version,
-			"Size":                   cluster.Size,
 			"AllowInstallations":     cluster.AllowInstallations,
 		}).
 		Where("ID = ?", cluster.ID),

@@ -10,6 +10,8 @@ const (
 	// ClusterStateProvisioningRequested is a cluster in the process of being
 	// provisioned with operators.
 	ClusterStateProvisioningRequested = "provisioning-requested"
+	// ClusterStateRefreshRequested is a cluster that will have metadata refreshed.
+	ClusterStateRefreshRequested = "refresh-requested"
 	// ClusterStateProvisioningFailed is a cluster that failed provisioning.
 	ClusterStateProvisioningFailed = "provisioning-failed"
 	// ClusterStateUpgradeRequested is a cluster in the process of upgrading.
@@ -54,6 +56,7 @@ var AllClusterStates = []string{
 var AllClusterStatesPendingWork = []string{
 	ClusterStateCreationRequested,
 	ClusterStateProvisioningRequested,
+	ClusterStateRefreshRequested,
 	ClusterStateUpgradeRequested,
 	ClusterStateResizeRequested,
 	ClusterStateDeletionRequested,

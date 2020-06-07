@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
@@ -26,7 +25,7 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("", addContext(handleUpdateClusterConfiguration)).Methods("PUT")
 	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
 	clusterRouter.Handle("/kubernetes", addContext(handleUpgradeKubernetes)).Methods("PUT")
-	clusterRouter.Handle("/size/{size}", addContext(handleResizeCluster)).Methods("PUT")
+	clusterRouter.Handle("/size", addContext(handleResizeCluster)).Methods("PUT")
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
@@ -87,11 +86,16 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		},
 		Provisioner: "kops",
 		ProvisionerMetadataKops: &model.KopsMetadata{
-			Version: createClusterRequest.Version,
-			AMI:     createClusterRequest.KopsAMI,
+			ChangeRequest: &model.KopsMetadataRequestedState{
+				Version:            createClusterRequest.Version,
+				AMI:                createClusterRequest.KopsAMI,
+				MasterInstanceType: createClusterRequest.MasterInstanceType,
+				MasterCount:        createClusterRequest.MasterCount,
+				NodeInstanceType:   createClusterRequest.NodeInstanceType,
+				NodeMinCount:       createClusterRequest.NodeMinCount,
+				NodeMaxCount:       createClusterRequest.NodeMaxCount,
+			},
 		},
-		Version:            "0.0.0",
-		Size:               createClusterRequest.Size,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		State:              model.ClusterStateCreationRequested,
 	}
@@ -377,7 +381,9 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, cluster)
 }
 
 // handleResizeCluster responds to PUT /api/cluster/{cluster}/size/{size},
@@ -385,11 +391,11 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
-	size := vars["size"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	if !model.IsSupportedClusterSize(size) {
-		c.Logger.Warnf("unsupported cluster size %s", size)
+	resizeClusterRequest, err := model.NewResizeClusterRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -401,26 +407,6 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	// Changing master sizing is currently not supported so ensure the provided
-	// HA count value is identical to what it was originally.
-	newSize, err := kops.GetSize(size)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to parse new cluster size")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	oldSize, err := kops.GetSize(cluster.Size)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to parse old cluster size")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if newSize.MasterCount != oldSize.MasterCount {
-		c.Logger.Warnf("new size HA value (%s) must be identical to old value (%s)", newSize.MasterCount, oldSize.MasterCount)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	newState := model.ClusterStateResizeRequested
 
 	if !cluster.ValidTransitionState(newState) {
@@ -429,11 +415,10 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if cluster.Size != size {
-		cluster.Size = size
-		err := c.Store.UpdateCluster(cluster)
+	if resizeClusterRequest.Apply(cluster.ProvisionerMetadataKops) {
+		err = c.Store.UpdateCluster(cluster)
 		if err != nil {
-			c.Logger.WithError(err).Error("failed to cluster version")
+			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -465,7 +450,9 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	unlockOnce()
 	c.Supervisor.Do()
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, cluster)
 }
 
 // handleDeleteCluster responds to DELETE /api/cluster/{cluster}, beginning the process of

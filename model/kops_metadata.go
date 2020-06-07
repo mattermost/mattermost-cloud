@@ -14,6 +14,21 @@ type KopsMetadata struct {
 	NodeInstanceType   string
 	NodeMinCount       int64
 	NodeMaxCount       int64
+	ChangeRequest      *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
+}
+
+type KopsMetadataRequestedState struct {
+	Version            string `json:"Version,omitempty"`
+	AMI                string `json:"AMI,omitempty"`
+	MasterInstanceType string `json:"MasterInstanceType,omitempty"`
+	MasterCount        int64  `json:"MasterCount,omitempty"`
+	NodeInstanceType   string `json:"NodeInstanceType,omitempty"`
+	NodeMinCount       int64  `json:"NodeMinCount,omitempty"`
+	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
+}
+
+func (km *KopsMetadata) ClearChangeRequest() {
+	km.ChangeRequest = nil
 }
 
 // NewKopsMetadata creates an instance of KopsMetadata given the raw provisioner metadata.

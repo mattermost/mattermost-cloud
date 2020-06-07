@@ -16,7 +16,6 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		{"defaults", &model.CreateClusterRequest{}, false},
 		{"invalid provider", &model.CreateClusterRequest{Provider: "blah"}, true},
 		{"invalid version", &model.CreateClusterRequest{Version: "blah"}, true},
-		{"invalid size", &model.CreateClusterRequest{Size: "blah"}, true},
 	}
 
 	for _, tc := range testCases {
