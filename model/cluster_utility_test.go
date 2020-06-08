@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,27 +72,6 @@ func TestSetDesired(t *testing.T) {
 }
 
 func TestGetActualVersion(t *testing.T) {
-	um := &UtilityMetadata{
-		DesiredVersions: utilityVersions{
-			Prometheus:  "",
-			Nginx:       "10.3",
-			Fluentbit:   "1337",
-			PublicNginx: "1234",
-			Teleport:    "12345",
-		},
-		ActualVersions: utilityVersions{
-			Prometheus:  "prometheus-10.3",
-			Nginx:       "nginx-10.2",
-			Fluentbit:   "fluent-bit-0.9",
-			PublicNginx: "nginx-10.2",
-			Teleport:    "teleport-0.2.0",
-		},
-	}
-
-	b, err := json.Marshal(um)
-	require.NoError(t, err)
-	assert.NotEqual(t, 0, len(b))
-
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
@@ -101,12 +79,14 @@ func TestGetActualVersion(t *testing.T) {
 				Nginx:       "10.3",
 				Fluentbit:   "1337",
 				PublicNginx: "1234",
+				Teleport:    "12345",
 			},
 			ActualVersions: utilityVersions{
 				Prometheus:  "prometheus-10.3",
 				Nginx:       "nginx-10.2",
 				Fluentbit:   "fluent-bit-0.9",
 				PublicNginx: "nginx-10.2",
+				Teleport:    "teleport-0.2.0",
 			},
 		},
 	}
@@ -137,27 +117,6 @@ func TestGetActualVersion(t *testing.T) {
 }
 
 func TestGetDesiredVersion(t *testing.T) {
-	um := &UtilityMetadata{
-		DesiredVersions: utilityVersions{
-			Prometheus:  "",
-			Nginx:       "10.3",
-			Fluentbit:   "1337",
-			PublicNginx: "1234",
-			Teleport:    "12345",
-		},
-		ActualVersions: utilityVersions{
-			Prometheus:  "prometheus-10.3",
-			Nginx:       "nginx-10.2",
-			Fluentbit:   "fluent-bit-0.9",
-			PublicNginx: "nginx-10.2",
-			Teleport:    "teleport-0.2.0",
-		},
-	}
-
-	b, err := json.Marshal(um)
-	require.NoError(t, err)
-	assert.NotEqual(t, 0, len(b))
-
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
@@ -165,12 +124,14 @@ func TestGetDesiredVersion(t *testing.T) {
 				Nginx:       "10.3",
 				Fluentbit:   "1337",
 				PublicNginx: "1234",
+				Teleport:    "12345",
 			},
 			ActualVersions: utilityVersions{
 				Prometheus:  "prometheus-10.3",
 				Nginx:       "nginx-10.2",
 				Fluentbit:   "fluent-bit-0.9",
 				PublicNginx: "nginx-10.2",
+				Teleport:    "teleport-0.2.0",
 			},
 		},
 	}
