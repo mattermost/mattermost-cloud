@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,7 +73,6 @@ func TestSetDesired(t *testing.T) {
 }
 
 func TestGetActualVersion(t *testing.T) {
-<<<<<<< HEAD
 	um := &UtilityMetadata{
 		DesiredVersions: utilityVersions{
 			Prometheus:  "",
@@ -94,8 +94,6 @@ func TestGetActualVersion(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, len(b))
 
-=======
->>>>>>> 62b815b34d5e4ca4539265fd5864c1e938d88806
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
@@ -139,7 +137,6 @@ func TestGetActualVersion(t *testing.T) {
 }
 
 func TestGetDesiredVersion(t *testing.T) {
-<<<<<<< HEAD
 	um := &UtilityMetadata{
 		DesiredVersions: utilityVersions{
 			Prometheus:  "",
@@ -161,8 +158,6 @@ func TestGetDesiredVersion(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, 0, len(b))
 
-=======
->>>>>>> 62b815b34d5e4ca4539265fd5864c1e938d88806
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
