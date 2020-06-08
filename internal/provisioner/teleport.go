@@ -114,7 +114,7 @@ func getEnvironment(awsClient aws.AWS) (string, error) {
 		return "", errors.New("Account Alias not defined")
 	}
 	for _, alias := range accountAliases.AccountAliases {
-		if strings.HasPrefix(*alias, "mattermost-cloud") {
+		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
 			return strings.Split(*alias, "-")[2], nil
 		}
 	}

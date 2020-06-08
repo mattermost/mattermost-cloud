@@ -48,7 +48,6 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"jetstack":    "https://charts.jetstack.io",
 	"stable":      "https://kubernetes-charts.storage.googleapis.com",
 	"chartmuseum": "https://chartmuseum.internal.core.cloud.mattermost.com",
 }
