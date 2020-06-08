@@ -55,13 +55,17 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			if AMI == "" {
 				AMI = ig.Spec.Image
 			} else if AMI != ig.Spec.Image {
-				metadata.AddWarning(fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s is has AMI %s", ig.Metadata.Name, ig.Spec.Image))
+				warning := fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
+				metadata.AddWarning(warning)
+				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}
 
 			if masterMachineType == "" {
 				masterMachineType = ig.Spec.MachineType
 			} else if masterMachineType != ig.Spec.MachineType {
-				metadata.AddWarning(fmt.Sprintf("Expected all master hosts to be running same machine type, but instance group %s is has type %s", ig.Metadata.Name, ig.Spec.MachineType))
+				warning := fmt.Sprintf("Expected all master hosts to be running same machine type, but instance group %s has type %s", ig.Metadata.Name, ig.Spec.MachineType)
+				metadata.AddWarning(warning)
+				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}
 
 			masterIGCount++
@@ -69,7 +73,9 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			if AMI == "" {
 				AMI = ig.Spec.Image
 			} else if AMI != ig.Spec.Image {
-				metadata.AddWarning(fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s is has AMI %s", ig.Metadata.Name, ig.Spec.Image))
+				warning := fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
+				metadata.AddWarning(warning)
+				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}
 
 			NodeIGCount++
@@ -77,15 +83,21 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			nodeMinCount = ig.Spec.MinSize
 			nodeMaxCount = ig.Spec.MaxSize
 		default:
-			metadata.AddWarning(fmt.Sprintf("Instance group %s has unknown role %s", ig.Metadata.Name, ig.Spec.Role))
+			warning := fmt.Sprintf("Instance group %s has unknown role %s", ig.Metadata.Name, ig.Spec.Role)
+			metadata.AddWarning(warning)
+			c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 		}
 	}
 
 	if masterIGCount == 0 {
-		metadata.AddWarning("Failed to find any master instance groups")
+		warning := "Failed to find any master instance groups"
+		metadata.AddWarning(warning)
+		c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 	}
 	if NodeIGCount != 1 {
-		metadata.AddWarning(fmt.Sprintf("expected exactly 1 node instance group, but found %d", NodeIGCount))
+		warning := fmt.Sprintf("expected exactly 1 node instance group, but found %d", NodeIGCount)
+		metadata.AddWarning(warning)
+		c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 	}
 
 	metadata.AMI = AMI
