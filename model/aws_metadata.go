@@ -8,14 +8,14 @@ type AWSMetadata struct {
 }
 
 // NewAWSMetadata creates an instance of AWSMetadata given the raw provider metadata.
-func NewAWSMetadata(providerMetadata []byte) (*AWSMetadata, error) {
-	awsMetadata := AWSMetadata{}
-
-	if providerMetadata == nil {
-		return &awsMetadata, nil
+func NewAWSMetadata(metadataBytes []byte) (*AWSMetadata, error) {
+	if metadataBytes == nil || string(metadataBytes) == "null" {
+		// TODO: remove "null" check after sqlite is gone.
+		return nil, nil
 	}
 
-	err := json.Unmarshal(providerMetadata, &awsMetadata)
+	var awsMetadata AWSMetadata
+	err := json.Unmarshal(metadataBytes, &awsMetadata)
 	if err != nil {
 		return nil, err
 	}

@@ -11,7 +11,7 @@ func TestNewKopsMetadata(t *testing.T) {
 	t.Run("nil payload", func(t *testing.T) {
 		kopsMetadata, err := model.NewKopsMetadata(nil)
 		require.NoError(t, err)
-		require.Equal(t, "", kopsMetadata.Name)
+		require.Nil(t, kopsMetadata)
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {

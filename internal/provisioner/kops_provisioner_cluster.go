@@ -55,50 +55,36 @@ func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool
 }
 
 // PrepareCluster ensures a cluster object is ready for provisioning.
-func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) (bool, error) {
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to parse existing provisioner metadata")
-	}
-
+func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 	// Don't regenerate the name if already set.
-	if kopsMetadata.Name != "" {
-		return false, nil
+	if cluster.ProvisionerMetadataKops.Name != "" {
+		return false
 	}
 
 	// Generate the kops name using the cluster id.
-	kopsMetadata.Name = fmt.Sprintf("%s-kops.k8s.local", cluster.ID)
-	cluster.SetProvisionerMetadata(kopsMetadata)
+	cluster.ProvisionerMetadataKops.Name = fmt.Sprintf("%s-kops.k8s.local", cluster.ID)
 
-	return true, nil
+	return true
 }
 
 // CreateCluster creates a cluster using kops and terraform.
 func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsClient aws.AWS) error {
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	awsMetadata, err := model.NewAWSMetadata(cluster.ProviderMetadata)
+	isAMIValid, err := awsClient.IsValidAMI(cluster.ProvisionerMetadataKops.AMI, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse provider metadata")
-	}
-
-	isAMIValid, err := awsClient.IsValidAMI(kopsMetadata.AMI, logger)
-	if err != nil {
-		return errors.Wrapf(err, "Error checking the AWS AMI Image %s", kopsMetadata.AMI)
+		return errors.Wrapf(err, "error checking the AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
 	if !isAMIValid {
-		return errors.Wrapf(err, "invalid AWS AMI Image %s", kopsMetadata.AMI)
+		return errors.Wrapf(err, "invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
 
 	clusterSize, err := kops.GetSize(cluster.Size)
 	if err != nil {
 		return err
 	}
+
+	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
 	kops, err := kops.New(provisioner.s3StateStore, logger)
@@ -121,7 +107,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		kopsMetadata.AMI,
 		cluster.Provider,
 		clusterSize,
-		awsMetadata.Zones,
+		cluster.ProviderMetadataAWS.Zones,
 		clusterResources.PrivateSubnetIDs,
 		clusterResources.PublicSubnetsIDs,
 		clusterResources.MasterSecurityGroupIDs,
@@ -212,12 +198,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
@@ -356,19 +337,16 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
-	logger.WithField("name", kopsMetadata.Name).Info("Successfully provisioned cluster")
+	logger.WithField("name", cluster.ProvisionerMetadataKops.Name).Info("Successfully provisioned cluster")
 
 	return nil
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
 func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error {
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
@@ -452,12 +430,9 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 
 // ResizeCluster resizes a cluster.
 func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error {
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	clusterSize, err := kops.GetSize(cluster.Size)
 	if err != nil {
@@ -551,12 +526,9 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
 func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) error {
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
@@ -644,12 +616,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}
@@ -718,12 +685,7 @@ func (provisioner *KopsProvisioner) GetClusterVersion(cluster *model.Cluster) (s
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return DefaultKubernetesVersion, errors.Wrap(err, "failed to export kubecfg")
 	}

@@ -923,4 +923,63 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.18.0"), semver.MustParse("0.19.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE Cluster RENAME TO ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE Cluster (
+				ID TEXT PRIMARY KEY,
+				Provider TEXT NOT NULL,
+				Provisioner TEXT NOT NULL,
+				ProviderMetadataRaw BYTEA NULL,
+				ProvisionerMetadataRaw BYTEA NULL,
+				UtilityMetadataRaw BYTEA NULL,
+				Version TEXT NOT NULL,
+				Size TEXT NOT NULL,
+				State TEXT NOT NULL,
+				AllowInstallations BOOLEAN NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			INSERT INTO Cluster
+			SELECT
+				ID,
+				Provider,
+				Provisioner,
+				ProviderMetadata,
+				ProvisionerMetadata,
+				UtilityMetadata,
+				Version,
+				Size,
+				State,
+				AllowInstallations,
+				CreateAt,
+				DeleteAt,
+				LockAcquiredBy,
+				LockAcquiredAt
+			FROM
+				ClusterTemp;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

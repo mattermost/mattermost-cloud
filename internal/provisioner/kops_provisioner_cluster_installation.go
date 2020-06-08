@@ -32,12 +32,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
@@ -163,17 +158,12 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	if kopsMetadata.Name == "" {
+	if cluster.ProvisionerMetadataKops.Name == "" {
 		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
 		return nil
 	}
 
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
@@ -281,17 +271,12 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	if kopsMetadata.Name == "" {
+	if cluster.ProvisionerMetadataKops.Name == "" {
 		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
 		return nil
 	}
 
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
@@ -346,17 +331,12 @@ func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *mode
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	if kopsMetadata.Name == "" {
+	if cluster.ProvisionerMetadataKops.Name == "" {
 		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
 		return nil, nil
 	}
 
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}
@@ -395,12 +375,7 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 	}
 	defer kops.Close()
 
-	kopsMetadata, err := model.NewKopsMetadata(cluster.ProvisionerMetadata)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse provisioner metadata")
-	}
-
-	err = kops.ExportKubecfg(kopsMetadata.Name)
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}
