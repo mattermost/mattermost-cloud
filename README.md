@@ -20,26 +20,35 @@ This repository houses the open-source components of Mattermost Private Cloud. O
 
 ### Environment Setup
 
+#### Required Software
+
+The following is required to properly run the cloud server.
+
+##### Note: when versions are specified, it is extremely important to follow the requirement. Newer versions will often not work as expected
+
 1. Install [Go](https://golang.org/doc/install)
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
-3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.15.X
-4. Install [Helm](https://helm.sh/docs/using_helm/) version 2.14.X
+3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.16.X
+4. Install [Helm](https://helm.sh/docs/using_helm/) version 2.16.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [mockgen](github.com/golang/mock/mockgen) version 1.4.x
-7. Specify the region in your AWS config, e.g. `~/.aws/config`:
+
+#### Other Setup
+
+1. Specify the region in your AWS config, e.g. `~/.aws/config`:
 ```
 [profile mm-cloud]
 region = us-east-1
 ```
-7. Generate an AWS Access and Secret key pair, then export them in your bash profile:
+2. Generate an AWS Access and Secret key pair, then export them in your bash profile:
   ```
   export AWS_ACCESS_KEY_ID=YOURACCESSKEYID
   export AWS_SECRET_ACCESS_KEY=YOURSECRETACCESSKEY
   export AWS_PROFILE=mm-cloud
   ```
-8. Create an S3 bucket to store the kops state
-9. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
+3. Create an S3 bucket to store the kops state
+4. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
 
 Also:
 - Make sure you have a key in your ~/.ssh/

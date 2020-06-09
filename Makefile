@@ -9,7 +9,7 @@ DOCKER_BASE_IMAGE = alpine:3.11
 ## Tool Versions
 TERRAFORM_VERSION=0.11.14
 KOPS_VERSION=v1.16.3
-HELM_VERSION=v2.16.6
+HELM_VERSION=v2.16.7
 KUBECTL_VERSION=v1.18.3
 
 ################################################################################
