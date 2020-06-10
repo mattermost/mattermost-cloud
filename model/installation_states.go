@@ -22,6 +22,14 @@ const (
 	InstallationStateCreationNoCompatibleClusters = "creation-no-compatible-clusters"
 	// InstallationStateCreationFinalTasks is the final step of the installation creation.
 	InstallationStateCreationFinalTasks = "creation-final-tasks"
+	// InstallationStateHibernationRequested is an installation that is about
+	// to be put into hibernation.
+	InstallationStateHibernationRequested = "hibernation-requested"
+	// InstallationStateHibernationInProgress is an installation that is
+	// transitioning to hibernation.
+	InstallationStateHibernationInProgress = "hibernation-in-progress"
+	// InstallationStateHibernating is an installation that is hibernating.
+	InstallationStateHibernating = "hibernating"
 	// InstallationStateUpdateRequested is an installation that is about to undergo an update.
 	InstallationStateUpdateRequested = "update-requested"
 	// InstallationStateUpdateInProgress is an installation that is being updated.
@@ -57,6 +65,9 @@ var AllInstallationStates = []string{
 	InstallationStateCreationFailed,
 	InstallationStateCreationNoCompatibleClusters,
 	InstallationStateCreationFinalTasks,
+	InstallationStateHibernationRequested,
+	InstallationStateHibernationInProgress,
+	InstallationStateHibernating,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateUpdateFailed,
@@ -79,6 +90,8 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateCreationNoCompatibleClusters,
 	InstallationStateCreationFinalTasks,
 	InstallationStateCreationDNS,
+	InstallationStateHibernationRequested,
+	InstallationStateHibernationInProgress,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateDeletionRequested,
@@ -93,6 +106,7 @@ var AllInstallationStatesPendingWork = []string{
 // API endpoint should put the installation in this state.
 var AllInstallationRequestStates = []string{
 	InstallationStateCreationRequested,
+	InstallationStateHibernationRequested,
 	InstallationStateUpdateRequested,
 	InstallationStateDeletionRequested,
 }
@@ -103,6 +117,8 @@ func (i *Installation) ValidTransitionState(newState string) bool {
 	switch newState {
 	case InstallationStateCreationRequested:
 		return validTransitionToInstallationStateCreationRequested(i.State)
+	case InstallationStateHibernationRequested:
+		return validTransitionToInstallationStateHibernationRequested(i.State)
 	case InstallationStateUpdateRequested:
 		return validTransitionToInstallationStateUpgradeRequested(i.State)
 	case InstallationStateDeletionRequested:
@@ -122,9 +138,19 @@ func validTransitionToInstallationStateCreationRequested(currentState string) bo
 	return false
 }
 
+func validTransitionToInstallationStateHibernationRequested(currentState string) bool {
+	switch currentState {
+	case InstallationStateStable:
+		return true
+	}
+
+	return false
+}
+
 func validTransitionToInstallationStateUpgradeRequested(currentState string) bool {
 	switch currentState {
 	case InstallationStateStable,
+		InstallationStateHibernating,
 		InstallationStateUpdateRequested,
 		InstallationStateUpdateFailed:
 		return true

@@ -155,6 +155,53 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 	return nil
 }
 
+// HibernateClusterInstallation updates a cluster installation to consume fewer
+// resources.
+func (provisioner *KopsProvisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	kops, err := kops.New(provisioner.s3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create kops wrapper")
+	}
+	defer kops.Close()
+
+	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to export kubecfg")
+	}
+
+	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+
+	name := makeClusterInstallationName(clusterInstallation)
+	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	// Hibernation is currently considered changing the Mattermost app deployment
+	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
+	// The current way to do this is to set a negative replica count in the
+	// k8s custom resource.
+	// TODO: enhance hibernation to include database and/or filestore.
+	cr.Spec.Replicas = -1
+
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
+	}
+
+	logger.Info("Updated cluster installation")
+
+	return nil
+}
+
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
 func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
@@ -217,30 +264,37 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		cr.Spec.Image = installation.Image
 	}
 
+	// A few notes on installation sizing changes:
+	//  - Resource and replica changes are currently targeting the Mattermost
+	//    app pod only. Other pods such as those managed by the MinIO and
+	//    MySQL operator won't be updated with the current Mattermost
+	//    Operator logic. This is intentional as those apps can have replica
+	//    scaling issues.
+	//  - Resizing currently ignores the installation scheduling algorithm.
+	//    There is no good interface to determine if the new installation
+	//    size will safely fit on the cluster. This could, in theory, be done
+	//    when the size request change comes in on the API, but would require
+	//    new scheduling logic. For now, take care when resizing.
+	//    TODO: address these issue.
 	if cr.Spec.Size == installation.Size {
 		logger.Debugf("Cluster installation already on size %s", installation.Size)
 	} else {
-		// A few notes on installation sizing changes:
-		//  - Resource and replica changes are currently targeting the Mattermost
-		//    app pod only. Other pods such as those managed by the MinIO and
-		//    MySQL operator won't be updated with the current Mattermost
-		//    Operator logic. This is intentional as those apps can have replica
-		//    scaling issues.
-		//  - Resizing currently ignores the installation scheduling algorithm.
-		//    There is no good interface to determine if the new installation
-		//    size will safely fit on the cluster. This could, in theory, be done
-		//    when the size request change comes in on the API, but would require
-		//    new scheduling logic. For now, take care when resizing.
-		//    TODO: address these issue.
 		logger.Debugf("Cluster installation size updated from %s to %s", cr.Spec.Size, installation.Size)
-		sizeTemplate, err := mmv1alpha1.GetClusterSize(installation.Size)
-		if err != nil {
-			return errors.Wrap(err, "failed to get size requirements")
-		}
 		cr.Spec.Size = installation.Size
-		cr.Spec.Replicas = sizeTemplate.App.Replicas
-		cr.Spec.Resources = sizeTemplate.App.Resources
 	}
+
+	sizeTemplate, err := mmv1alpha1.GetClusterSize(installation.Size)
+	if err != nil {
+		return errors.Wrap(err, "failed to get size requirements")
+	}
+	if cr.Spec.Replicas == sizeTemplate.App.Replicas {
+		logger.Debugf("Cluster installation already has %d replicas", sizeTemplate.App.Replicas)
+	} else {
+		logger.Debugf("Cluster installation replicas updated from %d to %d", cr.Spec.Replicas, sizeTemplate.App.Replicas)
+		cr.Spec.Replicas = sizeTemplate.App.Replicas
+	}
+	// Always ensure resources match
+	cr.Spec.Resources = sizeTemplate.App.Resources
 
 	cr.Spec.MattermostLicenseSecret = ""
 	secretName := fmt.Sprintf("%s-license", name)

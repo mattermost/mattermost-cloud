@@ -9,6 +9,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -53,6 +54,7 @@ type installationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
 	GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
@@ -194,7 +196,7 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 		return s.preProvisionInstallation(installation, instanceID, logger)
 
 	case model.InstallationStateCreationInProgress:
-		return s.waitForClusterInstallationStable(installation, instanceID, logger)
+		return s.waitForCreationStable(installation, instanceID, logger)
 
 	case model.InstallationStateCreationFinalTasks:
 		return s.finalCreationTasks(installation, logger)
@@ -206,7 +208,13 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 		return s.updateInstallation(installation, instanceID, logger)
 
 	case model.InstallationStateUpdateInProgress:
-		return s.waitForUpdateComplete(installation, instanceID, logger)
+		return s.waitForUpdateStable(installation, instanceID, logger)
+
+	case model.InstallationStateHibernationRequested:
+		return s.hibernateInstallation(installation, instanceID, logger)
+
+	case model.InstallationStateHibernationInProgress:
+		return s.waitForHibernationStable(installation, instanceID, logger)
 
 	case model.InstallationStateDeletionRequested,
 		model.InstallationStateDeletionInProgress:
@@ -387,53 +395,23 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 	}
 
 	logger.Info("Installation pre-provisioning complete")
+
 	return s.configureInstallationDNS(installation, instanceID, logger)
 }
 
-func (s *InstallationSupervisor) waitForClusterInstallationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
-	})
+func (s *InstallationSupervisor) waitForCreationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to find cluster installations")
+		logger.WithError(err).Error("Installation creation failed")
+		return model.InstallationStateCreationFailed
+	}
+	if !stable {
 		return model.InstallationStateCreationInProgress
 	}
 
-	// Consider the installation to be stable once all cluster installations are
-	// stable. Or, if some cluster installations have failed, mark the
-	// installation as failed.
-	if len(clusterInstallations) == 0 {
-		logger.Error("Expected 1 cluster installations to be created, but found none")
-		return model.InstallationStateCreationFailed
-	}
+	logger.Info("Created cluster installations are now stable")
 
-	var stable, reconciling, failed, other int
-	for _, clusterInstallation := range clusterInstallations {
-		switch clusterInstallation.State {
-		case model.ClusterInstallationStateStable:
-			stable++
-		case model.ClusterInstallationStateReconciling:
-			reconciling++
-		case model.ClusterInstallationStateCreationFailed:
-			failed++
-		default:
-			other++
-		}
-	}
-
-	logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
-
-	if len(clusterInstallations) == stable {
-		logger.Info("Finished creating cluster installation")
-		return s.finalCreationTasks(installation, logger)
-	}
-	if failed > 0 {
-		logger.Infof("Found %d failed cluster installations", failed)
-		return model.InstallationStateCreationFailed
-	}
-
-	return model.InstallationStateCreationInProgress
+	return s.finalCreationTasks(installation, logger)
 }
 
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -474,7 +452,8 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 	}
 
 	logger.Infof("Successfully configured DNS %s", installation.DNS)
-	return s.waitForClusterInstallationStable(installation, instanceID, logger)
+
+	return s.waitForCreationStable(installation, instanceID, logger)
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -540,46 +519,109 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		}
 	}
 
-	logger.Infof("Finished updating clusters installations")
+	logger.Info("Finished updating clusters installations")
 
-	return model.InstallationStateUpdateInProgress
+	return s.waitForUpdateStable(installation, instanceID, logger)
 }
 
-func (s *InstallationSupervisor) waitForUpdateComplete(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	if err != nil {
+		logger.WithError(err).Error("Installation update failed")
+		return model.InstallationStateUpdateFailed
+	}
+	if !stable {
+		return model.InstallationStateUpdateInProgress
+	}
+
+	logger.Info("Finished updating installation")
+
+	return model.InstallationStateStable
+}
+
+func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		InstallationID: installation.ID,
 		PerPage:        model.AllPerPage,
+		InstallationID: installation.ID,
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
 		return installation.State
 	}
 
-	var stable, reconciling, failed int
+	var clusterInstallationIDs []string
+	if len(clusterInstallations) > 0 {
+		for _, clusterInstallation := range clusterInstallations {
+			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+		}
+
+		clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
+		if !clusterInstallationLocks.TryLock() {
+			logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
+			return installation.State
+		}
+		defer clusterInstallationLocks.Unlock()
+
+		// Fetch the same cluster installations again, now that we have the locks.
+		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+			PerPage: model.AllPerPage,
+			IDs:     clusterInstallationIDs,
+		})
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
+			return installation.State
+		}
+
+		if len(clusterInstallations) != len(clusterInstallationIDs) {
+			logger.Warnf("Found only %d cluster installations after locking, expected %d", len(clusterInstallations), len(clusterInstallationIDs))
+		}
+	}
+
 	for _, clusterInstallation := range clusterInstallations {
-		if clusterInstallation.State == model.ClusterInstallationStateStable {
-			stable++
+		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
+		if err != nil {
+			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
+			return clusterInstallation.State
 		}
-		if clusterInstallation.State == model.ClusterInstallationStateReconciling {
-			reconciling++
+		if cluster == nil {
+			logger.Errorf("Failed to find cluster %s", clusterInstallation.ClusterID)
+			return failedClusterInstallationState(clusterInstallation.State)
 		}
-		if clusterInstallation.State == model.ClusterInstallationStateCreationFailed {
-			failed++
+
+		err = s.provisioner.HibernateClusterInstallation(cluster, installation, clusterInstallation)
+		if err != nil {
+			logger.Error("Failed to update cluster installation")
+			return installation.State
+		}
+
+		clusterInstallation.State = model.ClusterInstallationStateReconciling
+		err = s.store.UpdateClusterInstallation(clusterInstallation)
+		if err != nil {
+			logger.Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
+			return installation.State
 		}
 	}
 
-	logger.Debugf("Found %d cluster installations, %d stable, %d reconciling, %d failed", len(clusterInstallations), stable, reconciling, failed)
+	logger.Info("Finished updating clusters installations")
 
-	if len(clusterInstallations) == stable {
-		logger.Infof("Finished updating installation")
-		return model.InstallationStateStable
+	return s.waitForHibernationStable(installation, instanceID, logger)
+}
+
+func (s *InstallationSupervisor) waitForHibernationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	if err != nil {
+		// TODO: there is no real failure state for hibernating so handle this
+		// better in the future.
+		logger.WithError(err).Warn("Installation hibernation failed")
+		return model.InstallationStateHibernationInProgress
 	}
-	if failed > 0 {
-		logger.Infof("Found %d failed cluster installations", failed)
-		return model.InstallationStateUpdateFailed
+	if !stable {
+		return model.InstallationStateHibernationInProgress
 	}
 
-	return installation.State
+	logger.Info("Finished updating installation")
+
+	return model.InstallationStateHibernating
 }
 
 func (s *InstallationSupervisor) deleteInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -720,4 +762,42 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
 	logger.Info("Finished final creation tasks")
 	return model.InstallationStateStable
+}
+
+// Helper funcs
+
+func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installation *model.Installation, logger log.FieldLogger) (bool, error) {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		InstallationID: installation.ID,
+		PerPage:        model.AllPerPage,
+	})
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find cluster installations")
+		return false, nil
+	}
+
+	var stable, reconciling, failed, other int
+	for _, clusterInstallation := range clusterInstallations {
+		switch clusterInstallation.State {
+		case model.ClusterInstallationStateStable:
+			stable++
+		case model.ClusterInstallationStateReconciling:
+			reconciling++
+		case model.ClusterInstallationStateCreationFailed:
+			failed++
+		default:
+			other++
+		}
+	}
+
+	logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
+
+	if len(clusterInstallations) == stable {
+		return true, nil
+	}
+	if failed > 0 {
+		return false, errors.Errorf("found %d failed cluster installations", failed)
+	}
+
+	return false, nil
 }
