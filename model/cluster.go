@@ -16,8 +16,6 @@ type Cluster struct {
 	ProvisionerMetadataKops *KopsMetadata
 	UtilityMetadata         *UtilityMetadata
 	AllowInstallations      bool
-	Version                 string
-	Size                    string
 	CreateAt                int64
 	DeleteAt                int64
 	LockAcquiredBy          *string
