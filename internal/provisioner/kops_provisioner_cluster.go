@@ -240,38 +240,58 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return err
 	}
 
-	_, err = k8sClient.CreateNamespacesIfDoesNotExist(namespaces)
+	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
 	if err != nil {
 		return err
+	}
+
+	// Need to remove two items from the calico because the fields after the creation are imutable so the
+	// create/update does not work. We might want to refactor this in the future to avoid this
+	logger.Info("Cleaning up some calico resources to reapply")
+	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete("calico-typha", &metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Service calico-typha not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete service calico-typha")
+	}
+
+	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete("calico-typha", &metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("PodDisruptionBudget calico-typha not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
 	}
 
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
 		{
-			Path:            "operator-manifests/mysql/mysql-operator.yaml",
+			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/minio/minio-operator.yaml",
+			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
 			DeployNamespace: minioOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
+			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
+			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/service_account.yaml",
+			Path:            "manifests/operator-manifests/mattermost/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/role.yaml",
+			Path:            "manifests/operator-manifests/mattermost/role.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/role_binding.yaml",
+			Path:            "manifests/operator-manifests/mattermost/role_binding.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/operator.yaml",
+			Path:            "manifests/operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
+		}, {
+			Path:            "manifests/calico-policy-only.yaml",
+			DeployNamespace: "kube-system",
 		},
 	}
 	err = k8sClient.CreateFromFiles(files)
@@ -282,21 +302,22 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// change the waiting time because creation can take more time
 	// due container download / init / container creation / volume allocation
 	wait = 240
-	operatorsWithDeployment := []string{"minio-operator", "mattermost-operator"}
-	for _, operator := range operatorsWithDeployment {
-		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
+	appsWithDeployment := map[string]string{"minio-operator": "minio-operator", "mattermost-operator": "mattermost-operator",
+		"calico-typha-horizontal-autoscaler": "kube-system", "calico-typha": "kube-system"}
+	for deployment, namespace := range appsWithDeployment {
+		pods, err := k8sClient.GetPodsFromDeployment(namespace, deployment)
 		if err != nil {
 			return err
 		}
 		if len(pods.Items) == 0 {
-			return fmt.Errorf("no pods found from %q deployment", operator)
+			return fmt.Errorf("no pods found from %q deployment", deployment)
 		}
 
 		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
+			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, deployment, pod.GetName())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
+			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
 			if err != nil {
 				return err
 			}
@@ -324,6 +345,29 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 				return err
 			}
 			logger.Infof("Successfully deployed operator pod %q", pod.Name)
+		}
+	}
+
+	supportAppsWithDaemonSets := map[string]string{"calico-node": "kube-system"}
+	for daemonSet, namespace := range supportAppsWithDaemonSets {
+
+		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
+		if err != nil {
+			return err
+		}
+		if len(pods.Items) == 0 {
+			return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
+		}
+
+		for _, pod := range pods.Items {
+			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
+			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
+			if err != nil {
+				return err
+			}
+			logger.Infof("Successfully deployed support apps pod %q", pod.Name)
 		}
 	}
 

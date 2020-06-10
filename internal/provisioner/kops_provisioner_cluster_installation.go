@@ -42,9 +42,20 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return err
 	}
 
-	_, err = k8sClient.CreateNamespaceIfDoesNotExist(clusterInstallation.Namespace)
+	_, err = k8sClient.CreateOrUpdateNamespace(clusterInstallation.Namespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
+	}
+
+	installationName := makeClusterInstallationName(clusterInstallation)
+
+	file := k8s.ManifestFile{
+		Path:            "manifests/network-policies/mm-installation-netpol.yaml",
+		DeployNamespace: clusterInstallation.Namespace,
+	}
+	err = k8sClient.CreateFromFile(file, installationName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create network policy %s", clusterInstallation.Namespace)
 	}
 
 	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
@@ -53,7 +64,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			APIVersion: "mattermost.com/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      makeClusterInstallationName(clusterInstallation),
+			Name:      installationName,
 			Namespace: clusterInstallation.Namespace,
 			Labels: map[string]string{
 				"installation":         installation.ID,
@@ -174,6 +185,15 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 	}
 
 	name := makeClusterInstallationName(clusterInstallation)
+
+	file := k8s.ManifestFile{
+		Path:            "manifests/network-policies/mm-installation-netpol.yaml",
+		DeployNamespace: clusterInstallation.Namespace,
+	}
+	err = k8sClient.CreateFromFile(file, name)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create network policy %s", clusterInstallation.Namespace)
+	}
 
 	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
 	if err != nil {

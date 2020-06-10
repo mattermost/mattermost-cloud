@@ -44,3 +44,45 @@ func TestClusterRolesBetaV1(t *testing.T) {
 		require.Equal(t, clusterRole.GetName(), result.GetName())
 	})
 }
+
+func TestRolesV1(t *testing.T) {
+	testClient := newTestKubeClient()
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-role",
+			Namespace: "test-role-ns",
+		},
+	}
+
+	t.Run("create role", func(t *testing.T) {
+		result, err := testClient.createOrUpdateRoleV1(role)
+		require.NoError(t, err)
+		require.Equal(t, role.GetName(), result.GetName())
+	})
+	t.Run("create cluster role", func(t *testing.T) {
+		result, err := testClient.createOrUpdateRoleV1(role)
+		require.NoError(t, err)
+		require.Equal(t, role.GetName(), result.GetName())
+	})
+}
+
+func TestRolesBetaV1(t *testing.T) {
+	testClient := newTestKubeClient()
+	role := &rbacbetav1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-role",
+			Namespace: "test-role-ns",
+		},
+	}
+
+	t.Run("create role", func(t *testing.T) {
+		result, err := testClient.createOrUpdateRoleBetaV1(role)
+		require.NoError(t, err)
+		require.Equal(t, role.GetName(), result.GetName())
+	})
+	t.Run("create duplicate role", func(t *testing.T) {
+		result, err := testClient.createOrUpdateRoleBetaV1(role)
+		require.NoError(t, err)
+		require.Equal(t, role.GetName(), result.GetName())
+	})
+}

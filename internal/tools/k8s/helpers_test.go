@@ -79,3 +79,22 @@ func TestGetPodsFromStatefulset(t *testing.T) {
 		assert.Len(t, pods.Items, 0)
 	})
 }
+
+func TestGetPodsFromDaemonSet(t *testing.T) {
+	testClient := newTestKubeClient()
+	daemonSet := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-daemonSet"},
+	}
+	namespace := "testing"
+
+	t.Run("create daemonSet", func(t *testing.T) {
+		result, err := testClient.createOrUpdateDaemonSetV1(namespace, daemonSet)
+		require.NoError(t, err)
+		assert.Equal(t, daemonSet.GetName(), result.GetName())
+	})
+	t.Run("get pods from daemonSet", func(t *testing.T) {
+		pods, err := testClient.GetPodsFromDaemonSet(namespace, daemonSet.GetName())
+		require.NoError(t, err)
+		assert.Len(t, pods.Items, 0)
+	})
+}

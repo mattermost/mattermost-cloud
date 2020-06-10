@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"reflect"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	mattermostscheme "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/scheme"
@@ -13,6 +14,8 @@ import (
 	appsbetav1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	apiv1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -36,7 +39,7 @@ func (f *ManifestFile) Basename() string {
 // files.
 func (kc *KubeClient) CreateFromFiles(files []ManifestFile) error {
 	for _, f := range files {
-		err := kc.CreateFromFile(f)
+		err := kc.CreateFromFile(f, "")
 		if err != nil {
 			return err
 		}
@@ -50,7 +53,7 @@ func (kc *KubeClient) CreateFromFiles(files []ManifestFile) error {
 // The current behavior leads to the create being attempted on all resources in
 // the provided file. An error is returned if any of the create actions failed.
 // This process equates to running `kubectl create -f FILENAME`.
-func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
+func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string) error {
 	data, err := ioutil.ReadFile(file.Path)
 	if err != nil {
 		return err
@@ -76,6 +79,10 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile) error {
 			logger.WithError(err).Error("unable to decode k8s resource")
 			failures++
 			continue
+		}
+
+		if installationName != "" && reflect.TypeOf(obj) == reflect.TypeOf(&networkingv1.NetworkPolicy{}) {
+			kc.updateLabelsNetworkPolicy(obj.(*networkingv1.NetworkPolicy), installationName)
 		}
 
 		result, err := kc.createFileResource(file.DeployNamespace, obj)
@@ -113,6 +120,10 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateClusterRoleV1(obj.(*rbacv1.ClusterRole))
 	case *rbacbetav1.ClusterRole:
 		return kc.createOrUpdateClusterRoleBetaV1(obj.(*rbacbetav1.ClusterRole))
+	case *rbacv1.Role:
+		return kc.createOrUpdateRoleV1(obj.(*rbacv1.Role))
+	case *rbacbetav1.Role:
+		return kc.createOrUpdateRoleBetaV1(obj.(*rbacbetav1.Role))
 	case *rbacv1.ClusterRoleBinding:
 		return kc.createOrUpdateClusterRoleBindingV1(obj.(*rbacv1.ClusterRoleBinding))
 	case *rbacbetav1.ClusterRoleBinding:
@@ -129,6 +140,12 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateService(deployNamespace, obj.(*apiv1.Service))
 	case *appsv1.StatefulSet:
 		return kc.createOrUpdateStatefulSet(deployNamespace, obj.(*appsv1.StatefulSet))
+	case *appsv1.DaemonSet:
+		return kc.createOrUpdateDaemonSetV1(deployNamespace, obj.(*appsv1.DaemonSet))
+	case *policyv1beta1.PodDisruptionBudget:
+		return kc.createOrUpdatePodDisruptionBudgetBetaV1(deployNamespace, obj.(*policyv1beta1.PodDisruptionBudget))
+	case *networkingv1.NetworkPolicy:
+		return kc.createOrUpdateNetworkPolicyV1(deployNamespace, obj.(*networkingv1.NetworkPolicy))
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}
