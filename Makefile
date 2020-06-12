@@ -32,6 +32,10 @@ LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL
 AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
 
+BUILD_HASH = $(shell git rev-parse HEAD)
+
+LDFLAGS += -X "github.com/mattermost/mattermost-cloud/model.BuildHash=$(BUILD_HASH)"
+
 export GO111MODULE=on
 
 ## Checks the code style, tests, builds and bundles.
@@ -64,7 +68,7 @@ dist:	build
 .PHONY: build
 build: ## Build the mattermost-cloud
 	@echo Building Mattermost-Cloud
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
 
 build-image:  ## Build the docker image for mattermost-cloud
 	@echo Building Mattermost-cloud Docker Image

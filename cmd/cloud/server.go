@@ -126,6 +126,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
+			"build-hash":                      model.BuildHash,
 			"cluster-supervisor":              clusterSupervisor,
 			"group-supervisor":                groupSupervisor,
 			"installation-supervisor":         installationSupervisor,
