@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -81,7 +82,31 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Wrap(err, "invalid env var settings")
 	}
 
+	return checkSpaces(request)
+}
+
+func checkSpaces(request *CreateInstallationRequest) error {
+	if hasWhiteSpace(request.DNS) != -1 {
+		return errors.Errorf("cannot have spaces in dns field. DNS=%s", request.DNS)
+	}
+	if hasWhiteSpace(request.Version) != -1 {
+		return errors.Errorf("cannot have spaces in version field. Version=%s", request.Version)
+	}
+	if hasWhiteSpace(request.Image) != -1 {
+		return errors.Errorf("cannot have spaces in image field. Image=%s", request.Image)
+	}
+	if hasWhiteSpace(request.License) != -1 {
+		return errors.Errorf("cannot have spaces in license field. License=%s", request.License)
+	}
+	if hasWhiteSpace(request.GroupID) != -1 {
+		return errors.Errorf("cannot have spaces in group field. Group=%s", request.GroupID)
+	}
+
 	return nil
+}
+
+func hasWhiteSpace(value string) int {
+	return strings.IndexAny(value, " ")
 }
 
 // NewCreateInstallationRequestFromReader will create a CreateInstallationRequest from an io.Reader with JSON data.
