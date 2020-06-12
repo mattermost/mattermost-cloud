@@ -380,7 +380,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 	outputJSON(c, w, cluster)
 }
 
-// handleResizeCluster responds to PUT /api/cluster/{cluster}/size/{size},
+// handleResizeCluster responds to PUT /api/cluster/{cluster}/size,
 // resizing the cluster.
 func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
