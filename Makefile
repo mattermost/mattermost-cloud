@@ -38,6 +38,9 @@ LDFLAGS += -X "github.com/mattermost/mattermost-cloud/model.BuildHash=$(BUILD_HA
 
 export GO111MODULE=on
 
+# force a new connection to be used try to fix the errors we see in circleci when downloading the dependencies
+export CURLOPT_FRESH_CONNECT=1
+
 ## Checks the code style, tests, builds and bundles.
 all: check-style dist
 
