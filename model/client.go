@@ -408,8 +408,8 @@ func (c *Client) HibernateInstallation(installationID string) (*Installation, er
 	}
 }
 
-// WakupInstallation wakes an installation from hibernation.
-func (c *Client) WakupInstallation(installationID string) (*Installation, error) {
+// WakeupInstallation wakes an installation from hibernation.
+func (c *Client) WakeupInstallation(installationID string) (*Installation, error) {
 	resp, err := c.doPost(c.buildURL("/api/installation/%s/wakeup", installationID), nil)
 	if err != nil {
 		return nil, err

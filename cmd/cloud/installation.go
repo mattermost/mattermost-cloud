@@ -208,7 +208,7 @@ var installationWakeupCmd = &cobra.Command{
 
 		installationID, _ := command.Flags().GetString("installation")
 
-		installation, err := client.WakupInstallation(installationID)
+		installation, err := client.WakeupInstallation(installationID)
 		if err != nil {
 			return errors.Wrap(err, "failed to wake up installation")
 		}
