@@ -187,12 +187,12 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 
 	vpc, err := d.getClusterInstallationVPC(store)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to get the acquired VPC for this installation")
+		return errors.Wrap(err, "failed to get the acquired VPC")
 	}
 
 	lockedRDSCluster, err := d.findRDSClusterForInstallation(*vpc.VpcId, store, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to find a RDS cluster available for receiving an installation database")
+		return errors.Wrap(err, "failed to find a RDS cluster ready to receive a database installation")
 	}
 	defer lockedRDSCluster.unlock(logger)
 
@@ -202,12 +202,12 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		SecretId: lockedRDSCluster.cluster.DBClusterIdentifier,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to get the master secret from AWS Secrets Service")
+		return errors.Wrap(err, "failed to get the master secret used for accessing the RDS cluster")
 	}
 
 	close, err := d.connectToRDSCluster(rdsMySQLSchemaInformationDatabase, *lockedRDSCluster.cluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to connect to the RDS cluster")
+		return errors.Wrap(err, "failed to connect to the RDS cluster")
 	}
 	defer close(logger)
 
@@ -216,32 +216,32 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 
 	err = d.createDatabaseIfNotExist(ctx, installationDatabaseName)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to create a installation database")
+		return errors.Wrap(err, "failed to create new installation database")
 	}
 
 	installationSecret, err := d.ensureMultitenantDatabaseSecretIsCreated(lockedRDSCluster.cluster.DBClusterIdentifier, vpc.VpcId)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to create a secret for this installation database")
+		return errors.Wrap(err, "failed to create a secret for the multitenant database installation")
 	}
 
 	err = d.createUserIfNotExist(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to create an user for this installation database")
+		return errors.Wrap(err, "failed to create an user for the multitenant database")
 	}
 
 	err = d.grantUserFullPermissions(ctx, installationDatabaseName, installationSecret.MasterUsername)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to grant permissions to the user of this installation database")
+		return errors.Wrap(err, "failed to grant permissions to the user of the multitenant database")
 	}
 
 	databaseInstallationIDs, err := store.AddMultitenantDatabaseInstallationID(*lockedRDSCluster.cluster.DBClusterIdentifier, d.installationID)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database because provisioner is unable to add the installation id")
+		return errors.Wrap(err, "failed to add the installation ID to the multitenant database")
 	}
 
 	err = d.updateCounterTag(lockedRDSCluster.cluster.DBClusterArn, len(databaseInstallationIDs))
 	if err != nil {
-		return errors.Wrap(err, "failed to provision multitenant database")
+		return errors.Wrap(err, "failed to update RDS multitenant database with a new counter tag")
 	}
 	logger.Debugf("Multitenant database ID %s counter value updated to %d", *lockedRDSCluster.cluster.DBClusterIdentifier, len(databaseInstallationIDs))
 
