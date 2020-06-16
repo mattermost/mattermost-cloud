@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,6 +13,8 @@ func init() {
 	logger.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
+	// Output to stdout instead of the default stderr.
+	log.SetOutput(os.Stdout)
 }
 
 type logrusWriter struct {
