@@ -3,14 +3,15 @@ package supervisor
 import (
 	"time"
 
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/k8s"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 // installationStore abstracts the database operations required to query installations.
@@ -549,32 +550,35 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 		return installation.State
 	}
 
+	if len(clusterInstallations) == 0 {
+		logger.Warn("Cluster installation list contained no results")
+		return installation.State
+	}
+
 	var clusterInstallationIDs []string
-	if len(clusterInstallations) > 0 {
-		for _, clusterInstallation := range clusterInstallations {
-			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
-		}
+	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+	}
 
-		clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
-		if !clusterInstallationLocks.TryLock() {
-			logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
-			return installation.State
-		}
-		defer clusterInstallationLocks.Unlock()
+	clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
+	if !clusterInstallationLocks.TryLock() {
+		logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
+		return installation.State
+	}
+	defer clusterInstallationLocks.Unlock()
 
-		// Fetch the same cluster installations again, now that we have the locks.
-		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage: model.AllPerPage,
-			IDs:     clusterInstallationIDs,
-		})
-		if err != nil {
-			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
-			return installation.State
-		}
+	// Fetch the same cluster installations again, now that we have the locks.
+	clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		PerPage: model.AllPerPage,
+		IDs:     clusterInstallationIDs,
+	})
+	if err != nil {
+		logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
+		return installation.State
+	}
 
-		if len(clusterInstallations) != len(clusterInstallationIDs) {
-			logger.Warnf("Found only %d cluster installations after locking, expected %d", len(clusterInstallations), len(clusterInstallationIDs))
-		}
+	if len(clusterInstallations) != len(clusterInstallationIDs) {
+		logger.Warnf("Found only %d cluster installations after locking, expected %d", len(clusterInstallations), len(clusterInstallationIDs))
 	}
 
 	for _, clusterInstallation := range clusterInstallations {
@@ -766,6 +770,11 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 
 // Helper funcs
 
+// checkIfClusterInstallationsAreStable returns if all cluster installations
+// belonging to an installation are stable or not. Any errors that will likely
+// not succeed on future retries will also be returned. Otherwise, the error will
+// be logged and a nil error is returned. This will allow the caller to confidently
+// retry until everything is stable.
 func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installation *model.Installation, logger log.FieldLogger) (bool, error) {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
