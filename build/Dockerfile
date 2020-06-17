@@ -1,6 +1,6 @@
 # Build the mattermost cloud
-ARG DOCKER_BUILD_IMAGE=golang:1.14.1
-ARG DOCKER_BASE_IMAGE=alpine:3.11.3
+ARG DOCKER_BUILD_IMAGE=golang:1.14
+ARG DOCKER_BASE_IMAGE=alpine:3.12
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /mattermost-cloud/
