@@ -8,18 +8,18 @@ import (
 
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
-	ID                      string
-	State                   string
-	Provider                string
-	ProviderMetadataAWS     *AWSMetadata
-	Provisioner             string
-	ProvisionerMetadataKops *KopsMetadata
-	UtilityMetadata         *UtilityMetadata
-	AllowInstallations      bool
-	CreateAt                int64
-	DeleteAt                int64
-	LockAcquiredBy          *string
-	LockAcquiredAt          int64
+	ID                      string           `json:"id,omitempty"`
+	State                   string           `json:"state,omitempty"`
+	Provider                string           `json:"provider,omitempty"`
+	ProviderMetadataAWS     *AWSMetadata     `json:"providerMetadataAWS,omitempty"`
+	Provisioner             string           `json:"provisioner,omitempty"`
+	ProvisionerMetadataKops *KopsMetadata    `json:"provisionerMetadataKops,omitempty"`
+	UtilityMetadata         *UtilityMetadata `json:"utilityMetadata,omitempty"`
+	AllowInstallations      bool             `json:"allowInstallations,omitempty"`
+	CreateAt                int64            `json:"createAt,omitempty"`
+	DeleteAt                int64            `json:"deleteAt,omitempty"`
+	LockAcquiredBy          *string          `json:"lockAcquiredBy,omitempty"`
+	LockAcquiredAt          int64            `json:"lockAcquiredAt,omitempty"`
 }
 
 // Clone returns a deep copy the cluster.

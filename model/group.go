@@ -7,18 +7,18 @@ import (
 
 // Group represents a group of Mattermost installations.
 type Group struct {
-	ID             string
-	Sequence       int64
-	Name           string
-	Description    string
-	Version        string
-	Image          string
-	MaxRolling     int64
-	MattermostEnv  EnvVarMap
-	CreateAt       int64
-	DeleteAt       int64
-	LockAcquiredBy *string
-	LockAcquiredAt int64
+	ID             string    `json:"id,omitempty"`
+	Sequence       int64     `json:"sequence,omitempty"`
+	Name           string    `json:"name,omitempty"`
+	Description    string    `json:"description,omitempty"`
+	Version        string    `json:"version,omitempty"`
+	Image          string    `json:"image,omitempty"`
+	MaxRolling     int64     `json:"maxRolling,omitempty"`
+	MattermostEnv  EnvVarMap `json:"mattermostEnv,omitempty"`
+	CreateAt       int64     `json:"createAt,omitempty"`
+	DeleteAt       int64     `json:"deleteAt,omitempty"`
+	LockAcquiredBy *string   `json:"lockAcquiredBy,omitempty"`
+	LockAcquiredAt int64     `json:"lockAcquiredAt,omitempty"`
 }
 
 // GroupFilter describes the parameters used to constrain a set of groups.

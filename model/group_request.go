@@ -11,12 +11,12 @@ import (
 
 // CreateGroupRequest specifies the parameters for a new group.
 type CreateGroupRequest struct {
-	Name          string
-	Description   string
-	Version       string
-	Image         string
-	MaxRolling    int64
-	MattermostEnv EnvVarMap
+	Name          string    `json:"name,omitempty"`
+	Description   string    `json:"description,omitempty"`
+	Version       string    `json:"version,omitempty"`
+	Image         string    `json:"image,omitempty"`
+	MaxRolling    int64     `json:"maxRolling,omitempty"`
+	MattermostEnv EnvVarMap `json:"mattermostEnv,omitempty"`
 }
 
 // SetDefaults sets the default values for a group create request.
@@ -61,13 +61,13 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 
 // PatchGroupRequest specifies the parameters for an updated group.
 type PatchGroupRequest struct {
-	ID            string
-	MaxRolling    *int64
-	Name          *string
-	Description   *string
-	Version       *string
-	Image         *string
-	MattermostEnv EnvVarMap
+	ID            string    `json:"id,omitempty"`
+	MaxRolling    *int64    `json:"maxRolling,omitempty"`
+	Name          *string   `json:"name,omitempty"`
+	Description   *string   `json:"description,omitempty"`
+	Version       *string   `json:"version,omitempty"`
+	Image         *string   `json:"image,omitempty"`
+	MattermostEnv EnvVarMap `json:"mattermostEnv,omitempty"`
 }
 
 // Apply applies the patch to the given group.

@@ -7,15 +7,15 @@ import (
 
 // ClusterInstallation is a single namespace within a cluster composing a potentially larger installation.
 type ClusterInstallation struct {
-	ID             string
-	ClusterID      string
-	InstallationID string
-	Namespace      string
-	State          string
-	CreateAt       int64
-	DeleteAt       int64
-	LockAcquiredBy *string
-	LockAcquiredAt int64
+	ID             string  `json:"id,omitempty"`
+	ClusterID      string  `json:"clusterId,omitempty"`
+	InstallationID string  `json:"installationId,omitempty"`
+	Namespace      string  `json:"namespace,omitempty"`
+	State          string  `json:"state,omitempty"`
+	CreateAt       int64   `json:"createAt,omitempty"`
+	DeleteAt       int64   `json:"deleteAt,omitempty"`
+	LockAcquiredBy *string `json:"lockAcquiredBy,omitempty"`
+	LockAcquiredAt int64   `json:"lockAcquiredAt,omitempty"`
 }
 
 // ClusterInstallationFilter describes the parameters used to constrain a set of cluster installations.
