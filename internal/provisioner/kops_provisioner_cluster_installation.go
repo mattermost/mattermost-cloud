@@ -176,7 +176,7 @@ func (provisioner *KopsProvisioner) HibernateClusterInstallation(cluster *model.
 
 	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create kubernetes client")
 	}
 
 	name := makeClusterInstallationName(clusterInstallation)
