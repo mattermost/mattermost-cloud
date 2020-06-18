@@ -391,6 +391,40 @@ func (c *Client) UpdateInstallation(installationID string, request *PatchInstall
 	}
 }
 
+// HibernateInstallation puts an installation into hibernation.
+func (c *Client) HibernateInstallation(installationID string) (*Installation, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/hibernate", installationID), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return InstallationFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// WakeupInstallation wakes an installation from hibernation.
+func (c *Client) WakeupInstallation(installationID string) (*Installation, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/wakeup", installationID), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return InstallationFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // DeleteInstallation deletes the given installation and all resources contained therein.
 func (c *Client) DeleteInstallation(installationID string) error {
 	resp, err := c.doDelete(c.buildURL("/api/installation/%s", installationID))
