@@ -6,37 +6,28 @@ require (
 	github.com/Masterminds/squirrel v1.4.0
 	github.com/aws/aws-sdk-go v1.32.5
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/emicklei/go-restful v2.12.0+incompatible // indirect
-	github.com/go-openapi/spec v0.19.8 // indirect
-	github.com/go-openapi/swag v0.19.9 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.4.3
-	// github.com/googleapis/gnostic v0.4.2 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.7.0
 	github.com/mattermost/mattermost-operator v1.4.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/onsi/gomega v1.10.1 // indirect
 	github.com/pborman/uuid v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 	k8s.io/api v0.17.7
 	k8s.io/apiextensions-apiserver v0.17.7
 	k8s.io/apimachinery v0.17.7
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-aggregator v0.17.7
-	k8s.io/utils v0.0.0-20200124190032-861946025e34 // indirect
-	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-// Pinned to kubernetes-1.16.10
+// Pinned to kubernetes-1.17.7
 replace (
 	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309
-	// github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.2
 	k8s.io/api => k8s.io/api v0.17.7
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.17.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.7
