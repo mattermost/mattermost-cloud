@@ -47,6 +47,8 @@ type AWS interface {
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
 	IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error)
+
+	GetAccountAliases() (*iam.ListAccountAliasesOutput, error)
 }
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.

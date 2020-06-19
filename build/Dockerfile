@@ -1,6 +1,6 @@
 # Build the mattermost cloud
-ARG DOCKER_BUILD_IMAGE=golang:1.14.1
-ARG DOCKER_BASE_IMAGE=alpine:3.11.3
+ARG DOCKER_BUILD_IMAGE=golang:1.14
+ARG DOCKER_BASE_IMAGE=alpine:3.12
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /mattermost-cloud/
@@ -30,7 +30,7 @@ COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/helm /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kubectl /usr/local/bin/
-COPY --from=build /mattermost-cloud/operator-manifests /mattermost-cloud/operator-manifests
+COPY --from=build /mattermost-cloud/manifests /mattermost-cloud/manifests
 COPY --from=build /mattermost-cloud/helm-charts /mattermost-cloud/helm-charts
 COPY --from=build /mattermost-cloud/terraform /mattermost-cloud/terraform
 COPY --from=build /mattermost-cloud/build/_output/bin/cloud /mattermost-cloud/cloud

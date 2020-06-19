@@ -126,6 +126,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
+			"build-hash":                      model.BuildHash,
 			"cluster-supervisor":              clusterSupervisor,
 			"group-supervisor":                groupSupervisor,
 			"installation-supervisor":         installationSupervisor,
@@ -228,9 +229,7 @@ var serverCmd = &cobra.Command{
 		//  - SIGINT (Ctrl+C)
 		//  - SIGTERM (Ctrl+/) (Kubernetes pod rolling termination)
 		// SIGKILL and SIGQUIT will not be caught.
-		signal.Notify(c, os.Interrupt)
-		// SIGTERM signal sent from kubernetes
-		signal.Notify(c, syscall.SIGTERM)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 		// Important:
 		// There are long-lived serial processes in the supervisors (especially
 		// the cluster supervisor). It is quite possible that these will still

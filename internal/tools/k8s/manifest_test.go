@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -20,6 +22,34 @@ metadata:
 badKey: v1
 kind: ServiceAccount
 metadata:`
+
+	exampleNetPolYAML = `
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: external-mm-allow
+spec:
+  podSelector:
+    matchLabels:
+      app: mattermost
+  ingress:
+  - ports:
+    - port: 8065
+    from:
+      - namespaceSelector:
+          matchLabels:
+            name: public-nginx`
+
+	exampleNetPolDenyYAML = `
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-from-other-namespaces
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - podSelector: {}`
 
 	exampleMultiResourceYAML = `
 apiVersion: apps/v1beta1
@@ -162,4 +192,54 @@ func TestBasename(t *testing.T) {
 			assert.Equal(t, tt.file.Basename(), tt.expected)
 		})
 	}
+}
+
+func TestCreateNetworkPolicy(t *testing.T) {
+	testClient := newTestKubeClient()
+
+	tempDir, err := ioutil.TempDir(".", "k8s-file-testing-netpol")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	networkPolYAML := filepath.Join(tempDir, "netpol.yaml")
+	err = ioutil.WriteFile(networkPolYAML, []byte(exampleNetPolYAML), 0600)
+	assert.NoError(t, err)
+
+	networkPolDenyYAML := filepath.Join(tempDir, "netpoldeny.yaml")
+	err = ioutil.WriteFile(networkPolDenyYAML, []byte(exampleNetPolDenyYAML), 0600)
+	assert.NoError(t, err)
+
+	namespace := "testing"
+
+	t.Run("create from file and add PodSelector labels", func(t *testing.T) {
+		files := ManifestFile{
+			Path:            networkPolYAML,
+			DeployNamespace: namespace,
+		}
+
+		err := testClient.CreateFromFile(files, "my-test-installation")
+		assert.NoError(t, err)
+
+		netPol, err := testClient.Clientset.NetworkingV1().NetworkPolicies(namespace).Get("external-mm-allow", metav1.GetOptions{})
+		assert.NoError(t, err)
+
+		expectedPodSelector := map[string]string{
+			"v1alpha1.mattermost.com/installation": "my-test-installation",
+			"app":                                  "mattermost",
+		}
+		assert.Equal(t, expectedPodSelector, netPol.Spec.PodSelector.MatchLabels)
+	})
+	t.Run("create from file as is", func(t *testing.T) {
+		files := ManifestFile{
+			Path:            networkPolDenyYAML,
+			DeployNamespace: namespace,
+		}
+
+		err := testClient.CreateFromFile(files, "my-test-installation")
+		assert.NoError(t, err)
+
+		netPol, err := testClient.Clientset.NetworkingV1().NetworkPolicies(namespace).Get("deny-from-other-namespaces", metav1.GetOptions{})
+		assert.NoError(t, err)
+		assert.Equal(t, netPol.Spec.PodSelector, metav1.LabelSelector{})
+	})
 }

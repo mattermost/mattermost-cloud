@@ -79,11 +79,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrapf(err, "invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
 
-	clusterSize, err := kops.GetSize(cluster.Size)
-	if err != nil {
-		return err
-	}
-
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
@@ -103,10 +98,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	err = kops.CreateCluster(
 		kopsMetadata.Name,
-		kopsMetadata.Version,
-		kopsMetadata.AMI,
 		cluster.Provider,
-		clusterSize,
+		kopsMetadata.ChangeRequest,
 		cluster.ProviderMetadataAWS.Zones,
 		clusterResources.PrivateSubnetIDs,
 		clusterResources.PublicSubnetsIDs,
@@ -240,38 +233,58 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return err
 	}
 
-	_, err = k8sClient.CreateNamespacesIfDoesNotExist(namespaces)
+	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
 	if err != nil {
 		return err
+	}
+
+	// Need to remove two items from the calico because the fields after the creation are imutable so the
+	// create/update does not work. We might want to refactor this in the future to avoid this
+	logger.Info("Cleaning up some calico resources to reapply")
+	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete("calico-typha", &metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Service calico-typha not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete service calico-typha")
+	}
+
+	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete("calico-typha", &metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("PodDisruptionBudget calico-typha not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
 	}
 
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
 		{
-			Path:            "operator-manifests/mysql/mysql-operator.yaml",
+			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
 			DeployNamespace: mysqlOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/minio/minio-operator.yaml",
+			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
 			DeployNamespace: minioOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
+			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
+			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/service_account.yaml",
+			Path:            "manifests/operator-manifests/mattermost/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/role.yaml",
+			Path:            "manifests/operator-manifests/mattermost/role.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/role_binding.yaml",
+			Path:            "manifests/operator-manifests/mattermost/role_binding.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
-			Path:            "operator-manifests/mattermost/operator.yaml",
+			Path:            "manifests/operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
+		}, {
+			Path:            "manifests/calico-policy-only.yaml",
+			DeployNamespace: "kube-system",
 		},
 	}
 	err = k8sClient.CreateFromFiles(files)
@@ -282,21 +295,22 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// change the waiting time because creation can take more time
 	// due container download / init / container creation / volume allocation
 	wait = 240
-	operatorsWithDeployment := []string{"minio-operator", "mattermost-operator"}
-	for _, operator := range operatorsWithDeployment {
-		pods, err := k8sClient.GetPodsFromDeployment(operator, operator)
+	appsWithDeployment := map[string]string{"minio-operator": "minio-operator", "mattermost-operator": "mattermost-operator",
+		"calico-typha-horizontal-autoscaler": "kube-system", "calico-typha": "kube-system"}
+	for deployment, namespace := range appsWithDeployment {
+		pods, err := k8sClient.GetPodsFromDeployment(namespace, deployment)
 		if err != nil {
 			return err
 		}
 		if len(pods.Items) == 0 {
-			return fmt.Errorf("no pods found from %q deployment", operator)
+			return fmt.Errorf("no pods found from %q deployment", deployment)
 		}
 
 		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
+			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, deployment, pod.GetName())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
+			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
 			if err != nil {
 				return err
 			}
@@ -327,6 +341,29 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}
 	}
 
+	supportAppsWithDaemonSets := map[string]string{"calico-node": "kube-system"}
+	for daemonSet, namespace := range supportAppsWithDaemonSets {
+
+		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
+		if err != nil {
+			return err
+		}
+		if len(pods.Items) == 0 {
+			return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
+		}
+
+		for _, pod := range pods.Items {
+			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
+			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
+			if err != nil {
+				return err
+			}
+			logger.Infof("Successfully deployed support apps pod %q", pod.Name)
+		}
+	}
+
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
@@ -354,14 +391,18 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	}
 	defer kops.Close()
 
-	switch kopsMetadata.Version {
-	case "latest", "":
+	switch kopsMetadata.ChangeRequest.Version {
+	case "":
+		logger.Info("Skipping kubernetes cluster version update")
+	case "latest":
+		logger.Info("Updating kubernetes to latest stable version")
 		err = kops.UpgradeCluster(kopsMetadata.Name)
 		if err != nil {
 			return err
 		}
 	default:
-		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.Version)
+		logger.Infof("Updating kubernetes to version %s", kopsMetadata.ChangeRequest.Version)
+		setValue := fmt.Sprintf("spec.kubernetesVersion=%s", kopsMetadata.ChangeRequest.Version)
 		err = kops.SetCluster(kopsMetadata.Name, setValue)
 		if err != nil {
 			return err
@@ -434,11 +475,6 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
-	clusterSize, err := kops.GetSize(cluster.Size)
-	if err != nil {
-		return err
-	}
-
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
@@ -472,7 +508,13 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 	if err != nil {
 		return err
 	}
-	igManifest, err = grossKopsReplaceSize(igManifest, clusterSize.NodeSize, string(clusterSize.NodeCount), string(clusterSize.NodeCount))
+
+	igManifest, err = grossKopsReplaceSize(
+		igManifest,
+		kopsMetadata.ChangeRequest.NodeInstanceType,
+		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMinCount),
+		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMaxCount),
+	)
 	if err != nil {
 		return err
 	}
@@ -673,36 +715,42 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}, nil
 }
 
-// GetClusterVersion returns the version of kubernetes running on the cluster.
-func (provisioner *KopsProvisioner) GetClusterVersion(cluster *model.Cluster) (string, error) {
+// RefreshKopsMetadata updates the kops metadata of a cluster with the current
+// values of the running cluster.
+func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	logger.Info("Getting cluster kubernetes version")
+	logger.Info("Refreshing kops metadata")
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to create kops wrapper")
+		return errors.Wrap(err, "failed to create kops wrapper")
 	}
 	defer kops.Close()
 
 	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to export kubecfg")
+		return errors.Wrap(err, "failed to export kubecfg")
 	}
 
 	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to construct k8s client")
+		return errors.Wrap(err, "failed to construct k8s client")
 	}
 
 	versionInfo, err := k8sClient.Clientset.Discovery().ServerVersion()
 	if err != nil {
-		return DefaultKubernetesVersion, errors.Wrap(err, "failed to get kubernetes version")
+		return errors.Wrap(err, "failed to get kubernetes version")
 	}
 
 	// The GitVersion string usually looks like v1.14.2 so we trim the "v" off
 	// to match the version syntax used in kops.
-	version := strings.TrimLeft(versionInfo.GitVersion, "v")
+	cluster.ProvisionerMetadataKops.Version = strings.TrimLeft(versionInfo.GitVersion, "v")
 
-	return version, nil
+	err = kops.UpdateMetadata(cluster.ProvisionerMetadataKops)
+	if err != nil {
+		return errors.Wrap(err, "failed to update metadata from kops state")
+	}
+
+	return nil
 }

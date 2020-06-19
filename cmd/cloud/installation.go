@@ -32,9 +32,6 @@ func init() {
 	installationUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
 	installationUpdateCmd.MarkFlagRequired("installation")
 
-	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
-	installationDeleteCmd.MarkFlagRequired("installation")
-
 	installationGetCmd.Flags().String("installation", "", "The id of the installation to be fetched.")
 	installationGetCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installation or not.")
 	installationGetCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installation or not.")
@@ -48,9 +45,20 @@ func init() {
 	installationListCmd.Flags().Int("per-page", 100, "The number of installations to fetch per page.")
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
 
+	installationHibernateCmd.Flags().String("installation", "", "The id of the installation to put into hibernation.")
+	installationHibernateCmd.MarkFlagRequired("installation")
+
+	installationWakeupCmd.Flags().String("installation", "", "The id of the installation to wake up from hibernation.")
+	installationWakeupCmd.MarkFlagRequired("installation")
+
+	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
+	installationDeleteCmd.MarkFlagRequired("installation")
+
 	installationCmd.AddCommand(installationCreateCmd)
 	installationCmd.AddCommand(installationUpdateCmd)
 	installationCmd.AddCommand(installationDeleteCmd)
+	installationCmd.AddCommand(installationHibernateCmd)
+	installationCmd.AddCommand(installationWakeupCmd)
 	installationCmd.AddCommand(installationGetCmd)
 	installationCmd.AddCommand(installationListCmd)
 	installationCmd.AddCommand(installationShowStateReport)
@@ -158,6 +166,56 @@ var installationDeleteCmd = &cobra.Command{
 		err := client.DeleteInstallation(installationID)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete installation")
+		}
+
+		return nil
+	},
+}
+
+var installationHibernateCmd = &cobra.Command{
+	Use:   "hibernate",
+	Short: "Put an installation into hibernation.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationID, _ := command.Flags().GetString("installation")
+
+		installation, err := client.HibernateInstallation(installationID)
+		if err != nil {
+			return errors.Wrap(err, "failed to put installation into hibernation")
+		}
+
+		err = printJSON(installation)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var installationWakeupCmd = &cobra.Command{
+	Use:   "wake-up",
+	Short: "Wake an installation from hibernation.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationID, _ := command.Flags().GetString("installation")
+
+		installation, err := client.WakeupInstallation(installationID)
+		if err != nil {
+			return errors.Wrap(err, "failed to wake up installation")
+		}
+
+		err = printJSON(installation)
+		if err != nil {
+			return err
 		}
 
 		return nil

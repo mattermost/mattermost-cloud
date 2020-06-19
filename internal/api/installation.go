@@ -25,6 +25,8 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("/mattermost", addContext(handleUpdateInstallation)).Methods("PUT")
 	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
 	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
+	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation)).Methods("POST")
+	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation)).Methods("POST")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
 }
 
@@ -247,6 +249,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	defer unlockOnce()
 
+	oldState := installation.State
 	newState := model.InstallationStateUpdateRequested
 
 	if !installation.ValidTransitionState(newState) {
@@ -269,7 +272,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
 			NewState:  newState,
-			OldState:  installation.State,
+			OldState:  oldState,
 			Timestamp: time.Now().UnixNano(),
 		}
 		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
@@ -396,6 +399,110 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// handleHibernateInstallation responds to POST /api/installation/{installation}/hibernate,
+// moving the installation into a hibernation state.
+func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	oldState := installation.State
+	newState := model.InstallationStateHibernationRequested
+
+	if !installation.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to hibernate installation while in state %s", installation.State)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	installation.State = newState
+
+	err := c.Store.UpdateInstallation(installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  newState,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installation)
+}
+
+// handleWakeupInstallation responds to POST /api/installation/{installation}/wakeup,
+// moving the installation out of a hibernation state.
+func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	installation, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	oldState := installation.State
+	newState := model.InstallationStateUpdateRequested
+
+	if !installation.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to wake up installation while in state %s", installation.State)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	installation.State = newState
+
+	err := c.Store.UpdateInstallation(installation)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to update installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  newState,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+	}
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	outputJSON(c, w, installation)
 }
 
 // handleDeleteInstallation responds to DELETE /api/installation/{installation}, beginning the process of

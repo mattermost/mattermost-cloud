@@ -16,7 +16,9 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		{"defaults", &model.CreateClusterRequest{}, false},
 		{"invalid provider", &model.CreateClusterRequest{Provider: "blah"}, true},
 		{"invalid version", &model.CreateClusterRequest{Version: "blah"}, true},
-		{"invalid size", &model.CreateClusterRequest{Size: "blah"}, true},
+		{"negative node counts", &model.CreateClusterRequest{NodeMinCount: -1, NodeMaxCount: -1}, true},
+		{"negative master count", &model.CreateClusterRequest{MasterCount: -1}, true},
+		{"mismatched node count", &model.CreateClusterRequest{NodeMinCount: 2, NodeMaxCount: 3}, true},
 	}
 
 	for _, tc := range testCases {
@@ -67,8 +69,12 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"empty",
 			false,
 			&model.PatchUpgradeClusterRequest{},
-			&model.KopsMetadata{},
-			&model.KopsMetadata{},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
 		},
 		{
 			"version only",
@@ -76,9 +82,13 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			&model.PatchUpgradeClusterRequest{
 				Version: sToP("version1"),
 			},
-			&model.KopsMetadata{},
 			&model.KopsMetadata{
-				Version: "version1",
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					Version: "version1",
+				},
 			},
 		},
 		{
@@ -87,9 +97,13 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			&model.PatchUpgradeClusterRequest{
 				KopsAMI: sToP("image1"),
 			},
-			&model.KopsMetadata{},
 			&model.KopsMetadata{
-				AMI: "image1",
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					AMI: "image1",
+				},
 			},
 		},
 		{
@@ -100,11 +114,15 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 				KopsAMI: sToP("image1"),
 			},
 			&model.KopsMetadata{
-				Version: "old-version",
+				Version:       "old-version",
+				ChangeRequest: &model.KopsMetadataRequestedState{},
 			},
 			&model.KopsMetadata{
-				Version: "version1",
-				AMI:     "image1",
+				Version: "old-version",
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					Version: "version1",
+					AMI:     "image1",
+				},
 			},
 		},
 	}
@@ -114,6 +132,30 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			apply := tc.request.Apply(tc.metadata)
 			assert.Equal(t, tc.expectApply, apply)
 			assert.Equal(t, tc.expectedMetadata, tc.metadata)
+		})
+	}
+}
+
+func TestResizeClusterRequestValid(t *testing.T) {
+	var testCases = []struct {
+		testName     string
+		request      *model.PatchClusterSizeRequest
+		requireError bool
+	}{
+		{"empty payload", &model.PatchClusterSizeRequest{}, false},
+		{"valid", &model.PatchClusterSizeRequest{NodeInstanceType: sToP("m5.large")}, false},
+		{"blank node type", &model.PatchClusterSizeRequest{NodeInstanceType: sToP("")}, true},
+		{"zero nodes", &model.PatchClusterSizeRequest{NodeMinCount: i64oP(0), NodeMaxCount: i64oP(0)}, true},
+		{"max lower than min", &model.PatchClusterSizeRequest{NodeMinCount: i64oP(5), NodeMaxCount: i64oP(2)}, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			if tc.requireError {
+				assert.Error(t, tc.request.Validate())
+			} else {
+				assert.NoError(t, tc.request.Validate())
+			}
 		})
 	}
 }

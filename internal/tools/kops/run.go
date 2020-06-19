@@ -42,7 +42,7 @@ func outputLogger(line string, logger log.FieldLogger) {
 	matches := glogRe.FindStringSubmatch(line)
 	if matches == nil {
 		// Assume non-glog output is a warning.
-		logger.Warnf("[kops] %s", line)
+		logger.Infof("[kops] %s", line)
 		return
 	}
 

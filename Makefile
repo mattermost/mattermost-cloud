@@ -3,13 +3,13 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.14.2
-DOCKER_BASE_IMAGE = alpine:3.11
+DOCKER_BUILD_IMAGE = golang:1.14.4
+DOCKER_BASE_IMAGE = alpine:3.12
 
 ## Tool Versions
 TERRAFORM_VERSION=0.11.14
 KOPS_VERSION=v1.16.3
-HELM_VERSION=v2.16.6
+HELM_VERSION=v2.16.9
 KUBECTL_VERSION=v1.18.3
 
 ################################################################################
@@ -31,6 +31,10 @@ LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL
 
 AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
 LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
+
+BUILD_HASH = $(shell git rev-parse HEAD)
+
+LDFLAGS += -X "github.com/mattermost/mattermost-cloud/model.BuildHash=$(BUILD_HASH)"
 
 export GO111MODULE=on
 
@@ -64,7 +68,7 @@ dist:	build
 .PHONY: build
 build: ## Build the mattermost-cloud
 	@echo Building Mattermost-Cloud
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/cloud  ./cmd/cloud
 
 build-image:  ## Build the docker image for mattermost-cloud
 	@echo Building Mattermost-cloud Docker Image

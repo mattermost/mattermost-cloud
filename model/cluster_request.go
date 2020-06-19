@@ -12,27 +12,43 @@ import (
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
 	Provider               string            `json:"provider,omitempty"`
+	Zones                  []string          `json:"zones,omitempty"`
 	Version                string            `json:"version,omitempty"`
 	KopsAMI                string            `json:"kops-ami,omitempty"`
-	Size                   string            `json:"size,omitempty"`
-	Zones                  []string          `json:"zones,omitempty"`
+	MasterInstanceType     string            `json:"master-instance-type,omitempty"`
+	MasterCount            int64             `json:"master-count,omitempty"`
+	NodeInstanceType       string            `json:"node-instance-type,omitempty"`
+	NodeMinCount           int64             `json:"node-min-count,omitempty"`
+	NodeMaxCount           int64             `json:"node-max-count,omitempty"`
 	AllowInstallations     bool              `json:"allow-installations,omitempty"`
 	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
 func (request *CreateClusterRequest) SetDefaults() {
-	if request.Provider == "" {
+	if len(request.Provider) == 0 {
 		request.Provider = ProviderAWS
 	}
-	if request.Version == "" {
+	if len(request.Version) == 0 {
 		request.Version = "latest"
-	}
-	if request.Size == "" {
-		request.Size = SizeAlef500
 	}
 	if len(request.Zones) == 0 {
 		request.Zones = []string{"us-east-1a"}
+	}
+	if len(request.MasterInstanceType) == 0 {
+		request.MasterInstanceType = "t3.medium"
+	}
+	if request.MasterCount == 0 {
+		request.MasterCount = 1
+	}
+	if len(request.NodeInstanceType) == 0 {
+		request.NodeInstanceType = "m5.large"
+	}
+	if request.NodeMinCount == 0 {
+		request.NodeMinCount = 2
+	}
+	if request.NodeMaxCount == 0 {
+		request.NodeMaxCount = request.NodeMinCount
 	}
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]string)
@@ -49,6 +65,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[PublicNginxCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PublicNginxCanonicalName] = PublicNginxDefaultVersion
 	}
+	if _, ok := request.DesiredUtilityVersions[TeleportCanonicalName]; !ok {
+		request.DesiredUtilityVersions[TeleportCanonicalName] = TeleportDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.
@@ -59,10 +78,16 @@ func (request *CreateClusterRequest) Validate() error {
 	if !ValidClusterVersion(request.Version) {
 		return errors.Errorf("unsupported cluster version %s", request.Version)
 	}
-	if !IsSupportedClusterSize(request.Size) {
-		return errors.Errorf("unsupported size %s", request.Size)
+	if request.MasterCount < 1 {
+		return errors.Errorf("master count (%d) must be 1 or greater", request.MasterCount)
 	}
-	// TODO: check zones?
+	if request.NodeMinCount < 1 {
+		return errors.Errorf("node min count (%d) must be 1 or greater", request.NodeMinCount)
+	}
+	if request.NodeMaxCount != request.NodeMinCount {
+		return errors.Errorf("node min (%d) and max (%d) counts must match", request.NodeMinCount, request.NodeMaxCount)
+	}
+	// TODO: check zones and instance types?
 
 	return nil
 }
@@ -118,7 +143,7 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 	return &updateClusterRequest, nil
 }
 
-// PatchUpgradeClusterRequest specifies the parameters upgrading a cluster.
+// PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
 	Version *string `json:"version,omitempty"`
 	KopsAMI *string `json:"kops-ami,omitempty"`
@@ -133,17 +158,22 @@ func (p *PatchUpgradeClusterRequest) Validate() error {
 	return nil
 }
 
-// Apply applies the patch to the given installation.
+// Apply applies the patch to the given cluster's metadata.
 func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
-	var applied bool
+	changes := &KopsMetadataRequestedState{}
 
+	var applied bool
 	if p.Version != nil && *p.Version != metadata.Version {
 		applied = true
-		metadata.Version = *p.Version
+		changes.Version = *p.Version
 	}
 	if p.KopsAMI != nil && *p.KopsAMI != metadata.AMI {
 		applied = true
-		metadata.AMI = *p.KopsAMI
+		changes.AMI = *p.KopsAMI
+	}
+
+	if applied {
+		metadata.ChangeRequest = changes
 	}
 
 	return applied
@@ -163,6 +193,70 @@ func NewUpgradeClusterRequestFromReader(reader io.Reader) (*PatchUpgradeClusterR
 	}
 
 	return &upgradeClusterRequest, nil
+}
+
+// PatchClusterSizeRequest specifies the parameters for resizing a cluster.
+type PatchClusterSizeRequest struct {
+	NodeInstanceType *string `json:"node-instance-type,omitempty"`
+	NodeMinCount     *int64  `json:"node-min-count,omitempty"`
+	NodeMaxCount     *int64  `json:"node-max-count,omitempty"`
+}
+
+// Validate validates the values of a PatchClusterSizeRequest.
+func (p *PatchClusterSizeRequest) Validate() error {
+	if p.NodeInstanceType != nil && len(*p.NodeInstanceType) == 0 {
+		return errors.New("node instance type cannot be a blank value")
+	}
+	if p.NodeMinCount != nil && *p.NodeMinCount < 1 {
+		return errors.New("node min count has to be 1 or greater")
+	}
+	if p.NodeMinCount != nil && p.NodeMaxCount != nil &&
+		*p.NodeMaxCount < *p.NodeMinCount {
+		return errors.Errorf("node max count (%d) can't be less than min count (%d)", *p.NodeMaxCount, *p.NodeMinCount)
+	}
+
+	return nil
+}
+
+// Apply applies the patch to the given cluster's kops metadata.
+func (p *PatchClusterSizeRequest) Apply(metadata *KopsMetadata) bool {
+	changes := &KopsMetadataRequestedState{}
+
+	var applied bool
+	if p.NodeInstanceType != nil && *p.NodeInstanceType != metadata.NodeInstanceType {
+		applied = true
+		changes.NodeInstanceType = *p.NodeInstanceType
+	}
+	if p.NodeMinCount != nil && *p.NodeMinCount != metadata.NodeMinCount {
+		applied = true
+		changes.NodeMinCount = *p.NodeMinCount
+	}
+	if p.NodeMaxCount != nil && *p.NodeMaxCount != metadata.NodeMaxCount {
+		applied = true
+		changes.NodeMaxCount = *p.NodeMaxCount
+	}
+
+	if applied {
+		metadata.ChangeRequest = changes
+	}
+
+	return applied
+}
+
+// NewResizeClusterRequestFromReader will create an PatchClusterSizeRequest from an io.Reader with JSON data.
+func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeRequest, error) {
+	var patchClusterSizeRequest PatchClusterSizeRequest
+	err := json.NewDecoder(reader).Decode(&patchClusterSizeRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode resize cluster request")
+	}
+
+	err = patchClusterSizeRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "resize cluster request failed validation")
+	}
+
+	return &patchClusterSizeRequest, nil
 }
 
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.

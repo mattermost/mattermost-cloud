@@ -29,7 +29,6 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
-			Size:                    model.SizeAlef500,
 			State:                   model.ClusterStateCreationRequested,
 			AllowInstallations:      false,
 		}
@@ -40,7 +39,6 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
-			Size:                    model.SizeAlef500,
 			State:                   model.ClusterStateStable,
 			AllowInstallations:      true,
 		}
@@ -96,7 +94,6 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
-			Size:                    model.SizeAlef500,
 			State:                   model.ClusterStateCreationRequested,
 			AllowInstallations:      false,
 		}
@@ -107,7 +104,6 @@ func TestClusters(t *testing.T) {
 			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
 			UtilityMetadata:         &model.UtilityMetadata{},
-			Size:                    model.SizeAlef500,
 			State:                   model.ClusterStateStable,
 			AllowInstallations:      true,
 		}
@@ -122,7 +118,6 @@ func TestClusters(t *testing.T) {
 		cluster1.Provisioner = "cluster-api"
 		cluster1.ProviderMetadataAWS = &model.AWSMetadata{Zones: []string{"zone2"}}
 		cluster1.ProvisionerMetadataKops = &model.KopsMetadata{Version: "version2"}
-		cluster1.Size = model.SizeAlef1000
 		cluster1.State = model.ClusterStateDeletionRequested
 		cluster1.AllowInstallations = true
 
