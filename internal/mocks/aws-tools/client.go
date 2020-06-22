@@ -6,6 +6,7 @@ package mocks
 
 import (
 	acm "github.com/aws/aws-sdk-go/service/acm"
+	iam "github.com/aws/aws-sdk-go/service/iam"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	logrus "github.com/sirupsen/logrus"
@@ -205,4 +206,19 @@ func (m *MockAWS) IsValidAMI(AMIImage string, logger logrus.FieldLogger) (bool, 
 func (mr *MockAWSMockRecorder) IsValidAMI(AMIImage, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidAMI", reflect.TypeOf((*MockAWS)(nil).IsValidAMI), AMIImage, logger)
+}
+
+// GetAccountAliases mocks base method
+func (m *MockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountAliases")
+	ret0, _ := ret[0].(*iam.ListAccountAliasesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountAliases indicates an expected call of GetAccountAliases
+func (mr *MockAWSMockRecorder) GetAccountAliases() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountAliases", reflect.TypeOf((*MockAWS)(nil).GetAccountAliases))
 }
