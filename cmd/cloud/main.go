@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 // Package main is the entry point to the Mattermost Cloud provisioning server and CLI.
 package main
 

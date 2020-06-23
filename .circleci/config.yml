@@ -33,6 +33,13 @@ jobs:
     - run: make check-modules
     - *save_cache
 
+  check-boilerplate:
+    executor:
+      name: default
+    steps:
+    - checkout
+    - run: ./hack/verify-boilerplate.sh
+
   test-sqlite:
     executor:
       name: default
@@ -82,12 +89,12 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: ./hacks/push-docker-pr.sh
+    - run: ./hack/push-docker-pr.sh
     - run:
         name: Re-run Docker Push if fail
         command: |
             sleep 20
-            ./hacks/push-docker-pr.sh
+            ./hack/push-docker-pr.sh
         when: on_fail
 
   push-docker:
@@ -97,12 +104,12 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: ./hacks/push-docker.sh
+    - run: ./hack/push-docker.sh
     - run:
         name: Re-run Docker Push if fail
         command: |
             sleep 20
-            ./hacks/push-docker.sh
+            ./hack/push-docker.sh
         when: on_fail
 
   scan-image:
@@ -128,6 +135,7 @@ workflows:
   version: 2
   ci-build:
     jobs:
+    - check-boilerplate
     - check-style
     - check-modules
     - test-sqlite
@@ -138,12 +146,18 @@ workflows:
         - check-style
         - test-sqlite
         - test-postgres
+        - check-boilerplate
     - scan-image:
         context: matterbuild-docker
         requires:
         - push-docker-pr
   master-build:
     jobs:
+    - check-boilerplate:
+        filters:
+          branches:
+            only:
+            - master
     - check-style:
         filters:
           branches:
@@ -170,12 +184,19 @@ workflows:
           - check-style
           - test-sqlite
           - test-postgres
+          - check-boilerplate
           filters:
             branches:
               only:
               - master
   tag-builds:
     jobs:
+    - check-boilerplate:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
     - check-style:
         filters:
           tags:
@@ -206,6 +227,7 @@ workflows:
         - check-style
         - test-sqlite
         - test-postgres
+        - check-boilerplate
         filters:
           tags:
             only: /^v.*/

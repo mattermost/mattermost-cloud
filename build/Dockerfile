@@ -1,3 +1,6 @@
+# Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+# See LICENSE.txt for license information.
+
 # Build the mattermost cloud
 ARG DOCKER_BUILD_IMAGE=golang:1.14
 ARG DOCKER_BASE_IMAGE=alpine:3.12

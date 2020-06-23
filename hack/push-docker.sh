@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+# See LICENSE.txt for license information.
+
 set -e
 set -u
 
@@ -16,4 +19,3 @@ echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdi
 docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
 
 docker push mattermost/mattermost-cloud:$TAG
-
