@@ -25,14 +25,14 @@ type Cmd struct {
 
 // New creates a new instance of Cmd through which to execute kops.
 func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
-	tempDir, err := ioutil.TempDir("", "kops-")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create temporary kops directory")
-	}
-
 	kopsPath, err := exec.LookPath("kops")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find kops installed on your PATH")
+	}
+
+	tempDir, err := ioutil.TempDir("", "kops-")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create temporary kops directory")
 	}
 
 	return &Cmd{
