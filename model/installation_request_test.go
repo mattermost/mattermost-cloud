@@ -92,6 +92,25 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 				},
 			},
 		},
+		{
+			"dns has space",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "domain.com ",
+			},
+		},
+		{
+			"Group/Database/filestore is blank should not fail validation",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:   "owner1",
+				DNS:       "domain.com",
+				GroupID:   "",
+				Filestore: "",
+				Database:  "",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
