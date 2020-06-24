@@ -54,7 +54,7 @@ func (a *Client) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error
 	return a.getZoneDNS(id, logger)
 }
 
-// GetPrivateZoneIDWithDefaultTag returns the Private R53 hosted zone ID for the default tag `MattermostCloudDNS`
+// GetPrivateZoneIDForDefaultTag returns the Private R53 hosted zone ID for the default tag `MattermostCloudDNS`
 func (a *Client) GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error) {
 	tag := Tag{
 		Key:   DefaultCloudDNSTagKey,
