@@ -223,7 +223,7 @@ func (a *mockAWS) GetTagByKeyAndZoneID(key string, id string, logger log.FieldLo
 		Value: "examplevalue",
 	}, nil
 }
-func (a *mockAWS) GetPrivateZoneID(logger log.FieldLogger, tags ...aws.Tag) (string, error) {
+func (a *mockAWS) GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error) {
 	return "EXAMPLER53ID", nil
 }
 

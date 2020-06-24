@@ -47,24 +47,18 @@ func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logge
 
 // GetPrivateZoneDomainName gets the private Route53 domain name.
 func (a *Client) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error) {
-	id, err := a.GetPrivateZoneID(logger)
+	id, err := a.GetPrivateZoneIDForDefaultTag(logger)
 	if err != nil {
 		return "", err
 	}
 	return a.getZoneDNS(id, logger)
 }
 
-// GetPrivateZoneID returns the R53 hosted zone ID for a given tag or if not provided for the default one
-func (a *Client) GetPrivateZoneID(logger log.FieldLogger, tags ...Tag) (string, error) {
-	if len(tags) > 1 {
-		return "", errors.New("does not support more than 1 tag yet")
-	}
+// GetPrivateZoneIDWithDefaultTag returns the Private R53 hosted zone ID for the default tag `MattermostCloudDNS`
+func (a *Client) GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error) {
 	tag := Tag{
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPrivateCloudDNSTagValue,
-	}
-	if len(tags) > 0 {
-		tag = tags[0]
 	}
 	id, err := a.getHostedZoneIDWithTag(tag, logger)
 	if err != nil {

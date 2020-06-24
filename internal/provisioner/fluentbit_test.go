@@ -29,7 +29,7 @@ func TestNewHelmDeploymentWithAuditLogsConfiguration(t *testing.T) {
 		Return("mockDns", nil).
 		AnyTimes()
 	awsClient.EXPECT().
-		GetPrivateZoneID(gomock.Eq(logger)).
+		GetPrivateZoneIDForDefaultTag(gomock.Eq(logger)).
 		Return("mockZone", nil).
 		AnyTimes()
 	expectedTag := &aws.Tag{Key: "AuditLogsCoreSecurity", Value: "expectedURL:12345"}
@@ -60,7 +60,7 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 		Return("mockDns", nil).
 		AnyTimes()
 	awsClient.EXPECT().
-		GetPrivateZoneID(gomock.Eq(logger)).
+		GetPrivateZoneIDForDefaultTag(gomock.Eq(logger)).
 		Return("mockZone", nil).
 		AnyTimes()
 	expectedTag := &aws.Tag{Key: "MattermostCloudDNS", Value: "private"}
@@ -91,9 +91,9 @@ func TestNewHelmDeploymentWithZoneIDError(t *testing.T) {
 		GetPrivateZoneDomainName(gomock.Eq(logger)).
 		Return("mockDns", nil).
 		AnyTimes()
-	err1 := errors.New("Mock error expected from func GetPrivateZoneID")
+	err1 := errors.New("Mock error expected from func GetPrivateZoneIDForDefaultTag")
 	awsClient.EXPECT().
-		GetPrivateZoneID(gomock.Eq(logger)).
+		GetPrivateZoneIDForDefaultTag(gomock.Eq(logger)).
 		Return("", err1).
 		AnyTimes()
 
@@ -119,7 +119,7 @@ func TestNewHelmDeploymentWithoutFindingAuditTag(t *testing.T) {
 		Return("mockDns", nil).
 		AnyTimes()
 	awsClient.EXPECT().
-		GetPrivateZoneID(gomock.Eq(logger)).
+		GetPrivateZoneIDForDefaultTag(gomock.Eq(logger)).
 		Return("mockZone", nil).
 		AnyTimes()
 	expectedTag := &aws.Tag{}
@@ -151,7 +151,7 @@ func TestNewHelmDeploymentWithNillTag(t *testing.T) {
 		Return("mockDns", nil).
 		AnyTimes()
 	awsClient.EXPECT().
-		GetPrivateZoneID(gomock.Eq(logger)).
+		GetPrivateZoneIDForDefaultTag(gomock.Eq(logger)).
 		Return("mockZone", nil).
 		AnyTimes()
 

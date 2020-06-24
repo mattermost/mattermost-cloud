@@ -81,7 +81,7 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	}
 
 	var auditLogsConf string
-	zoneID, err := f.awsClient.GetPrivateZoneID(logger)
+	zoneID, err := f.awsClient.GetPrivateZoneIDForDefaultTag(logger)
 	if err != nil {
 		logger.WithError(err).Error("unable to find Zone ID")
 	} else {
