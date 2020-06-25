@@ -83,14 +83,14 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	var auditLogsConf string
 	zoneID, err := f.awsClient.GetPrivateZoneIDForDefaultTag(logger)
 	if err != nil {
-		logger.WithError(err).Error("unable to find Zone ID")
+		logger.WithError(err).Error("unable to get Private Zone ID with the default tag, skipping setup...")
 	} else {
 		tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, zoneID, logger)
 		if err != nil {
-			logger.WithError(err).Error("failed to find Tag:AuditLogsCoreSecurity")
+			logger.WithError(err).Error("unable to find Tag:AuditLogsCoreSecurity")
 		}
 		if tag == nil {
-			logger.Info("unable to find tag")
+			logger.Info("Tag:AuditLogsCoreSecurity is missing, skipping setup...")
 			tag = &aws.Tag{}
 		}
 
