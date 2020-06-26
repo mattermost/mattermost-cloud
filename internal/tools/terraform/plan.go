@@ -22,14 +22,9 @@ type terraformOutput struct {
 
 // Init invokes terraform init.
 func (c *Cmd) Init(remoteKey string) error {
-	input, err := ioutil.ReadFile(path.Join("terraform", backendFilename))
+	err := ioutil.WriteFile(path.Join(c.dir, backendFilename), []byte(backendFile), 0644)
 	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(path.Join(c.dir, backendFilename), input, 0644)
-	if err != nil {
-		return err
+		return errors.Wrap(err, "unable to write terraform backend state file")
 	}
 
 	_, _, err = c.run(
