@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package aws
 
 import (
@@ -752,7 +756,7 @@ func (d *RDSMultitenantDatabase) connectRDSCluster(schema, endpoint, username, p
 }
 
 func (d *RDSMultitenantDatabase) createUserIfNotExist(ctx context.Context, username, password string) error {
-	_, err := d.db.QueryContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?", username, "%", password)
+	_, err := d.db.QueryContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ? REQUIRE SSL", username, "%", password)
 	if err != nil {
 		return errors.Wrapf(err, "creating user %s", username)
 	}

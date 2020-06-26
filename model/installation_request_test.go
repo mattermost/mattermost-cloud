@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package model_test
 
 import (
@@ -90,6 +94,25 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: ""},
 				},
+			},
+		},
+		{
+			"dns has space",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "domain.com ",
+			},
+		},
+		{
+			"Group/Database/filestore is blank should not fail validation",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:   "owner1",
+				DNS:       "domain.com",
+				GroupID:   "",
+				Filestore: "",
+				Database:  "",
 			},
 		},
 	}

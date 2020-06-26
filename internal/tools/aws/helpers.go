@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package aws
 
 import (
@@ -96,13 +100,13 @@ func MattermostRDSDatabaseName(installationID string) string {
 
 // MattermostMySQLConnString formats the connection string used for accessing a Mattermost database.
 func MattermostMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, endpoint, schema)
 }
 
-// RDSMySQLConnString formats the connection string used for accessing a MySql RDS cluster.
+// RDSMySQLConnString formats the connection string used for accessing a MySQL RDS cluster.
 func RDSMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s",
+	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, endpoint, schema)
 }
 

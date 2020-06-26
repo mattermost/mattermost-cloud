@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 // Package exechelper streamlines the running of external commands while both capturing and logging
 // their output.
 //

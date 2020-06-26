@@ -1,3 +1,6 @@
+# Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+# See LICENSE.txt for license information.
+
 ################################################################################
 ##                             VERSION PARAMS                                 ##
 ################################################################################
@@ -8,7 +11,7 @@ DOCKER_BASE_IMAGE = alpine:3.12
 
 ## Tool Versions
 TERRAFORM_VERSION=0.11.14
-KOPS_VERSION=v1.16.3
+KOPS_VERSION=v1.17.0
 HELM_VERSION=v2.16.9
 KUBECTL_VERSION=v1.18.3
 
@@ -117,18 +120,18 @@ mocks:
 	# Mockgen cannot generate mocks for logrus when reading it from modules.
 	GO111MODULE=off $(GO) get github.com/sirupsen/logrus
 
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/ec2/ec2iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/ec2.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/rds/rdsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/rds.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/s3/s3iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/s3.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/acm/acmiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/acm.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/iam/iamiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/iam.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/route53/route53iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/route53.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/kms/kmsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/kms.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/resource_tagging.go
-	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go
-	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go
-	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/ec2/ec2iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/ec2.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/rds/rdsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/rds.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/s3/s3iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/s3.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/acm/acmiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/acm.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/iam/iamiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/iam.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/route53/route53iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/route53.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/kms/kmsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/kms.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/resource_tagging.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go -copyright_file hack/boilerplate.go.txt
 
 .PHONY: check-modules
 check-modules: ## Check outdated modules
