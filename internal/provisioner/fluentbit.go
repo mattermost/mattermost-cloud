@@ -87,10 +87,10 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	} else {
 		tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, zoneID, logger)
 		if err != nil {
-			logger.WithError(err).Error("unable to find Tag:AuditLogsCoreSecurity")
+			logger.WithError(err).Errorf("unable to find %s", aws.DefaultAuditLogsCoreSecurityTagKey)
 		}
 		if tag == nil {
-			logger.Info("Tag:AuditLogsCoreSecurity is missing, skipping setup...")
+			logger.Infof("%s is missing, skipping setup...", aws.DefaultAuditLogsCoreSecurityTagKey)
 			tag = &aws.Tag{}
 		}
 
