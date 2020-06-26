@@ -6,7 +6,6 @@ package provisioner
 
 import (
 	"fmt"
-
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -84,17 +83,53 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	if err != nil {
 		logger.WithError(err).Error("unable to lookup private zone name")
 	}
+
+	var auditLogsConf string
+	zoneID, err := f.awsClient.GetPrivateZoneIDForDefaultTag(logger)
+	if err != nil {
+		logger.WithError(err).Error("unable to get Private Zone ID with the default tag, skipping setup...")
+	} else {
+		tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, zoneID, logger)
+		if err != nil {
+			logger.WithError(err).Errorf("unable to find %s", aws.DefaultAuditLogsCoreSecurityTagKey)
+		}
+		if tag == nil {
+			logger.Infof("%s is missing, skipping setup...", aws.DefaultAuditLogsCoreSecurityTagKey)
+			tag = &aws.Tag{}
+		}
+
+		hostPort := strings.Split(tag.Value, ":")
+		if len(hostPort) == 2 {
+			auditLogsConf = fmt.Sprintf(`[OUTPUT]
+	Name  forward
+	Match  *
+	Host  %s
+	Port  %s
+	tls  On
+	tls.verify  Off`, hostPort[0], hostPort[1])
+		} else {
+			logger.Info("AuditLogsCoreSecurity tag is missing from R53 hosted zone, " +
+				"fluent-bit will be configured without forwarding to audit logs to Security")
+		}
+	}
+
 	elasticSearchDNS := fmt.Sprintf("elasticsearch.%s", privateDomainName)
 	return &helmDeployment{
 		chartDeploymentName: "fluent-bit",
 		chartName:           "stable/fluent-bit",
 		namespace:           "fluent-bit",
-		setArgument:         fmt.Sprintf("backend.es.host=%s", elasticSearchDNS),
-		valuesPath:          "helm-charts/fluent-bit_values.yaml",
-		kopsProvisioner:     f.provisioner,
-		kops:                f.kops,
-		logger:              f.logger,
-		desiredVersion:      f.desiredVersion,
+		setArgument: fmt.Sprintf(`backend.es.host=%s,rawConfig=
+@INCLUDE fluent-bit-service.conf
+@INCLUDE fluent-bit-input.conf
+@INCLUDE fluent-bit-filter.conf
+@INCLUDE fluent-bit-output.conf
+%s
+`, elasticSearchDNS, auditLogsConf),
+		valuesPath:      "helm-charts/fluent-bit_values.yaml",
+		kopsProvisioner: f.provisioner,
+		kops:            f.kops,
+		logger:          f.logger,
+		desiredVersion:  f.desiredVersion,
 	}
 }
 

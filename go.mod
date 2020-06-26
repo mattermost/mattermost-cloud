@@ -6,6 +6,10 @@ require (
 	github.com/Masterminds/squirrel v1.4.0
 	github.com/aws/aws-sdk-go v1.32.5
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
+	github.com/emicklei/go-restful v2.11.2+incompatible // indirect
+	github.com/go-openapi/spec v0.19.6 // indirect
+	github.com/go-openapi/swag v0.19.7 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.4.3
 	github.com/gorilla/mux v1.7.4

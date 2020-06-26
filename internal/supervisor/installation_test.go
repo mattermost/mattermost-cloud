@@ -221,6 +221,16 @@ func (a *mockAWS) GetPrivateZoneDomainName(logger log.FieldLogger) (string, erro
 	return "test.domain", nil
 }
 
+func (a *mockAWS) GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*aws.Tag, error) {
+	return &aws.Tag{
+		Key:   "examplekey",
+		Value: "examplevalue",
+	}, nil
+}
+func (a *mockAWS) GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error) {
+	return "EXAMPLER53ID", nil
+}
+
 func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return nil
 }

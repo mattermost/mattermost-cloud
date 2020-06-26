@@ -39,6 +39,8 @@ type AWS interface {
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
+	GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error)
+	GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error)
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 	CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 

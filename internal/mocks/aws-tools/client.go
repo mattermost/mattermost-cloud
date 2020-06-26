@@ -99,6 +99,36 @@ func (mr *MockAWSMockRecorder) GetPrivateZoneDomainName(logger interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateZoneDomainName", reflect.TypeOf((*MockAWS)(nil).GetPrivateZoneDomainName), logger)
 }
 
+// GetPrivateZoneIDForDefaultTag mocks base method
+func (m *MockAWS) GetPrivateZoneIDForDefaultTag(logger logrus.FieldLogger) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPrivateZoneIDForDefaultTag", logger)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPrivateZoneIDForDefaultTag indicates an expected call of GetPrivateZoneIDForDefaultTag
+func (mr *MockAWSMockRecorder) GetPrivateZoneIDForDefaultTag(logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateZoneIDForDefaultTag", reflect.TypeOf((*MockAWS)(nil).GetPrivateZoneIDForDefaultTag), logger)
+}
+
+// GetTagByKeyAndZoneID mocks base method
+func (m *MockAWS) GetTagByKeyAndZoneID(key, id string, logger logrus.FieldLogger) (*aws.Tag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTagByKeyAndZoneID", key, id, logger)
+	ret0, _ := ret[0].(*aws.Tag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTagByKeyAndZoneID indicates an expected call of GetTagByKeyAndZoneID
+func (mr *MockAWSMockRecorder) GetTagByKeyAndZoneID(key, id, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTagByKeyAndZoneID", reflect.TypeOf((*MockAWS)(nil).GetTagByKeyAndZoneID), key, id, logger)
+}
+
 // CreatePrivateCNAME mocks base method
 func (m *MockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
