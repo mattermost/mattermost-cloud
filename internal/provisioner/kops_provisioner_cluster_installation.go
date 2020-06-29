@@ -125,7 +125,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 
 	databaseSpec, databaseSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSpecAndSecret(provisioner.store, logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to generate database configuration")
 	}
 
 	if databaseSpec != nil {
@@ -138,7 +138,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 
 	filestoreSpec, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to generate filestore configuration")
 	}
 
 	if filestoreSecret != nil {

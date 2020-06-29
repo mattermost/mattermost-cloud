@@ -244,8 +244,8 @@ func (s *TestMultitenantDatabaseSuite) TestUpdateInvalidRawInstallations() {
 		LockAcquiredBy:     &s.lockerID,
 	})
 	s.Assert().Error(err)
-	s.Assert().Equal("failed to parse raw installation ids: failed to get installation ids:"+
-		" invalid character 'b' looking for beginning of value", err.Error())
+	s.Assert().Equal("failed to parse raw installation ids: failed to unmarshal installation IDs: "+
+		"invalid character 'b' looking for beginning of value", err.Error())
 }
 
 func (s *TestMultitenantDatabaseSuite) TestUpdateNotLockedError() {

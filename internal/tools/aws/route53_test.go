@@ -19,7 +19,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			ListHostedZones(&route53.ListHostedZonesInput{}).
 			Return(&route53.ListHostedZonesOutput{
 				HostedZones: []*route53.HostedZone{
-					&route53.HostedZone{
+					{
 						Id: aws.String(a.HostedZoneID),
 					},
 				},
@@ -37,7 +37,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			Return(&route53.ListTagsForResourceOutput{
 				ResourceTagSet: &route53.ResourceTagSet{
 					Tags: []*route53.Tag{
-						&route53.Tag{
+						{
 							Key:   aws.String("random-key"),
 							Value: aws.String("random-value"),
 						},
@@ -50,7 +50,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			ListHostedZones(gomock.Any()).
 			Return(&route53.ListHostedZonesOutput{
 				HostedZones: []*route53.HostedZone{
-					&route53.HostedZone{
+					{
 						Id: aws.String(a.HostedZoneID),
 					},
 				},
@@ -67,7 +67,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			Return(&route53.ListTagsForResourceOutput{
 				ResourceTagSet: &route53.ResourceTagSet{
 					Tags: []*route53.Tag{
-						&route53.Tag{
+						{
 							Key:   aws.String("MattermostCloudDNS"),
 							Value: aws.String("public"),
 						},
@@ -119,7 +119,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEListTagsError() {
 			ListHostedZones(&route53.ListHostedZonesInput{}).
 			Return(&route53.ListHostedZonesOutput{
 				HostedZones: []*route53.HostedZone{
-					&route53.HostedZone{
+					{
 						Id: aws.String(a.HostedZoneID),
 					},
 				},
@@ -152,7 +152,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEChangeRecordSetsError() {
 			ListHostedZones(gomock.Any()).
 			Return(&route53.ListHostedZonesOutput{
 				HostedZones: []*route53.HostedZone{
-					&route53.HostedZone{
+					{
 						Id: aws.String(a.HostedZoneID),
 					},
 				},
@@ -169,7 +169,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEChangeRecordSetsError() {
 			Return(&route53.ListTagsForResourceOutput{
 				ResourceTagSet: &route53.ResourceTagSet{
 					Tags: []*route53.Tag{
-						&route53.Tag{
+						{
 							Key:   aws.String("MattermostCloudDNS"),
 							Value: aws.String("public"),
 						},
@@ -202,7 +202,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMENoHostedZone() {
 			ListHostedZones(gomock.Any()).
 			Return(&route53.ListHostedZonesOutput{
 				HostedZones: []*route53.HostedZone{
-					&route53.HostedZone{
+					{
 						Id: aws.String(a.HostedZoneID),
 					},
 				},
@@ -219,7 +219,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMENoHostedZone() {
 			Return(&route53.ListTagsForResourceOutput{
 				ResourceTagSet: &route53.ResourceTagSet{
 					Tags: []*route53.Tag{
-						&route53.Tag{
+						{
 							Key:   aws.String("random-key"),
 							Value: aws.String("random-value"),
 						},
