@@ -78,7 +78,7 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	numDatabases := len(multitenantDatabases)
 	switch {
 	case (numDatabases > 1):
-		return errors.Errorf("expected 1 or less multitenant databases from query, but found %d", len(multitenantDatabases))
+		return errors.Errorf("expected 1 or less multitenant databases from query, but found %d", numDatabases)
 	case (numDatabases < 1):
 		logger.Debug("No multitenant databases found for this installation; skipping...")
 	default:
