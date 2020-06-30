@@ -40,7 +40,7 @@ func TestGetAndSetInstallationIDs(t *testing.T) {
 		}
 		ids, err := database.GetInstallationIDs()
 		require.Error(t, err)
-		require.Equal(t, "failed to get installation ids: invalid character "+
+		require.Equal(t, "failed to unmarshal installation IDs: invalid character "+
 			"'a' looking for beginning of value", err.Error())
 		require.Nil(t, ids)
 	})

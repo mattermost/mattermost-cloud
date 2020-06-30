@@ -30,7 +30,7 @@ func (c *MultitenantDatabase) SetInstallationIDs(installationIDs MultitenantData
 
 	installations, err := json.Marshal(installationIDs)
 	if err != nil {
-		return errors.Wrap(err, "failed to set installation ids")
+		return errors.Wrap(err, "failed to marshal installation IDs")
 	}
 
 	c.RawInstallationIDs = installations
@@ -47,7 +47,7 @@ func (c *MultitenantDatabase) GetInstallationIDs() (MultitenantDatabaseInstallat
 
 	err := json.Unmarshal(c.RawInstallationIDs, &installationIDs)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get installation ids")
+		return nil, errors.Wrap(err, "failed to unmarshal installation IDs")
 	}
 
 	return installationIDs, nil

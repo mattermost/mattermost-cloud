@@ -126,7 +126,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
 		After(a.Mocks.API.EC2.EXPECT().
 			DescribeSecurityGroups(gomock.Any()).
 			Return(&ec2.DescribeSecurityGroupsOutput{
-				SecurityGroups: []*ec2.SecurityGroup{&ec2.SecurityGroup{GroupId: &a.GroupID}},
+				SecurityGroups: []*ec2.SecurityGroup{{GroupId: &a.GroupID}},
 			}, nil))
 
 	a.Mocks.Log.Logger.EXPECT().
@@ -154,7 +154,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 		After(a.Mocks.API.EC2.EXPECT().
 			DescribeSecurityGroups(gomock.Any()).
 			Return(&ec2.DescribeSecurityGroupsOutput{
-				SecurityGroups: []*ec2.SecurityGroup{&ec2.SecurityGroup{GroupId: &a.GroupID}},
+				SecurityGroups: []*ec2.SecurityGroup{{GroupId: &a.GroupID}},
 			}, nil))
 
 	a.Mocks.Log.Logger.EXPECT().

@@ -25,7 +25,7 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 			aws.String(resourceID),
 		},
 		Tags: []*ec2.Tag{
-			&ec2.Tag{
+			{
 				Key:   aws.String(key),
 				Value: aws.String(value),
 			},
@@ -54,7 +54,7 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 			aws.String(resourceID),
 		},
 		Tags: []*ec2.Tag{
-			&ec2.Tag{
+			{
 				Key:   aws.String(key),
 				Value: aws.String(value),
 			},
