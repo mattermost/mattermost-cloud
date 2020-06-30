@@ -45,6 +45,8 @@ controller:
     # Will add custom configuration options to Nginx https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
     ssl-redirect: "false"
     force-ssl-redirect: "false"
+    # remove the version of nginx from the responses
+    server-tokens: "false"
     server-snippet: |
       listen 8000;
       if ( $server_port = 80 ) {
