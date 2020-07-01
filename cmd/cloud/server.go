@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -47,6 +46,7 @@ func init() {
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
 	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
@@ -93,9 +93,14 @@ var serverCmd = &cobra.Command{
 			return errors.Errorf("server requires at least schema %s, current is %s", serverVersion, currentVersion)
 		}
 
+		// TODO: move these cluster threshold values to cluster configuration.
 		clusterResourceThreshold, _ := command.Flags().GetInt("cluster-resource-threshold")
 		if clusterResourceThreshold < 10 || clusterResourceThreshold > 100 {
-			return fmt.Errorf("cluster-resource-threshold (%d) must be set between 10 and 100", clusterResourceThreshold)
+			return errors.Errorf("cluster-resource-threshold (%d) must be set between 10 and 100", clusterResourceThreshold)
+		}
+		clusterResourceThresholdScaleValue, _ := command.Flags().GetInt("cluster-resource-threshold-scale-value")
+		if clusterResourceThresholdScaleValue < 0 || clusterResourceThresholdScaleValue > 10 {
+			return errors.Errorf("cluster-resource-threshold-scale-value (%d) must be set between 0 and 10", clusterResourceThresholdScaleValue)
 		}
 
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
@@ -130,20 +135,21 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
-			"build-hash":                      model.BuildHash,
-			"cluster-supervisor":              clusterSupervisor,
-			"group-supervisor":                groupSupervisor,
-			"installation-supervisor":         installationSupervisor,
-			"cluster-installation-supervisor": clusterInstallationSupervisor,
-			"store-version":                   currentVersion,
-			"state-store":                     s3StateStore,
-			"working-directory":               wd,
-			"cluster-resource-threshold":      clusterResourceThreshold,
-			"use-existing-aws-resources":      useExistingResources,
-			"keep-database-data":              keepDatabaseData,
-			"keep-filestore-data":             keepFilestoreData,
-			"debug":                           debugMode,
-			"dev-mode":                        devMode,
+			"build-hash":                             model.BuildHash,
+			"cluster-supervisor":                     clusterSupervisor,
+			"group-supervisor":                       groupSupervisor,
+			"installation-supervisor":                installationSupervisor,
+			"cluster-installation-supervisor":        clusterInstallationSupervisor,
+			"store-version":                          currentVersion,
+			"state-store":                            s3StateStore,
+			"working-directory":                      wd,
+			"cluster-resource-threshold":             clusterResourceThreshold,
+			"cluster-resource-threshold-scale-value": clusterResourceThresholdScaleValue,
+			"use-existing-aws-resources":             useExistingResources,
+			"keep-database-data":                     keepDatabaseData,
+			"keep-filestore-data":                    keepFilestoreData,
+			"debug":                                  debugMode,
+			"dev-mode":                               devMode,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -183,7 +189,7 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, keepDatabaseData, keepFilestoreData, resourceUtil, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, clusterResourceThresholdScaleValue, keepDatabaseData, keepFilestoreData, resourceUtil, logger))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))

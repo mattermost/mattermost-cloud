@@ -22,6 +22,7 @@ import (
 type installationStore interface {
 	GetClusters(clusterFilter *model.ClusterFilter) ([]*model.Cluster, error)
 	GetCluster(id string) (*model.Cluster, error)
+	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID string, lockerID string, force bool) (bool, error)
 
@@ -70,29 +71,31 @@ type installationProvisioner interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type InstallationSupervisor struct {
-	store                    installationStore
-	provisioner              installationProvisioner
-	aws                      aws.AWS
-	instanceID               string
-	clusterResourceThreshold int
-	keepDatabaseData         bool
-	keepFilestoreData        bool
-	resourceUtil             *utils.ResourceUtil
-	logger                   log.FieldLogger
+	store                              installationStore
+	provisioner                        installationProvisioner
+	aws                                aws.AWS
+	instanceID                         string
+	clusterResourceThreshold           int
+	clusterResourceThresholdScaleValue int
+	keepDatabaseData                   bool
+	keepFilestoreData                  bool
+	resourceUtil                       *utils.ResourceUtil
+	logger                             log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold int, keepDatabaseData, keepFilestoreData bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold, thresholdScaleValue int, keepDatabaseData, keepFilestoreData bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
-		store:                    store,
-		provisioner:              installationProvisioner,
-		aws:                      aws,
-		instanceID:               instanceID,
-		clusterResourceThreshold: threshold,
-		keepDatabaseData:         keepDatabaseData,
-		keepFilestoreData:        keepFilestoreData,
-		resourceUtil:             resourceUtil,
-		logger:                   logger,
+		store:                              store,
+		provisioner:                        installationProvisioner,
+		aws:                                aws,
+		instanceID:                         instanceID,
+		clusterResourceThreshold:           threshold,
+		clusterResourceThresholdScaleValue: thresholdScaleValue,
+		keepDatabaseData:                   keepDatabaseData,
+		keepFilestoreData:                  keepFilestoreData,
+		resourceUtil:                       resourceUtil,
+		logger:                             logger,
 	}
 }
 
@@ -328,12 +331,12 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 
 	size, err := mmv1alpha1.GetClusterSize(installation.Size)
 	if err != nil {
-		logger.WithError(err).Error("invalid cluster installation size")
+		logger.WithError(err).Error("Invalid cluster installation size")
 		return nil
 	}
 	clusterResources, err := s.provisioner.GetClusterResources(cluster, true)
 	if err != nil {
-		logger.WithError(err).Error("failed to get cluster resources")
+		logger.WithError(err).Error("Failed to get cluster resources")
 		return nil
 	}
 
@@ -350,8 +353,51 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		),
 	)
 	if cpuPercent > s.clusterResourceThreshold || memoryPercent > s.clusterResourceThreshold {
-		logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%%, Memory=%d%%", cluster.ID, s.clusterResourceThreshold, cpuPercent, memoryPercent)
-		return nil
+		if s.clusterResourceThresholdScaleValue == 0 ||
+			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
+			cluster.State != model.ClusterStateStable {
+			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%%, Memory=%d%%", cluster.ID, s.clusterResourceThreshold, cpuPercent, memoryPercent)
+			return nil
+		}
+
+		// This cluster is ready to scale to meet increased resource demand.
+		// TODO: if this ends up working well, build a safer interface for
+		// updating the cluster. We should try to reuse some of the API flow
+		// that already does this.
+
+		newWorkerCount := cluster.ProvisionerMetadataKops.NodeMinCount + int64(s.clusterResourceThresholdScaleValue)
+		if newWorkerCount > cluster.ProvisionerMetadataKops.NodeMaxCount {
+			newWorkerCount = cluster.ProvisionerMetadataKops.NodeMaxCount
+		}
+
+		cluster.State = model.ClusterStateResizeRequested
+		cluster.ProvisionerMetadataKops.ChangeRequest = &model.KopsMetadataRequestedState{
+			NodeMinCount: newWorkerCount,
+		}
+
+		logger.WithField("cluster", cluster.ID).Infof("Scaling cluster worker nodes from %d to %d (max=%d)",
+			cluster.ProvisionerMetadataKops.NodeMinCount,
+			cluster.ProvisionerMetadataKops.ChangeRequest.NodeMinCount,
+			cluster.ProvisionerMetadataKops.NodeMaxCount,
+		)
+		err = s.store.UpdateCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to update cluster")
+			return nil
+		}
+
+		webhookPayload := &model.WebhookPayload{
+			Type:      model.TypeCluster,
+			ID:        cluster.ID,
+			NewState:  model.ClusterStateResizeRequested,
+			OldState:  model.ClusterStateStable,
+			Timestamp: time.Now().UnixNano(),
+		}
+
+		err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+		if err != nil {
+			logger.WithError(err).Error("Unable to process and send webhooks")
+		}
 	}
 
 	// The cluster can support the cluster installation.

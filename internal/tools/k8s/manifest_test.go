@@ -147,7 +147,7 @@ func TestCreate(t *testing.T) {
 
 	t.Run("create from files", func(t *testing.T) {
 		files := []ManifestFile{
-			ManifestFile{
+			{
 				Path:            serviceYAML,
 				DeployNamespace: namespace,
 			},
@@ -157,7 +157,7 @@ func TestCreate(t *testing.T) {
 	})
 	t.Run("create from multi-resource file", func(t *testing.T) {
 		files := []ManifestFile{
-			ManifestFile{
+			{
 				Path:            multiYAML,
 				DeployNamespace: namespace,
 			},
@@ -167,7 +167,7 @@ func TestCreate(t *testing.T) {
 	})
 	t.Run("create with bad yaml format", func(t *testing.T) {
 		files := []ManifestFile{
-			ManifestFile{
+			{
 				Path:            badYAML,
 				DeployNamespace: namespace,
 			},

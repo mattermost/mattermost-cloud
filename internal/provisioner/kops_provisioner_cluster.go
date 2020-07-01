@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -697,7 +698,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 			// lead to false positives. In the future, we should use a scheduling
 			// library to perform the check instead.
 			for _, taint := range node.Spec.Taints {
-				if taint.Effect == "NoSchedule" {
+				if taint.Effect == v1.TaintEffectNoSchedule || taint.Effect == v1.TaintEffectPreferNoSchedule {
 					logger.Debugf("Ignoring node %s with taint '%s'", node.GetName(), taint.ToString())
 					skipNode = true
 					break

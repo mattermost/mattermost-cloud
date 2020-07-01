@@ -8,17 +8,14 @@ import (
 	"errors"
 	"testing"
 
+	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-
-	"github.com/bmizerany/assert"
-
-	"github.com/stretchr/testify/require"
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
-
-	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewHelmDeploymentWithAuditLogsConfiguration(t *testing.T) {
