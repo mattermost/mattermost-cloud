@@ -143,12 +143,14 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		"database-type":   d.databaseType,
 	})
 
-	var connTemplate string
+	var connTemplate, databaseCheckPort string
 	switch d.databaseType {
 	case model.DatabaseEngineTypeMySQL:
 		connTemplate = mysqlConnStringTemplate
+		databaseCheckPort = "3306"
 	case model.DatabaseEngineTypePostgres:
 		connTemplate = postgresConnStringTemplate
+		databaseCheckPort = "5432"
 	default:
 		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
 	}
@@ -177,7 +179,8 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": databaseConnectionString,
+			"DB_CONNECTION_STRING":    databaseConnectionString,
+			"DB_CONNECTION_CHECK_URL": fmt.Sprintf("http://%s:%s", *result.DBClusters[0].Endpoint, databaseCheckPort),
 		},
 	}
 
