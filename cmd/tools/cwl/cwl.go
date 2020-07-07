@@ -25,6 +25,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error: failed to parse webhook: %s", err)
 		return
 	}
+	if len(webhook.ID) == 0 {
+		return
+	}
 
 	wType := "UNKN"
 	switch webhook.Type {
