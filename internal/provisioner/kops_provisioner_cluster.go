@@ -141,6 +141,19 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
+	// TODO: read from config file
+	logger.Info("Updating kubelet options")
+	setValue := "spec.kubelet.authenticationTokenWebhook=true"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return err
+	}
+	setValue = "spec.kubelet.authorizationMode=Webhook"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return err
+	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
@@ -260,6 +273,24 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
 	}
 
+	// Need to remove two items from the metrics-server because the fields after the creation are imutable so the
+	// create/update does not work. We might want to refactor this in the future to avoid this
+	logger.Info("Cleaning up some metrics-server resources to reapply")
+	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete("metrics-server", &metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Service metrics-server not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete service metrics-server")
+	}
+
+	logger.Info("Cleaning up some metrics-server resources to reapply")
+	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete("v1beta1.metrics.k8s.io", &metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("APIService v1beta1.metrics.k8s.io not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete APIService v1beta1.metrics.k8s.io")
+	}
+
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
@@ -289,6 +320,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
 			Path:            "manifests/calico-policy-only.yaml",
+			DeployNamespace: "kube-system",
+		}, {
+			Path:            "manifests/metric-server/metric-server.yaml",
 			DeployNamespace: "kube-system",
 		},
 	}
@@ -417,6 +451,20 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 	err = updateKopsInstanceGroupAMIs(kops, kopsMetadata, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update kops instance group AMIs")
+	}
+
+	// TODO: read from config file
+	// TODO: check if those configs are already or remove this when we update all clusters
+	logger.Info("Updating kubelet options")
+	setValue := "spec.kubelet.authenticationTokenWebhook=true"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return err
+	}
+	setValue = "spec.kubelet.authorizationMode=Webhook"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return err
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())

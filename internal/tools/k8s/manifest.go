@@ -26,6 +26,8 @@ import (
 	apixv1beta1scheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	aggregatorscheme "k8s.io/kube-aggregator/pkg/apiserver/scheme"
 )
 
 // ManifestFile is a file containing kubernetes resources.
@@ -65,6 +67,7 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 
 	apixv1beta1scheme.AddToScheme(scheme.Scheme)
 	mattermostscheme.AddToScheme(scheme.Scheme)
+	aggregatorscheme.AddToScheme(scheme.Scheme)
 
 	logger := kc.logger.WithFields(log.Fields{
 		"file": file.Basename(),
@@ -150,6 +153,8 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdatePodDisruptionBudgetBetaV1(deployNamespace, obj.(*policyv1beta1.PodDisruptionBudget))
 	case *networkingv1.NetworkPolicy:
 		return kc.createOrUpdateNetworkPolicyV1(deployNamespace, obj.(*networkingv1.NetworkPolicy))
+	case *apiregistrationv1beta1.APIService:
+		return kc.createOrUpdateAPIServer(obj.(*apiregistrationv1beta1.APIService))
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}
