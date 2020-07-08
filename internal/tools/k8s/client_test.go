@@ -11,6 +11,7 @@ import (
 	apixfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	kubeagfake "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/fake"
 )
 
 func newTestKubeClient() *KubeClient {
@@ -19,6 +20,7 @@ func newTestKubeClient() *KubeClient {
 		Clientset:           fake.NewSimpleClientset(),
 		ApixClientset:       apixfake.NewSimpleClientset(),
 		MattermostClientset: mmfake.NewSimpleClientset(),
+		KubeagClientSet:     kubeagfake.NewSimpleClientset(),
 		logger:              logrus.New(),
 	}
 }
