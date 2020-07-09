@@ -23,6 +23,10 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
 	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")
 
+	searchRouter := apiRouter.PathPrefix("/search").Subrouter()
+	searchRouter.Handle(`/name/{name:[A-Za-z0-9]{1}[A-Za-z0-9\-\.]+}`,
+		addContext(handleGetInstallationByName)).Methods("GET")
+
 	installationRouter := apiRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
 	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
@@ -34,6 +38,47 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
 }
 
+func handleGetInstallationByName(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationDNS, ok := vars["name"]
+	if !ok {
+		c.Logger.Debug("couldn't get Installation DNS out of query")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	c.Logger = c.Logger.WithField("installation search", installationDNS)
+
+	includeGroupConfig, includeGroupConfigOverrides, err := parseGroupConfig(r.URL)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to parse group config parameters")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	installations, err := c.Store.GetInstallations(
+		&model.InstallationFilter{
+			Name:           installationDNS,
+			IncludeDeleted: true,
+			PerPage:        model.AllPerPage,
+		}, includeGroupConfig, includeGroupConfigOverrides)
+
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if len(installations) != 1 {
+		c.Logger.Debugf("getting installation with name %s returned %d results but should only return 1",
+			installationDNS, len(installations))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, installations[0])
+}
+
 // handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.
 func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -42,7 +87,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	includeGroupConfig, includeGroupConfigOverrides, err := parseGroupConfig(r.URL)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		c.Logger.WithError(err).Error("failed to parse group config parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

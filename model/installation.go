@@ -50,6 +50,7 @@ type InstallationFilter struct {
 	Page           int
 	PerPage        int
 	IncludeDeleted bool
+	Name           string
 }
 
 // Clone returns a deep copy the installation.

@@ -354,6 +354,34 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 	}
 }
 
+// GetInstallationByName finds an installation with the given FQDN.
+func (c *Client) GetInstallationByName(installationDNS string, request *GetInstallationRequest) (*Installation, error) {
+	u, err := url.Parse(c.buildURL("/api/search/name/%s", installationDNS))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return InstallationFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+
+}
+
 // GetInstallations fetches the list of installations from the configured provisioning server.
 func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installation, error) {
 	u, err := url.Parse(c.buildURL("/api/installations"))

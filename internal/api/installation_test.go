@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,7 +40,6 @@ func TestGetInstallations(t *testing.T) {
 		installation, err := client.GetInstallation(model.NewID(), nil)
 		require.NoError(t, err)
 		require.Nil(t, installation)
-
 	})
 
 	t.Run("no installations", func(t *testing.T) {
@@ -179,6 +179,19 @@ func TestGetInstallations(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, installation4, installation)
 			})
+
+			t.Run("get installation by name", func(t *testing.T) {
+				installation, err := client.GetInstallationByName(installation4.DNS, nil)
+				assert.NoError(t, err)
+				require.NotNil(t, installation)
+				assert.Equal(t, installation4.ID, installation.ID)
+				assert.Equal(t, installation4.DNS, installation.DNS)
+
+				noInstallation, err := client.GetInstallationByName("notarealname", nil)
+				assert.Nil(t, noInstallation)
+				assert.Error(t, err)
+			})
+
 		})
 
 		t.Run("get installations", func(t *testing.T) {

@@ -112,6 +112,9 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 	if !filter.IncludeDeleted {
 		builder = builder.Where("DeleteAt = 0")
 	}
+	if filter.Name != "" {
+		builder = builder.Where("DNS = ?", filter.Name)
+	}
 
 	var rawInstallations rawInstallations
 	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
