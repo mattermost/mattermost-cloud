@@ -57,7 +57,7 @@ func handleGetInstallationByName(c *Context, w http.ResponseWriter, r *http.Requ
 
 	installations, err := c.Store.GetInstallations(
 		&model.InstallationFilter{
-			Name:           installationDNS,
+			DNS:            installationDNS,
 			IncludeDeleted: true,
 			PerPage:        model.AllPerPage,
 		}, includeGroupConfig, includeGroupConfigOverrides)

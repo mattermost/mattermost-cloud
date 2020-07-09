@@ -132,7 +132,7 @@ func TestInstallations(t *testing.T) {
 	t.Run("get installation 3 by name", func(t *testing.T) {
 		installations, err := sqlStore.GetInstallations(
 			&model.InstallationFilter{
-				Name:    installation3.DNS,
+				DNS:     installation3.DNS,
 				PerPage: model.AllPerPage,
 			}, false, false)
 
