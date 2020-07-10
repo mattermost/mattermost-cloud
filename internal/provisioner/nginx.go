@@ -79,7 +79,7 @@ func (n *nginx) Destroy() error {
 func (n *nginx) NewHelmDeployment() *helmDeployment {
 	return &helmDeployment{
 		chartDeploymentName: "private-nginx",
-		chartName:           "stable/nginx-ingress",
+		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "internal-nginx",
 		setArgument:         "",
 		valuesPath:          "helm-charts/private-nginx_values.yaml",

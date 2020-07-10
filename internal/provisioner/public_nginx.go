@@ -93,7 +93,7 @@ func (n *publicNginx) NewHelmDeployment() *helmDeployment {
 
 	return &helmDeployment{
 		chartDeploymentName: "public-nginx",
-		chartName:           "stable/nginx-ingress",
+		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "public-nginx",
 		setArgument:         fmt.Sprintf("controller.service.annotations.\"service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert\"=%s", *awsACMCert.CertificateArn),
 		valuesPath:          "helm-charts/public-nginx_values.yaml",

@@ -3,6 +3,14 @@
 ##
 controller:
   ingressClass: nginx
+  image:
+    repository: us.gcr.io/k8s-artifacts-prod/ingress-nginx/controller
+    tag: "v0.34.0"
+    digest: sha256:56633bd00dab33d92ba14c6e709126a762d54a75a6e72437adefeaaca0abb069
+    pullPolicy: IfNotPresent
+    # www-data -> uid 101
+    runAsUser: 101
+    allowPrivilegeEscalation: true
 
   service:
     annotations:
@@ -52,3 +60,22 @@ controller:
       if ( $server_port = 80 ) {
          return 308 https://$host$request_uri;
       }
+
+  resources: 
+   limits:
+     cpu: 1000m
+     memory: 500Mi
+   requests:
+     cpu: 500m
+     memory: 250Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 150
+    targetMemoryUtilizationPercentage: 150
+
+defaultBackend:
+  enabled: true
+  replicaCount: 2
