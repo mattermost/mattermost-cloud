@@ -365,7 +365,7 @@ func (c *Client) GetInstallationByName(DNS string, request *GetInstallationReque
 	installations, err := c.GetInstallations(&GetInstallationsRequest{
 		IncludeGroupConfig:          request.IncludeGroupConfig,
 		IncludeGroupConfigOverrides: request.IncludeGroupConfigOverrides,
-		IncludeDeleted:              true,
+		IncludeDeleted:              false,
 		PerPage:                     AllPerPage,
 		DNS:                         DNS,
 	})
