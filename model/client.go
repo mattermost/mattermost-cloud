@@ -355,31 +355,29 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 }
 
 // GetInstallationByName finds an installation with the given FQDN.
-func (c *Client) GetInstallationByName(installationDNS string, request *GetInstallationRequest) (*Installation, error) {
-	u, err := url.Parse(c.buildURL("/api/search/name/%s", installationDNS))
+func (c *Client) GetInstallationByName(DNS string, request *GetInstallationRequest) (*Installation, error) {
+	if request == nil {
+		request = &GetInstallationRequest{
+			IncludeGroupConfig:          false,
+			IncludeGroupConfigOverrides: false,
+		}
+	}
+	installations, err := c.GetInstallations(&GetInstallationsRequest{
+		IncludeGroupConfig:          request.IncludeGroupConfig,
+		IncludeGroupConfigOverrides: request.IncludeGroupConfigOverrides,
+		IncludeDeleted:              true,
+		PerPage:                     AllPerPage,
+		DNS:                         DNS,
+	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "problem getting installation")
 	}
 
-	request.ApplyToURL(u)
-
-	resp, err := c.doGet(u.String())
-	if err != nil {
-		return nil, err
+	if len(installations) != 1 {
+		return nil, errors.Errorf("received ambiguous response (%d Installations) when expecting only one",
+			len(installations))
 	}
-	defer closeBody(resp)
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return InstallationFromReader(resp.Body)
-
-	case http.StatusNotFound:
-		return nil, nil
-
-	default:
-		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
-	}
-
+	return installations[0], nil
 }
 
 // GetInstallations fetches the list of installations from the configured provisioning server.

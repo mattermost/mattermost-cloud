@@ -187,7 +187,7 @@ func TestGetInstallations(t *testing.T) {
 				assert.Equal(t, installation4.ID, installation.ID)
 				assert.Equal(t, installation4.DNS, installation.DNS)
 
-				noInstallation, err := client.GetInstallationByName("notarealname", nil)
+				noInstallation, err := client.GetInstallationByName("notreal", nil)
 				assert.Nil(t, noInstallation)
 				assert.Error(t, err)
 			})
