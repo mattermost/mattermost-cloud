@@ -354,8 +354,8 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 	}
 }
 
-// GetInstallationByName finds an installation with the given FQDN.
-func (c *Client) GetInstallationByName(DNS string, request *GetInstallationRequest) (*Installation, error) {
+// GetInstallationByDNS finds an installation with the given FQDN.
+func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationRequest) (*Installation, error) {
 	if request == nil {
 		request = &GetInstallationRequest{
 			IncludeGroupConfig:          false,

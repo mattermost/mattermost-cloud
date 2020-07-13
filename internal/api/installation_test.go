@@ -181,13 +181,13 @@ func TestGetInstallations(t *testing.T) {
 			})
 
 			t.Run("get installation by name", func(t *testing.T) {
-				installation, err := client.GetInstallationByName(installation1.DNS, nil)
+				installation, err := client.GetInstallationByDNS(installation1.DNS, nil)
 				assert.NoError(t, err)
 				require.NotNil(t, installation)
 				assert.Equal(t, installation1.ID, installation.ID)
 				assert.Equal(t, installation1.DNS, installation.DNS)
 
-				noInstallation, err := client.GetInstallationByName("notreal", nil)
+				noInstallation, err := client.GetInstallationByDNS("notreal", nil)
 				assert.Nil(t, noInstallation)
 				assert.Error(t, err)
 			})
