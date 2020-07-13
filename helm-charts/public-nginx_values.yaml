@@ -75,6 +75,8 @@ controller:
     maxReplicas: 8
     targetCPUUtilizationPercentage: 150
     targetMemoryUtilizationPercentage: 150
+  metrics:
+     enabled: true
 
 defaultBackend:
   enabled: true
