@@ -354,6 +354,32 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 	}
 }
 
+// GetInstallationByDNS finds an installation with the given FQDN.
+func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationRequest) (*Installation, error) {
+	if request == nil {
+		request = &GetInstallationRequest{
+			IncludeGroupConfig:          false,
+			IncludeGroupConfigOverrides: false,
+		}
+	}
+	installations, err := c.GetInstallations(&GetInstallationsRequest{
+		IncludeGroupConfig:          request.IncludeGroupConfig,
+		IncludeGroupConfigOverrides: request.IncludeGroupConfigOverrides,
+		IncludeDeleted:              false,
+		PerPage:                     AllPerPage,
+		DNS:                         DNS,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "problem getting installation")
+	}
+
+	if len(installations) != 1 {
+		return nil, errors.Errorf("received ambiguous response (%d Installations) when expecting only one",
+			len(installations))
+	}
+	return installations[0], nil
+}
+
 // GetInstallations fetches the list of installations from the configured provisioning server.
 func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installation, error) {
 	u, err := url.Parse(c.buildURL("/api/installations"))

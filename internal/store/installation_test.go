@@ -129,6 +129,20 @@ func TestInstallations(t *testing.T) {
 		require.Equal(t, installation3, installation)
 	})
 
+	t.Run("get installation 3 by name", func(t *testing.T) {
+		installations, err := sqlStore.GetInstallations(
+			&model.InstallationFilter{
+				DNS:     installation3.DNS,
+				PerPage: model.AllPerPage,
+			}, false, false)
+
+		require.Equal(t, 1, len(installations))
+		installation := installations[0]
+
+		require.NoError(t, err)
+		require.Equal(t, installation.ID, installation3.ID)
+	})
+
 	t.Run("get and delete installation 4", func(t *testing.T) {
 		installation, err := sqlStore.GetInstallation(installation4.ID, false, false)
 		require.NoError(t, err)
