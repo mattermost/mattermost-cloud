@@ -42,7 +42,7 @@ spec:
     from:
       - namespaceSelector:
           matchLabels:
-            name: public-nginx`
+            name: nginx`
 
 	exampleNetPolDenyYAML = `
 kind: NetworkPolicy

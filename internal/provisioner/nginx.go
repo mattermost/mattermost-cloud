@@ -5,8 +5,10 @@
 package provisioner
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -14,6 +16,7 @@ import (
 )
 
 type nginx struct {
+	awsClient      aws.AWS
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
 	logger         log.FieldLogger
@@ -21,7 +24,7 @@ type nginx struct {
 	actualVersion  string
 }
 
-func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
@@ -30,11 +33,16 @@ func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, kops *k
 		return nil, errors.New("cannot create a connection to Nginx if the provisioner provided is nil")
 	}
 
+	if awsClient == nil {
+		return nil, errors.New("cannot create a connection to Prometheus if the awsClient provided is nil")
+	}
+
 	if kops == nil {
 		return nil, errors.New("cannot create a connection to Nginx if the Kops command provided is nil")
 	}
 
 	return &nginx{
+		awsClient:      awsClient,
 		provisioner:    provisioner,
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
@@ -69,7 +77,7 @@ func (n *nginx) DesiredVersion() string {
 }
 
 func (n *nginx) ActualVersion() string {
-	return strings.TrimPrefix(n.actualVersion, "nginx-ingress-")
+	return strings.TrimPrefix(n.actualVersion, "ingress-nginx-")
 }
 
 func (n *nginx) Destroy() error {
@@ -77,12 +85,24 @@ func (n *nginx) Destroy() error {
 }
 
 func (n *nginx) NewHelmDeployment() *helmDeployment {
+	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
+	if err != nil {
+		n.logger.WithError(err).Error("unable to retrive the AWS ACM")
+		return nil
+	}
+
+	awsACMPrivateCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
+	if err != nil {
+		n.logger.WithError(err).Error("unable to retrive the AWS Private ACM")
+		return nil
+	}
+
 	return &helmDeployment{
-		chartDeploymentName: "private-nginx",
+		chartDeploymentName: "nginx",
 		chartName:           "ingress-nginx/ingress-nginx",
-		namespace:           "internal-nginx",
-		setArgument:         "",
-		valuesPath:          "helm-charts/private-nginx_values.yaml",
+		namespace:           "nginx",
+		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.service.internal.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *awsACMCert.CertificateArn, *awsACMPrivateCert.CertificateArn),
+		valuesPath:          "helm-charts/nginx_values.yaml",
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,

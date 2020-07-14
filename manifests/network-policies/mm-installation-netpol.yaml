@@ -40,7 +40,7 @@ spec:
     from:
       - namespaceSelector:
           matchLabels:
-            name: public-nginx
+            name: nginx
 
 ---
 kind: NetworkPolicy

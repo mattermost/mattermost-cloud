@@ -5,7 +5,6 @@ controller:
   ingressClass: nginx
   image:
     repository: us.gcr.io/k8s-artifacts-prod/ingress-nginx/controller
-    tag: "v0.34.0"
     digest: sha256:56633bd00dab33d92ba14c6e709126a762d54a75a6e72437adefeaaca0abb069
     pullPolicy: IfNotPresent
     # www-data -> uid 101
@@ -13,11 +12,20 @@ controller:
     allowPrivilegeEscalation: true
 
   service:
+    enabled: true
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
       service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
       service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
-
+    
+    internal:
+      enabled: true
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+        service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+      
     enableHttp: true
     enableHttps: true
     targetPorts:

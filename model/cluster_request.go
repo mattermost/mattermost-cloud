@@ -66,9 +66,6 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[FluentbitCanonicalName]; !ok {
 		request.DesiredUtilityVersions[FluentbitCanonicalName] = FluentbitDefaultVersion
 	}
-	if _, ok := request.DesiredUtilityVersions[PublicNginxCanonicalName]; !ok {
-		request.DesiredUtilityVersions[PublicNginxCanonicalName] = PublicNginxDefaultVersion
-	}
 	if _, ok := request.DesiredUtilityVersions[TeleportCanonicalName]; !ok {
 		request.DesiredUtilityVersions[TeleportCanonicalName] = TeleportDefaultVersion
 	}

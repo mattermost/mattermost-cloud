@@ -91,7 +91,7 @@ func (p *prometheus) CreateOrUpgrade() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 120)
 	defer cancel()
 
-	endpoint, err := getLoadBalancerEndpoint(ctx, "internal-nginx", logger.WithField("prometheus-action", "create"), p.kops.GetKubeConfigPath())
+	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx", logger.WithField("prometheus-action", "create"), p.kops.GetKubeConfigPath())
 	if err != nil {
 		return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Prometheus")
 	}

@@ -63,7 +63,7 @@ type installationProvisioner interface {
 	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
-	GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
+	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -487,7 +487,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 			return failedClusterInstallationState(clusterInstallation.State)
 		}
 
-		endpoint, err := s.provisioner.GetNGINXLoadBalancerEndpoint(cluster, "public-nginx")
+		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, "nginx")
 		if err != nil {
 			logger.WithError(err).Error("Couldn't get the load balancer endpoint (nginx) for Cluster Installation")
 			return model.InstallationStateCreationDNS
