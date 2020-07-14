@@ -83,7 +83,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			MattermostEnv: installation.MattermostEnv.ToEnvList(),
 			UseIngressTLS: false,
 			IngressAnnotations: map[string]string{
-				"kubernetes.io/ingress.class":                          "nginx",
+				"kubernetes.io/ingress.class":                          "nginx-controller",
 				"kubernetes.io/tls-acme":                               "true",
 				"nginx.ingress.kubernetes.io/proxy-buffering":          "on",
 				"nginx.ingress.kubernetes.io/proxy-body-size":          "100m",
