@@ -224,3 +224,19 @@ terraform apply
 Tip: a quick and reliable way to get access to a cluster's terraform files and state is to use the `cloud workbench cluster` command. This will checkout the correct files locally in the same manner that the provisioning process uses.
 
 For more information on this change and reasoning for it, check out the [kops release notes](https://github.com/kubernetes/kops/releases/tag/v1.17.0).
+
+#### Cluster reprovisioning steps for new NGINX deployment
+
+This is related to the changes introduced in [PR-263](https://github.com/mattermost/mattermost-cloud/pull/263)
+
+Please follow the steps below for the reprovisioning of existing clusters:
+- Reprovision the cluster by running ```cloud cluster provision --cluster <cluster_id> --nginx-version 2.11.0```.
+- Check that new nginx deployed both internal and public Load Balancers (nginx-ingress-nginx-controller-internal and nginx-ingress-nginx-controller).
+- Manually update Prometheus Route53 record to use the new private Load Balancer (nginx-ingress-nginx-controller-internal).
+- Manually update cluster installations Route53 records one by one to use the new public Load balancer (nginx-ingress-nginx-controller).
+  - Update clusterinstallation ingress annotation to use Nginx class nginx-controller instead of nginx.
+  - Manually update network policy to target nginx instead of public-nginx.
+- Confirm that all services are up and running.
+- Delete old NGINX helm charts.
+  - ```helm del --purge public-nginx```
+  - ```helm del --purge private-nginx```
