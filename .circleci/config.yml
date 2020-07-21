@@ -2,7 +2,7 @@ version: 2.1
 executors:
   default:
     docker:
-    - image: circleci/golang:1.14.1
+    - image: circleci/golang:1.14.6
 
 aliases:
 - &restore_cache
@@ -57,7 +57,7 @@ jobs:
 
   test-postgres:
     docker:
-    - image: circleci/golang:1.14.1
+    - image: circleci/golang:1.14.6
       environment:
         CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
     - image: circleci/postgres:11.2-alpine
