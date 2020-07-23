@@ -14,10 +14,21 @@ import (
 const (
 	// InstallationDatabaseMysqlOperator is a database hosted in kubernetes via the operator.
 	InstallationDatabaseMysqlOperator = "mysql-operator"
-	// InstallationDatabaseSingleTenantRDS is a database hosted via Amazon RDS.
-	InstallationDatabaseSingleTenantRDS = "aws-rds"
-	// InstallationDatabaseMultiTenantRDS is a multitenant database hosted via Amazon RDS.
+	// InstallationDatabaseSingleTenantRDSMySQL is a MySQL database hosted via
+	// Amazon RDS.
+	// TODO: update name value to aws-rds-mysql
+	InstallationDatabaseSingleTenantRDSMySQL = "aws-rds"
+	// InstallationDatabaseSingleTenantRDSPostgres is a PostgreSQL database hosted
+	// via Amazon RDS.
+	InstallationDatabaseSingleTenantRDSPostgres = "aws-rds-postgres"
+	// InstallationDatabaseMultiTenantRDS is a MySQL multitenant database hosted
+	// via Amazon RDS.
 	InstallationDatabaseMultiTenantRDS = "aws-multitenant-rds"
+
+	// DatabaseEngineTypeMySQL is a MySQL database.
+	DatabaseEngineTypeMySQL = "mysql"
+	// DatabaseEngineTypePostgres is a PostgreSQL database.
+	DatabaseEngineTypePostgres = "postgres"
 )
 
 // Database is the interface for managing Mattermost databases.
@@ -92,7 +103,8 @@ func (i *Installation) InternalDatabase() bool {
 // IsSupportedDatabase returns true if the given database string is supported.
 func IsSupportedDatabase(database string) bool {
 	switch database {
-	case InstallationDatabaseSingleTenantRDS:
+	case InstallationDatabaseSingleTenantRDSMySQL:
+	case InstallationDatabaseSingleTenantRDSPostgres:
 	case InstallationDatabaseMultiTenantRDS:
 	case InstallationDatabaseMysqlOperator:
 	default:

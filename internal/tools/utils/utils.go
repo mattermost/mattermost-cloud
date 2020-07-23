@@ -32,13 +32,10 @@ func CopyDirectory(source string, dest string) error {
 	}
 
 	directory, _ := os.Open(source)
-
 	objects, err := directory.Readdir(-1)
 
 	for _, obj := range objects {
-
 		sourcefilepointer := source + "/" + obj.Name()
-
 		destinationfilepointer := dest + "/" + obj.Name()
 
 		if obj.IsDir() {
@@ -117,8 +114,10 @@ func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Datab
 	switch installation.Database {
 	case model.InstallationDatabaseMysqlOperator:
 		return model.NewMysqlOperatorDatabase()
-	case model.InstallationDatabaseSingleTenantRDS:
-		return aws.NewRDSDatabase(installation.ID, r.awsClient)
+	case model.InstallationDatabaseSingleTenantRDSMySQL:
+		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installation.ID, r.awsClient)
+	case model.InstallationDatabaseSingleTenantRDSPostgres:
+		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installation.ID, r.awsClient)
 	case model.InstallationDatabaseMultiTenantRDS:
 		return aws.NewRDSMultitenantDatabase(r.instanceID, installation.ID, r.awsClient)
 	}
