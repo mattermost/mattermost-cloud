@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kc *KubeClient) createOrUpdatePersistentVolume(namespace string, volume *corev1.PersistentVolume) (metav1.Object, error) {
+func (kc *KubeClient) createOrUpdatePersistentVolume(volume *corev1.PersistentVolume) (metav1.Object, error) {
 	_, err := kc.Clientset.CoreV1().PersistentVolumes().Get(volume.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err

@@ -156,7 +156,7 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 	case *apiregistrationv1beta1.APIService:
 		return kc.createOrUpdateAPIServer(obj.(*apiregistrationv1beta1.APIService))
 	case *apiv1.PersistentVolume:
-		return kc.createOrUpdatePersistentVolume(deployNamespace, obj.(*apiv1.PersistentVolume))
+		return kc.createOrUpdatePersistentVolume(obj.(*apiv1.PersistentVolume))
 	case *apiv1.PersistentVolumeClaim:
 		return kc.createOrUpdatePersistentVolumeClaim(deployNamespace, obj.(*apiv1.PersistentVolumeClaim))
 	default:
