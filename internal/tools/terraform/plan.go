@@ -8,10 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
 	"github.com/pkg/errors"
+
+	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 )
 
 type terraformOutput struct {
@@ -27,11 +30,16 @@ func (c *Cmd) Init(remoteKey string) error {
 		return errors.Wrap(err, "unable to write terraform backend state file")
 	}
 
+	awsRegion := os.Getenv("AWS_REGION")
+	if awsRegion == "" {
+		awsRegion = toolsAWS.DefaultAWSRegion
+	}
+
 	_, _, err = c.run(
 		"init",
 		arg("backend-config", fmt.Sprintf("bucket=%s", c.remoteStateBucket)),
 		arg("backend-config", fmt.Sprintf("key=%s/%s", remoteStateDirectory, remoteKey)),
-		arg("backend-config", "region=us-east-1"),
+		arg("backend-config", fmt.Sprintf("region=%s", awsRegion)),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke terraform init")

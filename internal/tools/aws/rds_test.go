@@ -76,6 +76,11 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		}).
 		Times(1)
 
+	// Retrive the Availability Zones.
+	a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
+		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
+		Times(1)
+
 	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
@@ -170,6 +175,11 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 	a.Mocks.API.RDS.EXPECT().
 		CreateDBCluster(gomock.Any()).
 		Return(nil, errors.New("invalid cluster name")).
+		Times(1)
+
+	// Retrive the Availability Zones.
+	a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
+		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 		Times(1)
 
 	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)

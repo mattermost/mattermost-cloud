@@ -45,6 +45,10 @@ GOVERALLS_VER := master
 GOVERALLS_BIN := goveralls
 GOVERALLS_GEN := $(TOOLS_BIN_DIR)/$(GOVERALLS_BIN)
 
+GOLINT_VER := master
+GOLINT_BIN := golint
+GOLINT_GEN := $(TOOLS_BIN_DIR)/$(GOLINT_BIN)
+
 export GO111MODULE=on
 
 ## Checks the code style, tests, builds and bundles.
@@ -57,10 +61,9 @@ check-style: govet lint
 
 ## Runs lint against all packages.
 .PHONY: lint
-lint:
+lint: $(GOLINT_GEN)
 	@echo Running lint
-	env GO111MODULE=off $(GO) get -u golang.org/x/lint/golint
-	golint -set_exit_status ./...
+	$(GOLINT_GEN) -set_exit_status ./...
 	@echo lint success
 
 ## Runs govet against all packages.
@@ -126,11 +129,19 @@ check-modules: $(OUTDATED_GEN) ## Check outdated modules
 	@echo Checking outdated modules
 	$(GO) list -u -m -json all | $(OUTDATED_GEN) -update -direct
 
+.PHONY: goverall
 goverall: $(GOVERALLS_GEN) ## Runs goveralls
 	$(GOVERALLS_GEN) -coverprofile=coverage.out -service=circle-ci -repotoken ${COVERALLS_REPO_TOKEN} || true
 
-unitest:
+.PHONY: unittest
+unittest:
 	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+
+.PHONY: verify-mocks
+verify-mocks:  $(MOCKGEN) mocks
+	@if !(git diff --quiet HEAD); then \
+		echo "generated files are out of date, run make mocks"; exit 1; \
+	fi
 
 ## --------------------------------------
 ## Tooling Binaries
@@ -145,3 +156,5 @@ $(OUTDATED_GEN): ## Build go-mod-outdated.
 $(GOVERALLS_GEN): ## Build goveralls.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/mattn/goveralls $(GOVERALLS_BIN) $(GOVERALLS_VER)
 
+$(GOLINT_GEN): ## Build golint.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/lint/golint $(GOLINT_BIN) $(GOLINT_VER)

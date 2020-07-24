@@ -40,6 +40,13 @@ jobs:
     - checkout
     - run: ./scripts/verify-boilerplate.sh
 
+  check-mocks:
+    executor:
+      name: default
+    steps:
+    - checkout
+    - run: make verify-mocks
+
   test-sqlite:
     executor:
       name: default
@@ -136,9 +143,11 @@ workflows:
     - check-modules
     - test-sqlite
     - test-postgres
+    - check-mocks
     - push-docker-pr:
         context: matterbuild-docker
         requires:
+        - check-mocks
         - check-style
         - test-sqlite
         - test-postgres
@@ -149,6 +158,11 @@ workflows:
         - push-docker-pr
   master-build:
     jobs:
+    - check-mocks:
+        filters:
+          branches:
+            only:
+            - master
     - check-boilerplate:
         filters:
           branches:
@@ -177,6 +191,7 @@ workflows:
     - push-docker:
           context: matterbuild-docker
           requires:
+          - check-mocks
           - check-style
           - test-sqlite
           - test-postgres
@@ -187,6 +202,12 @@ workflows:
               - master
   tag-builds:
     jobs:
+    - check-mocks:
+        filters:
+          tags:
+            only: /^v.*/
+          branches:
+            ignore: /.*/
     - check-boilerplate:
         filters:
           tags:
@@ -220,6 +241,7 @@ workflows:
     - push-docker:
         context: matterbuild-docker
         requires:
+        - check-mocks
         - check-style
         - test-sqlite
         - test-postgres

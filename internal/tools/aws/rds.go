@@ -109,12 +109,13 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		return errors.Errorf("%s is an invalid database engine type", databaseType)
 	}
 
+	azs, err := a.getAvailabilityZones()
+	if err != nil {
+		return err
+	}
+
 	input := &rds.CreateDBClusterInput{
-		AvailabilityZones: []*string{
-			aws.String("us-east-1a"),
-			aws.String("us-east-1b"),
-			aws.String("us-east-1c"),
-		},
+		AvailabilityZones:     azs,
 		BackupRetentionPeriod: aws.Int64(7),
 		DBClusterIdentifier:   aws.String(awsID),
 		DatabaseName:          aws.String("mattermost"),
