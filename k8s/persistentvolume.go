@@ -23,7 +23,7 @@ func (kc *KubeClient) createOrUpdatePersistentVolume(namespace string, volume *c
 	return kc.Clientset.CoreV1().PersistentVolumes().Update(volume)
 }
 
-func (kc *KubeClient) createOrUpdatePersistenVolumeClaim(namespace string, volumeClaim *corev1.PersistentVolumeClaim) (metav1.Object, error) {
+func (kc *KubeClient) createOrUpdatePersistentVolumeClaim(namespace string, volumeClaim *corev1.PersistentVolumeClaim) (metav1.Object, error) {
 	_, err := kc.Clientset.CoreV1().PersistentVolumeClaims(namespace).Get(volumeClaim.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err

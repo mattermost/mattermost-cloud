@@ -158,7 +158,7 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 	case *apiv1.PersistentVolume:
 		return kc.createOrUpdatePersistentVolume(deployNamespace, obj.(*apiv1.PersistentVolume))
 	case *apiv1.PersistentVolumeClaim:
-		return kc.createOrUpdatePersistenVolumeClaim(deployNamespace, obj.(*apiv1.PersistentVolumeClaim))
+		return kc.createOrUpdatePersistentVolumeClaim(deployNamespace, obj.(*apiv1.PersistentVolumeClaim))
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}
