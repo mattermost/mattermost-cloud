@@ -22,6 +22,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,14 +30,18 @@ import (
 // If tests are broken, this should be the first test to get fixed.
 func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 	database := RDSDatabase{
+		databaseType:   model.DatabaseEngineTypeMySQL,
 		installationID: a.InstallationA.ID,
 		client:         a.Mocks.AWS,
 	}
 
 	gomock.InOrder(
 		a.Mocks.Log.Logger.EXPECT().
-			Infof("Provisioning AWS RDS database with ID %s", CloudID(a.InstallationA.ID)).
-			Return().
+			WithFields(log.Fields{
+				"db-cluster-name": CloudID(a.InstallationA.ID),
+				"database-type":   database.databaseType,
+			}).
+			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
 		// Get cluster installations from data store.
@@ -57,11 +62,6 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 		a.Mocks.API.SecretsManager.EXPECT().
 			GetSecretValue(gomock.Any()).
 			Return(&secretsmanager.GetSecretValueOutput{SecretString: &a.SecretString}, nil).
-			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("secret-name", RDSSecretName(CloudID(a.InstallationA.ID))).
-			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
 		// Create encryption key since none has been created yet.
@@ -89,10 +89,6 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 				},
 			}, nil).
 			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			Infof("Encrypting RDS database with key %s", a.ResourceARN).
-			Times(1),
 	)
 
 	a.SetExpectCreateDBCluster()
@@ -105,14 +101,18 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 // Tests provisioning database assuming that an encryption key already exists.
 func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 	database := RDSDatabase{
+		databaseType:   model.DatabaseEngineTypeMySQL,
 		installationID: a.InstallationA.ID,
 		client:         a.Mocks.AWS,
 	}
 
 	gomock.InOrder(
 		a.Mocks.Log.Logger.EXPECT().
-			Infof("Provisioning AWS RDS database with ID %s", CloudID(a.InstallationA.ID)).
-			Return().
+			WithFields(log.Fields{
+				"db-cluster-name": CloudID(a.InstallationA.ID),
+				"database-type":   database.databaseType,
+			}).
+			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
 		// Get cluster installations from data store.
@@ -133,11 +133,6 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 		a.Mocks.API.SecretsManager.EXPECT().
 			GetSecretValue(gomock.Any()).
 			Return(&secretsmanager.GetSecretValueOutput{SecretString: &a.SecretString}, nil).
-			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("secret-name", RDSSecretName(CloudID(a.InstallationA.ID))).
-			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
 		// Get encryption key associated with this installation. This step assumes that
@@ -171,10 +166,6 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 				a.Assert().Equal(*input.KeyId, a.ResourceARN)
 			}).
 			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			Infof("Encrypting RDS database with key %s", a.ResourceARN).
-			Times(1),
 	)
 
 	a.SetExpectCreateDBCluster()
@@ -186,11 +177,20 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 
 func (a *AWSTestSuite) TestSnapshot() {
 	database := RDSDatabase{
+		databaseType:   model.DatabaseEngineTypeMySQL,
 		installationID: a.InstallationA.ID,
 		client:         a.Mocks.AWS,
 	}
 
 	gomock.InOrder(
+		a.Mocks.Log.Logger.EXPECT().
+			WithFields(log.Fields{
+				"db-cluster-name": CloudID(a.InstallationA.ID),
+				"database-type":   database.databaseType,
+			}).
+			Return(testlib.NewLoggerEntry()).
+			Times(1),
+
 		a.Mocks.API.RDS.EXPECT().CreateDBClusterSnapshot(gomock.Any()).
 			Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Do(func(input *rds.CreateDBClusterSnapshotInput) {
 			a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.ClusterA.ID))
@@ -212,11 +212,20 @@ func (a *AWSTestSuite) TestSnapshot() {
 
 func (a *AWSTestSuite) TestSnapshotError() {
 	database := RDSDatabase{
+		databaseType:   model.DatabaseEngineTypeMySQL,
 		installationID: a.InstallationA.ID,
 		client:         a.Mocks.AWS,
 	}
 
 	gomock.InOrder(
+		a.Mocks.Log.Logger.EXPECT().
+			WithFields(log.Fields{
+				"db-cluster-name": CloudID(a.InstallationA.ID),
+				"database-type":   database.databaseType,
+			}).
+			Return(testlib.NewLoggerEntry()).
+			Times(1),
+
 		a.Mocks.API.RDS.EXPECT().
 			CreateDBClusterSnapshot(gomock.Any()).
 			Return(nil, errors.New("database is not stable")).
@@ -251,11 +260,6 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 			}, nil).
 			Times(1),
 
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("security-group-ids", []string{a.GroupID}).
-			Return(testlib.NewLoggerEntry()).
-			Times(1),
-
 		a.Mocks.API.RDS.EXPECT().
 			DescribeDBSubnetGroups(gomock.Any()).
 			Return(&rds.DescribeDBSubnetGroupsOutput{
@@ -265,11 +269,6 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 					},
 				},
 			}, nil).
-			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("db-subnet-group-name", DBSubnetGroupName(a.VPCa)).
-			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
@@ -283,11 +282,6 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 				a.Assert().Equal(*input.DatabaseName, a.DBName)
 				a.Assert().Equal(*input.VpcSecurityGroupIds[0], a.GroupID)
 			}).
-			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("db-cluster-name", CloudID(a.InstallationA.ID)).
-			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
 }
@@ -328,7 +322,7 @@ func TestDatabaseProvision(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	database := NewRDSDatabase(id, &Client{
+	database := NewRDSDatabase(model.DatabaseEngineTypeMySQL, id, &Client{
 		mux: &sync.Mutex{},
 	})
 
@@ -343,7 +337,7 @@ func TestDatabaseTeardown(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	database := NewRDSDatabase(id, &Client{
+	database := NewRDSDatabase(model.DatabaseEngineTypeMySQL, id, &Client{
 		mux: &sync.Mutex{},
 	})
 

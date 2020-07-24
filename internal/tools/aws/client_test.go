@@ -70,6 +70,7 @@ type AWSTestSuite struct {
 	VPCb string
 
 	// RDS database fixtures.
+	RDSEngineType        string
 	RDSSecretID          string
 	RDSClusterID         string
 	SecretString         string
@@ -139,6 +140,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		RDSParamGroup:        "mattermost-provisioner-rds-pg",
 		RDSClusterID:         "rds-cluster-multitenant-09d44077df9934f96-97670d43",
 		RDSAvailabilityZones: []string{"us-east-1a", "us-east-1b", "us-east-1c"},
+		RDSEngineType:        model.DatabaseEngineTypeMySQL,
 		GroupID:              "id-0000000000000000",
 		SecretString:         `{"MasterUsername":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
 		SecretStringUserErr:  `{"username":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,
