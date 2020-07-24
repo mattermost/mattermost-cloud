@@ -2,7 +2,7 @@ version: 2.1
 executors:
   default:
     docker:
-    - image: circleci/golang:1.14.1
+    - image: circleci/golang:1.14.6
 
 aliases:
 - &restore_cache
@@ -38,7 +38,7 @@ jobs:
       name: default
     steps:
     - checkout
-    - run: ./hack/verify-boilerplate.sh
+    - run: ./scripts/verify-boilerplate.sh
 
   test-sqlite:
     executor:
@@ -47,13 +47,9 @@ jobs:
     - checkout
     - *restore_cache
     - run: |
-        go get golang.org/x/tools/cmd/cover
-        go get github.com/mattn/goveralls
-    - run: go test ./... -v -covermode=count -coverprofile=coverage.out
+        make unittest
+        make goverall
     - *save_cache
-    - run:
-        name: coveralls
-        command: goveralls -coverprofile=coverage.out -service=circle-ci -repotoken $COVERALLS_REPO_TOKEN || true
 
   test-postgres:
     docker:
@@ -79,7 +75,7 @@ jobs:
           echo Failed waiting for Postgres && exit 1
     - checkout
     - *restore_cache
-    - run: go test ./...
+    - run: make unittest
     - *save_cache
 
   push-docker-pr:
@@ -89,12 +85,12 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: ./hack/push-docker-pr.sh
+    - run: ./scripts/push-docker-pr.sh
     - run:
         name: Re-run Docker Push if fail
         command: |
             sleep 20
-            ./hack/push-docker-pr.sh
+            ./scripts/push-docker-pr.sh
         when: on_fail
 
   push-docker:
@@ -104,12 +100,12 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
-    - run: ./hack/push-docker.sh
+    - run: ./scripts/push-docker.sh
     - run:
         name: Re-run Docker Push if fail
         command: |
             sleep 20
-            ./hack/push-docker.sh
+            ./scripts/push-docker.sh
         when: on_fail
 
   scan-image:
