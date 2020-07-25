@@ -160,6 +160,7 @@ type GetInstallationsRequest struct {
 	Page                        int
 	PerPage                     int
 	IncludeDeleted              bool
+	DNS                         string
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
@@ -177,6 +178,9 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("per_page", strconv.Itoa(request.PerPage))
 	if request.IncludeDeleted {
 		q.Add("include_deleted", "true")
+	}
+	if request.DNS != "" {
+		q.Add("dns_name", request.DNS)
 	}
 	u.RawQuery = q.Encode()
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -73,7 +74,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	return "", fmt.Errorf("unable to find subnet group tagged for Mattermost DB usage: %s=%s", DefaultDBSubnetGroupTagKey, DefaultDBSubnetGroupTagValue)
 }
 
-func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID string, logger log.FieldLogger) error {
+func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID, databaseType string, logger log.FieldLogger) error {
 	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
@@ -93,6 +94,21 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		return err
 	}
 
+	var engine, engineVersion string
+	var port int64
+	switch databaseType {
+	case model.DatabaseEngineTypeMySQL:
+		engine = "aurora-mysql"
+		engineVersion = "5.7"
+		port = 3306
+	case model.DatabaseEngineTypePostgres:
+		engine = "aurora-postgresql"
+		engineVersion = "9.6.17"
+		port = 5432
+	default:
+		return errors.Errorf("%s is an invalid database engine type", databaseType)
+	}
+
 	input := &rds.CreateDBClusterInput{
 		AvailabilityZones: []*string{
 			aws.String("us-east-1a"),
@@ -103,11 +119,11 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		DBClusterIdentifier:   aws.String(awsID),
 		DatabaseName:          aws.String("mattermost"),
 		EngineMode:            aws.String("provisioned"),
-		Engine:                aws.String("aurora-mysql"),
-		EngineVersion:         aws.String("5.7"),
+		Engine:                aws.String(engine),
+		EngineVersion:         aws.String(engineVersion),
 		MasterUserPassword:    aws.String(password),
 		MasterUsername:        aws.String(username),
-		Port:                  aws.Int64(3306),
+		Port:                  aws.Int64(port),
 		StorageEncrypted:      aws.Bool(true),
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
@@ -124,7 +140,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 	return nil
 }
 
-func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, logger log.FieldLogger) error {
+func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName, databaseType string, logger log.FieldLogger) error {
 	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceName),
 	})
@@ -134,11 +150,25 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName string, l
 		return nil
 	}
 
+	// Some settings have to be tailored to the engine type like instance class:
+	// https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.DBInstanceClass.html
+	var engine, instanceClass string
+	switch databaseType {
+	case model.DatabaseEngineTypeMySQL:
+		engine = "aurora-mysql"
+		instanceClass = "db.t3.small"
+	case model.DatabaseEngineTypePostgres:
+		engine = "aurora-postgresql"
+		instanceClass = "db.r5.large"
+	default:
+		return errors.Errorf("%s is an invalid database engine type", databaseType)
+	}
+
 	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
 		DBClusterIdentifier:  aws.String(awsID),
 		DBInstanceIdentifier: aws.String(instanceName),
-		DBInstanceClass:      aws.String("db.t3.small"),
-		Engine:               aws.String("aurora-mysql"),
+		DBInstanceClass:      aws.String(instanceClass),
+		Engine:               aws.String(engine),
 		PubliclyAccessible:   aws.Bool(false),
 	})
 	if err != nil {

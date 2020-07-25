@@ -42,7 +42,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	includeGroupConfig, includeGroupConfigOverrides, err := parseGroupConfig(r.URL)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		c.Logger.WithError(err).Error("failed to parse group config parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -78,10 +78,12 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	includeGroupConfig, includeGroupConfigOverrides, err := parseGroupConfig(r.URL)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to parse paging parameters")
+		c.Logger.WithError(err).Error("failed to parse group parameters")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	dns := r.URL.Query().Get("dns_name")
 
 	filter := &model.InstallationFilter{
 		OwnerID:        owner,
@@ -89,6 +91,7 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 		Page:           page,
 		PerPage:        perPage,
 		IncludeDeleted: includeDeleted,
+		DNS:            dns,
 	}
 
 	installations, err := c.Store.GetInstallations(filter, includeGroupConfig, includeGroupConfigOverrides)

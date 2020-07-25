@@ -22,19 +22,22 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
-const connStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
+const mysqlConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
+const postgresConnStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
 
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
-	client         *Client
+	databaseType   string
 	installationID string
+	client         *Client
 }
 
 // NewRDSDatabase returns a new RDSDatabase interface.
-func NewRDSDatabase(installationID string, client *Client) *RDSDatabase {
+func NewRDSDatabase(databaseType, installationID string, client *Client) *RDSDatabase {
 	return &RDSDatabase{
-		client:         client,
+		databaseType:   databaseType,
 		installationID: installationID,
+		client:         client,
 	}
 }
 
@@ -54,7 +57,10 @@ func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, 
 func (d *RDSDatabase) Teardown(store model.InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error {
 	awsID := CloudID(d.installationID)
 
-	logger = logger.WithField("db-cluster-name", awsID)
+	logger = logger.WithFields(log.Fields{
+		"db-cluster-name": awsID,
+		"database-type":   d.databaseType,
+	})
 	logger.Info("Tearing down RDS DB cluster")
 
 	err := d.client.secretsManagerEnsureRDSSecretDeleted(awsID, logger)
@@ -101,15 +107,20 @@ func (d *RDSDatabase) Teardown(store model.InstallationDatabaseStoreInterface, k
 
 // Snapshot creates a snapshot of the RDS database.
 func (d *RDSDatabase) Snapshot(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	dbClusterID := CloudID(d.installationID)
+	awsID := CloudID(d.installationID)
+
+	logger = logger.WithFields(log.Fields{
+		"db-cluster-name": awsID,
+		"database-type":   d.databaseType,
+	})
 
 	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
-		DBClusterIdentifier:         aws.String(dbClusterID),
-		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", dbClusterID, time.Now().Nanosecond())),
+		DBClusterIdentifier:         aws.String(awsID),
+		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", awsID, time.Now().Nanosecond())),
 		Tags: []*rds.Tag{
 			{
 				Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
-				Value: aws.String(RDSSnapshotTagValue(dbClusterID)),
+				Value: aws.String(RDSSnapshotTagValue(awsID)),
 			},
 		},
 	})
@@ -117,7 +128,7 @@ func (d *RDSDatabase) Snapshot(store model.InstallationDatabaseStoreInterface, l
 		return errors.Wrap(err, "failed to create a DB cluster snapshot")
 	}
 
-	logger.WithField("installation-id", d.installationID).Info("RDS database snapshot in progress")
+	logger.Info("RDS database snapshot in progress")
 
 	return nil
 }
@@ -126,6 +137,21 @@ func (d *RDSDatabase) Snapshot(store model.InstallationDatabaseStoreInterface, l
 // accessing the RDS database.
 func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
 	awsID := CloudID(d.installationID)
+
+	logger = logger.WithFields(log.Fields{
+		"db-cluster-name": awsID,
+		"database-type":   d.databaseType,
+	})
+
+	var connTemplate string
+	switch d.databaseType {
+	case model.DatabaseEngineTypeMySQL:
+		connTemplate = mysqlConnStringTemplate
+	case model.DatabaseEngineTypePostgres:
+		connTemplate = postgresConnStringTemplate
+	default:
+		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
+	}
 
 	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
@@ -144,13 +170,14 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
+	databaseConnectionString := fmt.Sprintf(connTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint)
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
 		},
 		StringData: map[string]string{
-			"DB_CONNECTION_STRING": fmt.Sprintf(connStringTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint),
+			"DB_CONNECTION_STRING": databaseConnectionString,
 		},
 	}
 
@@ -166,7 +193,11 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.FieldLogger) error {
 	awsID := CloudID(installationID)
 
-	logger.Infof("Provisioning AWS RDS database with ID %s", awsID)
+	logger = logger.WithFields(log.Fields{
+		"db-cluster-name": awsID,
+		"database-type":   d.databaseType,
+	})
+	logger.Info("Provisioning AWS RDS database")
 
 	// To properly provision the database we need a SQL client to lookup which
 	// cluster(s) the installation is running on.
@@ -179,7 +210,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		InstallationID: installationID,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "unable to lookup cluster installations for installation %s", installationID)
+		return errors.Wrapf(err, "failed to lookup cluster installations for installation %s", installationID)
 	}
 
 	clusterInstallationCount := len(clusterInstallations)
@@ -239,20 +270,20 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 			},
 		})
 		if err != nil {
-			return errors.Wrapf(err, "unable to create an encryption key for db cluster %s", awsID)
+			return errors.Wrapf(err, "failed to create an encryption key for db cluster %s", awsID)
 		}
 	}
 
 	logger.Infof("Encrypting RDS database with key %s", *keyMetadata.Arn)
 
-	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, logger)
+	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, d.databaseType, logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to ensure DB cluster was created")
 	}
 
-	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), logger)
+	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), d.databaseType, logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to ensure DB instance was created")
 	}
 
 	return nil
