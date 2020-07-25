@@ -3,13 +3,6 @@
 ##
 controller:
   ingressClass: nginx-controller
-  image:
-    repository: us.gcr.io/k8s-artifacts-prod/ingress-nginx/controller
-    digest: sha256:56633bd00dab33d92ba14c6e709126a762d54a75a6e72437adefeaaca0abb069
-    pullPolicy: IfNotPresent
-    # www-data -> uid 101
-    runAsUser: 101
-    allowPrivilegeEscalation: true
 
   service:
     enabled: true

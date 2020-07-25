@@ -34,7 +34,7 @@ func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, awsClie
 	}
 
 	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to Prometheus if the awsClient provided is nil")
+		return nil, errors.New("cannot create a connection to Nginx if the awsClient provided is nil")
 	}
 
 	if kops == nil {
