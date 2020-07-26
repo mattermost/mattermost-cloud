@@ -194,6 +194,8 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 	installation.ID = model.NewID()
 	installation.CreateAt = GetMillis()
 
+	// add installation ID to mattermost-server env variables
+	installation.MattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
