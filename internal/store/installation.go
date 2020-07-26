@@ -195,6 +195,9 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 	installation.CreateAt = GetMillis()
 
 	// add installation ID to mattermost-server env variables
+	if installation.MattermostEnv == nil {
+		installation.MattermostEnv = map[string]model.EnvVar{}
+	}
 	installation.MattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
