@@ -13,7 +13,7 @@ require (
 	github.com/golang/mock v1.4.3
 	github.com/gorilla/mux v1.7.4
 	github.com/jmoiron/sqlx v1.2.0
-	github.com/lib/pq v1.7.0
+	github.com/lib/pq v1.8.0
 	github.com/mattermost/mattermost-operator v1.4.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pborman/uuid v1.2.0

@@ -115,14 +115,6 @@ func (s *mockInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*mod
 	return nil, nil
 }
 
-func (s *mockInstallationStore) AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error) {
-	return nil, nil
-}
-
-func (s *mockInstallationStore) RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (model.MultitenantDatabaseInstallationIDs, error) {
-	return nil, nil
-}
-
 func (s *mockInstallationStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
 	return nil, nil
 }

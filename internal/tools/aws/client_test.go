@@ -160,7 +160,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 
 		DefaultRDSTag: &ec2.Tag{
 			Key:   aws.String(trimTagPrefix(DefaultDBSecurityGroupTagKey)),
-			Value: aws.String(DefaultDBSecurityGroupTagValue),
+			Value: aws.String(DefaultDBSecurityGroupTagMySQLValue),
 		},
 	}
 }

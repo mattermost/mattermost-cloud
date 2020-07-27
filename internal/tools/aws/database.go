@@ -100,7 +100,7 @@ func (d *RDSDatabase) Teardown(store model.InstallationDatabaseStoreInterface, k
 		logger.Warn("Could not find any encryption key. It has been already deleted or never created.")
 	}
 
-	logger.Debug("AWS RDS db cluster teardown completed")
+	logger.Debug("AWS RDS database cluster teardown completed")
 
 	return nil
 }
@@ -190,7 +190,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		Secret: databaseSecretName,
 	}
 
-	logger.Debug("Cluster installation configured to use an AWS RDS Database")
+	logger.Debug("AWS multitenant database configuration generated for cluster installation")
 
 	return databaseSpec, databaseSecret, nil
 }

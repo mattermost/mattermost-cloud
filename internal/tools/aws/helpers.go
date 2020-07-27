@@ -110,6 +110,19 @@ func RDSMySQLConnString(schema, endpoint, username, password string) string {
 		username, password, endpoint, schema)
 }
 
+// MattermostPostgresConnString formats the connection string used by Mattermost
+// servers to access a PostgreSQL database.
+func MattermostPostgresConnString(schema, endpoint, username, password string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
+		username, password, endpoint, schema)
+}
+
+// RDSPostgresConnString formats the connection string used for accessing a Postgres RDS cluster.
+func RDSPostgresConnString(schema, endpoint, username, password string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
+		username, password, endpoint, schema)
+}
+
 // RDSMultitenantClusterSecretDescription formats the text used for the describing a multitenant database's secret key.
 func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string) string {
 	return fmt.Sprintf("Used for accessing installation ID: %s database managed by RDS cluster ID: %s", installationID, rdsClusterID)

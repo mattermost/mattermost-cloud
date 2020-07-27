@@ -87,7 +87,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupSGNotFoundError() {
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
 		a.SetDescribeSecurityGroupsExpectation("vpc-123-master", "vpc-sg-123-id-master", &ec2.Tag{
 			Key:   aws.String("dummy_tag)"),
-			Value: aws.String(DefaultDBSecurityGroupTagValue),
+			Value: aws.String(DefaultDBSecurityGroupTagMySQLValue),
 		}).Times(1),
 	)
 
@@ -169,7 +169,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownSGNotFoundError() {
 		a.SetDescribeDBInstancesExpectation("123-id-master").Times(1),
 		a.SetDescribeSecurityGroupsExpectation("vpc-sg-123-master", "vpc-sg-123-id-master", &ec2.Tag{
 			Key:   aws.String("dummy_tag)"),
-			Value: aws.String(DefaultDBSecurityGroupTagValue),
+			Value: aws.String(DefaultDBSecurityGroupTagMySQLValue),
 		}).Times(1),
 	)
 

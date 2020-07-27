@@ -5,85 +5,83 @@
 package model
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGetAndSetInstallationIDs(t *testing.T) {
-	t.Run("get empty", func(t *testing.T) {
-		database := MultitenantDatabase{}
-		err := database.SetInstallationIDs(MultitenantDatabaseInstallationIDs{})
-		require.NoError(t, err)
-
-		ids, err := database.GetInstallationIDs()
-		require.NoError(t, err)
-		require.Equal(t, 0, len(ids))
-	})
-
-	t.Run("get data", func(t *testing.T) {
-		expectedIDs := MultitenantDatabaseInstallationIDs{"id1", "id2", "id3"}
-
-		database := MultitenantDatabase{}
-		err := database.SetInstallationIDs(expectedIDs)
-		require.NoError(t, err)
-
-		ids, err := database.GetInstallationIDs()
-		require.NoError(t, err)
-		require.Equal(t, 3, len(ids))
-		require.Equal(t, ids, expectedIDs)
-	})
-
-	t.Run("get error", func(t *testing.T) {
-		database := MultitenantDatabase{
-			RawInstallationIDs: []byte{'a', 'b', 'c'},
-		}
-		ids, err := database.GetInstallationIDs()
-		require.Error(t, err)
-		require.Equal(t, "failed to unmarshal installation IDs: invalid character "+
-			"'a' looking for beginning of value", err.Error())
-		require.Nil(t, ids)
-	})
+func TestMultitenantDatabaseInstallationsCountContainsAndAdd(t *testing.T) {
+	var installations MultitenantDatabaseInstallations
+	for i := 1; i < 10; i++ {
+		t.Run(fmt.Sprintf("count-%d", i), func(t *testing.T) {
+			newID := NewID()
+			installations.Add(newID)
+			assert.Contains(t, installations, newID)
+			assert.Equal(t, installations.Count(), i)
+		})
+	}
 }
-func TestMultitenantDatabaseInstallationIDs(t *testing.T) {
-	t.Run("add id", func(t *testing.T) {
-		installationIDs := MultitenantDatabaseInstallationIDs{}
-		require.Equal(t, 0, len(installationIDs))
 
-		installationIDs.Add("id1")
-		require.Equal(t, 1, len(installationIDs))
-	})
+func TestMultitenantDatabaseInstallationsContains(t *testing.T) {
+	standardInstallations := MultitenantDatabaseInstallations{
+		"id1", "id2", "id3",
+	}
+	var testCases = []struct {
+		id             string
+		installations  MultitenantDatabaseInstallations
+		expectContains bool
+	}{
+		{"", standardInstallations, false},
+		{"id1", MultitenantDatabaseInstallations{}, false},
+		{"id4", standardInstallations, false},
+		{"id1", standardInstallations, true},
+		{"id3", standardInstallations, true},
+		{"id4", standardInstallations, false},
+	}
 
-	t.Run("remove id", func(t *testing.T) {
-		installationIDs := MultitenantDatabaseInstallationIDs{}
-		require.Equal(t, 0, len(installationIDs))
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			assert.Equal(t, tc.expectContains, tc.installations.Contains(tc.id))
+		})
+	}
+}
 
-		installationIDs.Add("id1")
-		installationIDs.Add("id2")
-		installationIDs.Add("id3")
-		require.Equal(t, 3, len(installationIDs))
+func TestMultitenantDatabaseInstallationsAdd(t *testing.T) {
+	var testCases = []struct {
+		id            string
+		installations MultitenantDatabaseInstallations
+	}{
+		{"id1", MultitenantDatabaseInstallations{}},
+		{"id4", MultitenantDatabaseInstallations{"id1", "id2", "id3"}},
+		{"id5", MultitenantDatabaseInstallations{"id1", "id2", "id3"}},
+	}
 
-		installationIDs.Remove("id3")
-		require.Equal(t, 2, len(installationIDs))
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			assert.NotContains(t, tc.installations, tc.id)
+			tc.installations.Add(tc.id)
+			assert.Contains(t, tc.installations, tc.id)
+		})
+	}
+}
 
-		installationIDs.Remove("id")
-		require.Equal(t, 2, len(installationIDs))
+func TestMultitenantDatabaseInstallationsRemove(t *testing.T) {
+	var testCases = []struct {
+		id            string
+		installations MultitenantDatabaseInstallations
+	}{
+		{"id1", MultitenantDatabaseInstallations{}},
+		{"id1", MultitenantDatabaseInstallations{"id1", "id2", "id3"}},
+		{"id2", MultitenantDatabaseInstallations{"id1", "id2", "id3"}},
+		{"id3", MultitenantDatabaseInstallations{"id1", "id2", "id3"}},
+		{"id4", MultitenantDatabaseInstallations{"id1", "id2", "id3"}},
+	}
 
-		installationIDs.Remove("id1")
-		require.Equal(t, 1, len(installationIDs))
-
-		installationIDs.Remove("id2")
-		require.Equal(t, 0, len(installationIDs))
-	})
-
-	t.Run("contain id", func(t *testing.T) {
-		installationIDs := MultitenantDatabaseInstallationIDs{}
-
-		installationIDs.Add("id1")
-		installationIDs.Add("id2")
-		installationIDs.Add("id3")
-
-		require.True(t, installationIDs.Contains("id2"))
-		require.False(t, installationIDs.Contains("id"))
-	})
+	for _, tc := range testCases {
+		t.Run(tc.id, func(t *testing.T) {
+			tc.installations.Remove(tc.id)
+			assert.NotContains(t, tc.installations, tc.id)
+		})
+	}
 }

@@ -21,9 +21,13 @@ const (
 	// InstallationDatabaseSingleTenantRDSPostgres is a PostgreSQL database hosted
 	// via Amazon RDS.
 	InstallationDatabaseSingleTenantRDSPostgres = "aws-rds-postgres"
-	// InstallationDatabaseMultiTenantRDS is a MySQL multitenant database hosted
-	// via Amazon RDS.
-	InstallationDatabaseMultiTenantRDS = "aws-multitenant-rds"
+	// InstallationDatabaseMultiTenantRDSMySQL is a MySQL multitenant database
+	// hosted via Amazon RDS.
+	// TODO: update name value to aws-multitenant-rds-mysql
+	InstallationDatabaseMultiTenantRDSMySQL = "aws-multitenant-rds"
+	// InstallationDatabaseMultiTenantRDSPotgres is a PostgreSQL multitenant
+	// database hosted via Amazon RDS.
+	InstallationDatabaseMultiTenantRDSPotgres = "aws-multitenant-rds-postgres"
 
 	// DatabaseEngineTypeMySQL is a MySQL database.
 	DatabaseEngineTypeMySQL = "mysql"
@@ -45,15 +49,13 @@ type Database interface {
 // https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r424597373
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
-	AddMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
-	RemoveMultitenantDatabaseInstallationID(rdsClusterID, installationID string) (MultitenantDatabaseInstallationIDs, error)
-	GetMultitenantDatabaseForInstallationID(installationID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
+	GetMultitenantDatabaseForInstallationID(installationID string) (*MultitenantDatabase, error)
 	CreateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
+	UpdateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
 	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
-	UpdateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.
@@ -105,7 +107,8 @@ func IsSupportedDatabase(database string) bool {
 	switch database {
 	case InstallationDatabaseSingleTenantRDSMySQL:
 	case InstallationDatabaseSingleTenantRDSPostgres:
-	case InstallationDatabaseMultiTenantRDS:
+	case InstallationDatabaseMultiTenantRDSMySQL:
+	case InstallationDatabaseMultiTenantRDSPotgres:
 	case InstallationDatabaseMysqlOperator:
 	default:
 		return false

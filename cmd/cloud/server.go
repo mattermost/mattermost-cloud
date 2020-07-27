@@ -125,15 +125,12 @@ var serverCmd = &cobra.Command{
 		}
 
 		if devMode {
-
 			if flagIsUnset(command, "keep-database-data") {
 				keepDatabaseData = false
 			}
-
 			if flagIsUnset(command, "keep-filestore-data") {
 				keepFilestoreData = false
 			}
-
 		}
 
 		logger.WithFields(logrus.Fields{
@@ -168,12 +165,15 @@ var serverCmd = &cobra.Command{
 		if awsRegion == "" {
 			awsRegion = toolsAWS.DefaultAWSRegion
 		}
-		awsClient := toolsAWS.NewAWSClientWithConfig(&sdkAWS.Config{
-			Region: sdkAWS.String(awsRegion),
-			// TODO: we should use Retryer for a more robust retry strategy.
-			// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
-			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
-		}, logger)
+		awsClient := toolsAWS.NewAWSClientWithConfig(
+			&sdkAWS.Config{
+				Region: sdkAWS.String(awsRegion),
+				// TODO: we should use Retryer for a more robust retry strategy.
+				// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
+				MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
+			},
+			logger,
+		)
 
 		resourceUtil := utils.NewResourceUtil(instanceID, awsClient)
 
