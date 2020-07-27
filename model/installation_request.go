@@ -18,17 +18,18 @@ import (
 
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
-	OwnerID       string
-	GroupID       string
-	Version       string
-	Image         string
-	DNS           string
-	License       string
-	Size          string
-	Affinity      string
-	Database      string
-	Filestore     string
-	MattermostEnv EnvVarMap
+	OwnerID         string
+	GroupID         string
+	Version         string
+	Image           string
+	DNS             string
+	License         string
+	Size            string
+	Affinity        string
+	Database        string
+	Filestore       string
+	APISecurityLock bool
+	MattermostEnv   EnvVarMap
 }
 
 // SetDefaults sets the default values for an installation create request.

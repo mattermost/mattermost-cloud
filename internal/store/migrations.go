@@ -986,4 +986,234 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.19.0"), semver.MustParse("0.20.0"), func(e execer) error {
+		// Changes:
+		// 1. Add APISecurityLock to cluster, installation, cluster installation
+		//    and group resources.
+		// 2. Remove deprecated cluster fields.
+
+		_, err := e.Exec(`ALTER TABLE Cluster RENAME TO ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE Cluster (
+				ID TEXT PRIMARY KEY,
+				Provider TEXT NOT NULL,
+				Provisioner TEXT NOT NULL,
+				ProviderMetadataRaw BYTEA NULL,
+				ProvisionerMetadataRaw BYTEA NULL,
+				UtilityMetadataRaw BYTEA NULL,
+				State TEXT NOT NULL,
+				AllowInstallations BOOLEAN NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				APISecurityLock BOOLEAN NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			INSERT INTO Cluster
+			SELECT
+				ID,
+				Provider,
+				Provisioner,
+				ProviderMetadataRaw,
+				ProvisionerMetadataRaw,
+				UtilityMetadataRaw,
+				State,
+				AllowInstallations,
+				CreateAt,
+				DeleteAt,
+				'false',
+				LockAcquiredBy,
+				LockAcquiredAt
+			FROM
+				ClusterTemp;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				CREATE TABLE Installation (
+					ID TEXT PRIMARY KEY,
+					OwnerID TEXT NOT NULL,
+					Version TEXT NOT NULL,
+					Image TEXT NOT NULL,
+					DNS TEXT NOT NULL,
+					Database TEXT NOT NULL,
+					Filestore TEXT NOT NULL,
+					License TEXT NULL,
+					Size TEXT NOT NULL,
+					MattermostEnvRaw BYTEA NULL,
+					Affinity TEXT NOT NULL,
+					GroupSequence BIGINT NULL,
+					GroupID TEXT NULL,
+					State TEXT NOT NULL,
+					CreateAt BIGINT NOT NULL,
+					DeleteAt BIGINT NOT NULL,
+					APISecurityLock BOOLEAN NOT NULL,
+					LockAcquiredBy TEXT NULL,
+					LockAcquiredAt BIGINT NOT NULL
+				);
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				INSERT INTO Installation
+				SELECT
+					ID,
+					OwnerID,
+					Version,
+					Image,
+					DNS,
+					Database,
+					Filestore,
+					License,
+					Size,
+					MattermostEnvRaw,
+					Affinity,
+					GroupSequence,
+					GroupID,
+					State,
+					CreateAt,
+					DeleteAt,
+					'false',
+					LockAcquiredBy,
+					LockAcquiredAt
+				FROM
+				InstallationTemp;
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE InstallationTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE ClusterInstallation RENAME TO ClusterInstallationTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				CREATE TABLE ClusterInstallation (
+					ID TEXT PRIMARY KEY,
+					ClusterID TEXT NOT NULL,
+					InstallationID TEXT NOT NULL,
+					Namespace TEXT NOT NULL,
+					State TEXT NOT NULL,
+					CreateAt BIGINT NOT NULL,
+					DeleteAt BIGINT NOT NULL,
+					APISecurityLock BOOLEAN NOT NULL,
+					LockAcquiredBy TEXT NULL,
+					LockAcquiredAt BIGINT NOT NULL
+				);
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				INSERT INTO ClusterInstallation
+				SELECT
+					ID,
+					ClusterID,
+					InstallationID,
+					Namespace,
+					State,
+					CreateAt,
+					DeleteAt,
+					'false',
+					LockAcquiredBy,
+					LockAcquiredAt
+				FROM
+				ClusterInstallationTemp;
+			`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE ClusterInstallationTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE "Group" RENAME TO "GroupTemp";`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE "Group" (
+				ID TEXT PRIMARY KEY,
+				Name TEXT,
+				Description TEXT,
+				Version TEXT,
+				Image TEXT,
+				MattermostEnvRaw BYTEA NULL,
+				MaxRolling BIGINT NOT NULL,
+				Sequence BIGINT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				APISecurityLock BOOLEAN NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			INSERT INTO "Group"
+				SELECT
+					ID,
+					Name,
+					Description,
+					Version,
+					Image,
+					MattermostEnvRaw,
+					MaxRolling,
+					Sequence,
+					CreateAt,
+					DeleteAt,
+					'false',
+					LockAcquiredBy,
+					LockAcquiredAt
+				FROM
+					"GroupTemp";
+				`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE "GroupTemp";`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

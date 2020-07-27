@@ -355,6 +355,17 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, err)
+
+		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("success", func(t *testing.T) {
 		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
 		require.NoError(t, err)
@@ -419,6 +430,18 @@ func TestRunClusterInstallationMattermostCLI(t *testing.T) {
 		resp, err := http.DefaultClient.Do(httpRequest)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, err)
+
+		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
+		require.EqualError(t, err, "failed with status code 403")
+		require.Empty(t, bytes)
+
+		err = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, err)
 	})
 
 	t.Run("non-zero exit command", func(t *testing.T) {

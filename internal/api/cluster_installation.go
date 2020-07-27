@@ -158,6 +158,12 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 		return
 	}
 
+	if clusterInstallation.APISecurityLock {
+		logSecurityLockConflict("cluster-installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query cluster")
@@ -251,6 +257,12 @@ func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter
 	if clusterInstallation.IsDeleted() {
 		c.Logger.Error("cluster installation is deleted")
 		w.WriteHeader(http.StatusGone)
+		return
+	}
+
+	if clusterInstallation.APISecurityLock {
+		logSecurityLockConflict("cluster-installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 

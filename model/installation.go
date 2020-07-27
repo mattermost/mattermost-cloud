@@ -12,25 +12,26 @@ import (
 
 // Installation represents a Mattermost installation.
 type Installation struct {
-	ID             string
-	OwnerID        string
-	GroupID        *string
-	GroupSequence  *int64 `json:"GroupSequence,omitempty"`
-	Version        string
-	Image          string
-	DNS            string
-	Database       string
-	Filestore      string
-	License        string
-	MattermostEnv  EnvVarMap
-	Size           string
-	Affinity       string
-	State          string
-	CreateAt       int64
-	DeleteAt       int64
-	LockAcquiredBy *string
-	LockAcquiredAt int64
-	GroupOverrides map[string]string `json:"GroupOverrides,omitempty"`
+	ID              string
+	OwnerID         string
+	GroupID         *string
+	GroupSequence   *int64 `json:"GroupSequence,omitempty"`
+	Version         string
+	Image           string
+	DNS             string
+	Database        string
+	Filestore       string
+	License         string
+	MattermostEnv   EnvVarMap
+	Size            string
+	Affinity        string
+	State           string
+	CreateAt        int64
+	DeleteAt        int64
+	APISecurityLock bool
+	LockAcquiredBy  *string
+	LockAcquiredAt  int64
+	GroupOverrides  map[string]string `json:"GroupOverrides,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be

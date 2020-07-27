@@ -18,7 +18,7 @@ func init() {
 	clusterInstallationSelect = sq.
 		Select(
 			"ID", "ClusterID", "InstallationID", "Namespace", "State", "CreateAt",
-			"DeleteAt", "LockAcquiredBy", "LockAcquiredAt",
+			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("ClusterInstallation")
 }
@@ -57,16 +57,6 @@ func (sqlStore *SQLStore) GetUnlockedClusterInstallationsPendingWork() ([]*model
 	return clusterInstallations, nil
 }
 
-// LockClusterInstallations marks the cluster installation as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockClusterInstallations(clusterInstallationIDs []string, lockerID string) (bool, error) {
-	return sqlStore.lockRows("ClusterInstallation", clusterInstallationIDs, lockerID)
-}
-
-// UnlockClusterInstallations releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockClusterInstallations(clusterInstallationIDs []string, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("ClusterInstallation", clusterInstallationIDs, lockerID, force)
-}
-
 // CreateClusterInstallation records the given cluster installation to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateClusterInstallation(clusterInstallation *model.ClusterInstallation) error {
 	clusterInstallation.ID = model.NewID()
@@ -75,15 +65,16 @@ func (sqlStore *SQLStore) CreateClusterInstallation(clusterInstallation *model.C
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("ClusterInstallation").
 		SetMap(map[string]interface{}{
-			"ID":             clusterInstallation.ID,
-			"ClusterID":      clusterInstallation.ClusterID,
-			"InstallationID": clusterInstallation.InstallationID,
-			"Namespace":      clusterInstallation.Namespace,
-			"State":          clusterInstallation.State,
-			"CreateAt":       clusterInstallation.CreateAt,
-			"DeleteAt":       0,
-			"LockAcquiredBy": nil,
-			"LockAcquiredAt": 0,
+			"ID":              clusterInstallation.ID,
+			"ClusterID":       clusterInstallation.ClusterID,
+			"InstallationID":  clusterInstallation.InstallationID,
+			"Namespace":       clusterInstallation.Namespace,
+			"State":           clusterInstallation.State,
+			"CreateAt":        clusterInstallation.CreateAt,
+			"DeleteAt":        0,
+			"APISecurityLock": clusterInstallation.APISecurityLock,
+			"LockAcquiredBy":  nil,
+			"LockAcquiredAt":  0,
 		}),
 	)
 	if err != nil {
@@ -156,6 +147,39 @@ func (sqlStore *SQLStore) DeleteClusterInstallation(id string) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark cluster installation as deleted")
+	}
+
+	return nil
+}
+
+// LockClusterInstallations marks the cluster installation as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockClusterInstallations(clusterInstallationIDs []string, lockerID string) (bool, error) {
+	return sqlStore.lockRows("ClusterInstallation", clusterInstallationIDs, lockerID)
+}
+
+// UnlockClusterInstallations releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockClusterInstallations(clusterInstallationIDs []string, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("ClusterInstallation", clusterInstallationIDs, lockerID, force)
+}
+
+// LockClusterInstallationAPI locks updates to the cluster installation from the API.
+func (sqlStore *SQLStore) LockClusterInstallationAPI(id string) error {
+	return sqlStore.setClusterInstallationAPILock(id, true)
+}
+
+// UnlockClusterInstallationAPI unlocks updates to the cluster installation from the API.
+func (sqlStore *SQLStore) UnlockClusterInstallationAPI(id string) error {
+	return sqlStore.setClusterInstallationAPILock(id, false)
+}
+
+func (sqlStore *SQLStore) setClusterInstallationAPILock(id string, lock bool) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("ClusterInstallation").
+		Set("APISecurityLock", lock).
+		Where("ID = ?", id),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to store cluster installation API lock")
 	}
 
 	return nil

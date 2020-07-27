@@ -591,6 +591,22 @@ func TestUpdateInstallation(t *testing.T) {
 		require.Nil(t, installationReponse)
 	})
 
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+
+		upgradeRequest := &model.PatchInstallationRequest{
+			Version: sToP(model.NewID()),
+			License: sToP(model.NewID()),
+		}
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		require.EqualError(t, err, "failed with status code 403")
+		require.Nil(t, installationResponse)
+
+		err = sqlStore.UnlockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("while upgrading", func(t *testing.T) {
 		installation1.State = model.InstallationStateUpdateRequested
 		err = sqlStore.UpdateInstallation(installation1)
@@ -600,7 +616,7 @@ func TestUpdateInstallation(t *testing.T) {
 			Version: sToP(model.NewID()),
 			License: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)
@@ -608,7 +624,7 @@ func TestUpdateInstallation(t *testing.T) {
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
 		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation1.Image)
-		require.Equal(t, installationReponse, installation1)
+		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
@@ -620,14 +636,14 @@ func TestUpdateInstallation(t *testing.T) {
 			Version: sToP(model.NewID()),
 			License: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
-		require.Equal(t, installationReponse, installation1)
+		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
@@ -639,14 +655,14 @@ func TestUpdateInstallation(t *testing.T) {
 			Version: sToP(model.NewID()),
 			License: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
-		require.Equal(t, installationReponse, installation1)
+		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("after deletion failed", func(t *testing.T) {
@@ -658,9 +674,9 @@ func TestUpdateInstallation(t *testing.T) {
 			Version: sToP(model.NewID()),
 			License: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, err, "failed with status code 400")
-		require.Nil(t, installationReponse)
+		require.Nil(t, installationResponse)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
@@ -672,9 +688,9 @@ func TestUpdateInstallation(t *testing.T) {
 			Version: sToP(model.NewID()),
 			License: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, err, "failed with status code 400")
-		require.Nil(t, installationReponse)
+		require.Nil(t, installationResponse)
 	})
 
 	t.Run("to version with embedded slash", func(t *testing.T) {
@@ -686,14 +702,14 @@ func TestUpdateInstallation(t *testing.T) {
 			Version: sToP("mattermost/mattermost-enterprise:v5.12"),
 			License: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
-		require.Equal(t, installationReponse, installation1)
+		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("to invalid size", func(t *testing.T) {
@@ -704,9 +720,9 @@ func TestUpdateInstallation(t *testing.T) {
 		upgradeRequest := &model.PatchInstallationRequest{
 			Size: sToP(model.NewID()),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.EqualError(t, err, "failed with status code 400")
-		require.Nil(t, installationReponse)
+		require.Nil(t, installationResponse)
 	})
 
 	t.Run("installation record updated", func(t *testing.T) {
@@ -719,14 +735,14 @@ func TestUpdateInstallation(t *testing.T) {
 			License: sToP(model.NewID()),
 			Size:    sToP("miniSingleton"),
 		}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, upgradeRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
-		require.Equal(t, installationReponse, installation1)
+		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("empty update request", func(t *testing.T) {
@@ -735,14 +751,14 @@ func TestUpdateInstallation(t *testing.T) {
 		require.NoError(t, err)
 
 		updateRequest := &model.PatchInstallationRequest{}
-		installationReponse, err := client.UpdateInstallation(installation1.ID, updateRequest)
+		installationResponse, err := client.UpdateInstallation(installation1.ID, updateRequest)
 		require.NoError(t, err)
 
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateStable, installation1.State)
 		ensureInstallationMatchesRequest(t, installation1, updateRequest)
-		require.Equal(t, installationReponse, installation1)
+		require.Equal(t, installationResponse, installation1)
 	})
 }
 
@@ -807,6 +823,17 @@ func TestJoinGroup(t *testing.T) {
 
 		err = client.JoinGroup(group1.ID, installation1.ID)
 		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+
+		err = client.JoinGroup(group1.ID, installation1.ID)
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
 	})
 
 	t.Run("to group 1", func(t *testing.T) {
@@ -913,6 +940,17 @@ func TestLeaveGroup(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 409")
 	})
 
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+
+		err = client.LeaveGroup(installation1.ID, &model.LeaveGroupRequest{RetainConfig: true})
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("while in group 1", func(t *testing.T) {
 		t.Run("don't retain group config", func(t *testing.T) {
 			oldVersion := installation1.Version
@@ -1010,6 +1048,17 @@ func TestDeleteInstallation(t *testing.T) {
 
 		err = client.DeleteInstallation(installation1.ID)
 		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+
+		err = client.DeleteInstallation(installation1.ID)
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
 	})
 
 	t.Run("while", func(t *testing.T) {

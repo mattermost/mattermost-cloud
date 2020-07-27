@@ -30,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(groupCmd)
 	rootCmd.AddCommand(schemaCmd)
 	rootCmd.AddCommand(webhookCmd)
+	rootCmd.AddCommand(securityCmd)
 	rootCmd.AddCommand(workbenchCmd)
 	rootCmd.AddCommand(completionCmd)
 }

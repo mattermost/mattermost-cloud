@@ -15,12 +15,13 @@ import (
 
 // CreateGroupRequest specifies the parameters for a new group.
 type CreateGroupRequest struct {
-	Name          string
-	Description   string
-	Version       string
-	Image         string
-	MaxRolling    int64
-	MattermostEnv EnvVarMap
+	Name            string
+	Description     string
+	Version         string
+	Image           string
+	MaxRolling      int64
+	APISecurityLock bool
+	MattermostEnv   EnvVarMap
 }
 
 // SetDefaults sets the default values for a group create request.

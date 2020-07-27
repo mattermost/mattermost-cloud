@@ -22,6 +22,7 @@ type Cluster struct {
 	AllowInstallations      bool
 	CreateAt                int64
 	DeleteAt                int64
+	APISecurityLock         bool
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
 }

@@ -34,6 +34,28 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
+// handleGetCluster responds to GET /api/cluster/{cluster}, returning the cluster in question.
+func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID)
+
+	cluster, err := c.Store.GetCluster(clusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if cluster == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, cluster)
+}
+
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.
 func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	page, perPage, includeDeleted, err := parsePaging(r.URL)
@@ -101,6 +123,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			},
 		},
 		AllowInstallations: createClusterRequest.AllowInstallations,
+		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
 	}
 
@@ -208,6 +231,12 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	defer unlockOnce()
 
+	if cluster.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	provisionClusterRequest, err := model.NewProvisionClusterRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to deserialize cluster provision request body")
@@ -261,28 +290,6 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	outputJSON(c, w, cluster)
 }
 
-// handleGetCluster responds to GET /api/cluster/{cluster}, returning the cluster in question.
-func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	clusterID := vars["cluster"]
-	c.Logger = c.Logger.WithField("cluster", clusterID)
-
-	cluster, err := c.Store.GetCluster(clusterID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to query cluster")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if cluster == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, cluster)
-}
-
 // handleUpdateClusterConfiguration responds to PUT /api/cluster/{cluster}, updating a cluster's
 // configuration.
 func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -296,6 +303,12 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 		return
 	}
 	defer unlockOnce()
+
+	if cluster.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	updateClusterRequest, err := model.NewUpdateClusterRequestFromReader(r.Body)
 	if err != nil {
@@ -341,6 +354,12 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 	defer unlockOnce()
+
+	if cluster.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	oldState := cluster.State
 	newState := model.ClusterStateUpgradeRequested
@@ -404,6 +423,12 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlockOnce()
+
+	if cluster.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	// One more check that can't be done without both the request and the cluster.
 	if resizeClusterRequest.NodeMinCount == nil &&
@@ -469,6 +494,12 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlockOnce()
+
+	if cluster.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	newState := model.ClusterInstallationStateDeletionRequested
 

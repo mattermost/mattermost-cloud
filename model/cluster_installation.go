@@ -11,15 +11,16 @@ import (
 
 // ClusterInstallation is a single namespace within a cluster composing a potentially larger installation.
 type ClusterInstallation struct {
-	ID             string
-	ClusterID      string
-	InstallationID string
-	Namespace      string
-	State          string
-	CreateAt       int64
-	DeleteAt       int64
-	LockAcquiredBy *string
-	LockAcquiredAt int64
+	ID              string
+	ClusterID       string
+	InstallationID  string
+	Namespace       string
+	State           string
+	CreateAt        int64
+	DeleteAt        int64
+	APISecurityLock bool
+	LockAcquiredBy  *string
+	LockAcquiredAt  int64
 }
 
 // ClusterInstallationFilter describes the parameters used to constrain a set of cluster installations.
