@@ -52,8 +52,9 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"stable":      "https://kubernetes-charts.storage.googleapis.com",
-	"chartmuseum": "https://chartmuseum.internal.core.cloud.mattermost.com",
+	"stable":        "https://kubernetes-charts.storage.googleapis.com",
+	"chartmuseum":   "https://chartmuseum.internal.core.cloud.mattermost.com",
+	"ingress-nginx": "https://kubernetes.github.io/ingress-nginx",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -64,7 +65,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, err
 	}
 
-	nginx, err := newNginxHandle(desiredVersion, provisioner, kops, logger)
+	nginx, err := newNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
@@ -84,16 +85,6 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.PublicNginxCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	publicNginx, err := newPublicNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Public Nginx")
-	}
-
 	desiredVersion, err = cluster.DesiredUtilityVersion(model.TeleportCanonicalName)
 	if err != nil {
 		return nil, err
@@ -107,7 +98,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, publicNginx, prometheus, fluentbit, teleport},
+		utilities:   []Utility{nginx, prometheus, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

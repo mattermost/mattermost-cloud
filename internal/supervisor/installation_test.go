@@ -197,7 +197,7 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 		nil
 }
 
-func (p *mockInstallationProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+func (p *mockInstallationProvisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
 	return "example.elb.us-east-1.amazonaws.com", nil
 }
 

@@ -32,7 +32,6 @@ func init() {
 	clusterCreateCmd.Flags().String("prometheus-version", model.PrometheusDefaultVersion, "The version of Prometheus to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("public-nginx-version", model.PublicNginxDefaultVersion, "The version of Public Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion, "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().Bool("dry-run", false, "When set to true, only print the cluster creation request without sending it.")
 
@@ -40,7 +39,6 @@ func init() {
 	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("public-nginx-version", "", "The version of Public Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of Teleport to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
@@ -455,7 +453,6 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
-	publicNginxVersion, _ := command.Flags().GetString("public-nginx-version")
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
 
 	utilityVersions := make(map[string]string)
@@ -470,10 +467,6 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 
 	if nginxVersion != "" {
 		utilityVersions[model.NginxCanonicalName] = nginxVersion
-	}
-
-	if publicNginxVersion != "" {
-		utilityVersions[model.PublicNginxCanonicalName] = publicNginxVersion
 	}
 
 	if teleportVersion != "" {

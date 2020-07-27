@@ -68,6 +68,14 @@ const (
 	// Note: This needs to be manually created before RDS databases can be used.
 	DefaultDBSubnetGroupTagValue = "MYSQL/Aurora"
 
+	// DefaultInstallPrivateCertificatesTagKey is the default key used to find the private
+	// TLS certificate ARN.
+	DefaultInstallPrivateCertificatesTagKey = "tag:MattermostCloudPrivateCertificates"
+
+	// DefaultInstallPrivateCertificatesTagValue is the default value used to find the private
+	// TLS certificate ARN.
+	DefaultInstallPrivateCertificatesTagValue = "true"
+
 	// DefaultInstallCertificatesTagKey is the default key used to find the server
 	// TLS certificate ARN.
 	DefaultInstallCertificatesTagKey = "tag:MattermostCloudInstallationCertificates"

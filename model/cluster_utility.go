@@ -16,8 +16,6 @@ const (
 	NginxCanonicalName = "nginx"
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
 	FluentbitCanonicalName = "fluentbit"
-	// PublicNginxCanonicalName is the canonical string representation of public nginx
-	PublicNginxCanonicalName = "public-nginx"
 	// TeleportCanonicalName is the canonical string representation of teleport
 	TeleportCanonicalName = "teleport"
 )
@@ -26,11 +24,11 @@ const (
 	// PrometheusDefaultVersion defines the default version for the Helm chart
 	PrometheusDefaultVersion = "10.4.0"
 	// NginxDefaultVersion defines the default version for the Helm chart
-	NginxDefaultVersion = "1.30.0"
+	NginxDefaultVersion = "2.11.0"
 	// FluentbitDefaultVersion defines the default version for the Helm chart
 	FluentbitDefaultVersion = "2.8.7"
 	// PublicNginxDefaultVersion defines the default version for the Helm chart
-	PublicNginxDefaultVersion = "1.30.0"
+	PublicNginxDefaultVersion = "2.11.0"
 	// TeleportDefaultVersion defines the default version for the Helm chart
 	TeleportDefaultVersion = "0.2.0"
 )
@@ -43,11 +41,10 @@ type UtilityMetadata struct {
 }
 
 type utilityVersions struct {
-	Prometheus  string
-	Nginx       string
-	Fluentbit   string
-	PublicNginx string
-	Teleport    string
+	Prometheus string
+	Nginx      string
+	Fluentbit  string
+	Teleport   string
 }
 
 // NewUtilityMetadata creates an instance of UtilityMetadata given the raw
@@ -154,8 +151,6 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 		return versions.Nginx
 	case FluentbitCanonicalName:
 		return versions.Fluentbit
-	case PublicNginxCanonicalName:
-		return versions.PublicNginx
 	case TeleportCanonicalName:
 		return versions.Teleport
 	}
@@ -175,8 +170,6 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 		versions.Nginx = desiredVersion
 	case FluentbitCanonicalName:
 		versions.Fluentbit = desiredVersion
-	case PublicNginxCanonicalName:
-		versions.PublicNginx = desiredVersion
 	case TeleportCanonicalName:
 		versions.Teleport = desiredVersion
 	}

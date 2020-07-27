@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"path"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -89,8 +90,8 @@ func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClien
 	}
 }
 
-// getLoadBalancerEndpoint is used to get the endpoint of the internal ingress.
-func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
+// getPrivateLoadBalancerEndpoint returns the private load balancer endpoint of the NGINX service.
+func getPrivateLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
 	k8sClient, err := k8s.New(configPath, logger)
 	if err != nil {
 		return "", err
@@ -101,26 +102,27 @@ func getLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.F
 			return "", err
 		}
 		for _, service := range services.Items {
-			if service.Status.LoadBalancer.Ingress != nil {
-				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-				if endpoint == "" {
-					return "", errors.New("loadbalancer endpoint value is empty")
-				}
+			if strings.HasSuffix(service.Name, "internal") {
+				if service.Status.LoadBalancer.Ingress != nil {
+					endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+					if endpoint == "" {
+						return "", errors.New("loadbalancer endpoint value is empty")
+					}
 
-				return endpoint, nil
+					return endpoint, nil
+				}
 			}
 		}
-
 		select {
 		case <-ctx.Done():
-			return "", errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
+			return "", errors.Wrap(ctx.Err(), "timed out waiting for internal load balancer to become ready")
 		case <-time.After(5 * time.Second):
 		}
 	}
 }
 
-// GetNGINXLoadBalancerEndpoint returns the load balancer endpoint of the NGINX service.
-func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+// GetPublicLoadBalancerEndpoint returns the public load balancer endpoint of the NGINX service.
+func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":         cluster.ID,
 		"nginx-namespace": namespace,
@@ -146,13 +148,15 @@ func (provisioner *KopsProvisioner) GetNGINXLoadBalancerEndpoint(cluster *model.
 		return "", err
 	}
 	for _, service := range services.Items {
-		if service.Status.LoadBalancer.Ingress != nil {
-			endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-			if endpoint == "" {
-				return "", errors.New("loadbalancer endpoint value is empty")
-			}
+		if !strings.HasSuffix(service.Name, "internal") {
+			if service.Status.LoadBalancer.Ingress != nil {
+				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+				if endpoint == "" {
+					return "", errors.New("loadbalancer endpoint value is empty")
+				}
 
-			return endpoint, nil
+				return endpoint, nil
+			}
 		}
 	}
 	return "", errors.New("failed to get NGINX load balancer endpoint")

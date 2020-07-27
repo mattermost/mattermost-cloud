@@ -79,18 +79,16 @@ func TestGetActualVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
-				Prometheus:  "",
-				Nginx:       "10.3",
-				Fluentbit:   "1337",
-				PublicNginx: "1234",
-				Teleport:    "12345",
+				Prometheus: "",
+				Nginx:      "10.3",
+				Fluentbit:  "1337",
+				Teleport:   "12345",
 			},
 			ActualVersions: utilityVersions{
-				Prometheus:  "prometheus-10.3",
-				Nginx:       "nginx-10.2",
-				Fluentbit:   "fluent-bit-0.9",
-				PublicNginx: "nginx-10.2",
-				Teleport:    "teleport-0.2.0",
+				Prometheus: "prometheus-10.3",
+				Nginx:      "nginx-10.2",
+				Fluentbit:  "fluent-bit-0.9",
+				Teleport:   "teleport-0.2.0",
 			},
 		},
 	}
@@ -107,10 +105,6 @@ func TestGetActualVersion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "fluent-bit-0.9", version)
 
-	version, err = c.ActualUtilityVersion(PublicNginxCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "nginx-10.2", version)
-
 	version, err = c.ActualUtilityVersion(TeleportCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "teleport-0.2.0", version)
@@ -124,18 +118,16 @@ func TestGetDesiredVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
-				Prometheus:  "",
-				Nginx:       "10.3",
-				Fluentbit:   "1337",
-				PublicNginx: "1234",
-				Teleport:    "12345",
+				Prometheus: "",
+				Nginx:      "10.3",
+				Fluentbit:  "1337",
+				Teleport:   "12345",
 			},
 			ActualVersions: utilityVersions{
-				Prometheus:  "prometheus-10.3",
-				Nginx:       "nginx-10.2",
-				Fluentbit:   "fluent-bit-0.9",
-				PublicNginx: "nginx-10.2",
-				Teleport:    "teleport-0.2.0",
+				Prometheus: "prometheus-10.3",
+				Nginx:      "nginx-10.2",
+				Fluentbit:  "fluent-bit-0.9",
+				Teleport:   "teleport-0.2.0",
 			},
 		},
 	}
@@ -151,10 +143,6 @@ func TestGetDesiredVersion(t *testing.T) {
 	version, err = c.DesiredUtilityVersion(FluentbitCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "1337", version)
-
-	version, err = c.DesiredUtilityVersion(PublicNginxCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "1234", version)
 
 	version, err = c.DesiredUtilityVersion(TeleportCanonicalName)
 	assert.NoError(t, err)
