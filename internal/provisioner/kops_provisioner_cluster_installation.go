@@ -62,6 +62,12 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create network policy %s", clusterInstallation.Namespace)
 	}
 
+	// add installation ID to mattermost-server env variables
+	if installation.MattermostEnv == nil {
+		installation.MattermostEnv = map[string]model.EnvVar{}
+	}
+	installation.MattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
+
 	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterInstallation",
