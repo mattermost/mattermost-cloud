@@ -99,11 +99,11 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 	switch databaseType {
 	case model.DatabaseEngineTypeMySQL:
 		engine = "aurora-mysql"
-		engineVersion = "5.7"
+		engineVersion = DefaultDatabaseMySQLVersion
 		port = 3306
 	case model.DatabaseEngineTypePostgres:
 		engine = "aurora-postgresql"
-		engineVersion = "9.6.17"
+		engineVersion = DefaultDatabasePostgresVersion
 		port = 5432
 	default:
 		return errors.Errorf("%s is an invalid database engine type", databaseType)
