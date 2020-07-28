@@ -22,6 +22,7 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
+	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apixv1beta1scheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -136,7 +137,9 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 	case *rbacbetav1.ClusterRoleBinding:
 		return kc.createOrUpdateClusterRoleBindingBetaV1(obj.(*rbacbetav1.ClusterRoleBinding))
 	case *apixv1beta1.CustomResourceDefinition:
-		return kc.createOrUpdateCustomResourceDefinition(obj.(*apixv1beta1.CustomResourceDefinition))
+		return kc.createOrUpdateCustomResourceDefinitionBetaV1(obj.(*apixv1beta1.CustomResourceDefinition))
+	case *apixv1.CustomResourceDefinition:
+		return kc.createOrUpdateCustomResourceDefinitionV1(obj.(*apixv1.CustomResourceDefinition))
 	case *mmv1alpha1.ClusterInstallation:
 		return kc.createOrUpdateClusterInstallation(deployNamespace, obj.(*mmv1alpha1.ClusterInstallation))
 	case *apiv1.Secret:

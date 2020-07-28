@@ -10,13 +10,14 @@ import (
 	"github.com/pkg/errors"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (kc *KubeClient) createOrUpdateCustomResourceDefinition(crd *apixv1beta1.CustomResourceDefinition) (metav1.Object, error) {
+func (kc *KubeClient) createOrUpdateCustomResourceDefinitionBetaV1(crd *apixv1beta1.CustomResourceDefinition) (metav1.Object, error) {
 	_, err := kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crd.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
@@ -40,6 +41,24 @@ func (kc *KubeClient) createOrUpdateCustomResourceDefinition(crd *apixv1beta1.Cu
 	}
 
 	return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Patch(crd.Name, types.MergePatchType, patch)
+}
+
+func (kc *KubeClient) createOrUpdateCustomResourceDefinitionV1(crd *apixv1.CustomResourceDefinition) (metav1.Object, error) {
+	_, err := kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Get(crd.GetName(), metav1.GetOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err != nil && k8sErrors.IsNotFound(err) {
+		return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Create(crd)
+	}
+
+	patch, err := json.Marshal(crd)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal new Custom Resource Defintion")
+	}
+
+	return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Patch(crd.Name, types.MergePatchType, patch)
 }
 
 func (kc *KubeClient) createOrUpdateClusterInstallation(namespace string, ci *mmv1alpha1.ClusterInstallation) (metav1.Object, error) {

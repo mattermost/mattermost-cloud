@@ -143,18 +143,6 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		"database-type":   d.databaseType,
 	})
 
-	var connTemplate, databaseCheckPort string
-	switch d.databaseType {
-	case model.DatabaseEngineTypeMySQL:
-		connTemplate = mysqlConnStringTemplate
-		databaseCheckPort = "3306"
-	case model.DatabaseEngineTypePostgres:
-		connTemplate = postgresConnStringTemplate
-		databaseCheckPort = "5432"
-	default:
-		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
-	}
-
 	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
 		return nil, nil, err
@@ -171,17 +159,31 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
 	}
 
+	var connTemplate, databaseConnectionCheck string
+	switch d.databaseType {
+	case model.DatabaseEngineTypeMySQL:
+		connTemplate = mysqlConnStringTemplate
+		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *result.DBClusters[0].Endpoint)
+	case model.DatabaseEngineTypePostgres:
+		connTemplate = postgresConnStringTemplate
+	default:
+		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
+	}
+
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
 	databaseConnectionString := fmt.Sprintf(connTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint)
+	secretStringData := map[string]string{
+		"DB_CONNECTION_STRING": databaseConnectionString,
+	}
+	if len(databaseConnectionCheck) != 0 {
+		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
+	}
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: databaseSecretName,
 		},
-		StringData: map[string]string{
-			"DB_CONNECTION_STRING":    databaseConnectionString,
-			"DB_CONNECTION_CHECK_URL": fmt.Sprintf("http://%s:%s", *result.DBClusters[0].Endpoint, databaseCheckPort),
-		},
+		StringData: secretStringData,
 	}
 
 	databaseSpec := &mmv1alpha1.Database{
