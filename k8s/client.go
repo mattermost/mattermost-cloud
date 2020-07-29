@@ -25,13 +25,22 @@ type KubeClient struct {
 	logger              log.FieldLogger
 }
 
+// NewFromConfig takes in an already created Kubernetes config object, and returns a KubeClient for accessing the kubernetes API
+func NewFromConfig(config *rest.Config, logger log.FieldLogger) (*KubeClient, error) {
+	return createKubeClient(config, logger)
+}
+
 // New returns a new KubeClient for accessing the kubernetes API.
-func New(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
+func NewFromFile(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", configLocation)
 	if err != nil {
 		return nil, err
 	}
 
+	return createKubeClient(config, logger)
+}
+
+func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient, error) {
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err

@@ -92,7 +92,7 @@ func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClien
 
 // getPrivateLoadBalancerEndpoint returns the private load balancer endpoint of the NGINX service.
 func getPrivateLoadBalancerEndpoint(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, error) {
-	k8sClient, err := k8s.New(configPath, logger)
+	k8sClient, err := k8s.NewFromFile(configPath, logger)
 	if err != nil {
 		return "", err
 	}
@@ -138,7 +138,7 @@ func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model
 		return "", errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return "", err
 	}

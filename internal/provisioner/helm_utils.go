@@ -263,7 +263,7 @@ func (d *helmDeployment) Version() (string, error) {
 
 // helmSetup is used for the initial setup of Helm in cluster.
 func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
