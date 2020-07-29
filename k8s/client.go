@@ -30,7 +30,7 @@ func NewFromConfig(config *rest.Config, logger log.FieldLogger) (*KubeClient, er
 	return createKubeClient(config, logger)
 }
 
-// New returns a new KubeClient for accessing the kubernetes API.
+// NewFromFile returns a new KubeClient for accessing the kubernetes API. (previously named 'New')
 func NewFromFile(configLocation string, logger log.FieldLogger) (*KubeClient, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", configLocation)
 	if err != nil {
