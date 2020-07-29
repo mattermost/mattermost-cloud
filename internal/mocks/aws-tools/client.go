@@ -84,6 +84,20 @@ func (mr *MockAWSMockRecorder) ReleaseVpc(clusterID, logger interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseVpc", reflect.TypeOf((*MockAWS)(nil).ReleaseVpc), clusterID, logger)
 }
 
+// AttachPolicyToRole mocks base method
+func (m *MockAWS) AttachPolicyToRole(roleName, policyName string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AttachPolicyToRole", roleName, policyName, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AttachPolicyToRole indicates an expected call of AttachPolicyToRole
+func (mr *MockAWSMockRecorder) AttachPolicyToRole(roleName, policyName string, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachPolicyToRole", reflect.TypeOf((*MockAWS)(nil).ReleaseVpc), roleName, policyName, logger)
+}
+
 // GetPrivateZoneDomainName mocks base method
 func (m *MockAWS) GetPrivateZoneDomainName(logger logrus.FieldLogger) (string, error) {
 	m.ctrl.T.Helper()
