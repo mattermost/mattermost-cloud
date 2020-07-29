@@ -129,6 +129,7 @@ mocks:
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/kms/kmsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/kms.go -copyright_file hack/boilerplate.go.txt
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go -copyright_file hack/boilerplate.go.txt
 	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/resource_tagging.go -copyright_file hack/boilerplate.go.txt
+	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/sts/stsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/sts.go -copyright_file hack/boilerplate.go.txt
 	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go -copyright_file hack/boilerplate.go.txt
 	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go -copyright_file hack/boilerplate.go.txt
 	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go -copyright_file hack/boilerplate.go.txt

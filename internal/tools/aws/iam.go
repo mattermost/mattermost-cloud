@@ -248,3 +248,23 @@ func (a *Client) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
 	}
 	return accountAliases, nil
 }
+
+// AttachPolicyToRole attaches a precreated IAM policy to an IAM role.
+func (a *Client) AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error {
+	accountID, err := a.GetAccountID()
+	if err != nil {
+		return errors.Wrap(err, "unable to get the current AWS Account ID")
+	}
+	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", accountID, policyName)
+
+	logger.Infof("Attaching policy (%s) in IAM role (%s)", policyARN, roleName)
+	_, err = a.Service().iam.AttachRolePolicy(&iam.AttachRolePolicyInput{
+		PolicyArn: aws.String(policyARN),
+		RoleName:  aws.String(roleName),
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to attach policy to IAM role")
+	}
+	logger.Info("Policy successfully attached")
+	return nil
+}

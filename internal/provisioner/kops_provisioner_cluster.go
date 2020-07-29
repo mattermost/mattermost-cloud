@@ -26,9 +26,13 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
-// DefaultKubernetesVersion is the default value for a kubernetes cluster
-// version value.
-const DefaultKubernetesVersion = "0.0.0"
+const (
+	// DefaultKubernetesVersion is the default value for a kubernetes cluster
+	// version value.
+	DefaultKubernetesVersion = "0.0.0"
+	// CustomNodePolicyName is the name of the custom IAM policy that will be attached in Kops Instance Profile
+	CustomNodePolicyName = "cloud-provisioning-node-policy"
+)
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
@@ -188,6 +192,12 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully updated storage class")
+
+	iamRole := fmt.Sprintf("nodes.%s-kops.k8s.local", cluster.ID)
+	err = awsClient.AttachPolicyToRole(iamRole, CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy")
+	}
 
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
@@ -401,6 +411,12 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			}
 			logger.Infof("Successfully deployed support apps pod %q", pod.Name)
 		}
+	}
+
+	iamRole := fmt.Sprintf("nodes.%s-kops.k8s.local", cluster.ID)
+	err = awsClient.AttachPolicyToRole(iamRole, CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
