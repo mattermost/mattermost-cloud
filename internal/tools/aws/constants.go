@@ -39,6 +39,14 @@ const (
 	// there is no cluster running in the VPC.
 	VpcClusterIDTagValueNone = "none"
 
+	// DefaultDatabaseMySQLVersion is the default version of MySQL used when
+	// creating databases.
+	DefaultDatabaseMySQLVersion = "5.7"
+
+	// DefaultDatabasePostgresVersion is the default version of PostgreSQL used
+	// when creating databases.
+	DefaultDatabasePostgresVersion = "11.7"
+
 	// DefaultDBSubnetGroupName is the default DB subnet group name used when
 	// creating DB clusters. This group name is defined by the owner of the AWS
 	// accounts and can be the same across all accounts.
