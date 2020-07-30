@@ -41,7 +41,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (provisioner *KopsProvisioner) HibernateClusterInstallation(cluster *model.
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kubernetes client")
 	}
@@ -236,7 +236,7 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}
@@ -425,7 +425,7 @@ func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *mode
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to construct k8s client")
 	}

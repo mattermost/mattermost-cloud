@@ -178,7 +178,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
 	logger.WithField("name", kopsMetadata.Name).Info("Updating VolumeBindingMode in default storage class")
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	logger.Info("Provisioning cluster")
 
 	// Begin deploying the mattermost operator.
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}
@@ -716,7 +716,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 		return nil, errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to construct k8s client")
 	}
@@ -786,7 +786,7 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 		return errors.Wrap(err, "failed to export kubecfg")
 	}
 
-	k8sClient, err := k8s.New(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to construct k8s client")
 	}
