@@ -30,7 +30,7 @@ The following is required to properly run the cloud server.
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
 3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.17.X
-4. Install [Helm](https://helm.sh/docs/using_helm/) version 2.16.X
+4. Install [Helm](https://helm.sh/docs/intro/install/) version 2.16.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [mockgen](github.com/golang/mock/mockgen) version 1.4.x
 
