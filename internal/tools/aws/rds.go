@@ -6,6 +6,8 @@ package aws
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -114,8 +116,16 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		return err
 	}
 
+	// default to at least 2 AZ
+	rdsAZs := azs[0:2]
+	if len(azs) >= 3 {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(azs), func(i, j int) { azs[i], azs[j] = azs[j], azs[i] })
+		rdsAZs = azs[0:3]
+	}
+
 	input := &rds.CreateDBClusterInput{
-		AvailabilityZones:     azs,
+		AvailabilityZones:     rdsAZs,
 		BackupRetentionPeriod: aws.Int64(7),
 		DBClusterIdentifier:   aws.String(awsID),
 		DatabaseName:          aws.String("mattermost"),
