@@ -26,18 +26,28 @@ BUILD_HASH := $(shell git rev-parse HEAD)
 
 ################################################################################
 
-AWS_SDK_URL := github.com/aws/aws-sdk-go
-LOGRUS_URL := github.com/sirupsen/logrus
-
-AWS_SDK_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${AWS_SDK_URL} | awk '{print $$NF}')
-LOGRUS_VERSION := $(shell find go.mod -type f -exec cat {} + | grep ${LOGRUS_URL} | awk '{print $$NF}')
-
-AWS_SDK_PATH := $(GOPATH)/pkg/mod/${AWS_SDK_URL}\@${AWS_SDK_VERSION}
-LOGRUS_PATH := $(GOPATH)/pkg/mod/${LOGRUS_URL}\@${LOGRUS_VERSION}
-
 BUILD_HASH = $(shell git rev-parse HEAD)
-
 LDFLAGS += -X "github.com/mattermost/mattermost-cloud/model.BuildHash=$(BUILD_HASH)"
+
+# Binaries.
+TOOLS_BIN_DIR := $(abspath bin)
+GO_INSTALL = ./scripts/go_install.sh
+
+MOCKGEN_VER := v1.4.3
+MOCKGEN_BIN := mockgen
+MOCKGEN := $(TOOLS_BIN_DIR)/$(MOCKGEN_BIN)-$(MOCKGEN_VER)
+
+OUTDATED_VER := master
+OUTDATED_BIN := go-mod-outdated
+OUTDATED_GEN := $(TOOLS_BIN_DIR)/$(OUTDATED_BIN)
+
+GOVERALLS_VER := master
+GOVERALLS_BIN := goveralls
+GOVERALLS_GEN := $(TOOLS_BIN_DIR)/$(GOVERALLS_BIN)
+
+GOLINT_VER := master
+GOLINT_BIN := golint
+GOLINT_GEN := $(TOOLS_BIN_DIR)/$(GOLINT_BIN)
 
 export GO111MODULE=on
 
@@ -51,10 +61,9 @@ check-style: govet lint
 
 ## Runs lint against all packages.
 .PHONY: lint
-lint:
+lint: $(GOLINT_GEN)
 	@echo Running lint
-	env GO111MODULE=off $(GO) get -u golang.org/x/lint/golint
-	golint -set_exit_status ./...
+	$(GOLINT_GEN) -set_exit_status ./...
 	@echo lint success
 
 ## Runs govet against all packages.
@@ -112,29 +121,40 @@ install: build
 
 # Generate mocks from the interfaces.
 .PHONY: mocks
-mocks:
-	@if [ ! -f $(GOPATH)/pkg/mod ]; then \
-		$(GO) mod download;\
-	fi
-
-	# Mockgen cannot generate mocks for logrus when reading it from modules.
-	GO111MODULE=off $(GO) get github.com/sirupsen/logrus
-
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/ec2/ec2iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/ec2.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/rds/rdsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/rds.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/s3/s3iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/s3.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/acm/acmiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/acm.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/iam/iamiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/iam.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/route53/route53iface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/route53.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/kms/kmsiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/kms.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/secretsmanager/secretsmanageriface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/secrets_manager.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(AWS_SDK_PATH)/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface/interface.go -package mocks -destination ./internal/mocks/aws-sdk/resource_tagging.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source ./internal/tools/aws/client.go -package mocks -destination ./internal/mocks/aws-tools/client.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source ./model/installation_database.go -package mocks -destination ./internal/mocks/model/installation_database.go -copyright_file hack/boilerplate.go.txt
-	$(GOPATH)/bin/mockgen -source $(GOPATH)/src/github.com/sirupsen/logrus/logrus.go -package mocks -destination ./internal/mocks/logger/logrus.go -copyright_file hack/boilerplate.go.txt
+mocks:  $(MOCKGEN)
+	go generate ./...
 
 .PHONY: check-modules
-check-modules: ## Check outdated modules
+check-modules: $(OUTDATED_GEN) ## Check outdated modules
 	@echo Checking outdated modules
-	$(GO) get -u github.com/psampaz/go-mod-outdated
-	$(GO) list -u -m -json all | go-mod-outdated -update -direct
+	$(GO) list -u -m -json all | $(OUTDATED_GEN) -update -direct
+
+.PHONY: goverall
+goverall: $(GOVERALLS_GEN) ## Runs goveralls
+	$(GOVERALLS_GEN) -coverprofile=coverage.out -service=circle-ci -repotoken ${COVERALLS_REPO_TOKEN} || true
+
+.PHONY: unittest
+unittest:
+	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+
+.PHONY: verify-mocks
+verify-mocks:  $(MOCKGEN) mocks
+	@if !(git diff --quiet HEAD); then \
+		echo "generated files are out of date, run make mocks"; exit 1; \
+	fi
+
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+$(MOCKGEN): ## Build mockgen.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golang/mock/mockgen $(MOCKGEN_BIN) $(MOCKGEN_VER)
+
+$(OUTDATED_GEN): ## Build go-mod-outdated.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/psampaz/go-mod-outdated $(OUTDATED_BIN) $(OUTDATED_VER)
+
+$(GOVERALLS_GEN): ## Build goveralls.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/mattn/goveralls $(GOVERALLS_BIN) $(GOVERALLS_VER)
+
+$(GOLINT_GEN): ## Build golint.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/lint/golint $(GOLINT_BIN) $(GOLINT_VER)

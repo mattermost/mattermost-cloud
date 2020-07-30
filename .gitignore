@@ -3,3 +3,4 @@ cloud*.db
 coverage.out
 .vscode
 build/_output/
+bin/*

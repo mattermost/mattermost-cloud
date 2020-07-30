@@ -89,6 +89,11 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 				},
 			}, nil).
 			Times(1),
+
+		// Retrive the Availability Zones.
+		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
+			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
+			Times(1),
 	)
 
 	a.SetExpectCreateDBCluster()
@@ -165,6 +170,11 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 			Do(func(input *kms.DescribeKeyInput) {
 				a.Assert().Equal(*input.KeyId, a.ResourceARN)
 			}).
+			Times(1),
+
+		// Retrive the Availability Zones.
+		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
+			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 			Times(1),
 	)
 
