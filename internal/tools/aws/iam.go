@@ -248,3 +248,49 @@ func (a *Client) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
 	}
 	return accountAliases, nil
 }
+
+// AttachPolicyToRole attaches a precreated IAM policy to an IAM role.
+func (a *Client) AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error {
+	accountID, err := a.GetAccountID()
+	if err != nil {
+		return errors.Wrap(err, "unable to get the current AWS Account ID")
+	}
+	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", accountID, policyName)
+
+	logger.Infof("Attaching policy (%s) to IAM role (%s)", policyARN, roleName)
+	_, err = a.Service().iam.AttachRolePolicy(&iam.AttachRolePolicyInput{
+		PolicyArn: aws.String(policyARN),
+		RoleName:  aws.String(roleName),
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to attach policy to IAM role")
+	}
+	logger.Info("IAM Policy successfully attached")
+	return nil
+}
+
+// DetachPolicyFromRole detaches an IAM policy from an IAM role.
+func (a *Client) DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error {
+	accountID, err := a.GetAccountID()
+	if err != nil {
+		return errors.Wrap(err, "unable to get the current AWS Account ID")
+	}
+	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", accountID, policyName)
+
+	logger.Infof("Dettaching policy (%s) from IAM role (%s)", policyARN, roleName)
+	_, err = a.Service().iam.DetachRolePolicy(&iam.DetachRolePolicyInput{
+		PolicyArn: aws.String(policyARN),
+		RoleName:  aws.String(roleName),
+	})
+	if aerr, ok := err.(awserr.Error); ok {
+		if aerr.Code() == iam.ErrCodeNoSuchEntityException {
+			logger.WithField("iam-policy", policyARN).Warn("IAM policy could not be detached; assuming already detached")
+			return nil
+		}
+	}
+	if err != nil {
+		return errors.Wrap(err, "unable to detach policy to IAM role")
+	}
+	logger.Info("IAM Policy successfully detached")
+	return nil
+}
