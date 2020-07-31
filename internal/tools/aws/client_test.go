@@ -139,7 +139,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		RDSParamGroupCluster: "mattermost-provisioner-rds-cluster-pg",
 		RDSParamGroup:        "mattermost-provisioner-rds-pg",
 		RDSClusterID:         "rds-cluster-multitenant-09d44077df9934f96-97670d43",
-		RDSAvailabilityZones: []string{"us-east-1a", "us-east-1b", "us-east-1c"},
+		RDSAvailabilityZones: []string{"us-honk-1a", "us-honk-1b"},
 		RDSEngineType:        model.DatabaseEngineTypeMySQL,
 		GroupID:              "id-0000000000000000",
 		SecretString:         `{"MasterUsername":"mmcloud","MasterPassword":"oX5rWueZt6ynsijE9PHpUO0VUWSwWSxqXCaZw1dC"}`,

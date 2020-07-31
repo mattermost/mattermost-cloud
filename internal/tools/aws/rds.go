@@ -6,6 +6,8 @@ package aws
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -99,22 +101,31 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 	switch databaseType {
 	case model.DatabaseEngineTypeMySQL:
 		engine = "aurora-mysql"
-		engineVersion = "5.7"
+		engineVersion = DefaultDatabaseMySQLVersion
 		port = 3306
 	case model.DatabaseEngineTypePostgres:
 		engine = "aurora-postgresql"
-		engineVersion = "9.6.17"
+		engineVersion = DefaultDatabasePostgresVersion
 		port = 5432
 	default:
 		return errors.Errorf("%s is an invalid database engine type", databaseType)
 	}
 
+	azs, err := a.getAvailabilityZones()
+	if err != nil {
+		return err
+	}
+
+	// default to at least 2 AZ
+	rdsAZs := azs[0:2]
+	if len(azs) >= 3 {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(azs), func(i, j int) { azs[i], azs[j] = azs[j], azs[i] })
+		rdsAZs = azs[0:3]
+	}
+
 	input := &rds.CreateDBClusterInput{
-		AvailabilityZones: []*string{
-			aws.String("us-east-1a"),
-			aws.String("us-east-1b"),
-			aws.String("us-east-1c"),
-		},
+		AvailabilityZones:     rdsAZs,
 		BackupRetentionPeriod: aws.Int64(7),
 		DBClusterIdentifier:   aws.String(awsID),
 		DatabaseName:          aws.String("mattermost"),
