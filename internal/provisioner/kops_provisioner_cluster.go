@@ -650,6 +650,22 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	logger.Info("Deleting cluster")
 
+	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "couldn't greate new utility group handle while deleting the cluster")
+	}
+
+	err = ugh.DestroyUtilityGroup()
+	if err != nil {
+		return errors.Wrap(err, "failed to destroy all services in the utility group")
+	}
+
+	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
+	err = awsClient.DetachPolicyFromRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to detach custom node policy")
+	}
+
 	_, err = kops.GetCluster(kopsMetadata.Name)
 	if err != nil {
 		logger.WithError(err).Error("Failed kops get cluster check: proceeding assuming kops and terraform resources were never created")
@@ -698,16 +714,6 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	err = awsClient.ReleaseVpc(cluster.ID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to release VPC")
-	}
-
-	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
-	if err != nil {
-		return errors.Wrap(err, "couldn't greate new utility group handle while deleting the cluster")
-	}
-
-	err = ugh.DestroyUtilityGroup()
-	if err != nil {
-		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
 	logger.Info("Successfully deleted cluster")

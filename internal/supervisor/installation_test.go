@@ -225,6 +225,10 @@ func (a *mockAWS) AttachPolicyToRole(roleName, policyName string, logger log.Fie
 	return nil
 }
 
+func (a *mockAWS) DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error {
+	return nil
+}
+
 func (a *mockAWS) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error) {
 	return "test.domain", nil
 }

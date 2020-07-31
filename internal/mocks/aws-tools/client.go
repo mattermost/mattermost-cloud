@@ -97,6 +97,20 @@ func (mr *MockAWSMockRecorder) AttachPolicyToRole(roleName, policyName, logger i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachPolicyToRole", reflect.TypeOf((*MockAWS)(nil).AttachPolicyToRole), roleName, policyName, logger)
 }
 
+// DetachPolicyFromRole mocks base method
+func (m *MockAWS) DetachPolicyFromRole(roleName, policyName string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DetachPolicyFromRole", roleName, policyName, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DetachPolicyFromRole indicates an expected call of DetachPolicyFromRole
+func (mr *MockAWSMockRecorder) DetachPolicyFromRole(roleName, policyName, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetachPolicyFromRole", reflect.TypeOf((*MockAWS)(nil).DetachPolicyFromRole), roleName, policyName, logger)
+}
+
 // GetPrivateZoneDomainName mocks base method
 func (m *MockAWS) GetPrivateZoneDomainName(logger logrus.FieldLogger) (string, error) {
 	m.ctrl.T.Helper()
