@@ -24,7 +24,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:           2,
 			NodeMaxCount:           2,
 			Zones:                  []string{"us-east-1a"},
-			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "2.11.0", "prometheus": "10.4.0", "teleport": "0.2.0"},
+			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "2.11.0", "prometheus": "10.4.0", "teleport": "0.3.0"},
 		}
 	}
 
@@ -81,7 +81,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"fluentbit":  "2.8.7",
 				"nginx":      "2.11.0",
 				"prometheus": "10.4.0",
-				"teleport":   "0.2.0"},
+				"teleport":   "0.3.0"},
 		}, clusterRequest)
 	})
 }

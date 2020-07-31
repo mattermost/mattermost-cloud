@@ -30,7 +30,7 @@ const (
 	// PublicNginxDefaultVersion defines the default version for the Helm chart
 	PublicNginxDefaultVersion = "2.11.0"
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportDefaultVersion = "0.2.0"
+	TeleportDefaultVersion = "0.3.0"
 )
 
 // UtilityMetadata is a container struct for any metadata related to

@@ -11,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/acm/acmiface"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -53,6 +55,8 @@ type AWS interface {
 	IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error)
 
 	GetAccountAliases() (*iam.ListAccountAliasesOutput, error)
+	DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error
+	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
 }
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
@@ -75,6 +79,7 @@ type Service struct {
 	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
 	kms                   kmsiface.KMSAPI
+	dynamodb              dynamodbiface.DynamoDBAPI
 }
 
 // NewService creates a new instance of Service.
@@ -89,6 +94,7 @@ func NewService(sess *session.Session) *Service {
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
 		ec2:                   ec2.New(sess),
 		kms:                   kms.New(sess),
+		dynamodb:              dynamodb.New(sess),
 	}
 }
 

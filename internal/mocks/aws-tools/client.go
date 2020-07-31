@@ -255,3 +255,31 @@ func (mr *MockAWSMockRecorder) GetAccountAliases() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountAliases", reflect.TypeOf((*MockAWS)(nil).GetAccountAliases))
 }
+
+// DynamoDBEnsureTableDeleted mocks base method
+func (m *MockAWS) DynamoDBEnsureTableDeleted(tableName string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DynamoDBEnsureTableDeleted", tableName, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DynamoDBEnsureTableDeleted indicates an expected call of DynamoDBEnsureTableDeleted
+func (mr *MockAWSMockRecorder) DynamoDBEnsureTableDeleted(tableName string, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DynamoDBEnsureTableDeleted", reflect.TypeOf((*MockAWS)(nil).DynamoDBEnsureTableDeleted))
+}
+
+// S3EnsureBucketDeleted mocks base method
+func (m *MockAWS) S3EnsureBucketDeleted(bucketName string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "S3EnsureBucketDeleted", bucketName, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// S3EnsureBucketDeleted indicates an expected call of GetAccountAliases
+func (mr *MockAWSMockRecorder) S3EnsureBucketDeleted(bucketName string, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3EnsureBucketDeleted", reflect.TypeOf((*MockAWS)(nil).S3EnsureBucketDeleted))
+}

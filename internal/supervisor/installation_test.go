@@ -213,6 +213,14 @@ func (a *mockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
 	return nil, nil
 }
 
+func (a *mockAWS) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error {
+	return nil
+}
+
 func (a *mockAWS) GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }

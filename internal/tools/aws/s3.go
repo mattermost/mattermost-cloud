@@ -38,7 +38,8 @@ func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger
 	return nil
 }
 
-func (a *Client) s3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error {
+// S3EnsureBucketDeleted is used to check if S3 bucket exists, clean it and delete it.
+func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error {
 	// First check if bucket still exists. There isn't a "GetBucket" so we will
 	// try to get the bucket policy instead.
 	_, err := a.Service().s3.GetBucketPolicy(&s3.GetBucketPolicyInput{
