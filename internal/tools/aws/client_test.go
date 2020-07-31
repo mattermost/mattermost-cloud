@@ -181,6 +181,7 @@ func (a *AWSTestSuite) SetupTest() {
 				secretsManager:        api.SecretsManager,
 				resourceGroupsTagging: api.ResourceGroupsTagging,
 				kms:                   api.KMS,
+				sts:                   api.STS,
 			},
 			config: &aws.Config{},
 			mux:    &sync.Mutex{},
@@ -208,6 +209,7 @@ func (a *AWSTestSuite) TestNewClient() {
 	a.Assert().NotNil(client.Service().secretsManager)
 	a.Assert().NotNil(client.Service().resourceGroupsTagging)
 	a.Assert().NotNil(client.Service().ec2)
+	a.Assert().NotNil(client.Service().sts)
 
 	_, err := client.Service().acm.ListCertificates(&acm.ListCertificatesInput{})
 	a.Assert().Error(err)
