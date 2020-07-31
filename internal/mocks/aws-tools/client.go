@@ -92,9 +92,9 @@ func (m *MockAWS) AttachPolicyToRole(roleName, policyName string, logger logrus.
 }
 
 // AttachPolicyToRole indicates an expected call of AttachPolicyToRole
-func (mr *MockAWSMockRecorder) AttachPolicyToRole(roleName, policyName string, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) AttachPolicyToRole(roleName, policyName, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachPolicyToRole", reflect.TypeOf((*MockAWS)(nil).ReleaseVpc), roleName, policyName, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttachPolicyToRole", reflect.TypeOf((*MockAWS)(nil).AttachPolicyToRole), roleName, policyName, logger)
 }
 
 // GetPrivateZoneDomainName mocks base method
