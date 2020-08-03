@@ -6,6 +6,7 @@ package aws
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
@@ -90,8 +91,14 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*m
 		},
 	}
 
+	S3RegionURL := S3URL
+	awsRegion := os.Getenv("AWS_REGION")
+	if awsRegion != "" || awsRegion != "us-east-1" {
+		S3RegionURL = "s3." + awsRegion + ".amazonaws.com"
+	}
+
 	filestoreSpec := &mmv1alpha1.Minio{
-		ExternalURL:    S3URL,
+		ExternalURL:    S3RegionURL,
 		ExternalBucket: awsID,
 		Secret:         filestoreSecretName,
 	}
