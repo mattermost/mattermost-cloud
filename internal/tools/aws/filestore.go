@@ -93,7 +93,7 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*m
 
 	S3RegionURL := S3URL
 	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion != "" || awsRegion != "us-east-1" {
+	if awsRegion != "" && awsRegion != "us-east-1" {
 		S3RegionURL = "s3." + awsRegion + ".amazonaws.com"
 	}
 
