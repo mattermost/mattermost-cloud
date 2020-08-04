@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	webhookCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	webhookCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 
 	webhookCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the webhook.")
 	webhookCreateCmd.Flags().String("url", "", "The callback URL of the webhook.")

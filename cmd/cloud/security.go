@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	securityCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	securityCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 
 	securityClusterCmd.PersistentFlags().String("cluster", "", "The id of the cluster.")
 	securityClusterCmd.MarkPersistentFlagRequired("cluster")

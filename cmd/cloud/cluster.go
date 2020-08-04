@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	clusterCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	clusterCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
 	clusterCreateCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")

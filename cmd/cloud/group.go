@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	groupCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	groupCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 
 	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")

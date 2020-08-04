@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	workbenchCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	workbenchCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 	workbenchCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 
 	workbenchClusterCmd.Flags().String("cluster", "", "The id of the cluster to work on.")
