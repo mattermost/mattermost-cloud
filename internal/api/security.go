@@ -20,19 +20,19 @@ func initSecurity(apiRouter *mux.Router, context *Context) {
 
 	securityClusterRouter := securityRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
 	securityClusterRouter.Handle("/api/lock", addContext(handleClusterLockAPI)).Methods("POST")
-	securityClusterRouter.Handle("/api/unlock", addContext(handleClusterUnockAPI)).Methods("POST")
+	securityClusterRouter.Handle("/api/unlock", addContext(handleClusterUnlockAPI)).Methods("POST")
 
 	securityInstallationRouter := securityRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
 	securityInstallationRouter.Handle("/api/lock", addContext(handleInstallationLockAPI)).Methods("POST")
-	securityInstallationRouter.Handle("/api/unlock", addContext(handleInstallationUnockAPI)).Methods("POST")
+	securityInstallationRouter.Handle("/api/unlock", addContext(handleInstallationUnlockAPI)).Methods("POST")
 
 	securityClusterInstallationRouter := securityRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
 	securityClusterInstallationRouter.Handle("/api/lock", addContext(handleClusterInstallationLockAPI)).Methods("POST")
-	securityClusterInstallationRouter.Handle("/api/unlock", addContext(handleClusterInstallationUnockAPI)).Methods("POST")
+	securityClusterInstallationRouter.Handle("/api/unlock", addContext(handleClusterInstallationUnlockAPI)).Methods("POST")
 
 	securityGroupRouter := securityRouter.PathPrefix("/group/{group:[A-Za-z0-9]{26}}").Subrouter()
 	securityGroupRouter.Handle("/api/lock", addContext(handleGroupLockAPI)).Methods("POST")
-	securityGroupRouter.Handle("/api/unlock", addContext(handleGroupUnockAPI)).Methods("POST")
+	securityGroupRouter.Handle("/api/unlock", addContext(handleGroupUnlockAPI)).Methods("POST")
 }
 
 // handleClusterLockAPI responds to POST /api/cluster/{cluster}/api/lock,
@@ -65,9 +65,9 @@ func handleClusterLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleClusterUnockAPI responds to POST /api/cluster/{cluster}/api/unlock,
+// handleClusterUnlockAPI responds to POST /api/cluster/{cluster}/api/unlock,
 // unlocking API changes for this cluster.
-func handleClusterUnockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleClusterUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
@@ -125,9 +125,9 @@ func handleInstallationLockAPI(c *Context, w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleInstallationUnockAPI responds to POST /api/installation/{installation}/api/unlock,
+// handleInstallationUnlockAPI responds to POST /api/installation/{installation}/api/unlock,
 // unlocking API changes for this installation.
-func handleInstallationUnockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
@@ -185,9 +185,9 @@ func handleClusterInstallationLockAPI(c *Context, w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleClusterInstallationUnockAPI responds to POST /api/cluster_installation/{cluster_installation}/api/unlock,
+// handleClusterInstallationUnlockAPI responds to POST /api/cluster_installation/{cluster_installation}/api/unlock,
 // unlocking API changes for this cluster installation.
-func handleClusterInstallationUnockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleClusterInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterInstallationID := vars["cluster_installation"]
 	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
@@ -245,9 +245,9 @@ func handleGroupLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleGroupUnockAPI responds to POST /api/group/{group}/api/unlock,
+// handleGroupUnlockAPI responds to POST /api/group/{group}/api/unlock,
 // unlocking API changes for this group.
-func handleGroupUnockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleGroupUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("group", groupID)
