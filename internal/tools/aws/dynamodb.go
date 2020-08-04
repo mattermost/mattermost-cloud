@@ -29,7 +29,7 @@ func (a *Client) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLo
 		TableName: aws.String(tableName),
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to delete bucket")
+		return errors.Wrap(err, "unable to delete DynamoDB table")
 	}
 
 	return nil
