@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -16,6 +17,7 @@ import (
 )
 
 type teleport struct {
+	awsClient      aws.AWS
 	environment    string
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
@@ -48,6 +50,7 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion string, provisione
 	}
 
 	return &teleport{
+		awsClient:      awsClient,
 		environment:    environment,
 		provisioner:    provisioner,
 		kops:           kops,
@@ -88,15 +91,35 @@ func (n *teleport) ActualVersion() string {
 }
 
 func (n *teleport) Destroy() error {
+	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
+	err := n.awsClient.S3EnsureBucketDeleted(teleportClusterName, n.logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete Teleport bucket")
+	}
+
+	err = n.awsClient.DynamoDBEnsureTableDeleted(teleportClusterName, n.logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete Teleport dynamodb table")
+	}
+
+	err = n.awsClient.DynamoDBEnsureTableDeleted(fmt.Sprintf("%s-events", teleportClusterName), n.logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete Teleport dynamodb events table")
+	}
 	return nil
 }
 
 func (n *teleport) NewHelmDeployment() *helmDeployment {
+	awsRegion := os.Getenv("AWS_REGION")
+	if awsRegion == "" {
+		awsRegion = aws.DefaultAWSRegion
+	}
+	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
 	return &helmDeployment{
 		chartDeploymentName: "teleport",
 		chartName:           "chartmuseum/teleport",
 		namespace:           "teleport",
-		setArgument:         fmt.Sprintf("config.auth_service.cluster_name=cloud-%s-%s", n.environment, n.cluster.ID),
+		setArgument:         fmt.Sprintf("config.auth_service.cluster_name=%[1]s,config.teleport.storage.region=%[2]s,config.teleport.storage.table_name=%[1]s,config.teleport.storage.audit_events_uri=dynamodb://%[1]s-events,config.teleport.storage.audit_sessions_uri=s3://%[1]s/records?region=%[2]s", teleportClusterName, awsRegion),
 		valuesPath:          "helm-charts/teleport_values.yaml",
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
