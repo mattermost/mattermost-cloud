@@ -1046,170 +1046,17 @@ var migrations = []migration{
 			return err
 		}
 
-		_, err = e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+		_, err = e.Exec(`ALTER TABLE Installation ADD COLUMN APISecurityLock BOOLEAN NOT NULL DEFAULT 'false';`)
 		if err != nil {
 			return err
 		}
 
-		_, err = e.Exec(`
-				CREATE TABLE Installation (
-					ID TEXT PRIMARY KEY,
-					OwnerID TEXT NOT NULL,
-					Version TEXT NOT NULL,
-					Image TEXT NOT NULL,
-					DNS TEXT NOT NULL,
-					Database TEXT NOT NULL,
-					Filestore TEXT NOT NULL,
-					License TEXT NULL,
-					Size TEXT NOT NULL,
-					MattermostEnvRaw BYTEA NULL,
-					Affinity TEXT NOT NULL,
-					GroupSequence BIGINT NULL,
-					GroupID TEXT NULL,
-					State TEXT NOT NULL,
-					CreateAt BIGINT NOT NULL,
-					DeleteAt BIGINT NOT NULL,
-					APISecurityLock BOOLEAN NOT NULL,
-					LockAcquiredBy TEXT NULL,
-					LockAcquiredAt BIGINT NOT NULL
-				);
-			`)
+		_, err = e.Exec(`ALTER TABLE ClusterInstallation ADD COLUMN APISecurityLock BOOLEAN NOT NULL DEFAULT 'false';`)
 		if err != nil {
 			return err
 		}
 
-		_, err = e.Exec(`
-				INSERT INTO Installation
-				SELECT
-					ID,
-					OwnerID,
-					Version,
-					Image,
-					DNS,
-					Database,
-					Filestore,
-					License,
-					Size,
-					MattermostEnvRaw,
-					Affinity,
-					GroupSequence,
-					GroupID,
-					State,
-					CreateAt,
-					DeleteAt,
-					'false',
-					LockAcquiredBy,
-					LockAcquiredAt
-				FROM
-				InstallationTemp;
-			`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`DROP TABLE InstallationTemp;`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`ALTER TABLE ClusterInstallation RENAME TO ClusterInstallationTemp;`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`
-				CREATE TABLE ClusterInstallation (
-					ID TEXT PRIMARY KEY,
-					ClusterID TEXT NOT NULL,
-					InstallationID TEXT NOT NULL,
-					Namespace TEXT NOT NULL,
-					State TEXT NOT NULL,
-					CreateAt BIGINT NOT NULL,
-					DeleteAt BIGINT NOT NULL,
-					APISecurityLock BOOLEAN NOT NULL,
-					LockAcquiredBy TEXT NULL,
-					LockAcquiredAt BIGINT NOT NULL
-				);
-			`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`
-				INSERT INTO ClusterInstallation
-				SELECT
-					ID,
-					ClusterID,
-					InstallationID,
-					Namespace,
-					State,
-					CreateAt,
-					DeleteAt,
-					'false',
-					LockAcquiredBy,
-					LockAcquiredAt
-				FROM
-				ClusterInstallationTemp;
-			`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`DROP TABLE ClusterInstallationTemp;`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`ALTER TABLE "Group" RENAME TO "GroupTemp";`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`
-			CREATE TABLE "Group" (
-				ID TEXT PRIMARY KEY,
-				Name TEXT,
-				Description TEXT,
-				Version TEXT,
-				Image TEXT,
-				MattermostEnvRaw BYTEA NULL,
-				MaxRolling BIGINT NOT NULL,
-				Sequence BIGINT NOT NULL,
-				CreateAt BIGINT NOT NULL,
-				DeleteAt BIGINT NOT NULL,
-				APISecurityLock BOOLEAN NOT NULL,
-				LockAcquiredBy TEXT NULL,
-				LockAcquiredAt BIGINT NOT NULL
-			);
-		`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`
-			INSERT INTO "Group"
-				SELECT
-					ID,
-					Name,
-					Description,
-					Version,
-					Image,
-					MattermostEnvRaw,
-					MaxRolling,
-					Sequence,
-					CreateAt,
-					DeleteAt,
-					'false',
-					LockAcquiredBy,
-					LockAcquiredAt
-				FROM
-					"GroupTemp";
-				`)
-		if err != nil {
-			return err
-		}
-
-		_, err = e.Exec(`DROP TABLE "GroupTemp";`)
+		_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN APISecurityLock BOOLEAN NOT NULL DEFAULT 'false';`)
 		if err != nil {
 			return err
 		}
