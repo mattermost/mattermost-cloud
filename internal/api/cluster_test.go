@@ -440,6 +440,18 @@ func TestProvisionCluster(t *testing.T) {
 		assert.Nil(t, clusterResp)
 	})
 
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+
+		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
+		require.EqualError(t, err, "failed with status code 403")
+		assert.Nil(t, clusterResp)
+
+		err = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("while provisioning", func(t *testing.T) {
 		cluster1.State = model.ClusterStateProvisioningRequested
 		err = sqlStore.UpdateCluster(cluster1)
@@ -569,6 +581,19 @@ func TestUpgradeCluster(t *testing.T) {
 		assert.Nil(t, clusterResp)
 	})
 
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+
+		version := "latest"
+		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		require.EqualError(t, err, "failed with status code 403")
+		assert.Nil(t, clusterResp)
+
+		err = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
 		err = sqlStore.UpdateCluster(cluster1)
@@ -679,6 +704,87 @@ func TestUpgradeCluster(t *testing.T) {
 	})
 }
 
+func TestUpdateClusterConfiguration(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
+		Provider:           model.ProviderAWS,
+		Zones:              []string{"zone"},
+		AllowInstallations: true,
+	})
+	require.NoError(t, err)
+
+	cluster1.ProvisionerMetadataKops.NodeMinCount = 5
+	err = sqlStore.UpdateCluster(cluster1)
+	require.NoError(t, err)
+
+	t.Run("unknown cluster", func(t *testing.T) {
+		clusterResp, err := client.UpdateCluster(model.NewID(), &model.UpdateClusterRequest{})
+		require.EqualError(t, err, "failed with status code 404")
+		assert.Nil(t, clusterResp)
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, err)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, err)
+			require.True(t, unlocked)
+		}()
+
+		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{})
+		require.EqualError(t, err, "failed with status code 409")
+		assert.Nil(t, clusterResp)
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+
+		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{})
+		require.EqualError(t, err, "failed with status code 403")
+		assert.Nil(t, clusterResp)
+
+		err = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("while stable", func(t *testing.T) {
+		cluster1.State = model.ClusterStateStable
+		err = sqlStore.UpdateCluster(cluster1)
+		require.NoError(t, err)
+
+		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{AllowInstallations: false})
+		require.NoError(t, err)
+		assert.NotNil(t, clusterResp)
+
+		cluster1, err = client.GetCluster(cluster1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.ClusterStateStable, cluster1.State)
+		assert.False(t, cluster1.AllowInstallations)
+	})
+}
+
 func TestResizeCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
@@ -729,6 +835,18 @@ func TestResizeCluster(t *testing.T) {
 		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
 		require.EqualError(t, err, "failed with status code 409")
 		assert.Nil(t, clusterResp)
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+
+		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
+		require.EqualError(t, err, "failed with status code 403")
+		assert.Nil(t, clusterResp)
+
+		err = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
 	})
 
 	t.Run("while resizing", func(t *testing.T) {
@@ -881,6 +999,17 @@ func TestDeleteCluster(t *testing.T) {
 
 		err = client.DeleteCluster(cluster1.ID)
 		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
+
+		err := client.DeleteCluster(cluster1.ID)
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, err)
 	})
 
 	// valid unlocked states

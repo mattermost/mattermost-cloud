@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -306,6 +307,18 @@ func TestUpdateGroup(t *testing.T) {
 		require.Nil(t, group)
 	})
 
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockGroupAPI(group1.ID)
+		require.NoError(t, err)
+
+		groupResp, err := client.UpdateGroup(&model.PatchGroupRequest{ID: group1.ID})
+		require.EqualError(t, err, "failed with status code 403")
+		assert.Nil(t, groupResp)
+
+		err = sqlStore.UnlockGroupAPI(group1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("partial update", func(t *testing.T) {
 		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:      group1.ID,
@@ -392,6 +405,17 @@ func TestDeleteGroup(t *testing.T) {
 	t.Run("unknown group", func(t *testing.T) {
 		err = client.DeleteGroup(model.NewID())
 		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockGroupAPI(group1.ID)
+		require.NoError(t, err)
+
+		err := client.DeleteGroup(group1.ID)
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockGroupAPI(group1.ID)
+		require.NoError(t, err)
 	})
 
 	t.Run("installations in group", func(t *testing.T) {

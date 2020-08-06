@@ -20,8 +20,8 @@ func init() {
 		Select(
 			"ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
-			"MattermostEnvRaw", "CreateAt", "DeleteAt", "LockAcquiredBy",
-			"LockAcquiredAt",
+			"MattermostEnvRaw", "CreateAt", "DeleteAt", "APISecurityLock",
+			"LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Installation")
 }
@@ -179,16 +179,6 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 	return installations, nil
 }
 
-// LockInstallation marks the installation as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockInstallation(installationID, lockerID string) (bool, error) {
-	return sqlStore.lockRows("Installation", []string{installationID}, lockerID)
-}
-
-// UnlockInstallation releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockInstallation(installationID, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("Installation", []string{installationID}, lockerID, force)
-}
-
 // CreateInstallation records the given installation to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) error {
 	installation.ID = model.NewID()
@@ -214,10 +204,11 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 			"Size":             installation.Size,
 			"Affinity":         installation.Affinity,
 			"State":            installation.State,
-			"CreateAt":         installation.CreateAt,
 			"License":          installation.License,
 			"MattermostEnvRaw": []byte(envJSON),
+			"CreateAt":         installation.CreateAt,
 			"DeleteAt":         0,
+			"APISecurityLock":  installation.APISecurityLock,
 			"LockAcquiredBy":   nil,
 			"LockAcquiredAt":   0,
 		}),
@@ -314,6 +305,39 @@ func (sqlStore *SQLStore) DeleteInstallation(id string) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark installation as deleted")
+	}
+
+	return nil
+}
+
+// LockInstallation marks the installation as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockInstallation(installationID, lockerID string) (bool, error) {
+	return sqlStore.lockRows("Installation", []string{installationID}, lockerID)
+}
+
+// UnlockInstallation releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockInstallation(installationID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("Installation", []string{installationID}, lockerID, force)
+}
+
+// LockInstallationAPI locks updates to the installation from the API.
+func (sqlStore *SQLStore) LockInstallationAPI(installationID string) error {
+	return sqlStore.setInstallationAPILock(installationID, true)
+}
+
+// UnlockInstallationAPI unlocks updates to the installation from the API.
+func (sqlStore *SQLStore) UnlockInstallationAPI(installationID string) error {
+	return sqlStore.setInstallationAPILock(installationID, false)
+}
+
+func (sqlStore *SQLStore) setInstallationAPILock(installationID string, lock bool) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		Set("APISecurityLock", lock).
+		Where("ID = ?", installationID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to store installation API lock")
 	}
 
 	return nil

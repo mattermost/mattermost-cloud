@@ -29,8 +29,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// clusterRootDir is the local directory that contains cluster configuration.
-const clusterRootDir = "clusters"
+const (
+	clusterRootDir        = "clusters"
+	defaultLocalServerAPI = "http://localhost:8075"
+)
 
 var instanceID string
 

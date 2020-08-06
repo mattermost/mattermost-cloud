@@ -23,6 +23,8 @@ type Store interface {
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID, lockerID string, force bool) (bool, error)
+	LockClusterAPI(clusterID string) error
+	UnlockClusterAPI(clusterID string) error
 	DeleteCluster(clusterID string) error
 
 	CreateInstallation(installation *model.Installation) error
@@ -31,10 +33,14 @@ type Store interface {
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
+	LockInstallationAPI(installationID string) error
+	UnlockInstallationAPI(installationID string) error
 	DeleteInstallation(installationID string) error
 
 	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
 	GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error)
+	LockClusterInstallationAPI(clusterInstallationID string) error
+	UnlockClusterInstallationAPI(clusterInstallationID string) error
 
 	CreateGroup(group *model.Group) error
 	GetGroup(groupID string) (*model.Group, error)
@@ -42,6 +48,8 @@ type Store interface {
 	UpdateGroup(group *model.Group) error
 	LockGroup(groupID, lockerID string) (bool, error)
 	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
+	LockGroupAPI(groupID string) error
+	UnlockGroupAPI(groupID string) error
 	DeleteGroup(groupID string) error
 
 	CreateWebhook(webhook *model.Webhook) error

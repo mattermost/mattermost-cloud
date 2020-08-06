@@ -89,12 +89,13 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	group := model.Group{
-		Name:          createGroupRequest.Name,
-		Description:   createGroupRequest.Description,
-		Version:       createGroupRequest.Version,
-		Image:         createGroupRequest.Image,
-		MaxRolling:    createGroupRequest.MaxRolling,
-		MattermostEnv: createGroupRequest.MattermostEnv,
+		Name:            createGroupRequest.Name,
+		Description:     createGroupRequest.Description,
+		Version:         createGroupRequest.Version,
+		Image:           createGroupRequest.Image,
+		MaxRolling:      createGroupRequest.MaxRolling,
+		APISecurityLock: createGroupRequest.APISecurityLock,
+		MattermostEnv:   createGroupRequest.MattermostEnv,
 	}
 
 	err = c.Store.CreateGroup(&group)
@@ -131,6 +132,12 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
+	if group.APISecurityLock {
+		logSecurityLockConflict("group", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	if patchGroupRequest.Apply(group) {
 		err := c.Store.UpdateGroup(group)
 		if err != nil {
@@ -161,6 +168,12 @@ func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlockOnce()
+
+	if group.APISecurityLock {
+		logSecurityLockConflict("group", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	installations, err := c.Store.GetInstallations(&model.InstallationFilter{
 		GroupID:        groupID,

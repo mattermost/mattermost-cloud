@@ -25,6 +25,7 @@ type CreateClusterRequest struct {
 	NodeMinCount           int64             `json:"node-min-count,omitempty"`
 	NodeMaxCount           int64             `json:"node-max-count,omitempty"`
 	AllowInstallations     bool              `json:"allow-installations,omitempty"`
+	APISecurityLock        bool              `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
 }
 

@@ -787,3 +787,60 @@ func (c *Client) DeleteWebhook(webhookID string) error {
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// LockAPIForCluster locks API changes for a given cluster.
+func (c *Client) LockAPIForCluster(clusterID string) error {
+	return c.makeSecurityCall("cluster", clusterID, "api", "lock")
+}
+
+// UnlockAPIForCluster unlocks API changes for a given cluster.
+func (c *Client) UnlockAPIForCluster(clusterID string) error {
+	return c.makeSecurityCall("cluster", clusterID, "api", "unlock")
+}
+
+// LockAPIForInstallation locks API changes for a given installation.
+func (c *Client) LockAPIForInstallation(installationID string) error {
+	return c.makeSecurityCall("installation", installationID, "api", "lock")
+}
+
+// UnlockAPIForInstallation unlocks API changes for a given installation.
+func (c *Client) UnlockAPIForInstallation(installationID string) error {
+	return c.makeSecurityCall("installation", installationID, "api", "unlock")
+}
+
+// LockAPIForClusterInstallation locks API changes for a given cluster installation.
+func (c *Client) LockAPIForClusterInstallation(clusterID string) error {
+	return c.makeSecurityCall("cluster_installation", clusterID, "api", "lock")
+}
+
+// UnlockAPIForClusterInstallation unlocks API changes for a given cluster installation.
+func (c *Client) UnlockAPIForClusterInstallation(clusterID string) error {
+	return c.makeSecurityCall("cluster_installation", clusterID, "api", "unlock")
+}
+
+// LockAPIForGroup locks API changes for a given group.
+func (c *Client) LockAPIForGroup(groupID string) error {
+	return c.makeSecurityCall("group", groupID, "api", "lock")
+}
+
+// UnlockAPIForGroup unlocks API changes for a given group.
+func (c *Client) UnlockAPIForGroup(groupID string) error {
+	return c.makeSecurityCall("group", groupID, "api", "unlock")
+}
+
+func (c *Client) makeSecurityCall(resourceType, id, securityType, action string) error {
+	resp, err := c.doPost(c.buildURL("/api/security/%s/%s/%s/%s", resourceType, id, securityType, action), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+
+}

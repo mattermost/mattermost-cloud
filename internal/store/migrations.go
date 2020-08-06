@@ -986,4 +986,81 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.19.0"), semver.MustParse("0.20.0"), func(e execer) error {
+		// Changes:
+		// 1. Add APISecurityLock to cluster, installation, cluster installation
+		//    and group resources.
+		// 2. Remove deprecated cluster fields.
+
+		_, err := e.Exec(`ALTER TABLE Cluster RENAME TO ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE Cluster (
+				ID TEXT PRIMARY KEY,
+				Provider TEXT NOT NULL,
+				Provisioner TEXT NOT NULL,
+				ProviderMetadataRaw BYTEA NULL,
+				ProvisionerMetadataRaw BYTEA NULL,
+				UtilityMetadataRaw BYTEA NULL,
+				State TEXT NOT NULL,
+				AllowInstallations BOOLEAN NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				APISecurityLock BOOLEAN NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			INSERT INTO Cluster
+			SELECT
+				ID,
+				Provider,
+				Provisioner,
+				ProviderMetadataRaw,
+				ProvisionerMetadataRaw,
+				UtilityMetadataRaw,
+				State,
+				AllowInstallations,
+				CreateAt,
+				DeleteAt,
+				'false',
+				LockAcquiredBy,
+				LockAcquiredAt
+			FROM
+				ClusterTemp;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE ClusterTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE Installation ADD COLUMN APISecurityLock BOOLEAN NOT NULL DEFAULT 'false';`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE ClusterInstallation ADD COLUMN APISecurityLock BOOLEAN NOT NULL DEFAULT 'false';`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE "Group" ADD COLUMN APISecurityLock BOOLEAN NOT NULL DEFAULT 'false';`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

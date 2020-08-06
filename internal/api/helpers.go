@@ -9,7 +9,12 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
+
+func logSecurityLockConflict(resourceType string, logger logrus.FieldLogger) {
+	logger.WithField("api-security-lock-conflict", resourceType).Warn("API security lock conflict detected")
+}
 
 func parseInt(u *url.URL, name string, defaultValue int) (int, error) {
 	valueStr := u.Query().Get(name)

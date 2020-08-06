@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	clusterInstallationCmd.PersistentFlags().String("server", "http://localhost:8075", "The provisioning server whose API will be queried.")
+	clusterInstallationCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 
 	clusterInstallationGetCmd.Flags().String("cluster-installation", "", "The id of the cluster installation to be fetched.")
 	clusterInstallationGetCmd.MarkFlagRequired("cluster-installation")

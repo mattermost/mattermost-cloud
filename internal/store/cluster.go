@@ -20,7 +20,7 @@ func init() {
 		Select(
 			"ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
 			"UtilityMetadataRaw", "State", "AllowInstallations", "CreateAt", "DeleteAt",
-			"LockAcquiredBy", "LockAcquiredAt",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Cluster")
 }
@@ -146,16 +146,6 @@ func (sqlStore *SQLStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, er
 	return rawClusters.toClusters()
 }
 
-// LockCluster marks the cluster as locked for exclusive use by the caller.
-func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) {
-	return sqlStore.lockRows("Cluster", []string{clusterID}, lockerID)
-}
-
-// UnlockCluster releases a lock previously acquired against a caller.
-func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRows("Cluster", []string{clusterID}, lockerID, force)
-}
-
 // CreateCluster records the given cluster to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 	cluster.ID = model.NewID()
@@ -179,10 +169,9 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 			"AllowInstallations":     cluster.AllowInstallations,
 			"CreateAt":               cluster.CreateAt,
 			"DeleteAt":               0,
+			"APISecurityLock":        cluster.APISecurityLock,
 			"LockAcquiredBy":         nil,
 			"LockAcquiredAt":         0,
-			"Size":                   "DEPRECATED",
-			"Version":                "DEPRECATED",
 		}),
 	)
 	if err != nil {
@@ -230,6 +219,39 @@ func (sqlStore *SQLStore) DeleteCluster(id string) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to mark cluster as deleted")
+	}
+
+	return nil
+}
+
+// LockCluster marks the cluster as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockCluster(clusterID, lockerID string) (bool, error) {
+	return sqlStore.lockRows("Cluster", []string{clusterID}, lockerID)
+}
+
+// UnlockCluster releases a lock previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockCluster(clusterID, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("Cluster", []string{clusterID}, lockerID, force)
+}
+
+// LockClusterAPI locks updates to the cluster from the API.
+func (sqlStore *SQLStore) LockClusterAPI(clusterID string) error {
+	return sqlStore.setClusterAPILock(clusterID, true)
+}
+
+// UnlockClusterAPI unlocks updates to the cluster from the API.
+func (sqlStore *SQLStore) UnlockClusterAPI(clusterID string) error {
+	return sqlStore.setClusterAPILock(clusterID, false)
+}
+
+func (sqlStore *SQLStore) setClusterAPILock(clusterID string, lock bool) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Cluster").
+		Set("APISecurityLock", lock).
+		Where("ID = ?", clusterID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to store cluster API lock")
 	}
 
 	return nil

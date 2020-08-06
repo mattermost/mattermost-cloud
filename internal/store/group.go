@@ -25,8 +25,8 @@ type rawGroups []*rawGroup
 func init() {
 	groupSelect = sq.
 		Select("ID", "Name", "Description", "Version", "Image", "Sequence", "CreateAt",
-			"DeleteAt", "MattermostEnvRaw", "MaxRolling", "LockAcquiredBy",
-			"LockAcquiredAt").
+			"DeleteAt", "MattermostEnvRaw", "MaxRolling", "APISecurityLock",
+			"LockAcquiredBy", "LockAcquiredAt").
 		From(`"Group"`)
 }
 
@@ -243,6 +243,7 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 			"MaxRolling":       group.MaxRolling,
 			"CreateAt":         group.CreateAt,
 			"DeleteAt":         0,
+			"APISecurityLock":  group.APISecurityLock,
 			"LockAcquiredBy":   nil,
 			"LockAcquiredAt":   0,
 		}),
@@ -317,4 +318,27 @@ func (sqlStore *SQLStore) LockGroup(groupID, lockerID string) (bool, error) {
 // UnlockGroup releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockGroup(groupID, lockerID string, force bool) (bool, error) {
 	return sqlStore.unlockRows(`"Group"`, []string{groupID}, lockerID, force)
+}
+
+// LockGroupAPI locks updates to the group from the API.
+func (sqlStore *SQLStore) LockGroupAPI(id string) error {
+	return sqlStore.setGroupAPILock(id, true)
+}
+
+// UnlockGroupAPI unlocks updates to the group from the API.
+func (sqlStore *SQLStore) UnlockGroupAPI(id string) error {
+	return sqlStore.setGroupAPILock(id, false)
+}
+
+func (sqlStore *SQLStore) setGroupAPILock(id string, lock bool) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update(`"Group"`).
+		Set("APISecurityLock", lock).
+		Where("ID = ?", id),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to store group API lock")
+	}
+
+	return nil
 }

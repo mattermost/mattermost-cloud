@@ -137,18 +137,19 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	installation := model.Installation{
-		OwnerID:       createInstallationRequest.OwnerID,
-		GroupID:       &createInstallationRequest.GroupID,
-		Version:       createInstallationRequest.Version,
-		Image:         createInstallationRequest.Image,
-		DNS:           createInstallationRequest.DNS,
-		Database:      createInstallationRequest.Database,
-		Filestore:     createInstallationRequest.Filestore,
-		License:       createInstallationRequest.License,
-		Size:          createInstallationRequest.Size,
-		Affinity:      createInstallationRequest.Affinity,
-		MattermostEnv: createInstallationRequest.MattermostEnv,
-		State:         model.InstallationStateCreationRequested,
+		OwnerID:         createInstallationRequest.OwnerID,
+		GroupID:         &createInstallationRequest.GroupID,
+		Version:         createInstallationRequest.Version,
+		Image:           createInstallationRequest.Image,
+		DNS:             createInstallationRequest.DNS,
+		Database:        createInstallationRequest.Database,
+		Filestore:       createInstallationRequest.Filestore,
+		License:         createInstallationRequest.License,
+		Size:            createInstallationRequest.Size,
+		Affinity:        createInstallationRequest.Affinity,
+		APISecurityLock: createInstallationRequest.APISecurityLock,
+		MattermostEnv:   createInstallationRequest.MattermostEnv,
+		State:           model.InstallationStateCreationRequested,
 	}
 
 	err = c.Store.CreateInstallation(&installation)
@@ -256,6 +257,12 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	defer unlockOnce()
 
+	if installation.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	oldState := installation.State
 	newState := model.InstallationStateUpdateRequested
 
@@ -310,6 +317,12 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer installationUnlockOnce()
 
+	if installation.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	group, status, groupUnlockOnce := lockGroup(c, groupID)
 	if status != 0 {
 		w.WriteHeader(status)
@@ -362,6 +375,12 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlockOnce()
+
+	if installation.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	// TODO: does it make sense to enforce normal update-requested valid states?
 	// Should there be more or less valid states? Review this when necessary.
@@ -422,6 +441,12 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 	}
 	defer unlockOnce()
 
+	if installation.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	oldState := installation.State
 	newState := model.InstallationStateHibernationRequested
 
@@ -474,6 +499,12 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	defer unlockOnce()
 
+	if installation.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	oldState := installation.State
 	newState := model.InstallationStateUpdateRequested
 
@@ -525,6 +556,12 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 	defer unlockOnce()
+
+	if installation.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	newState := model.InstallationStateDeletionRequested
 
