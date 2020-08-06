@@ -165,7 +165,7 @@ const (
 
 	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of
 	// schemas allowed in a multitenant RDS database cluster.
-	DefaultRDSMultitenantDatabaseCountLimit = 10
+	DefaultRDSMultitenantDatabaseCountLimit = 100
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
