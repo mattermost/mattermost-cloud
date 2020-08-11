@@ -4,6 +4,11 @@
 
 package model
 
+import (
+	"encoding/json"
+	"io"
+)
+
 // MultitenantDatabase represents database infrastructure that contains multiple
 // installation databases.
 type MultitenantDatabase struct {
@@ -11,9 +16,9 @@ type MultitenantDatabase struct {
 	VpcID          string
 	DatabaseType   string
 	Installations  MultitenantDatabaseInstallations
-	LockAcquiredBy *string
 	CreateAt       int64
 	DeleteAt       int64
+	LockAcquiredBy *string
 	LockAcquiredAt int64
 }
 
@@ -61,4 +66,17 @@ type MultitenantDatabaseFilter struct {
 	MaxInstallationsLimit int
 	Page                  int
 	PerPage               int
+}
+
+// MultitenantDatabasesFromReader decodes a json-encoded list of multitenant databases from the given io.Reader.
+func MultitenantDatabasesFromReader(reader io.Reader) ([]*MultitenantDatabase, error) {
+	databases := []*MultitenantDatabase{}
+	decoder := json.NewDecoder(reader)
+
+	err := decoder.Decode(&databases)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return databases, nil
 }

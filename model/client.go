@@ -710,6 +710,30 @@ func (c *Client) LeaveGroup(installationID string, request *LeaveGroupRequest) e
 	}
 }
 
+// GetMultitenantDatabases fetches the list of multitenant databases from the configured provisioning server.
+func (c *Client) GetMultitenantDatabases(request *GetDatabasesRequest) ([]*MultitenantDatabase, error) {
+	u, err := url.Parse(c.buildURL("/api/databases"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return MultitenantDatabasesFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // CreateWebhook requests the creation of a webhook from the configured provisioning server.
 func (c *Client) CreateWebhook(request *CreateWebhookRequest) (*Webhook, error) {
 	resp, err := c.doPost(c.buildURL("/api/webhooks"), request)

@@ -28,6 +28,7 @@ func init() {
 	rootCmd.AddCommand(clusterCmd)
 	rootCmd.AddCommand(installationCmd)
 	rootCmd.AddCommand(groupCmd)
+	rootCmd.AddCommand(databaseCmd)
 	rootCmd.AddCommand(schemaCmd)
 	rootCmd.AddCommand(webhookCmd)
 	rootCmd.AddCommand(securityCmd)
