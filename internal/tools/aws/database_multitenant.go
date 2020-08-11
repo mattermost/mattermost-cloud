@@ -867,13 +867,16 @@ func (d *RDSMultitenantDatabase) ensureDatabaseIsCreated(ctx context.Context, da
 			return errors.Wrap(err, "failed to run create database SQL command")
 		}
 	} else {
-		query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
-		_, err := d.db.QueryContext(ctx, query)
+		query := fmt.Sprintf(`SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');`, databaseName)
+		rows, err := d.db.QueryContext(ctx, query)
 		if err != nil {
 			return errors.Wrap(err, "failed to run create database SQL command")
 		}
+		if rows.Next() {
+			return nil
+		}
 
-		query = fmt.Sprintf("CREATE DATABASE %s", databaseName)
+		query = fmt.Sprintf(`CREATE DATABASE %s`, databaseName)
 		_, err = d.db.QueryContext(ctx, query)
 		if err != nil {
 			return errors.Wrap(err, "failed to run create database SQL command")
@@ -890,10 +893,13 @@ func (d *RDSMultitenantDatabase) ensureDatabaseUserIsCreated(ctx context.Context
 			return errors.Wrap(err, "failed to run create user SQL command")
 		}
 	} else {
-		query := fmt.Sprintf("DROP USER IF EXISTS %s", username)
-		_, err := d.db.QueryContext(ctx, query)
+		query := fmt.Sprintf("SELECT 1 FROM pg_roles WHERE rolname='%s'", username)
+		rows, err := d.db.QueryContext(ctx, query)
 		if err != nil {
 			return errors.Wrap(err, "failed to run original user cleanup SQL command")
+		}
+		if rows.Next() {
+			return nil
 		}
 
 		// Due to not being able use parameters here, we have to do something
