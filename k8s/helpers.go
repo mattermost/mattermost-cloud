@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/remotecommand"
@@ -30,6 +31,10 @@ func (kc *KubeClient) WaitForPodRunning(ctx context.Context, namespace, podName 
 			if pod.Status.Phase == corev1.PodRunning {
 				return pod, nil
 			}
+		}
+		if err != nil && k8serrors.IsNotFound(err) {
+			kc.logger.Infof("Pod %s not found in %s namesapace, maybe was part of the old replicaset, since we updated the deployment/statefullsets, moving on", podName, namespace)
+			return &corev1.Pod{}, nil
 		}
 
 		select {

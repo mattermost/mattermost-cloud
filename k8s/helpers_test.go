@@ -22,16 +22,21 @@ func TestWaitForPodRunning(t *testing.T) {
 	podName := "test-pod"
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: podName},
-		Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+		Status:     corev1.PodStatus{Phase: corev1.PodPending},
 	}
 
 	t.Run("don't wait for running", func(t *testing.T) {
+		_, err := testClient.Clientset.CoreV1().Pods(namespace).Create(&pod)
+		require.NoError(t, err)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		_, err := testClient.WaitForPodRunning(ctx, namespace, podName)
+		_, err = testClient.WaitForPodRunning(ctx, namespace, podName)
 		require.Error(t, err)
+		err = testClient.Clientset.CoreV1().Pods(namespace).Delete(podName, &metav1.DeleteOptions{})
+		require.NoError(t, err)
 	})
 	t.Run("create pod", func(t *testing.T) {
+		pod.Status.Phase = corev1.PodRunning
 		pod, err := testClient.Clientset.CoreV1().Pods(namespace).Create(&pod)
 		require.NoError(t, err)
 		assert.Equal(t, podName, pod.GetName())

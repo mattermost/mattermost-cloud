@@ -357,11 +357,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, deployment, pod.GetName())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
+			_, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
 			if err != nil {
 				return err
 			}
-			logger.Infof("Successfully deployed operator pod %q", pod.Name)
+			logger.Infof("Successfully deployed service pod %q", pod.GetName())
 		}
 	}
 
@@ -384,7 +384,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			if err != nil {
 				return err
 			}
-			logger.Infof("Successfully deployed operator pod %q", pod.Name)
+			logger.Infof("Successfully deployed service pod %q", pod.GetName())
 		}
 	}
 
@@ -407,7 +407,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			if err != nil {
 				return err
 			}
-			logger.Infof("Successfully deployed support apps pod %q", pod.Name)
+			logger.Infof("Successfully deployed support apps pod %q", pod.GetName())
 		}
 	}
 
