@@ -25,9 +25,9 @@ const (
 	// hosted via Amazon RDS.
 	// TODO: update name value to aws-multitenant-rds-mysql
 	InstallationDatabaseMultiTenantRDSMySQL = "aws-multitenant-rds"
-	// InstallationDatabaseMultiTenantRDSPotgres is a PostgreSQL multitenant
+	// InstallationDatabaseMultiTenantRDSPostgres is a PostgreSQL multitenant
 	// database hosted via Amazon RDS.
-	InstallationDatabaseMultiTenantRDSPotgres = "aws-multitenant-rds-postgres"
+	InstallationDatabaseMultiTenantRDSPostgres = "aws-multitenant-rds-postgres"
 
 	// DatabaseEngineTypeMySQL is a MySQL database.
 	DatabaseEngineTypeMySQL = "mysql"
@@ -108,7 +108,7 @@ func IsSupportedDatabase(database string) bool {
 	case InstallationDatabaseSingleTenantRDSMySQL:
 	case InstallationDatabaseSingleTenantRDSPostgres:
 	case InstallationDatabaseMultiTenantRDSMySQL:
-	case InstallationDatabaseMultiTenantRDSPotgres:
+	case InstallationDatabaseMultiTenantRDSPostgres:
 	case InstallationDatabaseMysqlOperator:
 	default:
 		return false

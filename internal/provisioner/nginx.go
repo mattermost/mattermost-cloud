@@ -62,8 +62,11 @@ func (n *nginx) updateVersion(h *helmDeployment) error {
 }
 
 func (n *nginx) CreateOrUpgrade() error {
-	h := n.NewHelmDeployment()
-	err := h.Update()
+	h, err := n.NewHelmDeployment()
+	if err != nil {
+		return errors.Wrap(err, "failed to generate nginx helm deployment")
+	}
+	err = h.Update()
 	if err != nil {
 		return err
 	}
@@ -84,17 +87,15 @@ func (n *nginx) Destroy() error {
 	return nil
 }
 
-func (n *nginx) NewHelmDeployment() *helmDeployment {
+func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {
-		n.logger.WithError(err).Error("unable to retrive the AWS ACM")
-		return nil
+		return nil, errors.Wrap(err, "failed to retrive the AWS ACM")
 	}
 
 	awsACMPrivateCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
 	if err != nil {
-		n.logger.WithError(err).Error("unable to retrive the AWS Private ACM")
-		return nil
+		return nil, errors.Wrap(err, "failed to retrive the AWS Private ACM")
 	}
 
 	return &helmDeployment{
@@ -107,7 +108,7 @@ func (n *nginx) NewHelmDeployment() *helmDeployment {
 		kops:                n.kops,
 		logger:              n.logger,
 		desiredVersion:      n.desiredVersion,
-	}
+	}, nil
 }
 
 func (n *nginx) Name() string {

@@ -120,7 +120,7 @@ func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Datab
 		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installation.ID, r.awsClient)
 	case model.InstallationDatabaseMultiTenantRDSMySQL:
 		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypeMySQL, r.instanceID, installation.ID, r.awsClient)
-	case model.InstallationDatabaseMultiTenantRDSPotgres:
+	case model.InstallationDatabaseMultiTenantRDSPostgres:
 		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypePostgres, r.instanceID, installation.ID, r.awsClient)
 	}
 
