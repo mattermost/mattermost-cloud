@@ -757,8 +757,9 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 		}
 
 		// PostgreSQL username can't start with integers, so prepend something
-		// valid just in case.
-		username := fmt.Sprintf("dbuser_%s", d.installationID)
+		// valid just in case. Name can't be longer than 32 characters for MySQL
+		// databases though.
+		username := fmt.Sprintf("user_%s", d.installationID)
 		installationSecret, err = d.createInstallationSecret(installationSecretName, username, description, tags)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", installationSecretName)
