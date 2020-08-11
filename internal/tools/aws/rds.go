@@ -18,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) ([]string, error) {
+func (a *Client) rdsGetDBSecurityGroupIDs(vpcID, tagValue string, logger log.FieldLogger) ([]string, error) {
 	result, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		Filters: []*ec2.Filter{
 			{
@@ -27,7 +27,7 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 			},
 			{
 				Name:   aws.String(DefaultDBSecurityGroupTagKey),
-				Values: []*string{aws.String(DefaultDBSecurityGroupTagValue)},
+				Values: []*string{aws.String(tagValue)},
 			},
 		},
 	})
@@ -41,7 +41,7 @@ func (a *Client) rdsGetDBSecurityGroupIDs(vpcID string, logger log.FieldLogger) 
 	}
 
 	if len(dbSecurityGroups) == 0 {
-		return []string{}, fmt.Errorf("unable to find security groups tagged for Mattermost DB usage: %s=%s", DefaultDBSecurityGroupTagKey, DefaultDBSecurityGroupTagValue)
+		return []string{}, fmt.Errorf("unable to find security groups tagged for Mattermost DB usage: %s=%s", DefaultDBSecurityGroupTagKey, DefaultDBSecurityGroupTagMySQLValue)
 	}
 
 	logger.WithField("security-group-ids", dbSecurityGroups).Debugf("Found %d DB tagged security groups", len(dbSecurityGroups))
@@ -77,6 +77,23 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 }
 
 func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID, databaseType string, logger log.FieldLogger) error {
+	var engine, engineVersion, sgTagValue string
+	var port int64
+	switch databaseType {
+	case model.DatabaseEngineTypeMySQL:
+		engine = "aurora-mysql"
+		engineVersion = DefaultDatabaseMySQLVersion
+		port = 3306
+		sgTagValue = DefaultDBSecurityGroupTagMySQLValue
+	case model.DatabaseEngineTypePostgres:
+		engine = "aurora-postgresql"
+		engineVersion = DefaultDatabasePostgresVersion
+		port = 5432
+		sgTagValue = DefaultDBSecurityGroupTagPostgresValue
+	default:
+		return errors.Errorf("%s is an invalid database engine type", databaseType)
+	}
+
 	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
@@ -86,7 +103,7 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 		return nil
 	}
 
-	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(vpcID, logger)
+	dbSecurityGroupIDs, err := a.rdsGetDBSecurityGroupIDs(vpcID, sgTagValue, logger)
 	if err != nil {
 		return err
 	}
@@ -94,21 +111,6 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 	dbSubnetGroupName, err := a.rdsGetDBSubnetGroupName(vpcID, logger)
 	if err != nil {
 		return err
-	}
-
-	var engine, engineVersion string
-	var port int64
-	switch databaseType {
-	case model.DatabaseEngineTypeMySQL:
-		engine = "aurora-mysql"
-		engineVersion = DefaultDatabaseMySQLVersion
-		port = 3306
-	case model.DatabaseEngineTypePostgres:
-		engine = "aurora-postgresql"
-		engineVersion = DefaultDatabasePostgresVersion
-		port = 5432
-	default:
-		return errors.Errorf("%s is an invalid database engine type", databaseType)
 	}
 
 	azs, err := a.getAvailabilityZones()

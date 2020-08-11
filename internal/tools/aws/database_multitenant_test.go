@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/golang/mock/gomock"
 
@@ -23,14 +24,20 @@ import (
 // the entire code will run here.
 func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 	database := RDSMultitenantDatabase{
+		databaseType:   model.DatabaseEngineTypeMySQL,
 		installationID: a.InstallationA.ID,
 		instanceID:     a.InstanceID,
 		client:         a.Mocks.AWS,
 	}
 
+	databaseType := database.DatabaseTypeTagValue()
+
 	gomock.InOrder(
 		a.Mocks.Log.Logger.EXPECT().
-			WithField("multitenant-rds-database", MattermostRDSDatabaseName(a.InstallationA.ID)).
+			WithFields(log.Fields{
+				"multitenant-rds-database": MattermostRDSDatabaseName(a.InstallationA.ID),
+				"database-type":            database.databaseType,
+			}).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
@@ -53,7 +60,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			GetMultitenantDatabases(gomock.Any()).
 			Do(func(input *model.MultitenantDatabaseFilter) {
 				a.Assert().Equal(input.InstallationID, a.InstallationA.ID)
-				a.Assert().Equal(model.NoInstallationsLimit, input.NumOfInstallationsLimit)
+				a.Assert().Equal(model.NoInstallationsLimit, input.MaxInstallationsLimit)
 				a.Assert().Equal(input.PerPage, model.AllPerPage)
 			}).
 			Return(make([]*model.MultitenantDatabase, 0), nil),
@@ -62,7 +69,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
 			GetMultitenantDatabases(gomock.Any()).
 			Do(func(input *model.MultitenantDatabaseFilter) {
-				a.Assert().Equal(DefaultRDSMultitenantDatabaseCountLimit, input.NumOfInstallationsLimit)
+				a.Assert().Equal(DefaultRDSMultitenantDatabaseMySQLCountLimit, input.MaxInstallationsLimit)
 				a.Assert().Equal(input.PerPage, model.AllPerPage)
 			}).
 			Return(make([]*model.MultitenantDatabase, 0), nil),
@@ -92,6 +99,10 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 					{
 						Key:    aws.String("VpcID"),
 						Values: []*string{aws.String(a.VPCa)},
+					},
+					{
+						Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
+						Values: []*string{&databaseType},
 					},
 					{
 						Key: aws.String("Counter"),
@@ -176,6 +187,14 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			}, nil).
 			Times(1),
 
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
+			UpdateMultitenantDatabase(&model.MultitenantDatabase{
+				ID: a.RDSClusterID,
+				Installations: model.MultitenantDatabaseInstallations{
+					database.installationID,
+				}}).
+			Times(1),
+
 		a.Mocks.API.RDS.EXPECT().
 			DescribeDBClusters(gomock.Any()).
 			Do(func(input *rds.DescribeDBClustersInput) {
@@ -215,6 +234,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 
 	err := database.Provision(a.Mocks.Model.DatabaseInstallationStore, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
-	a.Assert().Equal("failed to create schema in multitenant RDS cluster rds-cluster-multitenant-09d44077df9934f96-97670d43: "+
-		"failed to run create database SQL command: dial tcp: lookup aws.rds.com/mattermost: no such host", err.Error())
+	a.Assert().Equal("failed to run provisioning sql commands: failed to create schema in multitenant RDS cluster "+
+		"rds-cluster-multitenant-09d44077df9934f96-97670d43: failed to run create database SQL command: dial tcp: "+
+		"lookup aws.rds.com/mattermost: no such host", err.Error())
 }

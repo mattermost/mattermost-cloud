@@ -1063,4 +1063,56 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.20.0"), semver.MustParse("0.21.0"), func(e execer) error {
+		// Changes:
+		// 1. Add DatabaseType column.
+		// 2. Rename RawInstallationIDs to InstallationsRaw.
+		// 3. Set VpcID to NOT NULL.
+
+		_, err := e.Exec(`ALTER TABLE MultitenantDatabase RENAME TO MultitenantDatabaseTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE MultitenantDatabase (
+				ID TEXT PRIMARY KEY,
+				VpcID TEXT NOT NULL,
+				DatabaseType TEXT NOT NULL,
+				InstallationsRaw BYTEA NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,             
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+		INSERT INTO MultitenantDatabase
+		SELECT
+			ID,
+			VpcID,
+			'mysql',
+			RawInstallationIDs,
+			CreateAt,
+			DeleteAt,
+			LockAcquiredBy,
+			LockAcquiredAt
+		FROM
+		MultitenantDatabaseTemp;
+	`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE MultitenantDatabaseTemp;`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

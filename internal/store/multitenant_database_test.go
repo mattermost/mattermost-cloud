@@ -54,8 +54,8 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 		VpcID: "vpc_id1",
 	}
 
-	s.database1.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID0, s.installationID1})
-	s.database2.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID2, s.installationID3, s.installationID4})
+	s.database1.Installations = model.MultitenantDatabaseInstallations{s.installationID0, s.installationID1}
+	s.database2.Installations = model.MultitenantDatabaseInstallations{s.installationID2, s.installationID3, s.installationID4}
 
 	err := s.sqlStore.CreateMultitenantDatabase(s.database1)
 	s.Assert().NoError(err)
@@ -89,11 +89,6 @@ func (s *TestMultitenantDatabaseSuite) TestCreateNilIDError() {
 	s.Assert().Error(err)
 }
 
-func (s *TestMultitenantDatabaseSuite) TestCreateNilInputError() {
-	err := s.sqlStore.CreateMultitenantDatabase(nil)
-	s.Assert().Error(err)
-}
-
 func (s *TestMultitenantDatabaseSuite) TestGet() {
 	database, err := s.sqlStore.GetMultitenantDatabase(s.database1.ID)
 	s.Assert().NoError(err)
@@ -109,18 +104,17 @@ func (s *TestMultitenantDatabaseSuite) TestGetNotFound() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		NumOfInstallationsLimit: 2,
-		PerPage:                 model.AllPerPage,
+		MaxInstallationsLimit: 2,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
-	s.Assert().NotNil(databases)
 	s.Assert().Equal(0, len(databases))
 }
 
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		NumOfInstallationsLimit: 3,
-		PerPage:                 model.AllPerPage,
+		MaxInstallationsLimit: 3,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -130,21 +124,19 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintZero() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		NumOfInstallationsLimit: 1,
-		PerPage:                 model.AllPerPage,
+		MaxInstallationsLimit: 1,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
-	s.Assert().NotNil(databases)
 	s.Assert().Equal(0, len(databases))
 }
 
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintFilterNotNil() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		NumOfInstallationsLimit: 0,
-		PerPage:                 model.AllPerPage,
+		MaxInstallationsLimit: 0,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
-	s.Assert().NotNil(databases)
 	s.Assert().Equal(0, len(databases))
 }
 
@@ -156,8 +148,8 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintAll() {
 	s.Assert().NoError(err)
 
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		NumOfInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:                 model.AllPerPage,
+		MaxInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -170,9 +162,9 @@ func (s *TestMultitenantDatabaseSuite) TestGetLockerIDConstraintAll() {
 	s.Assert().True(locked)
 
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		LockerID:                s.installationID0,
-		NumOfInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:                 model.AllPerPage,
+		LockerID:              s.installationID0,
+		MaxInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -185,7 +177,6 @@ func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 		PerPage: model.AllPerPage,
 	})
 	s.Assert().NoError(err)
-	s.Assert().NotNil(databases)
 	s.Assert().Equal(0, len(databases))
 }
 
@@ -194,7 +185,6 @@ func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabase() {
 		PerPage: model.AllPerPage,
 	})
 	s.Assert().NoError(err)
-	s.Assert().NotNil(databases)
 	s.Assert().Equal(0, len(databases))
 }
 
@@ -203,7 +193,7 @@ func (s *TestMultitenantDatabaseSuite) TestUpdate() {
 	s.Assert().NoError(err)
 	s.Assert().True(locked)
 
-	s.database1.RawInstallationIDs = nil
+	s.database1.Installations = model.MultitenantDatabaseInstallations{model.NewID()}
 	s.database1.LockAcquiredBy = &s.lockerID
 
 	err = s.sqlStore.UpdateMultitenantDatabase(s.database1)
@@ -212,84 +202,7 @@ func (s *TestMultitenantDatabaseSuite) TestUpdate() {
 	database, err := s.sqlStore.GetMultitenantDatabase(s.database1.ID)
 	s.Assert().NoError(err)
 	s.Assert().NotNil(database)
-	s.Assert().Equal(s.database1.RawInstallationIDs, database.RawInstallationIDs)
-}
-
-func (s *TestMultitenantDatabaseSuite) TestUpdateNilInputError() {
-	err := s.sqlStore.UpdateMultitenantDatabase(nil)
-	s.Assert().Error(err)
-}
-
-func (s *TestMultitenantDatabaseSuite) TestUpdateNoRowsAffectedError() {
-	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
-	s.Assert().NoError(err)
-	s.Assert().True(locked)
-
-	err = s.sqlStore.UpdateMultitenantDatabase(&model.MultitenantDatabase{
-		ID:             "banana",
-		LockAcquiredBy: &s.lockerID,
-	})
-	s.Assert().Error(err)
-	s.Assert().Equal("failed to update multitenant database: no rows affected", err.Error())
-}
-
-func (s *TestMultitenantDatabaseSuite) TestUpdateInvalidRawInstallations() {
-	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
-	s.Assert().NoError(err)
-	s.Assert().True(locked)
-
-	err = s.sqlStore.UpdateMultitenantDatabase(&model.MultitenantDatabase{
-		ID:                 "banana",
-		RawInstallationIDs: []byte{'b', 'a', 'n', 'a', 'n', 'a'},
-		LockAcquiredBy:     &s.lockerID,
-	})
-	s.Assert().Error(err)
-	s.Assert().Equal("failed to parse raw installation ids: failed to unmarshal installation IDs: "+
-		"invalid character 'b' looking for beginning of value", err.Error())
-}
-
-func (s *TestMultitenantDatabaseSuite) TestUpdateNotLockedError() {
-	err := s.sqlStore.UpdateMultitenantDatabase(&model.MultitenantDatabase{
-		ID: s.database1.ID,
-	})
-	s.Assert().Error(err)
-	s.Assert().Equal("multitenant database is not locked", err.Error())
-}
-
-func (s *TestMultitenantDatabaseSuite) TestAddInstallationID() {
-	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
-	s.Assert().NoError(err)
-	s.Assert().True(locked)
-
-	installationIDs, err := s.sqlStore.AddMultitenantDatabaseInstallationID(s.database1.ID, "some_id")
-	s.Assert().NoError(err)
-	s.Assert().NotNil(installationIDs)
-	s.Assert().Contains(installationIDs, "some_id")
-}
-
-func (s *TestMultitenantDatabaseSuite) TestAddInstallationNotFoundDatabaseID() {
-	installationIDs, err := s.sqlStore.AddMultitenantDatabaseInstallationID("banana", "some_id")
-	s.Assert().Error(err)
-	s.Assert().Nil(installationIDs)
-	s.Assert().Equal("unable to find multitenant database ID banana", err.Error())
-}
-
-func (s *TestMultitenantDatabaseSuite) TestRemoveInstallationID() {
-	locked, err := s.sqlStore.LockMultitenantDatabase(s.database1.ID, s.lockerID)
-	s.Assert().NoError(err)
-	s.Assert().True(locked)
-
-	installationIDs, err := s.sqlStore.RemoveMultitenantDatabaseInstallationID(s.database1.ID, s.installationID0)
-	s.Assert().NoError(err)
-	s.Assert().NotNil(installationIDs)
-	s.Assert().NotContains(installationIDs, s.installationID0)
-}
-
-func (s *TestMultitenantDatabaseSuite) TestRemoveInstallationNotFoundDatabaseID() {
-	installationIDs, err := s.sqlStore.RemoveMultitenantDatabaseInstallationID("banana", "some_id")
-	s.Assert().Error(err)
-	s.Assert().Nil(installationIDs)
-	s.Assert().Equal("unable to find multitenant database ID banana", err.Error())
+	s.Assert().Equal(s.database1.Installations, database.Installations)
 }
 
 func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallationID() {
@@ -303,37 +216,37 @@ func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallation
 	database, err := s.sqlStore.GetMultitenantDatabaseForInstallationID("banana")
 	s.Assert().Error(err)
 	s.Assert().Nil(database)
-	s.Assert().Equal("expected exactly one multitenant database per installation (found 0)", err.Error())
+	s.Assert().Equal("expected exactly one multitenant database, but found 0", err.Error())
 }
 
 func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallationIDErrorMany() {
 	db := model.MultitenantDatabase{
 		ID: "database_some_id",
 	}
-	db.SetInstallationIDs(model.MultitenantDatabaseInstallationIDs{s.installationID0})
+	db.Installations = model.MultitenantDatabaseInstallations{s.installationID0}
 	err := s.sqlStore.CreateMultitenantDatabase(&db)
 	s.Assert().NoError(err)
 
 	database, err := s.sqlStore.GetMultitenantDatabaseForInstallationID(s.installationID0)
 	s.Assert().Error(err)
 	s.Assert().Nil(database)
-	s.Assert().Equal("expected exactly one multitenant database per installation (found 2)", err.Error())
+	s.Assert().Equal("expected exactly one multitenant database, but found 2", err.Error())
 }
 
 func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		VpcID:                   "vpc_id0",
-		NumOfInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:                 model.AllPerPage,
+		VpcID:                 "vpc_id0",
+		MaxInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
 	s.Assert().Equal(1, len(databases))
 
 	databases, err = s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		VpcID:                   "does_not_exist",
-		NumOfInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:                 model.AllPerPage,
+		VpcID:                 "does_not_exist",
+		MaxInstallationsLimit: model.NoInstallationsLimit,
+		PerPage:               model.AllPerPage,
 	})
 	s.Assert().NoError(err)
 	s.Assert().Nil(databases)

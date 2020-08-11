@@ -155,7 +155,7 @@ func (d *RDSDatabaseMigration) toTeardownError(err error) error {
 
 func isRDSInstanceSecurityGroup(securityGroup *ec2.SecurityGroup) bool {
 	for _, tag := range securityGroup.Tags {
-		if *tag.Key == trimTagPrefix(DefaultDBSecurityGroupTagKey) && *tag.Value == DefaultDBSecurityGroupTagValue {
+		if *tag.Key == trimTagPrefix(DefaultDBSecurityGroupTagKey) && *tag.Value == DefaultDBSecurityGroupTagMySQLValue {
 			return true
 		}
 	}

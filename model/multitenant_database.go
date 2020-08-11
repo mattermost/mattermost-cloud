@@ -4,66 +4,31 @@
 
 package model
 
-import (
-	"encoding/json"
-
-	"github.com/pkg/errors"
-)
-
-// MultitenantDatabase represents a cluster that manages multiple databases.
+// MultitenantDatabase represents database infrastructure that contains multiple
+// installation databases.
 type MultitenantDatabase struct {
-	ID                 string
-	VpcID              string
-	RawInstallationIDs []byte `json:",omitempty"`
-	LockAcquiredBy     *string
-	CreateAt           int64
-	DeleteAt           int64
-	LockAcquiredAt     int64
+	ID             string
+	VpcID          string
+	DatabaseType   string
+	Installations  MultitenantDatabaseInstallations
+	LockAcquiredBy *string
+	CreateAt       int64
+	DeleteAt       int64
+	LockAcquiredAt int64
 }
 
-// SetInstallationIDs is a helper method to parse DatabaseClusterInstallationIDs to the corresponding JSON-encoded bytes.
-func (c *MultitenantDatabase) SetInstallationIDs(installationIDs MultitenantDatabaseInstallationIDs) error {
-	if len(installationIDs) == 0 {
-		c.RawInstallationIDs = nil
-		return nil
-	}
+// MultitenantDatabaseInstallations is the list of installation IDs that belong
+// to a given MultitenantDatabase.
+type MultitenantDatabaseInstallations []string
 
-	installations, err := json.Marshal(installationIDs)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal installation IDs")
-	}
-
-	c.RawInstallationIDs = installations
-	return nil
-}
-
-// GetInstallationIDs is a helper method to parse JSON-encoded bytes to DatabaseClusterInstallationIDs.
-func (c *MultitenantDatabase) GetInstallationIDs() (MultitenantDatabaseInstallationIDs, error) {
-	installationIDs := MultitenantDatabaseInstallationIDs{}
-
-	if len(c.RawInstallationIDs) < 1 {
-		return installationIDs, nil
-	}
-
-	err := json.Unmarshal(c.RawInstallationIDs, &installationIDs)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal installation IDs")
-	}
-
-	return installationIDs, nil
-}
-
-// MultitenantDatabaseInstallationIDs is a container that holds a collection of installation IDs.
-type MultitenantDatabaseInstallationIDs []string
-
-// Add inserts a new installation in the container.
-func (d *MultitenantDatabaseInstallationIDs) Add(installationID string) {
-	*d = append(*d, installationID)
+// Count returns the number of installations on the multitenant database.
+func (i *MultitenantDatabaseInstallations) Count() int {
+	return len(*i)
 }
 
 // Contains checks if the supplied installation ID exists in the container.
-func (d *MultitenantDatabaseInstallationIDs) Contains(installationID string) bool {
-	for _, id := range *d {
+func (i *MultitenantDatabaseInstallations) Contains(installationID string) bool {
+	for _, id := range *i {
 		if id == installationID {
 			return true
 		}
@@ -72,11 +37,16 @@ func (d *MultitenantDatabaseInstallationIDs) Contains(installationID string) boo
 	return false
 }
 
+// Add inserts a new installation in the container.
+func (i *MultitenantDatabaseInstallations) Add(installationID string) {
+	*i = append(*i, installationID)
+}
+
 // Remove deletes the installation from the container.
-func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
-	for i, installation := range *d {
+func (i *MultitenantDatabaseInstallations) Remove(installationID string) {
+	for j, installation := range *i {
 		if installation == installationID {
-			(*d) = append((*d)[:i], (*d)[i+1:]...)
+			(*i) = append((*i)[:j], (*i)[j+1:]...)
 		}
 	}
 }
@@ -84,10 +54,11 @@ func (d *MultitenantDatabaseInstallationIDs) Remove(installationID string) {
 // MultitenantDatabaseFilter filters results based on a specific installation ID, Vpc ID and a number of
 // installation's limit.
 type MultitenantDatabaseFilter struct {
-	LockerID                string
-	InstallationID          string
-	VpcID                   string
-	NumOfInstallationsLimit int
-	Page                    int
-	PerPage                 int
+	LockerID              string
+	InstallationID        string
+	VpcID                 string
+	DatabaseType          string
+	MaxInstallationsLimit int
+	Page                  int
+	PerPage               int
 }

@@ -53,17 +53,36 @@ const (
 	// Note: This needs to be manually created before RDS databases can be used.
 	DefaultDBSubnetGroupName = "mattermost-databases"
 
+	// DatabaseTypeMySQLAurora is a MySQL database running on AWS RDS Aurora.
+	DatabaseTypeMySQLAurora = "MYSQL/Aurora"
+
+	// DatabaseTypePostgresSQLAurora is a PostgreSQL database running on AWS
+	// RDS Aurora.
+	DatabaseTypePostgresSQLAurora = "PostgreSQL/Aurora"
+
+	// CloudInstallationDatabaseTagKey is the common tag key for determing
+	// database type.
+	CloudInstallationDatabaseTagKey = "tag:MattermostCloudInstallationDatabase"
+
 	// DefaultDBSecurityGroupTagKey is the default DB security group tag key
 	// that is used to find security groups to use in configuration of the RDS
 	// database.
 	// Note: This needs to be manually created before RDS databases can be used.
 	DefaultDBSecurityGroupTagKey = "tag:MattermostCloudInstallationDatabase"
 
-	// DefaultDBSecurityGroupTagValue is the default DB security group tag value
-	// that is used to find security groups to use in configuration of the RDS
-	// database.
-	// Note: This needs to be manually created before RDS databases can be used.
-	DefaultDBSecurityGroupTagValue = "MYSQL/Aurora"
+	// DefaultDBSecurityGroupTagMySQLValue is the default DB security group tag
+	// value that is used to find MySQL security groups to use in configuration
+	// of the RDS database.
+	// Note: This needs to be manually created before MySQL RDS databases can be
+	// used.
+	DefaultDBSecurityGroupTagMySQLValue = DatabaseTypeMySQLAurora
+
+	// DefaultDBSecurityGroupTagPostgresValue is the default DB security group
+	// tag value that is used to find Postgres security groups to use in
+	// configuration of the RDS database.
+	// Note: This needs to be manually created before MySQL RDS databases can be
+	// used.
+	DefaultDBSecurityGroupTagPostgresValue = DatabaseTypePostgresSQLAurora
 
 	// DefaultDBSubnetGroupTagKey is the default DB subnet group tag key that is
 	// used to find subnet groups to use in configuration of the RDS database.
@@ -74,7 +93,7 @@ const (
 	// that is used to find subnet groups to use in configuration of the RDS
 	// database.
 	// Note: This needs to be manually created before RDS databases can be used.
-	DefaultDBSubnetGroupTagValue = "MYSQL/Aurora"
+	DefaultDBSubnetGroupTagValue = DatabaseTypeMySQLAurora
 
 	// DefaultInstallPrivateCertificatesTagKey is the default key used to find the private
 	// TLS certificate ARN.
@@ -132,9 +151,15 @@ const (
 	// existing installations.
 	rdsSuffix = "-rds"
 
-	// rdsMySQLSchemaInformationDatabase is the schema the name given to a
-	// MySQL database information's table.
-	rdsMySQLSchemaInformationDatabase = "information_schema"
+	// rdsMySQLDefaultSchema is the default schema given to a new RDS MySQL
+	// database. This is used to connect to multitenant RDS clusters to set up
+	// new installation databases as needed.
+	rdsMySQLDefaultSchema = "information_schema"
+
+	// rdsPostgresDefaultSchema is the default schema given to a new RDS
+	// Postgres database. This is used to connect to multitenant RDS clusters
+	// to set up new installation databases as needed.
+	rdsPostgresDefaultSchema = "postgres"
 
 	// rdsDatabaseNamePrefix is the prefix value used when creating Mattermost
 	// RDS database schemas.
@@ -163,9 +188,13 @@ const (
 	// client will take before cancel a call to the database.
 	DefaultMySQLContextTimeSeconds = 15
 
-	// DefaultRDSMultitenantDatabaseCountLimit is the maximum number of
-	// schemas allowed in a multitenant RDS database cluster.
-	DefaultRDSMultitenantDatabaseCountLimit = 10
+	// DefaultRDSMultitenantDatabaseMySQLCountLimit is the maximum number of
+	// schemas allowed in a MySQL multitenant RDS database cluster.
+	DefaultRDSMultitenantDatabaseMySQLCountLimit = 10
+
+	// DefaultRDSMultitenantDatabasePostgresCountLimit is the maximum number of
+	// schemas allowed in a Posgres multitenant RDS database cluster.
+	DefaultRDSMultitenantDatabasePostgresCountLimit = 100
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.

@@ -24,9 +24,9 @@ type rawGroups []*rawGroup
 
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "Image", "Sequence", "CreateAt",
-			"DeleteAt", "MattermostEnvRaw", "MaxRolling", "APISecurityLock",
-			"LockAcquiredBy", "LockAcquiredAt").
+		Select("ID", "Name", "Description", "Version", "Image", "Sequence",
+			"CreateAt", "DeleteAt", "MattermostEnvRaw", "MaxRolling",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From(`"Group"`)
 }
 
