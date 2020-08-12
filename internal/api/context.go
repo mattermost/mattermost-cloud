@@ -56,6 +56,8 @@ type Store interface {
 	GetWebhook(webhookID string) (*model.Webhook, error)
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 	DeleteWebhook(webhookID string) error
+
+	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
