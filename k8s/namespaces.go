@@ -72,8 +72,14 @@ func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespac
 // Any errors will be returned immediately and the remaining namespaces will be
 // skipped.
 func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
+	policy := metav1.DeletePropagationForeground
+	gracePeriod := int64(45)
+	deleteOpts := &metav1.DeleteOptions{
+		GracePeriodSeconds: &gracePeriod,
+		PropagationPolicy:  &policy,
+	}
 	for _, namespaceName := range namespaceNames {
-		err := kc.Clientset.CoreV1().Namespaces().Delete(namespaceName, &metav1.DeleteOptions{})
+		err := kc.Clientset.CoreV1().Namespaces().Delete(namespaceName, deleteOpts)
 		if err != nil {
 			return err
 		}
