@@ -18,6 +18,7 @@ import (
 
 func init() {
 	clusterCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+	clusterCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
 
 	clusterCreateCmd.Flags().String("provider", "aws", "Cloud provider hosting the cluster.")
 	clusterCreateCmd.Flags().String("version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
@@ -33,7 +34,6 @@ func init() {
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion, "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().Bool("dry-run", false, "When set to true, only print the cluster creation request without sending it.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
@@ -56,7 +56,6 @@ func init() {
 	clusterResizeCmd.Flags().String("size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
 	clusterResizeCmd.Flags().Int64("size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
 	clusterResizeCmd.Flags().Int64("size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
-	clusterResizeCmd.Flags().Bool("dry-run", false, "When set to true, only print the cluster creation request without sending it.")
 	clusterResizeCmd.MarkFlagRequired("cluster")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
@@ -150,7 +149,7 @@ var clusterCreateCmd = &cobra.Command{
 		if dryRun {
 			err = printJSON(request)
 			if err != nil {
-				return errors.Wrap(err, "failed to print cluster creation request")
+				return errors.Wrap(err, "failed to print API request")
 			}
 
 			return nil
@@ -180,14 +179,24 @@ var clusterProvisionCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 		clusterID, _ := command.Flags().GetString("cluster")
 
-		var pcr *model.ProvisionClusterRequest = nil
+		var request *model.ProvisionClusterRequest = nil
 		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
-			pcr = &model.ProvisionClusterRequest{
+			request = &model.ProvisionClusterRequest{
 				DesiredUtilityVersions: desiredUtilityVersions,
 			}
 		}
 
-		cluster, err := client.ProvisionCluster(clusterID, pcr)
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err := printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		cluster, err := client.ProvisionCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
 		}
@@ -213,9 +222,21 @@ var clusterUpdateCmd = &cobra.Command{
 		clusterID, _ := command.Flags().GetString("cluster")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 
-		cluster, err := client.UpdateCluster(clusterID, &model.UpdateClusterRequest{
+		request := &model.UpdateClusterRequest{
 			AllowInstallations: allowInstallations,
-		})
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err := printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		cluster, err := client.UpdateCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to update cluster")
 		}
@@ -240,10 +261,22 @@ var clusterUpgradeCmd = &cobra.Command{
 
 		clusterID, _ := command.Flags().GetString("cluster")
 
-		cluster, err := client.UpgradeCluster(clusterID, &model.PatchUpgradeClusterRequest{
+		request := &model.PatchUpgradeClusterRequest{
 			Version: getStringFlagPointer(command, "version"),
 			KopsAMI: getStringFlagPointer(command, "kops-ami"),
-		})
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err := printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		cluster, err := client.UpgradeCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade cluster")
 		}
@@ -292,7 +325,7 @@ var clusterResizeCmd = &cobra.Command{
 		if dryRun {
 			err = printJSON(request)
 			if err != nil {
-				return errors.Wrap(err, "failed to print cluster resize request")
+				return errors.Wrap(err, "failed to print API request")
 			}
 
 			return nil
