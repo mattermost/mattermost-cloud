@@ -338,23 +338,27 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		return nil
 	}
 
-	cpuPercent := clusterResources.CalculateCPUPercentUsed(
-		size.CalculateCPUMilliRequirement(
-			installation.InternalDatabase(),
-			installation.InternalFilestore(),
-		),
+	installationCPURequirement := size.CalculateCPUMilliRequirement(
+		installation.InternalDatabase(),
+		installation.InternalFilestore(),
 	)
-	memoryPercent := clusterResources.CalculateMemoryPercentUsed(
-		size.CalculateMemoryMilliRequirement(
-			installation.InternalDatabase(),
-			installation.InternalFilestore(),
-		),
+	installationMemRequirement := size.CalculateMemoryMilliRequirement(
+		installation.InternalDatabase(),
+		installation.InternalFilestore(),
 	)
+	cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
+	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
+
 	if cpuPercent > s.clusterResourceThreshold || memoryPercent > s.clusterResourceThreshold {
 		if s.clusterResourceThresholdScaleValue == 0 ||
 			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
 			cluster.State != model.ClusterStateStable {
-			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%%, Memory=%d%%", cluster.ID, s.clusterResourceThreshold, cpuPercent, memoryPercent)
+			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%% (+%dm), Memory=%d%% (+%dMi)",
+				cluster.ID,
+				s.clusterResourceThreshold,
+				cpuPercent, installationCPURequirement,
+				memoryPercent, installationMemRequirement/1048576000, // Have to convert to Mi
+			)
 			return nil
 		}
 
