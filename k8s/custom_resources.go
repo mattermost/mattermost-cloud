@@ -5,6 +5,7 @@
 package k8s
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -18,13 +19,14 @@ import (
 )
 
 func (kc *KubeClient) createOrUpdateCustomResourceDefinitionBetaV1(crd *apixv1beta1.CustomResourceDefinition) (metav1.Object, error) {
-	_, err := kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crd.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, crd.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+		return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{})
 	}
 
 	// TODO: investigate issue where standard update fails
@@ -40,17 +42,18 @@ func (kc *KubeClient) createOrUpdateCustomResourceDefinitionBetaV1(crd *apixv1be
 		return nil, errors.Wrap(err, "could not marshal new Custom Resource Defintion")
 	}
 
-	return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Patch(crd.Name, types.MergePatchType, patch)
+	return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Patch(ctx, crd.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateCustomResourceDefinitionV1(crd *apixv1.CustomResourceDefinition) (metav1.Object, error) {
-	_, err := kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Get(crd.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crd.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Create(crd)
+		return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{})
 	}
 
 	patch, err := json.Marshal(crd)
@@ -58,18 +61,19 @@ func (kc *KubeClient) createOrUpdateCustomResourceDefinitionV1(crd *apixv1.Custo
 		return nil, errors.Wrap(err, "could not marshal new Custom Resource Defintion")
 	}
 
-	return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Patch(crd.Name, types.MergePatchType, patch)
+	return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Patch(ctx, crd.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateClusterInstallation(namespace string, ci *mmv1alpha1.ClusterInstallation) (metav1.Object, error) {
-	_, err := kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Get(ci.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Get(ctx, ci.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Create(ci)
+		return kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Create(ctx, ci, metav1.CreateOptions{})
 	}
 
-	return kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Update(ci)
+	return kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Update(ctx, ci, metav1.UpdateOptions{})
 }

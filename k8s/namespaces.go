@@ -5,6 +5,8 @@
 package k8s
 
 import (
+	"context"
+
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +31,8 @@ func (kc *KubeClient) CreateOrUpdateNamespaces(namespaceNames []string) ([]*core
 
 // CreateOrUpdateNamespace creates or update a namespace
 func (kc *KubeClient) CreateOrUpdateNamespace(namespaceName string) (*corev1.Namespace, error) {
-	_, err := kc.Clientset.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.Clientset.CoreV1().Namespaces().Get(ctx, namespaceName, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
@@ -44,10 +47,10 @@ func (kc *KubeClient) CreateOrUpdateNamespace(namespaceName string) (*corev1.Nam
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.Clientset.CoreV1().Namespaces().Create(nsSpec)
+		return kc.Clientset.CoreV1().Namespaces().Create(ctx, nsSpec, metav1.CreateOptions{})
 	}
 
-	return kc.Clientset.CoreV1().Namespaces().Update(nsSpec)
+	return kc.Clientset.CoreV1().Namespaces().Update(ctx, nsSpec, metav1.UpdateOptions{})
 }
 
 // GetNamespaces returns a list of kubernetes namespace objects if they exist.
@@ -55,9 +58,10 @@ func (kc *KubeClient) CreateOrUpdateNamespace(namespaceName string) (*corev1.Nam
 // Any errors will be returned immediately and the remaining namespaces will be
 // skipped.
 func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespace, error) {
+	ctx := context.TODO()
 	namespaces := []*corev1.Namespace{}
 	for _, namespaceName := range namespaceNames {
-		namespace, err := kc.Clientset.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+		namespace, err := kc.Clientset.CoreV1().Namespaces().Get(ctx, namespaceName, metav1.GetOptions{})
 		if err != nil {
 			return namespaces, err
 		}
@@ -74,12 +78,13 @@ func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespac
 func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
 	policy := metav1.DeletePropagationForeground
 	gracePeriod := int64(45)
-	deleteOpts := &metav1.DeleteOptions{
+	deleteOpts := metav1.DeleteOptions{
 		GracePeriodSeconds: &gracePeriod,
 		PropagationPolicy:  &policy,
 	}
+	ctx := context.TODO()
 	for _, namespaceName := range namespaceNames {
-		err := kc.Clientset.CoreV1().Namespaces().Delete(namespaceName, deleteOpts)
+		err := kc.Clientset.CoreV1().Namespaces().Delete(ctx, namespaceName, deleteOpts)
 		if err != nil {
 			return err
 		}

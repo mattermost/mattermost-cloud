@@ -5,6 +5,8 @@
 package k8s
 
 import (
+	"context"
+
 	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,16 +17,17 @@ const (
 )
 
 func (kc *KubeClient) createOrUpdateNetworkPolicyV1(namespace string, networkPolicy *networkingv1.NetworkPolicy) (metav1.Object, error) {
-	_, err := kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Get(networkPolicy.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, networkPolicy.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Create(networkPolicy)
+		return kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Create(ctx, networkPolicy, metav1.CreateOptions{})
 	}
 
-	return kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Update(networkPolicy)
+	return kc.Clientset.NetworkingV1().NetworkPolicies(namespace).Update(ctx, networkPolicy, metav1.UpdateOptions{})
 }
 
 func (kc *KubeClient) updateLabelsNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy, installationName string) {

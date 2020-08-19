@@ -5,6 +5,7 @@
 package k8s
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,8 @@ func TestNamespaces(t *testing.T) {
 				Name: testNamespace,
 			},
 		}
-		_, err := testClient.Clientset.CoreV1().Namespaces().Create(nsSpec)
+		ctx := context.TODO()
+		_, err := testClient.Clientset.CoreV1().Namespaces().Create(ctx, nsSpec, metav1.CreateOptions{})
 		require.NoError(t, err)
 
 		namespace, err := testClient.CreateOrUpdateNamespaces([]string{testNamespace})

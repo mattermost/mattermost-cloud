@@ -5,6 +5,7 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -155,7 +156,8 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		mattermostInstallation.Spec.Minio = *filestoreSpec
 	}
 
-	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(mattermostInstallation)
+	ctx := context.TODO()
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(ctx, mattermostInstallation, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation")
 	}
@@ -189,8 +191,9 @@ func (provisioner *KopsProvisioner) HibernateClusterInstallation(cluster *model.
 		return errors.Wrap(err, "failed to create kubernetes client")
 	}
 
+	ctx := context.TODO()
 	name := makeClusterInstallationName(clusterInstallation)
-	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
+	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
@@ -202,7 +205,7 @@ func (provisioner *KopsProvisioner) HibernateClusterInstallation(cluster *model.
 	// TODO: enhance hibernation to include database and/or filestore.
 	cr.Spec.Replicas = -1
 
-	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
@@ -252,7 +255,8 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create network policy %s", clusterInstallation.Namespace)
 	}
 
-	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
+	ctx := context.TODO()
+	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
@@ -324,7 +328,7 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		}
 		cr.Spec.MattermostLicenseSecret = secretName
 	} else {
-		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
+		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
 		if k8sErrors.IsNotFound(err) {
 			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
 		}
@@ -332,7 +336,7 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 
 	cr.Spec.MattermostEnv = installation.MattermostEnv.ToEnvList()
 
-	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(cr)
+	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
@@ -372,7 +376,8 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 
 	name := makeClusterInstallationName(clusterInstallation)
 
-	err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(name, nil)
+	ctx := context.TODO()
+	err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Warnf("Cluster installation %s not found, assuming already deleted", name)
 	} else if err != nil {
@@ -381,7 +386,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 
 	if installation.License != "" {
 		secretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
-		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(secretName, nil)
+		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
 		if k8sErrors.IsNotFound(err) {
 			logger.Warnf("Secret %s/%s not found, assuming already deleted", clusterInstallation.Namespace, secretName)
 		} else if err != nil {
@@ -389,7 +394,7 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 		}
 	}
 
-	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(clusterInstallation.Namespace, &metav1.DeleteOptions{})
+	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, clusterInstallation.Namespace, metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Warnf("Namespace %s not found, assuming already deleted", clusterInstallation.Namespace)
 	} else if err != nil {
@@ -432,7 +437,8 @@ func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *mode
 
 	name := makeClusterInstallationName(clusterInstallation)
 
-	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(name, metav1.GetOptions{})
+	ctx := context.TODO()
+	cr, err := k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return cr, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
@@ -469,7 +475,8 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 		return nil, errors.Wrap(err, "failed to construct k8s client")
 	}
 
-	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(metav1.ListOptions{
+	ctx := context.TODO()
+	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=mattermost",
 	})
 	if err != nil {
