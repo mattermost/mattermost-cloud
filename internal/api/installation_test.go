@@ -189,7 +189,7 @@ func TestGetInstallations(t *testing.T) {
 
 				noInstallation, err := client.GetInstallationByDNS("notreal", nil)
 				assert.Nil(t, noInstallation)
-				assert.Error(t, err)
+				assert.NoError(t, err)
 			})
 
 		})
