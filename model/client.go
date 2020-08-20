@@ -373,7 +373,7 @@ func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationReques
 		return nil, errors.Wrap(err, "problem getting installation")
 	}
 
-	if len(installations) != 1 {
+	if len(installations) > 1 {
 		return nil, errors.Errorf("received ambiguous response (%d Installations) when expecting only one",
 			len(installations))
 	}
