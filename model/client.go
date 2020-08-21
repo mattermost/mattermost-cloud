@@ -406,6 +406,7 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 	}
 }
 
+// GetInstallationsCount returns then number of installations filtered by deleted field
 func (c *Client) GetInstallationsCount(includeDeleted bool) (int, error) {
 	u, err := url.Parse(c.buildURL("/api/installations/count"))
 	if err != nil {

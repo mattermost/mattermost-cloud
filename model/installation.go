@@ -44,6 +44,7 @@ type Installation struct {
 	configMergeGroupSequence int64
 }
 
+// InstallationsCount represents the number of installations
 type InstallationsCount struct {
 	Count int `json:"installations_count"`
 }
@@ -154,6 +155,8 @@ func InstallationsFromReader(reader io.Reader) ([]*Installation, error) {
 	return installations, nil
 }
 
+// InstallationsCountFromReader decodes a json-encoded installations count data from the
+// given io.Reader
 func InstallationsCountFromReader(reader io.Reader) (int, error) {
 	installationsCount := InstallationsCount{}
 	decoder := json.NewDecoder(reader)
