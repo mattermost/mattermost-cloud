@@ -259,6 +259,32 @@ func TestGetInstallations(t *testing.T) {
 				})
 			}
 		})
+
+		t.Run("get installations count", func(t *testing.T) {
+			testCases := []struct {
+				Description    string
+				IncludeDeleted bool
+				Expected       int
+			}{
+				{
+					"count without deleted",
+					false,
+					3,
+				},
+				{
+					"count with deleted",
+					true,
+					4,
+				},
+			}
+			for _, testCase := range testCases {
+				t.Run(testCase.Description, func(t *testing.T) {
+					installations, err := client.GetInstallationsCount(testCase.IncludeDeleted)
+					require.NoError(t, err)
+					require.Equal(t, testCase.Expected, installations)
+				})
+			}
+		})
 	})
 }
 

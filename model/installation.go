@@ -44,6 +44,10 @@ type Installation struct {
 	configMergeGroupSequence int64
 }
 
+type InstallationsCount struct {
+	Count int `json:"installations_count"`
+}
+
 // InstallationFilter describes the parameters used to constrain a set of installations.
 type InstallationFilter struct {
 	OwnerID        string
@@ -148,4 +152,15 @@ func InstallationsFromReader(reader io.Reader) ([]*Installation, error) {
 	}
 
 	return installations, nil
+}
+
+func InstallationsCountFromReader(reader io.Reader) (int, error) {
+	installationsCount := InstallationsCount{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&installationsCount)
+	if err != nil && err != io.EOF {
+		return 0, err
+	}
+
+	return installationsCount.Count, nil
 }
