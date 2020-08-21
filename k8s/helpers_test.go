@@ -25,19 +25,20 @@ func TestWaitForPodRunning(t *testing.T) {
 		Status:     corev1.PodStatus{Phase: corev1.PodPending},
 	}
 
+	ctx := context.TODO()
 	t.Run("don't wait for running", func(t *testing.T) {
-		_, err := testClient.Clientset.CoreV1().Pods(namespace).Create(&pod)
+		_, err := testClient.Clientset.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		require.NoError(t, err)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		_, err = testClient.WaitForPodRunning(ctx, namespace, podName)
 		require.Error(t, err)
-		err = testClient.Clientset.CoreV1().Pods(namespace).Delete(podName, &metav1.DeleteOptions{})
+		err = testClient.Clientset.CoreV1().Pods(namespace).Delete(ctx, podName, metav1.DeleteOptions{})
 		require.NoError(t, err)
 	})
 	t.Run("create pod", func(t *testing.T) {
 		pod.Status.Phase = corev1.PodRunning
-		pod, err := testClient.Clientset.CoreV1().Pods(namespace).Create(&pod)
+		pod, err := testClient.Clientset.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, podName, pod.GetName())
 		assert.Equal(t, corev1.PodRunning, pod.Status.Phase)

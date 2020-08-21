@@ -240,9 +240,10 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 
 	// Remove all previously-installed operator namespaces and resources.
+	ctx := context.TODO()
 	for _, namespace := range namespaces {
 		logger.Infof("Cleaning up namespace %s", namespace)
-		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(namespace, &metav1.DeleteOptions{})
+		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
 		if k8sErrors.IsNotFound(err) {
 			logger.Infof("Namespace %s not found; skipping...", namespace)
 		} else if err != nil {
@@ -267,14 +268,14 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// Need to remove two items from the calico because the fields after the creation are imutable so the
 	// create/update does not work. We might want to refactor this in the future to avoid this
 	logger.Info("Cleaning up some calico resources to reapply")
-	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete("calico-typha", &metav1.DeleteOptions{})
+	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("Service calico-typha not found; skipping...")
 	} else if err != nil {
 		return errors.Wrap(err, "failed to delete service calico-typha")
 	}
 
-	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete("calico-typha", &metav1.DeleteOptions{})
+	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("PodDisruptionBudget calico-typha not found; skipping...")
 	} else if err != nil {
@@ -284,7 +285,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// Need to remove two items from the metrics-server because the fields after the creation are imutable so the
 	// create/update does not work. We might want to refactor this in the future to avoid this
 	logger.Info("Cleaning up some metrics-server resources to reapply")
-	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete("metrics-server", &metav1.DeleteOptions{})
+	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "metrics-server", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("Service metrics-server not found; skipping...")
 	} else if err != nil {
@@ -292,7 +293,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 
 	logger.Info("Cleaning up some metrics-server resources to reapply")
-	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete("v1beta1.metrics.k8s.io", &metav1.DeleteOptions{})
+	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete(ctx, "v1beta1.metrics.k8s.io", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("APIService v1beta1.metrics.k8s.io not found; skipping...")
 	} else if err != nil {
@@ -741,14 +742,15 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 		return nil, errors.Wrap(err, "failed to construct k8s client")
 	}
 
-	allPods, err := k8sClient.Clientset.CoreV1().Pods("").List(metav1.ListOptions{})
+	ctx := context.TODO()
+	allPods, err := k8sClient.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 	usedCPU, usedMemory := k8s.CalculateTotalPodMilliResourceRequests(allPods)
 
 	var totalCPU, totalMemory int64
-	nodes, err := k8sClient.Clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := k8sClient.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

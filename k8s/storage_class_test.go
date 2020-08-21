@@ -5,6 +5,7 @@
 package k8s
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +21,8 @@ func TestStorageClass(t *testing.T) {
 	class := "gp2"
 
 	t.Run("update storageclass", func(t *testing.T) {
-		testClient.Clientset.StorageV1beta1().StorageClasses().Create(storageClass)
+		ctx := context.TODO()
+		testClient.Clientset.StorageV1beta1().StorageClasses().Create(ctx, storageClass, metav1.CreateOptions{})
 		result, err := testClient.UpdateStorageClassVolumeBindingMode(class)
 		require.NoError(t, err)
 		require.Equal(t, storageClass.GetName(), result.GetName())

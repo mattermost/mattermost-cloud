@@ -5,20 +5,23 @@
 package k8s
 
 import (
+	"context"
+
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 )
 
 func (kc *KubeClient) createOrUpdateAPIServer(apiRegistration *apiregistrationv1beta1.APIService) (metav1.Object, error) {
-	_, err := kc.KubeagClientSet.ApiregistrationV1beta1().APIServices().Get(apiRegistration.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.KubeagClientSet.ApiregistrationV1beta1().APIServices().Get(ctx, apiRegistration.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.KubeagClientSet.ApiregistrationV1beta1().APIServices().Create(apiRegistration)
+		return kc.KubeagClientSet.ApiregistrationV1beta1().APIServices().Create(ctx, apiRegistration, metav1.CreateOptions{})
 	}
 
-	return kc.KubeagClientSet.ApiregistrationV1beta1().APIServices().Update(apiRegistration)
+	return kc.KubeagClientSet.ApiregistrationV1beta1().APIServices().Update(ctx, apiRegistration, metav1.UpdateOptions{})
 }

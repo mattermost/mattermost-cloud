@@ -5,6 +5,8 @@
 package k8s
 
 import (
+	"context"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -12,53 +14,57 @@ import (
 )
 
 func (kc *KubeClient) createOrUpdateRoleBindingV1(namespace string, binding *rbacv1.RoleBinding) (metav1.Object, error) {
-	_, err := kc.Clientset.RbacV1().RoleBindings(namespace).Get(binding.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.Clientset.RbacV1().RoleBindings(namespace).Get(ctx, binding.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.Clientset.RbacV1().RoleBindings(namespace).Create(binding)
+		return kc.Clientset.RbacV1().RoleBindings(namespace).Create(ctx, binding, metav1.CreateOptions{})
 	}
 
-	return kc.Clientset.RbacV1().RoleBindings(namespace).Update(binding)
+	return kc.Clientset.RbacV1().RoleBindings(namespace).Update(ctx, binding, metav1.UpdateOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateRoleBindingBetaV1(namespace string, binding *rbacbetav1.RoleBinding) (metav1.Object, error) {
-	_, err := kc.Clientset.RbacV1beta1().RoleBindings(namespace).Get(binding.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.Clientset.RbacV1beta1().RoleBindings(namespace).Get(ctx, binding.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.Clientset.RbacV1beta1().RoleBindings(namespace).Create(binding)
+		return kc.Clientset.RbacV1beta1().RoleBindings(namespace).Create(ctx, binding, metav1.CreateOptions{})
 	}
 
-	return kc.Clientset.RbacV1beta1().RoleBindings(namespace).Update(binding)
+	return kc.Clientset.RbacV1beta1().RoleBindings(namespace).Update(ctx, binding, metav1.UpdateOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateClusterRoleBindingV1(binding *rbacv1.ClusterRoleBinding) (metav1.Object, error) {
-	_, err := kc.Clientset.RbacV1().ClusterRoleBindings().Get(binding.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.Clientset.RbacV1().ClusterRoleBindings().Get(ctx, binding.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.Clientset.RbacV1().ClusterRoleBindings().Create(binding)
+		return kc.Clientset.RbacV1().ClusterRoleBindings().Create(ctx, binding, metav1.CreateOptions{})
 	}
 
-	return kc.Clientset.RbacV1().ClusterRoleBindings().Update(binding)
+	return kc.Clientset.RbacV1().ClusterRoleBindings().Update(ctx, binding, metav1.UpdateOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateClusterRoleBindingBetaV1(binding *rbacbetav1.ClusterRoleBinding) (metav1.Object, error) {
-	_, err := kc.Clientset.RbacV1beta1().ClusterRoleBindings().Get(binding.GetName(), metav1.GetOptions{})
+	ctx := context.TODO()
+	_, err := kc.Clientset.RbacV1beta1().ClusterRoleBindings().Get(ctx, binding.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.Clientset.RbacV1beta1().ClusterRoleBindings().Create(binding)
+		return kc.Clientset.RbacV1beta1().ClusterRoleBindings().Create(ctx, binding, metav1.CreateOptions{})
 	}
 
-	return kc.Clientset.RbacV1beta1().ClusterRoleBindings().Update(binding)
+	return kc.Clientset.RbacV1beta1().ClusterRoleBindings().Update(ctx, binding, metav1.UpdateOptions{})
 }

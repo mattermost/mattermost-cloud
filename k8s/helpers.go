@@ -26,7 +26,7 @@ import (
 // the provided timeout then an error will be returned.
 func (kc *KubeClient) WaitForPodRunning(ctx context.Context, namespace, podName string) (*corev1.Pod, error) {
 	for {
-		pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		pod, err := kc.Clientset.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err == nil {
 			if pod.Status.Phase == corev1.PodRunning {
 				return pod, nil
@@ -47,7 +47,8 @@ func (kc *KubeClient) WaitForPodRunning(ctx context.Context, namespace, podName 
 
 // GetPodsFromDeployment gets the pods that belong to a given deployment.
 func (kc *KubeClient) GetPodsFromDeployment(namespace, deploymentName string) (*corev1.PodList, error) {
-	deployment, err := kc.Clientset.AppsV1().Deployments(namespace).Get(deploymentName, metav1.GetOptions{})
+	ctx := context.TODO()
+	deployment, err := kc.Clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +56,13 @@ func (kc *KubeClient) GetPodsFromDeployment(namespace, deploymentName string) (*
 	set := labels.Set(deployment.GetLabels())
 	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 
-	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
+	return kc.Clientset.CoreV1().Pods(namespace).List(ctx, listOptions)
 }
 
 // GetPodsFromStatefulset gets the pods that belong to a given stateful set.
 func (kc *KubeClient) GetPodsFromStatefulset(namespace, statefulSetName string) (*corev1.PodList, error) {
-	statefulSet, err := kc.Clientset.AppsV1().StatefulSets(namespace).Get(statefulSetName, metav1.GetOptions{})
+	ctx := context.TODO()
+	statefulSet, err := kc.Clientset.AppsV1().StatefulSets(namespace).Get(ctx, statefulSetName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,12 +70,13 @@ func (kc *KubeClient) GetPodsFromStatefulset(namespace, statefulSetName string) 
 	set := labels.Set(statefulSet.GetLabels())
 	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 
-	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
+	return kc.Clientset.CoreV1().Pods(namespace).List(ctx, listOptions)
 }
 
 // GetPodsFromDaemonSet gets the pods that belong to a given daemonset.
 func (kc *KubeClient) GetPodsFromDaemonSet(namespace, daemonSetName string) (*corev1.PodList, error) {
-	daemonSet, err := kc.Clientset.AppsV1().DaemonSets(namespace).Get(daemonSetName, metav1.GetOptions{})
+	ctx := context.TODO()
+	daemonSet, err := kc.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSetName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +84,7 @@ func (kc *KubeClient) GetPodsFromDaemonSet(namespace, daemonSetName string) (*co
 	set := labels.Set(daemonSet.GetLabels())
 	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 
-	return kc.Clientset.CoreV1().Pods(namespace).List(listOptions)
+	return kc.Clientset.CoreV1().Pods(namespace).List(ctx, listOptions)
 }
 
 // RemoteCommand executes a kubernetes command against a remote cluster.

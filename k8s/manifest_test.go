@@ -5,6 +5,7 @@
 package k8s
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -224,7 +225,8 @@ func TestCreateNetworkPolicy(t *testing.T) {
 		err := testClient.CreateFromFile(files, "my-test-installation")
 		assert.NoError(t, err)
 
-		netPol, err := testClient.Clientset.NetworkingV1().NetworkPolicies(namespace).Get("external-mm-allow", metav1.GetOptions{})
+		ctx := context.TODO()
+		netPol, err := testClient.Clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, "external-mm-allow", metav1.GetOptions{})
 		assert.NoError(t, err)
 
 		expectedPodSelector := map[string]string{
@@ -242,7 +244,8 @@ func TestCreateNetworkPolicy(t *testing.T) {
 		err := testClient.CreateFromFile(files, "my-test-installation")
 		assert.NoError(t, err)
 
-		netPol, err := testClient.Clientset.NetworkingV1().NetworkPolicies(namespace).Get("deny-from-other-namespaces", metav1.GetOptions{})
+		ctx := context.TODO()
+		netPol, err := testClient.Clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, "deny-from-other-namespaces", metav1.GetOptions{})
 		assert.NoError(t, err)
 		assert.Equal(t, netPol.Spec.PodSelector, metav1.LabelSelector{})
 	})

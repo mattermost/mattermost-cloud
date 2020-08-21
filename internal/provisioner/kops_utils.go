@@ -72,7 +72,7 @@ func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClien
 		default:
 			var shouldWait bool
 			for _, namespace := range namespaces {
-				_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+				_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 				if err != nil && k8sErrors.IsNotFound(err) {
 					continue
 				}
@@ -96,8 +96,9 @@ func getPrivateLoadBalancerEndpoint(ctx context.Context, namespace string, logge
 	if err != nil {
 		return "", err
 	}
+
 	for {
-		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return "", err
 		}
@@ -143,7 +144,8 @@ func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model
 		return "", err
 	}
 
-	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(metav1.ListOptions{})
+	ctx := context.TODO()
+	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", err
 	}
