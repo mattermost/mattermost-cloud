@@ -419,7 +419,7 @@ func (c *Client) GetInstallationsCount(includeDeleted bool) (int, error) {
 	}
 	resp, err := c.doGet(u.String())
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "problem getting installations count")
 	}
 	defer closeBody(resp)
 	switch resp.StatusCode {
