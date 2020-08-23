@@ -35,6 +35,22 @@ func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger
 		return errors.Wrap(err, "unable to block public bucket access")
 	}
 
+	_, err = a.Service().s3.PutBucketEncryption(&s3.PutBucketEncryptionInput{
+		Bucket: aws.String(bucketName),
+		ServerSideEncryptionConfiguration: &s3.ServerSideEncryptionConfiguration{
+			Rules: []*s3.ServerSideEncryptionRule{
+				{
+					ApplyServerSideEncryptionByDefault: &s3.ServerSideEncryptionByDefault{
+						SSEAlgorithm: aws.String(s3.ServerSideEncryptionAes256),
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return errors.Wrap(err, "unable to set bucket encryption default")
+	}
+
 	return nil
 }
 
