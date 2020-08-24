@@ -46,7 +46,7 @@ type Installation struct {
 
 // InstallationsCount represents the number of installations
 type InstallationsCount struct {
-	Count int `json:"installations_count"`
+	Count int
 }
 
 // InstallationFilter describes the parameters used to constrain a set of installations.
