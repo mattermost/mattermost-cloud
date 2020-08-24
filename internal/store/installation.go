@@ -147,7 +147,7 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 // GetInstallationsCount returns the number of installations filtered by the deletedat
 // field
 func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int, error) {
-	builder := sq.Select("COUNT(*) as InstallationsNumber").From("Installation")
+	builder := sq.Select("COUNT(*) as InstallationsCount").From("Installation")
 	if !includeDeleted {
 		builder = builder.Where("DeleteAt = 0")
 	}
