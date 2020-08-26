@@ -21,6 +21,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 
 	installationsRouter := apiRouter.PathPrefix("/installations").Subrouter()
 	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
+	installationsRouter.Handle("/count", addContext(handleGetNumberOfInstallations)).Methods("GET")
 	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")
 
 	installationRouter := apiRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
@@ -107,6 +108,25 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, installations)
+}
+
+// handlerGetNumberOfInstallations responds to GET /api/installations/count, returning the
+// number of non-deleted installations
+func handleGetNumberOfInstallations(c *Context, w http.ResponseWriter, r *http.Request) {
+	includeDeleted, err := parseBool(r.URL, "include_deleted", false)
+	if err != nil {
+		includeDeleted = false
+	}
+	installationsCount, err := c.Store.GetInstallationsCount(includeDeleted)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query the number of installations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	result := model.InstallationsCount{Count: installationsCount}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, result)
 }
 
 // handleCreateInstallation responds to POST /api/installations, beginning the process of creating

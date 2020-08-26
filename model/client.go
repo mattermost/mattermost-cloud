@@ -406,6 +406,30 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 	}
 }
 
+// GetInstallationsCount returns then number of installations filtered by deleted field
+func (c *Client) GetInstallationsCount(includeDeleted bool) (int, error) {
+	u, err := url.Parse(c.buildURL("/api/installations/count"))
+	if err != nil {
+		return 0, err
+	}
+	if includeDeleted {
+		q := u.Query()
+		q.Add("include_deleted", "true")
+		u.RawQuery = q.Encode()
+	}
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return 0, errors.Wrap(err, "problem getting installations count")
+	}
+	defer closeBody(resp)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return InstallationsCountFromReader(resp.Body)
+	default:
+		return 0, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // UpdateInstallation updates an installation.
 func (c *Client) UpdateInstallation(installationID string, request *PatchInstallationRequest) (*Installation, error) {
 	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost", installationID), request)

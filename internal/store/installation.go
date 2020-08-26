@@ -144,6 +144,25 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 	return installations, nil
 }
 
+// GetInstallationsCount returns the number of installations filtered by the deletedat
+// field
+func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int, error) {
+	builder := sq.Select("COUNT(*) as InstallationsCount").From("Installation")
+	if !includeDeleted {
+		builder = builder.Where("DeleteAt = 0")
+	}
+	var numberOfInstallations int
+	query, _, err := builder.ToSql()
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to parse query for installations count")
+	}
+	err = sqlStore.get(sqlStore.db, &numberOfInstallations, query)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to query for installations count")
+	}
+	return numberOfInstallations, nil
+}
+
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
 func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Installation, error) {
 	builder := installationSelect.
