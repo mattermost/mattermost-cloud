@@ -12,6 +12,7 @@ import (
 
 func init() {
 	groupCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+	groupCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
 
 	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
 	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")
@@ -85,15 +86,26 @@ var groupCreateCmd = &cobra.Command{
 			return err
 		}
 
-		group, err := client.CreateGroup(&model.CreateGroupRequest{
+		request := &model.CreateGroupRequest{
 			Name:          name,
 			MaxRolling:    maxRolling,
 			Description:   description,
 			Version:       version,
 			Image:         image,
 			MattermostEnv: envVarMap,
-		})
+		}
 
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err = printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		group, err := client.CreateGroup(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to create group")
 		}
@@ -120,7 +132,7 @@ var groupUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		group, err := client.UpdateGroup(&model.PatchGroupRequest{
+		request := &model.PatchGroupRequest{
 			ID:            groupID,
 			Name:          getStringFlagPointer(command, "name"),
 			Description:   getStringFlagPointer(command, "description"),
@@ -128,7 +140,19 @@ var groupUpdateCmd = &cobra.Command{
 			Image:         getStringFlagPointer(command, "image"),
 			MaxRolling:    getInt64FlagPointer(command, "max-rolling"),
 			MattermostEnv: envVarMap,
-		})
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err = printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		group, err := client.UpdateGroup(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to update group")
 		}

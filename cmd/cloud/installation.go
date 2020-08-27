@@ -12,6 +12,7 @@ import (
 
 func init() {
 	installationCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+	installationCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
 
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
 	installationCreateCmd.Flags().String("group", "", "The id of the group to join")
@@ -99,7 +100,7 @@ var installationCreateCmd = &cobra.Command{
 			return err
 		}
 
-		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		request := &model.CreateInstallationRequest{
 			OwnerID:       ownerID,
 			GroupID:       groupID,
 			Version:       version,
@@ -111,7 +112,19 @@ var installationCreateCmd = &cobra.Command{
 			Database:      database,
 			Filestore:     filestore,
 			MattermostEnv: envVarMap,
-		})
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err = printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		installation, err := client.CreateInstallation(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to create installation")
 		}
@@ -138,16 +151,25 @@ var installationUpdateCmd = &cobra.Command{
 			return err
 		}
 
-		installation, err := client.UpdateInstallation(
-			installationID,
-			&model.PatchInstallationRequest{
-				Version:       getStringFlagPointer(command, "version"),
-				Image:         getStringFlagPointer(command, "image"),
-				Size:          getStringFlagPointer(command, "size"),
-				License:       getStringFlagPointer(command, "license"),
-				MattermostEnv: envVarMap,
-			},
-		)
+		request := &model.PatchInstallationRequest{
+			Version:       getStringFlagPointer(command, "version"),
+			Image:         getStringFlagPointer(command, "image"),
+			Size:          getStringFlagPointer(command, "size"),
+			License:       getStringFlagPointer(command, "license"),
+			MattermostEnv: envVarMap,
+		}
+
+		dryRun, _ := command.Flags().GetBool("dry-run")
+		if dryRun {
+			err = printJSON(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to print API request")
+			}
+
+			return nil
+		}
+
+		installation, err := client.UpdateInstallation(installationID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to update installation")
 		}
