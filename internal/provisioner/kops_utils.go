@@ -98,7 +98,7 @@ func getPrivateLoadBalancerEndpoint(ctx context.Context, namespace string, logge
 	}
 
 	for {
-		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
+		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return "", err
 		}
