@@ -63,11 +63,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		return errors.Wrapf(err, "failed to create network policy %s", clusterInstallation.Namespace)
 	}
 
-	// add installation ID to mattermost-server env variables
-	if installation.MattermostEnv == nil {
-		installation.MattermostEnv = map[string]model.EnvVar{}
-	}
-	installation.MattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
+	mattermostEnv := getMattermostEnvWithOverrides(installation)
 
 	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
 		TypeMeta: metav1.TypeMeta{
@@ -87,7 +83,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			IngressName:   installation.DNS,
-			MattermostEnv: installation.MattermostEnv.ToEnvList(),
+			MattermostEnv: mattermostEnv.ToEnvList(),
 			UseIngressTLS: false,
 			IngressAnnotations: map[string]string{
 				"kubernetes.io/ingress.class":                          "nginx-controller",
@@ -334,7 +330,8 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		}
 	}
 
-	cr.Spec.MattermostEnv = installation.MattermostEnv.ToEnvList()
+	mattermostEnv := getMattermostEnvWithOverrides(installation)
+	cr.Spec.MattermostEnv = mattermostEnv.ToEnvList()
 
 	_, err = k8sClient.MattermostClientset.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -519,4 +516,23 @@ func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInsta
 	logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
 
 	return output, err
+}
+
+// Set env overrides that are required from installations for function correctly
+// in the cloud environment.
+// NOTE: this should be called whenever the Mattermost custom resource is created
+// or updated.
+func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVarMap {
+	mattermostEnv := installation.MattermostEnv
+	if mattermostEnv == nil {
+		mattermostEnv = map[string]model.EnvVar{}
+	}
+
+	mattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
+
+	if !installation.InternalFilestore() {
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "true"}
+	}
+
+	return mattermostEnv
 }
