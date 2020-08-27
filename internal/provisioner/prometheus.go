@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -88,7 +89,7 @@ func (p *prometheus) CreateOrUpgrade() error {
 	}
 
 	p.logger.Debugln("CNAME was not provisioned for prometheus")
-	ctx, cancel := context.WithTimeout(context.Background(), 120)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 	defer cancel()
 
 	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx", logger.WithField("prometheus-action", "create"), p.kops.GetKubeConfigPath())
