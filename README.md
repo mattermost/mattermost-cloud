@@ -47,7 +47,11 @@ region = us-east-1
   export AWS_SECRET_ACCESS_KEY=YOURSECRETACCESSKEY
   export AWS_PROFILE=mm-cloud
   ```
-3. Create an S3 bucket to store the kops state
+3. Create an S3 bucket to store the kops state. The name of the bucket **MUST** start with `cloud-` prefix and
+   has to be created using the provisioner account credentials. To do it run the following:
+   ```bash
+   aws s3api create-bucket --bucket cloud-<yourname>-kops-state --region us-east-1
+   ```
 4. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
 
 Also:
