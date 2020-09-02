@@ -21,6 +21,14 @@ type mockProvisioner struct {
 	CommandError error
 }
 
+func (s *mockProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	if len(s.Output) == 0 {
+		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)
+	}
+
+	return s.Output, s.CommandError
+}
+
 func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstallation, ...string) ([]byte, error) {
 	if len(s.Output) == 0 {
 		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)

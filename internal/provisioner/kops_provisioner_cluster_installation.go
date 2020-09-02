@@ -447,10 +447,11 @@ func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *mode
 
 // ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
 func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	return provisioner.execCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
+	return provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
 }
 
-func (provisioner *KopsProvisioner) execCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+// ExecClusterInstallationCLI execs the provided command on the defined cluster installation.
+func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -529,6 +530,7 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 	}
 
 	mattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
+	mattermostEnv["MM_SERVICESETTINGS_ENABLELOCALMODE"] = model.EnvVar{Value: "true"}
 
 	if !installation.InternalFilestore() {
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "true"}

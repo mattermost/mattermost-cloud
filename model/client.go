@@ -600,6 +600,25 @@ func (c *Client) RunMattermostCLICommandOnClusterInstallation(clusterInstallatio
 	}
 }
 
+// ExecClusterInstallationCLI runs a valid exec command against a cluster installation.
+func (c *Client) ExecClusterInstallationCLI(clusterInstallationID, command string, subcommand []string) ([]byte, error) {
+	resp, err := c.doPost(c.buildURL("/api/cluster_installation/%s/exec/%s", clusterInstallationID, command), subcommand)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	bytes, _ := ioutil.ReadAll(resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return bytes, nil
+
+	default:
+		return bytes, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // CreateGroup requests the creation of a group from the configured provisioning server.
 func (c *Client) CreateGroup(request *CreateGroupRequest) (*Group, error) {
 	resp, err := c.doPost(c.buildURL("/api/groups"), request)
