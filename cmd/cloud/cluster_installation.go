@@ -33,6 +33,11 @@ func init() {
 	clusterInstallationConfigSetCmd.MarkFlagRequired("key")
 	clusterInstallationConfigSetCmd.MarkFlagRequired("value")
 
+	clusterInstallationMMCTL.Flags().String("cluster-installation", "", "The id of the cluster installation.")
+	clusterInstallationMMCTL.Flags().String("command", "", "The mmctl subcommand to run.")
+	clusterInstallationMMCTL.MarkFlagRequired("cluster-installation")
+	clusterInstallationMMCTL.MarkFlagRequired("command")
+
 	clusterInstallationMattermostCLICmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
 	clusterInstallationMattermostCLICmd.Flags().String("command", "", "The Mattermost CLI subcommand to run.")
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("cluster-installation")
@@ -41,6 +46,7 @@ func init() {
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
+	clusterInstallationCmd.AddCommand(clusterInstallationMMCTL)
 	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
@@ -175,6 +181,30 @@ var clusterInstallationConfigSetCmd = &cobra.Command{
 		err := client.SetClusterInstallationConfig(clusterInstallationID, config)
 		if err != nil {
 			return errors.Wrap(err, "failed to modify cluster installation config")
+		}
+
+		return nil
+	},
+}
+
+var clusterInstallationMMCTL = &cobra.Command{
+	Use:   "mmctl",
+	Short: "Run a mmctl command on a cluster installation",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
+		subcommand, _ := command.Flags().GetString("command")
+
+		output, err := client.ExecClusterInstallationCLI(clusterInstallationID, "mmctl", strings.Split(subcommand, " "))
+
+		// Print any output and then check and handle errors.
+		fmt.Println(string(output))
+		if err != nil {
+			return errors.Wrap(err, "failed to run mattermost CLI command")
 		}
 
 		return nil

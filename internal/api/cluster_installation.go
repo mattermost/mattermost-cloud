@@ -5,6 +5,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -24,6 +25,7 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationRouter.Handle("", addContext(handleGetClusterInstallation)).Methods("GET")
 	clusterInstallationRouter.Handle("/config", addContext(handleGetClusterInstallationConfig)).Methods("GET")
 	clusterInstallationRouter.Handle("/config", addContext(handleSetClusterInstallationConfig)).Methods("PUT")
+	clusterInstallationRouter.Handle("/exec/{command}", addContext(handleRunClusterInstallationExecCommand)).Methods("POST")
 	clusterInstallationRouter.Handle("/mattermost_cli", addContext(handleRunClusterInstallationMattermostCLI)).Methods("POST")
 }
 
@@ -230,7 +232,77 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleRunClusterInstallationExecCommand responds to POST /api/cluster_installation/{cluster_installation}/exec/{command},
+// running a valid exec command and returning any output.
+func handleRunClusterInstallationExecCommand(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterInstallationID := vars["cluster_installation"]
+	command := vars["command"]
+	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
+
+	if !model.IsValidExecCommand(command) {
+		c.Logger.Errorf("%s is not a permitted exec command", command)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	clusterInstallationExecSubcommand, err := model.NewClusterInstallationExecSubcommandFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	clusterInstallation, err := c.Store.GetClusterInstallation(clusterInstallationID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if clusterInstallation == nil {
+		c.Logger.Error("cluster installation not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if clusterInstallation.IsDeleted() {
+		c.Logger.Error("cluster installation is deleted")
+		w.WriteHeader(http.StatusGone)
+		return
+	}
+
+	if clusterInstallation.APISecurityLock {
+		logSecurityLockConflict("cluster-installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if cluster == nil {
+		c.Logger.Errorf("failed to find cluster %s associated with cluster installation", clusterInstallation.ClusterID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	args := append([]string{fmt.Sprintf("./bin/%s", command)}, clusterInstallationExecSubcommand...)
+	output, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, args...)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to execute command")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(output)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+}
+
 // handleRunClusterInstallationMattermostCLI responds to POST /api/cluster_installation/{cluster_installation}/mattermost_cli, running a Mattermost CLI command and returning any output.
+// TODO: deprecate or refactor into /exec/command endpoint
 func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clusterInstallationID := vars["cluster_installation"]

@@ -62,3 +62,17 @@ func NewClusterInstallationMattermostCLISubcommandFromReader(reader io.Reader) (
 
 	return clusterInstallationMattermostCLISubcommand, nil
 }
+
+// ClusterInstallationExecSubcommand describes the payload necessary to run container exec commands on a cluster installation.
+type ClusterInstallationExecSubcommand []string
+
+// NewClusterInstallationExecSubcommandFromReader will create a ClusterInstallationExecSubcommand from an io.Reader.
+func NewClusterInstallationExecSubcommandFromReader(reader io.Reader) (ClusterInstallationExecSubcommand, error) {
+	var clusterInstallationExecSubcommand ClusterInstallationExecSubcommand
+	err := json.NewDecoder(reader).Decode(&clusterInstallationExecSubcommand)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode cluster installation exec request")
+	}
+
+	return clusterInstallationExecSubcommand, nil
+}
