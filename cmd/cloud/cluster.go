@@ -127,7 +127,7 @@ var clusterCreateCmd = &cobra.Command{
 		}
 		masterInstanceType, _ := command.Flags().GetString("size-master-instance-type")
 		if len(masterInstanceType) != 0 {
-			request.NodeInstanceType = masterInstanceType
+			request.MasterInstanceType = masterInstanceType
 		}
 		masterCount, _ := command.Flags().GetInt64("size-master-count")
 		if masterCount != 0 {
