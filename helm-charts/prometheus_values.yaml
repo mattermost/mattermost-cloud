@@ -3,6 +3,8 @@ serviceAccounts:
     create: false
 
 server:
+  persistentVolume:
+    size: 100Gi
   ingress:
     enabled: true
     annotations:
