@@ -234,7 +234,7 @@ For more information on this change and reasoning for it, check out the [kops re
 This is related to the changes introduced in [PR-263](https://github.com/mattermost/mattermost-cloud/pull/263)
 
 Please follow the steps below for the reprovisioning of existing clusters:
-- Reprovision the cluster by running ```cloud cluster provision --cluster <cluster_id> --nginx-version 2.11.0```.
+- Reprovision the cluster by running ```cloud cluster provision --cluster <cluster_id> --nginx-version 2.15.0```.
 - Check that new nginx deployed both internal and public Load Balancers (nginx-ingress-nginx-controller-internal and nginx-ingress-nginx-controller).
 - Manually update Prometheus Route53 record to use the new private Load Balancer (nginx-ingress-nginx-controller-internal).
 - Manually update cluster installations Route53 records one by one to use the new public Load balancer (nginx-ingress-nginx-controller).
