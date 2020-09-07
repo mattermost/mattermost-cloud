@@ -35,6 +35,7 @@ type KopsProvisioner struct {
 	s3StateStore            string
 	privateSubnetIds        string
 	publicSubnetIds         string
+	allowCIDRRangeList      []string
 	owner                   string
 	useExistingAWSResources bool
 	resourceUtil            *utils.ResourceUtil
@@ -44,7 +45,7 @@ type KopsProvisioner struct {
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 // TODO(gsagula): Consider replacing all these paramaters with a struct for readability.
-func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool,
+func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, allowCIDRRangeList []string,
 	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
 
 	logger = logger.WithField("provisioner", "kops")
@@ -52,6 +53,7 @@ func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool
 	return &KopsProvisioner{
 		s3StateStore:            s3StateStore,
 		useExistingAWSResources: useExistingAWSResources,
+		allowCIDRRangeList:      allowCIDRRangeList,
 		logger:                  logger,
 		resourceUtil:            resourceUtil,
 		owner:                   owner,

@@ -46,6 +46,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
+
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
@@ -74,6 +76,11 @@ var serverCmd = &cobra.Command{
 		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
 		if machineLogs {
 			logger.SetFormatter(&logrus.JSONFormatter{})
+		}
+
+		allowListCIDRRange, _ := command.Flags().GetStringSlice("allow-list-cidr-range")
+		if len(allowListCIDRRange) == 0 {
+			return errors.New("allow-list-cidr-range must have at least one value")
 		}
 
 		logger := logger.WithField("instance", instanceID)
@@ -182,6 +189,7 @@ var serverCmd = &cobra.Command{
 			s3StateStore,
 			owner,
 			useExistingResources,
+			allowListCIDRRange,
 			resourceUtil,
 			logger,
 			sqlStore,
