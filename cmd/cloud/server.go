@@ -80,7 +80,7 @@ var serverCmd = &cobra.Command{
 
 		allowListCIDRRange, _ := command.Flags().GetStringSlice("allow-list-cidr-range")
 		if len(allowListCIDRRange) == 0 {
-			return errors.Errorf("allow-list-cidr-range must have at least one value")
+			return errors.Error("allow-list-cidr-range must have at least one value")
 		}
 
 		logger := logger.WithField("instance", instanceID)
