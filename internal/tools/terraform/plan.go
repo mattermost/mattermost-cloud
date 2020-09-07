@@ -19,7 +19,7 @@ import (
 
 type terraformOutput struct {
 	Sensitive bool        `json:"sensitive"`
-	Type      string      `json:"type"`
+	Type      interface{} `json:"type"`
 	Value     interface{} `json:"value"`
 }
 

@@ -31,14 +31,14 @@ import (
 func verifyTerraformAndKopsMatch(kopsName string, terraformClient *terraform.Cmd, logger log.FieldLogger) error {
 	out, ok, err := terraformClient.Output("cluster_name")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get terraform output for cluster_name")
 	}
 	if !ok {
 		logger.Warn("No cluster_name in terraform config, skipping check")
 		return nil
 	}
 	if out != kopsName {
-		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsName)
+		return errors.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsName)
 	}
 
 	return nil
