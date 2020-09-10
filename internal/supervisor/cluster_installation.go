@@ -230,19 +230,19 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 }
 
 func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-
 	cr, err := s.provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster installation resource")
 		return model.ClusterInstallationStateReconciling
 	}
 
-	if cr.Status.State != mmv1alpha1.Stable {
+	if cr.Status.State != mmv1alpha1.Stable ||
+		cr.Spec.Replicas != cr.Status.Replicas ||
+		cr.Spec.Version != cr.Status.Version {
 		logger.Info("Cluster installation is still reconciling")
 		return model.ClusterInstallationStateReconciling
 	}
 
 	logger.Info("Cluster installation finished reconciling")
 	return model.ClusterInstallationStateStable
-
 }
