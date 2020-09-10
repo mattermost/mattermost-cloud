@@ -54,6 +54,36 @@ func (mr *MockAWSMockRecorder) GetCertificateSummaryByTag(key, value, logger int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificateSummaryByTag", reflect.TypeOf((*MockAWS)(nil).GetCertificateSummaryByTag), key, value, logger)
 }
 
+// GetAccountAliases mocks base method
+func (m *MockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountAliases")
+	ret0, _ := ret[0].(*iam.ListAccountAliasesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountAliases indicates an expected call of GetAccountAliases
+func (mr *MockAWSMockRecorder) GetAccountAliases() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountAliases", reflect.TypeOf((*MockAWS)(nil).GetAccountAliases))
+}
+
+// GetCloudEnvironmentName mocks base method
+func (m *MockAWS) GetCloudEnvironmentName() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCloudEnvironmentName")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCloudEnvironmentName indicates an expected call of GetCloudEnvironmentName
+func (mr *MockAWSMockRecorder) GetCloudEnvironmentName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloudEnvironmentName", reflect.TypeOf((*MockAWS)(nil).GetCloudEnvironmentName))
+}
+
 // GetAndClaimVpcResources mocks base method
 func (m *MockAWS) GetAndClaimVpcResources(clusterID, owner string, logger logrus.FieldLogger) (aws.ClusterResources, error) {
 	m.ctrl.T.Helper()
@@ -267,21 +297,6 @@ func (m *MockAWS) IsValidAMI(AMIImage string, logger logrus.FieldLogger) (bool, 
 func (mr *MockAWSMockRecorder) IsValidAMI(AMIImage, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsValidAMI", reflect.TypeOf((*MockAWS)(nil).IsValidAMI), AMIImage, logger)
-}
-
-// GetAccountAliases mocks base method
-func (m *MockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAccountAliases")
-	ret0, _ := ret[0].(*iam.ListAccountAliasesOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAccountAliases indicates an expected call of GetAccountAliases
-func (mr *MockAWSMockRecorder) GetAccountAliases() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountAliases", reflect.TypeOf((*MockAWS)(nil).GetAccountAliases))
 }
 
 // DynamoDBEnsureTableDeleted mocks base method

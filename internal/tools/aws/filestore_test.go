@@ -31,7 +31,7 @@ func TestFilestoreProvision(t *testing.T) {
 
 	logger.Warnf("Provisioning down AWS filestore %s", id)
 
-	err := filestore.Provision(logger)
+	err := filestore.Provision(nil, logger)
 	require.NoError(t, err)
 }
 
@@ -48,6 +48,6 @@ func TestFilestoreTeardown(t *testing.T) {
 
 	logger.Warnf("Tearing down AWS filestore %s", id)
 
-	err := filestore.Teardown(false, logger)
+	err := filestore.Teardown(false, nil, logger)
 	require.NoError(t, err)
 }

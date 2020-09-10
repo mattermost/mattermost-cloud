@@ -227,12 +227,23 @@ const (
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSEncryptionTagKey = "rds-encryption-key"
 
-	// DefaultRDSMultitenantVPCIDTagKey is the key used to identify the VPC ID
-	// used for multitenant RDS
-	// database clusters.
+	// VpcIDTagKey is the key used to identify resources belonging to a given
+	// VPC.
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
-	DefaultRDSMultitenantVPCIDTagKey = "tag:VpcID"
+	VpcIDTagKey = "tag:VpcID"
+
+	// FilestoreMultitenantS3TagKey is the key used to identify S3 buckets that
+	// provide multitenant filestores.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	FilestoreMultitenantS3TagKey = "tag:Filestore"
+
+	// FilestoreMultitenantS3TagValue is FilestoreMultitenantS3TagKey value for
+	// S3 multitenant databases.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	FilestoreMultitenantS3TagValue = "Multitenant"
 
 	// DefaultRDSMultitenantDatabaseIDTagKey is the key used to identify a
 	// multitenant RDS database clusters.

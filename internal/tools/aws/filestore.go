@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ func NewS3Filestore(installationID string, awsClient *Client) *S3Filestore {
 }
 
 // Provision completes all the steps necessary to provision an S3 filestore.
-func (f *S3Filestore) Provision(logger log.FieldLogger) error {
+func (f *S3Filestore) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	err := f.s3FilestoreProvision(f.installationID, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to provision AWS S3 filestore")
@@ -40,7 +41,7 @@ func (f *S3Filestore) Provision(logger log.FieldLogger) error {
 }
 
 // Teardown removes all AWS resources related to an S3 filestore.
-func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
+func (f *S3Filestore) Teardown(keepData bool, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	awsID := CloudID(f.installationID)
 
 	logger = logger.WithField("s3-bucket-name", awsID)
@@ -72,7 +73,7 @@ func (f *S3Filestore) Teardown(keepData bool, logger log.FieldLogger) error {
 
 // GenerateFilestoreSpecAndSecret creates the k8s filestore spec and secret for
 // accessing the S3 bucket.
-func (f *S3Filestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
+func (f *S3Filestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
 	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID, logger)
 	if err != nil {
@@ -125,7 +126,7 @@ func (f *S3Filestore) s3FilestoreProvision(installationID string, logger log.Fie
 		return err
 	}
 	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", arn.AccountID, awsID)
-	policy, err := f.awsClient.iamEnsurePolicyCreated(awsID, policyARN, logger)
+	policy, err := f.awsClient.iamEnsureS3PolicyCreated(awsID, policyARN, awsID, "*", logger)
 	if err != nil {
 		return err
 	}

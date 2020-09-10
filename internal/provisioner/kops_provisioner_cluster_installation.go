@@ -139,7 +139,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		mattermostInstallation.Spec.Database = *databaseSpec
 	}
 
-	filestoreSpec, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(logger)
+	filestoreSpec, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(provisioner.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate filestore configuration")
 	}
@@ -534,6 +534,10 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 
 	if !installation.InternalFilestore() {
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "true"}
+	}
+
+	if installation.Filestore == model.InstallationFilestoreMultiTenantAwsS3 {
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3PATHPREFIX"] = model.EnvVar{Value: installation.ID}
 	}
 
 	return mattermostEnv

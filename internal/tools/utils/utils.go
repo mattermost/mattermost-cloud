@@ -102,6 +102,8 @@ func (r *ResourceUtil) GetFilestore(installation *model.Installation) model.File
 		return model.NewMinioOperatorFilestore()
 	case model.InstallationFilestoreAwsS3:
 		return aws.NewS3Filestore(installation.ID, r.awsClient)
+	case model.InstallationFilestoreMultiTenantAwsS3:
+		return aws.NewS3MultitenantFilestore(installation.ID, r.awsClient)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match

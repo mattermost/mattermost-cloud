@@ -27,13 +27,13 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 		if r.HTTPResponse != nil && r.HTTPRequest != nil {
 			var buffer bytes.Buffer
 
-			buffer.WriteString(fmt.Sprintf("[aws] %s %s %s ", r.HTTPRequest.Method, r.HTTPResponse.Status, r.HTTPResponse.Request.URL.String()))
+			buffer.WriteString(fmt.Sprintf("[aws] %s %s (%s)", r.HTTPRequest.Method, r.HTTPRequest.URL.String(), r.HTTPResponse.Status))
 
 			paramBytes, err := json.Marshal(r.Params)
 			if err != nil {
 				buffer.WriteString(err.Error())
 			} else {
-				buffer.Write(paramBytes)
+				logger = logger.WithField("params", string(paramBytes))
 			}
 
 			logger = logger.WithFields(logrus.Fields{

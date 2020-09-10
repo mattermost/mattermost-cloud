@@ -21,11 +21,14 @@ type policyDocument struct {
 }
 
 type policyStatementEntry struct {
-	Sid      string
-	Effect   string
-	Action   []string
-	Resource string
+	Sid       string
+	Effect    string
+	Action    []string
+	Resource  string
+	Condition policyStatementCondition `json:"Condition,omitempty"`
 }
+
+type policyStatementCondition map[string]map[string][]string
 
 func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*iam.User, error) {
 	getResult, err := a.Service().iam.GetUser(&iam.GetUserInput{
@@ -137,7 +140,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 	return nil
 }
 
-func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.FieldLogger) (*iam.Policy, error) {
+func (a *Client) iamEnsureS3PolicyCreated(awsID, policyARN, bucketName, permittedDirectory string, logger log.FieldLogger) (*iam.Policy, error) {
 	getResult, err := a.Service().iam.GetPolicy(&iam.GetPolicyInput{
 		PolicyArn: aws.String(policyARN),
 	})
@@ -153,6 +156,18 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 		return nil, err
 	}
 
+	// The list condition directory needs a bit of logic to set correctly for
+	// the single and multi-tenant S3 filestores.
+	listCondition := policyStatementCondition{}
+	if permittedDirectory != "*" {
+		permittedDirectory = fmt.Sprintf("%s/*", permittedDirectory)
+		listCondition = policyStatementCondition{
+			"StringLike": {
+				"s3:prefix": []string{permittedDirectory},
+			},
+		}
+	}
+
 	policy := policyDocument{
 		Version: "2012-10-17",
 		Statement: []policyStatementEntry{
@@ -162,7 +177,8 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 				Action: []string{
 					"s3:ListBucket",
 				},
-				Resource: fmt.Sprintf("arn:aws:s3:::%s", awsID),
+				Resource:  fmt.Sprintf("arn:aws:s3:::%s", bucketName),
+				Condition: listCondition,
 			}, {
 				Sid:    "AllObjectActions",
 				Effect: "Allow",
@@ -173,7 +189,7 @@ func (a *Client) iamEnsurePolicyCreated(awsID, policyARN string, logger log.Fiel
 					"s3:PutObjectAcl",
 					"s3:DeleteObject",
 				},
-				Resource: fmt.Sprintf("arn:aws:s3:::%s/*", awsID),
+				Resource: fmt.Sprintf("arn:aws:s3:::%s/%s", bucketName, permittedDirectory),
 			},
 		},
 	}

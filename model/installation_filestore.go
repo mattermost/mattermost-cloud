@@ -16,13 +16,16 @@ const (
 	InstallationFilestoreMinioOperator = "minio-operator"
 	// InstallationFilestoreAwsS3 is a filestore hosted via Amazon S3.
 	InstallationFilestoreAwsS3 = "aws-s3"
+	// InstallationFilestoreMultiTenantAwsS3 is a filestore hosted via a shared
+	// Amazon S3 bucket.
+	InstallationFilestoreMultiTenantAwsS3 = "aws-multitenant-s3"
 )
 
 // Filestore is the interface for managing Mattermost filestores.
 type Filestore interface {
-	Provision(logger log.FieldLogger) error
-	Teardown(keepData bool, logger log.FieldLogger) error
-	GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error)
+	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
+	Teardown(keepData bool, store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
+	GenerateFilestoreSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error)
 }
 
 // MinioOperatorFilestore is a filestore backed by the MinIO operator.
@@ -34,14 +37,14 @@ func NewMinioOperatorFilestore() *MinioOperatorFilestore {
 }
 
 // Provision completes all the steps necessary to provision a MinIO operator filestore.
-func (f *MinioOperatorFilestore) Provision(logger log.FieldLogger) error {
+func (f *MinioOperatorFilestore) Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger.Info("MinIO operator filestore requires no pre-provisioning; skipping...")
 
 	return nil
 }
 
 // Teardown removes all MinIO operator resources related to a given installation.
-func (f *MinioOperatorFilestore) Teardown(keepData bool, logger log.FieldLogger) error {
+func (f *MinioOperatorFilestore) Teardown(keepData bool, store InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	logger.Info("MinIO operator filestore requires no teardown; skipping...")
 	if keepData {
 		logger.Warn("Data preservation was requested, but isn't currently possible with the MinIO operator")
@@ -52,7 +55,7 @@ func (f *MinioOperatorFilestore) Teardown(keepData bool, logger log.FieldLogger)
 
 // GenerateFilestoreSpecAndSecret creates the k8s filestore spec and secret for
 // accessing the MinIO operator filestore.
-func (f *MinioOperatorFilestore) GenerateFilestoreSpecAndSecret(logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
+func (f *MinioOperatorFilestore) GenerateFilestoreSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	return nil, nil, nil
 }
 
@@ -64,5 +67,7 @@ func (i *Installation) InternalFilestore() bool {
 
 // IsSupportedFilestore returns true if the given filestore string is supported.
 func IsSupportedFilestore(filestore string) bool {
-	return filestore == InstallationFilestoreMinioOperator || filestore == InstallationFilestoreAwsS3
+	return filestore == InstallationFilestoreMinioOperator ||
+		filestore == InstallationFilestoreAwsS3 ||
+		filestore == InstallationFilestoreMultiTenantAwsS3
 }

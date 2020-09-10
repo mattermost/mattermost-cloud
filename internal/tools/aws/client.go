@@ -5,6 +5,7 @@
 package aws
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,12 +33,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 // AWS interface for use by other packages.
 type AWS interface {
 	GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error)
+
+	GetAccountAliases() (*iam.ListAccountAliasesOutput, error)
+	GetCloudEnvironmentName() (string, error)
 
 	GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error)
 	ReleaseVpc(clusterID string, logger log.FieldLogger) error
@@ -47,9 +52,9 @@ type AWS interface {
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 	GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error)
 	GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error)
+
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 	CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
-
 	IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool
 	DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error
 	DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
@@ -58,7 +63,6 @@ type AWS interface {
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error
 	IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error)
 
-	GetAccountAliases() (*iam.ListAccountAliasesOutput, error)
 	DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error
 	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
 }
@@ -141,4 +145,31 @@ func (c *Client) AddSQLStore(store model.InstallationDatabaseStoreInterface) {
 // HasSQLStore returns whether the AWS client has a SQL store or not.
 func (c *Client) HasSQLStore() bool {
 	return c.store != nil
+}
+
+// Helpers
+
+// GetCloudEnvironmentName looks for a standard cloud account environment name
+// and returns it.
+func (c *Client) GetCloudEnvironmentName() (string, error) {
+	accountAliases, err := c.GetAccountAliases()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get account aliases")
+	}
+	if len(accountAliases.AccountAliases) < 1 {
+		return "", errors.New("account alias not defined")
+	}
+
+	for _, alias := range accountAliases.AccountAliases {
+		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
+			envName := strings.Split(*alias, "-")[2]
+			if len(envName) == 0 {
+				return "", errors.New("environment name value was empty")
+			}
+
+			return envName, nil
+		}
+	}
+
+	return "", errors.New("account environment name could not be found from account aliases")
 }
