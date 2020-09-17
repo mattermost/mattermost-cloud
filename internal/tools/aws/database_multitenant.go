@@ -15,7 +15,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -111,7 +110,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 	})
 	logger.Info("Provisioning Multitenant AWS RDS database")
 
-	vpc, err := d.getClusterInstallationVPC(store)
+	vpc, err := getVPCForInstallation(d.installationID, store, d.client)
 	if err != nil {
 		return errors.Wrap(err, "failed to find cluster installation VPC")
 	}
@@ -404,7 +403,7 @@ func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID s
 				Values: []*string{aws.String(DefaultRDSMultitenantDatabaseTypeTagValue)},
 			},
 			{
-				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
+				Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
 				Values: []*string{&vpcID},
 			},
 			{
@@ -498,43 +497,6 @@ func (d *RDSMultitenantDatabase) getRDSClusterIDFromResourceTags(resourceTags []
 	}
 
 	return nil, nil
-}
-
-func (d *RDSMultitenantDatabase) getClusterInstallationVPC(store model.InstallationDatabaseStoreInterface) (*ec2.Vpc, error) {
-	clusterInstallations, err := store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
-		InstallationID: d.installationID,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query cluster installations")
-	}
-
-	clusterInstallationCount := len(clusterInstallations)
-	if clusterInstallationCount == 0 {
-		return nil, errors.Errorf("no cluster installations found for installation ID %s", d.installationID)
-	}
-	if clusterInstallationCount != 1 {
-		return nil, errors.Errorf("multitenant RDS provisioning is not currently supported for multiple cluster installations (found %d)", clusterInstallationCount)
-	}
-
-	vpcs, err := d.client.GetVpcsWithFilters([]*ec2.Filter{
-		{
-			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(clusterInstallations[0].ClusterID)},
-		},
-		{
-			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
-		},
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to lookup the VPC for installation ID %s", d.installationID)
-	}
-	if len(vpcs) != 1 {
-		return nil, errors.Errorf("expected 1 VPC for multitenant RDS cluster ID %s (found %d)", clusterInstallations[0].ClusterID, len(vpcs))
-	}
-
-	return vpcs[0], nil
 }
 
 func (d *RDSMultitenantDatabase) updateCounterTag(resourceARN *string, counter int) error {
@@ -747,7 +709,7 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 				Value: rdsClusterID,
 			},
 			{
-				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantVPCIDTagKey)),
+				Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
 				Value: VpcID,
 			},
 			{

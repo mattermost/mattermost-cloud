@@ -205,6 +205,10 @@ func (a *mockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
 	return nil, nil
 }
 
+func (a *mockAWS) GetCloudEnvironmentName() (string, error) {
+	return "test", nil
+}
+
 func (a *mockAWS) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error {
 	return nil
 }

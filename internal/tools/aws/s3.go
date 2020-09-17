@@ -87,3 +87,19 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 
 	return nil
 }
+
+// S3EnsureBucketDirectoryDeleted is used to ensure that a bucket directory is
+// deleted.
+func (a *Client) S3EnsureBucketDirectoryDeleted(bucketName, directory string, logger log.FieldLogger) error {
+	iter := s3manager.NewDeleteListIterator(a.Service().s3, &s3.ListObjectsInput{
+		Bucket: aws.String(bucketName),
+		Prefix: aws.String(directory),
+	})
+
+	err := s3manager.NewBatchDeleteWithClient(a.Service().s3).Delete(aws.BackgroundContext(), iter)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete bucket directory")
+	}
+
+	return nil
+}

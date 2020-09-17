@@ -10,7 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 )
 
 // CloudID returns the standard ID used for AWS resource names. This ID is used
@@ -93,6 +97,12 @@ func RDSMultitenantSecretName(id string) string {
 	return fmt.Sprintf("rds-multitenant-%s", id)
 }
 
+// MattermostMultitenantS3Name formats the name of a Mattermost S3 multitenant
+// filestore bucket name.
+func MattermostMultitenantS3Name(environmentName, vpcID string) string {
+	return fmt.Sprintf("mattermost-cloud-%s-provisioning-%s", environmentName, vpcID)
+}
+
 // MattermostRDSDatabaseName formats the name of a Mattermost RDS database schema.
 func MattermostRDSDatabaseName(installationID string) string {
 	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
@@ -126,4 +136,45 @@ func RDSPostgresConnString(schema, endpoint, username, password string) string {
 // RDSMultitenantClusterSecretDescription formats the text used for the describing a multitenant database's secret key.
 func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string) string {
 	return fmt.Sprintf("Used for accessing installation ID: %s database managed by RDS cluster ID: %s", installationID, rdsClusterID)
+}
+
+// getVPCForInstallation returns a single VPC that the cluster installation of
+// the provided installation resides in. Installations with multiple cluster
+// installations are currently not supported.
+func getVPCForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (*ec2.Vpc, error) {
+	clusterInstallations, err := store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		PerPage:        model.AllPerPage,
+		InstallationID: installationID,
+		IncludeDeleted: true,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query cluster installations")
+	}
+
+	clusterInstallationCount := len(clusterInstallations)
+	if clusterInstallationCount == 0 {
+		return nil, errors.Errorf("no cluster installations found for installation ID %s", installationID)
+	}
+	if clusterInstallationCount != 1 {
+		return nil, errors.Errorf("VPC lookups for installations with more than one cluster installation are currently not supported (found %d)", clusterInstallationCount)
+	}
+
+	vpcs, err := client.GetVpcsWithFilters([]*ec2.Filter{
+		{
+			Name:   aws.String(VpcClusterIDTagKey),
+			Values: []*string{aws.String(clusterInstallations[0].ClusterID)},
+		},
+		{
+			Name:   aws.String(VpcAvailableTagKey),
+			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+		},
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to lookup VPC for installation %s", installationID)
+	}
+	if len(vpcs) != 1 {
+		return nil, errors.Errorf("expected 1 VPC for cluster installation %s, but found %d", clusterInstallations[0].ClusterID, len(vpcs))
+	}
+
+	return vpcs[0], nil
 }

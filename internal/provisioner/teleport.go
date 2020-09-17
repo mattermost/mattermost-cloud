@@ -40,7 +40,7 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion string, provisione
 		return nil, errors.New("cannot create a connection to Teleport if the Kops command provided is nil")
 	}
 
-	environment, err := getEnvironment(awsClient)
+	environment, err := awsClient.GetCloudEnvironmentName()
 	if err != nil {
 		return nil, err
 	}
@@ -130,20 +130,4 @@ func (n *teleport) NewHelmDeployment() *helmDeployment {
 
 func (n *teleport) Name() string {
 	return model.TeleportCanonicalName
-}
-
-func getEnvironment(awsClient aws.AWS) (string, error) {
-	accountAliases, err := awsClient.GetAccountAliases()
-	if err != nil {
-		return "", err
-	}
-	if len(accountAliases.AccountAliases) < 1 {
-		return "", errors.New("Account Alias not defined")
-	}
-	for _, alias := range accountAliases.AccountAliases {
-		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
-			return strings.Split(*alias, "-")[2], nil
-		}
-	}
-	return "", errors.New("Account environment was not obtained")
 }
