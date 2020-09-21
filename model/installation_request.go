@@ -5,11 +5,15 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -31,6 +35,9 @@ type CreateInstallationRequest struct {
 	APISecurityLock bool
 	MattermostEnv   EnvVarMap
 }
+
+// https://man7.org/linux/man-pages/man7/hostname.7.html
+var hostnamePattern *regexp.Regexp = regexp.MustCompile(`[a-zA-Z0-9][\.a-z-A-Z\-0-9]+`)
 
 // SetDefaults sets the default values for an installation create request.
 func (request *CreateInstallationRequest) SetDefaults() {
@@ -59,11 +66,8 @@ func (request *CreateInstallationRequest) Validate() error {
 	if request.OwnerID == "" {
 		return errors.New("must specify owner")
 	}
-	if request.DNS == "" {
-		return errors.New("must specify DNS")
-	}
-	if len(request.DNS) >= 64 {
-		return errors.Errorf("DNS names must be less than 64 characters, but name was %d long. DNS=%s", len(request.DNS), request.DNS)
+	if err := isValidDNS(request.DNS); err != nil {
+		return err
 	}
 	_, err := mmv1alpha1.GetClusterSize(request.Size)
 	if err != nil {
@@ -88,6 +92,31 @@ func (request *CreateInstallationRequest) Validate() error {
 	}
 
 	return checkSpaces(request)
+}
+
+func isValidDNS(dns string) error {
+	if (len(dns) >= 64) || len(strings.SplitN(dns, ".", 2)[0]) < 3 {
+		return errors.Errorf("DNS names must be between 3 and 64 characters, but name was %d long. DNS=%s", len(dns), dns)
+	}
+	// check that domain matches regex for valid names
+	if found := hostnamePattern.FindString(dns); found != dns {
+		return errors.Errorf("DNS name provided (%s) failed hostname pattern check", dns)
+	}
+	// check that domain does not resolve. Use a custom pure-Go resolver
+	// to get the same behavior on VPN, in testing, and in production
+	r := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			return (&net.Dialer{
+				Timeout: time.Second * time.Duration(10000),
+			}).DialContext(ctx, "udp", "1.1.1.1:53")
+		},
+	}
+	_, err := r.LookupHost(context.Background(), dns)
+	if err == nil {
+		return errors.Errorf("dns name %s is already taken", dns)
+	}
+	return nil
 }
 
 func checkSpaces(request *CreateInstallationRequest) error {
