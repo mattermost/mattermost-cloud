@@ -96,7 +96,7 @@ func (request *CreateInstallationRequest) Validate() error {
 
 func isValidDNS(dns string) error {
 	subdomain := strings.SplitN(dns, ".", 2)[0]
-	if (len(subdomain) >= 64) || len(subdomain) < 3 {
+	if len(subdomain) >= 64 || len(subdomain) < 3 {
 		return errors.Errorf("DNS names must be between 3 and 64 characters, but name was %d long. DNS=%s", len(dns), dns)
 	}
 	// check that domain matches regex for valid names
