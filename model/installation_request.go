@@ -120,7 +120,18 @@ func isValidDNS(dns string) error {
 	if err == nil {
 		return errors.Errorf("dns name %s is already taken", dns)
 	}
-	return nil
+	switch e := err.(type) {
+	case *net.DNSError:
+		if !e.IsNotFound {
+			return e
+		}
+		return nil
+	default:
+		// all of the errors that indicate success are DNSErrors. If
+		// there's some other error, which shouldn't be possible, return
+		// the unexpected error
+		return errors.Wrapf(e, "unexpected error when looking up DNS name %s", dns)
+	}
 }
 
 func checkSpaces(request *CreateInstallationRequest) error {
