@@ -121,7 +121,7 @@ var clusterInstallationListCmd = &cobra.Command{
 			table.SetHeader([]string{"ID", "STATE", "INSTALLATION ID", "CLUSTER ID"})
 
 			for _, ci := range clusterInstallations {
-				table.Append([]string{ci.ID, ci.State, ci.InstallationID, ci.InstallationID})
+				table.Append([]string{ci.ID, ci.State, ci.InstallationID, ci.ClusterID})
 			}
 			table.Render()
 
