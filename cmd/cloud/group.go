@@ -5,7 +5,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -41,6 +45,7 @@ func init() {
 	groupListCmd.Flags().Int("page", 0, "The page of groups to fetch, starting at 0.")
 	groupListCmd.Flags().Int("per-page", 100, "The number of groups to fetch per page.")
 	groupListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted groups.")
+	groupListCmd.Flags().Bool("table", false, "Whether to display the returned group list in a table or not")
 
 	groupJoinCmd.Flags().String("group", "", "The id of the group to which the installation will be added.")
 	groupJoinCmd.Flags().String("installation", "", "The id of the installation to add to the group.")
@@ -227,6 +232,24 @@ var groupListCmd = &cobra.Command{
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query groups")
+		}
+
+		outputToTable, _ := command.Flags().GetBool("table")
+		if outputToTable {
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetHeader([]string{"ID", "NAME", "SEQ", "ROL", "IMAGE", "VERSION", "ENV?"})
+
+			for _, group := range groups {
+				hasEnv := "no"
+				if len(group.MattermostEnv) > 0 {
+					hasEnv = "yes"
+				}
+				table.Append([]string{group.ID, group.Name, fmt.Sprintf("%d", group.Sequence), fmt.Sprintf("%d", group.MaxRolling), group.Image, group.Version, hasEnv})
+			}
+			table.Render()
+
+			return nil
 		}
 
 		err = printJSON(groups)

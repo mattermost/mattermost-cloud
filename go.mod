@@ -15,6 +15,7 @@ require (
 	github.com/lib/pq v1.8.0
 	github.com/mattermost/mattermost-operator v1.6.1-0.20200818143941-8810bed9630a
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/olekukonko/tablewriter v0.0.4
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0

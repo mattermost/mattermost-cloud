@@ -6,9 +6,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -67,6 +69,7 @@ func init() {
 	clusterListCmd.Flags().Int("page", 0, "The page of clusters to fetch, starting at 0.")
 	clusterListCmd.Flags().Int("per-page", 100, "The number of clusters to fetch per page.")
 	clusterListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted clusters.")
+	clusterListCmd.Flags().Bool("table", false, "Whether to display the returned cluster list in a table or not")
 
 	clusterUtilitiesCmd.Flags().String("cluster", "", "The id of the cluster whose utilities are to be fetched.")
 	clusterUtilitiesCmd.MarkFlagRequired("cluster")
@@ -411,6 +414,26 @@ var clusterListCmd = &cobra.Command{
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query clusters")
+		}
+
+		outputToTable, _ := command.Flags().GetBool("table")
+		if outputToTable {
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES"})
+
+			for _, cluster := range clusters {
+				table.Append([]string{
+					cluster.ID,
+					cluster.State,
+					cluster.ProvisionerMetadataKops.Version,
+					fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
+					fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
+				})
+			}
+			table.Render()
+
+			return nil
 		}
 
 		err = printJSON(clusters)

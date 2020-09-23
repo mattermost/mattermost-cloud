@@ -6,9 +6,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +26,7 @@ func init() {
 	clusterInstallationListCmd.Flags().Int("page", 0, "The page of cluster installations to fetch, starting at 0.")
 	clusterInstallationListCmd.Flags().Int("per-page", 100, "The number of cluster installations to fetch per page.")
 	clusterInstallationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted cluster installations.")
+	clusterInstallationListCmd.Flags().Bool("table", false, "Whether to display the returned cluster installation list in a table or not")
 
 	clusterInstallationConfigCmd.PersistentFlags().String("cluster-installation", "", "The id of the cluster installation.")
 	clusterInstallationConfigCmd.MarkFlagRequired("cluster-installation")
@@ -109,6 +112,20 @@ var clusterInstallationListCmd = &cobra.Command{
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query cluster installations")
+		}
+
+		outputToTable, _ := command.Flags().GetBool("table")
+		if outputToTable {
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetHeader([]string{"ID", "STATE", "INSTALLATION ID", "CLUSTER ID"})
+
+			for _, ci := range clusterInstallations {
+				table.Append([]string{ci.ID, ci.State, ci.InstallationID, ci.InstallationID})
+			}
+			table.Render()
+
+			return nil
 		}
 
 		err = printJSON(clusterInstallations)
