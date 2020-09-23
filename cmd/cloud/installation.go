@@ -5,7 +5,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -49,6 +52,7 @@ func init() {
 	installationListCmd.Flags().Int("page", 0, "The page of installations to fetch, starting at 0.")
 	installationListCmd.Flags().Int("per-page", 100, "The number of installations to fetch per page.")
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
+	installationListCmd.Flags().Bool("table", false, "Whether to display the returned installation list in a table or not")
 
 	installationHibernateCmd.Flags().String("installation", "", "The id of the installation to put into hibernation.")
 	installationHibernateCmd.MarkFlagRequired("installation")
@@ -308,6 +312,20 @@ var installationListCmd = &cobra.Command{
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query installations")
+		}
+
+		outputToTable, _ := command.Flags().GetBool("table")
+		if outputToTable {
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetHeader([]string{"ID", "STATE", "VERSION", "DATABASE", "FILESTORE", "DNS"})
+
+			for _, installation := range installations {
+				table.Append([]string{installation.ID, installation.State, installation.Version, installation.Database, installation.Filestore, installation.DNS})
+			}
+			table.Render()
+
+			return nil
 		}
 
 		err = printJSON(installations)
