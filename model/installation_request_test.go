@@ -24,14 +24,14 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			false,
 			&model.CreateInstallationRequest{
 				OwnerID: "owner1",
-				DNS:     "domain.com",
+				DNS:     "domain4321.com",
 			},
 		},
 		{
 			"no owner ID",
 			true,
 			&model.CreateInstallationRequest{
-				DNS: "domain.com",
+				DNS: "domain4321.com",
 			},
 		},
 		{
@@ -50,11 +50,51 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
+			"DNS too short",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "a.com",
+			},
+		},
+		{
+			"DNS starts with a hyphen",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "-domain4321.com",
+			},
+		},
+		{
+			"DNS has invalid unicode characters",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "letseat🍕.com",
+			},
+		},
+		{
+			"DNS has invalid special characters",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "joram&gabe.com",
+			},
+		},
+		{
+			"DNS is a real FQDN that is in use already",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "google.com",
+			},
+		},
+		{
 			"invalid installation size",
 			true,
 			&model.CreateInstallationRequest{
 				OwnerID: "owner1",
-				DNS:     "domain.com",
+				DNS:     "domain4321.com",
 				Size:    "jumbo",
 			},
 		},
@@ -63,7 +103,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			true,
 			&model.CreateInstallationRequest{
 				OwnerID:  "owner1",
-				DNS:      "domain.com",
+				DNS:      "domain4321.com",
 				Affinity: "solo",
 			},
 		},
@@ -72,7 +112,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			true,
 			&model.CreateInstallationRequest{
 				OwnerID:  "owner1",
-				DNS:      "domain.com",
+				DNS:      "domain4321.com",
 				Database: "none",
 			},
 		},
@@ -81,7 +121,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			true,
 			&model.CreateInstallationRequest{
 				OwnerID:   "owner1",
-				DNS:       "domain.com",
+				DNS:       "domain4321.com",
 				Filestore: "none",
 			},
 		},
@@ -90,7 +130,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			true,
 			&model.CreateInstallationRequest{
 				OwnerID: "owner1",
-				DNS:     "domain.com",
+				DNS:     "domain4321.com",
 				MattermostEnv: model.EnvVarMap{
 					"key1": {Value: ""},
 				},
@@ -101,7 +141,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			true,
 			&model.CreateInstallationRequest{
 				OwnerID: "owner1",
-				DNS:     "domain.com ",
+				DNS:     "domain4321.com ",
 			},
 		},
 		{
@@ -109,7 +149,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			false,
 			&model.CreateInstallationRequest{
 				OwnerID:   "owner1",
-				DNS:       "domain.com",
+				DNS:       "domain4321.com",
 				GroupID:   "",
 				Filestore: "",
 				Database:  "",
@@ -151,7 +191,7 @@ func TestCreateInstallationRequestFromReader(t *testing.T) {
 		request, err := model.NewCreateInstallationRequestFromReader(bytes.NewReader([]byte(`{
 			"OwnerID":"owner",
 			"Version":"version",
-			"DNS":"dns",
+			"DNS":"dns4321.com",
 			"License": "this_is_my_license",
 			"MattermostEnv": {"key1": {"Value": "value1"}},
 			"Affinity":"multitenant"
@@ -161,7 +201,7 @@ func TestCreateInstallationRequestFromReader(t *testing.T) {
 		expected := &model.CreateInstallationRequest{
 			OwnerID:       "owner",
 			Version:       "version",
-			DNS:           "dns",
+			DNS:           "dns4321.com",
 			License:       "this_is_my_license",
 			MattermostEnv: model.EnvVarMap{"key1": {Value: "value1"}},
 			Affinity:      "multitenant",
