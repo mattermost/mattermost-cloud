@@ -590,8 +590,8 @@ github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7
 github.com/markbates/inflect v1.0.4/go.mod h1:1fR9+pO2KHEO9ZRtto13gDwwZaAKstQzferVeWqbgNs=
 github.com/marstr/guid v1.1.0/go.mod h1:74gB1z2wpxxInTG6yaqA7KrtM0NZ+RbrcqDvYHefzho=
 github.com/mattermost/blubr v0.0.0-20200113232543-f0ce67760aeb/go.mod h1:Tk99160Gy8m4rJPKIgYZrYneLepPCx5KPB3rp9+iK00=
-github.com/mattermost/mattermost-operator v1.7.0 h1:cgQ20LuMKAqZvoLFMI4hD3f0/aygswJH3lKyXegoQgo=
-github.com/mattermost/mattermost-operator v1.7.0/go.mod h1:OpKk/kpyFEZenLRrVFKWc7Yzvi7ctycezfAGNLTHJQE=
+github.com/mattermost/mattermost-operator v1.8.0 h1:CBV+KhT2yTXYqHEWqWr1HbQtoDPj1aYmwDZJkh54fpc=
+github.com/mattermost/mattermost-operator v1.8.0/go.mod h1:OpKk/kpyFEZenLRrVFKWc7Yzvi7ctycezfAGNLTHJQE=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-ieproxy v0.0.0-20190610004146-91bb50d98149/go.mod h1:31jz6HNzdxOmlERGGEc4v/dMssOfmp2p5bT/okiKFFc=
