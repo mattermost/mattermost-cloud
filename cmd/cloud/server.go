@@ -182,7 +182,7 @@ var serverCmd = &cobra.Command{
 		}
 		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 
-		err = healthCheck(awsConfig, s3StateStore)
+		err = checkRequirements(awsConfig, s3StateStore)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
 		}
@@ -277,7 +277,7 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func healthCheck(awsConfig *sdkAWS.Config, s3StateStore string) error {
+func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 	for _, requiredUtility := range []string{
 		"terraform",
 		"helm",
