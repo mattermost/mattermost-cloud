@@ -47,6 +47,9 @@ func init() {
 	groupListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted groups.")
 	groupListCmd.Flags().Bool("table", false, "Whether to display the returned group list in a table or not")
 
+	groupGetStatusCmd.Flags().String("group", "", "The id of the group of which the status should be fetched.")
+	groupGetStatusCmd.MarkFlagRequired("group")
+
 	groupJoinCmd.Flags().String("group", "", "The id of the group to which the installation will be added.")
 	groupJoinCmd.Flags().String("installation", "", "The id of the installation to add to the group.")
 	groupJoinCmd.MarkFlagRequired("group")
@@ -61,6 +64,7 @@ func init() {
 	groupCmd.AddCommand(groupDeleteCmd)
 	groupCmd.AddCommand(groupGetCmd)
 	groupCmd.AddCommand(groupListCmd)
+	groupCmd.AddCommand(groupGetStatusCmd)
 	groupCmd.AddCommand(groupJoinCmd)
 	groupCmd.AddCommand(groupLeaveCmd)
 }
@@ -253,6 +257,33 @@ var groupListCmd = &cobra.Command{
 		}
 
 		err = printJSON(groups)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var groupGetStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Get a particular groups status.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		groupID, _ := command.Flags().GetString("group")
+		groupStatus, err := client.GetGroupStatus(groupID)
+		if err != nil {
+			return errors.Wrap(err, "failed to query group status")
+		}
+		if groupStatus == nil {
+			return nil
+		}
+
+		err = printJSON(groupStatus)
 		if err != nil {
 			return err
 		}

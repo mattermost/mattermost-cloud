@@ -25,6 +25,8 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupRouter.Handle("", addContext(handleGetGroup)).Methods("GET")
 	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
 	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
+	groupRouter.Handle("/status", addContext(handleGetGroupStatus)).Methods("GET")
+
 }
 
 // handleGetGroup responds to GET /api/group/{group}, returning the group in question.
@@ -202,4 +204,27 @@ func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// handleGetGroupStatus responds to GET /api/group/{group}/status,
+// returning the rollout status of the group in question.
+func handleGetGroupStatus(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	groupID := vars["group"]
+	c.Logger = c.Logger.WithField("group", groupID)
+
+	groupStatus, err := c.Store.GetGroupStatus(groupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query group status")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if groupStatus == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, groupStatus)
 }

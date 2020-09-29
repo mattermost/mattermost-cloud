@@ -445,3 +445,116 @@ func TestDeleteGroup(t *testing.T) {
 		require.NotEqual(t, 0, group1.DeleteAt)
 	})
 }
+
+func TestGroupStatus(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+	installationsCreated := 0
+
+	// helper function for creating installations
+	newInstallation := func(groupId *string, sequence *int64, state string) *model.Installation {
+		installationsCreated += 1 // Increment to generate unique DNS for each installation
+
+		createRequest := &model.CreateInstallationRequest{
+			OwnerID:  "owner",
+			Version:  "version",
+			DNS:      fmt.Sprintf("dns%d.example.com", installationsCreated),
+			Affinity: model.InstallationAffinityIsolated,
+		}
+		if groupId != nil {
+			createRequest.GroupID = *groupId
+		}
+
+		installation, err := client.CreateInstallation(createRequest)
+		require.NoError(t, err)
+
+		installation.State = state
+		installation.GroupSequence = sequence
+		err = sqlStore.UpdateInstallation(installation)
+		require.NoError(t, err)
+
+		return installation
+	}
+
+	group, err := client.CreateGroup(&model.CreateGroupRequest{
+		Name:        "group1",
+		Description: "description",
+		Version:     "version",
+		Image:       "sample/image",
+	})
+	require.NoError(t, err)
+
+	t.Run("empty group", func(t *testing.T) {
+		expectedStatus := &model.GroupStatus{
+			InstallationsCount:           0,
+			InstallationsRolledOut:       0,
+			InstallationsAwaitingRollOut: 0,
+		}
+		groupStatus, err := client.GetGroupStatus(group.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+	})
+
+	t.Run("ignore different groups", func(t *testing.T) {
+		expectedStatus := &model.GroupStatus{
+			InstallationsCount:           0,
+			InstallationsRolledOut:       0,
+			InstallationsAwaitingRollOut: 0,
+		}
+		ignoredGroup, err := client.CreateGroup(&model.CreateGroupRequest{
+			Name:        "group2",
+			Description: "description",
+			Version:     "version",
+			Image:       "sample/image",
+		})
+		require.NoError(t, err)
+
+		newInstallation(nil, nil, model.InstallationStateStable)
+		newInstallation(&ignoredGroup.ID, nil, model.InstallationStateStable)
+
+		groupStatus, err := client.GetGroupStatus(group.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+	})
+
+	t.Run("count installations", func(t *testing.T) {
+		expectedStatus := &model.GroupStatus{
+			InstallationsCount:           6,
+			InstallationsRolledOut:       2,
+			InstallationsAwaitingRollOut: 1,
+		}
+		var differentSequence int64 = -1
+
+		// rolled out stable
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateStable)
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateStable)
+		// rolled out not stable
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateUpdateInProgress)
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateCreationDNS)
+		// not rolled out stable
+		newInstallation(&group.ID, &differentSequence, model.InstallationStateStable)
+		// not rolled out unstable
+		newInstallation(&group.ID, &differentSequence, model.InstallationStateUpdateInProgress)
+
+		groupStatus, err := client.GetGroupStatus(group.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+	})
+
+	t.Run("unknown group", func(t *testing.T) {
+		groupStatus, err := client.GetGroupStatus(model.NewID())
+		require.Nil(t, groupStatus)
+		require.Nil(t, err)
+	})
+}

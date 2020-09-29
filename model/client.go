@@ -714,6 +714,26 @@ func (c *Client) GetGroups(request *GetGroupsRequest) ([]*Group, error) {
 	}
 }
 
+// GetGroupStatus fetches the status for specified group from the configured provisioning server.
+func (c *Client) GetGroupStatus(groupID string) (*GroupStatus, error) {
+	resp, err := c.doGet(c.buildURL("/api/group/%s/status", groupID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return GroupStatusFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // JoinGroup joins an installation to the given group, leaving any existing group.
 func (c *Client) JoinGroup(groupID, installationID string) error {
 	resp, err := c.doPut(c.buildURL("/api/installation/%s/group/%s", installationID, groupID), nil)

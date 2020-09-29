@@ -567,3 +567,89 @@ func TestDeleteGroup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, group1, actualGroup1)
 }
+
+func TestGetGroupStatus(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	group1 := &model.Group{
+		Name:        "group1",
+		Description: "description1",
+		Version:     "version1",
+	}
+
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	t.Run("empty group", func(t *testing.T) {
+		expectedStatus := &model.GroupStatus{
+			InstallationsCount:           0,
+			InstallationsRolledOut:       0,
+			InstallationsAwaitingRollOut: 0,
+		}
+		groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+	})
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		GroupID:   &group1.ID,
+		Version:   "version",
+		DNS:       "dns.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateInstallation(installation1)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	t.Run("group with installation", func(t *testing.T) {
+		// unstable
+		expectedStatus := &model.GroupStatus{
+			InstallationsCount:           1,
+			InstallationsRolledOut:       0,
+			InstallationsAwaitingRollOut: 0,
+		}
+		groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+
+		// stable awaiting rollout
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		expectedStatus = &model.GroupStatus{
+			InstallationsCount:           1,
+			InstallationsRolledOut:       0,
+			InstallationsAwaitingRollOut: 1,
+		}
+		groupStatus, err = sqlStore.GetGroupStatus(group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+
+		// stable rolled out
+		installation1.GroupSequence = &group1.Sequence
+		err = sqlStore.UpdateInstallation(installation1)
+		require.NoError(t, err)
+
+		expectedStatus = &model.GroupStatus{
+			InstallationsCount:           1,
+			InstallationsRolledOut:       1,
+			InstallationsAwaitingRollOut: 0,
+		}
+		groupStatus, err = sqlStore.GetGroupStatus(group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupStatus)
+	})
+}
