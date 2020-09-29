@@ -170,10 +170,10 @@ func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRolling
 }
 
 // GetGroupStatus returns total number of installations in the group as well as number or
-// Installations already rolled out and awaiting rollout
+// Installations already rolled out and awaiting rollout.
 //
 // Note: This function uses the same conditions as GetGroupRollingMetadata to be more accurate
-// with the internal state seen by the Group Supervisor
+// with the internal state seen by the Group Supervisor.
 func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, error) {
 	group, err := sqlStore.GetGroup(groupID)
 	if err != nil {

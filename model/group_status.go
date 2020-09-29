@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-// GroupStatus represents the status of group rollout
+// GroupStatus represents the status of a group.
 type GroupStatus struct {
 	InstallationsCount           int64
 	InstallationsRolledOut       int64
