@@ -6,11 +6,13 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -172,15 +174,18 @@ var serverCmd = &cobra.Command{
 		if awsRegion == "" {
 			awsRegion = toolsAWS.DefaultAWSRegion
 		}
-		awsClient := toolsAWS.NewAWSClientWithConfig(
-			&sdkAWS.Config{
-				Region: sdkAWS.String(awsRegion),
-				// TODO: we should use Retryer for a more robust retry strategy.
-				// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
-				MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
-			},
-			logger,
-		)
+		awsConfig := &sdkAWS.Config{
+			Region: sdkAWS.String(awsRegion),
+			// TODO: we should use Retryer for a more robust retry strategy.
+			// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
+			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
+		}
+		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
+
+		err = checkRequirements(awsConfig, s3StateStore)
+		if err != nil {
+			return errors.Wrap(err, "failed health check")
+		}
 
 		resourceUtil := utils.NewResourceUtil(instanceID, awsClient)
 
@@ -270,6 +275,63 @@ var serverCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
+	for _, requiredUtility := range []string{
+		"terraform",
+		"helm",
+		"kops",
+		"kubectl",
+	} {
+		_, err := exec.LookPath(requiredUtility)
+		if err != nil {
+			return errors.Errorf("failed to find %s on the PATH", requiredUtility)
+		}
+	}
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return errors.Wrap(err, "failed to determine the current user's home directory")
+	}
+	sshDir := path.Join(homedir, ".ssh")
+	possibleKeys, err := ioutil.ReadDir(sshDir)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find a SSH key in %s", sshDir)
+
+	}
+	hasKeys := func() bool {
+		for _, k := range possibleKeys {
+			if k.IsDir() {
+				continue
+			}
+			keyFile, err := os.Open(path.Join(sshDir, k.Name()))
+			if err != nil {
+				continue
+			}
+			prefix := make([]byte, 3)
+			read, err := keyFile.Read(prefix)
+			if read == 0 || err != nil {
+				continue
+			}
+			if string(prefix) == "ssh" {
+				return true
+			}
+		}
+		return false
+	}()
+	if !hasKeys {
+		return errors.Errorf("failed to find an SSH key in %s", homedir)
+	}
+	if !strings.HasPrefix(s3StateStore, "cloud") {
+		return errors.Errorf("the state bucket in S3 provided (%s) does not start with 'cloud-' which is a required prefix", s3StateStore)
+	}
+	client := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
+	_, err = client.GetCloudEnvironmentName()
+	if err != nil {
+		return errors.Wrap(err, "failed to establish a connection with AWS")
+	}
+
+	return nil
 }
 
 // deprecationWarnings performs all checks for deprecated settings and warns if
