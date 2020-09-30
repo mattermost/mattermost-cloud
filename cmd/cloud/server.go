@@ -322,9 +322,6 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 	if !hasKeys {
 		return errors.Errorf("failed to find an SSH key in %s", homedir)
 	}
-	if !strings.HasPrefix(s3StateStore, "cloud") {
-		return errors.Errorf("the state bucket in S3 provided (%s) does not start with 'cloud-' which is a required prefix", s3StateStore)
-	}
 	client := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 	_, err = client.GetCloudEnvironmentName()
 	if err != nil {
