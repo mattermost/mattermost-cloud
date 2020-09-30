@@ -108,26 +108,37 @@ func MattermostRDSDatabaseName(installationID string) string {
 	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
 }
 
-// MattermostMySQLConnString formats the connection string used for accessing a Mattermost database.
-func MattermostMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+// MattermostMySQLConnStrings formats the connection string used for accessing a
+// Mattermost database.
+func MattermostMySQLConnStrings(schema, endpoint, username, password string) (string, string) {
+	dbConnection := fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, endpoint, schema)
+	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+		username, password, endpoint, schema)
+
+	return dbConnection, readReplicas
 }
 
-// RDSMySQLConnString formats the connection string used for accessing a MySQL RDS cluster.
+// RDSMySQLConnString formats the connection string used by the provisioner for
+// accessing a MySQL RDS cluster.
 func RDSMySQLConnString(schema, endpoint, username, password string) string {
 	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, endpoint, schema)
 }
 
-// MattermostPostgresConnString formats the connection string used by Mattermost
+// MattermostPostgresConnStrings formats the connection strings used by Mattermost
 // servers to access a PostgreSQL database.
-func MattermostPostgresConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
+func MattermostPostgresConnStrings(schema, endpoint, username, password string) (string, string) {
+	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
 		username, password, endpoint, schema)
+	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
+		username, password, endpoint, schema)
+
+	return dbConnection, readReplicas
 }
 
-// RDSPostgresConnString formats the connection string used for accessing a Postgres RDS cluster.
+// RDSPostgresConnString formats the connection string used by the provisioner
+// for accessing a Postgres RDS cluster.
 func RDSPostgresConnString(schema, endpoint, username, password string) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
 		username, password, endpoint, schema)

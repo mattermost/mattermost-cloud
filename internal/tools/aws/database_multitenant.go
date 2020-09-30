@@ -209,24 +209,27 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 		return nil, nil, errors.Wrap(err, "failed to unmarshal secret payload")
 	}
 
-	var databaseConnectionString string
+	var databaseConnectionString, databaseReadReplicasString string
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
-		databaseConnectionString = MattermostMySQLConnString(
-			installationDatabaseName,
-			*rdsCluster.Endpoint,
-			installationSecret.MasterUsername,
-			installationSecret.MasterPassword,
-		)
+		databaseConnectionString, databaseReadReplicasString =
+			MattermostMySQLConnStrings(
+				installationDatabaseName,
+				*rdsCluster.Endpoint,
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+			)
 	} else {
-		databaseConnectionString = MattermostPostgresConnString(
-			installationDatabaseName,
-			*rdsCluster.Endpoint,
-			installationSecret.MasterUsername,
-			installationSecret.MasterPassword,
-		)
+		databaseConnectionString, databaseReadReplicasString =
+			MattermostPostgresConnStrings(
+				installationDatabaseName,
+				*rdsCluster.Endpoint,
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+			)
 	}
 	secretStringData := map[string]string{
-		"DB_CONNECTION_STRING": databaseConnectionString,
+		"DB_CONNECTION_STRING":              databaseConnectionString,
+		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
 	}
 
 	databaseSecret := &corev1.Secret{

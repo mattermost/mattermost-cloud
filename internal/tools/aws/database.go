@@ -23,7 +23,9 @@ import (
 )
 
 const mysqlConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
+const mysqlConnReaderStringTemplate = "%s:%s@tcp(%s:3306)/mattermost?readTimeout=30s&writeTimeout=30s"
 const postgresConnStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
+const postgresConnReaderStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
 
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
@@ -148,32 +150,36 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		return nil, nil, err
 	}
 
-	result, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+	dbClusters, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(result.DBClusters) != 1 {
-		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(result.DBClusters))
+	if len(dbClusters.DBClusters) != 1 {
+		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(dbClusters.DBClusters))
 	}
 
-	var connTemplate, databaseConnectionCheck string
+	var connTemplate, readerTemplate, databaseConnectionCheck string
 	switch d.databaseType {
 	case model.DatabaseEngineTypeMySQL:
 		connTemplate = mysqlConnStringTemplate
-		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *result.DBClusters[0].Endpoint)
+		readerTemplate = mysqlConnReaderStringTemplate
+		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *dbClusters.DBClusters[0].Endpoint)
 	case model.DatabaseEngineTypePostgres:
 		connTemplate = postgresConnStringTemplate
+		readerTemplate = postgresConnReaderStringTemplate
 	default:
 		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
-	databaseConnectionString := fmt.Sprintf(connTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *result.DBClusters[0].Endpoint)
+	databaseConnectionString := fmt.Sprintf(connTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbClusters.DBClusters[0].Endpoint)
+	databaseConnectionReaderString := fmt.Sprintf(readerTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbClusters.DBClusters[0].ReaderEndpoint)
 	secretStringData := map[string]string{
-		"DB_CONNECTION_STRING": databaseConnectionString,
+		"DB_CONNECTION_STRING":              databaseConnectionString,
+		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseConnectionReaderString,
 	}
 	if len(databaseConnectionCheck) != 0 {
 		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
