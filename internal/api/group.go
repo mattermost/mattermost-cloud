@@ -26,7 +26,6 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
 	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
 	groupRouter.Handle("/status", addContext(handleGetGroupStatus)).Methods("GET")
-
 }
 
 // handleGetGroup responds to GET /api/group/{group}, returning the group in question.

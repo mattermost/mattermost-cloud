@@ -497,9 +497,9 @@ func TestGroupStatus(t *testing.T) {
 
 	t.Run("empty group", func(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
-			InstallationsCount:           0,
-			InstallationsRolledOut:       0,
-			InstallationsAwaitingRollOut: 0,
+			InstallationsTotal:          0,
+			InstallationsUpdated:        0,
+			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := client.GetGroupStatus(group.ID)
 		require.NoError(t, err)
@@ -508,9 +508,9 @@ func TestGroupStatus(t *testing.T) {
 
 	t.Run("ignore different groups", func(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
-			InstallationsCount:           0,
-			InstallationsRolledOut:       0,
-			InstallationsAwaitingRollOut: 0,
+			InstallationsTotal:          0,
+			InstallationsUpdated:        0,
+			InstallationsAwaitingUpdate: 0,
 		}
 		ignoredGroup, err := client.CreateGroup(&model.CreateGroupRequest{
 			Name:        "group2",
@@ -530,9 +530,9 @@ func TestGroupStatus(t *testing.T) {
 
 	t.Run("count installations", func(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
-			InstallationsCount:           6,
-			InstallationsRolledOut:       2,
-			InstallationsAwaitingRollOut: 1,
+			InstallationsTotal:          6,
+			InstallationsUpdated:        2,
+			InstallationsAwaitingUpdate: 1,
 		}
 		var differentSequence int64 = -1
 

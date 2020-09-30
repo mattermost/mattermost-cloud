@@ -267,7 +267,7 @@ var groupListCmd = &cobra.Command{
 
 var groupGetStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Get a particular groups status.",
+	Short: "Get a particular group's status.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 

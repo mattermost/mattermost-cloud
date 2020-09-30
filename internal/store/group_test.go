@@ -585,9 +585,9 @@ func TestGetGroupStatus(t *testing.T) {
 
 	t.Run("empty group", func(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
-			InstallationsCount:           0,
-			InstallationsRolledOut:       0,
-			InstallationsAwaitingRollOut: 0,
+			InstallationsTotal:          0,
+			InstallationsUpdated:        0,
+			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
 		require.NoError(t, err)
@@ -614,9 +614,9 @@ func TestGetGroupStatus(t *testing.T) {
 	t.Run("group with installation", func(t *testing.T) {
 		// unstable
 		expectedStatus := &model.GroupStatus{
-			InstallationsCount:           1,
-			InstallationsRolledOut:       0,
-			InstallationsAwaitingRollOut: 0,
+			InstallationsTotal:          1,
+			InstallationsUpdated:        0,
+			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
 		require.NoError(t, err)
@@ -630,9 +630,9 @@ func TestGetGroupStatus(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 
 		expectedStatus = &model.GroupStatus{
-			InstallationsCount:           1,
-			InstallationsRolledOut:       0,
-			InstallationsAwaitingRollOut: 1,
+			InstallationsTotal:          1,
+			InstallationsUpdated:        0,
+			InstallationsAwaitingUpdate: 1,
 		}
 		groupStatus, err = sqlStore.GetGroupStatus(group1.ID)
 		require.NoError(t, err)
@@ -644,9 +644,9 @@ func TestGetGroupStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedStatus = &model.GroupStatus{
-			InstallationsCount:           1,
-			InstallationsRolledOut:       1,
-			InstallationsAwaitingRollOut: 0,
+			InstallationsTotal:          1,
+			InstallationsUpdated:        1,
+			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err = sqlStore.GetGroupStatus(group1.ID)
 		require.NoError(t, err)

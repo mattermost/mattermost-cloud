@@ -11,9 +11,9 @@ import (
 
 // GroupStatus represents the status of a group.
 type GroupStatus struct {
-	InstallationsCount           int64
-	InstallationsRolledOut       int64
-	InstallationsAwaitingRollOut int64
+	InstallationsTotal          int64
+	InstallationsUpdated        int64
+	InstallationsAwaitingUpdate int64
 }
 
 // GroupStatusFromReader decodes a json-encoded group status from the given io.Reader.
