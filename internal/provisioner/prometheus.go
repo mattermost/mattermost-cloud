@@ -190,7 +190,7 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 	}
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", p.cluster.ID, privateDomainName)
 
-	helmValueArguments := fmt.Sprintf("prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", prometheusDNS, strings.Join(p.provisioner.allowCIDRRangeList, "\\,"))
+	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.provisioner.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
 		chartDeploymentName: "prometheus",
