@@ -52,6 +52,7 @@ type Store interface {
 	LockGroupAPI(groupID string) error
 	UnlockGroupAPI(groupID string) error
 	DeleteGroup(groupID string) error
+	GetGroupStatus(groupID string) (*model.GroupStatus, error)
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)

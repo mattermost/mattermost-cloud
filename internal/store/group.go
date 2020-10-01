@@ -126,39 +126,26 @@ func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRolling
 	metadata := &GroupRollingMetadata{InstallationIDsToBeRolled: []string{}}
 
 	var installations []*model.Installation
-	installationBuilder := sq.
-		Select("ID").
-		From("Installation").
-		Where("GroupID = ?", group.ID).
-		Where("(GroupSequence IS NULL OR GroupSequence != ?)", group.Sequence).
-		Where("State = ?", model.InstallationStateStable).
-		Where("DeleteAt = 0")
-	err = sqlStore.selectBuilder(sqlStore.db, &installations, installationBuilder)
+	err = sqlStore.queryInstallationsToBeRolledOut(
+		[]string{"ID"},
+		group,
+		&installations,
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to query for installations to be roll out")
 	}
 	for _, installation := range installations {
 		metadata.InstallationIDsToBeRolled = append(metadata.InstallationIDsToBeRolled, installation.ID)
 	}
 
-	var totalResult countResult
-	installationBuilder = sq.
-		Select("Count (*)").
-		From("Installation").
-		Where("GroupID = ?", group.ID).
-		Where("DeleteAt = 0")
-	err = sqlStore.selectBuilder(sqlStore.db, &totalResult, installationBuilder)
+	count, err := sqlStore.countInstallationsInGroup(group)
 	if err != nil {
-		return nil, err
-	}
-	count, err := totalResult.value()
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
 	}
 	metadata.InstallationTotalCount = count
 
 	var stableResult countResult
-	installationBuilder = sq.
+	installationBuilder := sq.
 		Select("Count (*)").
 		From("Installation").
 		Where("GroupID = ?", group.ID).
@@ -166,11 +153,11 @@ func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRolling
 		Where("DeleteAt = 0")
 	err = sqlStore.selectBuilder(sqlStore.db, &stableResult, installationBuilder)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to query for stable installations count in a group")
 	}
 	count, err = stableResult.value()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get count result of stable installations")
 	}
 	metadata.InstallationStableCount = count
 	metadata.InstallationNonStableCount = metadata.InstallationTotalCount - metadata.InstallationStableCount
@@ -180,6 +167,89 @@ func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRolling
 	}
 
 	return metadata, nil
+}
+
+// GetGroupStatus returns total number of installations in the group as well as number or
+// Installations already rolled out and awaiting rollout.
+//
+// Note: This function uses the same conditions as GetGroupRollingMetadata to be more accurate
+// with the internal state seen by the Group Supervisor.
+func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, error) {
+	group, err := sqlStore.GetGroup(groupID)
+	if err != nil {
+		return nil, err
+	}
+	if group == nil {
+		return nil, nil
+	}
+
+	var toBeRolledResult countResult
+	err = sqlStore.queryInstallationsToBeRolledOut(
+		[]string{"Count (*)"},
+		group,
+		&toBeRolledResult,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for count of installation to be roll out")
+	}
+	installationsToBeRolled, err := toBeRolledResult.value()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get count result of installations to be roll out")
+	}
+
+	var rolledOutResult countResult
+	installationBuilder := sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("GroupSequence = ?", group.Sequence).
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &rolledOutResult, installationBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for rolled out installations")
+	}
+	rolledOutInstallations, err := rolledOutResult.value()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get count result of rolled out installations")
+	}
+
+	totalInstallations, err := sqlStore.countInstallationsInGroup(group)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
+	}
+
+	return &model.GroupStatus{
+		InstallationsTotal:          totalInstallations,
+		InstallationsUpdated:        rolledOutInstallations,
+		InstallationsAwaitingUpdate: installationsToBeRolled,
+	}, nil
+}
+
+func (sqlStore *SQLStore) queryInstallationsToBeRolledOut(columns []string, group *model.Group, dest interface{}) error {
+	builder := sq.
+		Select(columns...).
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("(GroupSequence IS NULL OR GroupSequence != ?)", group.Sequence).
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+
+	return sqlStore.selectBuilder(sqlStore.db, dest, builder)
+}
+
+func (sqlStore *SQLStore) countInstallationsInGroup(group *model.Group) (int64, error) {
+	var totalResult countResult
+	builder := sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("DeleteAt = 0")
+	err := sqlStore.selectBuilder(sqlStore.db, &totalResult, builder)
+	if err != nil {
+		return 0, err
+	}
+	return totalResult.value()
 }
 
 // GetGroup fetches the given group by id.
