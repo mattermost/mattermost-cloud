@@ -7,14 +7,19 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type prometheus struct {
@@ -65,8 +70,60 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 
 func (p *prometheus) CreateOrUpgrade() error {
 	logger := p.logger.WithField("prometheus-action", "create")
+
+	environment, err := p.awsClient.GetCloudEnvironmentName()
+	if err != nil {
+		return errors.Wrap(err, "failed to get environment name for thanos objstore secret")
+	}
+
+	if environment == "" {
+		return errors.New("cannot create a thanos objstore secret if environment is empty")
+	}
+
+	awsRegion := os.Getenv("AWS_REGION")
+	if awsRegion == "" {
+		awsRegion = aws.DefaultAWSRegion
+	}
+
+	secretData := map[string]interface{}{
+		"type": "s3",
+		"config": map[string]string{
+			"bucket":   fmt.Sprintf("cloud-%s-prometheus-metrics", environment),
+			"endpoint": fmt.Sprintf("s3.%s.amazonaws.com", awsRegion),
+		},
+	}
+
+	secret, err := yaml.Marshal(secretData)
+	if err != nil {
+		return errors.Wrap(err, "thanos objstore secret yaml marshal failed")
+	}
+
+	thanosObjStoreSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "thanos-objstore-config",
+		},
+		StringData: map[string]string{
+			"thanos.yaml": string(secret),
+		},
+	}
+
+	k8sClient, err := k8s.NewFromFile(p.kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to set up the k8s client")
+	}
+
+	_, err = k8sClient.CreateOrUpdateNamespace("prometheus")
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the prometheus namespace")
+	}
+
+	_, err = k8sClient.CreateOrUpdateSecret("prometheus", thanosObjStoreSecret)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the Thanos object storage secret")
+	}
+
 	h := p.NewHelmDeployment()
-	err := h.Update()
+	err = h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Helm deployment")
 	}
@@ -133,17 +190,17 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 	}
 	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", p.cluster.ID, privateDomainName)
 
-	helmValueArguments := fmt.Sprintf("server.ingress.hosts={%s},server.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", prometheusDNS, strings.Join(p.provisioner.allowCIDRRangeList, "\\,"))
+	helmValueArguments := fmt.Sprintf("prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", prometheusDNS, strings.Join(p.provisioner.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
 		chartDeploymentName: "prometheus",
-		chartName:           "stable/prometheus",
+		chartName:           "prometheus-community/kube-prometheus-stack",
 		kops:                p.kops,
 		kopsProvisioner:     p.provisioner,
 		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          "helm-charts/prometheus_values.yaml",
+		valuesPath:          "helm-charts/prometheus_operator_values.yaml",
 		desiredVersion:      p.desiredVersion,
 	}
 }
@@ -157,7 +214,7 @@ func (p *prometheus) DesiredVersion() string {
 }
 
 func (p *prometheus) ActualVersion() string {
-	return strings.TrimPrefix(p.actualVersion, "prometheus-")
+	return strings.TrimPrefix(p.actualVersion, "kube-prometheus-stack-")
 }
 
 func (p *prometheus) updateVersion(h *helmDeployment) error {

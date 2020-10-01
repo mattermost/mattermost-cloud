@@ -22,7 +22,7 @@ const (
 
 const (
 	// PrometheusDefaultVersion defines the default version for the Helm chart
-	PrometheusDefaultVersion = "10.4.0"
+	PrometheusDefaultVersion = "9.4.4"
 	// NginxDefaultVersion defines the default version for the Helm chart
 	NginxDefaultVersion = "2.15.0"
 	// FluentbitDefaultVersion defines the default version for the Helm chart
