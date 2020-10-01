@@ -182,6 +182,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"DNS": installation.DNS},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
