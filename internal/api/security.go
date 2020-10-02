@@ -35,7 +35,7 @@ func initSecurity(apiRouter *mux.Router, context *Context) {
 	securityGroupRouter.Handle("/api/unlock", addContext(handleGroupUnlockAPI)).Methods("POST")
 }
 
-// handleClusterLockAPI responds to POST /api/cluster/{cluster}/api/lock,
+// handleClusterLockAPI responds to POST /api/security/cluster/{cluster}/api/lock,
 // locking API changes for this cluster.
 func handleClusterLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -65,7 +65,7 @@ func handleClusterLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleClusterUnlockAPI responds to POST /api/cluster/{cluster}/api/unlock,
+// handleClusterUnlockAPI responds to POST /api/security/cluster/{cluster}/api/unlock,
 // unlocking API changes for this cluster.
 func handleClusterUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -95,7 +95,7 @@ func handleClusterUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleInstallationLockAPI responds to POST /api/installation/{installation}/api/lock,
+// handleInstallationLockAPI responds to POST /api/security/installation/{installation}/api/lock,
 // locking API changes for this installation.
 func handleInstallationLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -125,7 +125,7 @@ func handleInstallationLockAPI(c *Context, w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleInstallationUnlockAPI responds to POST /api/installation/{installation}/api/unlock,
+// handleInstallationUnlockAPI responds to POST /api/security/installation/{installation}/api/unlock,
 // unlocking API changes for this installation.
 func handleInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -155,7 +155,7 @@ func handleInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleClusterInstallationLockAPI responds to POST /api/cluster_installation/{cluster_installation}/api/lock,
+// handleClusterInstallationLockAPI responds to POST /api/security/cluster_installation/{cluster_installation}/api/lock,
 // locking API changes for this cluster installation.
 func handleClusterInstallationLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -185,7 +185,7 @@ func handleClusterInstallationLockAPI(c *Context, w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleClusterInstallationUnlockAPI responds to POST /api/cluster_installation/{cluster_installation}/api/unlock,
+// handleClusterInstallationUnlockAPI responds to POST /api/security/cluster_installation/{cluster_installation}/api/unlock,
 // unlocking API changes for this cluster installation.
 func handleClusterInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -215,7 +215,7 @@ func handleClusterInstallationUnlockAPI(c *Context, w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleGroupLockAPI responds to POST /api/group/{group}/api/lock,
+// handleGroupLockAPI responds to POST /api/security/group/{group}/api/lock,
 // locking API changes for this group.
 func handleGroupLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -245,7 +245,7 @@ func handleGroupLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// handleGroupUnlockAPI responds to POST /api/group/{group}/api/unlock,
+// handleGroupUnlockAPI responds to POST /api/security/group/{group}/api/unlock,
 // unlocking API changes for this group.
 func handleGroupUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
