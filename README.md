@@ -30,7 +30,7 @@ The following is required to properly run the cloud server.
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
 3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.17.X
-4. Install [Helm](https://helm.sh/docs/intro/install/) version 2.16.X
+4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.3.X as `helm3` or version 2.16.X as `helm`
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
 
@@ -244,3 +244,12 @@ Please follow the steps below for the reprovisioning of existing clusters:
 - Delete old NGINX helm charts.
   - ```helm del --purge public-nginx```
   - ```helm del --purge private-nginx```
+
+#### Running with Helm 2
+
+Running the application with Helm 2 support instead of Helm 3 is still supported but will be soon removed. 
+To run server with Helm 2, use:
+```bash
+cloud server --state-store=<your-s3-bucket> --helm2=true
+```
+

@@ -12,17 +12,47 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
+
+// HelmUtilsManager is a wrapper for Helm related operations based on used version
+type HelmUtilsManager struct {
+	deprecatedHelm2    bool
+	helmClientProvider func(logger log.FieldLogger) (*helm.Cmd, error)
+}
+
+// NewHelmUtilsManager creates new HelmUtilsManager
+func NewHelmUtilsManager(useHelm2 bool) *HelmUtilsManager {
+	provider := helm.NewV3
+	if useHelm2 {
+		provider = helm.New
+	}
+
+	return &HelmUtilsManager{
+		deprecatedHelm2:    useHelm2,
+		helmClientProvider: provider,
+	}
+}
+
+// addUpgradeArgs adds version specific arguments for `helm upgrade` command.
+func (um *HelmUtilsManager) addUpgradeArgs(args []string) []string {
+	if !um.deprecatedHelm2 {
+		args = append(args, "--create-namespace")
+	}
+	return args
+}
+
+// addListArgs adds version specific arguments for `helm list` command.
+func (um *HelmUtilsManager) addListArgs(args []string) []string {
+	if !um.deprecatedHelm2 {
+		args = append(args, "--all-namespaces")
+	}
+	return args
+}
 
 // helmDeployment deploys Helm charts.
 type helmDeployment struct {
@@ -39,10 +69,14 @@ type helmDeployment struct {
 	logger          log.FieldLogger
 }
 
-func installHelm(kops *kops.Cmd, repos map[string]string, logger log.FieldLogger) error {
+func (um *HelmUtilsManager) installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
 	logger.Info("Installing Helm")
 
-	err := helmSetup(logger, kops)
+	if !um.deprecatedHelm2 {
+		return nil
+	}
+
+	err := um.helmSetup(logger, kops)
 	if err != nil {
 		return errors.Wrap(err, "unable to install helm")
 	}
@@ -59,11 +93,11 @@ func installHelm(kops *kops.Cmd, repos map[string]string, logger log.FieldLogger
 	return nil
 }
 
-func (d *helmDeployment) Update() error {
+func (d *helmDeployment) Update(helmUtilManager *HelmUtilsManager) error {
 	logger := d.logger.WithField("helm-update", d.chartName)
 
 	logger.Infof("Refreshing helm chart %s -- may trigger service upgrade", d.chartName)
-	err := upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
+	err := helmUtilManager.upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("got an error trying to upgrade the helm chart %s", d.chartName))
 	}
@@ -89,7 +123,7 @@ func waitForHelmRunning(ctx context.Context, configPath string) error {
 }
 
 // helmRepoAdd adds new helm repos
-func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
+func (um *HelmUtilsManager) helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 	logger.Infof("Adding helm repo %s", repoName)
 	arguments := []string{
 		"repo",
@@ -98,7 +132,7 @@ func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 		repoURL,
 	}
 
-	helmClient, err := helm.New(logger)
+	helmClient, err := um.helmClientProvider(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -109,17 +143,17 @@ func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 		return errors.Wrapf(err, "unable to add repo %s", repoName)
 	}
 
-	return helmRepoUpdate(logger)
+	return um.helmRepoUpdate(logger)
 }
 
 // helmRepoUpdate updates the helm repos to get latest available charts
-func helmRepoUpdate(logger log.FieldLogger) error {
+func (um *HelmUtilsManager) helmRepoUpdate(logger log.FieldLogger) error {
 	arguments := []string{
 		"repo",
 		"update",
 	}
 
-	helmClient, err := helm.New(logger)
+	helmClient, err := um.helmClientProvider(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -133,40 +167,8 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 	return nil
 }
 
-// installHelmChart is used to install Helm charts.
-func installHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
-	arguments := []string{
-		"--debug",
-		"install",
-		"--kubeconfig", configPath,
-		"-f", chart.valuesPath,
-		chart.chartName,
-		"--namespace", chart.namespace,
-		"--name", chart.chartDeploymentName,
-	}
-	if chart.setArgument != "" {
-		arguments = append(arguments, "--set", chart.setArgument)
-	}
-	if chart.desiredVersion != "" {
-		arguments = append(arguments, "--version", chart.desiredVersion)
-	}
-
-	helmClient, err := helm.New(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
-	}
-	defer helmClient.Close()
-
-	err = helmClient.RunGenericCommand(arguments...)
-	if err != nil {
-		return errors.Wrapf(err, "unable to install helm chart %s", chart.chartName)
-	}
-
-	return nil
-}
-
 // upgradeHelmChart is used to upgrade Helm deployments.
-func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
+func (um *HelmUtilsManager) upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	arguments := []string{
 		"--debug",
 		"upgrade",
@@ -177,6 +179,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"--namespace", chart.namespace,
 		"--install",
 	}
+	arguments = um.addUpgradeArgs(arguments)
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
@@ -184,7 +187,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
-	helmClient, err := helm.New(logger)
+	helmClient, err := um.helmClientProvider(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -199,126 +202,84 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 }
 
 type helmReleaseJSON struct {
-	Name       string `json:"Name"`
-	Revision   int    `json:"Revision"`
-	Updated    string `json:"Updated"`
-	Status     string `json:"Status"`
-	Chart      string `json:"Chart"`
-	AppVersion string `json:"AppVersion"`
-	Namespace  string `json:"Namespace"`
+	Name       string `json:"name"`
+	Revision   string `json:"revision"`
+	Updated    string `json:"updated"`
+	Status     string `json:"status"`
+	Chart      string `json:"chart"`
+	AppVersion string `json:"appVersion"`
+	Namespace  string `json:"namespace"`
+}
+
+type helmReleaseList interface {
+	asListOutput() *HelmListOutput
 }
 
 // HelmListOutput is a struct for holding the unmarshaled
 // representation of the output from helm list --output json
-type HelmListOutput struct {
-	Releases []helmReleaseJSON `json:"Releases"`
+type HelmListOutput []helmReleaseJSON
+
+func (l HelmListOutput) asSlice() []helmReleaseJSON {
+	return l
 }
 
-func (d *helmDeployment) List() (*HelmListOutput, error) {
+func (l HelmListOutput) asListOutput() *HelmListOutput {
+	return &l
+}
+
+func (d *helmDeployment) List(helmUtilManager *HelmUtilsManager) (*HelmListOutput, error) {
 	arguments := []string{
 		"list",
 		"--kubeconfig", d.kops.GetKubeConfigPath(),
 		"--output", "json",
 	}
-
-	// TODO: Not using helm client here due to requirement for raw output
-	cmd := exec.Command("helm", arguments...)
+	arguments = helmUtilManager.addListArgs(arguments)
 
 	logger := d.logger.WithFields(log.Fields{
-		"cmd": cmd.Path,
+		"cmd": "helm",
 	})
 
-	rawOutput, err := cmd.Output()
+	helmClient, err := helmUtilManager.helmClientProvider(logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create helm wrapper")
+	}
+	defer helmClient.Close()
+
+	rawOutput, err := helmClient.RunCommandRaw(arguments...)
 	if err != nil {
 		if len(rawOutput) > 0 {
 			logger.Debugf("Helm output was:\n%s\n", string(rawOutput))
 		}
-		return nil, err
+		return nil, errors.Wrap(err, "while listing Helm Releases")
 	}
 
-	output := &HelmListOutput{}
-	err = json.Unmarshal(rawOutput, output)
+	var helmList helmReleaseList
+	if helmUtilManager.deprecatedHelm2 {
+		helmList = &Helm2ListOutput{}
+	} else {
+		helmList = &HelmListOutput{}
+	}
+
+	err = json.Unmarshal(rawOutput, helmList)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal JSON output from helm list")
 	}
 
-	return output, nil
+	return helmList.asListOutput(), nil
 
 }
 
-func (d *helmDeployment) Version() (string, error) {
-	output, err := d.List()
+func (d *helmDeployment) Version(helmUtilManager *HelmUtilsManager) (string, error) {
+	output, err := d.List(helmUtilManager)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "while getting Helm Deployment version")
 	}
 
-	for _, release := range output.Releases {
+	for _, release := range output.asSlice() {
 		if release.Name == d.chartDeploymentName {
 			return release.Chart, nil
 		}
 	}
 
 	return "", errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
-}
-
-// helmSetup is used for the initial setup of Helm in cluster.
-func helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up the k8s client")
-	}
-
-	logger.Info("Creating Tiller service account")
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
-	}
-
-	ctx := context.TODO()
-	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Get(ctx, "tiller", metav1.GetOptions{})
-	if err != nil {
-		// need to create cluster role bindings for Tiller since they couldn't be found
-
-		_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(ctx, serviceAccount, metav1.CreateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to set up Tiller service account for Helm")
-		}
-
-		logger.Info("Creating Tiller cluster role bind")
-		roleBinding := &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
-			Subjects: []rbacv1.Subject{
-				{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
-			},
-			RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
-		}
-
-		_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(ctx, roleBinding, metav1.CreateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to create cluster role bindings")
-		}
-	}
-
-	err = helmInit(logger, kops)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// helmInit calls helm init and doesn't do anything fancy
-func helmInit(logger log.FieldLogger, kops *kops.Cmd) error {
-	logger.Info("Upgrading Helm")
-	helmClient, err := helm.New(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
-	}
-	defer helmClient.Close()
-
-	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
-	if err != nil {
-		return errors.Wrap(err, "failed to upgrade helm")
-	}
-
-	return nil
 }

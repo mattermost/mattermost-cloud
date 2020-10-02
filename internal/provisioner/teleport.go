@@ -61,8 +61,8 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion string, provisione
 
 }
 
-func (n *teleport) updateVersion(h *helmDeployment) error {
-	actualVersion, err := h.Version()
+func (n *teleport) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeployment) error {
+	actualVersion, err := h.Version(helmUtilManager)
 	if err != nil {
 		return err
 	}
@@ -71,14 +71,14 @@ func (n *teleport) updateVersion(h *helmDeployment) error {
 	return nil
 }
 
-func (n *teleport) CreateOrUpgrade() error {
+func (n *teleport) CreateOrUpgrade(helmUtilManager *HelmUtilsManager) error {
 	h := n.NewHelmDeployment()
-	err := h.Update()
+	err := h.Update(helmUtilManager)
 	if err != nil {
 		return err
 	}
 
-	err = n.updateVersion(h)
+	err = n.updateVersion(helmUtilManager, h)
 	return err
 }
 

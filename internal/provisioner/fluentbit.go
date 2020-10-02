@@ -54,15 +54,15 @@ func (f *fluentbit) Destroy() error {
 	return nil
 }
 
-func (f *fluentbit) CreateOrUpgrade() error {
+func (f *fluentbit) CreateOrUpgrade(helmUtilManager *HelmUtilsManager) error {
 	logger := f.logger.WithField("fluentbit-action", "upgrade")
 	h := f.NewHelmDeployment(logger)
-	err := h.Update()
+	err := h.Update(helmUtilManager)
 	if err != nil {
 		return err
 	}
 
-	err = f.updateVersion(h)
+	err = f.updateVersion(helmUtilManager, h)
 	return err
 }
 
@@ -133,8 +133,8 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	}
 }
 
-func (f *fluentbit) updateVersion(h *helmDeployment) error {
-	actualVersion, err := h.Version()
+func (f *fluentbit) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeployment) error {
+	actualVersion, err := h.Version(helmUtilManager)
 	if err != nil {
 		return err
 	}

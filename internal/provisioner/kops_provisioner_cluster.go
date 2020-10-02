@@ -41,12 +41,13 @@ type KopsProvisioner struct {
 	resourceUtil            *utils.ResourceUtil
 	logger                  log.FieldLogger
 	store                   model.InstallationDatabaseStoreInterface
+	helmUtilsManager        *HelmUtilsManager
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 // TODO(gsagula): Consider replacing all these paramaters with a struct for readability.
 func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, allowCIDRRangeList []string,
-	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
+	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface, deprecatedHelm2 bool) *KopsProvisioner {
 
 	logger = logger.WithField("provisioner", "kops")
 
@@ -58,6 +59,7 @@ func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool
 		resourceUtil:            resourceUtil,
 		owner:                   owner,
 		store:                   store,
+		helmUtilsManager:        NewHelmUtilsManager(deprecatedHelm2),
 	}
 }
 

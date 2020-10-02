@@ -51,8 +51,8 @@ func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, awsClie
 
 }
 
-func (n *nginx) updateVersion(h *helmDeployment) error {
-	actualVersion, err := h.Version()
+func (n *nginx) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeployment) error {
+	actualVersion, err := h.Version(helmUtilManager)
 	if err != nil {
 		return err
 	}
@@ -61,17 +61,17 @@ func (n *nginx) updateVersion(h *helmDeployment) error {
 	return nil
 }
 
-func (n *nginx) CreateOrUpgrade() error {
+func (n *nginx) CreateOrUpgrade(helmUtilManager *HelmUtilsManager) error {
 	h, err := n.NewHelmDeployment()
 	if err != nil {
 		return errors.Wrap(err, "failed to generate nginx helm deployment")
 	}
-	err = h.Update()
+	err = h.Update(helmUtilManager)
 	if err != nil {
 		return err
 	}
 
-	err = n.updateVersion(h)
+	err = n.updateVersion(helmUtilManager, h)
 	return err
 }
 

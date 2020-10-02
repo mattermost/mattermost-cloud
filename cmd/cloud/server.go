@@ -59,6 +59,9 @@ func init() {
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
+
+	// TODO: Remove after the migration to Helm 3 is finished
+	serverCmd.PersistentFlags().Bool("helm2", false, "Use deprecated Helm 2.")
 }
 
 var serverCmd = &cobra.Command{
@@ -142,6 +145,8 @@ var serverCmd = &cobra.Command{
 			}
 		}
 
+		useHelm2, _ := command.Flags().GetBool("helm2")
+
 		logger.WithFields(logrus.Fields{
 			"build-hash":                             model.BuildHash,
 			"cluster-supervisor":                     clusterSupervisor,
@@ -158,6 +163,7 @@ var serverCmd = &cobra.Command{
 			"keep-filestore-data":                    keepFilestoreData,
 			"debug":                                  debugMode,
 			"dev-mode":                               devMode,
+			"helm2":                                  useHelm2,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -182,7 +188,7 @@ var serverCmd = &cobra.Command{
 		}
 		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 
-		err = checkRequirements(awsConfig, s3StateStore)
+		err = checkRequirements(awsConfig, s3StateStore, useHelm2)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
 		}
@@ -198,6 +204,7 @@ var serverCmd = &cobra.Command{
 			resourceUtil,
 			logger,
 			sqlStore,
+			useHelm2,
 		)
 
 		var multiDoer supervisor.MultiDoer
@@ -277,13 +284,19 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
-	for _, requiredUtility := range []string{
+func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string, useHelm2 bool) error {
+	utilities := []string{
 		"terraform",
-		"helm",
 		"kops",
 		"kubectl",
-	} {
+	}
+	if useHelm2 {
+		utilities = append(utilities, "helm")
+	} else {
+		utilities = append(utilities, "helm3")
+	}
+
+	for _, requiredUtility := range utilities {
 		_, err := exec.LookPath(requiredUtility)
 		if err != nil {
 			return errors.Errorf("failed to find %s on the PATH", requiredUtility)

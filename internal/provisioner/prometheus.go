@@ -63,15 +63,15 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 	}, nil
 }
 
-func (p *prometheus) CreateOrUpgrade() error {
+func (p *prometheus) CreateOrUpgrade(helmUtilManager *HelmUtilsManager) error {
 	logger := p.logger.WithField("prometheus-action", "create")
 	h := p.NewHelmDeployment()
-	err := h.Update()
+	err := h.Update(helmUtilManager)
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Helm deployment")
 	}
 
-	err = p.updateVersion(h)
+	err = p.updateVersion(helmUtilManager, h)
 	if err != nil {
 		return err
 	}
@@ -160,8 +160,8 @@ func (p *prometheus) ActualVersion() string {
 	return strings.TrimPrefix(p.actualVersion, "prometheus-")
 }
 
-func (p *prometheus) updateVersion(h *helmDeployment) error {
-	actualVersion, err := h.Version()
+func (p *prometheus) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeployment) error {
+	actualVersion, err := h.Version(helmUtilManager)
 	if err != nil {
 		return err
 	}
