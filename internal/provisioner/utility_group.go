@@ -76,6 +76,11 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
+	prometheusOperator, err := newPrometheusOperatorHandle(cluster, provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
+	}
+
 	desiredVersion, err = cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
 	if err != nil {
 		return nil, err
@@ -99,7 +104,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, fluentbit, teleport},
+		utilities:   []Utility{nginx, prometheus, prometheusOperator, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
@@ -148,17 +153,39 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		}
 	}
 
+	// TODO: This part needs to be removed and the code bellow uncommented as soon as all clusters are reprovisioned.
+	// Its a temporary migration solution to migrate from Prometheus to Prometheus Operator.
 	for _, utility := range group.utilities {
-		err := utility.CreateOrUpgrade()
-		if err != nil {
-			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
-		}
+		if utility.Name() == "prometheus" && utility.ActualVersion() != "" {
+			logger.Info("Prometheus utility group is deployed in the cluster. Destroying...")
+			err := utility.Destroy()
+			if err != nil {
+				return errors.Wrap(err, "failed to destroy Prometheus cluster utility")
+			}
+		} else {
+			err := utility.CreateOrUpgrade()
+			if err != nil {
+				return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+			}
 
-		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
-		if err != nil {
-			return err
+			err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	// for _, utility := range group.utilities {
+	// 	err := utility.CreateOrUpgrade()
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+	// 	}
+
+	// 	err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
