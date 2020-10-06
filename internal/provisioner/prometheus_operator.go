@@ -62,7 +62,7 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 		awsClient:      awsClient,
 		cluster:        cluster,
 		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.PrometheusCanonicalName),
+		logger:         logger.WithField("cluster-utility", model.PrometheusOperatorCanonicalName),
 		provisioner:    provisioner,
 		desiredVersion: version,
 	}, nil
@@ -183,6 +183,10 @@ func (p *prometheusOperator) Destroy() error {
 	return nil
 }
 
+func (p *prometheusOperator) Migrate() error {
+	return nil
+}
+
 func (p *prometheusOperator) NewHelmDeployment() *helmDeployment {
 	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(p.logger)
 	if err != nil {
@@ -206,7 +210,7 @@ func (p *prometheusOperator) NewHelmDeployment() *helmDeployment {
 }
 
 func (p *prometheusOperator) Name() string {
-	return model.PrometheusCanonicalName
+	return model.PrometheusOperatorCanonicalName
 }
 
 func (p *prometheusOperator) DesiredVersion() string {

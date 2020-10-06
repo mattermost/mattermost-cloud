@@ -24,6 +24,10 @@ type Utility interface {
 	// utility from a cluster
 	Destroy() error
 
+	// Migrate can be used if special care must be taken for migrating a
+	// utility from a cluster
+	Migrate() error
+
 	// ActualVersion returns the utility's last reported actual version,
 	// at the time of Create or Upgrade. This version will remain valid
 	// unless something interacts with the cluster out of band, at which
@@ -155,12 +159,12 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 
 	// TODO: This part needs to be removed and the code bellow uncommented as soon as all clusters are reprovisioned.
 	// Its a temporary migration solution to migrate from Prometheus to Prometheus Operator.
+	// After the migration all prometheus related code should be removed.
 	for _, utility := range group.utilities {
-		if utility.Name() == "prometheus" && utility.ActualVersion() != "" {
-			logger.Info("Prometheus utility group is deployed in the cluster. Destroying...")
-			err := utility.Destroy()
+		if utility.Name() == "prometheus" {
+			err := utility.Migrate()
 			if err != nil {
-				return errors.Wrap(err, "failed to destroy Prometheus cluster utility")
+				return errors.Wrap(err, "failed to destroy the Prometheus utility group")
 			}
 		} else {
 			err := utility.CreateOrUpgrade()

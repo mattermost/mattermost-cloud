@@ -106,7 +106,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "prometheus-10.3", version)
 
-	version, err := c.ActualUtilityVersion(PrometheusOperatorCanonicalName)
+	version, err = c.ActualUtilityVersion(PrometheusOperatorCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "kube-prometheus-stack-9.4", version)
 

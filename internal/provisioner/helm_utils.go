@@ -226,7 +226,7 @@ func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLo
 
 	err = helmClient.RunGenericCommand(arguments...)
 	if err != nil {
-		return errors.Wrapf(err, "unable to delete helm chart %s", chart.chartName)
+		return errors.Wrapf(err, "unable to delete helm chart %s", chart.chartDeploymentName)
 	}
 
 	return nil

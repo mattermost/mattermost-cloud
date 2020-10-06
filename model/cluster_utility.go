@@ -172,7 +172,7 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 	case PrometheusCanonicalName:
 		versions.Prometheus = desiredVersion
 	case PrometheusOperatorCanonicalName:
-		versions.Prometheus = desiredVersion
+		versions.PrometheusOperator = desiredVersion
 	case NginxCanonicalName:
 		versions.Nginx = desiredVersion
 	case FluentbitCanonicalName:

@@ -123,18 +123,32 @@ func (p *prometheus) Destroy() error {
 		return errors.Wrap(err, "failed to delete Route53 DNS record")
 	}
 
+	p.actualVersion = ""
+
+	return nil
+}
+
+func (p *prometheus) Migrate() error {
+	logger := p.logger.WithField("prometheus-action", "migrate")
+
 	h := p.NewHelmDeployment()
-	err = h.Delete()
+
+	logger.Info("Getting a list of the existing Helm charts to check if Prometheus is deployed")
+	list, err := h.List()
 	if err != nil {
-		return errors.Wrap(err, "failed to delete the Prometheus Helm deployment")
+		return errors.Wrap(err, "failed to list helm charts")
+	}
+	for _, release := range list.Releases {
+		if release.Name == "prometheus" {
+			logger.Info("Prometheus Helm chart is deployed, removing...")
+			err = h.Delete()
+			if err != nil {
+				return errors.Wrap(err, "failed to delete the Prometheus Helm deployment")
+			}
+		}
 	}
 
 	p.actualVersion = ""
-
-	err = p.updateVersion(h)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
