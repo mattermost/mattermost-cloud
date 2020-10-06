@@ -83,7 +83,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrapf(err, "error checking the AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
 	if !isAMIValid {
-		return errors.Wrapf(err, "invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
+		return errors.Errorf("invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -436,8 +436,16 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	isAMIValid, err := awsClient.IsValidAMI(cluster.ProvisionerMetadataKops.AMI, logger)
+	if err != nil {
+		return errors.Wrapf(err, "error checking the AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
+	}
+	if !isAMIValid {
+		return errors.Errorf("invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
+	}
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 

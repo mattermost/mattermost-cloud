@@ -74,7 +74,7 @@ func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster, aws aw
 	return nil
 }
 
-func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster) error {
+func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }
 
