@@ -31,6 +31,10 @@ const (
 	TeleportDefaultVersion = "0.3.0"
 )
 
+// UtilityValuesDirectory is the directory in which Helm charts and
+// other Utility values are stored
+var UtilityValuesDirectory string
+
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {

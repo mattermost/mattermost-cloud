@@ -49,7 +49,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
-
+	serverCmd.PersistentFlags().String("utility-values-directory", "./helm-charts", "The location of the Helm charts and other metadata for Cluster Utilities.")
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
@@ -127,6 +127,8 @@ var serverCmd = &cobra.Command{
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
 
+		model.UtilityValuesDirectory, _ = command.Flags().GetString("utility-values-directory")
+
 		wd, err := os.Getwd()
 		if err != nil {
 			wd = "error getting working directory"
@@ -151,6 +153,7 @@ var serverCmd = &cobra.Command{
 			"store-version":                          currentVersion,
 			"state-store":                            s3StateStore,
 			"working-directory":                      wd,
+			"utility-values-directory":               model.UtilityValuesDirectory,
 			"cluster-resource-threshold":             clusterResourceThreshold,
 			"cluster-resource-threshold-scale-value": clusterResourceThresholdScaleValue,
 			"use-existing-aws-resources":             useExistingResources,
