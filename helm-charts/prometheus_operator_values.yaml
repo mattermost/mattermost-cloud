@@ -21,8 +21,6 @@ fullnameOverride: ""
 ## Labels to apply to all resources
 ##
 commonLabels: {}
-# scmhash: abc123
-# myLabel: aakkmd
 
 ## Create default rules for monitoring the cluster
 ##

@@ -213,7 +213,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	arguments := []string{
 		"--debug",
-		"del",
+		"delete",
 		"--kubeconfig", configPath,
 		"--purge", chart.chartDeploymentName,
 	}
