@@ -61,77 +61,77 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion string, provisione
 
 }
 
-func (n *teleport) updateVersion(h *helmDeployment) error {
+func (t *teleport) updateVersion(h *helmDeployment) error {
 	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
 
-	n.actualVersion = actualVersion
+	t.actualVersion = actualVersion
 	return nil
 }
 
-func (n *teleport) CreateOrUpgrade() error {
-	h := n.NewHelmDeployment()
+func (t *teleport) CreateOrUpgrade() error {
+	h := t.NewHelmDeployment()
 	err := h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = n.updateVersion(h)
+	err = t.updateVersion(h)
 	return err
 }
 
-func (n *teleport) DesiredVersion() string {
-	return n.desiredVersion
+func (t *teleport) DesiredVersion() string {
+	return t.desiredVersion
 }
 
-func (n *teleport) ActualVersion() string {
-	return strings.TrimPrefix(n.actualVersion, "teleport-")
+func (t *teleport) ActualVersion() string {
+	return strings.TrimPrefix(t.actualVersion, "teleport-")
 }
 
-func (n *teleport) Destroy() error {
-	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
-	err := n.awsClient.S3EnsureBucketDeleted(teleportClusterName, n.logger)
+func (t *teleport) Destroy() error {
+	teleportClusterName := fmt.Sprintf("cloud-%s-%s", t.environment, t.cluster.ID)
+	err := t.awsClient.S3EnsureBucketDeleted(teleportClusterName, t.logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to delete Teleport bucket")
 	}
 
-	err = n.awsClient.DynamoDBEnsureTableDeleted(teleportClusterName, n.logger)
+	err = t.awsClient.DynamoDBEnsureTableDeleted(teleportClusterName, t.logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to delete Teleport dynamodb table")
 	}
 
-	err = n.awsClient.DynamoDBEnsureTableDeleted(fmt.Sprintf("%s-events", teleportClusterName), n.logger)
+	err = t.awsClient.DynamoDBEnsureTableDeleted(fmt.Sprintf("%s-events", teleportClusterName), t.logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to delete Teleport dynamodb events table")
 	}
 	return nil
 }
 
-func (n *teleport) NewHelmDeployment() *helmDeployment {
+func (t *teleport) NewHelmDeployment() *helmDeployment {
 	awsRegion := os.Getenv("AWS_REGION")
 	if awsRegion == "" {
 		awsRegion = aws.DefaultAWSRegion
 	}
-	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
+	teleportClusterName := fmt.Sprintf("cloud-%s-%s", t.environment, t.cluster.ID)
 	return &helmDeployment{
 		chartDeploymentName: "teleport",
 		chartName:           "chartmuseum/teleport",
 		namespace:           "teleport",
 		setArgument:         fmt.Sprintf("config.auth_service.cluster_name=%[1]s,config.teleport.storage.region=%[2]s,config.teleport.storage.table_name=%[1]s,config.teleport.storage.audit_events_uri=dynamodb://%[1]s-events,config.teleport.storage.audit_sessions_uri=s3://%[1]s/records?region=%[2]s", teleportClusterName, awsRegion),
-		valuesPath:          n.ValuesPath(),
-		kopsProvisioner:     n.provisioner,
-		kops:                n.kops,
-		logger:              n.logger,
-		desiredVersion:      n.desiredVersion,
+		valuesPath:          t.ValuesPath(),
+		kopsProvisioner:     t.provisioner,
+		kops:                t.kops,
+		logger:              t.logger,
+		desiredVersion:      t.desiredVersion,
 	}
 }
 
-func (t *teleport) ValuesPath() string {
+func (*teleport) ValuesPath() string {
 	return model.UtilityValuesDirectory() + "/teleport_values.yaml"
 }
 
-func (n *teleport) Name() string {
+func (*teleport) Name() string {
 	return model.TeleportCanonicalName
 }
