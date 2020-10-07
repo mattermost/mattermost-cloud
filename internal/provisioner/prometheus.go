@@ -5,10 +5,8 @@
 package provisioner
 
 import (
-	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -64,44 +62,9 @@ func newPrometheusHandle(cluster *model.Cluster, provisioner *KopsProvisioner, a
 }
 
 func (p *prometheus) CreateOrUpgrade() error {
-	logger := p.logger.WithField("prometheus-action", "create")
-
-	h := p.NewHelmDeployment()
-	err := h.Update()
+	err := p.Migrate()
 	if err != nil {
-		return errors.Wrap(err, "failed to create the Prometheus Helm deployment")
-	}
-
-	err = p.updateVersion(h)
-	if err != nil {
-		return err
-	}
-
-	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to lookup private zone name")
-	}
-
-	app := "prometheus"
-	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
-	if p.awsClient.IsProvisionedPrivateCNAME(dns, p.logger) {
-		p.logger.Debugln("CNAME was already provisioned for prometheus")
-		return nil
-	}
-
-	p.logger.Debugln("CNAME was not provisioned for prometheus")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
-	defer cancel()
-
-	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx", logger.WithField("prometheus-action", "create"), p.kops.GetKubeConfigPath())
-	if err != nil {
-		return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Prometheus")
-	}
-
-	logger.Infof("Registering DNS %s for %s", dns, app)
-	err = p.awsClient.CreatePrivateCNAME(dns, []string{endpoint}, logger.WithField("prometheus-dns-create", dns))
-	if err != nil {
-		return errors.Wrap(err, "failed to create a CNAME to point to Prometheus")
+		return errors.Wrap(err, "failed to run Migrate action for Prometheus utility group")
 	}
 
 	return nil

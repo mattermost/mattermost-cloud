@@ -157,39 +157,17 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		}
 	}
 
-	// TODO: This part needs to be removed and the code bellow uncommented as soon as all clusters are reprovisioned.
-	// Its a temporary migration solution to migrate from Prometheus to Prometheus Operator.
-	// After the migration all prometheus related code should be removed.
 	for _, utility := range group.utilities {
-		if utility.Name() == "prometheus" {
-			err := utility.Migrate()
-			if err != nil {
-				return errors.Wrap(err, "failed to destroy the Prometheus utility group")
-			}
-		} else {
-			err := utility.CreateOrUpgrade()
-			if err != nil {
-				return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
-			}
+		err := utility.CreateOrUpgrade()
+		if err != nil {
+			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+		}
 
-			err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
-			if err != nil {
-				return err
-			}
+		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+		if err != nil {
+			return err
 		}
 	}
-
-	// for _, utility := range group.utilities {
-	// 	err := utility.CreateOrUpgrade()
-	// 	if err != nil {
-	// 		return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
-	// 	}
-
-	// 	err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	return nil
 }
