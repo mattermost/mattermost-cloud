@@ -125,12 +125,16 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 @INCLUDE fluent-bit-output.conf
 %s
 `, elasticSearchDNS, auditLogsConf),
-		valuesPath:      model.UtilityValuesDirectory + "/fluent-bit_values.yaml",
+		valuesPath:      f.ValuesPath(),
 		kopsProvisioner: f.provisioner,
 		kops:            f.kops,
 		logger:          f.logger,
 		desiredVersion:  f.desiredVersion,
 	}
+}
+
+func (f *fluentbit) ValuesPath() string {
+	return model.UtilityValuesDirectory() + "/fluent-bit_values.yaml"
 }
 
 func (f *fluentbit) updateVersion(h *helmDeployment) error {

@@ -37,6 +37,10 @@ type Utility interface {
 	// Name returns the canonical string-version name for the utility,
 	// used throughout the application
 	Name() string
+
+	// ValuesPath returns the path (if any) of the associated values
+	// file or Helm chart that is associated with this Utility
+	ValuesPath() string
 }
 
 // utilityGroup  holds  the  metadata  needed  to  manage  a  specific

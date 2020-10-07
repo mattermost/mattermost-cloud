@@ -87,6 +87,9 @@ func (n *nginx) Destroy() error {
 	return nil
 }
 
+func (n *nginx) ValuesPath() string {
+	return model.UtilityValuesDirectory() + "/nginx_values.yaml"
+}
 func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {
@@ -103,7 +106,7 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "nginx",
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.service.internal.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *awsACMCert.CertificateArn, *awsACMPrivateCert.CertificateArn),
-		valuesPath:          model.UtilityValuesDirectory + "/nginx_values.yaml",
+		valuesPath:          n.ValuesPath(),
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,

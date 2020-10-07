@@ -127,7 +127,11 @@ var serverCmd = &cobra.Command{
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
 
-		model.UtilityValuesDirectory, _ = command.Flags().GetString("utility-values-directory")
+		utilityValuesDirectory, _ := command.Flags().GetString("utility-values-directory")
+		if _, err := os.Stat(utilityValuesDirectory); err != nil {
+			return errors.Wrapf(err, "failed to load Utility Group values from directory %s", utilityValuesDirectory)
+		}
+		model.SetUtilityValuesDirectory(utilityValuesDirectory)
 
 		wd, err := os.Getwd()
 		if err != nil {

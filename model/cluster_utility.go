@@ -31,9 +31,9 @@ const (
 	TeleportDefaultVersion = "0.3.0"
 )
 
-// UtilityValuesDirectory is the directory in which Helm charts and
+// utilityValuesDirectory is the directory in which Helm charts and
 // other Utility values are stored
-var UtilityValuesDirectory string
+var utilityValuesDirectory string
 
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
@@ -67,6 +67,19 @@ func NewUtilityMetadata(metadataBytes []byte) (*UtilityMetadata, error) {
 	}
 
 	return &utilityMetadata, nil
+}
+
+// SetUtilityValuesDirectory sets the global location of values &
+// charts for the UtilityGroup. Note: changing this values affects the
+// whole Provisioner, not just a single cluster
+func SetUtilityValuesDirectory(dir string) {
+	utilityValuesDirectory = dir
+}
+
+// UtilityValuesDirectory returns the global location of the values &
+// charts directory
+func UtilityValuesDirectory() string {
+	return utilityValuesDirectory
 }
 
 // SetUtilityActualVersion stores the provided version for the

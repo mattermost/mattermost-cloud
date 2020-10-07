@@ -143,9 +143,13 @@ func (p *prometheus) NewHelmDeployment() *helmDeployment {
 		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          model.UtilityValuesDirectory + "/prometheus_values.yaml",
+		valuesPath:          p.ValuesPath(),
 		desiredVersion:      p.desiredVersion,
 	}
+}
+
+func (p *prometheus) ValuesPath() string {
+	return model.UtilityValuesDirectory() + "/prometheus_values.yaml"
 }
 
 func (p *prometheus) Name() string {
