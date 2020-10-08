@@ -27,6 +27,7 @@ type CreateClusterRequest struct {
 	AllowInstallations     bool              `json:"allow-installations,omitempty"`
 	APISecurityLock        bool              `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
+	ExtraAnnotations       []string          `json:"extra-annotations,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.

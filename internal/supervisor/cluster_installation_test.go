@@ -151,7 +151,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
 
 				installation := &model.Installation{}
-				err := sqlStore.CreateInstallation(installation)
+				err := sqlStore.CreateInstallation(installation, nil)
 				require.NoError(t, err)
 
 				clusterInstallation := &model.ClusterInstallation{
@@ -186,7 +186,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
 
 				cluster := &model.Cluster{}
-				err := sqlStore.CreateCluster(cluster)
+				err := sqlStore.CreateCluster(cluster, nil)
 				require.NoError(t, err)
 
 				clusterInstallation := &model.ClusterInstallation{
@@ -223,11 +223,11 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
 
 				cluster := &model.Cluster{}
-				err := sqlStore.CreateCluster(cluster)
+				err := sqlStore.CreateCluster(cluster, nil)
 				require.NoError(t, err)
 
 				installation := &model.Installation{}
-				err = sqlStore.CreateInstallation(installation)
+				err = sqlStore.CreateInstallation(installation, nil)
 				require.NoError(t, err)
 
 				clusterInstallation := &model.ClusterInstallation{
@@ -251,11 +251,11 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
 
 		cluster := &model.Cluster{}
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		installation := &model.Installation{}
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{

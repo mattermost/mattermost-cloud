@@ -17,9 +17,11 @@ type Supervisor interface {
 
 // Store describes the interface required to persist changes made via API requests.
 type Store interface {
-	CreateCluster(cluster *model.Cluster) error
+	CreateCluster(cluster *model.Cluster, annotations []*model.Annotation) error
 	GetCluster(clusterID string) (*model.Cluster, error)
+	GetClusterDTO(clusterID string) (*model.ClusterDTO, error)
 	GetClusters(filter *model.ClusterFilter) ([]*model.Cluster, error)
+	GetClusterDTOs(filter *model.ClusterFilter) ([]*model.ClusterDTO, error)
 	UpdateCluster(cluster *model.Cluster) error
 	LockCluster(clusterID, lockerID string) (bool, error)
 	UnlockCluster(clusterID, lockerID string, force bool) (bool, error)
@@ -27,9 +29,11 @@ type Store interface {
 	UnlockClusterAPI(clusterID string) error
 	DeleteCluster(clusterID string) error
 
-	CreateInstallation(installation *model.Installation) error
+	CreateInstallation(installation *model.Installation, annotations []*model.Annotation) error
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
+	GetInstallationDTO(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.InstallationDTO, error)
 	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
+	GetInstallationDTOs(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.InstallationDTO, error)
 	GetInstallationsCount(includeDeleted bool) (int, error)
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)

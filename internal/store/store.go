@@ -5,6 +5,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -174,4 +175,56 @@ func (sqlStore *SQLStore) execBuilder(e execer, b builder) (sql.Result, error) {
 	}
 
 	return sqlStore.exec(e, sql, args...)
+}
+
+// dbInterface is an interface describing a resource that can execute read and write queries.
+//
+// It allows the use of *sqlx.Db and *sqlx.Tx.
+type dbInterface interface {
+	execer
+	queryer
+}
+
+type transactionStarter interface {
+	BeginTxx(context.Context, *sql.TxOptions) (*sqlx.Tx, error)
+}
+
+func (sqlStore *SQLStore) beginTransaction(tr transactionStarter) (*Transaction, error) {
+	tx, err := tr.BeginTxx(context.Background(), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to begin transaction")
+	}
+
+	return &Transaction{
+		Tx:        tx,
+		sqlStore:  sqlStore,
+		committed: false,
+	}, nil
+}
+
+// Transaction is a wrapper around *sqlx.Tx providing convenience methods.
+type Transaction struct {
+	*sqlx.Tx
+	sqlStore  *SQLStore
+	committed bool
+}
+
+// Commit commits the pending transaction.
+func (t *Transaction) Commit() error {
+	err := t.Tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit the transaction")
+	}
+	t.committed = true
+	return nil
+}
+
+// RollbackUnlessCommitted rollback the transaction if it is not committed.
+func (t *Transaction) RollbackUnlessCommitted() {
+	if !t.committed {
+		err := t.Tx.Rollback()
+		if err != nil {
+			t.sqlStore.logger.Errorf("error: failed to rollback uncommitted transaction: %s", err.Error())
+		}
+	}
 }

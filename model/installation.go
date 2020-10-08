@@ -68,6 +68,14 @@ func (i *Installation) Clone() *Installation {
 	return &clone
 }
 
+// ToDTO expands installation to InstallationDTO.
+func (i *Installation) ToDTO(annotations []*Annotation) *InstallationDTO {
+	return &InstallationDTO{
+		Installation: i,
+		Annotations:  annotations,
+	}
+}
+
 // IsInGroup returns if the installation is in a group or not.
 func (i *Installation) IsInGroup() bool {
 	return i.GroupID != nil

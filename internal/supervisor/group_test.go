@@ -187,7 +187,7 @@ func TestGroupSupervisor(t *testing.T) {
 			State:    model.InstallationStateStable,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(group)
@@ -214,7 +214,7 @@ func TestGroupSupervisor(t *testing.T) {
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -227,7 +227,7 @@ func TestGroupSupervisor(t *testing.T) {
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -240,7 +240,7 @@ func TestGroupSupervisor(t *testing.T) {
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
-		})
+		}, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -270,7 +270,7 @@ func TestGroupSupervisor(t *testing.T) {
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(group)
@@ -297,7 +297,7 @@ func TestGroupSupervisor(t *testing.T) {
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
-			})
+			}, nil)
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Millisecond)
@@ -310,7 +310,7 @@ func TestGroupSupervisor(t *testing.T) {
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
-			})
+			}, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(group)
@@ -340,7 +340,7 @@ func TestGroupSupervisor(t *testing.T) {
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
-			})
+			}, nil)
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Millisecond)
@@ -353,7 +353,7 @@ func TestGroupSupervisor(t *testing.T) {
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateDeletionInProgress,
-			})
+			}, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(group)

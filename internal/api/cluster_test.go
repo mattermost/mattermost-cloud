@@ -24,6 +24,7 @@ import (
 func TestClusters(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -86,12 +87,16 @@ func TestClusters(t *testing.T) {
 
 	t.Run("clusters", func(t *testing.T) {
 		cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
-			Provider: model.ProviderAWS,
-			Zones:    []string{"zone"},
+			Provider:         model.ProviderAWS,
+			Zones:            []string{"zone"},
+			ExtraAnnotations: []string{"multitenant", "super-awesome"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, cluster1)
 		require.Equal(t, model.ProviderAWS, cluster1.Provider)
+		require.Equal(t, 2, len(cluster1.Annotations))
+		assert.True(t, containsAnnotation("multitenant", cluster1.Annotations))
+		assert.True(t, containsAnnotation("super-awesome", cluster1.Annotations))
 		// require.Equal(t, []string{"zone"}, cluster1.Zones)
 
 		actualCluster1, err := client.GetCluster(cluster1.ID)
@@ -100,6 +105,7 @@ func TestClusters(t *testing.T) {
 		require.Equal(t, model.ProviderAWS, actualCluster1.Provider)
 		// require.Equal(t, []string{"zone"}, actualCluster1.Zones)
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster1.State)
+		require.Equal(t, cluster1.Annotations, actualCluster1.Annotations)
 
 		time.Sleep(1 * time.Millisecond)
 
@@ -110,6 +116,7 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, cluster2)
 		require.Equal(t, model.ProviderAWS, cluster2.Provider)
+		require.Nil(t, cluster2.Annotations)
 		// require.Equal(t, []string{"zone"}, cluster2.Zones)
 
 		actualCluster2, err := client.GetCluster(cluster2.ID)
@@ -118,6 +125,7 @@ func TestClusters(t *testing.T) {
 		require.Equal(t, model.ProviderAWS, actualCluster2.Provider)
 		// require.Equal(t, []string{"zone"}, actualCluster2.Zones)
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster2.State)
+		require.Equal(t, cluster2.Annotations, actualCluster2.Annotations)
 
 		time.Sleep(1 * time.Millisecond)
 
@@ -144,7 +152,7 @@ func TestClusters(t *testing.T) {
 				IncludeDeleted: false,
 			})
 			require.NoError(t, err)
-			require.Equal(t, []*model.Cluster{cluster1, cluster2}, clusters)
+			require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
 		})
 
 		t.Run("get clusters, page 1, perPage 2, exclude deleted", func(t *testing.T) {
@@ -154,12 +162,12 @@ func TestClusters(t *testing.T) {
 				IncludeDeleted: false,
 			})
 			require.NoError(t, err)
-			require.Equal(t, []*model.Cluster{cluster3}, clusters)
+			require.Equal(t, []*model.ClusterDTO{cluster3.ToDTO(nil)}, clusters)
 		})
 
 		t.Run("delete cluster", func(t *testing.T) {
 			cluster2.State = model.ClusterStateStable
-			err := sqlStore.UpdateCluster(cluster2)
+			err := sqlStore.UpdateCluster(cluster2.Cluster)
 			require.NoError(t, err)
 
 			err = client.DeleteCluster(cluster2.ID)
@@ -178,7 +186,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: false,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster1, cluster2}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
@@ -188,7 +196,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: false,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster3}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
 			})
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
@@ -198,7 +206,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: true,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster1, cluster2}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
@@ -208,7 +216,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: true,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster3}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
 			})
 		})
 
@@ -227,7 +235,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: false,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster1, cluster3}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster1, cluster3}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
@@ -237,7 +245,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: false,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{}, clusters)
+				require.Equal(t, []*model.ClusterDTO{}, clusters)
 			})
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
@@ -247,7 +255,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: true,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster1, cluster2}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
@@ -257,7 +265,7 @@ func TestClusters(t *testing.T) {
 					IncludeDeleted: true,
 				})
 				require.NoError(t, err)
-				require.Equal(t, []*model.Cluster{cluster3}, clusters)
+				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
 			})
 		})
 	})
@@ -266,6 +274,7 @@ func TestClusters(t *testing.T) {
 func TestCreateCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -298,21 +307,66 @@ func TestCreateCluster(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
+	t.Run("invalid annotation", func(t *testing.T) {
+		_, err := client.CreateCluster(&model.CreateClusterRequest{
+			Provider:         model.ProviderAWS,
+			Zones:            []string{"zone"},
+			ExtraAnnotations: []string{"my invalid annotation"},
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
 	t.Run("valid", func(t *testing.T) {
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
-			Provider: model.ProviderAWS,
-			Zones:    []string{"zone"},
+			Provider:         model.ProviderAWS,
+			Zones:            []string{"zone"},
+			ExtraAnnotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
 		require.Equal(t, model.ProviderAWS, cluster.Provider)
 		require.Equal(t, model.ClusterStateCreationRequested, cluster.State)
+		require.True(t, containsAnnotation("my-annotation", cluster.Annotations))
 		// TODO: more fields...
+	})
+
+	t.Run("handle annotations", func(t *testing.T) {
+		annotations := []*model.Annotation{
+			{ID: "", Name: "multi-tenant"},
+			{ID: "", Name: "super-awesome"},
+		}
+
+		for _, ann := range annotations {
+			err := sqlStore.CreateAnnotation(ann)
+			require.NoError(t, err)
+		}
+
+		for _, testCase := range []struct {
+			description string
+			annotations []string
+			expected    []*model.Annotation
+		}{
+			{"nil annotations", nil, nil},
+			{"empty annotations", []string{}, nil},
+			{"with annotations", []string{"multi-tenant", "super-awesome"}, annotations},
+		} {
+			t.Run(testCase.description, func(t *testing.T) {
+				cluster, err := client.CreateCluster(&model.CreateClusterRequest{
+					Provider:         model.ProviderAWS,
+					Zones:            []string{"zone"},
+					ExtraAnnotations: testCase.annotations,
+				})
+				require.NoError(t, err)
+
+				assert.Equal(t, testCase.expected, cluster.Annotations)
+			})
+		}
 	})
 }
 
 func TestRetryCreateCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -326,8 +380,9 @@ func TestRetryCreateCluster(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
-		Provider: model.ProviderAWS,
-		Zones:    []string{"zone"},
+		Provider:         model.ProviderAWS,
+		Zones:            []string{"zone"},
+		ExtraAnnotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -338,7 +393,7 @@ func TestRetryCreateCluster(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -358,7 +413,7 @@ func TestRetryCreateCluster(t *testing.T) {
 
 	t.Run("while creating", func(t *testing.T) {
 		cluster1.State = model.ClusterStateCreationRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		err = client.RetryCreateCluster(cluster1.ID)
@@ -367,11 +422,12 @@ func TestRetryCreateCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.ClusterStateCreationRequested, cluster1.State)
+		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		err = client.RetryCreateCluster(cluster1.ID)
@@ -380,7 +436,7 @@ func TestRetryCreateCluster(t *testing.T) {
 
 	t.Run("while creation failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateCreationFailed
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		err = client.RetryCreateCluster(cluster1.ID)
@@ -395,6 +451,7 @@ func TestRetryCreateCluster(t *testing.T) {
 func TestProvisionCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -408,8 +465,9 @@ func TestProvisionCluster(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
-		Provider: model.ProviderAWS,
-		Zones:    []string{"zone"},
+		Provider:         model.ProviderAWS,
+		Zones:            []string{"zone"},
+		ExtraAnnotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -421,7 +479,7 @@ func TestProvisionCluster(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -454,7 +512,7 @@ func TestProvisionCluster(t *testing.T) {
 
 	t.Run("while provisioning", func(t *testing.T) {
 		cluster1.State = model.ClusterStateProvisioningRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
@@ -464,11 +522,12 @@ func TestProvisionCluster(t *testing.T) {
 		cluster1, err = client.GetCluster(cluster1.ID)
 		require.NoError(t, err)
 		require.Equal(t, model.ClusterStateProvisioningRequested, cluster1.State)
+		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
 	})
 
 	t.Run("after provisioning failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateProvisioningFailed
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
@@ -482,7 +541,7 @@ func TestProvisionCluster(t *testing.T) {
 
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
@@ -496,7 +555,7 @@ func TestProvisionCluster(t *testing.T) {
 
 	t.Run("after upgrade failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeFailed
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
@@ -510,7 +569,7 @@ func TestProvisionCluster(t *testing.T) {
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
@@ -524,7 +583,7 @@ func TestProvisionCluster(t *testing.T) {
 
 	t.Run("while deleting", func(t *testing.T) {
 		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
@@ -536,6 +595,7 @@ func TestProvisionCluster(t *testing.T) {
 func TestUpgradeCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -549,8 +609,9 @@ func TestUpgradeCluster(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
-		Provider: model.ProviderAWS,
-		Zones:    []string{"zone"},
+		Provider:         model.ProviderAWS,
+		Zones:            []string{"zone"},
+		ExtraAnnotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -562,7 +623,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -596,7 +657,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		version := "latest"
@@ -609,11 +670,12 @@ func TestUpgradeCluster(t *testing.T) {
 		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
 		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
 		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
+		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeFailed
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		version := "latest"
@@ -630,7 +692,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while stable, to latest", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		version := "latest"
@@ -647,7 +709,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while stable, to valid version", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		version := "1.14.1"
@@ -664,7 +726,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while stable, to invalid version", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
@@ -674,7 +736,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while stable, to valid version and new AMI", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		version := "1.14.1"
@@ -695,7 +757,7 @@ func TestUpgradeCluster(t *testing.T) {
 
 	t.Run("while deleting", func(t *testing.T) {
 		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
@@ -707,6 +769,7 @@ func TestUpgradeCluster(t *testing.T) {
 func TestUpdateClusterConfiguration(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -723,11 +786,12 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 		Provider:           model.ProviderAWS,
 		Zones:              []string{"zone"},
 		AllowInstallations: true,
+		ExtraAnnotations:   []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
 	cluster1.ProvisionerMetadataKops.NodeMinCount = 5
-	err = sqlStore.UpdateCluster(cluster1)
+	err = sqlStore.UpdateCluster(cluster1.Cluster)
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
@@ -738,7 +802,7 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -771,7 +835,7 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{AllowInstallations: false})
@@ -782,12 +846,14 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, model.ClusterStateStable, cluster1.State)
 		assert.False(t, cluster1.AllowInstallations)
+		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
 	})
 }
 
 func TestResizeCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -801,13 +867,14 @@ func TestResizeCluster(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
-		Provider: model.ProviderAWS,
-		Zones:    []string{"zone"},
+		Provider:         model.ProviderAWS,
+		Zones:            []string{"zone"},
+		ExtraAnnotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
 	cluster1.ProvisionerMetadataKops.NodeMinCount = 5
-	err = sqlStore.UpdateCluster(cluster1)
+	err = sqlStore.UpdateCluster(cluster1.Cluster)
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
@@ -818,7 +885,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -851,7 +918,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while resizing", func(t *testing.T) {
 		cluster1.State = model.ClusterStateResizeRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
@@ -862,11 +929,12 @@ func TestResizeCluster(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
 		assert.Equal(t, "test1", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
+		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
 	})
 
 	t.Run("after resize failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateResizeFailed
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test2")})
@@ -881,7 +949,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test3")})
@@ -896,7 +964,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while stable, to max node count lower than cluster min", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		max := int64(1)
@@ -907,7 +975,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while stable, to invalid size", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		min := int64(10)
@@ -919,7 +987,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
@@ -929,7 +997,7 @@ func TestResizeCluster(t *testing.T) {
 
 	t.Run("while deleting", func(t *testing.T) {
 		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
@@ -941,6 +1009,7 @@ func TestResizeCluster(t *testing.T) {
 func TestDeleteCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -979,7 +1048,7 @@ func TestDeleteCluster(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1)
+		err = sqlStore.UpdateCluster(cluster1.Cluster)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -1028,7 +1097,7 @@ func TestDeleteCluster(t *testing.T) {
 		for _, state := range states {
 			t.Run(state, func(t *testing.T) {
 				cluster1.State = state
-				err = sqlStore.UpdateCluster(cluster1)
+				err = sqlStore.UpdateCluster(cluster1.Cluster)
 				require.NoError(t, err)
 
 				err = client.DeleteCluster(cluster1.ID)
@@ -1045,7 +1114,7 @@ func TestDeleteCluster(t *testing.T) {
 		for _, state := range states {
 			t.Run(state, func(t *testing.T) {
 				cluster2.State = state
-				err = sqlStore.UpdateCluster(cluster2)
+				err = sqlStore.UpdateCluster(cluster2.Cluster)
 				require.NoError(t, err)
 
 				err = client.DeleteCluster(cluster2.ID)
@@ -1062,6 +1131,8 @@ func TestDeleteCluster(t *testing.T) {
 func TestGetAllUtilityMetadata(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
@@ -1091,4 +1162,13 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
 	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
 	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
+}
+
+func containsAnnotation(name string, annotations []*model.Annotation) bool {
+	for _, a := range annotations {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
 }

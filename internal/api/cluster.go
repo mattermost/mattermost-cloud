@@ -40,7 +40,7 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	cluster, err := c.Store.GetCluster(clusterID)
+	cluster, err := c.Store.GetClusterDTO(clusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query cluster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -71,14 +71,14 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 		IncludeDeleted: includeDeleted,
 	}
 
-	clusters, err := c.Store.GetClusters(filter)
+	clusters, err := c.Store.GetClusterDTOs(filter)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query clusters")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if clusters == nil {
-		clusters = []*model.Cluster{}
+		clusters = []*model.ClusterDTO{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -134,7 +134,14 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.Store.CreateCluster(&cluster)
+	annotations, err := model.AnnotationsFromStringSlice(createClusterRequest.ExtraAnnotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate extra annotations")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.Store.CreateCluster(&cluster, annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to create cluster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -157,7 +164,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, cluster.ToDTO(annotations))
 }
 
 // handleRetryCreateCluster responds to POST /api/cluster/{cluster}, retrying a previously
@@ -195,7 +202,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 		}
 		cluster.State = newState
 
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(cluster.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to retry cluster creation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -268,7 +275,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 		}
 		cluster.State = newState
 
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(cluster.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -319,7 +326,7 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 
 	if cluster.AllowInstallations != updateClusterRequest.AllowInstallations {
 		cluster.AllowInstallations = updateClusterRequest.AllowInstallations
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(cluster.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -372,7 +379,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 
 	if upgradeClusterRequest.Apply(cluster.ProvisionerMetadataKops) {
 		cluster.State = newState
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(cluster.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -450,7 +457,7 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	if resizeClusterRequest.Apply(cluster.ProvisionerMetadataKops) {
 		cluster.State = newState
-		err = c.Store.UpdateCluster(cluster)
+		err = c.Store.UpdateCluster(cluster.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -536,7 +543,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 		cluster.State = newState
 
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(cluster.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to mark cluster for deletion")
 			w.WriteHeader(http.StatusInternalServerError)

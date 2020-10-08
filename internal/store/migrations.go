@@ -1115,4 +1115,59 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.21.0"), semver.MustParse("0.22.0"), func(e execer) error {
+		// Changes:
+		// 1. Add Annotation table.
+		// 2. Add ClusterAnnotation table.
+		// 3. Add InstallationAnnotation table.
+		// 4. Add constraints to ensure Annotation to Cluster mappings and Annotation to Installation mappings are unique.
+
+		_, err := e.Exec(`
+			CREATE TABLE Annotation (
+				ID TEXT PRIMARY KEY,
+				Name TEXT NOT NULL UNIQUE
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE ClusterAnnotation (
+				ID TEXT PRIMARY KEY,
+				ClusterID TEXT NOT NULL,
+				AnnotationID TEXT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX ClusterAnnotation_ClusterID_AnnotationID ON ClusterAnnotation (ClusterID, AnnotationID);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE InstallationAnnotation (
+				ID TEXT PRIMARY KEY,
+				InstallationID TEXT NOT NULL,
+				AnnotationID TEXT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX InstallationAnnotation_InstallationID_AnnotationID ON InstallationAnnotation (InstallationID, AnnotationID);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

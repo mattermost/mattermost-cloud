@@ -28,6 +28,7 @@ func init() {
 	installationCreateCmd.Flags().String("database", model.InstallationDatabaseMysqlOperator, "The Mattermost server database type. Accepts mysql-operator, aws-rds, aws-rds-postgres, or aws-multitenant-rds")
 	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator or aws-s3")
 	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the installation. Accepts multiple values.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
@@ -98,6 +99,7 @@ var installationCreateCmd = &cobra.Command{
 		database, _ := command.Flags().GetString("database")
 		filestore, _ := command.Flags().GetString("filestore")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		annotations, _ := command.Flags().GetStringArray("annotation")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
 		if err != nil {
@@ -105,17 +107,18 @@ var installationCreateCmd = &cobra.Command{
 		}
 
 		request := &model.CreateInstallationRequest{
-			OwnerID:       ownerID,
-			GroupID:       groupID,
-			Version:       version,
-			Image:         image,
-			Size:          size,
-			DNS:           dns,
-			License:       license,
-			Affinity:      affinity,
-			Database:      database,
-			Filestore:     filestore,
-			MattermostEnv: envVarMap,
+			OwnerID:          ownerID,
+			GroupID:          groupID,
+			Version:          version,
+			Image:            image,
+			Size:             size,
+			DNS:              dns,
+			License:          license,
+			Affinity:         affinity,
+			Database:         database,
+			Filestore:        filestore,
+			MattermostEnv:    envVarMap,
+			ExtraAnnotations: annotations,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

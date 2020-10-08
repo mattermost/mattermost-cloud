@@ -48,7 +48,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	installation, err := c.Store.GetInstallation(installationID, includeGroupConfig, includeGroupConfigOverrides)
+	installation, err := c.Store.GetInstallationDTO(installationID, includeGroupConfig, includeGroupConfigOverrides)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -95,14 +95,14 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 		DNS:            dns,
 	}
 
-	installations, err := c.Store.GetInstallations(filter, includeGroupConfig, includeGroupConfigOverrides)
+	installations, err := c.Store.GetInstallationDTOs(filter, includeGroupConfig, includeGroupConfigOverrides)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installations")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if installations == nil {
-		installations = []*model.Installation{}
+		installations = []*model.InstallationDTO{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -172,7 +172,14 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		State:           model.InstallationStateCreationRequested,
 	}
 
-	err = c.Store.CreateInstallation(&installation)
+	annotations, err := model.AnnotationsFromStringSlice(createInstallationRequest.ExtraAnnotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate extra annotations")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.Store.CreateInstallation(&installation, annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to create installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -197,7 +204,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation)
+	outputJSON(c, w, installation.ToDTO(annotations))
 }
 
 // handleRetryCreateInstallation responds to POST /api/installation/{installation}, retrying a
@@ -236,7 +243,7 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 		}
 		installation.State = newState
 
-		err := c.Store.UpdateInstallation(installation)
+		err := c.Store.UpdateInstallation(installation.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to retry installation creation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -294,10 +301,10 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if patchInstallationRequest.Apply(installation) {
+	if patchInstallationRequest.Apply(installation.Installation) {
 		installation.State = newState
 
-		err = c.Store.UpdateInstallation(installation)
+		err = c.Store.UpdateInstallation(installation.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update installation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -363,7 +370,7 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	if installation.GroupID == nil || *installation.GroupID != groupID {
 		installation.GroupID = &groupID
 
-		err := c.Store.UpdateInstallation(installation)
+		err := c.Store.UpdateInstallation(installation.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update installation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -436,7 +443,7 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 			installation.MattermostEnv = mergedInstallation.MattermostEnv
 		}
 
-		err := c.Store.UpdateInstallation(installation)
+		err := c.Store.UpdateInstallation(installation.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update installation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -481,7 +488,7 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 
 	installation.State = newState
 
-	err := c.Store.UpdateInstallation(installation)
+	err := c.Store.UpdateInstallation(installation.Installation)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -540,7 +547,7 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	installation.State = newState
 
-	err := c.Store.UpdateInstallation(installation)
+	err := c.Store.UpdateInstallation(installation.Installation)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -607,7 +614,7 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		}
 		installation.State = newState
 
-		err := c.Store.UpdateInstallation(installation)
+		err := c.Store.UpdateInstallation(installation.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to mark installation for deletion")
 			w.WriteHeader(http.StatusInternalServerError)

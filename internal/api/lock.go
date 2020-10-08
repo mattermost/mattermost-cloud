@@ -13,8 +13,8 @@ import (
 
 // lockCluster synchronizes access to the given cluster across potentially
 // multiple provisioning servers.
-func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
-	cluster, err := c.Store.GetCluster(clusterID)
+func lockCluster(c *Context, clusterID string) (*model.ClusterDTO, int, func()) {
+	cluster, err := c.Store.GetClusterDTO(clusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query cluster")
 		return nil, http.StatusInternalServerError, nil
@@ -83,8 +83,8 @@ func lockGroup(c *Context, groupID string) (*model.Group, int, func()) {
 
 // lockInstallation synchronizes access to the given installation across
 // potentially multiple provisioning servers.
-func lockInstallation(c *Context, installationID string) (*model.Installation, int, func()) {
-	installation, err := c.Store.GetInstallation(installationID, false, false)
+func lockInstallation(c *Context, installationID string) (*model.InstallationDTO, int, func()) {
+	installation, err := c.Store.GetInstallationDTO(installationID, false, false)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installation")
 		return nil, http.StatusInternalServerError, nil

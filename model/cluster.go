@@ -36,6 +36,14 @@ func (c *Cluster) Clone() *Cluster {
 	return &clone
 }
 
+// ToDTO expands cluster to ClusterDTO.
+func (c *Cluster) ToDTO(annotations []*Annotation) *ClusterDTO {
+	return &ClusterDTO{
+		Cluster:     c,
+		Annotations: annotations,
+	}
+}
+
 // ClusterFromReader decodes a json-encoded cluster from the given io.Reader.
 func ClusterFromReader(reader io.Reader) (*Cluster, error) {
 	cluster := Cluster{}

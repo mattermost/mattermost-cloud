@@ -113,7 +113,7 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 }
 
 // CreateCluster requests the creation of a cluster from the configured provisioning server.
-func (c *Client) CreateCluster(request *CreateClusterRequest) (*Cluster, error) {
+func (c *Client) CreateCluster(request *CreateClusterRequest) (*ClusterDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/clusters"), request)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (c *Client) CreateCluster(request *CreateClusterRequest) (*Cluster, error) 
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterFromReader(resp.Body)
+		return ClusterDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -148,7 +148,7 @@ func (c *Client) RetryCreateCluster(clusterID string) error {
 
 // ProvisionCluster provisions k8s operators and Helm charts on a
 // cluster from the configured provisioning server.
-func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) (*Cluster, error) {
+func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterRequest) (*ClusterDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster/%s/provision", clusterID), request)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterReq
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterFromReader(resp.Body)
+		return ClusterDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -165,7 +165,7 @@ func (c *Client) ProvisionCluster(clusterID string, request *ProvisionClusterReq
 }
 
 // GetCluster fetches the specified cluster from the configured provisioning server.
-func (c *Client) GetCluster(clusterID string) (*Cluster, error) {
+func (c *Client) GetCluster(clusterID string) (*ClusterDTO, error) {
 	resp, err := c.doGet(c.buildURL("/api/cluster/%s", clusterID))
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (c *Client) GetCluster(clusterID string) (*Cluster, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return ClusterFromReader(resp.Body)
+		return ClusterDTOFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -185,7 +185,7 @@ func (c *Client) GetCluster(clusterID string) (*Cluster, error) {
 }
 
 // GetClusters fetches the list of clusters from the configured provisioning server.
-func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
+func (c *Client) GetClusters(request *GetClustersRequest) ([]*ClusterDTO, error) {
 	u, err := url.Parse(c.buildURL("/api/clusters"))
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (c *Client) GetClusters(request *GetClustersRequest) ([]*Cluster, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return ClustersFromReader(resp.Body)
+		return ClusterDTOsFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -226,7 +226,7 @@ func (c *Client) GetClusterUtilities(clusterID string) (*UtilityMetadata, error)
 }
 
 // UpdateCluster updates a cluster's configuration.
-func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) (*Cluster, error) {
+func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) (*ClusterDTO, error) {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s", clusterID), request)
 	if err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) 
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterFromReader(resp.Body)
+		return ClusterDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -243,7 +243,7 @@ func (c *Client) UpdateCluster(clusterID string, request *UpdateClusterRequest) 
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRequest) (*Cluster, error) {
+func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRequest) (*ClusterDTO, error) {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s/kubernetes", clusterID), request)
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRe
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterFromReader(resp.Body)
+		return ClusterDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -260,7 +260,7 @@ func (c *Client) UpgradeCluster(clusterID string, request *PatchUpgradeClusterRe
 }
 
 // ResizeCluster resizes a cluster with a new size value.
-func (c *Client) ResizeCluster(clusterID string, request *PatchClusterSizeRequest) (*Cluster, error) {
+func (c *Client) ResizeCluster(clusterID string, request *PatchClusterSizeRequest) (*ClusterDTO, error) {
 	resp, err := c.doPut(c.buildURL("/api/cluster/%s/size", clusterID), request)
 	if err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func (c *Client) ResizeCluster(clusterID string, request *PatchClusterSizeReques
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return ClusterFromReader(resp.Body)
+		return ClusterDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -294,7 +294,7 @@ func (c *Client) DeleteCluster(clusterID string) error {
 }
 
 // CreateInstallation requests the creation of a installation from the configured provisioning server.
-func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*Installation, error) {
+func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installations"), request)
 	if err != nil {
 		return nil, err
@@ -303,7 +303,7 @@ func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*Instal
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationFromReader(resp.Body)
+		return InstallationDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -328,7 +328,7 @@ func (c *Client) RetryCreateInstallation(installationID string) error {
 }
 
 // GetInstallation fetches the specified installation from the configured provisioning server.
-func (c *Client) GetInstallation(installationID string, request *GetInstallationRequest) (*Installation, error) {
+func (c *Client) GetInstallation(installationID string, request *GetInstallationRequest) (*InstallationDTO, error) {
 	u, err := url.Parse(c.buildURL("/api/installation/%s", installationID))
 	if err != nil {
 		return nil, err
@@ -344,7 +344,7 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return InstallationFromReader(resp.Body)
+		return InstallationDTOFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -355,7 +355,7 @@ func (c *Client) GetInstallation(installationID string, request *GetInstallation
 }
 
 // GetInstallationByDNS finds an installation with the given FQDN.
-func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationRequest) (*Installation, error) {
+func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationRequest) (*InstallationDTO, error) {
 	if request == nil {
 		request = &GetInstallationRequest{
 			IncludeGroupConfig:          false,
@@ -383,7 +383,7 @@ func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationReques
 }
 
 // GetInstallations fetches the list of installations from the configured provisioning server.
-func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installation, error) {
+func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*InstallationDTO, error) {
 	u, err := url.Parse(c.buildURL("/api/installations"))
 	if err != nil {
 		return nil, err
@@ -399,7 +399,7 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return InstallationsFromReader(resp.Body)
+		return InstallationDTOsFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -431,7 +431,7 @@ func (c *Client) GetInstallationsCount(includeDeleted bool) (int, error) {
 }
 
 // UpdateInstallation updates an installation.
-func (c *Client) UpdateInstallation(installationID string, request *PatchInstallationRequest) (*Installation, error) {
+func (c *Client) UpdateInstallation(installationID string, request *PatchInstallationRequest) (*InstallationDTO, error) {
 	resp, err := c.doPut(c.buildURL("/api/installation/%s/mattermost", installationID), request)
 	if err != nil {
 		return nil, err
@@ -440,7 +440,7 @@ func (c *Client) UpdateInstallation(installationID string, request *PatchInstall
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationFromReader(resp.Body)
+		return InstallationDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -448,7 +448,7 @@ func (c *Client) UpdateInstallation(installationID string, request *PatchInstall
 }
 
 // HibernateInstallation puts an installation into hibernation.
-func (c *Client) HibernateInstallation(installationID string) (*Installation, error) {
+func (c *Client) HibernateInstallation(installationID string) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installation/%s/hibernate", installationID), nil)
 	if err != nil {
 		return nil, err
@@ -457,7 +457,7 @@ func (c *Client) HibernateInstallation(installationID string) (*Installation, er
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationFromReader(resp.Body)
+		return InstallationDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -465,7 +465,7 @@ func (c *Client) HibernateInstallation(installationID string) (*Installation, er
 }
 
 // WakeupInstallation wakes an installation from hibernation.
-func (c *Client) WakeupInstallation(installationID string) (*Installation, error) {
+func (c *Client) WakeupInstallation(installationID string) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installation/%s/wakeup", installationID), nil)
 	if err != nil {
 		return nil, err
@@ -474,7 +474,7 @@ func (c *Client) WakeupInstallation(installationID string) (*Installation, error
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return InstallationFromReader(resp.Body)
+		return InstallationDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)

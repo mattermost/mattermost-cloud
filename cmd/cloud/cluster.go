@@ -36,6 +36,7 @@ func init() {
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion, "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
@@ -113,6 +114,7 @@ var clusterCreateCmd = &cobra.Command{
 		kopsAMI, _ := command.Flags().GetString("kops-ami")
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
+		annotations, _ := command.Flags().GetStringArray("annotation")
 
 		request := &model.CreateClusterRequest{
 			Provider:               provider,
@@ -121,6 +123,7 @@ var clusterCreateCmd = &cobra.Command{
 			Zones:                  strings.Split(zones, ","),
 			AllowInstallations:     allowInstallations,
 			DesiredUtilityVersions: processUtilityFlags(command),
+			ExtraAnnotations:       annotations,
 		}
 
 		size, _ := command.Flags().GetString("size")

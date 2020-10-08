@@ -20,6 +20,7 @@ import (
 func TestInstallations(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	ownerID1 := model.NewID()
 	ownerID2 := model.NewID()
@@ -38,6 +39,8 @@ func TestInstallations(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
+	annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
+
 	installation1 := &model.Installation{
 		OwnerID:   ownerID1,
 		Version:   "version",
@@ -50,8 +53,16 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1, annotations)
 	require.NoError(t, err)
+
+	t.Run("fail on not unique DNS", func(t *testing.T) {
+		if sqlStore.db.DriverName() != "postgres" {
+			t.Skip()
+		}
+		err := sqlStore.CreateInstallation(&model.Installation{DNS: "dns.example.com"}, nil)
+		require.Error(t, err)
+	})
 
 	time.Sleep(1 * time.Millisecond)
 
@@ -68,7 +79,7 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2)
+	err = sqlStore.CreateInstallation(installation2, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -85,7 +96,7 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation3)
+	err = sqlStore.CreateInstallation(installation3, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -102,7 +113,7 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation4)
+	err = sqlStore.CreateInstallation(installation4, nil)
 	require.NoError(t, err)
 
 	t.Run("get unknown installation", func(t *testing.T) {
@@ -292,6 +303,7 @@ func TestInstallations(t *testing.T) {
 func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	ownerID := model.NewID()
 	groupID := model.NewID()
@@ -306,7 +318,7 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 		GroupID:   &groupID,
 		State:     model.InstallationStateCreationRequested,
 	}
-	err := sqlStore.CreateInstallation(creationRequestedInstallation)
+	err := sqlStore.CreateInstallation(creationRequestedInstallation, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -319,7 +331,7 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 		GroupID:  &groupID,
 		State:    model.InstallationStateUpdateRequested,
 	}
-	err = sqlStore.CreateInstallation(updateRequestedInstallation)
+	err = sqlStore.CreateInstallation(updateRequestedInstallation, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -332,7 +344,7 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 		GroupID:  &groupID,
 		State:    model.InstallationStateDeletionRequested,
 	}
-	err = sqlStore.CreateInstallation(deletionRequestedInstallation)
+	err = sqlStore.CreateInstallation(deletionRequestedInstallation, nil)
 	require.NoError(t, err)
 
 	otherStates := []string{
@@ -384,6 +396,7 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 func TestLockInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	lockerID1 := model.NewID()
 	lockerID2 := model.NewID()
@@ -394,14 +407,14 @@ func TestLockInstallation(t *testing.T) {
 		OwnerID: ownerID,
 		DNS:     "dns1.example.com",
 	}
-	err := sqlStore.CreateInstallation(installation1)
+	err := sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
 		OwnerID: ownerID,
 		DNS:     "dns2.example.com",
 	}
-	err = sqlStore.CreateInstallation(installation2)
+	err = sqlStore.CreateInstallation(installation2, nil)
 	require.NoError(t, err)
 
 	t.Run("installations should start unlocked", func(t *testing.T) {
@@ -511,6 +524,7 @@ func TestLockInstallation(t *testing.T) {
 func TestUpdateInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	ownerID1 := model.NewID()
 	ownerID2 := model.NewID()
@@ -569,7 +583,7 @@ func TestUpdateInstallation(t *testing.T) {
 		State:    model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
@@ -585,7 +599,7 @@ func TestUpdateInstallation(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2)
+	err = sqlStore.CreateInstallation(installation2, nil)
 	require.NoError(t, err)
 
 	installation1.OwnerID = ownerID2
@@ -633,6 +647,7 @@ func TestUpdateInstallation(t *testing.T) {
 func TestUpdateInstallationSequence(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	group1 := &model.Group{
 		Version: "group1-version",
@@ -658,7 +673,7 @@ func TestUpdateInstallationSequence(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	t.Run("group config not merged", func(t *testing.T) {
@@ -687,6 +702,7 @@ func TestUpdateInstallationSequence(t *testing.T) {
 func TestUpdateInstallationState(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	installation1 := &model.Installation{
 		OwnerID:   model.NewID(),
@@ -700,7 +716,7 @@ func TestUpdateInstallationState(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1)
+	err := sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -720,6 +736,7 @@ func TestUpdateInstallationState(t *testing.T) {
 func TestDeleteInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
 
 	ownerID1 := model.NewID()
 	ownerID2 := model.NewID()
@@ -737,7 +754,7 @@ func TestDeleteInstallation(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1)
+	err := sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -753,7 +770,7 @@ func TestDeleteInstallation(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2)
+	err = sqlStore.CreateInstallation(installation2, nil)
 	require.NoError(t, err)
 
 	err = sqlStore.DeleteInstallation(installation1.ID)

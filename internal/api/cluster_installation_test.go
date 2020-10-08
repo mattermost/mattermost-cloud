@@ -271,7 +271,7 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster := &model.Cluster{}
-	err := sqlStore.CreateCluster(cluster)
+	err := sqlStore.CreateCluster(cluster, nil)
 	require.NoError(t, err)
 
 	clusterInstallation1 := &model.ClusterInstallation{
@@ -320,7 +320,7 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster := &model.Cluster{}
-	err := sqlStore.CreateCluster(cluster)
+	err := sqlStore.CreateCluster(cluster, nil)
 	require.NoError(t, err)
 
 	clusterInstallation1 := &model.ClusterInstallation{
@@ -399,7 +399,7 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster := &model.Cluster{}
-	err := sqlStore.CreateCluster(cluster)
+	err := sqlStore.CreateCluster(cluster, nil)
 	require.NoError(t, err)
 
 	clusterInstallation1 := &model.ClusterInstallation{
@@ -491,7 +491,7 @@ func TestRunClusterInstallationMattermostCLI(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	cluster := &model.Cluster{}
-	err := sqlStore.CreateCluster(cluster)
+	err := sqlStore.CreateCluster(cluster, nil)
 	require.NoError(t, err)
 
 	clusterInstallation1 := &model.ClusterInstallation{
