@@ -70,6 +70,17 @@ func (d *helmDeployment) Update() error {
 	return nil
 }
 
+func (d *helmDeployment) Delete() error {
+	logger := d.logger.WithField("helm-delete", d.chartDeploymentName)
+
+	logger.Infof("Deleting helm chart %s", d.chartDeploymentName)
+	err := deleteHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("got an error trying to delete the helm chart %s", d.chartDeploymentName))
+	}
+	return nil
+}
+
 // waitForHelmRunning is used to check when Helm is ready to install charts.
 func waitForHelmRunning(ctx context.Context, configPath string) error {
 	for {
@@ -193,6 +204,29 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	err = helmClient.RunGenericCommand(arguments...)
 	if err != nil {
 		return errors.Wrapf(err, "unable to upgrade helm chart %s", chart.chartName)
+	}
+
+	return nil
+}
+
+// deleteHelmChart is used to delete Helm charts.
+func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
+	arguments := []string{
+		"--debug",
+		"delete",
+		"--kubeconfig", configPath,
+		"--purge", chart.chartDeploymentName,
+	}
+
+	helmClient, err := helm.New(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to create helm wrapper")
+	}
+	defer helmClient.Close()
+
+	err = helmClient.RunGenericCommand(arguments...)
+	if err != nil {
+		return errors.Wrapf(err, "unable to delete helm chart %s", chart.chartDeploymentName)
 	}
 
 	return nil

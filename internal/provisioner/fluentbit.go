@@ -54,6 +54,10 @@ func (f *fluentbit) Destroy() error {
 	return nil
 }
 
+func (f *fluentbit) Migrate() error {
+	return nil
+}
+
 func (f *fluentbit) CreateOrUpgrade() error {
 	logger := f.logger.WithField("fluentbit-action", "upgrade")
 	h := f.NewHelmDeployment(logger)
