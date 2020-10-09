@@ -14,6 +14,8 @@ const (
 	PrometheusCanonicalName = "prometheus"
 	// PrometheusOperatorCanonicalName is the canonical string representation of prometheus operator
 	PrometheusOperatorCanonicalName = "prometheus-operator"
+	// ThanosCanonicalName is the canonical string representation of prometheus
+	ThanosCanonicalName = "thanos"
 	// NginxCanonicalName is the canonical string representation of nginx
 	NginxCanonicalName = "nginx"
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
@@ -27,6 +29,8 @@ const (
 	PrometheusDefaultVersion = "10.4.0"
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
 	PrometheusOperatorDefaultVersion = "9.4.4"
+	// ThanosDefaultVersion defines the default version for the Helm chart
+	ThanosDefaultVersion = "2.4.3"
 	// NginxDefaultVersion defines the default version for the Helm chart
 	NginxDefaultVersion = "2.15.0"
 	// FluentbitDefaultVersion defines the default version for the Helm chart
@@ -45,6 +49,7 @@ type UtilityMetadata struct {
 type utilityVersions struct {
 	Prometheus         string
 	PrometheusOperator string
+	Thanos             string
 	Nginx              string
 	Fluentbit          string
 	Teleport           string
@@ -152,6 +157,8 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 		return versions.Prometheus
 	case PrometheusOperatorCanonicalName:
 		return versions.PrometheusOperator
+	case ThanosCanonicalName:
+		return versions.Thanos
 	case NginxCanonicalName:
 		return versions.Nginx
 	case FluentbitCanonicalName:
@@ -173,6 +180,8 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 		versions.Prometheus = desiredVersion
 	case PrometheusOperatorCanonicalName:
 		versions.PrometheusOperator = desiredVersion
+	case ThanosCanonicalName:
+		versions.Thanos = desiredVersion
 	case NginxCanonicalName:
 		versions.Nginx = desiredVersion
 	case FluentbitCanonicalName:
