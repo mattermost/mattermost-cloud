@@ -14,7 +14,7 @@ const (
 	PrometheusCanonicalName = "prometheus"
 	// PrometheusOperatorCanonicalName is the canonical string representation of prometheus operator
 	PrometheusOperatorCanonicalName = "prometheus-operator"
-	// ThanosCanonicalName is the canonical string representation of prometheus
+	// ThanosCanonicalName is the canonical string representation of thanos
 	ThanosCanonicalName = "thanos"
 	// NginxCanonicalName is the canonical string representation of nginx
 	NginxCanonicalName = "nginx"
