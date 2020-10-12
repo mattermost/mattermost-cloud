@@ -17,7 +17,7 @@ var clusterSelect sq.SelectBuilder
 
 func init() {
 	clusterSelect = sq.
-		Select("Cluster.ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
+		Select("ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
 			"UtilityMetadataRaw", "State", "AllowInstallations", "CreateAt", "DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From("Cluster")

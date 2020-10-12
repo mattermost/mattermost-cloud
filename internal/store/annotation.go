@@ -68,7 +68,7 @@ func (sqlStore *SQLStore) getOrCreateAnnotations(db dbInterface, annotations []*
 	for i, ann := range annotations {
 		annotation, err := sqlStore.getOrCreateAnnotation(db, ann)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to get or create annotation '%s'", ann.Name)
 		}
 		annotations[i] = annotation
 	}

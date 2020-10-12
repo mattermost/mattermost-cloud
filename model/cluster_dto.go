@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-// ClusterDTO represents cluster entity with connected data.
+// ClusterDTO represents cluster entity with connected data. DTO stands for Data Transfer Object.
 type ClusterDTO struct {
 	*Cluster
 	Annotations []*Annotation `json:"Annotations,omitempty"`

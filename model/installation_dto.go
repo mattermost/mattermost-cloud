@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-// InstallationDTO represents a Mattermost installation.
+// InstallationDTO represents a Mattermost installation. DTO stands for Data Transfer Object.
 type InstallationDTO struct {
 	*Installation
 	Annotations []*Annotation `json:"Annotations,omitempty"`
