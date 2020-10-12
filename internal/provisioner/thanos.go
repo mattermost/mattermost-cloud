@@ -81,7 +81,16 @@ func (t *thanos) CreateOrUpgrade() error {
 		awsRegion = aws.DefaultAWSRegion
 	}
 
-	h := t.NewHelmDeployment()
+	privateDomainName, err := t.awsClient.GetPrivateZoneDomainName(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to lookup private zone name")
+	}
+
+	app := "thanos"
+	dns := fmt.Sprintf("%s.%s.%s", t.cluster.ID, app, privateDomainName)
+	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
+
+	h := t.NewHelmDeployment(dns, grpcDNS)
 	err = h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Thanos Helm deployment")
@@ -91,14 +100,6 @@ func (t *thanos) CreateOrUpgrade() error {
 	if err != nil {
 		return err
 	}
-
-	privateDomainName, err := t.awsClient.GetPrivateZoneDomainName(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to lookup private zone name")
-	}
-
-	app := "thanos"
-	dns := fmt.Sprintf("%s.%s.%s", t.cluster.ID, app, privateDomainName)
 
 	if t.awsClient.IsProvisionedPrivateCNAME(dns, t.logger) {
 		t.logger.Debugln("Main CNAME was already provisioned for thanos")
@@ -119,7 +120,6 @@ func (t *thanos) CreateOrUpgrade() error {
 		}
 	}
 
-	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
 	if t.awsClient.IsProvisionedPrivateCNAME(grpcDNS, t.logger) {
 		t.logger.Debugln("GRPC CNAME was already provisioned for thanos")
 	} else {
@@ -172,14 +172,7 @@ func (t *thanos) Migrate() error {
 	return nil
 }
 
-func (t *thanos) NewHelmDeployment() *helmDeployment {
-	privateDomainName, err := t.awsClient.GetPrivateZoneDomainName(t.logger)
-	if err != nil {
-		t.logger.WithError(err).Error("unable to lookup private zone name")
-	}
-	thanosDNS := fmt.Sprintf("%s.thanos.%s", t.cluster.ID, privateDomainName)
-	thanosDNSGRPC := fmt.Sprintf("%s-grpc.thanos.%s", t.cluster.ID, privateDomainName)
-
+func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("querier.ingress.hostname=%s,querier.ingress.grpc.hostname=%s,querier.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.provisioner.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{

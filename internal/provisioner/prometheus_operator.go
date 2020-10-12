@@ -122,7 +122,15 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 	}
 
-	h := p.NewHelmDeployment()
+	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to lookup private zone name")
+	}
+
+	app := "prometheus"
+	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
+
+	h := p.NewHelmDeployment(dns)
 	err = h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Operator Helm deployment")
@@ -133,13 +141,6 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return err
 	}
 
-	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to lookup private zone name")
-	}
-
-	app := "prometheus"
-	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 	if p.awsClient.IsProvisionedPrivateCNAME(dns, p.logger) {
 		p.logger.Debugln("CNAME was already provisioned for prometheus")
 		return nil
@@ -187,13 +188,7 @@ func (p *prometheusOperator) Migrate() error {
 	return nil
 }
 
-func (p *prometheusOperator) NewHelmDeployment() *helmDeployment {
-	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(p.logger)
-	if err != nil {
-		p.logger.WithError(err).Error("unable to lookup private zone name")
-	}
-	prometheusDNS := fmt.Sprintf("%s.prometheus.%s", p.cluster.ID, privateDomainName)
-
+func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.provisioner.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
