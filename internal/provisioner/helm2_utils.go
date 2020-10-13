@@ -7,14 +7,10 @@ package provisioner
 // TODO: this file can be removed after full migration to Helm 3
 
 import (
-	"context"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/k8s"
+	"encoding/json"
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"
 )
 
@@ -56,64 +52,40 @@ func (l Helm2ListOutput) asListOutput() *HelmListOutput {
 	return &list
 }
 
-// helmSetup is used for the initial setup of Helm in cluster.
-func (um *HelmUtilsManager) helmSetup(logger log.FieldLogger, kops *kops.Cmd) error {
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up the k8s client")
+func (d *helmDeployment) ListV2() (*HelmListOutput, error) {
+	arguments := []string{
+		"list",
+		"--kubeconfig", d.kops.GetKubeConfigPath(),
+		"--output", "json",
 	}
 
-	logger.Info("Creating Tiller service account")
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "tiller"},
-	}
+	logger := d.logger.WithFields(log.Fields{
+		"cmd": "helm",
+	})
 
-	ctx := context.TODO()
-	_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Get(ctx, "tiller", metav1.GetOptions{})
+	helmClient, err := helm.New(logger)
 	if err != nil {
-		// need to create cluster role bindings for Tiller since they couldn't be found
-
-		_, err = k8sClient.Clientset.CoreV1().ServiceAccounts("kube-system").Create(ctx, serviceAccount, metav1.CreateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to set up Tiller service account for Helm")
-		}
-
-		logger.Info("Creating Tiller cluster role bind")
-		roleBinding := &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{Name: "tiller-cluster-rule"},
-			Subjects: []rbacv1.Subject{
-				{Kind: "ServiceAccount", Name: "tiller", Namespace: "kube-system"},
-			},
-			RoleRef: rbacv1.RoleRef{Kind: "ClusterRole", Name: "cluster-admin"},
-		}
-
-		_, err = k8sClient.Clientset.RbacV1().ClusterRoleBindings().Create(ctx, roleBinding, metav1.CreateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to create cluster role bindings")
-		}
-	}
-
-	err = um.helmInit(logger, kops)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// helmInit calls helm init and doesn't do anything fancy
-func (um *HelmUtilsManager) helmInit(logger log.FieldLogger, kops *kops.Cmd) error {
-	logger.Info("Upgrading Helm")
-	helmClient, err := um.helmClientProvider(logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to create helm wrapper")
+		return nil, errors.Wrap(err, "unable to create helm wrapper")
 	}
 	defer helmClient.Close()
 
-	err = helmClient.RunGenericCommand("--debug", "--kubeconfig", kops.GetKubeConfigPath(), "init", "--service-account", "tiller", "--upgrade")
+	rawOutput, err := helmClient.RunCommandRaw(arguments...)
 	if err != nil {
-		return errors.Wrap(err, "failed to upgrade helm")
+		if len(rawOutput) > 0 {
+			logger.Debugf("Helm output was:\n%s\n", string(rawOutput))
+		}
+		return nil, errors.Wrap(err, "while listing Helm Releases")
 	}
 
-	return nil
+	if len(rawOutput) == 0 {
+		return &HelmListOutput{}, nil
+	}
+
+	var helmList Helm2ListOutput
+	err = json.Unmarshal(rawOutput, &helmList)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to unmarshal JSON output from helm list")
+	}
+
+	return helmList.asListOutput(), nil
 }

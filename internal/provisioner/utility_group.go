@@ -18,7 +18,7 @@ import (
 type Utility interface {
 	// CreateOrUpgrade is responsible for deploying the utility in the
 	// cluster and then for updating it if it already exists when called
-	CreateOrUpgrade(*HelmUtilsManager) error
+	CreateOrUpgrade() error
 
 	// Destroy can be used if special care must be taken for deleting a
 	// utility from a cluster
@@ -134,21 +134,21 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 func (group utilityGroup) ProvisionUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
 
-	err := group.provisioner.helmUtilsManager.installHelm(group.kops, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
-	if err != nil {
-		return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
-	}
+	//err := group.provisioner.helmUtilsManager.installHelm(group.kops, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
+	//}
 
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {
-		err = group.provisioner.helmUtilsManager.helmRepoAdd(repoName, repoURL, logger)
+		err := helmRepoAdd(repoName, repoURL, logger)
 		if err != nil {
 			return errors.Wrap(err, "unable to add helm repos")
 		}
 	}
 
 	for _, utility := range group.utilities {
-		err := utility.CreateOrUpgrade(group.provisioner.helmUtilsManager)
+		err := utility.CreateOrUpgrade()
 		if err != nil {
 			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
 		}

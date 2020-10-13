@@ -39,7 +39,7 @@ spec:
         image: mattermost/mattermost-cloud:latest
         imagePullPolicy: Always
         terminationMessagePolicy: "FallbackToLogsOnError"
-        args: ["server", "--debug", "--state-store", "mattermost-kops-state-test", "--database", "$(DATABASE)", "--helm2", "true"]
+        args: ["server", "--debug", "--state-store", "mattermost-kops-state-test", "--database", "$(DATABASE)"]
         ports:
         - containerPort: 8075
           name: api

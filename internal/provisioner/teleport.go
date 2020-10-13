@@ -61,8 +61,8 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion string, provisione
 
 }
 
-func (n *teleport) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeployment) error {
-	actualVersion, err := h.Version(helmUtilManager)
+func (n *teleport) updateVersion(h *helmDeployment) error {
+	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
@@ -71,14 +71,20 @@ func (n *teleport) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeplo
 	return nil
 }
 
-func (n *teleport) CreateOrUpgrade(helmUtilManager *HelmUtilsManager) error {
+func (n *teleport) CreateOrUpgrade() error {
 	h := n.NewHelmDeployment()
-	err := h.Update(helmUtilManager)
+
+	err := h.TryMigrate(n.Name())
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate teleport release")
+	}
+
+	err = h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = n.updateVersion(helmUtilManager, h)
+	err = n.updateVersion(h)
 	return err
 }
 

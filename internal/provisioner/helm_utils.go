@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
@@ -19,40 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// HelmUtilsManager is a wrapper for Helm related operations based on used version
-type HelmUtilsManager struct {
-	deprecatedHelm2    bool
-	helmClientProvider func(logger log.FieldLogger) (*helm.Cmd, error)
-}
-
-// NewHelmUtilsManager creates new HelmUtilsManager
-func NewHelmUtilsManager(useHelm2 bool) *HelmUtilsManager {
-	provider := helm.NewV3
-	if useHelm2 {
-		provider = helm.New
-	}
-
-	return &HelmUtilsManager{
-		deprecatedHelm2:    useHelm2,
-		helmClientProvider: provider,
-	}
-}
-
-// addUpgradeArgs adds version specific arguments for `helm upgrade` command.
-func (um *HelmUtilsManager) addUpgradeArgs(args []string) []string {
-	if !um.deprecatedHelm2 {
-		args = append(args, "--create-namespace")
-	}
-	return args
-}
-
-// addListArgs adds version specific arguments for `helm list` command.
-func (um *HelmUtilsManager) addListArgs(args []string) []string {
-	if !um.deprecatedHelm2 {
-		args = append(args, "--all-namespaces")
-	}
-	return args
-}
 
 // helmDeployment deploys Helm charts.
 type helmDeployment struct {
@@ -69,35 +36,11 @@ type helmDeployment struct {
 	logger          log.FieldLogger
 }
 
-func (um *HelmUtilsManager) installHelm(kops *kops.Cmd, logger log.FieldLogger) error {
-	logger.Info("Installing Helm")
-
-	if !um.deprecatedHelm2 {
-		return nil
-	}
-
-	err := um.helmSetup(logger, kops)
-	if err != nil {
-		return errors.Wrap(err, "unable to install helm")
-	}
-
-	wait := 120
-	logger.Infof("Waiting up to %d seconds for helm to become ready...", wait)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	err = waitForHelmRunning(ctx, kops.GetKubeConfigPath())
-	if err != nil {
-		return errors.Wrap(err, "helm didn't start as expected, or we couldn't detect it")
-	}
-
-	return nil
-}
-
-func (d *helmDeployment) Update(helmUtilManager *HelmUtilsManager) error {
+func (d *helmDeployment) Update() error {
 	logger := d.logger.WithField("helm-update", d.chartName)
 
 	logger.Infof("Refreshing helm chart %s -- may trigger service upgrade", d.chartName)
-	err := helmUtilManager.upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
+	err := upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("got an error trying to upgrade the helm chart %s", d.chartName))
 	}
@@ -123,7 +66,7 @@ func waitForHelmRunning(ctx context.Context, configPath string) error {
 }
 
 // helmRepoAdd adds new helm repos
-func (um *HelmUtilsManager) helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
+func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 	logger.Infof("Adding helm repo %s", repoName)
 	arguments := []string{
 		"repo",
@@ -132,7 +75,7 @@ func (um *HelmUtilsManager) helmRepoAdd(repoName, repoURL string, logger log.Fie
 		repoURL,
 	}
 
-	helmClient, err := um.helmClientProvider(logger)
+	helmClient, err := helm.NewV3(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -143,17 +86,17 @@ func (um *HelmUtilsManager) helmRepoAdd(repoName, repoURL string, logger log.Fie
 		return errors.Wrapf(err, "unable to add repo %s", repoName)
 	}
 
-	return um.helmRepoUpdate(logger)
+	return helmRepoUpdate(logger)
 }
 
 // helmRepoUpdate updates the helm repos to get latest available charts
-func (um *HelmUtilsManager) helmRepoUpdate(logger log.FieldLogger) error {
+func helmRepoUpdate(logger log.FieldLogger) error {
 	arguments := []string{
 		"repo",
 		"update",
 	}
 
-	helmClient, err := um.helmClientProvider(logger)
+	helmClient, err := helm.NewV3(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -168,7 +111,7 @@ func (um *HelmUtilsManager) helmRepoUpdate(logger log.FieldLogger) error {
 }
 
 // upgradeHelmChart is used to upgrade Helm deployments.
-func (um *HelmUtilsManager) upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
+func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	arguments := []string{
 		"--debug",
 		"upgrade",
@@ -178,8 +121,9 @@ func (um *HelmUtilsManager) upgradeHelmChart(chart helmDeployment, configPath st
 		"-f", chart.valuesPath,
 		"--namespace", chart.namespace,
 		"--install",
+		"--create-namespace",
+		"--wait",
 	}
-	arguments = um.addUpgradeArgs(arguments)
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
@@ -187,7 +131,7 @@ func (um *HelmUtilsManager) upgradeHelmChart(chart helmDeployment, configPath st
 		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
-	helmClient, err := um.helmClientProvider(logger)
+	helmClient, err := helm.NewV3(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -211,13 +155,18 @@ type helmReleaseJSON struct {
 	Namespace  string `json:"namespace"`
 }
 
-type helmReleaseList interface {
-	asListOutput() *HelmListOutput
-}
-
 // HelmListOutput is a struct for holding the unmarshaled
 // representation of the output from helm list --output json
 type HelmListOutput []helmReleaseJSON
+
+func (l HelmListOutput) containsRelease(name string) bool {
+	for _, rel := range l {
+		if rel.Name == name {
+			return true
+		}
+	}
+	return false
+}
 
 func (l HelmListOutput) asSlice() []helmReleaseJSON {
 	return l
@@ -227,19 +176,19 @@ func (l HelmListOutput) asListOutput() *HelmListOutput {
 	return &l
 }
 
-func (d *helmDeployment) List(helmUtilManager *HelmUtilsManager) (*HelmListOutput, error) {
+func (d *helmDeployment) List() (*HelmListOutput, error) {
 	arguments := []string{
 		"list",
 		"--kubeconfig", d.kops.GetKubeConfigPath(),
 		"--output", "json",
+		"--all-namespaces",
 	}
-	arguments = helmUtilManager.addListArgs(arguments)
 
 	logger := d.logger.WithFields(log.Fields{
-		"cmd": "helm",
+		"cmd": "helm3",
 	})
 
-	helmClient, err := helmUtilManager.helmClientProvider(logger)
+	helmClient, err := helm.NewV3(logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -253,14 +202,8 @@ func (d *helmDeployment) List(helmUtilManager *HelmUtilsManager) (*HelmListOutpu
 		return nil, errors.Wrap(err, "while listing Helm Releases")
 	}
 
-	var helmList helmReleaseList
-	if helmUtilManager.deprecatedHelm2 {
-		helmList = &Helm2ListOutput{}
-	} else {
-		helmList = &HelmListOutput{}
-	}
-
-	err = json.Unmarshal(rawOutput, helmList)
+	var helmList HelmListOutput
+	err = json.Unmarshal(rawOutput, &helmList)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal JSON output from helm list")
 	}
@@ -269,8 +212,8 @@ func (d *helmDeployment) List(helmUtilManager *HelmUtilsManager) (*HelmListOutpu
 
 }
 
-func (d *helmDeployment) Version(helmUtilManager *HelmUtilsManager) (string, error) {
-	output, err := d.List(helmUtilManager)
+func (d *helmDeployment) Version() (string, error) {
+	output, err := d.List()
 	if err != nil {
 		return "", errors.Wrap(err, "while getting Helm Deployment version")
 	}
@@ -282,4 +225,61 @@ func (d *helmDeployment) Version(helmUtilManager *HelmUtilsManager) (string, err
 	}
 
 	return "", errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
+}
+
+// TryMigrate migrates Helm release from version 2 to 3 if it exists.
+func (d *helmDeployment) TryMigrate(release string) error {
+	logger := d.logger.WithField("operation", "migrate")
+
+	hasTiller, err := d.tillerExists(logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if Tiller exists on cluster")
+	}
+	if !hasTiller {
+		logger.Debugf("Tiller does not exist on cluster, skipping migration")
+		return nil
+	}
+
+	listV2, err := d.ListV2()
+	if err != nil {
+		return errors.Wrap(err, "failed to list Helm 2 releases")
+	}
+
+	listV3, err := d.List()
+	if err != nil {
+		return errors.Wrap(err, "failed to list Helm 3 releases")
+	}
+
+	if listV2.containsRelease(release) && !listV3.containsRelease(release) {
+		logger.Debugf("Release '%s' found with Helm 2 and not found with Helm 3. Starting the migration...", release)
+		return helm.MigrateReleases(logger, d.kops.GetKubeConfigPath(), release)
+	}
+
+	logger.Debugf("Skipping migration of release '%s'", release)
+	return nil
+}
+
+func (d *helmDeployment) tillerExists(logger log.FieldLogger) (bool, error) {
+	helm2, err := helm.New(logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to initialize Helm 2 client")
+	}
+
+	args := []string{
+		"version",
+		"--kubeconfig", d.kops.GetKubeConfigPath(),
+	}
+
+	_, err = helm2.RunCommandRaw(args...)
+	if err == nil {
+		return true, nil
+	}
+
+	if ee, ok := err.(*exec.ExitError); ok {
+		if strings.Contains(string(ee.Stderr), "Error: could not find tiller") {
+			return false, nil
+		}
+	}
+
+	return false, err
 }

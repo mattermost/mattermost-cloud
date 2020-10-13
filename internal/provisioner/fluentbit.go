@@ -54,15 +54,21 @@ func (f *fluentbit) Destroy() error {
 	return nil
 }
 
-func (f *fluentbit) CreateOrUpgrade(helmUtilManager *HelmUtilsManager) error {
+func (f *fluentbit) CreateOrUpgrade() error {
 	logger := f.logger.WithField("fluentbit-action", "upgrade")
 	h := f.NewHelmDeployment(logger)
-	err := h.Update(helmUtilManager)
+
+	err := h.TryMigrate(f.Name())
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate fluent-bit release")
+	}
+
+	err = h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = f.updateVersion(helmUtilManager, h)
+	err = f.updateVersion(h)
 	return err
 }
 
@@ -133,8 +139,8 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	}
 }
 
-func (f *fluentbit) updateVersion(helmUtilManager *HelmUtilsManager, h *helmDeployment) error {
-	actualVersion, err := h.Version(helmUtilManager)
+func (f *fluentbit) updateVersion(h *helmDeployment) error {
+	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}

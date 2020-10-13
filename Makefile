@@ -112,7 +112,8 @@ get-helm: ## Download helm only if it's not available. Used in the docker build
 	@if [ ! -f build/helm3 ]; then \
 		curl -Lo build/helm3.tar.gz https://get.helm.sh/helm-${HELM_3_VERSION}-linux-amd64.tar.gz &&\
 		cd build && tar -zxvf helm3.tar.gz &&\
-		cp linux-amd64/helm helm3 && chmod +x helm3 && rm helm3.tar.gz && rm -rf linux-amd64;\
+		cp linux-amd64/helm helm3 && chmod +x helm3 && rm helm3.tar.gz && rm -rf linux-amd64 &&\
+		./helm3 plugin install https://github.com/helm/helm-2to3.git;\
 	fi
 
 get-kubectl: ## Download kubectl only if it's not available. Used in the docker build
