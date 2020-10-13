@@ -24,6 +24,10 @@ type Utility interface {
 	// utility from a cluster
 	Destroy() error
 
+	// Migrate can be used if special care must be taken for migrating a
+	// utility from a cluster
+	Migrate() error
+
 	// ActualVersion returns the utility's last reported actual version,
 	// at the time of Create or Upgrade. This version will remain valid
 	// unless something interacts with the cluster out of band, at which
@@ -56,9 +60,10 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"stable":        "https://kubernetes-charts.storage.googleapis.com",
-	"chartmuseum":   "https://chartmuseum.internal.core.cloud.mattermost.com",
-	"ingress-nginx": "https://kubernetes.github.io/ingress-nginx",
+	"stable":               "https://kubernetes-charts.storage.googleapis.com",
+	"chartmuseum":          "https://chartmuseum.internal.core.cloud.mattermost.com",
+	"ingress-nginx":        "https://kubernetes.github.io/ingress-nginx",
+	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -77,6 +82,11 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	prometheus, err := newPrometheusHandle(cluster, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
+	}
+
+	prometheusOperator, err := newPrometheusOperatorHandle(cluster, provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
 	desiredVersion, err = cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
@@ -102,7 +112,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, fluentbit, teleport},
+		utilities:   []Utility{nginx, prometheus, prometheusOperator, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

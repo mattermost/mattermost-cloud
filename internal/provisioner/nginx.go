@@ -90,6 +90,11 @@ func (n *nginx) Destroy() error {
 func (n *nginx) ValuesPath() string {
 	return model.UtilityValuesDirectory() + "/nginx_values.yaml"
 }
+
+func (n *nginx) Migrate() error {
+	return nil
+}
+
 func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {
