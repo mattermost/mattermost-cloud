@@ -244,4 +244,3 @@ Please follow the steps below for the reprovisioning of existing clusters:
 - Delete old NGINX helm charts.
   - ```helm del --purge public-nginx```
   - ```helm del --purge private-nginx```
-  
