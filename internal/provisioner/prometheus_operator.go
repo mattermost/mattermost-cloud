@@ -204,9 +204,13 @@ func (p *prometheusOperator) NewHelmDeployment() *helmDeployment {
 		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          "helm-charts/prometheus_operator_values.yaml",
+		valuesPath:          p.ValuesPath(),
 		desiredVersion:      p.desiredVersion,
 	}
+}
+
+func (*prometheusOperator) ValuesPath() string {
+	return model.UtilityValuesDirectory() + "/prometheus_operator_values.yaml"
 }
 
 func (p *prometheusOperator) Name() string {
