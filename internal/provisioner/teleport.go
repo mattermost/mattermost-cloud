@@ -115,6 +115,10 @@ func (n *teleport) Destroy() error {
 	return nil
 }
 
+func (n *teleport) Migrate() error {
+	return nil
+}
+
 func (n *teleport) NewHelmDeployment() *helmDeployment {
 	awsRegion := os.Getenv("AWS_REGION")
 	if awsRegion == "" {

@@ -93,6 +93,10 @@ func (n *nginx) Destroy() error {
 	return nil
 }
 
+func (n *nginx) Migrate() error {
+	return nil
+}
+
 func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {

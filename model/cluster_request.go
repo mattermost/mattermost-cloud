@@ -61,6 +61,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[PrometheusCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PrometheusCanonicalName] = PrometheusDefaultVersion
 	}
+	if _, ok := request.DesiredUtilityVersions[PrometheusOperatorCanonicalName]; !ok {
+		request.DesiredUtilityVersions[PrometheusOperatorCanonicalName] = PrometheusOperatorDefaultVersion
+	}
 	if _, ok := request.DesiredUtilityVersions[NginxCanonicalName]; !ok {
 		request.DesiredUtilityVersions[NginxCanonicalName] = NginxDefaultVersion
 	}

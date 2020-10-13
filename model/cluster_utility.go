@@ -12,6 +12,8 @@ import (
 const (
 	// PrometheusCanonicalName is the canonical string representation of prometheus
 	PrometheusCanonicalName = "prometheus"
+	// PrometheusOperatorCanonicalName is the canonical string representation of prometheus operator
+	PrometheusOperatorCanonicalName = "prometheus-operator"
 	// NginxCanonicalName is the canonical string representation of nginx
 	NginxCanonicalName = "nginx"
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
@@ -23,6 +25,8 @@ const (
 const (
 	// PrometheusDefaultVersion defines the default version for the Helm chart
 	PrometheusDefaultVersion = "10.4.0"
+	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
+	PrometheusOperatorDefaultVersion = "9.4.4"
 	// NginxDefaultVersion defines the default version for the Helm chart
 	NginxDefaultVersion = "2.15.0"
 	// FluentbitDefaultVersion defines the default version for the Helm chart
@@ -39,10 +43,11 @@ type UtilityMetadata struct {
 }
 
 type utilityVersions struct {
-	Prometheus string
-	Nginx      string
-	Fluentbit  string
-	Teleport   string
+	Prometheus         string
+	PrometheusOperator string
+	Nginx              string
+	Fluentbit          string
+	Teleport           string
 }
 
 // NewUtilityMetadata creates an instance of UtilityMetadata given the raw
@@ -145,6 +150,8 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 	switch utility {
 	case PrometheusCanonicalName:
 		return versions.Prometheus
+	case PrometheusOperatorCanonicalName:
+		return versions.PrometheusOperator
 	case NginxCanonicalName:
 		return versions.Nginx
 	case FluentbitCanonicalName:
@@ -164,6 +171,8 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 	switch utility {
 	case PrometheusCanonicalName:
 		versions.Prometheus = desiredVersion
+	case PrometheusOperatorCanonicalName:
+		versions.PrometheusOperator = desiredVersion
 	case NginxCanonicalName:
 		versions.Nginx = desiredVersion
 	case FluentbitCanonicalName:
