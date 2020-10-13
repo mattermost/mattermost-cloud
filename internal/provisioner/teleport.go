@@ -74,7 +74,7 @@ func (n *teleport) updateVersion(h *helmDeployment) error {
 func (n *teleport) CreateOrUpgrade() error {
 	h := n.NewHelmDeployment()
 
-	err := h.TryMigrate(n.Name())
+	err := h.TryMigrate()
 	if err != nil {
 		return errors.Wrap(err, "failed to migrate teleport release")
 	}

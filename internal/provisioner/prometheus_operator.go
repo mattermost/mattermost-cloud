@@ -71,6 +71,12 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 func (p *prometheusOperator) CreateOrUpgrade() error {
 	logger := p.logger.WithField("prometheus-action", "create")
 
+	h := p.NewHelmDeployment()
+	err := h.TryMigrate()
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate prometheus-operator release")
+	}
+
 	environment, err := p.awsClient.GetCloudEnvironmentName()
 	if err != nil {
 		return errors.Wrap(err, "failed to get environment name for thanos objstore secret")
@@ -122,7 +128,6 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 	}
 
-	h := p.NewHelmDeployment()
 	err = h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Operator Helm deployment")

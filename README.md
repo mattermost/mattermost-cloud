@@ -30,7 +30,7 @@ The following is required to properly run the cloud server.
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
 3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.17.X
-4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.3.X as `helm3` and version 2.16.X as `helm`
+4. Install [Helm](https://helm.sh/docs/intro/install/) version 2.16.X as `helm` and version 3.3.X as `helm3` with [2to3 plugin](https://github.com/helm/helm-2to3#install)
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
 
@@ -245,14 +245,3 @@ Please follow the steps below for the reprovisioning of existing clusters:
   - ```helm del --purge public-nginx```
   - ```helm del --purge private-nginx```
   
-  
-// TODO: Migration for Helm
-
-// TODO: manual steps:
-// - Backup Helm 2 releases
-// - Reprovision cluster
-// - Verify everything is working
-// - Cleanup old Helm 2 releases // TODO: consider doing cleanup as part of migration
-
-
-

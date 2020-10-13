@@ -144,11 +144,6 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 func (group utilityGroup) ProvisionUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
 
-	//err := group.provisioner.helmUtilsManager.installHelm(group.kops, group.provisioner.logger.WithField("helm-install", "ProvisionUtilityGroup"))
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to set up Helm as a prerequisite to installing the cluster utilities")
-	//}
-
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {
 		err := helmRepoAdd(repoName, repoURL, logger)
@@ -167,6 +162,11 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err := helm2Cleanup(logger, group.kops.GetKubeConfigPath())
+	if err != nil {
+		return errors.Wrap(err, "failed to cleanup Helm 2")
 	}
 
 	return nil
