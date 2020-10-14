@@ -616,6 +616,7 @@ func TestGetGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          1,
 			InstallationsUpdated:        0,
+			InstallationsBeingUpdated:   1,
 			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
@@ -632,6 +633,7 @@ func TestGetGroupStatus(t *testing.T) {
 		expectedStatus = &model.GroupStatus{
 			InstallationsTotal:          1,
 			InstallationsUpdated:        0,
+			InstallationsBeingUpdated:   0,
 			InstallationsAwaitingUpdate: 1,
 		}
 		groupStatus, err = sqlStore.GetGroupStatus(group1.ID)
