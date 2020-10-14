@@ -26,12 +26,15 @@ LABEL name="Mattermost Cloud" \
 
 ENV CLOUD=/mattermost-cloud/cloud \
     USER_UID=10001 \
-    USER_NAME=cloud
+    USER_NAME=cloud \
+    HELM_DATA_HOME="/helm3/data"
 
 RUN  apk update && apk add libc6-compat && apk add ca-certificates
 COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/kops /usr/local/bin/
 COPY --from=build /mattermost-cloud/build/helm /usr/local/bin/
+COPY --from=build /mattermost-cloud/build/helm3 /usr/local/bin/
+COPY --from=build /mattermost-cloud/build/helm3-data /helm3/data
 COPY --from=build /mattermost-cloud/build/kubectl /usr/local/bin/
 COPY --from=build /mattermost-cloud/manifests /mattermost-cloud/manifests
 COPY --from=build /mattermost-cloud/helm-charts /mattermost-cloud/helm-charts

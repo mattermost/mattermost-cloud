@@ -66,6 +66,12 @@ func (n *nginx) CreateOrUpgrade() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to generate nginx helm deployment")
 	}
+
+	err = h.TryMigrate()
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate nginx release")
+	}
+
 	err = h.Update()
 	if err != nil {
 		return err

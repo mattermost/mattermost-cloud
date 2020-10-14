@@ -4,7 +4,10 @@
 
 package helm
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+	"os/exec"
+)
 
 // RunGenericCommand runs any given helm command.
 func (c *Cmd) RunGenericCommand(arg ...string) error {
@@ -14,4 +17,10 @@ func (c *Cmd) RunGenericCommand(arg ...string) error {
 	}
 
 	return nil
+}
+
+// RunCommandRaw runs any given helm command returning raw output.
+func (c *Cmd) RunCommandRaw(arg ...string) ([]byte, error) {
+	cmd := exec.Command(c.helmPath, arg...)
+	return cmd.Output()
 }
