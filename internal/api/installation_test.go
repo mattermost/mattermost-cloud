@@ -184,7 +184,7 @@ func TestGetInstallations(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, installation1, installationDTO.Installation)
 				require.Equal(t, 2, len(installationDTO.Annotations))
-				require.Equal(t, annotations, installationDTO.Annotations)
+				require.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
 			})
 
 			t.Run("get deleted installation", func(t *testing.T) {

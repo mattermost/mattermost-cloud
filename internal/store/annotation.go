@@ -73,7 +73,6 @@ func (sqlStore *SQLStore) getOrCreateAnnotations(db dbInterface, annotations []*
 		annotations[i] = annotation
 	}
 
-	model.SortAnnotations(annotations)
 	return annotations, nil
 }
 
@@ -127,7 +126,6 @@ func (sqlStore *SQLStore) GetAnnotationsForCluster(clusterID string) ([]*model.A
 		return nil, errors.Wrap(err, "failed to get annotations for Cluster")
 	}
 
-	model.SortAnnotations(annotations)
 	return annotations, nil
 }
 
@@ -163,10 +161,6 @@ func (sqlStore *SQLStore) GetAnnotationsForClusters(filter *model.ClusterFilter)
 		)
 	}
 
-	for _, ann := range annotations {
-		model.SortAnnotations(ann)
-	}
-
 	return annotations, nil
 }
 
@@ -183,7 +177,6 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallation(installationID string) (
 		return nil, errors.Wrap(err, "failed to get annotations for Installation")
 	}
 
-	model.SortAnnotations(annotations)
 	return annotations, nil
 }
 
@@ -217,10 +210,6 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallations(filter *model.Installat
 			annotations[ca.InstallationID],
 			&model.Annotation{ID: ca.AnnotationID, Name: ca.AnnotationName},
 		)
-	}
-
-	for _, ann := range annotations {
-		model.SortAnnotations(ann)
 	}
 
 	return annotations, nil

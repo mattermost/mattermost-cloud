@@ -70,7 +70,7 @@ func TestInstallationDTOs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, installation1, installationDTO.Installation)
 		assert.Equal(t, len(annotations), len(installationDTO.Annotations))
-		assert.Equal(t, annotations, installationDTO.Annotations)
+		assert.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
 	})
 
 	t.Run("get installation DTOs", func(t *testing.T) {
@@ -81,6 +81,9 @@ func TestInstallationDTOs(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(installationDTOs))
+		for _, i := range installationDTOs {
+			model.SortAnnotations(i.Annotations)
+		}
 		assert.Equal(t, []*model.InstallationDTO{installation1.ToDTO(annotations), installation2.ToDTO(nil)}, installationDTOs)
 	})
 }

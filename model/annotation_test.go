@@ -23,7 +23,7 @@ func TestAnnotationsFromStringSlice(t *testing.T) {
 			{
 				"valid names",
 				[]string{"abcd", "multi-tenant", "awesome_annotation"},
-				[]*Annotation{{Name: "abcd"}, {Name: "awesome_annotation"}, {Name: "multi-tenant"}},
+				[]*Annotation{{Name: "abcd"}, {Name: "multi-tenant"}, {Name: "awesome_annotation"}},
 			},
 			{
 				"long names",

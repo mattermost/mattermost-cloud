@@ -63,13 +63,17 @@ func TestClusterDTOs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, cluster1, clusterDTO.Cluster)
 		assert.Equal(t, len(annotations), len(clusterDTO.Annotations))
-		assert.Equal(t, annotations, clusterDTO.Annotations)
+		assert.Equal(t, annotations, model.SortAnnotations(clusterDTO.Annotations))
 	})
 
 	t.Run("get cluster DTOs", func(t *testing.T) {
 		clusterDTOs, err := sqlStore.GetClusterDTOs(&model.ClusterFilter{PerPage: model.AllPerPage, IncludeDeleted: true})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(clusterDTOs))
+
+		for _, c := range clusterDTOs {
+			model.SortAnnotations(c.Annotations)
+		}
 		assert.Equal(t, []*model.ClusterDTO{cluster1.ToDTO(annotations), cluster2.ToDTO(nil)}, clusterDTOs)
 	})
 }

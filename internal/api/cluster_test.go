@@ -89,14 +89,13 @@ func TestClusters(t *testing.T) {
 		cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:         model.ProviderAWS,
 			Zones:            []string{"zone"},
-			ExtraAnnotations: []string{"multitenant", "super-awesome"},
+			ExtraAnnotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, cluster1)
 		require.Equal(t, model.ProviderAWS, cluster1.Provider)
-		require.Equal(t, 2, len(cluster1.Annotations))
-		assert.True(t, containsAnnotation("multitenant", cluster1.Annotations))
-		assert.True(t, containsAnnotation("super-awesome", cluster1.Annotations))
+		require.Equal(t, 1, len(cluster1.Annotations))
+		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
 		// require.Equal(t, []string{"zone"}, cluster1.Zones)
 
 		actualCluster1, err := client.GetCluster(cluster1.ID)
@@ -105,7 +104,7 @@ func TestClusters(t *testing.T) {
 		require.Equal(t, model.ProviderAWS, actualCluster1.Provider)
 		// require.Equal(t, []string{"zone"}, actualCluster1.Zones)
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster1.State)
-		require.Equal(t, cluster1.Annotations, actualCluster1.Annotations)
+		require.Equal(t, cluster1.Annotations, model.SortAnnotations(actualCluster1.Annotations))
 
 		time.Sleep(1 * time.Millisecond)
 
@@ -357,7 +356,7 @@ func TestCreateCluster(t *testing.T) {
 				})
 				require.NoError(t, err)
 
-				assert.Equal(t, testCase.expected, cluster.Annotations)
+				assert.Equal(t, testCase.expected, model.SortAnnotations(cluster.Annotations))
 			})
 		}
 	})

@@ -41,13 +41,13 @@ func AnnotationsFromStringSlice(names []string) ([]*Annotation, error) {
 		annotations = append(annotations, &Annotation{Name: n})
 	}
 
-	SortAnnotations(annotations)
 	return annotations, nil
 }
 
 // SortAnnotations sorts annotations by name alphabetically.
-func SortAnnotations(annotations []*Annotation) {
+func SortAnnotations(annotations []*Annotation) []*Annotation {
 	sort.Slice(annotations, func(i, j int) bool {
 		return annotations[i].Name < annotations[j].Name
 	})
+	return annotations
 }
