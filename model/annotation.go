@@ -13,7 +13,7 @@ import (
 const (
 	annotationMinLen        = 3
 	annotationMaxLen        = 64
-	annotationAllowedFormat = "annotations must start with letter and can contain only lowercase letters, numbers or '_', '-' characters"
+	annotationAllowedFormat = "annotations must start with a letter and can contain only lowercase letters, numbers or '_', '-' characters"
 )
 
 var annotationRegex = regexp.MustCompile("^[a-z].[a-z0-9_-]*$")
