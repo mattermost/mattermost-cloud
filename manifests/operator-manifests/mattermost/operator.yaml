@@ -12,19 +12,12 @@ spec:
       labels:
         name: mattermost-operator
     spec:
-      serviceAccountName: mattermost-operator
       containers:
-        - name: mattermost-operator
-          image: mattermost/mattermost-operator:v1.8.0
-          imagePullPolicy: IfNotPresent
-          command:
-          - mattermost-operator
-          env:
-            - name: WATCH_NAMESPACE
-              value: ""
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "mattermost-operator"
+      - args:
+        - --enable-leader-election
+        command:
+        - /mattermost-operator
+        image: mattermost/mattermost-operator:v1.9.0
+        imagePullPolicy: IfNotPresent
+        name: mattermost-operator
+      serviceAccountName: mattermost-operator
