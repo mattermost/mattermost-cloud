@@ -14,7 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 type mockClusterInstallationStore struct {

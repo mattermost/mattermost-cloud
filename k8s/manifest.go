@@ -11,7 +11,7 @@ import (
 	"path"
 	"reflect"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	mattermostscheme "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/scheme"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
