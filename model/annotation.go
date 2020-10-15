@@ -33,10 +33,10 @@ func AnnotationsFromStringSlice(names []string) ([]*Annotation, error) {
 	annotations := make([]*Annotation, 0, len(names))
 	for _, n := range names {
 		if len(n) < annotationMinLen || len(n) > annotationMaxLen {
-			return nil, fmt.Errorf("error: annotation '%s' is invalid: annotations must be between %d and %d characters long", n, annotationMinLen, annotationMaxLen)
+			return nil, fmt.Errorf("annotation '%s' is invalid: annotations must be between %d and %d characters long", n, annotationMinLen, annotationMaxLen)
 		}
 		if !annotationRegex.MatchString(n) {
-			return nil, fmt.Errorf("error: annotation '%s' is invalid: %s", n, annotationAllowedFormat)
+			return nil, fmt.Errorf("annotation '%s' is invalid: %s", n, annotationAllowedFormat)
 		}
 		annotations = append(annotations, &Annotation{Name: n})
 	}
