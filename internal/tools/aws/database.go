@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 const mysqlConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"

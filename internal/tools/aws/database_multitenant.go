@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 
 	// Database drivers
 	_ "github.com/go-sql-driver/mysql"

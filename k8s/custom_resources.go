@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
