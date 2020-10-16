@@ -1078,6 +1078,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 			DesiredUtilityVersions: map[string]string{
 				"prometheus":          "10.3.0",
 				"prometheus-operator": "9.4.4",
+				"thanos":              "2.4.3",
 				"nginx":               "stable",
 			},
 		})
@@ -1087,11 +1088,13 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.PrometheusOperator)
+	assert.Equal(t, "", utilityMetadata.ActualVersions.Thanos)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
 
 	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
 	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
 	assert.Equal(t, "9.4.4", utilityMetadata.DesiredVersions.PrometheusOperator)
+	assert.Equal(t, "2.4.3", utilityMetadata.DesiredVersions.Thanos)
 	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
 }
