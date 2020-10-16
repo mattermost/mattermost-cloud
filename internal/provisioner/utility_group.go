@@ -60,6 +60,7 @@ var helmRepos = map[string]string{
 	"chartmuseum":          "https://chartmuseum.internal.core.cloud.mattermost.com",
 	"ingress-nginx":        "https://kubernetes.github.io/ingress-nginx",
 	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
+	"bitnami":              "https://charts.bitnami.com/bitnami",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -85,6 +86,11 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
+	thanos, err := newThanosHandle(cluster, provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Thanos")
+	}
+
 	desiredVersion, err = cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
 	if err != nil {
 		return nil, err
@@ -108,7 +114,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, prometheusOperator, fluentbit, teleport},
+		utilities:   []Utility{nginx, prometheus, prometheusOperator, thanos, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

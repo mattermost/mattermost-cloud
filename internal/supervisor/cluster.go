@@ -31,7 +31,7 @@ type clusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
-	UpgradeCluster(cluster *model.Cluster) error
+	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
 	ResizeCluster(cluster *model.Cluster) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
 	RefreshKopsMetadata(cluster *model.Cluster) error
@@ -198,7 +198,7 @@ func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.
 }
 
 func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.UpgradeCluster(cluster)
+	err := s.provisioner.UpgradeCluster(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upgrade cluster")
 		return model.ClusterStateUpgradeFailed

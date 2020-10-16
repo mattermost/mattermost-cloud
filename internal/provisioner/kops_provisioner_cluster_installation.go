@@ -14,7 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -130,7 +130,6 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 	if err != nil {
 		return errors.Wrap(err, "failed to generate database configuration")
 	}
-
 	if databaseSpec != nil {
 		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, databaseSecret)
 		if err != nil {
@@ -143,7 +142,6 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 	if err != nil {
 		return errors.Wrap(err, "failed to generate filestore configuration")
 	}
-
 	if filestoreSecret != nil {
 		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, filestoreSecret)
 		if err != nil {
@@ -328,6 +326,30 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		if k8sErrors.IsNotFound(err) {
 			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
 		}
+	}
+
+	databaseSpec, databaseSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSpecAndSecret(provisioner.store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate database configuration")
+	}
+	if databaseSpec != nil {
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, databaseSecret)
+		if err != nil {
+			return errors.Wrapf(err, "failed to update the database secret %s/%s", clusterInstallation.Namespace, databaseSecret.Name)
+		}
+		cr.Spec.Database = *databaseSpec
+	}
+
+	filestoreSpec, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(provisioner.store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate filestore configuration")
+	}
+	if filestoreSecret != nil {
+		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, filestoreSecret)
+		if err != nil {
+			return errors.Wrapf(err, "failed to update the filestore secret %s/%s", clusterInstallation.Namespace, filestoreSecret.Name)
+		}
+		cr.Spec.Minio = *filestoreSpec
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)

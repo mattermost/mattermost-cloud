@@ -1980,90 +1980,30 @@ prometheus:
     ##
     portName: "web"
 
-  additionalServiceMonitors: []
-  ## Name of the ServiceMonitor to create
-  ##
-  # - name: ""
-
-    ## Additional labels to set used for the ServiceMonitorSelector. Together with standard labels from
-    ## the chart
-    ##
-    # additionalLabels: {}
-
-    ## Service label for use in assembling a job name of the form <label value>-<port>
-    ## If no label is specified, the service name is used.
-    ##
-    # jobLabel: ""
-
-    ## labels to transfer from the kubernetes service to the target
-    ##
-    # targetLabels: ""
-
-    ## Label selector for services to which this ServiceMonitor applies
-    ##
-    # selector: {}
-
-    ## Namespaces from which services are selected
-    ##
-    # namespaceSelector:
-      ## Match any namespace
-      ##
-      # any: false
-
-      ## Explicit list of namespace names to select
-      ##
-      # matchNames: []
-
-    ## Endpoints of the selected service to be monitored
-    ##
-    # endpoints: []
-      ## Name of the endpoint's service port
-      ## Mutually exclusive with targetPort
-      # - port: ""
-
-      ## Name or number of the endpoint's target port
-      ## Mutually exclusive with port
-      # - targetPort: ""
-
-      ## File containing bearer token to be used when scraping targets
-      ##
-      #   bearerTokenFile: ""
-
-      ## Interval at which metrics should be scraped
-      ##
-      #   interval: 30s
-
-      ## HTTP path to scrape for metrics
-      ##
-      #   path: /metrics
-
-      ## HTTP scheme to use for scraping
-      ##
-      #   scheme: http
-
-      ## TLS configuration to use when scraping the endpoint
-      ##
-      #   tlsConfig:
-
-          ## Path to the CA file
-          ##
-          # caFile: ""
-
-          ## Path to client certificate file
-          ##
-          # certFile: ""
-
-          ## Skip certificate verification
-          ##
-          # insecureSkipVerify: false
-
-          ## Path to client key file
-          ##
-          # keyFile: ""
-
-          ## Server name used to verify host name
-          ##
-          # serverName: ""
+  additionalServiceMonitors:
+  - name: mattermost
+    selector:
+      matchLabels:
+        app: mattermost
+    namespaceSelector:
+      any: true
+    endpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics
+        scheme: http
+  - name: nginx
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: nginx
+    namespaceSelector:
+      matchNames:
+      - nginx
+    endpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics
+        scheme: http
 
   additionalPodMonitors: []
   ## Name of the PodMonitor to create

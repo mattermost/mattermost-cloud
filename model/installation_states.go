@@ -4,7 +4,7 @@
 
 package model
 
-import mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
+import mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 
 const (
 	// InstallationStateStable is an installation in a stable state and undergoing no changes.
