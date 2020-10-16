@@ -136,7 +136,6 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to migrate prometheus-operator release")
 	}
 
-
 	err = h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Operator Helm deployment")
