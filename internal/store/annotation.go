@@ -6,6 +6,7 @@ package store
 
 import (
 	"database/sql"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"

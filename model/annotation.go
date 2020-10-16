@@ -16,7 +16,7 @@ const (
 	annotationAllowedFormat = "annotations must start with a letter and can contain only lowercase letters, numbers or '_', '-' characters"
 )
 
-var annotationRegex = regexp.MustCompile("^[a-z].[a-z0-9_-]*$")
+var annotationRegex = regexp.MustCompile("^[a-z]+[a-z0-9_-]*$")
 
 // Annotation represents an annotation.
 type Annotation struct {

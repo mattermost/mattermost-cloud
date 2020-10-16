@@ -5,9 +5,10 @@
 package model
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestAnnotationsFromStringSlice(t *testing.T) {
@@ -53,6 +54,7 @@ func TestAnnotationsFromStringSlice(t *testing.T) {
 				[]string{"abcd", "xyz", "Abcd"},
 			},
 			{"to short name", []string{"abcd", "ab"}},
+			{"invalid characters", []string{"a?bcd"}},
 			{"not allowed character ' '", []string{"ab cd"}},
 			{"not allowed character '!'", []string{"ab!cd"}},
 			{"not allowed character ':'", []string{"ab:cd"}},

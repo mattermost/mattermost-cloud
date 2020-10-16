@@ -5,12 +5,13 @@
 package store
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
 )
 
 func TestAnnotations_Cluster(t *testing.T) {

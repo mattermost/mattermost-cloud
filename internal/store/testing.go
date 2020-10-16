@@ -6,13 +6,14 @@ package store
 
 import (
 	"fmt"
+	"net/url"
+	"os"
+	"testing"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/url"
-	"os"
-	"testing"
 )
 
 func makeUnmigratedTestSQLStore(tb testing.TB, logger log.FieldLogger) *SQLStore {

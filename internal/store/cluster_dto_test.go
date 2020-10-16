@@ -5,11 +5,12 @@
 package store
 
 import (
+	"testing"
+
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestClusterDTOs(t *testing.T) {

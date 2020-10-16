@@ -217,7 +217,7 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
@@ -226,24 +226,24 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 
 	newState := model.InstallationStateCreationRequested
 
-	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to retry installation creation while in state %s", installation.State)
+	if !installationDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to retry installation creation while in state %s", installationDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.State != newState {
+	if installationDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
-			ID:        installation.ID,
+			ID:        installationDTO.ID,
 			NewState:  newState,
-			OldState:  installation.State,
+			OldState:  installationDTO.State,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installation.DNS},
+			ExtraData: map[string]string{"DNS": installationDTO.DNS},
 		}
-		installation.State = newState
+		installationDTO.State = newState
 
-		err := c.Store.UpdateInstallation(installation.Installation)
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to retry installation creation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -262,7 +262,7 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation)
+	outputJSON(c, w, installationDTO)
 }
 
 // handleUpdateInstallation responds to PUT /api/installation/{installation}/mattermost,
@@ -279,32 +279,32 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installation.APISecurityLock {
+	if installationDTO.APISecurityLock {
 		logSecurityLockConflict("installation", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	oldState := installation.State
+	oldState := installationDTO.State
 	newState := model.InstallationStateUpdateRequested
 
-	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to update installation while in state %s", installation.State)
+	if !installationDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to update installation while in state %s", installationDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if patchInstallationRequest.Apply(installation.Installation) {
-		installation.State = newState
+	if patchInstallationRequest.Apply(installationDTO.Installation) {
+		installationDTO.State = newState
 
-		err = c.Store.UpdateInstallation(installation.Installation)
+		err = c.Store.UpdateInstallation(installationDTO.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update installation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -313,11 +313,11 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
-			ID:        installation.ID,
+			ID:        installationDTO.ID,
 			NewState:  newState,
 			OldState:  oldState,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installation.DNS},
+			ExtraData: map[string]string{"DNS": installationDTO.DNS},
 		}
 		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 		if err != nil {
@@ -330,7 +330,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation)
+	outputJSON(c, w, installationDTO)
 }
 
 // handleJoinGroup responds to PUT /api/installation/{installation}/group/{group}, joining the group.
@@ -340,14 +340,14 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, status, installationUnlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, installationUnlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer installationUnlockOnce()
 
-	if installation.APISecurityLock {
+	if installationDTO.APISecurityLock {
 		logSecurityLockConflict("installation", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -367,10 +367,10 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	// Update the installation, but don't directly modify the configuration.
 	// The supervisor will manage this later.
-	if installation.GroupID == nil || *installation.GroupID != groupID {
-		installation.GroupID = &groupID
+	if installationDTO.GroupID == nil || *installationDTO.GroupID != groupID {
+		installationDTO.GroupID = &groupID
 
-		err := c.Store.UpdateInstallation(installation.Installation)
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update installation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -399,14 +399,14 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installation.APISecurityLock {
+	if installationDTO.APISecurityLock {
 		logSecurityLockConflict("installation", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -415,16 +415,16 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	// TODO: does it make sense to enforce normal update-requested valid states?
 	// Should there be more or less valid states? Review this when necessary.
 	newState := model.InstallationStateUpdateRequested
-	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to leave group while installation is in state %s", installation.State)
+	if !installationDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to leave group while installation is in state %s", installationDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.GroupID != nil {
-		installation.State = newState
-		installation.GroupID = nil
-		installation.GroupSequence = nil
+	if installationDTO.GroupID != nil {
+		installationDTO.State = newState
+		installationDTO.GroupID = nil
+		installationDTO.GroupSequence = nil
 
 		if retainConfig {
 			// The installation is leaving the group, but the config is being set
@@ -438,12 +438,12 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			installation.Version = mergedInstallation.Version
-			installation.Image = mergedInstallation.Image
-			installation.MattermostEnv = mergedInstallation.MattermostEnv
+			installationDTO.Version = mergedInstallation.Version
+			installationDTO.Image = mergedInstallation.Image
+			installationDTO.MattermostEnv = mergedInstallation.MattermostEnv
 		}
 
-		err := c.Store.UpdateInstallation(installation.Installation)
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update installation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -464,31 +464,31 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installation.APISecurityLock {
+	if installationDTO.APISecurityLock {
 		logSecurityLockConflict("installation", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	oldState := installation.State
+	oldState := installationDTO.State
 	newState := model.InstallationStateHibernationRequested
 
-	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to hibernate installation while in state %s", installation.State)
+	if !installationDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to hibernate installation while in state %s", installationDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	installation.State = newState
+	installationDTO.State = newState
 
-	err := c.Store.UpdateInstallation(installation.Installation)
+	err := c.Store.UpdateInstallation(installationDTO.Installation)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -497,11 +497,11 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeInstallation,
-		ID:        installation.ID,
+		ID:        installationDTO.ID,
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS},
+		ExtraData: map[string]string{"DNS": installationDTO.DNS},
 	}
 	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -513,7 +513,7 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation)
+	outputJSON(c, w, installationDTO)
 }
 
 // handleWakeupInstallation responds to POST /api/installation/{installation}/wakeup,
@@ -523,31 +523,31 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installation.APISecurityLock {
+	if installationDTO.APISecurityLock {
 		logSecurityLockConflict("installation", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	oldState := installation.State
+	oldState := installationDTO.State
 	newState := model.InstallationStateUpdateRequested
 
-	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to wake up installation while in state %s", installation.State)
+	if !installationDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to wake up installation while in state %s", installationDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	installation.State = newState
+	installationDTO.State = newState
 
-	err := c.Store.UpdateInstallation(installation.Installation)
+	err := c.Store.UpdateInstallation(installationDTO.Installation)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -556,11 +556,11 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeInstallation,
-		ID:        installation.ID,
+		ID:        installationDTO.ID,
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS},
+		ExtraData: map[string]string{"DNS": installationDTO.DNS},
 	}
 	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -572,7 +572,7 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation)
+	outputJSON(c, w, installationDTO)
 }
 
 // handleDeleteInstallation responds to DELETE /api/installation/{installation}, beginning the process of
@@ -582,14 +582,14 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installation, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installation.APISecurityLock {
+	if installationDTO.APISecurityLock {
 		logSecurityLockConflict("installation", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -597,24 +597,24 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	newState := model.InstallationStateDeletionRequested
 
-	if !installation.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to delete installation while in state %s", installation.State)
+	if !installationDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to delete installation while in state %s", installationDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if installation.State != newState {
+	if installationDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeInstallation,
-			ID:        installation.ID,
+			ID:        installationDTO.ID,
 			NewState:  newState,
-			OldState:  installation.State,
+			OldState:  installationDTO.State,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installation.DNS},
+			ExtraData: map[string]string{"DNS": installationDTO.DNS},
 		}
-		installation.State = newState
+		installationDTO.State = newState
 
-		err := c.Store.UpdateInstallation(installation.Installation)
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to mark installation for deletion")
 			w.WriteHeader(http.StatusInternalServerError)
