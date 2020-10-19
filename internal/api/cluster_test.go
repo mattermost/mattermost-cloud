@@ -89,7 +89,7 @@ func TestClusters(t *testing.T) {
 		cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:         model.ProviderAWS,
 			Zones:            []string{"zone"},
-			ExtraAnnotations: []string{"my-annotation"},
+			Annotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, cluster1)
@@ -310,7 +310,7 @@ func TestCreateCluster(t *testing.T) {
 		_, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:         model.ProviderAWS,
 			Zones:            []string{"zone"},
-			ExtraAnnotations: []string{"my invalid annotation"},
+			Annotations: []string{"my invalid annotation"},
 		})
 		require.EqualError(t, err, "failed with status code 400")
 	})
@@ -319,7 +319,7 @@ func TestCreateCluster(t *testing.T) {
 		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:         model.ProviderAWS,
 			Zones:            []string{"zone"},
-			ExtraAnnotations: []string{"my-annotation"},
+			Annotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
 		require.Equal(t, model.ProviderAWS, cluster.Provider)
@@ -352,7 +352,7 @@ func TestCreateCluster(t *testing.T) {
 				cluster, err := client.CreateCluster(&model.CreateClusterRequest{
 					Provider:         model.ProviderAWS,
 					Zones:            []string{"zone"},
-					ExtraAnnotations: testCase.annotations,
+					Annotations: testCase.annotations,
 				})
 				require.NoError(t, err)
 
@@ -381,7 +381,7 @@ func TestRetryCreateCluster(t *testing.T) {
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider:         model.ProviderAWS,
 		Zones:            []string{"zone"},
-		ExtraAnnotations: []string{"my-annotation"},
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -466,7 +466,7 @@ func TestProvisionCluster(t *testing.T) {
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider:         model.ProviderAWS,
 		Zones:            []string{"zone"},
-		ExtraAnnotations: []string{"my-annotation"},
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -610,7 +610,7 @@ func TestUpgradeCluster(t *testing.T) {
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider:         model.ProviderAWS,
 		Zones:            []string{"zone"},
-		ExtraAnnotations: []string{"my-annotation"},
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -785,7 +785,7 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 		Provider:           model.ProviderAWS,
 		Zones:              []string{"zone"},
 		AllowInstallations: true,
-		ExtraAnnotations:   []string{"my-annotation"},
+		Annotations:   []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -868,7 +868,7 @@ func TestResizeCluster(t *testing.T) {
 	cluster1, err := client.CreateCluster(&model.CreateClusterRequest{
 		Provider:         model.ProviderAWS,
 		Zones:            []string{"zone"},
-		ExtraAnnotations: []string{"my-annotation"},
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 

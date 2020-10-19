@@ -118,7 +118,7 @@ var installationCreateCmd = &cobra.Command{
 			Database:         database,
 			Filestore:        filestore,
 			MattermostEnv:    envVarMap,
-			ExtraAnnotations: annotations,
+			Annotations: annotations,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

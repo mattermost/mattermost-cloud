@@ -134,7 +134,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	annotations, err := model.AnnotationsFromStringSlice(createClusterRequest.ExtraAnnotations)
+	annotations, err := model.AnnotationsFromStringSlice(createClusterRequest.Annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to validate extra annotations")
 		w.WriteHeader(http.StatusBadRequest)

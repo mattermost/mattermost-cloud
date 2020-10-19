@@ -394,7 +394,7 @@ func TestCreateInstallation(t *testing.T) {
 			Version:          "version",
 			DNS:              "dns.example.com",
 			Affinity:         model.InstallationAffinityIsolated,
-			ExtraAnnotations: []string{"my invalid annotation"},
+			Annotations: []string{"my invalid annotation"},
 		})
 		require.EqualError(t, err, "failed with status code 400")
 	})
@@ -405,7 +405,7 @@ func TestCreateInstallation(t *testing.T) {
 			Version:          "version",
 			DNS:              "dns.example.com",
 			Affinity:         model.InstallationAffinityIsolated,
-			ExtraAnnotations: []string{"my-annotation"},
+			Annotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "owner", installation.OwnerID)
@@ -511,7 +511,7 @@ func TestCreateInstallation(t *testing.T) {
 					OwnerID:          "owner1",
 					Version:          "version",
 					DNS:              fmt.Sprintf("dns-annotation%d.example.com", i),
-					ExtraAnnotations: testCase.annotations,
+					Annotations: testCase.annotations,
 				})
 				require.NoError(t, err)
 
@@ -542,7 +542,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 		Version:          "version",
 		DNS:              "dns.example.com",
 		Affinity:         model.InstallationAffinityIsolated,
-		ExtraAnnotations: []string{"my-annotation"},
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -629,7 +629,7 @@ func TestUpdateInstallation(t *testing.T) {
 		Version:          "version",
 		DNS:              "dns.example.com",
 		Affinity:         model.InstallationAffinityIsolated,
-		ExtraAnnotations: []string{"my-annotation"},
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 

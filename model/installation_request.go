@@ -34,7 +34,7 @@ type CreateInstallationRequest struct {
 	Filestore        string
 	APISecurityLock  bool
 	MattermostEnv    EnvVarMap
-	ExtraAnnotations []string
+	Annotations []string
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html

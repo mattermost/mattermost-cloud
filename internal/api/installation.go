@@ -172,7 +172,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		State:           model.InstallationStateCreationRequested,
 	}
 
-	annotations, err := model.AnnotationsFromStringSlice(createInstallationRequest.ExtraAnnotations)
+	annotations, err := model.AnnotationsFromStringSlice(createInstallationRequest.Annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to validate extra annotations")
 		w.WriteHeader(http.StatusBadRequest)

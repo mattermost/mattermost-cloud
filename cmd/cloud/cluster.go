@@ -123,7 +123,7 @@ var clusterCreateCmd = &cobra.Command{
 			Zones:                  strings.Split(zones, ","),
 			AllowInstallations:     allowInstallations,
 			DesiredUtilityVersions: processUtilityFlags(command),
-			ExtraAnnotations:       annotations,
+			Annotations:       annotations,
 		}
 
 		size, _ := command.Flags().GetString("size")
