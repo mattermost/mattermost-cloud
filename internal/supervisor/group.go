@@ -5,9 +5,12 @@
 package supervisor
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -22,6 +25,8 @@ type groupStore interface {
 	UpdateInstallationState(*model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
+
+	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
 // GroupSupervisor finds installations belonging to groups that need to have
@@ -112,15 +117,29 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 		installation, err := s.store.GetInstallation(id, true, false)
 		if err != nil {
 			logger.WithError(err).Error("Unable to get installation to set new state")
+			installationLock.Unlock()
 			continue
 		}
 
+		oldState := installation.State
 		installation.State = model.InstallationStateUpdateRequested
 		err = s.store.UpdateInstallationState(installation)
 		if err != nil {
 			logger.WithError(err).Error("Unable to set new installation state")
 		} else {
 			moved++
+
+			webhookPayload := &model.WebhookPayload{
+				Type:      model.TypeInstallation,
+				ID:        installation.ID,
+				NewState:  installation.State,
+				OldState:  oldState,
+				Timestamp: time.Now().UnixNano(),
+			}
+			err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+			if err != nil {
+				logger.WithError(err).Error("Unable to process and send webhooks")
+			}
 		}
 		installationLock.Unlock()
 	}

@@ -124,7 +124,7 @@ func (i *Installation) ValidTransitionState(newState string) bool {
 	case InstallationStateHibernationRequested:
 		return validTransitionToInstallationStateHibernationRequested(i.State)
 	case InstallationStateUpdateRequested:
-		return validTransitionToInstallationStateUpgradeRequested(i.State)
+		return validTransitionToInstallationStateUpdateRequested(i.State)
 	case InstallationStateDeletionRequested:
 		return validTransitionToInstallationStateDeletionRequested(i.State)
 	}
@@ -151,11 +151,12 @@ func validTransitionToInstallationStateHibernationRequested(currentState string)
 	return false
 }
 
-func validTransitionToInstallationStateUpgradeRequested(currentState string) bool {
+func validTransitionToInstallationStateUpdateRequested(currentState string) bool {
 	switch currentState {
 	case InstallationStateStable,
 		InstallationStateHibernating,
 		InstallationStateUpdateRequested,
+		InstallationStateUpdateInProgress,
 		InstallationStateUpdateFailed:
 		return true
 	}

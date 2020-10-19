@@ -79,6 +79,20 @@ func (i *Installation) ConfigMergedWithGroup() bool {
 	return i.configMergedWithGroup
 }
 
+// InstallationSequenceMatchesMergedGroupSequence returns if the installation's
+// group sequence number matches the sequence number of the merged group config
+// or not.
+func (i *Installation) InstallationSequenceMatchesMergedGroupSequence() bool {
+	if !i.configMergedWithGroup {
+		return true
+	}
+	if i.GroupSequence == nil {
+		return false
+	}
+
+	return i.configMergeGroupSequence == *i.GroupSequence
+}
+
 // SyncGroupAndInstallationSequence updates the installation GroupSequence value
 // to reflect the hidden group Sequence value from the time the configuration
 // was origianlly merged.

@@ -19,12 +19,15 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type mockInstallationStore struct {
 	Installation                     *model.Installation
 	UnlockedInstallationsPendingWork []*model.Installation
+
+	Group *model.Group
 
 	UnlockChan              chan interface{}
 	UpdateInstallationCalls int
@@ -111,6 +114,21 @@ func (s *mockInstallationStore) UpdateClusterInstallation(clusterInstallation *m
 	return nil
 }
 
+func (s *mockInstallationStore) GetGroup(groupId string) (*model.Group, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) LockGroup(groupID, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UnlockGroup(groupID, lockerID string, force bool) (bool, error) {
+	if s.UnlockChan != nil {
+		close(s.UnlockChan)
+	}
+	return true, nil
+}
+
 func (s *mockInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
 	return nil, nil
 }
@@ -162,6 +180,10 @@ func (p *mockInstallationProvisioner) HibernateClusterInstallation(cluster *mode
 
 func (p *mockInstallationProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
+}
+
+func (p *mockInstallationProvisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	return true, nil
 }
 
 func (p *mockInstallationProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
@@ -1041,6 +1063,57 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
 	})
 
+	t.Run("update requested, cluster installations stable, in group with different sequence", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		group := &model.Group{
+			ID:       model.NewID(),
+			Sequence: 2,
+			Version:  "gversion",
+			Image:    "gImage",
+		}
+
+		err = sqlStore.CreateGroup(group)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &group.ID,
+			State:    model.InstallationStateUpdateRequested,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateStable,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateUpdateInProgress)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
+
+		installation, err = sqlStore.GetInstallation(installation.ID, true, false)
+		require.NoError(t, err)
+		assert.True(t, installation.InstallationSequenceMatchesMergedGroupSequence())
+	})
+
 	t.Run("update in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
@@ -1079,6 +1152,57 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
 	})
 
+	t.Run("update requested, cluster installations reconciling, in group with different sequence", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		group := &model.Group{
+			ID:       model.NewID(),
+			Sequence: 2,
+			Version:  "gversion",
+			Image:    "gImage",
+		}
+
+		err = sqlStore.CreateGroup(group)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &group.ID,
+			State:    model.InstallationStateUpdateInProgress,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateReconciling,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateUpdateRequested)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
+
+		installation, err = sqlStore.GetInstallation(installation.ID, true, false)
+		require.NoError(t, err)
+		assert.False(t, installation.InstallationSequenceMatchesMergedGroupSequence())
+	})
+
 	t.Run("update in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
@@ -1115,6 +1239,65 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
+	})
+
+	t.Run("update requested, cluster installations stable, in group with same sequence", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster)
+		require.NoError(t, err)
+
+		group := &model.Group{
+			ID:      model.NewID(),
+			Version: "gversion",
+			Image:   "gImage",
+		}
+
+		err = sqlStore.CreateGroup(group)
+		require.NoError(t, err)
+		// Group Sequence always set to 0 when created so we need to update it.
+		group.Sequence = 2
+		err = sqlStore.UpdateGroup(group)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &group.ID,
+			State:    model.InstallationStateUpdateInProgress,
+		}
+
+		err = sqlStore.CreateInstallation(installation)
+		require.NoError(t, err)
+
+		installation.MergeWithGroup(group, false)
+		installation.SyncGroupAndInstallationSequence()
+		err = sqlStore.UpdateInstallationGroupSequence(installation)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateStable,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateStable)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
+
+		installation, err = sqlStore.GetInstallation(installation.ID, true, false)
+		require.NoError(t, err)
+		assert.True(t, installation.InstallationSequenceMatchesMergedGroupSequence())
 	})
 
 	t.Run("hibernation requested, cluster installations stable", func(t *testing.T) {
