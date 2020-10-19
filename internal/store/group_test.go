@@ -346,7 +346,7 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -421,7 +421,7 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -606,7 +606,7 @@ func TestGetGroupStatus(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1)
+	err = sqlStore.CreateInstallation(installation1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)

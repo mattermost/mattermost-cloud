@@ -13,13 +13,13 @@ import (
 
 // lockCluster synchronizes access to the given cluster across potentially
 // multiple provisioning servers.
-func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
-	cluster, err := c.Store.GetCluster(clusterID)
+func lockCluster(c *Context, clusterID string) (*model.ClusterDTO, int, func()) {
+	clusterDTO, err := c.Store.GetClusterDTO(clusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query cluster")
 		return nil, http.StatusInternalServerError, nil
 	}
-	if cluster == nil {
+	if clusterDTO == nil {
 		return nil, http.StatusNotFound, nil
 	}
 
@@ -34,9 +34,9 @@ func lockCluster(c *Context, clusterID string) (*model.Cluster, int, func()) {
 
 	unlockOnce := sync.Once{}
 
-	return cluster, 0, func() {
+	return clusterDTO, 0, func() {
 		unlockOnce.Do(func() {
-			unlocked, err := c.Store.UnlockCluster(cluster.ID, c.RequestID, false)
+			unlocked, err := c.Store.UnlockCluster(clusterDTO.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock cluster")
 			} else if unlocked != true {
@@ -83,13 +83,13 @@ func lockGroup(c *Context, groupID string) (*model.Group, int, func()) {
 
 // lockInstallation synchronizes access to the given installation across
 // potentially multiple provisioning servers.
-func lockInstallation(c *Context, installationID string) (*model.Installation, int, func()) {
-	installation, err := c.Store.GetInstallation(installationID, false, false)
+func lockInstallation(c *Context, installationID string) (*model.InstallationDTO, int, func()) {
+	installationDTO, err := c.Store.GetInstallationDTO(installationID, false, false)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query installation")
 		return nil, http.StatusInternalServerError, nil
 	}
-	if installation == nil {
+	if installationDTO == nil {
 		return nil, http.StatusNotFound, nil
 	}
 
@@ -104,9 +104,9 @@ func lockInstallation(c *Context, installationID string) (*model.Installation, i
 
 	unlockOnce := sync.Once{}
 
-	return installation, 0, func() {
+	return installationDTO, 0, func() {
 		unlockOnce.Do(func() {
-			unlocked, err := c.Store.UnlockInstallation(installation.ID, c.RequestID, false)
+			unlocked, err := c.Store.UnlockInstallation(installationDTO.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock installation")
 			} else if unlocked != true {

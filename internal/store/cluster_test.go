@@ -17,6 +17,7 @@ func TestClusters(t *testing.T) {
 	t.Run("get unknown cluster", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := MakeTestSQLStore(t, logger)
+		defer CloseConnection(t, sqlStore)
 
 		cluster, err := sqlStore.GetCluster("unknown")
 		require.NoError(t, err)
@@ -26,6 +27,7 @@ func TestClusters(t *testing.T) {
 	t.Run("get clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := MakeTestSQLStore(t, logger)
+		defer CloseConnection(t, sqlStore)
 
 		cluster1 := &model.Cluster{
 			Provider:                "aws",
@@ -47,12 +49,14 @@ func TestClusters(t *testing.T) {
 			AllowInstallations:      true,
 		}
 
-		err := sqlStore.CreateCluster(cluster1)
+		annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
+
+		err := sqlStore.CreateCluster(cluster1, annotations)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
 
-		err = sqlStore.CreateCluster(cluster2)
+		err = sqlStore.CreateCluster(cluster2, nil)
 		require.NoError(t, err)
 
 		actualCluster1, err := sqlStore.GetCluster(cluster1.ID)
@@ -91,6 +95,7 @@ func TestClusters(t *testing.T) {
 	t.Run("update clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := MakeTestSQLStore(t, logger)
+		defer CloseConnection(t, sqlStore)
 
 		cluster1 := &model.Cluster{
 			Provider:                "aws",
@@ -112,10 +117,10 @@ func TestClusters(t *testing.T) {
 			AllowInstallations:      true,
 		}
 
-		err := sqlStore.CreateCluster(cluster1)
+		err := sqlStore.CreateCluster(cluster1, nil)
 		require.NoError(t, err)
 
-		err = sqlStore.CreateCluster(cluster2)
+		err = sqlStore.CreateCluster(cluster2, nil)
 		require.NoError(t, err)
 
 		cluster1.Provider = "azure"
@@ -140,6 +145,7 @@ func TestClusters(t *testing.T) {
 	t.Run("delete cluster", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := MakeTestSQLStore(t, logger)
+		defer CloseConnection(t, sqlStore)
 
 		cluster1 := &model.Cluster{
 			Provider:                "aws",
@@ -159,12 +165,12 @@ func TestClusters(t *testing.T) {
 			AllowInstallations:      true,
 		}
 
-		err := sqlStore.CreateCluster(cluster1)
+		err := sqlStore.CreateCluster(cluster1, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
 
-		err = sqlStore.CreateCluster(cluster2)
+		err = sqlStore.CreateCluster(cluster2, nil)
 		require.NoError(t, err)
 
 		err = sqlStore.DeleteCluster(cluster1.ID)
@@ -220,7 +226,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	creationRequestedCluster := &model.Cluster{
 		State: model.ClusterStateCreationRequested,
 	}
-	err := sqlStore.CreateCluster(creationRequestedCluster)
+	err := sqlStore.CreateCluster(creationRequestedCluster, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -228,7 +234,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	upgradeRequestedCluster := &model.Cluster{
 		State: model.ClusterStateUpgradeRequested,
 	}
-	err = sqlStore.CreateCluster(upgradeRequestedCluster)
+	err = sqlStore.CreateCluster(upgradeRequestedCluster, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -236,7 +242,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	deletionRequestedCluster := &model.Cluster{
 		State: model.ClusterStateDeletionRequested,
 	}
-	err = sqlStore.CreateCluster(deletionRequestedCluster)
+	err = sqlStore.CreateCluster(deletionRequestedCluster, nil)
 	require.NoError(t, err)
 
 	// Store clusters with states that should be ignored by GetUnlockedClustersPendingWork()
@@ -249,7 +255,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 		model.ClusterStateStable,
 	}
 	for _, otherState := range otherStates {
-		err = sqlStore.CreateCluster(&model.Cluster{State: otherState})
+		err = sqlStore.CreateCluster(&model.Cluster{State: otherState}, nil)
 		require.NoError(t, err)
 	}
 
@@ -292,11 +298,11 @@ func TestLockCluster(t *testing.T) {
 	lockerID2 := model.NewID()
 
 	cluster1 := &model.Cluster{}
-	err := sqlStore.CreateCluster(cluster1)
+	err := sqlStore.CreateCluster(cluster1, nil)
 	require.NoError(t, err)
 
 	cluster2 := &model.Cluster{}
-	err = sqlStore.CreateCluster(cluster2)
+	err = sqlStore.CreateCluster(cluster2, nil)
 	require.NoError(t, err)
 
 	t.Run("clusters should start unlocked", func(t *testing.T) {

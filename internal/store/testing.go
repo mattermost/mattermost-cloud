@@ -12,6 +12,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,4 +54,10 @@ func MakeTestSQLStore(tb testing.TB, logger log.FieldLogger) *SQLStore {
 	require.NoError(tb, err)
 
 	return sqlStore
+}
+
+// CloseConnection closes underlying database connection.
+func CloseConnection(tb testing.TB, sqlStore *SQLStore) {
+	err := sqlStore.db.Close()
+	assert.NoError(tb, err)
 }

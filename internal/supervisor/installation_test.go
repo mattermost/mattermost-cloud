@@ -373,7 +373,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -388,7 +388,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateStable,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -411,7 +411,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -426,7 +426,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		// The stored installation is InstallationStateCreationInProgress, so we
@@ -455,7 +455,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err := sqlStore.CreateInstallation(installation)
+		err := sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -470,7 +470,7 @@ func TestInstallationSupervisor(t *testing.T) {
 
 		cluster := standardStableTestCluster()
 		cluster.AllowInstallations = false
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -485,7 +485,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -499,7 +499,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -523,7 +523,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -537,7 +537,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -552,7 +552,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -575,7 +575,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -590,7 +590,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -613,7 +613,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -628,7 +628,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationDNS,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -651,7 +651,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -666,7 +666,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -689,7 +689,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -704,7 +704,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationPreProvisioning,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -727,7 +727,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -742,7 +742,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationPreProvisioning,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -765,7 +765,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -780,7 +780,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -803,7 +803,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -818,7 +818,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -841,7 +841,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -856,7 +856,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -879,7 +879,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -894,7 +894,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationFinalTasks,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -928,7 +928,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationNoCompatibleClusters,
 		}
 
-		err := sqlStore.CreateInstallation(installation)
+		err := sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -942,7 +942,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -966,7 +966,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationNoCompatibleClusters,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -980,7 +980,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -995,7 +995,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationNoCompatibleClusters,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -1009,7 +1009,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1024,7 +1024,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateUpdateRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1047,7 +1047,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1062,7 +1062,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1085,7 +1085,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1100,7 +1100,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1123,7 +1123,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1138,7 +1138,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateHibernationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1161,7 +1161,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1176,7 +1176,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateHibernationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1199,7 +1199,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1214,7 +1214,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateHibernationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1237,7 +1237,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1252,7 +1252,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1275,7 +1275,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1290,7 +1290,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1313,7 +1313,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1328,7 +1328,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateDeletionInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1351,7 +1351,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1366,7 +1366,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1389,7 +1389,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1404,7 +1404,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1428,7 +1428,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 			cluster := standardStableTestCluster()
-			err := sqlStore.CreateCluster(cluster)
+			err := sqlStore.CreateCluster(cluster, nil)
 			require.NoError(t, err)
 
 			owner := model.NewID()
@@ -1443,7 +1443,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(installation)
+			err = sqlStore.CreateInstallation(installation, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -1458,7 +1458,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 			cluster := standardStableTestCluster()
-			err := sqlStore.CreateCluster(cluster)
+			err := sqlStore.CreateCluster(cluster, nil)
 			require.NoError(t, err)
 
 			for i := 1; i < 3; i++ {
@@ -1475,7 +1475,7 @@ func TestInstallationSupervisor(t *testing.T) {
 						State:    model.InstallationStateCreationRequested,
 					}
 
-					err = sqlStore.CreateInstallation(installation)
+					err = sqlStore.CreateInstallation(installation, nil)
 					require.NoError(t, err)
 
 					supervisor.Supervise(installation)
@@ -1492,7 +1492,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 			cluster := standardStableTestCluster()
-			err := sqlStore.CreateCluster(cluster)
+			err := sqlStore.CreateCluster(cluster, nil)
 			require.NoError(t, err)
 
 			owner := model.NewID()
@@ -1507,7 +1507,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(isolatedInstallation)
+			err = sqlStore.CreateInstallation(isolatedInstallation, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(isolatedInstallation)
@@ -1527,7 +1527,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(multitenantInstallation)
+			err = sqlStore.CreateInstallation(multitenantInstallation, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(multitenantInstallation)
@@ -1551,7 +1551,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 			cluster := standardStableTestCluster()
-			err := sqlStore.CreateCluster(cluster)
+			err := sqlStore.CreateCluster(cluster, nil)
 			require.NoError(t, err)
 
 			owner := model.NewID()
@@ -1566,7 +1566,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(installation)
+			err = sqlStore.CreateInstallation(installation, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -1591,7 +1591,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", 80, 2, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1606,7 +1606,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)

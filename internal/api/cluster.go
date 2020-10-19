@@ -40,7 +40,7 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	cluster, err := c.Store.GetCluster(clusterID)
+	cluster, err := c.Store.GetClusterDTO(clusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query cluster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -71,14 +71,14 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 		IncludeDeleted: includeDeleted,
 	}
 
-	clusters, err := c.Store.GetClusters(filter)
+	clusters, err := c.Store.GetClusterDTOs(filter)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query clusters")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if clusters == nil {
-		clusters = []*model.Cluster{}
+		clusters = []*model.ClusterDTO{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -134,7 +134,14 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.Store.CreateCluster(&cluster)
+	annotations, err := model.AnnotationsFromStringSlice(createClusterRequest.Annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to validate extra annotations")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.Store.CreateCluster(&cluster, annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to create cluster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -157,7 +164,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, cluster.ToDTO(annotations))
 }
 
 // handleRetryCreateCluster responds to POST /api/cluster/{cluster}, retrying a previously
@@ -170,7 +177,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
@@ -179,23 +186,23 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 
 	newState := model.ClusterStateCreationRequested
 
-	if !cluster.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to retry cluster creation while in state %s", cluster.State)
+	if !clusterDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to retry cluster creation while in state %s", clusterDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if cluster.State != newState {
+	if clusterDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
-			ID:        cluster.ID,
+			ID:        clusterDTO.ID,
 			NewState:  newState,
-			OldState:  cluster.State,
+			OldState:  clusterDTO.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = newState
+		clusterDTO.State = newState
 
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to retry cluster creation")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -214,7 +221,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, clusterDTO)
 }
 
 // handleProvisionCluster responds to POST /api/cluster/{cluster}/provision,
@@ -224,14 +231,14 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if cluster.APISecurityLock {
+	if clusterDTO.APISecurityLock {
 		logSecurityLockConflict("cluster", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -244,7 +251,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = cluster.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
+	err = clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -252,23 +259,23 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	newState := model.ClusterStateProvisioningRequested
 
-	if !cluster.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to provision cluster while in state %s", cluster.State)
+	if !clusterDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to provision cluster while in state %s", clusterDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if cluster.State != newState {
+	if clusterDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
-			ID:        cluster.ID,
+			ID:        clusterDTO.ID,
 			NewState:  newState,
-			OldState:  cluster.State,
+			OldState:  clusterDTO.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = newState
+		clusterDTO.State = newState
 
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -287,7 +294,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, clusterDTO)
 }
 
 // handleUpdateClusterConfiguration responds to PUT /api/cluster/{cluster}, updating a cluster's
@@ -297,14 +304,14 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if cluster.APISecurityLock {
+	if clusterDTO.APISecurityLock {
 		logSecurityLockConflict("cluster", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -317,9 +324,9 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 		return
 	}
 
-	if cluster.AllowInstallations != updateClusterRequest.AllowInstallations {
-		cluster.AllowInstallations = updateClusterRequest.AllowInstallations
-		err := c.Store.UpdateCluster(cluster)
+	if clusterDTO.AllowInstallations != updateClusterRequest.AllowInstallations {
+		clusterDTO.AllowInstallations = updateClusterRequest.AllowInstallations
+		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -331,7 +338,7 @@ func handleUpdateClusterConfiguration(c *Context, w http.ResponseWriter, r *http
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, clusterDTO)
 }
 
 // handleUpgradeKubernetes responds to PUT /api/cluster/{cluster}/kubernetes,
@@ -348,31 +355,31 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if cluster.APISecurityLock {
+	if clusterDTO.APISecurityLock {
 		logSecurityLockConflict("cluster", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	oldState := cluster.State
+	oldState := clusterDTO.State
 	newState := model.ClusterStateUpgradeRequested
 
-	if !cluster.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to upgrade cluster while in state %s", cluster.State)
+	if !clusterDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to upgrade cluster while in state %s", clusterDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if upgradeClusterRequest.Apply(cluster.ProvisionerMetadataKops) {
-		cluster.State = newState
-		err := c.Store.UpdateCluster(cluster)
+	if upgradeClusterRequest.Apply(clusterDTO.ProvisionerMetadataKops) {
+		clusterDTO.State = newState
+		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -382,7 +389,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		if oldState != newState {
 			webhookPayload := &model.WebhookPayload{
 				Type:      model.TypeCluster,
-				ID:        cluster.ID,
+				ID:        clusterDTO.ID,
 				NewState:  newState,
 				OldState:  oldState,
 				Timestamp: time.Now().UnixNano(),
@@ -400,7 +407,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, clusterDTO)
 }
 
 // handleResizeCluster responds to PUT /api/cluster/{cluster}/size,
@@ -417,14 +424,14 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if cluster.APISecurityLock {
+	if clusterDTO.APISecurityLock {
 		logSecurityLockConflict("cluster", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -433,24 +440,24 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	// One more check that can't be done without both the request and the cluster.
 	if resizeClusterRequest.NodeMinCount == nil &&
 		resizeClusterRequest.NodeMaxCount != nil &&
-		*resizeClusterRequest.NodeMaxCount < cluster.ProvisionerMetadataKops.NodeMinCount {
+		*resizeClusterRequest.NodeMaxCount < clusterDTO.ProvisionerMetadataKops.NodeMinCount {
 		c.Logger.Error("resize patch would set max node count lower than min node count")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	oldState := cluster.State
+	oldState := clusterDTO.State
 	newState := model.ClusterStateResizeRequested
 
-	if !cluster.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to resize cluster while in state %s", cluster.State)
+	if !clusterDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to resize cluster while in state %s", clusterDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if resizeClusterRequest.Apply(cluster.ProvisionerMetadataKops) {
-		cluster.State = newState
-		err = c.Store.UpdateCluster(cluster)
+	if resizeClusterRequest.Apply(clusterDTO.ProvisionerMetadataKops) {
+		clusterDTO.State = newState
+		err = c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update cluster")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -460,7 +467,7 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		if oldState != newState {
 			webhookPayload := &model.WebhookPayload{
 				Type:      model.TypeCluster,
-				ID:        cluster.ID,
+				ID:        clusterDTO.ID,
 				NewState:  newState,
 				OldState:  oldState,
 				Timestamp: time.Now().UnixNano(),
@@ -478,7 +485,7 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, cluster)
+	outputJSON(c, w, clusterDTO)
 }
 
 // handleDeleteCluster responds to DELETE /api/cluster/{cluster}, beginning the process of
@@ -488,14 +495,14 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	cluster, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if cluster.APISecurityLock {
+	if clusterDTO.APISecurityLock {
 		logSecurityLockConflict("cluster", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -503,14 +510,14 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	newState := model.ClusterInstallationStateDeletionRequested
 
-	if !cluster.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to delete cluster while in state %s", cluster.State)
+	if !clusterDTO.ValidTransitionState(newState) {
+		c.Logger.Warnf("unable to delete cluster while in state %s", clusterDTO.State)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	clusterInstallations, err := c.Store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		ClusterID:      cluster.ID,
+		ClusterID:      clusterDTO.ID,
 		IncludeDeleted: false,
 		PerPage:        model.AllPerPage,
 	})
@@ -526,17 +533,17 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if cluster.State != newState {
+	if clusterDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
-			ID:        cluster.ID,
+			ID:        clusterDTO.ID,
 			NewState:  newState,
-			OldState:  cluster.State,
+			OldState:  clusterDTO.State,
 			Timestamp: time.Now().UnixNano(),
 		}
-		cluster.State = newState
+		clusterDTO.State = newState
 
-		err := c.Store.UpdateCluster(cluster)
+		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to mark cluster for deletion")
 			w.WriteHeader(http.StatusInternalServerError)

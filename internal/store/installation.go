@@ -96,25 +96,7 @@ func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, include
 func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error) {
 	builder := installationSelect.
 		OrderBy("CreateAt ASC")
-
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
-
-	if filter.OwnerID != "" {
-		builder = builder.Where("OwnerID = ?", filter.OwnerID)
-	}
-	if filter.GroupID != "" {
-		builder = builder.Where("GroupID = ?", filter.GroupID)
-	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
-	}
-	if filter.DNS != "" {
-		builder = builder.Where("DNS = ?", filter.DNS)
-	}
+	builder = sqlStore.applyInstallationFilter(builder, filter)
 
 	var rawInstallations rawInstallations
 	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
@@ -142,6 +124,29 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 	}
 
 	return installations, nil
+}
+
+func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filter *model.InstallationFilter) sq.SelectBuilder {
+	if filter.PerPage != model.AllPerPage {
+		builder = builder.
+			Limit(uint64(filter.PerPage)).
+			Offset(uint64(filter.Page * filter.PerPage))
+	}
+
+	if filter.OwnerID != "" {
+		builder = builder.Where("OwnerID = ?", filter.OwnerID)
+	}
+	if filter.GroupID != "" {
+		builder = builder.Where("GroupID = ?", filter.GroupID)
+	}
+	if !filter.IncludeDeleted {
+		builder = builder.Where("DeleteAt = 0")
+	}
+	if filter.DNS != "" {
+		builder = builder.Where("DNS = ?", filter.DNS)
+	}
+
+	return builder
 }
 
 // GetInstallationsCount returns the number of installations filtered by the deletedat
@@ -199,7 +204,39 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 }
 
 // CreateInstallation records the given installation to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) error {
+func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, annotations []*model.Annotation) error {
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	err = sqlStore.createInstallation(tx, installation)
+	if err != nil {
+		return errors.Wrap(err, "failed to create installation")
+	}
+
+	if len(annotations) > 0 {
+		annotations, err := sqlStore.getOrCreateAnnotations(tx, annotations)
+		if err != nil {
+			return errors.Wrap(err, "failed to get or create annotations")
+		}
+
+		_, err = sqlStore.createInstallationAnnotations(tx, installation.ID, annotations)
+		if err != nil {
+			return errors.Wrap(err, "failed to create annotations for installation")
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit the transaction")
+	}
+
+	return nil
+}
+
+func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Installation) error {
 	installation.ID = model.NewID()
 	installation.CreateAt = GetMillis()
 
@@ -208,7 +245,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation) e
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
-	_, err = sqlStore.execBuilder(sqlStore.db, sq.
+	_, err = sqlStore.execBuilder(db, sq.
 		Insert("Installation").
 		SetMap(map[string]interface{}{
 			"ID":               installation.ID,

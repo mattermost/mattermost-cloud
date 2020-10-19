@@ -17,11 +17,9 @@ var clusterSelect sq.SelectBuilder
 
 func init() {
 	clusterSelect = sq.
-		Select(
-			"ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
+		Select("ID", "Provider", "Provisioner", "ProviderMetadataRaw", "ProvisionerMetadataRaw",
 			"UtilityMetadataRaw", "State", "AllowInstallations", "CreateAt", "DeleteAt",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
-		).
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
 		From("Cluster")
 }
 
@@ -108,7 +106,18 @@ func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
 func (sqlStore *SQLStore) GetClusters(filter *model.ClusterFilter) ([]*model.Cluster, error) {
 	builder := clusterSelect.
 		OrderBy("CreateAt ASC")
+	builder = sqlStore.applyClustersFilter(builder, filter)
 
+	var rawClusters rawClusters
+	err := sqlStore.selectBuilder(sqlStore.db, &rawClusters, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for clusters")
+	}
+
+	return rawClusters.toClusters()
+}
+
+func (sqlStore *SQLStore) applyClustersFilter(builder sq.SelectBuilder, filter *model.ClusterFilter) sq.SelectBuilder {
 	if filter.PerPage != model.AllPerPage {
 		builder = builder.
 			Limit(uint64(filter.PerPage)).
@@ -119,13 +128,7 @@ func (sqlStore *SQLStore) GetClusters(filter *model.ClusterFilter) ([]*model.Clu
 		builder = builder.Where("DeleteAt = 0")
 	}
 
-	var rawClusters rawClusters
-	err := sqlStore.selectBuilder(sqlStore.db, &rawClusters, builder)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for clusters")
-	}
-
-	return rawClusters.toClusters()
+	return builder
 }
 
 // GetUnlockedClustersPendingWork returns an unlocked cluster in a pending state.
@@ -147,7 +150,40 @@ func (sqlStore *SQLStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, er
 }
 
 // CreateCluster records the given cluster to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
+func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster, annotations []*model.Annotation) error {
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	err = sqlStore.createCluster(tx, cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to create cluster")
+	}
+
+	if len(annotations) > 0 {
+		annotations, err := sqlStore.getOrCreateAnnotations(tx, annotations)
+		if err != nil {
+			return errors.Wrap(err, "failed to get or create annotations")
+		}
+
+		_, err = sqlStore.createClusterAnnotations(tx, cluster.ID, annotations)
+		if err != nil {
+			return errors.Wrap(err, "failed to create annotations for cluster")
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit the transaction")
+	}
+
+	return nil
+}
+
+// createCluster records the given cluster to the database, assigning it a unique ID.
+func (sqlStore *SQLStore) createCluster(execer execer, cluster *model.Cluster) error {
 	cluster.ID = model.NewID()
 	cluster.CreateAt = GetMillis()
 
@@ -156,7 +192,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster) error {
 		return errors.Wrap(err, "unable to build raw cluster metadata")
 	}
 
-	_, err = sqlStore.execBuilder(sqlStore.db, sq.
+	_, err = sqlStore.execBuilder(execer, sq.
 		Insert("Cluster").
 		SetMap(map[string]interface{}{
 			"ID":                     cluster.ID,

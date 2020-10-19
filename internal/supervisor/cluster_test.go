@@ -148,7 +148,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 				ProvisionerMetadataKops: &model.KopsMetadata{},
 				State:                   tc.InitialState,
 			}
-			err := sqlStore.CreateCluster(cluster)
+			err := sqlStore.CreateCluster(cluster, nil)
 			require.NoError(t, err)
 
 			supervisor.Supervise(cluster)
@@ -168,7 +168,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			Provider: model.ProviderAWS,
 			State:    model.ClusterStateDeletionRequested,
 		}
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		// The stored cluster is ClusterStateDeletionRequested, so we will pass

@@ -389,7 +389,7 @@ func TestDeleteGroup(t *testing.T) {
 	require.NoError(t, err)
 
 	installation1.State = model.InstallationStateStable
-	err = sqlStore.UpdateInstallation(installation1)
+	err = sqlStore.UpdateInstallation(installation1.Installation)
 	require.NoError(t, err)
 
 	t.Run("join group", func(t *testing.T) {
@@ -481,10 +481,10 @@ func TestGroupStatus(t *testing.T) {
 
 		installation.State = state
 		installation.GroupSequence = sequence
-		err = sqlStore.UpdateInstallation(installation)
+		err = sqlStore.UpdateInstallation(installation.Installation)
 		require.NoError(t, err)
 
-		return installation
+		return installation.Installation
 	}
 
 	group, err := client.CreateGroup(&model.CreateGroupRequest{

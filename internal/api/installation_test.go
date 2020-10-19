@@ -24,6 +24,7 @@ import (
 func TestGetInstallations(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -119,6 +120,15 @@ func TestGetInstallations(t *testing.T) {
 	t.Run("results", func(t *testing.T) {
 		ownerID1 := model.NewID()
 		ownerID2 := model.NewID()
+		annotations := []*model.Annotation{
+			{ID: "", Name: "multi-tenant"},
+			{ID: "", Name: "super-awesome"},
+		}
+
+		for _, ann := range annotations {
+			err := sqlStore.CreateAnnotation(ann)
+			require.NoError(t, err)
+		}
 
 		installation1 := &model.Installation{
 			OwnerID:  ownerID1,
@@ -127,7 +137,7 @@ func TestGetInstallations(t *testing.T) {
 			Size:     "1000users",
 			Affinity: model.InstallationAffinityIsolated,
 		}
-		err := sqlStore.CreateInstallation(installation1)
+		err := sqlStore.CreateInstallation(installation1, annotations)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -138,7 +148,7 @@ func TestGetInstallations(t *testing.T) {
 			DNS:      "dns2.example.com",
 			Affinity: model.InstallationAffinityIsolated,
 		}
-		err = sqlStore.CreateInstallation(installation2)
+		err = sqlStore.CreateInstallation(installation2, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -149,7 +159,7 @@ func TestGetInstallations(t *testing.T) {
 			DNS:      "dns3.example.com",
 			Affinity: model.InstallationAffinityIsolated,
 		}
-		err = sqlStore.CreateInstallation(installation3)
+		err = sqlStore.CreateInstallation(installation3, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -160,24 +170,27 @@ func TestGetInstallations(t *testing.T) {
 			DNS:      "dns4.example.com",
 			Affinity: model.InstallationAffinityIsolated,
 		}
-		err = sqlStore.CreateInstallation(installation4)
+		err = sqlStore.CreateInstallation(installation4, nil)
 		require.NoError(t, err)
 		err = sqlStore.DeleteInstallation(installation4.ID)
 		require.NoError(t, err)
-		installation4, err = client.GetInstallation(installation4.ID, nil)
+		installation4DTO, err := client.GetInstallation(installation4.ID, nil)
 		require.NoError(t, err)
+		installation4 = installation4DTO.Installation
 
 		t.Run("get installation", func(t *testing.T) {
 			t.Run("installation 1", func(t *testing.T) {
-				installation, err := client.GetInstallation(installation1.ID, nil)
+				installationDTO, err := client.GetInstallation(installation1.ID, nil)
 				require.NoError(t, err)
-				require.Equal(t, installation1, installation)
+				require.Equal(t, installation1, installationDTO.Installation)
+				require.Equal(t, 2, len(installationDTO.Annotations))
+				require.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
 			})
 
 			t.Run("get deleted installation", func(t *testing.T) {
-				installation, err := client.GetInstallation(installation4.ID, nil)
+				installationDTO, err := client.GetInstallation(installation4.ID, nil)
 				require.NoError(t, err)
-				require.Equal(t, installation4, installation)
+				require.Equal(t, installation4, installationDTO.Installation)
 			})
 
 			t.Run("get installation by name", func(t *testing.T) {
@@ -253,9 +266,9 @@ func TestGetInstallations(t *testing.T) {
 
 			for _, testCase := range testCases {
 				t.Run(testCase.Description, func(t *testing.T) {
-					installations, err := client.GetInstallations(testCase.GetInstallationsRequest)
+					installationDTOs, err := client.GetInstallations(testCase.GetInstallationsRequest)
 					require.NoError(t, err)
-					require.Equal(t, testCase.Expected, installations)
+					require.Equal(t, testCase.Expected, dtosToInstallations(installationDTOs))
 				})
 			}
 		})
@@ -291,6 +304,7 @@ func TestGetInstallations(t *testing.T) {
 func TestCreateInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -374,12 +388,24 @@ func TestCreateInstallation(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
+	t.Run("invalid annotations", func(t *testing.T) {
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:          "owner",
+			Version:          "version",
+			DNS:              "dns.example.com",
+			Affinity:         model.InstallationAffinityIsolated,
+			Annotations: []string{"my invalid annotation"},
+		})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
 	t.Run("valid", func(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:  "owner",
-			Version:  "version",
-			DNS:      "dns.example.com",
-			Affinity: model.InstallationAffinityIsolated,
+			OwnerID:          "owner",
+			Version:          "version",
+			DNS:              "dns.example.com",
+			Affinity:         model.InstallationAffinityIsolated,
+			Annotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "owner", installation.OwnerID)
@@ -392,6 +418,7 @@ func TestCreateInstallation(t *testing.T) {
 		require.EqualValues(t, 0, installation.LockAcquiredAt)
 		require.NotEqual(t, 0, installation.CreateAt)
 		require.EqualValues(t, 0, installation.DeleteAt)
+		assert.True(t, containsAnnotation("my-annotation", installation.Annotations))
 	})
 
 	t.Run("valid with custom image", func(t *testing.T) {
@@ -458,11 +485,46 @@ func TestCreateInstallation(t *testing.T) {
 			require.EqualError(t, err, "failed with status code 400")
 		})
 	})
+
+	t.Run("handle annotations", func(t *testing.T) {
+		annotations := []*model.Annotation{
+			{ID: "", Name: "multi-tenant"},
+			{ID: "", Name: "super-awesome"},
+		}
+
+		for _, ann := range annotations {
+			err := sqlStore.CreateAnnotation(ann)
+			require.NoError(t, err)
+		}
+
+		for i, testCase := range []struct {
+			description string
+			annotations []string
+			expected    []*model.Annotation
+		}{
+			{"nil annotations", nil, nil},
+			{"empty annotations", []string{}, nil},
+			{"with annotations", []string{"multi-tenant", "super-awesome"}, annotations},
+		} {
+			t.Run(testCase.description, func(t *testing.T) {
+				installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+					OwnerID:          "owner1",
+					Version:          "version",
+					DNS:              fmt.Sprintf("dns-annotation%d.example.com", i),
+					Annotations: testCase.annotations,
+				})
+				require.NoError(t, err)
+
+				assert.Equal(t, testCase.expected, installation.Annotations)
+			})
+		}
+	})
 }
 
 func TestRetryCreateInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -476,10 +538,11 @@ func TestRetryCreateInstallation(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:  "owner",
-		Version:  "version",
-		DNS:      "dns.example.com",
-		Affinity: model.InstallationAffinityIsolated,
+		OwnerID:          "owner",
+		Version:          "version",
+		DNS:              "dns.example.com",
+		Affinity:         model.InstallationAffinityIsolated,
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -490,7 +553,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -510,7 +573,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 
 	t.Run("while creating", func(t *testing.T) {
 		installation1.State = model.InstallationStateCreationRequested
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		err = client.RetryCreateInstallation(installation1.ID)
@@ -519,11 +582,12 @@ func TestRetryCreateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateCreationRequested, installation1.State)
+		assert.True(t, containsAnnotation("my-annotation", installation1.Annotations))
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		err = client.RetryCreateInstallation(installation1.ID)
@@ -532,7 +596,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 
 	t.Run("while creation failed", func(t *testing.T) {
 		installation1.State = model.InstallationStateCreationFailed
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		err = client.RetryCreateInstallation(installation1.ID)
@@ -547,6 +611,7 @@ func TestRetryCreateInstallation(t *testing.T) {
 func TestUpdateInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -560,10 +625,11 @@ func TestUpdateInstallation(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:  "owner",
-		Version:  "version",
-		DNS:      "dns.example.com",
-		Affinity: model.InstallationAffinityIsolated,
+		OwnerID:          "owner",
+		Version:          "version",
+		DNS:              "dns.example.com",
+		Affinity:         model.InstallationAffinityIsolated,
+		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
 
@@ -594,7 +660,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -635,7 +701,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	t.Run("while upgrading", func(t *testing.T) {
 		installation1.State = model.InstallationStateUpdateRequested
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -648,14 +714,15 @@ func TestUpdateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
-		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		ensureInstallationMatchesRequest(t, installation1.Installation, upgradeRequest)
 		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation1.Image)
 		require.Equal(t, installationResponse, installation1)
+		assert.True(t, containsAnnotation("my-annotation", installation1.Annotations))
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
 		installation1.State = model.InstallationStateUpdateFailed
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -668,13 +735,13 @@ func TestUpdateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
-		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		ensureInstallationMatchesRequest(t, installation1.Installation, upgradeRequest)
 		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -687,13 +754,13 @@ func TestUpdateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
-		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		ensureInstallationMatchesRequest(t, installation1.Installation, upgradeRequest)
 		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("after deletion failed", func(t *testing.T) {
 		installation1.State = model.InstallationStateDeletionFailed
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -707,7 +774,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	t.Run("while deleting", func(t *testing.T) {
 		installation1.State = model.InstallationStateDeletionRequested
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -721,7 +788,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	t.Run("to version with embedded slash", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -734,13 +801,13 @@ func TestUpdateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
-		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		ensureInstallationMatchesRequest(t, installation1.Installation, upgradeRequest)
 		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("to invalid size", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -753,7 +820,7 @@ func TestUpdateInstallation(t *testing.T) {
 
 	t.Run("installation record updated", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		upgradeRequest := &model.PatchInstallationRequest{
@@ -767,13 +834,13 @@ func TestUpdateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
-		ensureInstallationMatchesRequest(t, installation1, upgradeRequest)
+		ensureInstallationMatchesRequest(t, installation1.Installation, upgradeRequest)
 		require.Equal(t, installationResponse, installation1)
 	})
 
 	t.Run("empty update request", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		updateRequest := &model.PatchInstallationRequest{}
@@ -783,7 +850,7 @@ func TestUpdateInstallation(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateStable, installation1.State)
-		ensureInstallationMatchesRequest(t, installation1, updateRequest)
+		ensureInstallationMatchesRequest(t, installation1.Installation, updateRequest)
 		require.Equal(t, installationResponse, installation1)
 	})
 }
@@ -791,6 +858,7 @@ func TestUpdateInstallation(t *testing.T) {
 func TestJoinGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -911,6 +979,7 @@ func TestJoinGroup(t *testing.T) {
 func TestLeaveGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -939,7 +1008,7 @@ func TestLeaveGroup(t *testing.T) {
 	require.NoError(t, err)
 
 	installation1.State = model.InstallationStateStable
-	err = sqlStore.UpdateInstallation(installation1)
+	err = sqlStore.UpdateInstallation(installation1.Installation)
 	require.NoError(t, err)
 
 	err = client.JoinGroup(group1.ID, installation1.ID)
@@ -1027,6 +1096,7 @@ func TestLeaveGroup(t *testing.T) {
 func TestDeleteInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
@@ -1054,7 +1124,7 @@ func TestDeleteInstallation(t *testing.T) {
 
 	t.Run("while locked", func(t *testing.T) {
 		installation1.State = model.InstallationStateStable
-		err = sqlStore.UpdateInstallation(installation1)
+		err = sqlStore.UpdateInstallation(installation1.Installation)
 		require.NoError(t, err)
 
 		lockerID := model.NewID()
@@ -1108,7 +1178,7 @@ func TestDeleteInstallation(t *testing.T) {
 		for _, validDeletingState := range validDeletingStates {
 			t.Run(validDeletingState, func(t *testing.T) {
 				installation1.State = validDeletingState
-				err = sqlStore.UpdateInstallation(installation1)
+				err = sqlStore.UpdateInstallation(installation1.Installation)
 				require.NoError(t, err)
 
 				err := client.DeleteInstallation(installation1.ID)
@@ -1120,4 +1190,12 @@ func TestDeleteInstallation(t *testing.T) {
 			})
 		}
 	})
+}
+
+func dtosToInstallations(dtos []*model.InstallationDTO) []*model.Installation {
+	installations := make([]*model.Installation, 0, len(dtos))
+	for _, dto := range dtos {
+		installations = append(installations, dto.Installation)
+	}
+	return installations
 }
