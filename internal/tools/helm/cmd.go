@@ -30,6 +30,19 @@ func New(logger log.FieldLogger) (*Cmd, error) {
 	}, nil
 }
 
+// NewV3 creates a new instance of Cmd through which to execute helm3.
+func NewV3(logger log.FieldLogger) (*Cmd, error) {
+	helmPath, err := exec.LookPath("helm3")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find helm3 installed on your PATH")
+	}
+
+	return &Cmd{
+		helmPath: helmPath,
+		logger:   logger,
+	}, nil
+}
+
 // Close is a no-op.
 func (c *Cmd) Close() error {
 	return nil

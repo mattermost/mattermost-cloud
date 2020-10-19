@@ -13,6 +13,7 @@ DOCKER_BASE_IMAGE = alpine:3.12
 TERRAFORM_VERSION=0.11.14
 KOPS_VERSION=v1.17.1
 HELM_VERSION=v2.16.9
+HELM_3_VERSION=v3.3.4
 KUBECTL_VERSION=v1.18.3
 
 ################################################################################
@@ -107,6 +108,13 @@ get-helm: ## Download helm only if it's not available. Used in the docker build
 		curl -Lo build/helm.tar.gz https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz &&\
 		cd build && tar -zxvf helm.tar.gz &&\
 		cp linux-amd64/helm . && chmod +x helm && rm helm.tar.gz && rm -rf linux-amd64;\
+	fi
+	@if [ ! -f build/helm3 ]; then \
+		curl -Lo build/helm3.tar.gz https://get.helm.sh/helm-${HELM_3_VERSION}-linux-amd64.tar.gz &&\
+		cd build && tar -zxvf helm3.tar.gz &&\
+		cp linux-amd64/helm helm3 && chmod +x helm3 && rm helm3.tar.gz && rm -rf linux-amd64 &&\
+		export HELM_DATA_HOME=./helm3-data &&\
+		./helm3 plugin install https://github.com/helm/helm-2to3.git;\
 	fi
 
 get-kubectl: ## Download kubectl only if it's not available. Used in the docker build

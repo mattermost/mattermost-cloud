@@ -94,14 +94,23 @@ func (p *prometheus) Destroy() error {
 func (p *prometheus) Migrate() error {
 	logger := p.logger.WithField("prometheus-action", "migrate")
 
+	tillerExists, err := tillerExists(logger, p.kops.GetKubeConfigPath())
+	if err != nil {
+		return errors.Wrap(err, "failed to check if Tiller exists")
+	}
+	if !tillerExists {
+		logger.Info("Tiller does not exist skipping cleanup of Prometheus chart")
+		return nil
+	}
+
 	h := p.NewHelmDeployment()
 
 	logger.Info("Getting a list of the existing Helm charts to check if Prometheus is deployed")
-	list, err := h.List()
+	list, err := h.ListV2()
 	if err != nil {
 		return errors.Wrap(err, "failed to list helm charts")
 	}
-	for _, release := range list.Releases {
+	for _, release := range list.asSlice() {
 		if release.Name == "prometheus" {
 			logger.Info("Prometheus Helm chart is deployed, removing...")
 			err = h.Delete()

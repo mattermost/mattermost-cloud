@@ -131,6 +131,11 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 
 	h := p.NewHelmDeployment(dns)
+	err = h.TryMigrate()
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate prometheus-operator release")
+	}
+
 	err = h.Update()
 	if err != nil {
 		return errors.Wrap(err, "failed to create the Prometheus Operator Helm deployment")
