@@ -178,7 +178,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 		group, err := s.store.GetGroup(*installation.GroupID)
 		if err != nil {
-			logger.Error("Failed to get group for final configuration check")
+			logger.WithError(err).Error("Failed to get group for final configuration check")
 			return
 		}
 		if *installation.GroupSequence != group.Sequence {
