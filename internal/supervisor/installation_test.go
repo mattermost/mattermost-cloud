@@ -143,6 +143,10 @@ func (s *mockInstallationStore) GetMultitenantDatabaseForInstallationID(installa
 	return nil, nil
 }
 
+func (s *mockInstallationStore) GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error) {
+	return nil, nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources
@@ -1613,5 +1617,88 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
 		expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
+	})
+
+	t.Run("cluster with proper annotations selected", func(t *testing.T) {
+		annotations := []*model.Annotation{
+			{Name: "multi-tenant"}, {Name: "customer-abc"},
+		}
+
+		installationInCreationRequestedState := func() *model.Installation {
+			groupID := model.NewID()
+
+			return &model.Installation{
+				OwnerID:  model.NewID(),
+				Version:  "version",
+				DNS:      "dns.example.com",
+				Size:     mmv1alpha1.Size100String,
+				Affinity: model.InstallationAffinityMultiTenant,
+				GroupID:  &groupID,
+				State:    model.InstallationStateCreationRequested,
+			}
+		}
+
+		t.Run("cluster with matching annotations exists", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+
+			cluster := standardStableTestCluster()
+			err := sqlStore.CreateCluster(cluster, annotations)
+			require.NoError(t, err)
+
+			installation := installationInCreationRequestedState()
+
+			err = sqlStore.CreateInstallation(installation, annotations)
+			require.NoError(t, err)
+
+			supervisor.Supervise(installation)
+			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
+			expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
+		})
+
+		t.Run("cluster with matching annotations does not exists", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+
+			cluster := standardStableTestCluster()
+			err := sqlStore.CreateCluster(cluster, nil)
+			require.NoError(t, err)
+
+			installation := installationInCreationRequestedState()
+
+			err = sqlStore.CreateInstallation(installation, annotations)
+			require.NoError(t, err)
+
+			supervisor.Supervise(installation)
+			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationNoCompatibleClusters)
+			expectClusterInstallations(t, sqlStore, installation, 0, "")
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 0)
+		})
+
+		t.Run("annotations filter ignored when installation without annotations", func(t *testing.T) {
+			logger := testlib.MakeLogger(t)
+			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+
+			cluster := standardStableTestCluster()
+			err := sqlStore.CreateCluster(cluster, annotations)
+			require.NoError(t, err)
+
+			installation := installationInCreationRequestedState()
+
+			err = sqlStore.CreateInstallation(installation, nil)
+			require.NoError(t, err)
+
+			supervisor.Supervise(installation)
+			expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
+			expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
+			expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
+		})
 	})
 }

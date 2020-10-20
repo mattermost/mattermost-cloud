@@ -71,7 +71,6 @@ func TestAnnotationsFromStringSlice(t *testing.T) {
 			})
 		}
 	})
-
 }
 
 func TestSortAnnotations(t *testing.T) {
@@ -96,5 +95,4 @@ func TestSortAnnotations(t *testing.T) {
 			assert.Equal(t, testCase.expected, testCase.annotations)
 		})
 	}
-
 }

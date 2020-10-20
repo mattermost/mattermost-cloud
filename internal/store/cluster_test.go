@@ -408,3 +408,117 @@ func TestLockCluster(t *testing.T) {
 		require.Nil(t, cluster2.LockAcquiredBy)
 	})
 }
+
+func TestClustersAnnotationsFilter(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	annotations := []*model.Annotation{
+		{Name: "abcd"},
+		{Name: "my-annotation"},
+		{Name: "test"},
+		{Name: "multi-tenant"},
+		{Name: "private"},
+	}
+
+	for _, ann := range annotations {
+		err := sqlStore.CreateAnnotation(ann)
+		require.NoError(t, err)
+	}
+
+	clustersAnnotations := [][]*model.Annotation{
+		{{Name: "my-annotation"}, {Name: "test"}, {Name: "multi-tenant"}},
+		{{Name: "my-annotation"}, {Name: "test"}, {Name: "multi-tenant"}},
+		{{Name: "abcd"}, {Name: "test"}, {Name: "multi-tenant"}},
+		{{Name: "multi-tenant"}},
+		{{Name: "test"}, {Name: "abcd"}, {Name: "private"}},
+		{{Name: "multi-tenant"}, {Name: "test"}},
+		{{Name: "private"}},
+		{},
+	}
+
+	clusters := make([]*model.Cluster, len(clustersAnnotations))
+	for i := range clusters {
+		clusters[i] = &model.Cluster{}
+		err := sqlStore.CreateCluster(clusters[i], clustersAnnotations[i])
+		require.NoError(t, err)
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	t.Run("filter for: test + multi-tenant", func(t *testing.T) {
+		filter := &model.ClusterFilter{
+			PerPage:     model.AllPerPage,
+			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[2].ID, annotations[3].ID}},
+		}
+
+		filteredClusters, err := sqlStore.GetClusters(filter)
+		require.NoError(t, err)
+		require.Equal(t, 4, len(filteredClusters))
+		require.Equal(t, clusters[0], filteredClusters[0])
+		require.Equal(t, clusters[1], filteredClusters[1])
+		require.Equal(t, clusters[2], filteredClusters[2])
+		require.Equal(t, clusters[5], filteredClusters[3])
+	})
+
+	t.Run("filter for: private", func(t *testing.T) {
+		filter := &model.ClusterFilter{
+			PerPage:     model.AllPerPage,
+			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[4].ID}},
+		}
+
+		filteredClusters, err := sqlStore.GetClusters(filter)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(filteredClusters))
+		require.Equal(t, clusters[4], filteredClusters[0])
+		require.Equal(t, clusters[6], filteredClusters[1])
+	})
+
+	t.Run("filter for: my-annotation + test + multi-tenant", func(t *testing.T) {
+		filter := &model.ClusterFilter{
+			PerPage:     model.AllPerPage,
+			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[1].ID, annotations[2].ID, annotations[3].ID}},
+		}
+
+		filteredClusters, err := sqlStore.GetClusters(filter)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(filteredClusters))
+		require.Equal(t, clusters[0], filteredClusters[0])
+		require.Equal(t, clusters[1], filteredClusters[1])
+	})
+
+	t.Run("filter for: private + abcd", func(t *testing.T) {
+		filter := &model.ClusterFilter{
+			PerPage:     model.AllPerPage,
+			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[4].ID, annotations[0].ID}},
+		}
+
+		filteredClusters, err := sqlStore.GetClusters(filter)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(filteredClusters))
+		require.Equal(t, clusters[4], filteredClusters[0])
+	})
+
+	t.Run("filter without annotations", func(t *testing.T) {
+		filter := &model.ClusterFilter{
+			PerPage: model.AllPerPage,
+		}
+
+		filteredClusters, err := sqlStore.GetClusters(filter)
+		require.NoError(t, err)
+		require.Equal(t, 8, len(filteredClusters))
+	})
+
+	t.Run("filter providing no IDs", func(t *testing.T) {
+		filter := &model.ClusterFilter{
+			PerPage: model.AllPerPage,
+			Annotations: &model.AnnotationsFilter{
+				MatchAllIDs: []string{},
+			},
+		}
+
+		filteredClusters, err := sqlStore.GetClusters(filter)
+		require.NoError(t, err)
+		require.Equal(t, 8, len(filteredClusters))
+	})
+}

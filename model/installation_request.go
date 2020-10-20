@@ -22,19 +22,19 @@ import (
 
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
-	OwnerID          string
-	GroupID          string
-	Version          string
-	Image            string
-	DNS              string
-	License          string
-	Size             string
-	Affinity         string
-	Database         string
-	Filestore        string
-	APISecurityLock  bool
-	MattermostEnv    EnvVarMap
-	Annotations []string
+	OwnerID         string
+	GroupID         string
+	Version         string
+	Image           string
+	DNS             string
+	License         string
+	Size            string
+	Affinity        string
+	Database        string
+	Filestore       string
+	APISecurityLock bool
+	MattermostEnv   EnvVarMap
+	Annotations     []string
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html

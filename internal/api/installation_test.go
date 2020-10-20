@@ -390,10 +390,10 @@ func TestCreateInstallation(t *testing.T) {
 
 	t.Run("invalid annotations", func(t *testing.T) {
 		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:          "owner",
-			Version:          "version",
-			DNS:              "dns.example.com",
-			Affinity:         model.InstallationAffinityIsolated,
+			OwnerID:     "owner",
+			Version:     "version",
+			DNS:         "dns.example.com",
+			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my invalid annotation"},
 		})
 		require.EqualError(t, err, "failed with status code 400")
@@ -401,10 +401,10 @@ func TestCreateInstallation(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:          "owner",
-			Version:          "version",
-			DNS:              "dns.example.com",
-			Affinity:         model.InstallationAffinityIsolated,
+			OwnerID:     "owner",
+			Version:     "version",
+			DNS:         "dns.example.com",
+			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
@@ -508,9 +508,9 @@ func TestCreateInstallation(t *testing.T) {
 		} {
 			t.Run(testCase.description, func(t *testing.T) {
 				installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-					OwnerID:          "owner1",
-					Version:          "version",
-					DNS:              fmt.Sprintf("dns-annotation%d.example.com", i),
+					OwnerID:     "owner1",
+					Version:     "version",
+					DNS:         fmt.Sprintf("dns-annotation%d.example.com", i),
 					Annotations: testCase.annotations,
 				})
 				require.NoError(t, err)
@@ -538,10 +538,10 @@ func TestRetryCreateInstallation(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:          "owner",
-		Version:          "version",
-		DNS:              "dns.example.com",
-		Affinity:         model.InstallationAffinityIsolated,
+		OwnerID:     "owner",
+		Version:     "version",
+		DNS:         "dns.example.com",
+		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
@@ -625,10 +625,10 @@ func TestUpdateInstallation(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:          "owner",
-		Version:          "version",
-		DNS:              "dns.example.com",
-		Affinity:         model.InstallationAffinityIsolated,
+		OwnerID:     "owner",
+		Version:     "version",
+		DNS:         "dns.example.com",
+		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
