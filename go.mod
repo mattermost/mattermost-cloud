@@ -11,6 +11,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.4.4
 	github.com/gorilla/mux v1.7.4
+	github.com/gosuri/uilive v0.0.4
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattermost/mattermost-operator v1.9.0

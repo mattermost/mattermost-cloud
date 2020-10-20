@@ -183,21 +183,21 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 		return nil, nil
 	}
 
-	var toBeRolledResult countResult
+	var awaitingUpdateResult countResult
 	err = sqlStore.queryInstallationsToBeRolledOut(
 		[]string{"Count (*)"},
 		group,
-		&toBeRolledResult,
+		&awaitingUpdateResult,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for count of installation to be roll out")
+		return nil, errors.Wrap(err, "failed to query for count of installation to be rolled out")
 	}
-	installationsToBeRolled, err := toBeRolledResult.value()
+	awaitingUpdateCount, err := awaitingUpdateResult.value()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get count result of installations to be roll out")
+		return nil, errors.Wrap(err, "failed to get count result of installations to be rolled out")
 	}
 
-	var rolledOutResult countResult
+	var updatedResult countResult
 	installationBuilder := sq.
 		Select("Count (*)").
 		From("Installation").
@@ -205,24 +205,27 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 		Where("GroupSequence = ?", group.Sequence).
 		Where("State = ?", model.InstallationStateStable).
 		Where("DeleteAt = 0")
-	err = sqlStore.selectBuilder(sqlStore.db, &rolledOutResult, installationBuilder)
+	err = sqlStore.selectBuilder(sqlStore.db, &updatedResult, installationBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for rolled out installations")
 	}
-	rolledOutInstallations, err := rolledOutResult.value()
+	updatedCount, err := updatedResult.value()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get count result of rolled out installations")
 	}
 
-	totalInstallations, err := sqlStore.countInstallationsInGroup(group)
+	totalCount, err := sqlStore.countInstallationsInGroup(group)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
 	}
 
+	unstableCount := totalCount - updatedCount - awaitingUpdateCount
+
 	return &model.GroupStatus{
-		InstallationsTotal:          totalInstallations,
-		InstallationsUpdated:        rolledOutInstallations,
-		InstallationsAwaitingUpdate: installationsToBeRolled,
+		InstallationsTotal:          totalCount,
+		InstallationsUpdated:        updatedCount,
+		InstallationsUnstable:       unstableCount,
+		InstallationsAwaitingUpdate: awaitingUpdateCount,
 	}, nil
 }
 

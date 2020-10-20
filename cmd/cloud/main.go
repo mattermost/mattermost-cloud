@@ -34,6 +34,7 @@ func init() {
 	rootCmd.AddCommand(securityCmd)
 	rootCmd.AddCommand(workbenchCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(dashboardCmd)
 }
 
 func main() {
