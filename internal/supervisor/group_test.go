@@ -71,6 +71,10 @@ func (s *mockGroupStore) UnlockInstallation(installationID, lockerID string, for
 	return true, nil
 }
 
+func (s *mockGroupStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
+	return nil, nil
+}
+
 func TestGroupSupervisorDo(t *testing.T) {
 	t.Run("no groups pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)

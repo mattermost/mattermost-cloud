@@ -42,6 +42,10 @@ type installationStore interface {
 	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 
+	GetGroup(id string) (*model.Group, error)
+	LockGroup(groupID, lockerID string) (bool, error)
+	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
+
 	GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
 	GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error)
@@ -56,9 +60,10 @@ type installationStore interface {
 // provisioner abstracts the provisioning operations required by the installation supervisor.
 type installationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error
-	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
 	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
 	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
@@ -162,24 +167,36 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 	installation.State = newState
 
 	if installation.ConfigMergedWithGroup() && installation.State == model.InstallationStateStable {
-		installation.SyncGroupAndInstallationSequence()
-		err = s.store.UpdateInstallationGroupSequence(installation)
-		if err != nil {
-			logger.WithError(err).Warnf("Failed to set installation sequence to %s", newState)
+		// Perform a final group configuration check. This time, it is vital to
+		// check the installation while the group is locked.
+		groupLock := newGroupLock(*installation.GroupID, s.instanceID, s.store, logger)
+		if !groupLock.TryLock() {
+			logger.Error("Failed to lock group for final configuration check")
 			return
+		}
+		defer groupLock.Unlock()
+
+		group, err := s.store.GetGroup(*installation.GroupID)
+		if err != nil {
+			logger.Error("Failed to get group for final configuration check")
+			return
+		}
+		if *installation.GroupSequence != group.Sequence {
+			logger.Warnf("The installation's group configuration has changed; moving installation back to %s", model.InstallationStateUpdateRequested)
+			installation.State = model.InstallationStateUpdateRequested
 		}
 	}
 
 	err = s.store.UpdateInstallationState(installation)
 	if err != nil {
-		logger.WithError(err).Warnf("Failed to set installation state to %s", newState)
+		logger.WithError(err).Errorf("Failed to set installation state to %s", newState)
 		return
 	}
 
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeInstallation,
 		ID:        installation.ID,
-		NewState:  newState,
+		NewState:  installation.State,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
 		ExtraData: map[string]string{"DNS": installation.DNS},
@@ -189,7 +206,7 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
-	logger.Debugf("Transitioned installation from %s to %s", oldState, newState)
+	logger.Debugf("Transitioned installation from %s to %s", oldState, installation.State)
 }
 
 // transitionInstallation works with the given installation to transition it to a final state.
@@ -511,6 +528,21 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	// Before starting, we check the installation and group sequence numbers and
+	// sync them if they are not already. This is used to check if the group
+	// configuration has changed during the upgrade process or not.
+	if !installation.InstallationSequenceMatchesMergedGroupSequence() {
+		installation.SyncGroupAndInstallationSequence()
+
+		logger.Debugf("Updating installation to group configuration sequence %d", *installation.GroupSequence)
+
+		err := s.store.UpdateInstallationGroupSequence(installation)
+		if err != nil {
+			logger.WithError(err).Errorf("Failed to set installation sequence to %d", *installation.GroupSequence)
+			return installation.State
+		}
+	}
+
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		PerPage:        model.AllPerPage,
 		InstallationID: installation.ID,
@@ -565,11 +597,26 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 			return installation.State
 		}
 
-		clusterInstallation.State = model.ClusterInstallationStateReconciling
-		err = s.store.UpdateClusterInstallation(clusterInstallation)
-		if err != nil {
-			logger.Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
-			return installation.State
+		if clusterInstallation.State != model.ClusterInstallationStateReconciling {
+			oldState := clusterInstallation.State
+			clusterInstallation.State = model.ClusterInstallationStateReconciling
+			err = s.store.UpdateClusterInstallation(clusterInstallation)
+			if err != nil {
+				logger.Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
+				return installation.State
+			}
+
+			webhookPayload := &model.WebhookPayload{
+				Type:      model.TypeClusterInstallation,
+				ID:        clusterInstallation.ID,
+				NewState:  clusterInstallation.State,
+				OldState:  oldState,
+				Timestamp: time.Now().UnixNano(),
+			}
+			err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+			if err != nil {
+				logger.WithError(err).Error("Unable to process and send webhooks")
+			}
 		}
 	}
 
@@ -579,6 +626,13 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 }
 
 func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	// If the installation belongs to a group that has been updated, we requeue
+	// the installation update.
+	if !installation.InstallationSequenceMatchesMergedGroupSequence() {
+		logger.Warnf("The installation's group configuration has changed; moving installation back to %s", model.InstallationStateUpdateRequested)
+		return model.InstallationStateUpdateRequested
+	}
+
 	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
 	if err != nil {
 		logger.WithError(err).Error("Installation update failed")
@@ -591,6 +645,43 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 	logger.Info("Finished updating installation")
 
 	return model.InstallationStateStable
+}
+
+// Unused stub function
+// Will verify that all cluster installation belonging to an installation match
+// the provisioner's config.
+func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstallationConfig(installation *model.Installation, logger log.FieldLogger) (bool, error) {
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		PerPage:        model.AllPerPage,
+		InstallationID: installation.ID,
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to lookup cluster installations")
+	}
+
+	if len(clusterInstallations) == 0 {
+		return false, errors.Wrap(err, "cluster installation list contained no results")
+	}
+
+	for _, clusterInstallation := range clusterInstallations {
+		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to query cluster %s", clusterInstallation.ClusterID)
+		}
+		if cluster == nil {
+			return false, errors.Wrapf(err, "failed to find cluster %s", clusterInstallation.ClusterID)
+		}
+
+		match, err := s.provisioner.VerifyClusterInstallationMatchesConfig(cluster, installation, clusterInstallation)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to verify cluster installation matches")
+		}
+		if !match {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {

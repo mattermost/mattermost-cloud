@@ -169,6 +169,8 @@ func TestMergeWithGroup(t *testing.T) {
 	checkMergeValues := func(t *testing.T, installation *Installation, group *Group) {
 		t.Helper()
 
+		assert.Equal(t, installation.GroupID != nil, installation.IsInGroup())
+
 		assert.Equal(t, installation.Version, group.Version)
 		assert.Equal(t, installation.Image, group.Image)
 
@@ -270,5 +272,67 @@ func TestMergeWithGroup(t *testing.T) {
 		installation.MergeWithGroup(group, true)
 		checkMergeValues(t, installation, group)
 		assert.NotEmpty(t, installation.GroupOverrides)
+	})
+
+	t.Run("without overrides, group sequence matches", func(t *testing.T) {
+		installation := &Installation{
+			ID:            NewID(),
+			OwnerID:       "owner",
+			Version:       "iversion",
+			Image:         "iImage",
+			DNS:           "test.example.com",
+			License:       "this_is_my_license",
+			Affinity:      InstallationAffinityIsolated,
+			GroupID:       sToP("group_id"),
+			GroupSequence: iToP(2),
+			State:         InstallationStateStable,
+		}
+
+		group := &Group{
+			ID:       NewID(),
+			Sequence: 2,
+			Version:  "gversion",
+			Image:    "gImage",
+			MattermostEnv: EnvVarMap{
+				"key1": EnvVar{
+					Value: "value1",
+				},
+			},
+		}
+
+		installation.MergeWithGroup(group, false)
+		checkMergeValues(t, installation, group)
+		assert.True(t, installation.InstallationSequenceMatchesMergedGroupSequence())
+	})
+
+	t.Run("without overrides, group sequence doesn't match", func(t *testing.T) {
+		installation := &Installation{
+			ID:            NewID(),
+			OwnerID:       "owner",
+			Version:       "iversion",
+			Image:         "iImage",
+			DNS:           "test.example.com",
+			License:       "this_is_my_license",
+			Affinity:      InstallationAffinityIsolated,
+			GroupID:       sToP("group_id"),
+			GroupSequence: iToP(1),
+			State:         InstallationStateStable,
+		}
+
+		group := &Group{
+			ID:       NewID(),
+			Sequence: 2,
+			Version:  "gversion",
+			Image:    "gImage",
+			MattermostEnv: EnvVarMap{
+				"key1": EnvVar{
+					Value: "value1",
+				},
+			},
+		}
+
+		installation.MergeWithGroup(group, false)
+		checkMergeValues(t, installation, group)
+		assert.False(t, installation.InstallationSequenceMatchesMergedGroupSequence())
 	})
 }

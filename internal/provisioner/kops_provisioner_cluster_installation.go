@@ -223,11 +223,6 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 	}
 	defer kops.Close()
 
-	if cluster.ProvisionerMetadataKops.Name == "" {
-		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
-		return nil
-	}
-
 	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to export kubecfg")
@@ -235,7 +230,7 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 
 	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create kubernetes client")
 	}
 
 	name := makeClusterInstallationName(clusterInstallation)
@@ -363,6 +358,59 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 	logger.Info("Updated cluster installation")
 
 	return nil
+}
+
+// VerifyClusterInstallationMatchesConfig attempts to verify that a cluster
+// installation custom resource matches the configuration that is defined in the
+// provisioner
+// NOTE: this does NOT ensure that other resources such as network policies for
+// that namespace are correct. Also, the values checked are ONLY values that are
+// defined by both the installation and group configuration.
+func (provisioner *KopsProvisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	logger.Info("Verifying cluster installation resource configuration")
+
+	cr, err := provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	version := translateMattermostVersion(installation.Version)
+	if cr.Spec.Version != version {
+		logger.Debugf("Cluster installation resource on version %s when expecting %s", cr.Spec.Version, version)
+		return false, nil
+	}
+
+	if cr.Spec.Image != installation.Image {
+		logger.Debugf("Cluster installation resource on image %s when expecting %s", cr.Spec.Image, installation.Image)
+		return false, nil
+	}
+
+	mattermostEnv := getMattermostEnvWithOverrides(installation)
+	for _, wanted := range mattermostEnv.ToEnvList() {
+		if !ensureEnvMatch(wanted, cr.Spec.MattermostEnv) {
+			logger.Debugf("Cluster installation resource couldn't find env match for %s", wanted.Name)
+			return false, nil
+		}
+	}
+
+	logger.Debug("Verified cluster installation config matches")
+
+	return true, nil
+}
+
+func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
+	for _, env := range all {
+		if env == wanted {
+			return true
+		}
+	}
+
+	return false
 }
 
 // DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
