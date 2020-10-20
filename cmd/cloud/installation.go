@@ -56,7 +56,8 @@ func init() {
 	installationListCmd.Flags().Int("page", 0, "The page of installations to fetch, starting at 0.")
 	installationListCmd.Flags().Int("per-page", 100, "The number of installations to fetch per page.")
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
-	installationListCmd.Flags().Bool("table", false, "Whether to display the returned installation list in a table or not")
+	installationListCmd.Flags().Bool("table", false, "Whether to display the returned installation list in a table or not.")
+	installationListCmd.Flags().String("dns", "", "The dns to filter results by.")
 
 	installationHibernateCmd.Flags().String("installation", "", "The id of the installation to put into hibernation.")
 	installationHibernateCmd.MarkFlagRequired("installation")
@@ -322,6 +323,7 @@ var installationListCmd = &cobra.Command{
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		dns, _ := command.Flags().GetString("dns")
 		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 			OwnerID:                     owner,
 			GroupID:                     group,
@@ -329,6 +331,7 @@ var installationListCmd = &cobra.Command{
 			IncludeGroupConfigOverrides: includeGroupConfigOverrides,
 			Page:                        page,
 			PerPage:                     perPage,
+			DNS:                         dns,
 			IncludeDeleted:              includeDeleted,
 		})
 		if err != nil {
