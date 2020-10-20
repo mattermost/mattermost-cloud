@@ -486,12 +486,7 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 }
 
 func (s *InstallationSupervisor) waitForCreationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	// If the installation belongs to a group that has been updated, we requeue
-	// the installation update.
-	if !installation.InstallationSequenceMatchesMergedGroupSequence() {
-		logger.Warnf("The installation's group configuration has changed; moving installation back to %s", model.InstallationStateUpdateRequested)
-		return model.InstallationStateUpdateRequested
-	}
+	// TODO: Check group config for changes.
 
 	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
 	if err != nil {
