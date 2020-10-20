@@ -214,17 +214,17 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 		databaseConnectionString, databaseReadReplicasString =
 			MattermostMySQLConnStrings(
 				installationDatabaseName,
-				*rdsCluster.Endpoint,
 				installationSecret.MasterUsername,
 				installationSecret.MasterPassword,
+				rdsCluster,
 			)
 	} else {
 		databaseConnectionString, databaseReadReplicasString =
 			MattermostPostgresConnStrings(
 				installationDatabaseName,
-				*rdsCluster.Endpoint,
 				installationSecret.MasterUsername,
 				installationSecret.MasterPassword,
+				rdsCluster,
 			)
 	}
 	secretStringData := map[string]string{
