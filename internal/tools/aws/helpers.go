@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -110,11 +111,11 @@ func MattermostRDSDatabaseName(installationID string) string {
 
 // MattermostMySQLConnStrings formats the connection string used for accessing a
 // Mattermost database.
-func MattermostMySQLConnStrings(schema, endpoint, username, password string) (string, string) {
+func MattermostMySQLConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
 	dbConnection := fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
-		username, password, endpoint, schema)
+		username, password, *dbCluster.Endpoint, schema)
 	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
-		username, password, endpoint, schema)
+		username, password, *dbCluster.ReaderEndpoint, schema)
 
 	return dbConnection, readReplicas
 }
@@ -128,11 +129,11 @@ func RDSMySQLConnString(schema, endpoint, username, password string) string {
 
 // MattermostPostgresConnStrings formats the connection strings used by Mattermost
 // servers to access a PostgreSQL database.
-func MattermostPostgresConnStrings(schema, endpoint, username, password string) (string, string) {
+func MattermostPostgresConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
 	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
-		username, password, endpoint, schema)
+		username, password, *dbCluster.Endpoint, schema)
 	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
-		username, password, endpoint, schema)
+		username, password, *dbCluster.ReaderEndpoint, schema)
 
 	return dbConnection, readReplicas
 }
