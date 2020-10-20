@@ -20,11 +20,11 @@ type nginx struct {
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
 	logger         log.FieldLogger
-	desiredVersion string
-	actualVersion  string
+	actualVersion  model.UtilityVersion
+	desiredVersion model.UtilityVersion
 }
 
-func newNginxHandle(desiredVersion string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(desiredVersion model.UtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
@@ -67,11 +67,6 @@ func (n *nginx) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to generate nginx helm deployment")
 	}
 
-	err = h.TryMigrate()
-	if err != nil {
-		return errors.Wrap(err, "failed to migrate nginx release")
-	}
-
 	err = h.Update()
 	if err != nil {
 		return err
@@ -81,16 +76,29 @@ func (n *nginx) CreateOrUpgrade() error {
 	return err
 }
 
-func (n *nginx) DesiredVersion() string {
+func (n *nginx) DesiredVersion() model.UtilityVersion {
 	return n.desiredVersion
 }
 
-func (n *nginx) ActualVersion() string {
-	return strings.TrimPrefix(n.actualVersion, "ingress-nginx-")
+func (n *nginx) ActualVersion() model.UtilityVersion {
+	if n.actualVersion == nil {
+		return nil
+	}
+
+	return &model.HelmUtilityVersion{
+		Chart: strings.TrimPrefix(n.actualVersion.Version(), "ingress-nginx-"),
+	}
 }
 
 func (n *nginx) Destroy() error {
 	return nil
+}
+
+func (n *nginx) ValuesPath() string {
+	if n.desiredVersion == nil {
+		return ""
+	}
+	return n.provisioner.buildValuesPath("nginx_values.yaml", n.desiredVersion.Values())
 }
 
 func (n *nginx) Migrate() error {
@@ -113,7 +121,7 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "nginx",
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.service.internal.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *awsACMCert.CertificateArn, *awsACMPrivateCert.CertificateArn),
-		valuesPath:          "helm-charts/nginx_values.yaml",
+		valuesPath:          n.ValuesPath(),
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,

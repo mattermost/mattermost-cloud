@@ -82,14 +82,6 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
-			"DNS is a real FQDN that is in use already",
-			true,
-			&model.CreateInstallationRequest{
-				OwnerID: "owner1",
-				DNS:     "google.com",
-			},
-		},
-		{
 			"invalid installation size",
 			true,
 			&model.CreateInstallationRequest{
@@ -137,6 +129,30 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
+			"invalid single tenant db replicas",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNS:      "domain4321.com",
+				Database: model.InstallationDatabaseSingleTenantRDSPostgres,
+				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{
+					ReplicasCount: 33,
+				},
+			},
+		},
+		{
+			"ignore invalid replicas if db not single tenant",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNS:      "domain4321.com",
+				Database: model.InstallationDatabaseMultiTenantRDSPostgres,
+				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{
+					ReplicasCount: 33,
+				},
+			},
+		},
+		{
 			"dns has space",
 			true,
 			&model.CreateInstallationRequest{
@@ -168,6 +184,23 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("require annotated installation", func(t *testing.T) {
+		request := &model.CreateInstallationRequest{
+			OwnerID: "owner1",
+			DNS:     "domain4321.com",
+		}
+		request.SetDefaults()
+
+		assert.NoError(t, request.Validate())
+
+		model.SetRequireAnnotatedInstallations(true)
+		assert.Error(t, request.Validate())
+
+		request.Annotations = []string{"my-annotation"}
+		assert.NoError(t, request.Validate())
+		model.SetRequireAnnotatedInstallations(false)
+	})
 }
 
 func TestCreateInstallationRequestFromReader(t *testing.T) {

@@ -86,6 +86,10 @@ func (sqlStore *SQLStore) CreateClusterInstallation(clusterInstallation *model.C
 
 // GetClusterInstallations fetches the given page of created clusters. The first page is 0.
 func (sqlStore *SQLStore) GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
+	return sqlStore.getClusterInstallations(sqlStore.db, filter)
+}
+
+func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
 	builder := clusterInstallationSelect.
 		OrderBy("CreateAt ASC")
 
@@ -109,7 +113,7 @@ func (sqlStore *SQLStore) GetClusterInstallations(filter *model.ClusterInstallat
 	}
 
 	var clusterInstallations []*model.ClusterInstallation
-	err := sqlStore.selectBuilder(sqlStore.db, &clusterInstallations, builder)
+	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for clusterInstallations")
 	}

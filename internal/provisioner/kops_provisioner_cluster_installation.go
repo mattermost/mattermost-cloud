@@ -73,10 +73,7 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      installationName,
 			Namespace: clusterInstallation.Namespace,
-			Labels: map[string]string{
-				"installation":         installation.ID,
-				"cluster-installation": clusterInstallation.ID,
-			},
+			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation),
 		},
 		Spec: mmv1alpha1.ClusterInstallationSpec{
 			Size:          installation.Size,
@@ -251,6 +248,8 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 	}
 
 	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
+
+	cr.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
 
 	version := translateMattermostVersion(installation.Version)
 	if cr.Spec.Version == version {
@@ -589,6 +588,23 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 	return output, err
 }
 
+// generateClusterInstallationResourceLabels generates standard resource labels
+// for ClusterInstallation resources.
+func generateClusterInstallationResourceLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	labels := map[string]string{
+		"installation-id":         installation.ID,
+		"cluster-installation-id": clusterInstallation.ID,
+	}
+	if installation.GroupID != nil {
+		labels["group-id"] = *installation.GroupID
+	}
+	if installation.GroupSequence != nil {
+		labels["group-sequence"] = fmt.Sprintf("%d", *installation.GroupSequence)
+	}
+
+	return labels
+}
+
 // Set env overrides that are required from installations for function correctly
 // in the cloud environment.
 // NOTE: this should be called whenever the Mattermost custom resource is created
@@ -599,15 +615,24 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 		mattermostEnv = map[string]model.EnvVar{}
 	}
 
+	// General overrides.
 	mattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
 	mattermostEnv["MM_SERVICESETTINGS_ENABLELOCALMODE"] = model.EnvVar{Value: "true"}
 
+	// Filestore overrides.
 	if !installation.InternalFilestore() {
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "true"}
 	}
-
-	if installation.Filestore == model.InstallationFilestoreMultiTenantAwsS3 {
+	if installation.Filestore == model.InstallationFilestoreMultiTenantAwsS3 ||
+		installation.Filestore == model.InstallationFilestoreBifrost {
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3PATHPREFIX"] = model.EnvVar{Value: installation.ID}
+	}
+	if installation.Filestore == model.InstallationFilestoreBifrost {
+		mattermostEnv["MM_CLOUD_FILESTORE_BIFROST"] = model.EnvVar{Value: "true"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3ENDPOINT"] = model.EnvVar{Value: "bifrost.bifrost:80"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SIGNV2"] = model.EnvVar{Value: "false"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "false"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSL"] = model.EnvVar{Value: "false"}
 	}
 
 	return mattermostEnv

@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/pkg/errors"
+
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -31,6 +34,9 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/kubernetes", addContext(handleUpgradeKubernetes)).Methods("PUT")
 	clusterRouter.Handle("/size", addContext(handleResizeCluster)).Methods("PUT")
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
+	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations)).Methods("POST")
+	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation)).Methods("DELETE")
+
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
@@ -575,4 +581,99 @@ func handleGetAllUtilityMetadata(c *Context, w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, cluster.UtilityMetadata)
+}
+
+// handleAddClusterAnnotations responds to POST /api/cluster/{cluster}/annotations,
+// adds the set of annotations to the Cluster.
+func handleAddClusterAnnotations(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	c.Logger = c.Logger.WithField("cluster", clusterID).WithField("action", "add-cluster-annotations")
+
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if clusterDTO.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	annotations, err := annotationsFromRequest(r)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get annotations from request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	annotations, err = c.Store.CreateClusterAnnotations(clusterID, annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create cluster annotations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	clusterDTO.Annotations = append(clusterDTO.Annotations, annotations...)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, clusterDTO)
+}
+
+// handleDeleteClusterAnnotation responds to DELETE /api/cluster/{cluster}/annotation/{annotation-name},
+// removes annotation from the Cluster.
+func handleDeleteClusterAnnotation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["cluster"]
+	annotationName := vars["annotation-name"]
+	c.Logger = c.Logger.
+		WithField("cluster", clusterID).
+		WithField("action", "delete-cluster-annotation").
+		WithField("annotation-name", annotationName)
+
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if clusterDTO.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	err := c.Store.DeleteClusterAnnotation(clusterID, annotationName)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed delete cluster annotation")
+		if errors.Is(err, store.ErrClusterAnnotationUsedByInstallation) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func annotationsFromRequest(req *http.Request) ([]*model.Annotation, error) {
+	annotationsRequest, err := model.NewAddAnnotationsRequestFromReader(req.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode request")
+	}
+	defer req.Body.Close()
+
+	annotations, err := model.AnnotationsFromStringSlice(annotationsRequest.Annotations)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to validate annotations")
+	}
+
+	return annotations, nil
 }

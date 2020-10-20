@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
@@ -27,7 +26,7 @@ type helmDeployment struct {
 	namespace           string
 	setArgument         string
 	valuesPath          string
-	desiredVersion      string
+	desiredVersion      model.UtilityVersion
 
 	cluster         *model.Cluster
 	kopsProvisioner *KopsProvisioner
@@ -85,7 +84,7 @@ func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 		repoURL,
 	}
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -106,7 +105,7 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 		"update",
 	}
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -122,6 +121,7 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
+	logger.Warnf("helm deployment: %+v", chart)
 	arguments := []string{
 		"--debug",
 		"upgrade",
@@ -133,15 +133,16 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"--install",
 		"--create-namespace",
 		"--wait",
+		"--timeout", "20m",
 	}
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
-	if chart.desiredVersion != "" {
-		arguments = append(arguments, "--version", chart.desiredVersion)
+	if chart.desiredVersion.Version() != "" {
+		arguments = append(arguments, "--version", chart.desiredVersion.Version())
 	}
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -161,7 +162,8 @@ func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLo
 		"--debug",
 		"delete",
 		"--kubeconfig", configPath,
-		"--purge", chart.chartDeploymentName,
+		"--namespace", chart.namespace,
+		chart.chartDeploymentName,
 	}
 
 	helmClient, err := helm.New(logger)
@@ -221,7 +223,7 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 		"cmd": "helm3",
 	})
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -245,90 +247,17 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 
 }
 
-func (d *helmDeployment) Version() (string, error) {
+func (d *helmDeployment) Version() (*model.HelmUtilityVersion, error) {
 	output, err := d.List()
 	if err != nil {
-		return "", errors.Wrap(err, "while getting Helm Deployment version")
+		return nil, errors.Wrap(err, "while getting Helm Deployment version")
 	}
 
 	for _, release := range output.asSlice() {
 		if release.Name == d.chartDeploymentName {
-			return release.Chart, nil
+			return &model.HelmUtilityVersion{Chart: release.Chart}, nil
 		}
 	}
 
-	return "", errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
-}
-
-// TryMigrate migrates Helm release from version 2 to 3 if it exists.
-func (d *helmDeployment) TryMigrate() error {
-	logger := d.logger.WithField("operation", "migrate")
-
-	hasTiller, err := tillerExists(logger, d.kops.GetKubeConfigPath())
-	if err != nil {
-		return errors.Wrap(err, "failed to check if Tiller exists on cluster")
-	}
-	if !hasTiller {
-		logger.Debugf("Tiller does not exist on cluster, skipping migration")
-		return nil
-	}
-
-	listV2, err := d.ListV2()
-	if err != nil {
-		return errors.Wrap(err, "failed to list Helm 2 releases")
-	}
-
-	listV3, err := d.List()
-	if err != nil {
-		return errors.Wrap(err, "failed to list Helm 3 releases")
-	}
-
-	release := d.chartDeploymentName
-	if listV2.containsRelease(release) && !listV3.containsRelease(release) {
-		logger.Debugf("Release '%s' found with Helm 2 and not found with Helm 3. Starting the migration...", release)
-		return MigrateRelease(logger, d.kops.GetKubeConfigPath(), release)
-	}
-
-	logger.Debugf("Skipping migration of release '%s'", release)
-	return nil
-}
-
-func tillerExists(logger log.FieldLogger, kubeConfigPath string) (bool, error) {
-	helm2, err := helm.New(logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to initialize Helm 2 client")
-	}
-
-	args := []string{
-		"version",
-		"--kubeconfig", kubeConfigPath,
-	}
-
-	_, err = helm2.RunCommandRaw(args...)
-	if err == nil {
-		return true, nil
-	}
-
-	if ee, ok := err.(*exec.ExitError); ok {
-		if strings.Contains(string(ee.Stderr), "Error: could not find tiller") {
-			return false, nil
-		}
-	}
-
-	return false, err
-}
-
-func helm2Cleanup(logger log.FieldLogger, kubeConfigPath string) error {
-	log := logger.WithField("operation", "cleanup")
-
-	hasTiller, err := tillerExists(log, kubeConfigPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to check if Tiller exists on cluster")
-	}
-	if !hasTiller {
-		logger.Debugf("Tiller does not exist on cluster, skipping cleanup")
-		return nil
-	}
-
-	return CleanupAll(log, kubeConfigPath)
+	return nil, errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
 }

@@ -5,36 +5,43 @@
 package model
 
 import (
-	"context"
 	"encoding/json"
 	"io"
-	"net"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
+// requireAnnotatedInstallations if set, installations need to be annotated with at least one annotation.
+var requireAnnotatedInstallations bool
+
+// SetRequireAnnotatedInstallations is called with a value based on a CLI flag.
+func SetRequireAnnotatedInstallations(val bool) {
+	requireAnnotatedInstallations = val
+}
+
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
-	OwnerID          string
-	GroupID          string
-	Version          string
-	Image            string
-	DNS              string
-	License          string
-	Size             string
-	Affinity         string
-	Database         string
-	Filestore        string
-	APISecurityLock  bool
-	MattermostEnv    EnvVarMap
-	Annotations []string
+	OwnerID         string
+	GroupID         string
+	Version         string
+	Image           string
+	DNS             string
+	License         string
+	Size            string
+	Affinity        string
+	Database        string
+	Filestore       string
+	APISecurityLock bool
+	MattermostEnv   EnvVarMap
+	Annotations     []string
+	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
+	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
@@ -59,6 +66,9 @@ func (request *CreateInstallationRequest) SetDefaults() {
 	}
 	if request.Filestore == "" {
 		request.Filestore = InstallationFilestoreMinioOperator
+	}
+	if IsSingleTenantRDS(request.Database) {
+		request.SingleTenantDatabaseConfig.SetDefaults()
 	}
 }
 
@@ -88,10 +98,21 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Errorf("unsupported filestore %s", request.Filestore)
 	}
 	err = request.MattermostEnv.Validate()
+	if requireAnnotatedInstallations {
+		if len(request.Annotations) == 0 {
+			return errors.Errorf("at least one annotation is required")
+		}
+	}
+
 	if err != nil {
 		return errors.Wrap(err, "invalid env var settings")
 	}
-
+	if IsSingleTenantRDS(request.Database) {
+		err = request.SingleTenantDatabaseConfig.Validate()
+		if err != nil {
+			return errors.Wrap(err, "single tenant database config is invalid")
+		}
+	}
 	return checkSpaces(request)
 }
 
@@ -107,32 +128,7 @@ func isValidDNS(dns string) error {
 	if found := hostnamePattern.FindString(dns); found != dns {
 		return errors.Errorf("DNS name provided (%s) failed hostname pattern check", dns)
 	}
-	// check that domain does not resolve. Use a custom pure-Go resolver
-	// to get the same behavior on VPN, in testing, and in production
-	r := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			return (&net.Dialer{
-				Timeout: time.Second * time.Duration(10000),
-			}).DialContext(ctx, "udp", "1.1.1.1:53")
-		},
-	}
-	_, err := r.LookupHost(context.Background(), dns)
-	if err == nil {
-		return errors.Errorf("dns name %s is already taken", dns)
-	}
-	switch e := err.(type) {
-	case *net.DNSError:
-		if !e.IsNotFound {
-			return e
-		}
-		return nil
-	default:
-		// all of the errors that indicate success are DNSErrors. If
-		// there's some other error, which shouldn't be possible, return
-		// the unexpected error
-		return errors.Wrapf(e, "unexpected error when looking up DNS name %s", dns)
-	}
+	return nil
 }
 
 func checkSpaces(request *CreateInstallationRequest) error {

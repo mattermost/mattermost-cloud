@@ -23,11 +23,12 @@ type teleport struct {
 	kops           *kops.Cmd
 	cluster        *model.Cluster
 	logger         log.FieldLogger
-	desiredVersion string
-	actualVersion  string
+	desiredVersion model.UtilityVersion
+	actualVersion  model.UtilityVersion
+	valuesPath     string
 }
 
-func newTeleportHandle(cluster *model.Cluster, desiredVersion string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*teleport, error) {
+func newTeleportHandle(cluster *model.Cluster, desiredVersion model.UtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*teleport, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Teleport handle with nil logger")
 	}
@@ -71,15 +72,17 @@ func (n *teleport) updateVersion(h *helmDeployment) error {
 	return nil
 }
 
+func (n *teleport) ValuesPath() string {
+	if n.desiredVersion == nil {
+		return ""
+	}
+	return n.provisioner.buildValuesPath("teleport_values.yaml", n.desiredVersion.Values())
+}
+
 func (n *teleport) CreateOrUpgrade() error {
 	h := n.NewHelmDeployment()
 
-	err := h.TryMigrate()
-	if err != nil {
-		return errors.Wrap(err, "failed to migrate teleport release")
-	}
-
-	err = h.Update()
+	err := h.Update()
 	if err != nil {
 		return err
 	}
@@ -88,12 +91,15 @@ func (n *teleport) CreateOrUpgrade() error {
 	return err
 }
 
-func (n *teleport) DesiredVersion() string {
+func (n *teleport) DesiredVersion() model.UtilityVersion {
 	return n.desiredVersion
 }
 
-func (n *teleport) ActualVersion() string {
-	return strings.TrimPrefix(n.actualVersion, "teleport-")
+func (n *teleport) ActualVersion() model.UtilityVersion {
+	if n.actualVersion == nil {
+		return nil
+	}
+	return &model.HelmUtilityVersion{Chart: strings.TrimPrefix(n.actualVersion.Version(), "teleport-")}
 }
 
 func (n *teleport) Destroy() error {
@@ -130,7 +136,7 @@ func (n *teleport) NewHelmDeployment() *helmDeployment {
 		chartName:           "chartmuseum/teleport",
 		namespace:           "teleport",
 		setArgument:         fmt.Sprintf("config.auth_service.cluster_name=%[1]s,config.teleport.storage.region=%[2]s,config.teleport.storage.table_name=%[1]s,config.teleport.storage.audit_events_uri=dynamodb://%[1]s-events,config.teleport.storage.audit_sessions_uri=s3://%[1]s/records?region=%[2]s", teleportClusterName, awsRegion),
-		valuesPath:          "helm-charts/teleport_values.yaml",
+		valuesPath:          n.ValuesPath(),
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,

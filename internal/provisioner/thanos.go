@@ -24,8 +24,8 @@ type thanos struct {
 	kops           *kops.Cmd
 	logger         log.FieldLogger
 	provisioner    *KopsProvisioner
-	desiredVersion string
-	actualVersion  string
+	actualVersion  model.UtilityVersion
+	desiredVersion model.UtilityVersion
 }
 
 func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*thanos, error) {
@@ -49,10 +49,7 @@ func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsCl
 		return nil, errors.New("cannot create a connection to Thanos if the Kops command provided is nil")
 	}
 
-	version, err := cluster.DesiredUtilityVersion(model.ThanosCanonicalName)
-	if err != nil {
-		return nil, errors.Wrap(err, "something went wrong while getting chart version for Thanos")
-	}
+	version := cluster.DesiredUtilityVersion(model.ThanosCanonicalName)
 
 	return &thanos{
 		awsClient:      awsClient,
@@ -62,6 +59,13 @@ func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsCl
 		provisioner:    provisioner,
 		desiredVersion: version,
 	}, nil
+}
+
+func (t *thanos) ValuesPath() string {
+	if t.desiredVersion == nil {
+		return ""
+	}
+	return t.provisioner.buildValuesPath("thanos_values.yaml", t.desiredVersion.Values())
 }
 
 func (t *thanos) CreateOrUpgrade() error {
@@ -91,10 +95,6 @@ func (t *thanos) CreateOrUpgrade() error {
 	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
 
 	h := t.NewHelmDeployment(dns, grpcDNS)
-	err = h.TryMigrate()
-	if err != nil {
-		return errors.Wrap(err, "failed to migrate thanos release")
-	}
 
 	err = h.Update()
 	if err != nil {
@@ -169,7 +169,7 @@ func (t *thanos) Destroy() error {
 		return errors.Wrap(err, "failed to delete GRPC Route53 DNS record")
 	}
 
-	t.actualVersion = ""
+	t.actualVersion = nil
 	return nil
 }
 
@@ -188,7 +188,7 @@ func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeploym
 		logger:              t.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          "helm-charts/thanos_values.yaml",
+		valuesPath:          t.ValuesPath(),
 		desiredVersion:      t.desiredVersion,
 	}
 }
@@ -197,12 +197,18 @@ func (t *thanos) Name() string {
 	return model.ThanosCanonicalName
 }
 
-func (t *thanos) DesiredVersion() string {
+func (t *thanos) DesiredVersion() model.UtilityVersion {
 	return t.desiredVersion
 }
 
-func (t *thanos) ActualVersion() string {
-	return strings.TrimPrefix(t.actualVersion, "thanos-")
+func (t *thanos) ActualVersion() model.UtilityVersion {
+	if t.actualVersion == nil {
+		return nil
+	}
+	return &model.HelmUtilityVersion{
+		Chart:      strings.TrimPrefix(t.actualVersion.Version(), "thanos-"),
+		ValuesPath: t.actualVersion.Values(),
+	}
 }
 
 func (t *thanos) updateVersion(h *helmDeployment) error {

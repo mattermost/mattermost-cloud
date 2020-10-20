@@ -185,6 +185,7 @@ func TestGetInstallations(t *testing.T) {
 				require.Equal(t, installation1, installationDTO.Installation)
 				require.Equal(t, 2, len(installationDTO.Annotations))
 				require.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
+				require.Nil(t, installationDTO.SingleTenantDatabaseConfig)
 			})
 
 			t.Run("get deleted installation", func(t *testing.T) {
@@ -390,10 +391,10 @@ func TestCreateInstallation(t *testing.T) {
 
 	t.Run("invalid annotations", func(t *testing.T) {
 		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:          "owner",
-			Version:          "version",
-			DNS:              "dns.example.com",
-			Affinity:         model.InstallationAffinityIsolated,
+			OwnerID:     "owner",
+			Version:     "version",
+			DNS:         "dns.example.com",
+			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my invalid annotation"},
 		})
 		require.EqualError(t, err, "failed with status code 400")
@@ -401,10 +402,10 @@ func TestCreateInstallation(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-			OwnerID:          "owner",
-			Version:          "version",
-			DNS:              "dns.example.com",
-			Affinity:         model.InstallationAffinityIsolated,
+			OwnerID:     "owner",
+			Version:     "version",
+			DNS:         "dns.example.com",
+			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my-annotation"},
 		})
 		require.NoError(t, err)
@@ -508,9 +509,9 @@ func TestCreateInstallation(t *testing.T) {
 		} {
 			t.Run(testCase.description, func(t *testing.T) {
 				installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
-					OwnerID:          "owner1",
-					Version:          "version",
-					DNS:              fmt.Sprintf("dns-annotation%d.example.com", i),
+					OwnerID:     "owner1",
+					Version:     "version",
+					DNS:         fmt.Sprintf("dns-annotation%d.example.com", i),
 					Annotations: testCase.annotations,
 				})
 				require.NoError(t, err)
@@ -518,6 +519,58 @@ func TestCreateInstallation(t *testing.T) {
 				assert.Equal(t, testCase.expected, installation.Annotations)
 			})
 		}
+	})
+
+	dbConfigRequest := model.SingleTenantDatabaseRequest{
+		PrimaryInstanceType: "db.r5.xlarge",
+		ReplicaInstanceType: "db.r5.large",
+		ReplicasCount:       5,
+	}
+
+	t.Run("handle single tenant database configuration", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                    "owner1",
+			Version:                    "version",
+			DNS:                        "dns-db-config.example.com",
+			SingleTenantDatabaseConfig: dbConfigRequest,
+			Database:                   model.InstallationDatabaseSingleTenantRDSPostgres,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType, dbConfigRequest.PrimaryInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType, dbConfigRequest.ReplicaInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicasCount, dbConfigRequest.ReplicasCount)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType, dbConfigRequest.PrimaryInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType, dbConfigRequest.ReplicaInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicasCount, dbConfigRequest.ReplicasCount)
+	})
+
+	t.Run("ignore single tenant database configuration if db not single tenant", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                    "owner1",
+			Version:                    "version",
+			DNS:                        "dns-db-config2.example.com",
+			SingleTenantDatabaseConfig: dbConfigRequest,
+			Database:                   model.InstallationDatabaseMultiTenantRDSPostgres,
+		})
+		require.NoError(t, err)
+		assert.Nil(t, installation.SingleTenantDatabaseConfig)
+	})
+
+	t.Run("set default values for single tenant database configuration", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                    "owner1",
+			Version:                    "version",
+			DNS:                        "dns-db-config3.example.com",
+			SingleTenantDatabaseConfig: dbConfigRequest,
+			Database:                   model.InstallationDatabaseSingleTenantRDSMySQL,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, installation.SingleTenantDatabaseConfig)
+		assert.NotEmpty(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType)
+		assert.NotEmpty(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType)
 	})
 }
 
@@ -538,10 +591,10 @@ func TestRetryCreateInstallation(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:          "owner",
-		Version:          "version",
-		DNS:              "dns.example.com",
-		Affinity:         model.InstallationAffinityIsolated,
+		OwnerID:     "owner",
+		Version:     "version",
+		DNS:         "dns.example.com",
+		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
@@ -625,10 +678,10 @@ func TestUpdateInstallation(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		OwnerID:          "owner",
-		Version:          "version",
-		DNS:              "dns.example.com",
-		Affinity:         model.InstallationAffinityIsolated,
+		OwnerID:     "owner",
+		Version:     "version",
+		DNS:         "dns.example.com",
+		Affinity:    model.InstallationAffinityIsolated,
 		Annotations: []string{"my-annotation"},
 	})
 	require.NoError(t, err)
@@ -1189,6 +1242,125 @@ func TestDeleteInstallation(t *testing.T) {
 				require.Equal(t, model.InstallationStateDeletionRequested, installation1.State)
 			})
 		}
+	})
+}
+
+func TestInstallationAnnotations(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+	installation, err := client.CreateInstallation(
+		&model.CreateInstallationRequest{
+			OwnerID:  "owner",
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Affinity: model.InstallationAffinityMultiTenant,
+		})
+	require.NoError(t, err)
+
+	annotationsRequest := &model.AddAnnotationsRequest{
+		Annotations: []string{"my-annotation", "super-awesome123"},
+	}
+
+	installation, err = client.AddInstallationAnnotations(installation.ID, annotationsRequest)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(installation.Annotations))
+	assert.True(t, containsAnnotation("my-annotation", installation.Annotations))
+	assert.True(t, containsAnnotation("super-awesome123", installation.Annotations))
+
+	annotationsRequest = &model.AddAnnotationsRequest{
+		Annotations: []string{"my-annotation2"},
+	}
+	installation, err = client.AddInstallationAnnotations(installation.ID, annotationsRequest)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(installation.Annotations))
+
+	installation, err = client.GetInstallation(installation.ID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(installation.Annotations))
+	assert.True(t, containsAnnotation("my-annotation", installation.Annotations))
+	assert.True(t, containsAnnotation("my-annotation2", installation.Annotations))
+	assert.True(t, containsAnnotation("super-awesome123", installation.Annotations))
+
+	t.Run("fail to add duplicated annotation", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"my-annotation"},
+		}
+		_, err = client.AddInstallationAnnotations(installation.ID, annotationsRequest)
+		require.Error(t, err)
+	})
+
+	t.Run("fail to add invalid annotation", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"_my-annotation"},
+		}
+		_, err = client.AddInstallationAnnotations(installation.ID, annotationsRequest)
+		require.Error(t, err)
+	})
+
+	t.Run("fail to add or delete while api-security-locked", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"is-locked"},
+		}
+		err = sqlStore.LockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+
+		_, err = client.AddInstallationAnnotations(installation.ID, annotationsRequest)
+		require.Error(t, err)
+		err = client.DeleteInstallationAnnotation(installation.ID, "my-annotation2")
+		require.Error(t, err)
+
+		err = sqlStore.UnlockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+	})
+
+	err = client.DeleteInstallationAnnotation(installation.ID, "my-annotation2")
+	require.NoError(t, err)
+
+	installation, err = client.GetInstallation(installation.ID, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(installation.Annotations))
+
+	t.Run("delete unknown annotation", func(t *testing.T) {
+		err = client.DeleteInstallationAnnotation(installation.ID, "unknown")
+		require.NoError(t, err)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(installation.Annotations))
+	})
+
+	t.Run("fail with 403 if adding annotation when cluster on which it is scheduled does not contain it", func(t *testing.T) {
+		annotations := []*model.Annotation{
+			{Name: "my-annotation"},
+			{Name: "super-awesome123"},
+		}
+
+		cluster := &model.Cluster{}
+		err = sqlStore.CreateCluster(cluster, annotations)
+
+		clusterInstallation := &model.ClusterInstallation{
+			InstallationID: installation.ID,
+			ClusterID:      cluster.ID,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		_, err = client.AddInstallationAnnotations(installation.ID, &model.AddAnnotationsRequest{
+			Annotations: []string{"not-on-a-cluster"},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "403")
 	})
 }
 

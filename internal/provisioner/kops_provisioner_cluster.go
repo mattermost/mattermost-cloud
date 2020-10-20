@@ -41,11 +41,12 @@ type KopsProvisioner struct {
 	resourceUtil            *utils.ResourceUtil
 	logger                  log.FieldLogger
 	store                   model.InstallationDatabaseStoreInterface
+	valuesPath              string
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 // TODO(gsagula): Consider replacing all these paramaters with a struct for readability.
-func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, allowCIDRRangeList []string,
+func NewKopsProvisioner(s3StateStore, owner, valuesPath string, useExistingAWSResources bool, allowCIDRRangeList []string,
 	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
 
 	logger = logger.WithField("provisioner", "kops")
@@ -58,6 +59,7 @@ func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool
 		resourceUtil:            resourceUtil,
 		owner:                   owner,
 		store:                   store,
+		valuesPath:              valuesPath,
 	}
 }
 
@@ -226,6 +228,13 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 
 	logger.Info("Provisioning cluster")
 
+	// Start by gathering resources that will be needed later. If any of this
+	// fails then no cluster changes have been made which reduces risk.
+	bifrostSecret, err := awsClient.GenerateBifrostUtilitySecret(cluster.ID, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate bifrost secret")
+	}
+
 	// Begin deploying the mattermost operator.
 	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
 	if err != nil {
@@ -262,9 +271,20 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return err
 	}
 
+	// The bifrost utility cannot have downtime so it is not part of the namespace
+	// cleanup and recreation flow. We always only update bifrost.
+	bifrostNamespace := "bifrost"
+	namespaces = append(namespaces, bifrostNamespace)
+	logger.Info("Creating utility namespaces")
 	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create bifrost namespace")
+	}
+
+	logger.Info("Creating or updating bifrost secret")
+	_, err = k8sClient.CreateOrUpdateSecret(bifrostNamespace, bifrostSecret)
+	if err != nil {
+		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
 	// Need to remove two items from the calico because the fields after the creation are imutable so the
@@ -330,6 +350,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			Path:            "manifests/operator-manifests/mattermost/operator.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
+			Path:            "manifests/bifrost/bifrost.yaml",
+			DeployNamespace: bifrostNamespace,
+		}, {
 			Path:            "manifests/calico-policy-only.yaml",
 			DeployNamespace: "kube-system",
 		}, {
@@ -345,8 +368,13 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// change the waiting time because creation can take more time
 	// due container download / init / container creation / volume allocation
 	wait = 240
-	appsWithDeployment := map[string]string{"minio-operator": "minio-operator", "mattermost-operator": "mattermost-operator",
-		"calico-typha-horizontal-autoscaler": "kube-system", "calico-typha": "kube-system"}
+	appsWithDeployment := map[string]string{
+		"minio-operator":                     minioOperatorNamespace,
+		"mattermost-operator":                mattermostOperatorNamespace,
+		"bifrost":                            bifrostNamespace,
+		"calico-typha-horizontal-autoscaler": "kube-system",
+		"calico-typha":                       "kube-system",
+	}
 	for deployment, namespace := range appsWithDeployment {
 		pods, err := k8sClient.GetPodsFromDeployment(namespace, deployment)
 		if err != nil {

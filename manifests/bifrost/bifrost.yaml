@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bifrost
+  namespace: bifrost
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      name: bifrost
+  template:
+    metadata:
+      labels:
+        name: bifrost
+    spec:
+      containers:
+      - name: bifrost
+        command:
+        - /bifrost
+        image: mattermost/bifrost:cloud-1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: BIFROST_SERVICESETTINGS_HOST
+          value: "0.0.0.0:8087"
+        - name: BIFROST_SERVICESETTINGS_HEALTHHOST
+          value: "0.0.0.0:8099"
+        - name: BIFROST_LOGSETTINGS_CONSOLEJSON
+          value: "true"
+        - name: BIFROST_S3SETTINGS_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: bifrost
+              key: Bucket
+        - name: BIFROST_S3SETTINGS_ACCESSKEYID
+          valueFrom:
+            secretKeyRef:
+              name: bifrost
+              key: AccessKeyID
+        - name: BIFROST_S3SETTINGS_SECRETACCESSKEY
+          valueFrom:
+            secretKeyRef:
+              name: bifrost
+              key: SecretAccessKey
+        readinessProbe:
+          tcpSocket:
+            port: 8087
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8099
+          initialDelaySeconds: 3
+          periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bifrost
+  namespace: bifrost
+  labels:
+    kubernetes.io/name: "bifrost"
+spec:
+  selector:
+    name: bifrost
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8087
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mattermost-apps
+  namespace: bifrost
+spec:
+  podSelector: {}
+  ingress:
+  - ports:
+    - port: 8087
+      protocol: TCP
+    from:
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            app: mattermost
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            app: mattermost-update-check

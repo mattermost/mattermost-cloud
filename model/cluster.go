@@ -74,6 +74,13 @@ type ClusterFilter struct {
 	Page           int
 	PerPage        int
 	IncludeDeleted bool
+	Annotations    *AnnotationsFilter
+}
+
+// AnnotationsFilter describes filter based on Annotations.
+type AnnotationsFilter struct {
+	// MatchAllIDs contains all Annotation IDs which need to be set on a Cluster for it to be included in the result.
+	MatchAllIDs []string
 }
 
 var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|(latest))$`)

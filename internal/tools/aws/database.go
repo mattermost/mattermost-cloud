@@ -22,11 +22,6 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
-const mysqlConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
-const mysqlConnReaderStringTemplate = "%s:%s@tcp(%s:3306)/mattermost?readTimeout=30s&writeTimeout=30s"
-const postgresConnStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
-const postgresConnReaderStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
-
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
 	databaseType   string
@@ -145,7 +140,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		"database-type":   d.databaseType,
 	})
 
-	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -160,26 +155,35 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 	if len(dbClusters.DBClusters) != 1 {
 		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(dbClusters.DBClusters))
 	}
+	rdsCluster := dbClusters.DBClusters[0]
 
-	var connTemplate, readerTemplate, databaseConnectionCheck string
+	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
 	switch d.databaseType {
 	case model.DatabaseEngineTypeMySQL:
-		connTemplate = mysqlConnStringTemplate
-		readerTemplate = mysqlConnReaderStringTemplate
-		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *dbClusters.DBClusters[0].Endpoint)
+		databaseConnectionString, databaseReadReplicasString =
+			MattermostMySQLConnStrings(
+				"mattermost",
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+				rdsCluster,
+			)
+		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *rdsCluster.Endpoint)
 	case model.DatabaseEngineTypePostgres:
-		connTemplate = postgresConnStringTemplate
-		readerTemplate = postgresConnReaderStringTemplate
+		databaseConnectionString, databaseReadReplicasString =
+			MattermostPostgresConnStrings(
+				"mattermost",
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+				rdsCluster,
+			)
 	default:
 		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
-	databaseConnectionString := fmt.Sprintf(connTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbClusters.DBClusters[0].Endpoint)
-	databaseConnectionReaderString := fmt.Sprintf(readerTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbClusters.DBClusters[0].ReaderEndpoint)
 	secretStringData := map[string]string{
 		"DB_CONNECTION_STRING":              databaseConnectionString,
-		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseConnectionReaderString,
+		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
 	}
 	if len(databaseConnectionCheck) != 0 {
 		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
@@ -287,14 +291,36 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 	logger.Infof("Encrypting RDS database with key %s", *keyMetadata.Arn)
 
+	dbConfig, err := d.client.store.GetSingleTenantDatabaseConfigForInstallation(installationID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get single tenant database config for installation")
+	}
+	if dbConfig == nil {
+		return fmt.Errorf("single tenant database not found for installation")
+	}
+
+	dbEngine, err := dbEngineFromType(d.databaseType)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert database type to database engine")
+	}
+
 	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, d.databaseType, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure DB cluster was created")
 	}
 
-	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), d.databaseType, logger)
+	// Create primary
+	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), dbEngine, dbConfig.PrimaryInstanceType, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to ensure DB instance was created")
+		return errors.Wrap(err, "failed to ensure DB primary instance was created")
+	}
+
+	// Create replicas
+	for i := 0; i < dbConfig.ReplicasCount; i++ {
+		err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-replica-%d", awsID, i), dbEngine, dbConfig.ReplicaInstanceType, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure DB replica instance was created")
+		}
 	}
 
 	return nil
@@ -335,4 +361,15 @@ func (d *RDSDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*k
 	}
 
 	return keys, nil
+}
+
+func dbEngineFromType(dbType string) (string, error) {
+	switch dbType {
+	case model.DatabaseEngineTypeMySQL:
+		return "aurora-mysql", nil
+	case model.DatabaseEngineTypePostgres:
+		return "aurora-postgresql", nil
+	default:
+		return "", errors.Errorf("%s is an invalid database engine type", dbType)
+	}
 }

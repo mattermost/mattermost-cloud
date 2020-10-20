@@ -73,6 +73,8 @@ type PatchGroupRequest struct {
 	Version       *string
 	Image         *string
 	MattermostEnv EnvVarMap
+
+	ForceSequenceUpdate bool
 }
 
 // Apply applies the patch to the given group.
@@ -103,6 +105,12 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 		if group.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
 			applied = true
 		}
+	}
+
+	// This special value allows us to bump the group sequence number even when
+	// the patch contains no group modifications.
+	if p.ForceSequenceUpdate {
+		applied = true
 	}
 
 	return applied

@@ -28,8 +28,8 @@ type prometheusOperator struct {
 	kops           *kops.Cmd
 	logger         log.FieldLogger
 	provisioner    *KopsProvisioner
-	desiredVersion string
-	actualVersion  string
+	desiredVersion model.UtilityVersion
+	actualVersion  model.UtilityVersion
 }
 
 func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheusOperator, error) {
@@ -53,10 +53,7 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 		return nil, errors.New("cannot create a connection to Prometheus Operator if the Kops command provided is nil")
 	}
 
-	version, err := cluster.DesiredUtilityVersion(model.PrometheusOperatorCanonicalName)
-	if err != nil {
-		return nil, errors.Wrap(err, "something went wrong while getting chart version for Prometheus Operator")
-	}
+	chartVersion := cluster.DesiredUtilityVersion(model.PrometheusOperatorCanonicalName)
 
 	return &prometheusOperator{
 		awsClient:      awsClient,
@@ -64,7 +61,7 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.PrometheusOperatorCanonicalName),
 		provisioner:    provisioner,
-		desiredVersion: version,
+		desiredVersion: chartVersion,
 	}, nil
 }
 
@@ -131,10 +128,6 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 
 	h := p.NewHelmDeployment(dns)
-	err = h.TryMigrate()
-	if err != nil {
-		return errors.Wrap(err, "failed to migrate prometheus-operator release")
-	}
 
 	err = h.Update()
 	if err != nil {
@@ -152,7 +145,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	}
 
 	p.logger.Debugln("CNAME was not provisioned for prometheus")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
 	defer cancel()
 
 	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx", logger.WithField("prometheus-action", "create"), p.kops.GetKubeConfigPath())
@@ -167,6 +160,13 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	}
 
 	return nil
+}
+
+func (p *prometheusOperator) ValuesPath() string {
+	if p.desiredVersion == nil {
+		return ""
+	}
+	return p.provisioner.buildValuesPath("prometheus_operator_values.yaml", p.desiredVersion.Values())
 }
 
 func (p *prometheusOperator) Destroy() error {
@@ -185,7 +185,7 @@ func (p *prometheusOperator) Destroy() error {
 		return errors.Wrap(err, "failed to delete Route53 DNS record")
 	}
 
-	p.actualVersion = ""
+	p.actualVersion = nil
 	return nil
 }
 
@@ -204,7 +204,7 @@ func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeploy
 		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          "helm-charts/prometheus_operator_values.yaml",
+		valuesPath:          p.ValuesPath(),
 		desiredVersion:      p.desiredVersion,
 	}
 }
@@ -213,12 +213,19 @@ func (p *prometheusOperator) Name() string {
 	return model.PrometheusOperatorCanonicalName
 }
 
-func (p *prometheusOperator) DesiredVersion() string {
+func (p *prometheusOperator) DesiredVersion() model.UtilityVersion {
 	return p.desiredVersion
 }
 
-func (p *prometheusOperator) ActualVersion() string {
-	return strings.TrimPrefix(p.actualVersion, "kube-prometheus-stack-")
+func (p *prometheusOperator) ActualVersion() model.UtilityVersion {
+	if p.actualVersion == nil {
+		return nil
+	}
+
+	return &model.HelmUtilityVersion{
+		Chart:      strings.TrimPrefix(p.actualVersion.Version(), "kube-prometheus-stack-"),
+		ValuesPath: p.actualVersion.Values(),
+	}
 }
 
 func (p *prometheusOperator) updateVersion(h *helmDeployment) error {

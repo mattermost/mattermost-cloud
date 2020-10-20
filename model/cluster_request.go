@@ -15,19 +15,71 @@ import (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider               string            `json:"provider,omitempty"`
-	Zones                  []string          `json:"zones,omitempty"`
-	Version                string            `json:"version,omitempty"`
-	KopsAMI                string            `json:"kops-ami,omitempty"`
-	MasterInstanceType     string            `json:"master-instance-type,omitempty"`
-	MasterCount            int64             `json:"master-count,omitempty"`
-	NodeInstanceType       string            `json:"node-instance-type,omitempty"`
-	NodeMinCount           int64             `json:"node-min-count,omitempty"`
-	NodeMaxCount           int64             `json:"node-max-count,omitempty"`
-	AllowInstallations     bool              `json:"allow-installations,omitempty"`
-	APISecurityLock        bool              `json:"api-security-lock,omitempty"`
-	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
-	Annotations       []string          `json:"annotations,omitempty"`
+	Provider               string                    `json:"provider,omitempty"`
+	Zones                  []string                  `json:"zones,omitempty"`
+	Version                string                    `json:"version,omitempty"`
+	KopsAMI                string                    `json:"kops-ami,omitempty"`
+	MasterInstanceType     string                    `json:"master-instance-type,omitempty"`
+	MasterCount            int64                     `json:"master-count,omitempty"`
+	NodeInstanceType       string                    `json:"node-instance-type,omitempty"`
+	NodeMinCount           int64                     `json:"node-min-count,omitempty"`
+	NodeMaxCount           int64                     `json:"node-max-count,omitempty"`
+	AllowInstallations     bool                      `json:"allow-installations,omitempty"`
+	APISecurityLock        bool                      `json:"api-security-lock,omitempty"`
+	DesiredUtilityVersions map[string]UtilityVersion `json:"utility-versions,omitempty"`
+	Annotations            []string                  `json:"annotations,omitempty"`
+}
+
+// rawCreateClusterRequest specifies the parameters for a new cluster.
+type rawCreateClusterRequest struct {
+	Provider               string                     `json:"provider,omitempty"`
+	Zones                  []string                   `json:"zones,omitempty"`
+	Version                string                     `json:"version,omitempty"`
+	KopsAMI                string                     `json:"kops-ami,omitempty"`
+	MasterInstanceType     string                     `json:"master-instance-type,omitempty"`
+	MasterCount            int64                      `json:"master-count,omitempty"`
+	NodeInstanceType       string                     `json:"node-instance-type,omitempty"`
+	NodeMinCount           int64                      `json:"node-min-count,omitempty"`
+	NodeMaxCount           int64                      `json:"node-max-count,omitempty"`
+	AllowInstallations     bool                       `json:"allow-installations,omitempty"`
+	APISecurityLock        bool                       `json:"api-security-lock,omitempty"`
+	DesiredUtilityVersions map[string]json.RawMessage `json:"utility-versions,omitempty"`
+	Annotations            []string                   `json:"annotations,omitempty"`
+}
+
+func (request *CreateClusterRequest) UnmarshalJSON(bytes []byte) error {
+	raw := new(rawCreateClusterRequest)
+	err := json.Unmarshal(bytes, raw)
+	if err != nil {
+		return err
+	}
+	utilityVersions := make(map[string]UtilityVersion)
+	for utility, rawVersion := range raw.DesiredUtilityVersions {
+		version := new(HelmUtilityVersion)
+		err := json.Unmarshal(rawVersion, version)
+		if err != nil {
+			return err
+		}
+		utilityVersions[utility] = version
+	}
+
+	request = &CreateClusterRequest{
+		Provider:               raw.Provider,
+		Zones:                  raw.Zones,
+		Version:                raw.Version,
+		KopsAMI:                raw.KopsAMI,
+		MasterInstanceType:     raw.MasterInstanceType,
+		MasterCount:            raw.MasterCount,
+		NodeInstanceType:       raw.NodeInstanceType,
+		NodeMinCount:           raw.NodeMinCount,
+		NodeMaxCount:           raw.NodeMaxCount,
+		AllowInstallations:     raw.AllowInstallations,
+		APISecurityLock:        raw.APISecurityLock,
+		DesiredUtilityVersions: utilityVersions,
+		Annotations:            raw.Annotations,
+	}
+
+	return nil
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -57,10 +109,7 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.NodeMaxCount = request.NodeMinCount
 	}
 	if request.DesiredUtilityVersions == nil {
-		request.DesiredUtilityVersions = make(map[string]string)
-	}
-	if _, ok := request.DesiredUtilityVersions[PrometheusCanonicalName]; !ok {
-		request.DesiredUtilityVersions[PrometheusCanonicalName] = PrometheusDefaultVersion
+		request.DesiredUtilityVersions = make(map[string]UtilityVersion)
 	}
 	if _, ok := request.DesiredUtilityVersions[PrometheusOperatorCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PrometheusOperatorCanonicalName] = PrometheusOperatorDefaultVersion
@@ -270,7 +319,7 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
-	DesiredUtilityVersions map[string]string `json:"utility-versions,omitempty"`
+	DesiredUtilityVersions map[string]UtilityVersion `json:"utility-versions,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.

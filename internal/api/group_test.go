@@ -319,6 +319,27 @@ func TestUpdateGroup(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("only sequence updated", func(t *testing.T) {
+		group1, err = client.GetGroup(group1.ID)
+		require.NoError(t, err)
+		oldSequence := group1.Sequence
+
+		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
+			ID:                  group1.ID,
+			ForceSequenceUpdate: true,
+		})
+		require.NoError(t, err)
+
+		group1, err = client.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.Equal(t, "name", group1.Name)
+		require.Equal(t, "description", group1.Description)
+		require.Equal(t, "version", group1.Version)
+		require.EqualValues(t, group1.MattermostEnv, mattermostEnvFooBar)
+		require.Equal(t, updateResponseGroup, group1)
+		require.Equal(t, oldSequence+1, group1.Sequence)
+	})
+
 	t.Run("partial update", func(t *testing.T) {
 		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:      group1.ID,

@@ -5,6 +5,8 @@
 package provisioner
 
 import (
+	"fmt"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -32,15 +34,19 @@ type Utility interface {
 	// at the time of Create or Upgrade. This version will remain valid
 	// unless something interacts with the cluster out of band, at which
 	// time it will be invalid until Upgrade is called again
-	ActualVersion() string
+	ActualVersion() model.UtilityVersion
 
 	// DesiredVersion returns the utility's target version, which has been
 	// requested, but may not yet have been reconciled
-	DesiredVersion() string
+	DesiredVersion() model.UtilityVersion
 
 	// Name returns the canonical string-version name for the utility,
 	// used throughout the application
 	Name() string
+
+	// ValuesPath returns the location where the values file(s) are
+	// stored for this utility
+	ValuesPath() string
 }
 
 // utilityGroup  holds  the  metadata  needed  to  manage  a  specific
@@ -56,7 +62,7 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"stable":               "https://kubernetes-charts.storage.googleapis.com",
+	"stable":               "https://charts.helm.sh/stable",
 	"chartmuseum":          "https://chartmuseum.internal.core.cloud.mattermost.com",
 	"ingress-nginx":        "https://kubernetes.github.io/ingress-nginx",
 	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
@@ -66,19 +72,11 @@ var helmRepos = map[string]string{
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	desiredVersion, err := cluster.DesiredUtilityVersion(model.NginxCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	nginx, err := newNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
+	nginx, err := newNginxHandle(
+		cluster.DesiredUtilityVersion(model.NginxCanonicalName),
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
-	}
-
-	prometheus, err := newPrometheusHandle(cluster, provisioner, awsClient, kops, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
 	}
 
 	prometheusOperator, err := newPrometheusOperatorHandle(cluster, provisioner, awsClient, kops, logger)
@@ -91,22 +89,16 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	fluentbit, err := newFluentbitHandle(desiredVersion, provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(
+		cluster.DesiredUtilityVersion(model.FluentbitCanonicalName),
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.TeleportCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	teleport, err := newTeleportHandle(cluster, desiredVersion, provisioner, awsClient, kops, logger)
+	teleport, err := newTeleportHandle(
+		cluster, cluster.DesiredUtilityVersion(model.TeleportCanonicalName),
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
@@ -114,7 +106,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, prometheusOperator, thanos, fluentbit, teleport},
+		utilities:   []Utility{nginx, prometheusOperator, thanos, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
@@ -170,10 +162,12 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		}
 	}
 
-	err := helm2Cleanup(logger, group.kops.GetKubeConfigPath())
-	if err != nil {
-		return errors.Wrap(err, "failed to cleanup Helm 2")
-	}
-
 	return nil
+}
+
+func (provisioner *KopsProvisioner) buildValuesPath(utilityPath, valuesPath string) string {
+	if valuesPath == "" {
+		return fmt.Sprintf("helm-charts/%s", utilityPath)
+	}
+	return fmt.Sprintf("%s/%s/-/raw/%s", provisioner.valuesPath, valuesPath, utilityPath)
 }

@@ -11,6 +11,7 @@ import (
 	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/model"
 
 	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
@@ -40,7 +41,7 @@ func TestNewHelmDeploymentWithAuditLogsConfiguration(t *testing.T) {
 		AnyTimes()
 
 	kops := &kops.Cmd{}
-	fluentbit, err := newFluentbitHandle("1.2.3", provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(&model.HelmUtilityVersion{Chart: "1.2.3"}, provisioner, awsClient, kops, logger)
 	require.NoError(t, err, "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 
@@ -71,7 +72,7 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 		AnyTimes()
 
 	kops := &kops.Cmd{}
-	fluentbit, err := newFluentbitHandle("1.2.3", provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(&model.HelmUtilityVersion{Chart: "1.2.3"}, provisioner, awsClient, kops, logger)
 	require.NoError(t, err, "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 

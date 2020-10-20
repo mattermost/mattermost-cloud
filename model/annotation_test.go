@@ -5,6 +5,7 @@
 package model
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,5 +97,78 @@ func TestSortAnnotations(t *testing.T) {
 			assert.Equal(t, testCase.expected, testCase.annotations)
 		})
 	}
+}
 
+func TestNewAddAnnotationsRequestFromReader(t *testing.T) {
+	t.Run("empty request", func(t *testing.T) {
+		annotationsRequest, err := NewAddAnnotationsRequestFromReader(bytes.NewReader([]byte(
+			``,
+		)))
+		require.NoError(t, err)
+		require.Equal(t, &AddAnnotationsRequest{}, annotationsRequest)
+	})
+
+	t.Run("invalid request", func(t *testing.T) {
+		annotationsRequest, err := NewAddAnnotationsRequestFromReader(bytes.NewReader([]byte(
+			`{test`,
+		)))
+		require.Error(t, err)
+		require.Nil(t, annotationsRequest)
+	})
+
+	t.Run("request", func(t *testing.T) {
+		annotationsRequest, err := NewAddAnnotationsRequestFromReader(bytes.NewReader([]byte(
+			`{"annotations":["abcd", "super-awesome"]}`,
+		)))
+		require.NoError(t, err)
+		require.Equal(t, &AddAnnotationsRequest{Annotations: []string{"abcd", "super-awesome"}}, annotationsRequest)
+	})
+}
+
+func TestContainsAnnotation(t *testing.T) {
+
+	annotations := []*Annotation{
+		{ID: "1", Name: "annotation1"},
+		{ID: "2", Name: "my-annotation"},
+		{ID: "3", Name: "super-awesome"},
+		{ID: "4", Name: "fourth"},
+		{ID: "5", Name: "multi_tenant"},
+	}
+
+	for _, testCase := range []struct {
+		description string
+		slice       []*Annotation
+		annotation  *Annotation
+		isPresent   bool
+	}{
+		{
+			description: "should find annotation",
+			slice:       annotations,
+			annotation:  &Annotation{ID: "3", Name: "super-awesome"},
+			isPresent:   true,
+		},
+		{
+			description: "should find with ID only",
+			slice:       annotations,
+			annotation:  &Annotation{ID: "5"},
+			isPresent:   true,
+		},
+		{
+			description: "should not find annotation",
+			slice:       annotations,
+			annotation:  &Annotation{ID: "10", Name: "fourth"},
+			isPresent:   false,
+		},
+		{
+			description: "should not find in empty slice",
+			slice:       []*Annotation{},
+			annotation:  &Annotation{ID: "1"},
+			isPresent:   false,
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			found := ContainsAnnotation(testCase.slice, testCase.annotation)
+			assert.Equal(t, testCase.isPresent, found)
+		})
+	}
 }

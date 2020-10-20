@@ -135,6 +135,15 @@ func TestPatchGroupRequestApply(t *testing.T) {
 			&model.Group{},
 		},
 		{
+			"force sequence bump",
+			true,
+			&model.PatchGroupRequest{
+				ForceSequenceUpdate: true,
+			},
+			&model.Group{},
+			&model.Group{},
+		},
+		{
 			"name only",
 			true,
 			&model.PatchGroupRequest{

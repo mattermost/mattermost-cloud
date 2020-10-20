@@ -13,34 +13,26 @@ import (
 
 func TestSetUtilityVersion(t *testing.T) {
 	u := &utilityVersions{
-		Prometheus:         "",
 		PrometheusOperator: "",
 		Nginx:              "",
 		Fluentbit:          "",
 	}
 
-	setUtilityVersion(u, PrometheusCanonicalName, "1.9")
-	assert.Equal(t, u.Prometheus, "1.9")
-
 	setUtilityVersion(u, NginxCanonicalName, "0.9")
-	assert.Equal(t, u.Prometheus, "1.9")
 	assert.Equal(t, u.Nginx, "0.9")
 
 	setUtilityVersion(u, "an_error", "9")
-	assert.Equal(t, u.Prometheus, "1.9")
 	assert.Equal(t, u.Nginx, "0.9")
 }
 
 func TestGetUtilityVersion(t *testing.T) {
 	u := &utilityVersions{
-		Prometheus:         "4",
 		PrometheusOperator: "3",
 		Thanos:             "4",
 		Nginx:              "5",
 		Fluentbit:          "6",
 	}
 
-	assert.Equal(t, getUtilityVersion(u, PrometheusCanonicalName), "4")
 	assert.Equal(t, getUtilityVersion(u, PrometheusOperatorCanonicalName), "3")
 	assert.Equal(t, getUtilityVersion(u, ThanosCanonicalName), "4")
 	assert.Equal(t, getUtilityVersion(u, NginxCanonicalName), "5")
@@ -52,11 +44,10 @@ func TestSetActualVersion(t *testing.T) {
 	c := &Cluster{}
 
 	assert.Nil(t, c.UtilityMetadata)
-	err := c.SetUtilityActualVersion(NginxCanonicalName, "1.9.9")
+	err := c.SetUtilityActualVersion(NginxCanonicalName, &HelmUtilityVersion{Chart: "1.9.9"})
 	require.NoError(t, err)
 	assert.NotNil(t, c.UtilityMetadata)
-	version, err := c.ActualUtilityVersion(NginxCanonicalName)
-	require.NoError(t, err)
+	version := c.ActualUtilityVersion(NginxCanonicalName)
 	assert.Equal(t, "1.9.9", version)
 }
 
@@ -64,27 +55,21 @@ func TestSetDesired(t *testing.T) {
 	c := &Cluster{}
 
 	assert.Nil(t, c.UtilityMetadata)
-	err := c.SetUtilityDesiredVersions(map[string]string{
-		NginxCanonicalName: "1.9.9",
+	err := c.SetUtilityDesiredVersions(map[string]UtilityVersion{
+		NginxCanonicalName: &HelmUtilityVersion{Chart: "1.9.9"},
 	})
 	require.NoError(t, err)
 
 	assert.NotNil(t, c.UtilityMetadata)
 
-	version, err := c.DesiredUtilityVersion(NginxCanonicalName)
-	require.NoError(t, err)
+	version := c.DesiredUtilityVersion(NginxCanonicalName)
 	assert.Equal(t, "1.9.9", version)
-
-	version, err = c.DesiredUtilityVersion(PrometheusCanonicalName)
-	require.NoError(t, err)
-	assert.Equal(t, "", version)
 
 	version, err = c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
 	require.NoError(t, err)
 	assert.Equal(t, "", version)
 
-	version, err = c.DesiredUtilityVersion(ThanosCanonicalName)
-	require.NoError(t, err)
+	version = c.DesiredUtilityVersion(ThanosCanonicalName)
 	assert.Equal(t, "", version)
 }
 
@@ -92,7 +77,6 @@ func TestGetActualVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
-				Prometheus:         "",
 				PrometheusOperator: "",
 				Thanos:             "",
 				Nginx:              "10.3",
@@ -100,7 +84,6 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:           "12345",
 			},
 			ActualVersions: utilityVersions{
-				Prometheus:         "prometheus-10.3",
 				PrometheusOperator: "kube-prometheus-stack-9.4",
 				Thanos:             "thanos-2.4",
 				Nginx:              "nginx-10.2",
@@ -110,32 +93,23 @@ func TestGetActualVersion(t *testing.T) {
 		},
 	}
 
-	version, err := c.ActualUtilityVersion(PrometheusCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "prometheus-10.3", version)
-
-	version, err = c.ActualUtilityVersion(PrometheusOperatorCanonicalName)
+	version, err := c.ActualUtilityVersion(PrometheusOperatorCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "kube-prometheus-stack-9.4", version)
 
-	version, err = c.ActualUtilityVersion(ThanosCanonicalName)
-	assert.NoError(t, err)
+	version = c.ActualUtilityVersion(ThanosCanonicalName)
 	assert.Equal(t, "thanos-2.4", version)
 
-	version, err = c.ActualUtilityVersion(NginxCanonicalName)
-	assert.NoError(t, err)
+	version = c.ActualUtilityVersion(NginxCanonicalName)
 	assert.Equal(t, "nginx-10.2", version)
 
-	version, err = c.ActualUtilityVersion(FluentbitCanonicalName)
-	assert.NoError(t, err)
+	version = c.ActualUtilityVersion(FluentbitCanonicalName)
 	assert.Equal(t, "fluent-bit-0.9", version)
 
-	version, err = c.ActualUtilityVersion(TeleportCanonicalName)
-	assert.NoError(t, err)
+	version = c.ActualUtilityVersion(TeleportCanonicalName)
 	assert.Equal(t, "teleport-0.3.0", version)
 
-	version, err = c.ActualUtilityVersion("something else that doesn't exist")
-	assert.NoError(t, err)
+	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, "", version)
 }
 
@@ -143,7 +117,6 @@ func TestGetDesiredVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: utilityVersions{
-				Prometheus:         "",
 				PrometheusOperator: "",
 				Thanos:             "",
 				Nginx:              "10.3",
@@ -151,7 +124,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:           "12345",
 			},
 			ActualVersions: utilityVersions{
-				Prometheus:         "prometheus-10.3",
 				PrometheusOperator: "kube-prometheus-stack-9.4",
 				Thanos:             "thanos-2.4",
 				Nginx:              "nginx-10.2",
@@ -161,11 +133,7 @@ func TestGetDesiredVersion(t *testing.T) {
 		},
 	}
 
-	version, err := c.DesiredUtilityVersion(PrometheusCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "", version)
-
-	version, err = c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
+	version, err := c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
 	assert.NoError(t, err)
 	assert.Equal(t, "", version)
 

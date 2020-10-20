@@ -190,7 +190,11 @@ type transactionStarter interface {
 }
 
 func (sqlStore *SQLStore) beginTransaction(tr transactionStarter) (*Transaction, error) {
-	tx, err := tr.BeginTxx(context.Background(), nil)
+	return sqlStore.beginCustomTransaction(tr, nil)
+}
+
+func (sqlStore *SQLStore) beginCustomTransaction(tr transactionStarter, opts *sql.TxOptions) (*Transaction, error) {
+	tx, err := tr.BeginTxx(context.Background(), opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to begin transaction")
 	}

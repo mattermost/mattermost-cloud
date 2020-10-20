@@ -7,10 +7,7 @@ package aws
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
@@ -54,8 +51,23 @@ func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.Installatio
 	})
 	logger.Info("Tearing down AWS S3 filestore")
 
-	bucketName, err := f.getMultitenantBucketName(store)
+	bucketName, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
+		// Perform a manual check to see if no cluster installations were ever
+		// created for this installation.
+		clusterInstallations, ciErr := store.GetClusterInstallations(&model.ClusterInstallationFilter{
+			PerPage:        model.AllPerPage,
+			InstallationID: f.installationID,
+			IncludeDeleted: true,
+		})
+		if ciErr != nil {
+			return errors.Wrap(ciErr, "failed to query cluster installations")
+		}
+		if len(clusterInstallations) == 0 {
+			logger.Warn("No cluster installations found for installation; assuming multitenant filestore was never created")
+			return nil
+		}
+
 		return errors.Wrap(err, "failed to find multitenant bucket")
 	}
 
@@ -96,14 +108,14 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 	})
 	logger.Debug("Generating S3 multitenant filestore information")
 
-	bucketName, err := f.getMultitenantBucketName(store)
+	bucketName, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to find multitenant bucket")
 	}
 
 	logger = logger.WithField("s3-bucket-name", bucketName)
 
-	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID, logger)
+	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -146,7 +158,7 @@ func (f *S3MultitenantFilestore) s3FilestoreProvision(store model.InstallationDa
 	})
 	logger.Info("Provisioning AWS multitenant S3 filestore")
 
-	bucketName, err := f.getMultitenantBucketName(store)
+	bucketName, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to find multitenant bucket")
 	}
@@ -191,48 +203,4 @@ func (f *S3MultitenantFilestore) s3FilestoreProvision(store model.InstallationDa
 	logger.WithField("iam-user-name", *user.UserName).Debug("AWS secrets manager secret created")
 
 	return nil
-}
-
-func (f *S3MultitenantFilestore) getMultitenantBucketName(store model.InstallationDatabaseStoreInterface) (string, error) {
-	envName, err := f.awsClient.GetCloudEnvironmentName()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get cloud environment name")
-	}
-	vpc, err := getVPCForInstallation(f.installationID, store, f.awsClient)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to find cluster installation VPC")
-	}
-
-	bucketName := MattermostMultitenantS3Name(envName, *vpc.VpcId)
-
-	// Ensure the bucket exists and that the tags are correct.
-	tags, err := f.awsClient.Service().s3.GetBucketTagging(&s3.GetBucketTaggingInput{
-		Bucket: aws.String(bucketName),
-	})
-	if aerr, ok := err.(awserr.Error); ok {
-		if aerr.Code() == s3.ErrCodeNoSuchBucket {
-			return "", errors.Wrapf(err, "failed to find bucket %s", bucketName)
-		}
-	} else if err != nil {
-		return "", errors.Wrap(err, "failed to get bucket tags")
-	}
-
-	if !ensureTagInTagset(trimTagPrefix(VpcIDTagKey), *vpc.VpcId, tags.TagSet) {
-		return "", errors.Errorf("failed to find %s tag on S3 bucket %s", VpcIDTagKey, bucketName)
-	}
-	if !ensureTagInTagset(trimTagPrefix(FilestoreMultitenantS3TagKey), FilestoreMultitenantS3TagValue, tags.TagSet) {
-		return "", errors.Errorf("failed to find %s tag on S3 bucket %s", FilestoreMultitenantS3TagKey, bucketName)
-	}
-
-	return bucketName, nil
-}
-
-func ensureTagInTagset(key, value string, tags []*s3.Tag) bool {
-	for _, tag := range tags {
-		if *tag.Key == key && *tag.Value == value {
-			return true
-		}
-	}
-
-	return false
 }

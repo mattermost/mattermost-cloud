@@ -293,6 +293,40 @@ func (c *Client) DeleteCluster(clusterID string) error {
 	}
 }
 
+// AddClusterAnnotations adds annotations to the given cluster.
+func (c *Client) AddClusterAnnotations(clusterID string, annotationsRequest *AddAnnotationsRequest) (*ClusterDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/cluster/%s/annotations", clusterID), annotationsRequest)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return ClusterDTOFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteClusterAnnotation deletes annotation from the given cluster.
+func (c *Client) DeleteClusterAnnotation(clusterID string, annotationName string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster/%s/annotation/%s", clusterID, annotationName))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // CreateInstallation requests the creation of a installation from the configured provisioning server.
 func (c *Client) CreateInstallation(request *CreateInstallationRequest) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installations"), request)
@@ -491,6 +525,40 @@ func (c *Client) DeleteInstallation(installationID string) error {
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// AddInstallationAnnotations adds annotations to the given installation.
+func (c *Client) AddInstallationAnnotations(installationID string, annotationsRequest *AddAnnotationsRequest) (*InstallationDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/annotations", installationID), annotationsRequest)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return InstallationDTOFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteInstallationAnnotation deletes annotation from the given installation.
+func (c *Client) DeleteInstallationAnnotation(installationID string, annotationName string) error {
+	resp, err := c.doDelete(c.buildURL("/api/installation/%s/annotation/%s", installationID, annotationName))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
 		return nil
 
 	default:
