@@ -219,12 +219,12 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
 	}
 
-	beingUpdatedCount := totalCount - updatedCount - awaitingUpdateCount
+	unstableCount := totalCount - updatedCount - awaitingUpdateCount
 
 	return &model.GroupStatus{
 		InstallationsTotal:          totalCount,
 		InstallationsUpdated:        updatedCount,
-		InstallationsBeingUpdated:   beingUpdatedCount,
+		InstallationsUnstable:       unstableCount,
 		InstallationsAwaitingUpdate: awaitingUpdateCount,
 	}, nil
 }

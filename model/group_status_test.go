@@ -32,14 +32,14 @@ func TestGroupStatusFromReader(t *testing.T) {
 		groupStatus, err := GroupStatusFromReader(bytes.NewReader([]byte(`{
 			"InstallationsTotal": 4,
 			"InstallationsUpdated": 2,
-			"InstallationsBeingUpdated": 1,
+			"InstallationsUnstable": 1,
 			"InstallationsAwaitingUpdate": 1
 		}`)))
 		require.NoError(t, err)
 		require.Equal(t, &GroupStatus{
 			InstallationsTotal:          4,
 			InstallationsUpdated:        2,
-			InstallationsBeingUpdated:   1,
+			InstallationsUnstable:       1,
 			InstallationsAwaitingUpdate: 1,
 		}, groupStatus)
 	})

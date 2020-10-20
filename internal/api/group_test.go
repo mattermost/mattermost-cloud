@@ -499,7 +499,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          0,
 			InstallationsUpdated:        0,
-			InstallationsBeingUpdated:   0,
+			InstallationsUnstable:       0,
 			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := client.GetGroupStatus(group.ID)
@@ -511,7 +511,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          0,
 			InstallationsUpdated:        0,
-			InstallationsBeingUpdated:   0,
+			InstallationsUnstable:       0,
 			InstallationsAwaitingUpdate: 0,
 		}
 		ignoredGroup, err := client.CreateGroup(&model.CreateGroupRequest{
@@ -534,7 +534,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          6,
 			InstallationsUpdated:        2,
-			InstallationsBeingUpdated:   3,
+			InstallationsUnstable:       3,
 			InstallationsAwaitingUpdate: 1,
 		}
 		var differentSequence int64 = -1

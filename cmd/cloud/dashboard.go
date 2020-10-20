@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -148,5 +149,5 @@ var dashboardCmd = &cobra.Command{
 }
 
 func toStr(i int) string {
-	return fmt.Sprintf("%d", i)
+	return strconv.Itoa(i)
 }
