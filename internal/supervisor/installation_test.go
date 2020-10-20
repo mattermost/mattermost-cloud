@@ -1069,7 +1069,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		group := &model.Group{
@@ -1093,7 +1093,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateUpdateRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1158,7 +1158,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		group := &model.Group{
@@ -1182,7 +1182,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1247,7 +1247,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
 
 		cluster := standardStableTestCluster()
-		err := sqlStore.CreateCluster(cluster)
+		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
 		group := &model.Group{
@@ -1274,7 +1274,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation)
+		err = sqlStore.CreateInstallation(installation, nil)
 		require.NoError(t, err)
 
 		installation.MergeWithGroup(group, false)
