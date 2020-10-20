@@ -254,6 +254,21 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 }
 
 func (s *InstallationSupervisor) createInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	// Before starting, we check the installation and group sequence numbers and
+	// sync them if they are not already. This is used to check if the group
+	// configuration has changed during the creation process or not.
+	if !installation.InstallationSequenceMatchesMergedGroupSequence() {
+		installation.SyncGroupAndInstallationSequence()
+
+		logger.Debugf("Updating installation to group configuration sequence %d", *installation.GroupSequence)
+
+		err := s.store.UpdateInstallationGroupSequence(installation)
+		if err != nil {
+			logger.WithError(err).Errorf("Failed to set installation sequence to %d", *installation.GroupSequence)
+			return installation.State
+		}
+	}
+
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
 		PerPage:        model.AllPerPage,
@@ -471,6 +486,13 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 }
 
 func (s *InstallationSupervisor) waitForCreationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	// If the installation belongs to a group that has been updated, we requeue
+	// the installation update.
+	if !installation.InstallationSequenceMatchesMergedGroupSequence() {
+		logger.Warnf("The installation's group configuration has changed; moving installation back to %s", model.InstallationStateUpdateRequested)
+		return model.InstallationStateUpdateRequested
+	}
+
 	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
 	if err != nil {
 		logger.WithError(err).Error("Installation creation failed")
