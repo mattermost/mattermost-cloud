@@ -6,7 +6,6 @@ package store
 
 import (
 	"database/sql"
-	"reflect"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -332,17 +331,14 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 // that will possibly affect installation config then update the group sequence
 // number.
 func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
+	// Update the sequence number, but don't trust the group sequence number
+	// that was passed in.
 	originalGroup, err := sqlStore.GetGroup(group.ID)
 	if err != nil {
 		return err
 	}
-	if originalGroup.Version != group.Version ||
-		originalGroup.Image != group.Image ||
-		!reflect.DeepEqual(originalGroup.MattermostEnv, group.MattermostEnv) {
-		// Update the sequence number, but don't trust the group sequence number
-		// that was passed in.
-		group.Sequence = originalGroup.Sequence + 1
-	}
+	group.Sequence = originalGroup.Sequence + 1
+
 	envVarMap, err := group.MattermostEnv.ToJSON()
 	if err != nil {
 		return err
