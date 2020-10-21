@@ -56,6 +56,21 @@ func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.Installatio
 
 	bucketName, err := f.getMultitenantBucketName(store)
 	if err != nil {
+		// Perform a manual check to see if no cluster installations were ever
+		// created for this installation.
+		clusterInstallations, ciErr := store.GetClusterInstallations(&model.ClusterInstallationFilter{
+			PerPage:        model.AllPerPage,
+			InstallationID: f.installationID,
+			IncludeDeleted: true,
+		})
+		if ciErr != nil {
+			return errors.Wrap(ciErr, "failed to query cluster installations")
+		}
+		if len(clusterInstallations) == 0 {
+			logger.Warn("No cluster installations found for installation; assuming multitenant filestore was never created")
+			return nil
+		}
+
 		return errors.Wrap(err, "failed to find multitenant bucket")
 	}
 
@@ -198,6 +213,7 @@ func (f *S3MultitenantFilestore) getMultitenantBucketName(store model.Installati
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get cloud environment name")
 	}
+
 	vpc, err := getVPCForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to find cluster installation VPC")
