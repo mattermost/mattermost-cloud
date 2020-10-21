@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -33,6 +34,8 @@ type mockInstallationStore struct {
 	UnlockChan              chan interface{}
 	UpdateInstallationCalls int
 }
+
+var cloudMetrics = metrics.New()
 
 func (s *mockInstallationStore) GetClusters(clusterFilter *model.ClusterFilter) ([]*model.Cluster, error) {
 	return nil, nil
@@ -327,11 +330,13 @@ func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, logger log.Fiel
 }
 
 func TestInstallationSupervisorDo(t *testing.T) {
+	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
+
 	t.Run("no installations pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -349,7 +354,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		mockStore.Installation = mockStore.UnlockedInstallationsPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -359,6 +364,8 @@ func TestInstallationSupervisorDo(t *testing.T) {
 }
 
 func TestInstallationSupervisor(t *testing.T) {
+	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
+
 	expectInstallationState := func(t *testing.T, sqlStore *store.SQLStore, installation *model.Installation, expectedState string) {
 		t.Helper()
 
@@ -405,7 +412,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("unexpected state", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -443,7 +450,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("state has changed since installation was selected to be worked on", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -476,7 +483,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, no clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		owner := model.NewID()
 		groupID := model.NewID()
@@ -501,7 +508,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, cluster doesn't allow scheduling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		cluster.AllowInstallations = false
@@ -531,7 +538,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, no empty clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -569,7 +576,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -607,7 +614,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -645,7 +652,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation DNS, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -683,7 +690,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -721,7 +728,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations stable, in group with different sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -772,7 +779,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("pre provisioning requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -810,7 +817,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -848,7 +855,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -886,7 +893,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -924,7 +931,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations stable, in group with same sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -983,7 +990,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1021,7 +1028,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation final tasks, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1059,7 +1066,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, no clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		owner := model.NewID()
 		groupID := model.NewID()
@@ -1084,7 +1091,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, no available clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1122,7 +1129,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, available cluster", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1151,7 +1158,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1189,7 +1196,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations stable, in group with different sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1240,7 +1247,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1278,7 +1285,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations reconciling, in group with different sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1329,7 +1336,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1367,7 +1374,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations stable, in group with same sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1428,7 +1435,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("hibernation requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1466,7 +1473,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("hibernation in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1504,7 +1511,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("hibernation in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1542,7 +1549,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1580,7 +1587,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations deleting", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1618,7 +1625,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion in progress, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1656,7 +1663,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations failed, so retry", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1694,7 +1701,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations deleted", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1733,7 +1740,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, available cluster", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -1763,7 +1770,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, 3 installations, available cluster", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -1797,7 +1804,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, 1 isolated and 1 multitenant, available cluster", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -1856,7 +1863,7 @@ func TestInstallationSupervisor(t *testing.T) {
 					MilliUsedMemory:  100,
 				},
 			}
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -1896,7 +1903,8 @@ func TestInstallationSupervisor(t *testing.T) {
 				MilliUsedMemory:  100,
 			},
 		}
-		supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", 80, 2, false, false, &utils.ResourceUtil{}, logger)
+		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 2)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, mockInstallationProvisioner, &mockAWS{}, "instanceID", false, false, schedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1923,6 +1931,41 @@ func TestInstallationSupervisor(t *testing.T) {
 		expectClusterInstallationsOnCluster(t, sqlStore, cluster, 1)
 	})
 
+	t.Run("creation requested, cluster installations not yet created, use balanced installation scheduling", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, schedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
+
+		cluster1 := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster1, nil)
+		require.NoError(t, err)
+		cluster2 := standardStableTestCluster()
+		err = sqlStore.CreateCluster(cluster2, nil)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityMultiTenant,
+			GroupID:  &groupID,
+			State:    model.InstallationStateCreationRequested,
+		}
+
+		err = sqlStore.CreateInstallation(installation, nil)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateCreationInProgress)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateCreationRequested)
+		expectClusterInstallationsOnCluster(t, sqlStore, cluster1, 1)
+		expectClusterInstallationsOnCluster(t, sqlStore, cluster2, 0)
+	})
+
 	t.Run("cluster with proper annotations selected", func(t *testing.T) {
 		annotations := []*model.Annotation{
 			{Name: "multi-tenant"}, {Name: "customer-abc"},
@@ -1946,7 +1989,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, annotations)
@@ -1967,7 +2010,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -1988,7 +2031,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", 80, 0, false, false, &utils.ResourceUtil{}, logger)
+			supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, annotations)
