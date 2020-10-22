@@ -5,8 +5,11 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/mattermost/mattermost-cloud/internal/store"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
@@ -33,6 +36,8 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation)).Methods("POST")
 	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation)).Methods("POST")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
+	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations)).Methods("POST")
+	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation)).Methods("DELETE")
 }
 
 // handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.
@@ -631,4 +636,72 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleAddInstallationAnnotations responds to POST /api/installation/{installation}/annotations,
+// adds the set of annotations to the Installation.
+func handleAddInstallationAnnotations(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID).WithField("action", "add-installation-annotations")
+
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	annotations, err := annotationsFromRequest(r)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get annotations from request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	annotations, err = c.Store.CreateInstallationAnnotations(installationID, annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create installation annotations")
+		if errors.Is(err, store.ErrInstallationAnnotationDoNotMatchClusters) {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	installationDTO.Annotations = append(installationDTO.Annotations, annotations...)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, installationDTO)
+}
+
+// handleDeleteInstallationAnnotation responds to DELETE /api/installation/{installation}/annotation/{annotation-name},
+// removes annotation from the Installation.
+func handleDeleteInstallationAnnotation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	annotationName := vars["annotation-name"]
+	c.Logger = c.Logger.
+		WithField("installation", installationID).
+		WithField("action", "delete-installation-annotation").
+		WithField("annotation-name", annotationName)
+
+	_, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	err := c.Store.DeleteInstallationAnnotation(installationID, annotationName)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed delete cluster annotation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
 }

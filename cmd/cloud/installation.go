@@ -72,6 +72,7 @@ func init() {
 	installationCmd.AddCommand(installationGetCmd)
 	installationCmd.AddCommand(installationListCmd)
 	installationCmd.AddCommand(installationShowStateReport)
+	installationCmd.AddCommand(installationAnnotationCmd)
 }
 
 var installationCmd = &cobra.Command{
@@ -107,18 +108,18 @@ var installationCreateCmd = &cobra.Command{
 		}
 
 		request := &model.CreateInstallationRequest{
-			OwnerID:          ownerID,
-			GroupID:          groupID,
-			Version:          version,
-			Image:            image,
-			Size:             size,
-			DNS:              dns,
-			License:          license,
-			Affinity:         affinity,
-			Database:         database,
-			Filestore:        filestore,
-			MattermostEnv:    envVarMap,
-			Annotations: annotations,
+			OwnerID:       ownerID,
+			GroupID:       groupID,
+			Version:       version,
+			Image:         image,
+			Size:          size,
+			DNS:           dns,
+			License:       license,
+			Affinity:      affinity,
+			Database:      database,
+			Filestore:     filestore,
+			MattermostEnv: envVarMap,
+			Annotations:   annotations,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
