@@ -72,6 +72,7 @@ func TestAnnotationsFromStringSlice(t *testing.T) {
 			})
 		}
 	})
+
 }
 
 func TestSortAnnotations(t *testing.T) {
@@ -170,5 +171,4 @@ func TestContainsAnnotation(t *testing.T) {
 			assert.Equal(t, testCase.isPresent, found)
 		})
 	}
-
 }
