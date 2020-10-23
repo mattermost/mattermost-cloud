@@ -54,6 +54,8 @@ type installationStore interface {
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
 	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
 
+	GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error)
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -283,11 +285,24 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		return s.preProvisionInstallation(installation, instanceID, logger)
 	}
 
-	// Proceed to requesting cluster installation creation on any available clusters.
-	clusters, err := s.store.GetClusters(&model.ClusterFilter{
+	clusterFilter := &model.ClusterFilter{
 		PerPage:        model.AllPerPage,
 		IncludeDeleted: false,
-	})
+	}
+
+	// Get only clusters that have all annotations present on the installation.
+	// Clusters can have additional annotations not present on the installation.
+	annotations, err := s.store.GetAnnotationsForInstallation(installation.ID)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to get annotations for Installation")
+		return model.InstallationStateCreationRequested
+	}
+	if len(annotations) > 0 {
+		clusterFilter.Annotations = &model.AnnotationsFilter{MatchAllIDs: annotationsToIDs(annotations)}
+	}
+
+	// Proceed to requesting cluster installation creation on any available clusters.
+	clusters, err := s.store.GetClusters(clusterFilter)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to query clusters")
 		return model.InstallationStateCreationRequested
@@ -970,4 +985,13 @@ func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installati
 	}
 
 	return false, nil
+}
+
+// annotationsToIDs parses slice of annotations to slice of strings containing annotations IDs.
+func annotationsToIDs(annotations []*model.Annotation) []string {
+	ids := make([]string, 0, len(annotations))
+	for _, ann := range annotations {
+		ids = append(ids, ann.ID)
+	}
+	return ids
 }

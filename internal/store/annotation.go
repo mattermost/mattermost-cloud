@@ -6,10 +6,16 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+)
+
+const (
+	clusterAnnotationTable      = "ClusterAnnotation"
+	installationAnnotationTable = "InstallationAnnotation"
 )
 
 var annotationSelect sq.SelectBuilder
@@ -100,7 +106,7 @@ func (sqlStore *SQLStore) CreateClusterAnnotations(clusterID string, annotations
 }
 
 func (sqlStore *SQLStore) createClusterAnnotations(db execer, clusterID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
-	builder := sq.Insert("ClusterAnnotation").
+	builder := sq.Insert(clusterAnnotationTable).
 		Columns("ID", "ClusterID", "AnnotationID")
 
 	for _, a := range annotations {
@@ -119,7 +125,7 @@ func (sqlStore *SQLStore) GetAnnotationsForCluster(clusterID string) ([]*model.A
 	var annotations []*model.Annotation
 
 	builder := sq.Select(annotationColumns...).
-		From("ClusterAnnotation").
+		From(clusterAnnotationTable).
 		Where("ClusterID = ?", clusterID).
 		LeftJoin("Annotation ON Annotation.ID=AnnotationID")
 	err := sqlStore.selectBuilder(sqlStore.db, &annotations, builder)
@@ -145,7 +151,7 @@ func (sqlStore *SQLStore) GetAnnotationsForClusters(filter *model.ClusterFilter)
 		"Annotation.ID as AnnotationID",
 		"Annotation.Name as AnnotationName").
 		From("Cluster").
-		LeftJoin("ClusterAnnotation ON ClusterAnnotation.ClusterID = Cluster.ID").
+		LeftJoin(fmt.Sprintf("%s ON %s.ClusterID = Cluster.ID", clusterAnnotationTable, clusterAnnotationTable)).
 		Join("Annotation ON Annotation.ID=AnnotationID")
 	builder = sqlStore.applyClustersFilter(builder, filter)
 
@@ -170,7 +176,7 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallation(installationID string) (
 	var annotations []*model.Annotation
 
 	builder := sq.Select(annotationColumns...).
-		From("InstallationAnnotation").
+		From(installationAnnotationTable).
 		Where("InstallationID = ?", installationID).
 		LeftJoin("Annotation ON Annotation.ID=AnnotationID")
 	err := sqlStore.selectBuilder(sqlStore.db, &annotations, builder)
@@ -196,7 +202,7 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallations(filter *model.Installat
 		"Annotation.ID as AnnotationID",
 		"Annotation.Name as AnnotationName").
 		From("Installation").
-		LeftJoin("InstallationAnnotation ON InstallationAnnotation.InstallationID = Installation.ID").
+		LeftJoin(fmt.Sprintf("%s ON %s.InstallationID = Installation.ID", installationAnnotationTable, installationAnnotationTable)).
 		Join("Annotation ON Annotation.ID=AnnotationID")
 	builder = sqlStore.applyInstallationFilter(builder, filter)
 
@@ -222,7 +228,7 @@ func (sqlStore *SQLStore) CreateInstallationAnnotations(installationID string, a
 }
 
 func (sqlStore *SQLStore) createInstallationAnnotations(db execer, installationID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
-	builder := sq.Insert("InstallationAnnotation").
+	builder := sq.Insert(installationAnnotationTable).
 		Columns("ID", "InstallationID", "AnnotationID")
 
 	for _, a := range annotations {
