@@ -54,7 +54,7 @@ const (
 	DefaultDBSubnetGroupName = "mattermost-databases"
 
 	// DatabaseTypeMySQLAurora is a MySQL database running on AWS RDS Aurora.
-	DatabaseTypeMySQLAurora = "MYSQL/Aurora"
+	DatabaseTypeMySQLAurora = "MySQL/Aurora"
 
 	// DatabaseTypePostgresSQLAurora is a PostgreSQL database running on AWS
 	// RDS Aurora.
