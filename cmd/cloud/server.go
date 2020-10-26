@@ -305,7 +305,8 @@ func checkRequirements(logger logrus.FieldLogger, awsConfig *sdkAWS.Config, s3St
 	sshDir := path.Join(homedir, ".ssh")
 	possibleKeys, err := ioutil.ReadDir(sshDir)
 	if err != nil || len(possibleKeys) == 0 {
-		logger.Warnf("Failed to find SSH key in %s, falling back to /.ssh", sshDir)
+		logger.Warnf("Failed to find SSH key in %s: %s", sshDir, err)
+		logger.Info("Falling back to /.ssh")
 		// Fallback to the root directory if keys not found in $HOME
 		possibleKeys, err = ioutil.ReadDir("/.ssh")
 		if err != nil {
