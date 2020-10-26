@@ -112,9 +112,9 @@ func MattermostRDSDatabaseName(installationID string) string {
 // MattermostMySQLConnStrings formats the connection string used for accessing a
 // Mattermost database.
 func MattermostMySQLConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
-	dbConnection := fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+	dbConnection := fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4%%2Cutf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, *dbCluster.Endpoint, schema)
-	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
+	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4%%2Cutf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, *dbCluster.ReaderEndpoint, schema)
 
 	return dbConnection, readReplicas

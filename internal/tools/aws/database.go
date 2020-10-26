@@ -22,11 +22,6 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/pkg/apis/mattermost/v1alpha1"
 )
 
-const mysqlConnStringTemplate = "mysql://%s:%s@tcp(%s:3306)/mattermost?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"
-const mysqlConnReaderStringTemplate = "%s:%s@tcp(%s:3306)/mattermost?readTimeout=30s&writeTimeout=30s"
-const postgresConnStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
-const postgresConnReaderStringTemplate = "postgres://%s:%s@%s:5432/mattermost?sslmode=disable&connect_timeout=10"
-
 // RDSDatabase is a database backed by AWS RDS.
 type RDSDatabase struct {
 	databaseType   string
@@ -145,7 +140,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		"database-type":   d.databaseType,
 	})
 
-	rdsSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -160,26 +155,35 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 	if len(dbClusters.DBClusters) != 1 {
 		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(dbClusters.DBClusters))
 	}
+	rdsCluster := dbClusters.DBClusters[0]
 
-	var connTemplate, readerTemplate, databaseConnectionCheck string
+	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
 	switch d.databaseType {
 	case model.DatabaseEngineTypeMySQL:
-		connTemplate = mysqlConnStringTemplate
-		readerTemplate = mysqlConnReaderStringTemplate
-		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *dbClusters.DBClusters[0].Endpoint)
+		databaseConnectionString, databaseReadReplicasString =
+			MattermostMySQLConnStrings(
+				"mattermost",
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+				rdsCluster,
+			)
+		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *rdsCluster.Endpoint)
 	case model.DatabaseEngineTypePostgres:
-		connTemplate = postgresConnStringTemplate
-		readerTemplate = postgresConnReaderStringTemplate
+		databaseConnectionString, databaseReadReplicasString =
+			MattermostPostgresConnStrings(
+				"mattermost",
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+				rdsCluster,
+			)
 	default:
 		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
-	databaseConnectionString := fmt.Sprintf(connTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbClusters.DBClusters[0].Endpoint)
-	databaseConnectionReaderString := fmt.Sprintf(readerTemplate, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *dbClusters.DBClusters[0].ReaderEndpoint)
 	secretStringData := map[string]string{
 		"DB_CONNECTION_STRING":              databaseConnectionString,
-		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseConnectionReaderString,
+		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
 	}
 	if len(databaseConnectionCheck) != 0 {
 		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
