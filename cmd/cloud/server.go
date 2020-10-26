@@ -182,7 +182,7 @@ var serverCmd = &cobra.Command{
 		}
 		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 
-		err = checkRequirements(awsConfig, s3StateStore)
+		err = checkRequirements(logger, awsConfig, s3StateStore)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
 		}
@@ -277,7 +277,7 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
+func checkRequirements(logger logrus.FieldLogger, awsConfig *sdkAWS.Config, s3StateStore string) error {
 	utilities := []string{
 		"terraform",
 		"kops",
@@ -304,9 +304,13 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 	}
 	sshDir := path.Join(homedir, ".ssh")
 	possibleKeys, err := ioutil.ReadDir(sshDir)
-	if err != nil {
-		return errors.Wrapf(err, "failed to find a SSH key in %s", sshDir)
-
+	if err != nil || len(possibleKeys) == 0 {
+		logger.Warnf("Failed to find SSH key in %s, falling back to /.ssh", sshDir)
+		// Fallback to the root directory if keys not found in $HOME
+		possibleKeys, err = ioutil.ReadDir("/.ssh")
+		if err != nil {
+			return errors.Wrapf(err, "failed to find a SSH key in %s or the root directory", sshDir)
+		}
 	}
 	hasKeys := func() bool {
 		for _, k := range possibleKeys {
@@ -329,7 +333,7 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 		return false
 	}()
 	if !hasKeys {
-		return errors.Errorf("failed to find an SSH key in %s", homedir)
+		return errors.Errorf("failed to find an SSH key in %s or /.ssh", sshDir)
 	}
 	client := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 	_, err = client.GetCloudEnvironmentName()
