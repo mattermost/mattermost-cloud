@@ -27,7 +27,8 @@ LABEL name="Mattermost Cloud" \
 ENV CLOUD=/mattermost-cloud/cloud \
     USER_UID=10001 \
     USER_NAME=cloud \
-    HELM_DATA_HOME="/helm3/data"
+    HELM_DATA_HOME="/helm3/data" \
+    HOME="/root"
 
 RUN  apk update && apk add libc6-compat && apk add ca-certificates
 COPY --from=build /mattermost-cloud/build/terraform /usr/local/bin/
