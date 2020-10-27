@@ -133,6 +133,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		"--install",
 		"--create-namespace",
 		"--wait",
+		"--timeout", "20m",
 	}
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
