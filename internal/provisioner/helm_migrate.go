@@ -44,8 +44,8 @@ func MigrateRelease(logger log.FieldLogger, kubeConfigPath string, release strin
 	return nil
 }
 
-// CleanupAll cleans up all Helm 2 releases together with Tiller
-func CleanupAll(logger log.FieldLogger, kubeConfigPath string) error {
+// CleanupTiller cleans up all Helm 2 releases together with Tiller
+func CleanupTiller(logger log.FieldLogger, kubeConfigPath string) error {
 	helm3, err := helm.NewV3(logger.WithField("helm-version", "v3"))
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize Helm 3 client")
@@ -97,6 +97,7 @@ func cleanupAll(helm3 *helm.Cmd, kubeConfigPath string, dryRun bool) error {
 		"cleanup",
 		"--skip-confirmation",
 		"--kubeconfig", kubeConfigPath,
+		"--tiller-cleanup",
 	}
 	args = withDryRun(args, dryRun)
 

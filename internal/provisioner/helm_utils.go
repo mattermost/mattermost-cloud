@@ -330,5 +330,5 @@ func helm2Cleanup(logger log.FieldLogger, kubeConfigPath string) error {
 		return nil
 	}
 
-	return CleanupAll(log, kubeConfigPath)
+	return CleanupTiller(log, kubeConfigPath)
 }
