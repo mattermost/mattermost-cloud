@@ -16,7 +16,7 @@ func init() {
 	installationAnnotationAddCmd.MarkFlagRequired("installation")
 	installationAnnotationAddCmd.MarkFlagRequired("annotation")
 
-	installationAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the Annotation to be removed from the Installation.")
+	installationAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the installation.")
 	installationAnnotationDeleteCmd.Flags().String("installation", "", "The id of the installation from which annotations should be removed.")
 	installationAnnotationDeleteCmd.MarkFlagRequired("installation")
 	installationAnnotationDeleteCmd.MarkFlagRequired("annotation")

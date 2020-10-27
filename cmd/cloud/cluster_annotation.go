@@ -16,7 +16,7 @@ func init() {
 	clusterAnnotationAddCmd.MarkFlagRequired("cluster")
 	clusterAnnotationAddCmd.MarkFlagRequired("annotation")
 
-	clusterAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the Annotation to be removed from the Cluster.")
+	clusterAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the Cluster.")
 	clusterAnnotationDeleteCmd.Flags().String("cluster", "", "The id of the cluster from which annotation should be removed.")
 	clusterAnnotationDeleteCmd.MarkFlagRequired("cluster")
 	clusterAnnotationDeleteCmd.MarkFlagRequired("annotation")
