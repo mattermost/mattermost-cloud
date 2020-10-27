@@ -32,7 +32,7 @@ var installationAnnotationCmd = &cobra.Command{
 
 var installationAnnotationAddCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Adds Annotations to the Installation.",
+	Short: "Adds annotations to the installation.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 

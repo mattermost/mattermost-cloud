@@ -16,7 +16,7 @@ func init() {
 	clusterAnnotationAddCmd.MarkFlagRequired("cluster")
 	clusterAnnotationAddCmd.MarkFlagRequired("annotation")
 
-	clusterAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the Cluster.")
+	clusterAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the cluster.")
 	clusterAnnotationDeleteCmd.Flags().String("cluster", "", "The id of the cluster from which annotation should be removed.")
 	clusterAnnotationDeleteCmd.MarkFlagRequired("cluster")
 	clusterAnnotationDeleteCmd.MarkFlagRequired("annotation")
@@ -32,7 +32,7 @@ var clusterAnnotationCmd = &cobra.Command{
 
 var clusterAnnotationAddCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Adds Annotations to the Cluster.",
+	Short: "Adds annotations to the cluster.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 

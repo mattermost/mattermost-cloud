@@ -195,7 +195,7 @@ func (sqlStore *SQLStore) GetAnnotationsForClusters(filter *model.ClusterFilter)
 	return annotations, nil
 }
 
-// DeleteClusterAnnotation removes annotation from a given cluster.
+// DeleteClusterAnnotation removes an annotation from a given cluster.
 // Annotation cannot be removed if it is present on any of the Installations scheduled on the cluster.
 func (sqlStore *SQLStore) DeleteClusterAnnotation(clusterID string, annotationName string) error {
 	annotation, err := sqlStore.GetAnnotationByName(annotationName)
