@@ -625,7 +625,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 		err = s.provisioner.UpdateClusterInstallation(cluster, installation, clusterInstallation)
 		if err != nil {
-			logger.Error("Failed to update cluster installation")
+			logger.WithError(err).Error("Failed to update cluster installation")
 			return installation.State
 		}
 
@@ -770,14 +770,14 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 
 		err = s.provisioner.HibernateClusterInstallation(cluster, installation, clusterInstallation)
 		if err != nil {
-			logger.Error("Failed to update cluster installation")
+			logger.WithError(err).Error("Failed to update cluster installation")
 			return installation.State
 		}
 
 		clusterInstallation.State = model.ClusterInstallationStateReconciling
 		err = s.store.UpdateClusterInstallation(clusterInstallation)
 		if err != nil {
-			logger.Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
+			logger.WithError(err).Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
 			return installation.State
 		}
 	}
