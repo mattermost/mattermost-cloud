@@ -561,7 +561,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 		err = s.provisioner.UpdateClusterInstallation(cluster, installation, clusterInstallation)
 		if err != nil {
-			logger.Error("Failed to update cluster installation")
+			logger.WithError(err).Error("Failed to update cluster installation")
 			return installation.State
 		}
 
