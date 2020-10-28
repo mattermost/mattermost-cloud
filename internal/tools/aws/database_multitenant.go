@@ -209,7 +209,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 		return nil, nil, errors.Wrap(err, "failed to unmarshal secret payload")
 	}
 
-	var databaseConnectionString, databaseReadReplicasString string
+	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
 		databaseConnectionString, databaseReadReplicasString =
 			MattermostMySQLConnStrings(
@@ -218,6 +218,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 				installationSecret.MasterPassword,
 				rdsCluster,
 			)
+		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *rdsCluster.Endpoint)
 	} else {
 		databaseConnectionString, databaseReadReplicasString =
 			MattermostPostgresConnStrings(
@@ -230,6 +231,9 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 	secretStringData := map[string]string{
 		"DB_CONNECTION_STRING":              databaseConnectionString,
 		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
+	}
+	if len(databaseConnectionCheck) != 0 {
+		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
 	}
 
 	databaseSecret := &corev1.Secret{
@@ -337,7 +341,7 @@ func (d *RDSMultitenantDatabase) assignInstallationToMultitenantDatabaseAndLock(
 	}
 
 	if len(multitenantDatabases) == 0 {
-		logger.Infof("No multitenant databases with less than %d installations found in the datastore; fetching all available resources from AWS", d.MaxSupportedDatabases())
+		logger.Infof("No %s multitenant databases with less than %d installations found in the datastore; fetching all available resources from AWS", d.databaseType, d.MaxSupportedDatabases())
 
 		multitenantDatabases, err = d.getMultitenantDatabasesFromResourceTags(vpcID, store, logger)
 		if err != nil {
