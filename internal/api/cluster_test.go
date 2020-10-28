@@ -1224,6 +1224,22 @@ func TestClusterAnnotations(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("fail to add or delete while api-security-locked", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"is-locked"},
+		}
+		err = sqlStore.LockClusterAPI(cluster.ID)
+		require.NoError(t, err)
+
+		_, err = client.AddClusterAnnotations(cluster.ID, annotationsRequest)
+		require.Error(t, err)
+		err = client.DeleteClusterAnnotation(cluster.ID, "my-annotation2")
+		require.Error(t, err)
+
+		err = sqlStore.UnlockClusterAPI(cluster.ID)
+		require.NoError(t, err)
+	})
+
 	err = client.DeleteClusterAnnotation(cluster.ID, "my-annotation2")
 	require.NoError(t, err)
 

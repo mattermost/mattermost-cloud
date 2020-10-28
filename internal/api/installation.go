@@ -652,6 +652,12 @@ func handleAddInstallationAnnotations(c *Context, w http.ResponseWriter, r *http
 	}
 	defer unlockOnce()
 
+	if installationDTO.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	annotations, err := annotationsFromRequest(r)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get annotations from request")
@@ -688,12 +694,18 @@ func handleDeleteInstallationAnnotation(c *Context, w http.ResponseWriter, r *ht
 		WithField("action", "delete-installation-annotation").
 		WithField("annotation-name", annotationName)
 
-	_, status, unlockOnce := lockInstallation(c, installationID)
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
+
+	if installationDTO.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	err := c.Store.DeleteInstallationAnnotation(installationID, annotationName)
 	if err != nil {

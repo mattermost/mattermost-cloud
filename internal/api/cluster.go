@@ -597,6 +597,12 @@ func handleAddClusterAnnotations(c *Context, w http.ResponseWriter, r *http.Requ
 	}
 	defer unlockOnce()
 
+	if clusterDTO.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	annotations, err := annotationsFromRequest(r)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get annotations from request")
@@ -629,12 +635,18 @@ func handleDeleteClusterAnnotation(c *Context, w http.ResponseWriter, r *http.Re
 		WithField("action", "delete-cluster-annotation").
 		WithField("annotation-name", annotationName)
 
-	_, status, unlockOnce := lockCluster(c, clusterID)
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
+
+	if clusterDTO.APISecurityLock {
+		logSecurityLockConflict("cluster", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	err := c.Store.DeleteClusterAnnotation(clusterID, annotationName)
 	if err != nil {

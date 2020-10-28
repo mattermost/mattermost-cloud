@@ -1255,6 +1255,22 @@ func TestInstallationAnnotations(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("fail to add or delete while api-security-locked", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"is-locked"},
+		}
+		err = sqlStore.LockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+
+		_, err = client.AddInstallationAnnotations(installation.ID, annotationsRequest)
+		require.Error(t, err)
+		err = client.DeleteInstallationAnnotation(installation.ID, "my-annotation2")
+		require.Error(t, err)
+
+		err = sqlStore.UnlockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+	})
+
 	err = client.DeleteInstallationAnnotation(installation.ID, "my-annotation2")
 	require.NoError(t, err)
 
