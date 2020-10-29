@@ -91,6 +91,7 @@ func init() {
 	clusterCmd.AddCommand(clusterShowStateReport)
 	clusterCmd.AddCommand(clusterUtilitiesCmd)
 	clusterCmd.AddCommand(clusterShowSizeDictionary)
+	clusterCmd.AddCommand(clusterAnnotationCmd)
 }
 
 var clusterCmd = &cobra.Command{

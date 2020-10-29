@@ -64,6 +64,14 @@ type Store interface {
 	DeleteWebhook(webhookID string) error
 
 	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
+
+	GetOrCreateAnnotations(annotations []*model.Annotation) ([]*model.Annotation, error)
+
+	CreateClusterAnnotations(clusterID string, annotations []*model.Annotation) ([]*model.Annotation, error)
+	DeleteClusterAnnotation(clusterID string, annotationName string) error
+
+	CreateInstallationAnnotations(installationID string, annotations []*model.Annotation) ([]*model.Annotation, error)
+	DeleteInstallationAnnotation(installationID string, annotationName string) error
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.

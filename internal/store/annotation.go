@@ -23,6 +23,17 @@ var annotationColumns = []string{
 	"Annotation.ID", "Annotation.Name",
 }
 
+var (
+	// ErrClusterAnnotationUsedByInstallation is an error returned when user attempts to delete cluster annotation
+	// present on the installation scheduled on that cluster.
+	ErrClusterAnnotationUsedByInstallation = errors.New("cannot delete cluster annotation, " +
+		"it is used by one or more installations scheduled on the cluster")
+	// ErrInstallationAnnotationDoNotMatchClusters is an error returned when user attempts to add annotation to the
+	// installation, that is not present on any of the clusters on which the installation is scheduled.
+	ErrInstallationAnnotationDoNotMatchClusters = errors.New("cannot add annotations to installation, " +
+		"one or more clusters on which installation is scheduled do not contain one or more of new annotations")
+)
+
 func init() {
 	annotationSelect = sq.Select(annotationColumns...).
 		From("Annotation")
@@ -70,7 +81,11 @@ func (sqlStore *SQLStore) createAnnotation(db execer, annotation *model.Annotati
 	return nil
 }
 
-// getOrCreateAnnotations fetches annotations by name or creates them if they do not exist.
+// GetOrCreateAnnotations fetches annotations by name or creates them if they do not exist.
+func (sqlStore *SQLStore) GetOrCreateAnnotations(annotations []*model.Annotation) ([]*model.Annotation, error) {
+	return sqlStore.getOrCreateAnnotations(sqlStore.db, annotations)
+}
+
 func (sqlStore *SQLStore) getOrCreateAnnotations(db dbInterface, annotations []*model.Annotation) ([]*model.Annotation, error) {
 	for i, ann := range annotations {
 		annotation, err := sqlStore.getOrCreateAnnotation(db, ann)
@@ -102,6 +117,11 @@ func (sqlStore *SQLStore) getOrCreateAnnotation(db dbInterface, annotation *mode
 
 // CreateClusterAnnotations maps selected annotations to cluster and stores it in the database.
 func (sqlStore *SQLStore) CreateClusterAnnotations(clusterID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
+	annotations, err := sqlStore.getOrCreateAnnotations(sqlStore.db, annotations)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get or create annotations")
+	}
+
 	return sqlStore.createClusterAnnotations(sqlStore.db, clusterID, annotations)
 }
 
@@ -122,13 +142,17 @@ func (sqlStore *SQLStore) createClusterAnnotations(db execer, clusterID string, 
 
 // GetAnnotationsForCluster fetches all annotations assigned to the cluster.
 func (sqlStore *SQLStore) GetAnnotationsForCluster(clusterID string) ([]*model.Annotation, error) {
+	return sqlStore.getAnnotationsForCluster(sqlStore.db, clusterID)
+}
+
+func (sqlStore *SQLStore) getAnnotationsForCluster(db dbInterface, clusterID string) ([]*model.Annotation, error) {
 	var annotations []*model.Annotation
 
 	builder := sq.Select(annotationColumns...).
 		From(clusterAnnotationTable).
 		Where("ClusterID = ?", clusterID).
 		LeftJoin("Annotation ON Annotation.ID=AnnotationID")
-	err := sqlStore.selectBuilder(sqlStore.db, &annotations, builder)
+	err := sqlStore.selectBuilder(db, &annotations, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get annotations for Cluster")
 	}
@@ -171,15 +195,80 @@ func (sqlStore *SQLStore) GetAnnotationsForClusters(filter *model.ClusterFilter)
 	return annotations, nil
 }
 
+// DeleteClusterAnnotation removes an annotation from a given cluster.
+// Annotation cannot be removed if it is present on any of the Installations scheduled on the cluster.
+func (sqlStore *SQLStore) DeleteClusterAnnotation(clusterID string, annotationName string) error {
+	annotation, err := sqlStore.GetAnnotationByName(annotationName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get annotation '%s' by name", annotationName)
+	}
+	if annotation == nil {
+		return nil
+	}
+
+	tx, err := sqlStore.beginCustomTransaction(sqlStore.db, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+	if err != nil {
+		return errors.Wrap(err, "failed to begin the transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	clusterInstallations, err := sqlStore.getClusterInstallations(tx, &model.ClusterInstallationFilter{
+		PerPage:        model.AllPerPage,
+		ClusterID:      clusterID,
+		IncludeDeleted: false},
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to get cluster installations")
+	}
+
+	for _, ci := range clusterInstallations {
+		annotations, err := sqlStore.getAnnotationsForInstallation(tx, ci.InstallationID)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get annotations for '%s' installation", ci.InstallationID)
+		}
+		if model.ContainsAnnotation(annotations, annotation) {
+			return ErrClusterAnnotationUsedByInstallation
+		}
+	}
+
+	builder := sq.Delete(clusterAnnotationTable).
+		Where("ClusterID = ?", clusterID).
+		Where("AnnotationID = ?", annotation.ID)
+
+	result, err := sqlStore.execBuilder(tx, builder)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete cluster annotation")
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "failed to check affected rows when deleting cluster annotation")
+	}
+	if rows > 1 { // Do not fail if annotation is not set on cluster
+		return fmt.Errorf("error deleting cluster annotation, expected 0 or 1 rows to be affected was %d", rows)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit the transaction")
+	}
+
+	return nil
+}
+
 // GetAnnotationsForInstallation fetches all annotations assigned to the installation.
 func (sqlStore *SQLStore) GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error) {
+	return sqlStore.getAnnotationsForInstallation(sqlStore.db, installationID)
+}
+
+func (sqlStore *SQLStore) getAnnotationsForInstallation(db dbInterface, installationID string) ([]*model.Annotation, error) {
 	var annotations []*model.Annotation
 
 	builder := sq.Select(annotationColumns...).
 		From(installationAnnotationTable).
 		Where("InstallationID = ?", installationID).
 		LeftJoin("Annotation ON Annotation.ID=AnnotationID")
-	err := sqlStore.selectBuilder(sqlStore.db, &annotations, builder)
+	err := sqlStore.selectBuilder(db, &annotations, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get annotations for Installation")
 	}
@@ -223,8 +312,51 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallations(filter *model.Installat
 }
 
 // CreateInstallationAnnotations maps selected annotations to installation and stores it in the database.
+// Annotation cannot be added to the Installation if any of the clusters on which the Installation is scheduled
+// is not annotated with it.
 func (sqlStore *SQLStore) CreateInstallationAnnotations(installationID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
-	return sqlStore.createInstallationAnnotations(sqlStore.db, installationID, annotations)
+	tx, err := sqlStore.beginCustomTransaction(sqlStore.db, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to begin the transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	annotations, err = sqlStore.getOrCreateAnnotations(tx, annotations)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get or create annotations")
+	}
+
+	clusterInstallations, err := sqlStore.getClusterInstallations(tx, &model.ClusterInstallationFilter{
+		PerPage:        model.AllPerPage,
+		InstallationID: installationID,
+		IncludeDeleted: false},
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get cluster installations")
+	}
+
+	for _, ci := range clusterInstallations {
+		clusterAnnotations, err := sqlStore.getAnnotationsForCluster(tx, ci.ClusterID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get annotations for '%s' cluster", ci.ClusterID)
+		}
+
+		if !containsAllAnnotations(clusterAnnotations, annotations) {
+			return nil, ErrInstallationAnnotationDoNotMatchClusters
+		}
+	}
+
+	annotations, err = sqlStore.createInstallationAnnotations(tx, installationID, annotations)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create installation annotations")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to commit the transaction")
+	}
+
+	return annotations, nil
 }
 
 func (sqlStore *SQLStore) createInstallationAnnotations(db execer, installationID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
@@ -240,4 +372,43 @@ func (sqlStore *SQLStore) createInstallationAnnotations(db execer, installationI
 	}
 
 	return annotations, nil
+}
+
+// DeleteInstallationAnnotation removes annotation from a given Installation.
+func (sqlStore *SQLStore) DeleteInstallationAnnotation(installationID string, annotationName string) error {
+	annotation, err := sqlStore.GetAnnotationByName(annotationName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get annotation '%s' by name", annotationName)
+	}
+	if annotation == nil {
+		return nil
+	}
+
+	builder := sq.Delete(installationAnnotationTable).
+		Where("InstallationID = ?", installationID).
+		Where("AnnotationID = ?", annotation.ID)
+
+	result, err := sqlStore.execBuilder(sqlStore.db, builder)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation annotation")
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "failed to check affected rows when deleting installation annotation")
+	}
+	if rows > 1 { // Do not fail if annotation is not set on installation
+		return fmt.Errorf("error deleting installation annotation, expected 0 or 1 rows to be affected was %d", rows)
+	}
+
+	return nil
+}
+
+func containsAllAnnotations(base, new []*model.Annotation) bool {
+	for _, n := range new {
+		if !model.ContainsAnnotation(base, n) {
+			return false
+		}
+	}
+	return true
 }

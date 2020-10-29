@@ -5,9 +5,13 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"sort"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -24,7 +28,12 @@ type Annotation struct {
 	Name string
 }
 
-// AnnotationsFromStringSlice converts list of strings to list of annotations
+// AddAnnotationsRequest represent parameters passed to add set of annotations to the Cluster or Installation.
+type AddAnnotationsRequest struct {
+	Annotations []string `json:"annotations"`
+}
+
+// AnnotationsFromStringSlice converts list of strings to list of annotations.
 func AnnotationsFromStringSlice(names []string) ([]*Annotation, error) {
 	if names == nil {
 		return nil, nil
@@ -50,4 +59,26 @@ func SortAnnotations(annotations []*Annotation) []*Annotation {
 		return annotations[i].Name < annotations[j].Name
 	})
 	return annotations
+}
+
+// NewAddAnnotationsRequestFromReader will create a AddAnnotationsRequest from an
+// io.Reader with JSON data.
+func NewAddAnnotationsRequestFromReader(reader io.Reader) (*AddAnnotationsRequest, error) {
+	var addAnnotationsRequest AddAnnotationsRequest
+	err := json.NewDecoder(reader).Decode(&addAnnotationsRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode add annotations request")
+	}
+
+	return &addAnnotationsRequest, nil
+}
+
+// ContainsAnnotation determines whether slice of Annotations contains a specific annotation.
+func ContainsAnnotation(annotations []*Annotation, annotation *Annotation) bool {
+	for _, ann := range annotations {
+		if ann.ID == annotation.ID {
+			return true
+		}
+	}
+	return false
 }

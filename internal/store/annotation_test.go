@@ -59,8 +59,8 @@ func TestAnnotations_Cluster(t *testing.T) {
 		annotationsForCluster, err := sqlStore.GetAnnotationsForCluster(cluster1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, len(annotations), len(annotationsForCluster))
-		assert.True(t, containsAnnotation(annotation1, annotationsForCluster))
-		assert.True(t, containsAnnotation(annotation2, annotationsForCluster))
+		assert.True(t, model.ContainsAnnotation(annotationsForCluster, &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForCluster, &annotation2))
 	})
 
 	t.Run("fail to assign the same annotation to the cluster twice", func(t *testing.T) {
@@ -77,18 +77,69 @@ func TestAnnotations_Cluster(t *testing.T) {
 		annotationsForCluster, err := sqlStore.GetAnnotationsForCluster(cluster2.ID)
 		require.NoError(t, err)
 		assert.Equal(t, len(annotations), len(annotationsForCluster))
-		assert.True(t, containsAnnotation(annotation1, annotationsForCluster))
-		assert.True(t, containsAnnotation(annotation2, annotationsForCluster))
+		assert.True(t, model.ContainsAnnotation(annotationsForCluster, &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForCluster, &annotation2))
 	})
 
 	t.Run("get annotations for clusters", func(t *testing.T) {
 		annotationsForClusters, err := sqlStore.GetAnnotationsForClusters(&model.ClusterFilter{PerPage: model.AllPerPage})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(annotationsForClusters))
-		assert.True(t, containsAnnotation(annotation1, annotationsForClusters[cluster1.ID]))
-		assert.True(t, containsAnnotation(annotation2, annotationsForClusters[cluster1.ID]))
-		assert.True(t, containsAnnotation(annotation1, annotationsForClusters[cluster2.ID]))
-		assert.True(t, containsAnnotation(annotation2, annotationsForClusters[cluster2.ID]))
+		assert.True(t, model.ContainsAnnotation(annotationsForClusters[cluster1.ID], &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForClusters[cluster1.ID], &annotation2))
+		assert.True(t, model.ContainsAnnotation(annotationsForClusters[cluster2.ID], &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForClusters[cluster2.ID], &annotation2))
+	})
+
+	t.Run("delete cluster annotation", func(t *testing.T) {
+		err = sqlStore.DeleteClusterAnnotation(cluster1.ID, annotation1.Name)
+		require.NoError(t, err)
+		annotationsForCluster, err := sqlStore.GetAnnotationsForCluster(cluster1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(annotationsForCluster))
+
+		t.Run("do not fail when deleting cluster annotation twice", func(t *testing.T) {
+			err = sqlStore.DeleteClusterAnnotation(cluster1.ID, annotation1.Name)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("delete unknown annotation", func(t *testing.T) {
+		err = sqlStore.DeleteClusterAnnotation(cluster1.ID, "unknown-annotation")
+		require.NoError(t, err)
+	})
+
+	t.Run("fail to delete annotation if present on installation scheduled on the cluster", func(t *testing.T) {
+		installation1 := model.Installation{}
+		err = sqlStore.createInstallation(sqlStore.db, &installation1)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster1.ID,
+			InstallationID: installation1.ID,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		_, err = sqlStore.CreateInstallationAnnotations(installation1.ID, []*model.Annotation{&annotation2})
+		require.NoError(t, err)
+
+		err = sqlStore.DeleteClusterAnnotation(cluster1.ID, annotation2.Name)
+		require.Error(t, err)
+		assert.Equal(t, ErrClusterAnnotationUsedByInstallation, err)
+	})
+
+	newAnnotations := []*model.Annotation{
+		{Name: "new-annotation1"},
+		{Name: "new-annotation2"},
+	}
+
+	t.Run("correctly create new cluster annotations", func(t *testing.T) {
+		_, err = sqlStore.CreateClusterAnnotations(cluster2.ID, newAnnotations)
+		require.NoError(t, err)
+		annotationsForInstallation, err := sqlStore.GetAnnotationsForCluster(cluster2.ID)
+		require.NoError(t, err)
+		assert.Equal(t, len(annotations)+len(newAnnotations), len(annotationsForInstallation))
 	})
 }
 
@@ -118,8 +169,8 @@ func TestAnnotations_Installation(t *testing.T) {
 		annotationsForInstallation, err := sqlStore.GetAnnotationsForInstallation(installation1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, len(annotations), len(annotationsForInstallation))
-		assert.True(t, containsAnnotation(annotation1, annotationsForInstallation))
-		assert.True(t, containsAnnotation(annotation2, annotationsForInstallation))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallation, &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallation, &annotation2))
 	})
 
 	t.Run("fail to assign the same annotation to the installation twice", func(t *testing.T) {
@@ -136,26 +187,71 @@ func TestAnnotations_Installation(t *testing.T) {
 		annotationsForInstallation, err := sqlStore.GetAnnotationsForInstallation(installation2.ID)
 		require.NoError(t, err)
 		assert.Equal(t, len(annotations), len(annotationsForInstallation))
-		assert.True(t, containsAnnotation(annotation1, annotationsForInstallation))
-		assert.True(t, containsAnnotation(annotation2, annotationsForInstallation))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallation, &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallation, &annotation2))
 	})
 
 	t.Run("get annotations for installations", func(t *testing.T) {
 		annotationsForInstallations, err := sqlStore.GetAnnotationsForInstallations(&model.InstallationFilter{PerPage: model.AllPerPage})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(annotationsForInstallations))
-		assert.True(t, containsAnnotation(annotation1, annotationsForInstallations[installation1.ID]))
-		assert.True(t, containsAnnotation(annotation2, annotationsForInstallations[installation1.ID]))
-		assert.True(t, containsAnnotation(annotation1, annotationsForInstallations[installation2.ID]))
-		assert.True(t, containsAnnotation(annotation2, annotationsForInstallations[installation2.ID]))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallations[installation1.ID], &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallations[installation1.ID], &annotation2))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallations[installation2.ID], &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForInstallations[installation2.ID], &annotation2))
 	})
-}
 
-func containsAnnotation(annotation model.Annotation, annotations []*model.Annotation) bool {
-	for _, a := range annotations {
-		if *a == annotation {
-			return true
+	t.Run("delete installation annotation", func(t *testing.T) {
+		err = sqlStore.DeleteInstallationAnnotation(installation1.ID, annotation1.Name)
+		require.NoError(t, err)
+		annotationsForInstallation, err := sqlStore.GetAnnotationsForInstallation(installation1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(annotationsForInstallation))
+
+		t.Run("do not fail when deleting installation annotation twice", func(t *testing.T) {
+			err = sqlStore.DeleteInstallationAnnotation(installation1.ID, annotation1.Name)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("delete unknown annotation", func(t *testing.T) {
+		err = sqlStore.DeleteClusterAnnotation(installation1.ID, "unknown-annotation")
+		require.NoError(t, err)
+	})
+
+	t.Run("fail to create annotation if not present on cluster on which installation is scheduled", func(t *testing.T) {
+		cluster := model.Cluster{}
+		err = sqlStore.CreateCluster(&cluster, []*model.Annotation{&annotation1})
+		require.NoError(t, err)
+		installation := model.Installation{DNS: "dns3.com"}
+		err = sqlStore.CreateInstallation(&installation, nil)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
 		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		_, err = sqlStore.CreateInstallationAnnotations(installation.ID, []*model.Annotation{&annotation1})
+		require.NoError(t, err)
+
+		_, err = sqlStore.CreateInstallationAnnotations(installation.ID, []*model.Annotation{&annotation2})
+		require.Error(t, err)
+		assert.Equal(t, ErrInstallationAnnotationDoNotMatchClusters, err)
+	})
+
+	newAnnotations := []*model.Annotation{
+		{Name: "new-annotation1"},
+		{Name: "new-annotation2"},
 	}
-	return false
+
+	t.Run("correctly create new installation annotations", func(t *testing.T) {
+		_, err = sqlStore.CreateInstallationAnnotations(installation2.ID, newAnnotations)
+		require.NoError(t, err)
+		annotationsForInstallation, err := sqlStore.GetAnnotationsForInstallation(installation2.ID)
+		require.NoError(t, err)
+		assert.Equal(t, len(annotations)+len(newAnnotations), len(annotationsForInstallation))
+	})
 }

@@ -1146,10 +1146,8 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 			Provider: model.ProviderAWS,
 			Zones:    []string{"zone"},
 			DesiredUtilityVersions: map[string]string{
-				"prometheus":          "10.3.0",
-				"prometheus-operator": "9.4.4",
-				"thanos":              "2.4.3",
-				"nginx":               "stable",
+				"prometheus": "10.3.0",
+				"nginx":      "stable",
 			},
 		})
 
@@ -1157,16 +1155,126 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	utilityMetadata, err := client.GetClusterUtilities(c.ID)
 
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
-	assert.Equal(t, "", utilityMetadata.ActualVersions.PrometheusOperator)
-	assert.Equal(t, "", utilityMetadata.ActualVersions.Thanos)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
 
 	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
 	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
-	assert.Equal(t, "9.4.4", utilityMetadata.DesiredVersions.PrometheusOperator)
-	assert.Equal(t, "2.4.3", utilityMetadata.DesiredVersions.Thanos)
 	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
+}
+
+func TestClusterAnnotations(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+	cluster, err := client.CreateCluster(
+		&model.CreateClusterRequest{
+			Provider: model.ProviderAWS,
+			Zones:    []string{"zone"},
+		})
+	require.NoError(t, err)
+
+	annotationsRequest := &model.AddAnnotationsRequest{
+		Annotations: []string{"my-annotation", "super-awesome123"},
+	}
+
+	cluster, err = client.AddClusterAnnotations(cluster.ID, annotationsRequest)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(cluster.Annotations))
+	assert.True(t, containsAnnotation("my-annotation", cluster.Annotations))
+	assert.True(t, containsAnnotation("super-awesome123", cluster.Annotations))
+
+	annotationsRequest = &model.AddAnnotationsRequest{
+		Annotations: []string{"my-annotation2"},
+	}
+	cluster, err = client.AddClusterAnnotations(cluster.ID, annotationsRequest)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(cluster.Annotations))
+
+	cluster, err = client.GetCluster(cluster.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(cluster.Annotations))
+	assert.True(t, containsAnnotation("my-annotation", cluster.Annotations))
+	assert.True(t, containsAnnotation("my-annotation2", cluster.Annotations))
+	assert.True(t, containsAnnotation("super-awesome123", cluster.Annotations))
+
+	t.Run("fail to add duplicated annotation", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"my-annotation"},
+		}
+		_, err = client.AddClusterAnnotations(cluster.ID, annotationsRequest)
+		require.Error(t, err)
+	})
+
+	t.Run("fail to add invalid annotation", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"_my-annotation"},
+		}
+		_, err = client.AddClusterAnnotations(cluster.ID, annotationsRequest)
+		require.Error(t, err)
+	})
+
+	t.Run("fail to add or delete while api-security-locked", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"is-locked"},
+		}
+		err = sqlStore.LockClusterAPI(cluster.ID)
+		require.NoError(t, err)
+
+		_, err = client.AddClusterAnnotations(cluster.ID, annotationsRequest)
+		require.Error(t, err)
+		err = client.DeleteClusterAnnotation(cluster.ID, "my-annotation2")
+		require.Error(t, err)
+
+		err = sqlStore.UnlockClusterAPI(cluster.ID)
+		require.NoError(t, err)
+	})
+
+	err = client.DeleteClusterAnnotation(cluster.ID, "my-annotation2")
+	require.NoError(t, err)
+
+	cluster, err = client.GetCluster(cluster.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(cluster.Annotations))
+
+	t.Run("delete unknown annotation", func(t *testing.T) {
+		err = client.DeleteClusterAnnotation(cluster.ID, "unknown")
+		require.NoError(t, err)
+
+		cluster, err = client.GetCluster(cluster.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(cluster.Annotations))
+	})
+
+	t.Run("fail with 403 if deleting annotation used by installation", func(t *testing.T) {
+		annotations := []*model.Annotation{
+			{Name: "my-annotation"},
+		}
+
+		installation := &model.Installation{}
+		err = sqlStore.CreateInstallation(installation, annotations)
+
+		clusterInstallation := &model.ClusterInstallation{
+			InstallationID: installation.ID,
+			ClusterID:      cluster.ID,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		err = client.DeleteClusterAnnotation(cluster.ID, "my-annotation")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "403")
+	})
 }
 
 func containsAnnotation(name string, annotations []*model.Annotation) bool {
