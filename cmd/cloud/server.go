@@ -59,6 +59,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
+	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
 }
 
 var serverCmd = &cobra.Command{
@@ -79,6 +80,9 @@ var serverCmd = &cobra.Command{
 		if machineLogs {
 			logger.SetFormatter(&logrus.JSONFormatter{})
 		}
+
+		requireAnnotatedInstallations, _ := command.Flags().GetBool("require-annotated-installations")
+		model.SetRequireAnnotatedInstallations(requireAnnotatedInstallations)
 
 		allowListCIDRRange, _ := command.Flags().GetStringSlice("allow-list-cidr-range")
 		if len(allowListCIDRRange) == 0 {
