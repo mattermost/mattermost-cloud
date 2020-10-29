@@ -602,7 +602,7 @@ grafana:
 ## Component scraping the kube api server
 ##
 kubeApiServer:
-  enabled: true
+  enabled: false
   tlsConfig:
     serverName: kubernetes
     insecureSkipVerify: false
@@ -754,7 +754,7 @@ kubelet:
 ## Component scraping the kube controller manager
 ##
 kubeControllerManager:
-  enabled: true
+  enabled: false
 
   ## If your kube controller manager is not deployed as a pod, specify IPs it can be found on
   ##
@@ -807,12 +807,12 @@ kubeControllerManager:
 ## Component scraping coreDns. Use either this or kubeDns
 ##
 coreDns:
-  enabled: true
+  enabled: false
   service:
-    port: 9153
-    targetPort: 9153
-    # selector:
-    #   k8s-app: kube-dns
+    port: 10054
+    targetPort: 10054
+    selector:
+      k8s-app: kube-dns
   serviceMonitor:
     ## Scrape interval. If not set, the Prometheus default scrape interval is used.
     ##
@@ -887,7 +887,7 @@ kubeDns:
 ## Component scraping etcd
 ##
 kubeEtcd:
-  enabled: true
+  enabled: false
 
   ## If your etcd is not deployed as a pod, specify IPs it can be found on
   ##
@@ -1000,7 +1000,7 @@ kubeScheduler:
 ## Component scraping kube proxy
 ##
 kubeProxy:
-  enabled: true
+  enabled: false
 
   ## If your kube proxy is not deployed as a pod, specify IPs it can be found on
   ##
