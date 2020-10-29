@@ -170,7 +170,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 	}
 
 	t.Run("require annotated installation", func(t *testing.T) {
-		request := 	&model.CreateInstallationRequest{
+		request := &model.CreateInstallationRequest{
 			OwnerID: "owner1",
 			DNS:     "domain4321.com",
 		}
@@ -183,6 +183,7 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 
 		request.Annotations = []string{"my-annotation"}
 		assert.NoError(t, request.Validate())
+		model.SetRequireAnnotatedInstallations(false)
 	})
 }
 
