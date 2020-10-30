@@ -12,13 +12,17 @@ import (
 )
 
 const (
-	// InstallationFilestoreMinioOperator is a filestore hosted in kubernetes via the operator.
+	// InstallationFilestoreMinioOperator is a filestore hosted in kubernetes
+	// via the operator.
 	InstallationFilestoreMinioOperator = "minio-operator"
 	// InstallationFilestoreAwsS3 is a filestore hosted via Amazon S3.
 	InstallationFilestoreAwsS3 = "aws-s3"
 	// InstallationFilestoreMultiTenantAwsS3 is a filestore hosted via a shared
 	// Amazon S3 bucket.
 	InstallationFilestoreMultiTenantAwsS3 = "aws-multitenant-s3"
+	// InstallationFilestoreBifrost is a filestore hosted via a shared Amazon S3
+	// bucket using the bifrost gateway.
+	InstallationFilestoreBifrost = "bifrost"
 )
 
 // Filestore is the interface for managing Mattermost filestores.
@@ -69,5 +73,6 @@ func (i *Installation) InternalFilestore() bool {
 func IsSupportedFilestore(filestore string) bool {
 	return filestore == InstallationFilestoreMinioOperator ||
 		filestore == InstallationFilestoreAwsS3 ||
-		filestore == InstallationFilestoreMultiTenantAwsS3
+		filestore == InstallationFilestoreMultiTenantAwsS3 ||
+		filestore == InstallationFilestoreBifrost
 }
