@@ -82,14 +82,6 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
-			"DNS is a real FQDN that is in use already",
-			true,
-			&model.CreateInstallationRequest{
-				OwnerID: "owner1",
-				DNS:     "google.com",
-			},
-		},
-		{
 			"invalid installation size",
 			true,
 			&model.CreateInstallationRequest{
