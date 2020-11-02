@@ -99,27 +99,8 @@ var blastCommand = &cobra.Command{
 		logger.Infof("Waiting for Group to be created..")
 		blaster.waitForGroup()
 
-		allReports := []Report{}
-		for i := 0; i < runs; i++ {
-			logger.Infof("Requesting Installations be created..")
-			created := blaster.createInstallations(total, batchSize)
-			logger.Infof("Waiting for Installations to reconcile..")
-			blaster.waitForInstallations(created)
-			logger.Infof("Cleaning up Installations...")
-			blaster.cleanupInstallations(created)
-			report := blaster.compileReports()
-			logger.Infof(
-				"\nCompleted test:\n\nErrors: %d\nSuccessful Installs: %d\nMinimum Time to Reconcile: %d seconds\nMedian Time to Reconcile: %d seconds\nMaximum Time to Reconcile: %d seconds\n\n",
-				report.errorCount,
-				report.successCount,
-				report.minDuration,
-				report.medianDuration,
-				report.maxDuration,
-			)
-			allReports = append(allReports, blaster.reports...)
-			blaster.reports = []Report{}
-		}
-		blaster.reports = allReports
+		blaster.runTests(runs, batchSize, total)
+
 		report := blaster.compileReports()
 		logger.Infof(
 			"\nCompleted test:\n\nErrors: %d\nSuccessful Installs: %d\nMinimum Time to Reconcile: %d seconds\nMedian Time to Reconcile: %d seconds\nMaximum Time to Reconcile: %d seconds\n\n",
@@ -164,6 +145,30 @@ func (d Durations) Swap(i, j int) {
 // addReports stores reports in the Blaster's slice
 func (b *Blaster) addReports(reports ...Report) {
 	b.reports = append(b.reports, reports...)
+}
+
+func (b *Blaster) runTests(runs, batchSize, total int) {
+	allReports := []Report{}
+	for i := 0; i < runs; i++ {
+		logger.Infof("Requesting Installations be created..")
+		created := b.createInstallations(total, batchSize)
+		logger.Infof("Waiting for Installations to reconcile..")
+		b.waitForInstallations(created)
+		logger.Infof("Cleaning up Installations...")
+		b.cleanupInstallations(created)
+		report := b.compileReports()
+		logger.Infof(
+			"\nCompleted test:\n\nErrors: %d\nSuccessful Installs: %d\nMinimum Time to Reconcile: %d seconds\nMedian Time to Reconcile: %d seconds\nMaximum Time to Reconcile: %d seconds\n\n",
+			report.errorCount,
+			report.successCount,
+			report.minDuration,
+			report.medianDuration,
+			report.maxDuration,
+		)
+		allReports = append(allReports, b.reports...)
+		b.reports = []Report{}
+	}
+	b.reports = allReports
 }
 
 // compileReports generates output from the reports stored on the
