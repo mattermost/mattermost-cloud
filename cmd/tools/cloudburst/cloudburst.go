@@ -33,25 +33,37 @@ type errorReport struct {
 	message      string
 }
 
+// ReportType identifies types of test reports that may be returned
 type ReportType string
 
 const (
-	ErrorReportType     ReportType = "errorReport"
+	// ErrorReportType represents an error produced by a test
+	ErrorReportType ReportType = "errorReport"
+	// CompletedReportType represents a result from a completed test
 	CompletedReportType ReportType = "completedReport"
 )
 
+// Report allows for both error reports and completion reports to be
+// passed along the same channel with type safety
 type Report interface {
+	// Type returns the ReportType held by the concrete implementation
+	// of Report
 	Type() ReportType
 }
 
+// Type returns ErrorReportType for errorReport objects
 func (e *errorReport) Type() ReportType {
 	return ErrorReportType
 }
 
+// Type returns CompletedReportType for completedReport objects
 func (c *completedReport) Type() ReportType {
 	return CompletedReportType
 }
 
+// Blaster represents a single instance of the load testing tool. Each
+// Blaster is aware of its own reports (errors and completed reports),
+// and contains internal state that pertains to the entire test run.
 type Blaster struct {
 	client  *cloud.Client
 	testID  string
@@ -59,13 +71,15 @@ type Blaster struct {
 	reports []Report
 }
 
+// NewBlaster creates a new Blaster with which to blast the
+// Provisioning API
 func NewBlaster(serverAddress string) *Blaster {
 	client := cloud.NewClient(serverAddress)
 	return &Blaster{client: client, testID: cloud.NewID()}
 }
 
 var blastCommand = &cobra.Command{
-	Use:   "blast",
+	Use:   "cloudburst",
 	Short: "Run a load test against a provisioning server.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		serverAddress, _ := cmd.Flags().GetString("server")
@@ -128,24 +142,32 @@ type results struct {
 	minDuration    int64
 }
 
+// Durations allows us to Sort() a list of durations by implementing
+// the Sortable interface
 type Durations []int64
 
+// Len returns len() of the slice to satisfy the Sortable interface
 func (d Durations) Len() int {
 	return len(d)
 }
 
+// Less returns i<j in the slice to satisfy the Sortable interface
 func (d Durations) Less(i, j int) bool {
 	return d[i] < d[j]
 }
 
+// Swap performs a swap of i and j to satisfy the Sortable interface
 func (d Durations) Swap(i, j int) {
 	d[i], d[j] = d[j], d[i]
 }
 
+// addReports stores reports in the Blaster's slice
 func (b *Blaster) addReports(reports ...Report) {
 	b.reports = append(b.reports, reports...)
 }
 
+// compileReports generates output from the reports stored on the
+// Blaster object
 func (b *Blaster) compileReports() (output *results) {
 	output = new(results)
 	durations := []int64{}
@@ -166,6 +188,8 @@ func (b *Blaster) compileReports() (output *results) {
 	return
 }
 
+// waitForInstallations loops until all of the requested Installations
+// have successfully reached the 'stable' state
 func (b *Blaster) waitForInstallations(input map[string]*cloud.Installation) {
 	waiting := make(map[string]*cloud.Installation)
 	for _, i := range input {
@@ -216,12 +240,13 @@ func (b *Blaster) waitForInstallations(input map[string]*cloud.Installation) {
 		}
 		if len(waiting) == 0 {
 			return
-		} else {
-			time.Sleep(5 * time.Second)
 		}
+		time.Sleep(5 * time.Second)
 	}
 }
 
+// waitForGroup blocks until the Blaster's group is provisioned
+// successfully
 func (b *Blaster) waitForGroup() {
 	for {
 		g, err := b.client.GetGroup(b.group.ID)
@@ -243,6 +268,9 @@ func init() {
 	blastCommand.PersistentFlags().Int("total", 20, "Number of Installations to provision")
 }
 
+// serialBatchInstall requests installation of "count" number of
+// installations in serial. It will re-request rejected requests until
+// it successfully requests "count" Installations
 func (b *Blaster) serialBatchInstall(count int) (installations []*cloud.Installation) {
 	for i := 0; i < count; i++ {
 		install, err := b.createInstallation()
@@ -257,6 +285,8 @@ func (b *Blaster) serialBatchInstall(count int) (installations []*cloud.Installa
 	return
 }
 
+// createGroup creates a group for all of the Installations in the
+// test to belong to
 func (b *Blaster) createGroup() error {
 	group, err := b.client.CreateGroup(
 		&cloud.CreateGroupRequest{
@@ -271,6 +301,8 @@ func (b *Blaster) createGroup() error {
 	return nil
 }
 
+// cleanupInstallations attempts to delete the created Installations
+// until it succeeds, and blocks until that time.
 func (b *Blaster) cleanupInstallations(installations map[string]*cloud.Installation) {
 	for len(installations) > 0 {
 		for _, install := range installations {
@@ -305,6 +337,8 @@ func (b *Blaster) cleanupInstallations(installations map[string]*cloud.Installat
 	}
 }
 
+// cleanupGroup just deletes the group and returns an error if it
+// fails. It does not retry or block.
 func (b *Blaster) cleanupGroup() error {
 	err := b.client.DeleteGroup(b.group.ID)
 	if err != nil {
@@ -313,6 +347,10 @@ func (b *Blaster) cleanupGroup() error {
 	return nil
 }
 
+// createInstallations will request creation of "total" installations
+// in parallel, created in serial batches of size batchSize. A
+// batchSize of 1 will deploy all installations in parallel, and a
+// batchSize equal to total will deploy them all serially.
 func (b *Blaster) createInstallations(total, batchSize int) map[string]*cloud.Installation {
 	installationsChannel := make(chan []*cloud.Installation)
 	for i := 0; i < total; i += batchSize {
@@ -333,6 +371,8 @@ func (b *Blaster) createInstallations(total, batchSize int) map[string]*cloud.In
 	return allInstallations
 }
 
+// createInstallation requests creation of a single installation and
+// returns an error if the API does. It does not block or retry.
 func (b *Blaster) createInstallation() (*cloud.Installation, error) {
 	installationDTO, err := b.client.CreateInstallation(
 		&cloud.CreateInstallationRequest{
