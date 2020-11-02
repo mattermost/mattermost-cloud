@@ -5,15 +5,12 @@
 package model
 
 import (
-	"context"
 	"encoding/json"
 	"io"
-	"net"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -107,32 +104,7 @@ func isValidDNS(dns string) error {
 	if found := hostnamePattern.FindString(dns); found != dns {
 		return errors.Errorf("DNS name provided (%s) failed hostname pattern check", dns)
 	}
-	// check that domain does not resolve. Use a custom pure-Go resolver
-	// to get the same behavior on VPN, in testing, and in production
-	r := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			return (&net.Dialer{
-				Timeout: time.Second * time.Duration(10000),
-			}).DialContext(ctx, "udp", "1.1.1.1:53")
-		},
-	}
-	_, err := r.LookupHost(context.Background(), dns)
-	if err == nil {
-		return errors.Errorf("dns name %s is already taken", dns)
-	}
-	switch e := err.(type) {
-	case *net.DNSError:
-		if !e.IsNotFound {
-			return e
-		}
-		return nil
-	default:
-		// all of the errors that indicate success are DNSErrors. If
-		// there's some other error, which shouldn't be possible, return
-		// the unexpected error
-		return errors.Wrapf(e, "unexpected error when looking up DNS name %s", dns)
-	}
+	return nil
 }
 
 func checkSpaces(request *CreateInstallationRequest) error {
