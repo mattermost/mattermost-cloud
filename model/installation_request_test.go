@@ -160,6 +160,23 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("require annotated installation", func(t *testing.T) {
+		request := &model.CreateInstallationRequest{
+			OwnerID: "owner1",
+			DNS:     "domain4321.com",
+		}
+		request.SetDefaults()
+
+		assert.NoError(t, request.Validate())
+
+		model.SetRequireAnnotatedInstallations(true)
+		assert.Error(t, request.Validate())
+
+		request.Annotations = []string{"my-annotation"}
+		assert.NoError(t, request.Validate())
+		model.SetRequireAnnotatedInstallations(false)
+	})
 }
 
 func TestCreateInstallationRequestFromReader(t *testing.T) {

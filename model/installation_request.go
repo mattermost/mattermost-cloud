@@ -17,6 +17,14 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
+// requireAnnotatedInstallations if set, installations need to be annotated with at least one annotation.
+var requireAnnotatedInstallations bool
+
+// SetRequireAnnotatedInstallations is called with a value based on a CLI flag.
+func SetRequireAnnotatedInstallations(val bool) {
+	requireAnnotatedInstallations = val
+}
+
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
 	OwnerID         string
@@ -85,6 +93,12 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Errorf("unsupported filestore %s", request.Filestore)
 	}
 	err = request.MattermostEnv.Validate()
+	if requireAnnotatedInstallations {
+		if len(request.Annotations) == 0 {
+			return errors.Errorf("at least one annotation is required")
+		}
+	}
+
 	if err != nil {
 		return errors.Wrap(err, "invalid env var settings")
 	}
