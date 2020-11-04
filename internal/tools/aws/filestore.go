@@ -75,7 +75,7 @@ func (f *S3Filestore) Teardown(keepData bool, store model.InstallationDatabaseSt
 // accessing the S3 bucket.
 func (f *S3Filestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
-	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID, logger)
+	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID)
 	if err != nil {
 		return nil, nil, err
 	}

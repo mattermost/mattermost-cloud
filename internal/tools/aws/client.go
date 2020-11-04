@@ -35,6 +35,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // AWS interface for use by other packages.
@@ -65,6 +66,8 @@ type AWS interface {
 
 	DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error
 	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
+
+	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 }
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.

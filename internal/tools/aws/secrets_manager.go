@@ -136,8 +136,13 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 }
 
 // secretsManagerGetIAMAccessKey returns the AccessKey for an IAM account.
-func (a *Client) secretsManagerGetIAMAccessKey(awsID string, logger log.FieldLogger) (*IAMAccessKey, error) {
-	secretName := IAMSecretName(awsID)
+func (a *Client) secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, error) {
+	return a.secretsManagerGetIAMAccessKeyFromSecretName(IAMSecretName(awsID))
+}
+
+// secretsManagerGetIAMAccessKeyFromSecretName attempts to parse a secret into
+// and IAMAccessKey.
+func (a *Client) secretsManagerGetIAMAccessKeyFromSecretName(secretName string) (*IAMAccessKey, error) {
 	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})

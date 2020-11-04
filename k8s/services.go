@@ -14,7 +14,7 @@ import (
 
 func (kc *KubeClient) createOrUpdateService(namespace string, service *corev1.Service) (metav1.Object, error) {
 	ctx := context.TODO()
-	_, err := kc.Clientset.CoreV1().Services(namespace).Get(ctx, service.GetName(), metav1.GetOptions{})
+	existing, err := kc.Clientset.CoreV1().Services(namespace).Get(ctx, service.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
@@ -23,5 +23,14 @@ func (kc *KubeClient) createOrUpdateService(namespace string, service *corev1.Se
 		return kc.Clientset.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	}
 
+	// The following values need to be set to the existing resource or the k8s
+	// API will complain.
+	// TODO: revisit this and possibly use Patch instead of update.
+	if len(existing.Spec.ClusterIP) != 0 {
+		service.Spec.ClusterIP = existing.Spec.ClusterIP
+	}
+	if len(existing.ResourceVersion) != 0 {
+		service.ResourceVersion = existing.ResourceVersion
+	}
 	return kc.Clientset.CoreV1().Services(namespace).Update(ctx, service, metav1.UpdateOptions{})
 }

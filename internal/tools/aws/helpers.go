@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -150,6 +151,64 @@ func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string)
 	return fmt.Sprintf("Used for accessing installation ID: %s database managed by RDS cluster ID: %s", installationID, rdsClusterID)
 }
 
+func getMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (string, error) {
+	vpc, err := getVPCForInstallation(installationID, store, client)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to find cluster installation VPC")
+	}
+
+	bucketName, err := getMultitenantBucketNameForVPC(*vpc.VpcId, client)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get multitenant bucket name for VPC")
+	}
+
+	return bucketName, nil
+}
+
+func getMultitenantBucketNameForCluster(clusterID string, client *Client) (string, error) {
+	vpc, err := getVPCForCluster(clusterID, client)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to find cluster VPC")
+	}
+
+	bucketName, err := getMultitenantBucketNameForVPC(*vpc.VpcId, client)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get multitenant bucket name for VPC")
+	}
+
+	return bucketName, nil
+}
+
+func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error) {
+	envName, err := client.GetCloudEnvironmentName()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get cloud environment name")
+	}
+
+	bucketName := MattermostMultitenantS3Name(envName, vpcID)
+
+	tags, err := client.Service().s3.GetBucketTagging(&s3.GetBucketTaggingInput{
+		Bucket: aws.String(bucketName),
+	})
+	if aerr, ok := err.(awserr.Error); ok {
+		if aerr.Code() == s3.ErrCodeNoSuchBucket {
+			return "", errors.Wrapf(err, "failed to find bucket %s", bucketName)
+		}
+	} else if err != nil {
+		return "", errors.Wrap(err, "failed to get bucket tags")
+	}
+
+	// Ensure the tags are correct.
+	if !ensureTagInTagset(trimTagPrefix(VpcIDTagKey), vpcID, tags.TagSet) {
+		return "", errors.Errorf("failed to find %s tag on S3 bucket %s", VpcIDTagKey, bucketName)
+	}
+	if !ensureTagInTagset(trimTagPrefix(FilestoreMultitenantS3TagKey), FilestoreMultitenantS3TagValue, tags.TagSet) {
+		return "", errors.Errorf("failed to find %s tag on S3 bucket %s", FilestoreMultitenantS3TagKey, bucketName)
+	}
+
+	return bucketName, nil
+}
+
 // getVPCForInstallation returns a single VPC that the cluster installation of
 // the provided installation resides in. Installations with multiple cluster
 // installations are currently not supported.
@@ -171,10 +230,19 @@ func getVPCForInstallation(installationID string, store model.InstallationDataba
 		return nil, errors.Errorf("VPC lookups for installations with more than one cluster installation are currently not supported (found %d)", clusterInstallationCount)
 	}
 
+	vpc, err := getVPCForCluster(clusterInstallations[0].ClusterID, client)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to lookup cluster VPC for cluster installation")
+	}
+
+	return vpc, nil
+}
+
+func getVPCForCluster(clusterID string, client *Client) (*ec2.Vpc, error) {
 	vpcs, err := client.GetVpcsWithFilters([]*ec2.Filter{
 		{
 			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(clusterInstallations[0].ClusterID)},
+			Values: []*string{aws.String(clusterID)},
 		},
 		{
 			Name:   aws.String(VpcAvailableTagKey),
@@ -182,11 +250,21 @@ func getVPCForInstallation(installationID string, store model.InstallationDataba
 		},
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to lookup VPC for installation %s", installationID)
+		return nil, errors.Wrapf(err, "failed to lookup VPC for cluster %s", clusterID)
 	}
 	if len(vpcs) != 1 {
-		return nil, errors.Errorf("expected 1 VPC for cluster installation %s, but found %d", clusterInstallations[0].ClusterID, len(vpcs))
+		return nil, errors.Errorf("expected 1 VPC for cluster %s, but found %d", clusterID, len(vpcs))
 	}
 
 	return vpcs[0], nil
+}
+
+func ensureTagInTagset(key, value string, tags []*s3.Tag) bool {
+	for _, tag := range tags {
+		if *tag.Key == key && *tag.Value == value {
+			return true
+		}
+	}
+
+	return false
 }
