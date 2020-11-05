@@ -211,7 +211,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreated() {
 			}).
 			Times(1))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -232,7 +232,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceAlreadyExistError() {
 		Return(testlib.NewLoggerEntry()).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -260,7 +260,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreateError() {
 			}).
 			Times(1))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "instance creation failure")

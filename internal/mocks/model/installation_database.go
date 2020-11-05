@@ -237,3 +237,18 @@ func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) UnlockMultitenantD
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockMultitenantDatabase", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).UnlockMultitenantDatabase), multitenantdatabaseID, lockerID, force)
 }
+
+// GetSingleTenantDatabaseConfigForInstallation mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSingleTenantDatabaseConfigForInstallation", installationID)
+	ret0, _ := ret[0].(*model.SingleTenantDatabaseConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSingleTenantDatabaseConfigForInstallation indicates an expected call of GetSingleTenantDatabaseConfigForInstallation
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetSingleTenantDatabaseConfigForInstallation(installationID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSingleTenantDatabaseConfigForInstallation", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetSingleTenantDatabaseConfigForInstallation), installationID)
+}

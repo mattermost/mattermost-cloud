@@ -53,6 +53,7 @@ type installationStore interface {
 	UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
 	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error)
 
 	GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error)
 

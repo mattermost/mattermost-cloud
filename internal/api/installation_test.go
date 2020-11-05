@@ -185,6 +185,7 @@ func TestGetInstallations(t *testing.T) {
 				require.Equal(t, installation1, installationDTO.Installation)
 				require.Equal(t, 2, len(installationDTO.Annotations))
 				require.Equal(t, annotations, model.SortAnnotations(installationDTO.Annotations))
+				require.Nil(t, installationDTO.SingleTenantDatabaseConfig)
 			})
 
 			t.Run("get deleted installation", func(t *testing.T) {
@@ -518,6 +519,44 @@ func TestCreateInstallation(t *testing.T) {
 				assert.Equal(t, testCase.expected, installation.Annotations)
 			})
 		}
+	})
+
+	dbConfigRequest := model.SingleTenantDatabaseRequest{
+		PrimaryInstanceType: "db.r5.xlarge",
+		ReplicaInstanceType: "db.r5.large",
+		ReplicasCount:       5,
+	}
+
+	t.Run("handle single tenant database configuration", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                    "owner1",
+			Version:                    "version",
+			DNS:                        "dns-db-config.example.com",
+			SingleTenantDatabaseConfig: dbConfigRequest,
+			Database:                   model.InstallationDatabaseSingleTenantRDSPostgres,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType, dbConfigRequest.PrimaryInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType, dbConfigRequest.ReplicaInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicasCount, dbConfigRequest.ReplicasCount)
+
+		installation, err = client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType, dbConfigRequest.PrimaryInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType, dbConfigRequest.ReplicaInstanceType)
+		assert.Equal(t, installation.SingleTenantDatabaseConfig.ReplicasCount, dbConfigRequest.ReplicasCount)
+	})
+
+	t.Run("ignore single tenant database configuration if db not single tenant", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                    "owner1",
+			Version:                    "version",
+			DNS:                        "dns-db-config2.example.com",
+			SingleTenantDatabaseConfig: dbConfigRequest,
+			Database:                   model.InstallationDatabaseMultiTenantRDSPostgres,
+		})
+		require.NoError(t, err)
+		assert.Nil(t, installation.SingleTenantDatabaseConfig)
 	})
 }
 

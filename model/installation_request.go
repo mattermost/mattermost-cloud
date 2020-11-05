@@ -40,6 +40,8 @@ type CreateInstallationRequest struct {
 	APISecurityLock bool
 	MattermostEnv   EnvVarMap
 	Annotations     []string
+	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
+	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
@@ -64,6 +66,9 @@ func (request *CreateInstallationRequest) SetDefaults() {
 	}
 	if request.Filestore == "" {
 		request.Filestore = InstallationFilestoreMinioOperator
+	}
+	if IsSingleTenantRDS(request.Database) {
+		request.SingleTenantDatabaseConfig.SetDefaults()
 	}
 }
 
@@ -102,7 +107,12 @@ func (request *CreateInstallationRequest) Validate() error {
 	if err != nil {
 		return errors.Wrap(err, "invalid env var settings")
 	}
-
+	if IsSingleTenantRDS(request.Database) {
+		err = request.SingleTenantDatabaseConfig.Validate()
+		if err != nil {
+			return errors.Wrap(err, "single tenant database config is invalid")
+		}
+	}
 	return checkSpaces(request)
 }
 

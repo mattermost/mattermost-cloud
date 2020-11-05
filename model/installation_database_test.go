@@ -52,3 +52,24 @@ func TestIsSupportedDatabase(t *testing.T) {
 		})
 	}
 }
+
+func TestIsSingleTenantDatabase(t *testing.T) {
+	var testCases = []struct {
+		database       string
+		isSingleTenant bool
+	}{
+		{"", false},
+		{"unknown", false},
+		{model.InstallationDatabaseMysqlOperator, false},
+		{model.InstallationDatabaseMultiTenantRDSPostgres, false},
+		{model.InstallationDatabaseMultiTenantRDSMySQL, false},
+		{model.InstallationDatabaseSingleTenantRDSMySQL, true},
+		{model.InstallationDatabaseSingleTenantRDSPostgres, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.database, func(t *testing.T) {
+			assert.Equal(t, tc.isSingleTenant, model.IsSingleTenantRDS(tc.database))
+		})
+	}
+}

@@ -291,14 +291,36 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 	logger.Infof("Encrypting RDS database with key %s", *keyMetadata.Arn)
 
+	dbConfig, err := d.client.store.GetSingleTenantDatabaseConfigForInstallation(installationID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get single tenant database config for installation")
+	}
+	if dbConfig == nil {
+		return fmt.Errorf("single tenant database not found for installation")
+	}
+
+	dbEngine, err := dbEngineFromType(d.databaseType)
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert database type to database engine")
+	}
+
 	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, d.databaseType, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure DB cluster was created")
 	}
 
-	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), d.databaseType, logger)
+	// Create primary
+	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), dbEngine, dbConfig.PrimaryInstanceType, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to ensure DB instance was created")
+		return errors.Wrap(err, "failed to ensure DB primary instance was created")
+	}
+
+	// Create replicas
+	for i := 0; i < dbConfig.ReplicasCount; i++ {
+		err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-replica-%d", awsID, i), dbEngine, dbConfig.ReplicaInstanceType, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to ensure DB replica instance was created")
+		}
 	}
 
 	return nil
@@ -339,4 +361,15 @@ func (d *RDSDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*k
 	}
 
 	return keys, nil
+}
+
+func dbEngineFromType(dbType string) (string, error) {
+	switch dbType {
+	case model.DatabaseEngineTypeMySQL:
+		return "aurora-mysql", nil
+	case model.DatabaseEngineTypePostgres:
+		return "aurora-postgresql", nil
+	default:
+		return "", errors.Errorf("%s is an invalid database engine type", dbType)
+	}
 }

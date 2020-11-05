@@ -76,7 +76,15 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	return "", fmt.Errorf("unable to find subnet group tagged for Mattermost DB usage: %s=%s", DefaultDBSubnetGroupTagKey, DefaultDBSubnetGroupTagValue)
 }
 
-func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kmsKeyID, databaseType string, logger log.FieldLogger) error {
+func (a *Client) rdsEnsureDBClusterCreated(
+	awsID,
+	vpcID,
+	username,
+	password,
+	kmsKeyID,
+	databaseType string,
+	logger log.FieldLogger) error {
+
 	var engine, engineVersion, sgTagValue string
 	var port int64
 	switch databaseType {
@@ -153,7 +161,13 @@ func (a *Client) rdsEnsureDBClusterCreated(awsID, vpcID, username, password, kms
 	return nil
 }
 
-func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName, databaseType string, logger log.FieldLogger) error {
+func (a *Client) rdsEnsureDBClusterInstanceCreated(
+	awsID,
+	instanceName,
+	engine string,
+	instanceClass string,
+	logger log.FieldLogger) error {
+
 	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceName),
 	})
@@ -161,20 +175,6 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(awsID, instanceName, database
 		logger.WithField("db-instance-name", instanceName).Debug("AWS DB instance already created")
 
 		return nil
-	}
-
-	// Some settings have to be tailored to the engine type like instance class:
-	// https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.DBInstanceClass.html
-	var engine, instanceClass string
-	switch databaseType {
-	case model.DatabaseEngineTypeMySQL:
-		engine = "aurora-mysql"
-		instanceClass = "db.t3.small"
-	case model.DatabaseEngineTypePostgres:
-		engine = "aurora-postgresql"
-		instanceClass = "db.r5.large"
-	default:
-		return errors.Errorf("%s is an invalid database engine type", databaseType)
 	}
 
 	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{

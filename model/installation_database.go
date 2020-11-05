@@ -56,6 +56,7 @@ type InstallationDatabaseStoreInterface interface {
 	UpdateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
 	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*SingleTenantDatabaseConfig, error)
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.
@@ -110,6 +111,18 @@ func IsSupportedDatabase(database string) bool {
 	case InstallationDatabaseMultiTenantRDSMySQL:
 	case InstallationDatabaseMultiTenantRDSPostgres:
 	case InstallationDatabaseMysqlOperator:
+	default:
+		return false
+	}
+
+	return true
+}
+
+// IsSingleTenantRDS returns true if the given database is single tenant db.
+func IsSingleTenantRDS(database string) bool {
+	switch database {
+	case InstallationDatabaseSingleTenantRDSMySQL:
+	case InstallationDatabaseSingleTenantRDSPostgres:
 	default:
 		return false
 	}
