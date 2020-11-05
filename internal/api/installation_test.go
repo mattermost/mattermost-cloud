@@ -563,7 +563,7 @@ func TestCreateInstallation(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:                    "owner1",
 			Version:                    "version",
-			DNS:                        "dns-db-config2.example.com",
+			DNS:                        "dns-db-config3.example.com",
 			SingleTenantDatabaseConfig: dbConfigRequest,
 			Database:                   model.InstallationDatabaseSingleTenantRDSMySQL,
 		})
