@@ -33,7 +33,7 @@ func init() {
 	// Installation Settings
 	rootCmd.PersistentFlags().String("version", defaultMattermostVersion, "The Mattermost version to install.")
 	rootCmd.PersistentFlags().String("license", "", "The license to use in the installation.")
-	rootCmd.PersistentFlags().String("installation-domain", "dev.cloud.mattermost.com", "The provisioning server whose API will be queried.")
+	rootCmd.PersistentFlags().String("installation-domain", "dev.cloud.mattermost.com", "The domain under which the test installations will be created.")
 
 	rootCmd.AddCommand(databaseCmd)
 	rootCmd.AddCommand(filestoreCmd)
