@@ -558,6 +558,20 @@ func TestCreateInstallation(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, installation.SingleTenantDatabaseConfig)
 	})
+
+	t.Run("set default values for single tenant database configuration", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                    "owner1",
+			Version:                    "version",
+			DNS:                        "dns-db-config2.example.com",
+			SingleTenantDatabaseConfig: dbConfigRequest,
+			Database:                   model.InstallationDatabaseSingleTenantRDSMySQL,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, installation.SingleTenantDatabaseConfig)
+		assert.NotEmpty(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType)
+		assert.NotEmpty(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType)
+	})
 }
 
 func TestRetryCreateInstallation(t *testing.T) {

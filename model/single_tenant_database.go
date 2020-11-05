@@ -19,7 +19,7 @@ type SingleTenantDatabaseConfig struct {
 	ReplicasCount       int
 }
 
-// SingleTenantDatabaseConfig marshals database configuration to JSON if it is not nil.
+// ToJSON marshals database configuration to JSON if it is not nil.
 func (cfg *SingleTenantDatabaseConfig) ToJSON() ([]byte, error) {
 	if cfg == nil {
 		return nil, nil

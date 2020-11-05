@@ -126,9 +126,9 @@ var installationCreateCmd = &cobra.Command{
 		}
 
 		if model.IsSingleTenantRDS(database) {
-			rdsPrimaryInstance, _ :=command.Flags().GetString("rds-primary-instance")
-			rdsReplicaInstance, _ :=command.Flags().GetString("rds-replica-instance")
-			rdsReplicasCount, _ :=command.Flags().GetInt("rds-replicas-count")
+			rdsPrimaryInstance, _ := command.Flags().GetString("rds-primary-instance")
+			rdsReplicaInstance, _ := command.Flags().GetString("rds-replica-instance")
+			rdsReplicasCount, _ := command.Flags().GetInt("rds-replicas-count")
 
 			dbConfig := model.SingleTenantDatabaseRequest{
 				PrimaryInstanceType: rdsPrimaryInstance,
