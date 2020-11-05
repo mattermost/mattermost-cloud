@@ -35,12 +35,14 @@ func init() {
 	clusterCreateCmd.Flags().String("prometheus-operator-version", model.PrometheusOperatorDefaultVersion.Version(), "The version of Prometheus Operator to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("thanos-version", model.ThanosDefaultVersion.Version(), "The version of Thanos to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion.Version(), "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion.Version(), "The version of Nginx Internal to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("nginx-internal-version", model.NginxIntenalDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion.Version(), "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", model.PrometheusOperatorDefaultVersion.Values(), "The branch name of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", model.ThanosDefaultVersion.Values(), "The branch name of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", model.FluentbitDefaultVersion.Values(), "The branch name of the desired chart value file's version for Fluent-Bit")
 	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
+	clusterCreateCmd.Flags().String("nginx-internal-values", model.NginxIntenalDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
@@ -56,6 +58,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
 	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The branch name of the desired chart value file's version for Fluent-Bit")
 	clusterProvisionCmd.Flags().String("nginx-values", "", "The branch name of the desired chart value file's version for NGINX")
+	clusterProvisionCmd.Flags().String("nginx-internal-values", "", "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterProvisionCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
@@ -529,12 +532,14 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	thanosVersion, _ := command.Flags().GetString("thanos-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
+	nginxInternalVersion, _ := command.Flags().GetString("nginx-internal-version")
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
 
 	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
 	thanosValues, _ := command.Flags().GetString("thanos-values")
 	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")
 	nginxValues, _ := command.Flags().GetString("nginx-values")
+	nginxInternalValues, _ := command.Flags().GetString("nginx-internal-values")
 	teleportValues, _ := command.Flags().GetString("teleport-values")
 
 	utilityVersions := make(map[string]*model.HelmUtilityVersion)
@@ -553,6 +558,10 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 
 	if nginxVersion != "" && nginxValues != "" {
 		utilityVersions[model.NginxCanonicalName] = &model.HelmUtilityVersion{Chart: nginxVersion, ValuesPath: nginxValues}
+	}
+
+	if nginxInternalVersion != "" && nginxInternalValues != "" {
+		utilityVersions[model.NginxInternalCanonicalName] = &model.HelmUtilityVersion{Chart: nginxInternalVersion, ValuesPath: nginxInternalValues}
 	}
 
 	if teleportVersion != "" && teleportValues != "" {

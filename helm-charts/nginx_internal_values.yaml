@@ -1,0 +1,63 @@
+## nginx configuration
+## Ref: https://github.com/kubernetes/ingress/blob/master/controllers/nginx/configuration.md
+##
+controller:
+  ingressClass: nginx-internal
+  publishService:
+    enabled: true
+  metrics:
+    enabled: true
+
+  service:
+    enabled: true
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+      service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+
+    enableHttp: true
+    enableHttps: true
+    targetPorts:
+      http: 80
+      https: special
+    type: LoadBalancer
+
+  containerPort:
+    http: 80
+    https: 443
+    special: 8000
+
+  config:
+    keep-alive: "3600"
+    proxy-max-temp-file-size: "0"
+    # Will add custom configuration options to Nginx https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
+    ssl-redirect: "false"
+    force-ssl-redirect: "false"
+    # remove the version of nginx from the responses
+    server-tokens: "false"
+    server-snippet: |
+      listen 8000;
+      if ( $server_port = 80 ) {
+         return 308 https://$host$request_uri;
+      }
+
+  resources:
+   limits:
+     cpu: 1000m
+     memory: 500Mi
+   requests:
+     cpu: 500m
+     memory: 250Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 150
+    targetMemoryUtilizationPercentage: 150
+
+
+defaultBackend:
+  enabled: true
+  replicaCount: 1

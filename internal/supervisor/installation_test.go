@@ -255,6 +255,10 @@ func (a *mockAWS) GetAndClaimVpcResources(clusterID, owner string, logger log.Fi
 	return aws.ClusterResources{}, nil
 }
 
+func (a *mockAWS) GetVpcResources(clusterID string, logger log.FieldLogger) (aws.ClusterResources, error) {
+	return aws.ClusterResources{}, nil
+}
+
 func (a *mockAWS) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
 	return nil
 }

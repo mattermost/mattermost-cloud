@@ -19,6 +19,8 @@ const (
 	ThanosCanonicalName = "thanos"
 	// NginxCanonicalName is the canonical string representation of nginx
 	NginxCanonicalName = "nginx"
+	// NginxInternalCanonicalName is the canonical string representation of nginx internal
+	NginxInternalCanonicalName = "nginx-internal"
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
 	FluentbitCanonicalName = "fluentbit"
 	// TeleportCanonicalName is the canonical string representation of teleport
@@ -32,6 +34,8 @@ var (
 	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"}
 	// NginxDefaultVersion defines the default version for the Helm chart
 	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"}
+	// NginxIntenalDefaultVersion defines the default version for the Helm chart
+	NginxIntenalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
 	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"}
 	// TeleportDefaultVersion defines the default version for the Helm chart
@@ -48,6 +52,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		PrometheusOperator *HelmUtilityVersion
 		Thanos             *HelmUtilityVersion
 		Nginx              *HelmUtilityVersion
+		NginxInternal      *HelmUtilityVersion
 		Fluentbit          *HelmUtilityVersion
 		Teleport           *HelmUtilityVersion
 	}
@@ -55,6 +60,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		PrometheusOperator string
 		Thanos             string
 		Nginx              string
+		NginxInternal      string
 		Fluentbit          string
 		Teleport           string
 	}
@@ -71,6 +77,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		h.PrometheusOperator = &HelmUtilityVersion{Chart: oldUtilGrpVers.PrometheusOperator}
 		h.Thanos = &HelmUtilityVersion{Chart: oldUtilGrpVers.Thanos}
 		h.Nginx = &HelmUtilityVersion{Chart: oldUtilGrpVers.Nginx}
+		h.NginxInternal = &HelmUtilityVersion{Chart: oldUtilGrpVers.NginxInternal}
 		h.Fluentbit = &HelmUtilityVersion{Chart: oldUtilGrpVers.Fluentbit}
 		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
 		return nil
@@ -79,6 +86,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 	h.PrometheusOperator = utilGrpVers.PrometheusOperator
 	h.Thanos = utilGrpVers.Thanos
 	h.Nginx = utilGrpVers.Nginx
+	h.NginxInternal = utilGrpVers.NginxInternal
 	h.Fluentbit = utilGrpVers.Fluentbit
 	h.Teleport = utilGrpVers.Teleport
 	return nil
@@ -90,6 +98,7 @@ type UtilityGroupVersions struct {
 	PrometheusOperator *HelmUtilityVersion
 	Thanos             *HelmUtilityVersion
 	Nginx              *HelmUtilityVersion
+	NginxInternal      *HelmUtilityVersion
 	Fluentbit          *HelmUtilityVersion
 	Teleport           *HelmUtilityVersion
 }
@@ -205,6 +214,8 @@ func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtili
 		return versions.Thanos
 	case NginxCanonicalName:
 		return versions.Nginx
+	case NginxInternalCanonicalName:
+		return versions.NginxInternal
 	case FluentbitCanonicalName:
 		return versions.Fluentbit
 	case TeleportCanonicalName:
@@ -230,6 +241,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Thanos = desiredVersion
 	case NginxCanonicalName:
 		versions.Nginx = desiredVersion
+	case NginxInternalCanonicalName:
+		versions.NginxInternal = desiredVersion
 	case FluentbitCanonicalName:
 		versions.Fluentbit = desiredVersion
 	case TeleportCanonicalName:

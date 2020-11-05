@@ -17,6 +17,7 @@ import (
 // a kops cluster.
 type ClusterResources struct {
 	VpcID                  string
+	VpcCIDR                string
 	PrivateSubnetIDs       []string
 	PublicSubnetsIDs       []string
 	MasterSecurityGroupIDs []string
@@ -44,9 +45,10 @@ func (cr *ClusterResources) IsValid() error {
 	return nil
 }
 
-func (a *Client) getClusterResourcesForVPC(vpcID string, logger log.FieldLogger) (ClusterResources, error) {
+func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.FieldLogger) (ClusterResources, error) {
 	clusterResources := ClusterResources{
-		VpcID: vpcID,
+		VpcID:   vpcID,
+		VpcCIDR: vpcCIDR,
 	}
 
 	baseFilter := []*ec2.Filter{
@@ -147,7 +149,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), clusterID)
 	}
 	if len(clusterAlreadyClaimedVpcs) == 1 {
-		return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, logger)
+		return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, *clusterAlreadyClaimedVpcs[0].CidrBlock, logger)
 	}
 
 	// This cluster has not already claimed a VPC. Continue with claiming process.
@@ -185,7 +187,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 	// valid so we will claim the first one. Before doing that a sanity check of
 	// the VPCs resources will occur.
 	for _, vpc := range vpcs {
-		clusterResources, err := a.getClusterResourcesForVPC(*vpc.VpcId, logger)
+		clusterResources, err := a.getClusterResourcesForVPC(*vpc.VpcId, *vpc.CidrBlock, logger)
 		if err != nil {
 			logger.Warn(err)
 			continue
@@ -200,6 +202,35 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 	}
 
 	return ClusterResources{}, fmt.Errorf("%d VPCs were returned as currently available; none of them were configured correctly", len(vpcs))
+}
+
+// GetVpcResources retrieve the VPC information for a particulary cluster.
+func (a *Client) GetVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error) {
+	// First, check if a VPC has been claimed by this cluster. If only one has
+	// already been claimed, then return that with no error.
+	clusterAlreadyClaimedFilter := []*ec2.Filter{
+		{
+			Name: aws.String(VpcAvailableTagKey),
+			Values: []*string{
+				aws.String(VpcAvailableTagValueFalse),
+			},
+		},
+		{
+			Name: aws.String(VpcClusterIDTagKey),
+			Values: []*string{
+				aws.String(clusterID),
+			},
+		},
+	}
+	clusterAlreadyClaimedVpcs, err := a.GetVpcsWithFilters(clusterAlreadyClaimedFilter)
+	if err != nil {
+		return ClusterResources{}, err
+	}
+	if len(clusterAlreadyClaimedVpcs) != 1 {
+		return ClusterResources{}, errors.Errorf("expected exactly one VPC in the list, got %d for cluster %s; aborting process", len(clusterAlreadyClaimedVpcs), clusterID)
+	}
+
+	return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, *clusterAlreadyClaimedVpcs[0].CidrBlock, logger)
 }
 
 // ReleaseVpc changes the tags on a VPC to mark it as "available" again.
