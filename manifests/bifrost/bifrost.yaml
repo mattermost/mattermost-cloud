@@ -22,6 +22,8 @@ spec:
         env:
         - name: BIFROST_SERVICESETTINGS_HOST
           value: "0.0.0.0:8087"
+        - name: BIFROST_SERVICESETTINGS_HEALTHHOST
+          value: "0.0.0.0:8099"
         - name: BIFROST_LOGSETTINGS_CONSOLEJSON
           value: "true"
         - name: BIFROST_S3SETTINGS_BUCKET
@@ -39,16 +41,17 @@ spec:
             secretKeyRef:
               name: bifrost
               key: SecretAccessKey
-      readinessProbe:
-        tcpSocket:
-          port: 8087
-        initialDelaySeconds: 5
-        periodSeconds: 10
-      livenessProbe:
-        tcpSocket:
-          port: 8087
-        initialDelaySeconds: 10
-        periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 8087
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8099
+          initialDelaySeconds: 3
+          periodSeconds: 3
 ---
 apiVersion: v1
 kind: Service
@@ -64,3 +67,20 @@ spec:
   - port: 80
     protocol: TCP
     targetPort: 8087
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mattermost-apps
+  namespace: bifrost
+spec:
+  podSelector: {}
+  ingress:
+  - ports:
+    - port: 8087
+      protocol: TCP
+    from:
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            app: mattermost
