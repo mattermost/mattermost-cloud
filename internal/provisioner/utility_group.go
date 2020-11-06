@@ -76,11 +76,6 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
 
-	prometheus, err := newPrometheusHandle(cluster, provisioner, awsClient, kops, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Prometheus")
-	}
-
 	prometheusOperator, err := newPrometheusOperatorHandle(cluster, provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
@@ -114,7 +109,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, prometheus, prometheusOperator, thanos, fluentbit, teleport},
+		utilities:   []Utility{nginx, prometheusOperator, thanos, fluentbit, teleport},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

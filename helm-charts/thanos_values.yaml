@@ -122,7 +122,7 @@ querier:
   ## Affinity for pod assignment
   ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   ##
-  affinity: 
+  affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 100
@@ -134,6 +134,21 @@ querier:
               values:
               - querier
           topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: "kops.k8s.io/instancegroup"
+            operator: In
+            values:
+            - nodes-utilities
+
+  tolerations:
+  - key: "utilities"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
 
 
 
@@ -141,11 +156,6 @@ querier:
   ## ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
   nodeSelector: {}
-
-  ## Tolerations for pod assignment. Evaluated as a template.
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
-  tolerations: []
 
   ## Annotations for querier pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
@@ -206,7 +216,7 @@ querier:
   ## to configure --grpc-server-tls-cert, --grpc-server-tls-key, --grpc-server-tls-client-ca, --grpc-client-tls-secure, --grpc-client-tls-cert, --grpc-client-tls-key, --grpc-client-tls-ca, --grpc-client-server-name
   ## ref: https://github.com/thanos-io/thanos/blob/master/docs/components/query.md#flags
   grpcTLS:
-    # TLS server side 
+    # TLS server side
     server:
       # Enable TLS for GRPC server
       secure: false
@@ -393,7 +403,7 @@ compactor:
   ##
   enabled: false
 
-  
+
 
 ## Thanos Store Gateway parameters
 ##
