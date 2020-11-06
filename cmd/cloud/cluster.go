@@ -32,7 +32,6 @@ func init() {
 	clusterCreateCmd.Flags().Int64("size-node-count", 0, "The number of k8s worker nodes. Overwrites value from 'size'.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
-	clusterCreateCmd.Flags().String("prometheus-version", model.PrometheusDefaultVersion, "The version of Prometheus to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-version", model.PrometheusOperatorDefaultVersion, "The version of Prometheus Operator to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("thanos-version", model.ThanosDefaultVersion, "The version of Thanos to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
@@ -41,7 +40,6 @@ func init() {
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
-	clusterProvisionCmd.Flags().String("prometheus-version", "", "The version of Prometheus to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("prometheus-operator-version", "", "The version of Prometheus Operator to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("thanos-version", "", "The version of Thanos to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
 	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
@@ -514,7 +512,6 @@ var clusterShowStateReport = &cobra.Command{
 }
 
 func processUtilityFlags(command *cobra.Command) map[string]string {
-	prometheusVersion, _ := command.Flags().GetString("prometheus-version")
 	prometheusOperatorVersion, _ := command.Flags().GetString("prometheus-operator-version")
 	thanosVersion, _ := command.Flags().GetString("thanos-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
@@ -522,10 +519,6 @@ func processUtilityFlags(command *cobra.Command) map[string]string {
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
 
 	utilityVersions := make(map[string]string)
-
-	if prometheusVersion != "" {
-		utilityVersions[model.PrometheusCanonicalName] = prometheusVersion
-	}
 
 	if prometheusOperatorVersion != "" {
 		utilityVersions[model.PrometheusOperatorCanonicalName] = prometheusOperatorVersion
