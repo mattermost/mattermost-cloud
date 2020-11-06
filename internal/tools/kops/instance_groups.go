@@ -74,6 +74,12 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 
 			masterIGCount++
 		case "Node":
+			// TODO: temp fix while we dont support multiple igs
+			if ig.Metadata.Name == "nodes-utilities" {
+				c.logger.Debug("Skipping utility group")
+				continue
+			}
+
 			if AMI == "" {
 				AMI = ig.Spec.Image
 			} else if AMI != ig.Spec.Image {
