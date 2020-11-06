@@ -1,0 +1,16 @@
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: "kops.k8s.io/instancegroup"
+          operator: In
+          values:
+          - nodes-utilities
+
+tolerations:
+- key: "utilities"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"

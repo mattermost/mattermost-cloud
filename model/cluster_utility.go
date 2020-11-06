@@ -10,8 +10,6 @@ import (
 )
 
 const (
-	// PrometheusCanonicalName is the canonical string representation of prometheus
-	PrometheusCanonicalName = "prometheus"
 	// PrometheusOperatorCanonicalName is the canonical string representation of prometheus operator
 	PrometheusOperatorCanonicalName = "prometheus-operator"
 	// ThanosCanonicalName is the canonical string representation of thanos
@@ -25,8 +23,6 @@ const (
 )
 
 const (
-	// PrometheusDefaultVersion defines the default version for the Helm chart
-	PrometheusDefaultVersion = "10.4.0"
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
 	PrometheusOperatorDefaultVersion = "9.4.4"
 	// ThanosDefaultVersion defines the default version for the Helm chart
@@ -47,7 +43,6 @@ type UtilityMetadata struct {
 }
 
 type utilityVersions struct {
-	Prometheus         string
 	PrometheusOperator string
 	Thanos             string
 	Nginx              string
@@ -153,8 +148,6 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 // the utility's name's string representation for lookup
 func getUtilityVersion(versions *utilityVersions, utility string) string {
 	switch utility {
-	case PrometheusCanonicalName:
-		return versions.Prometheus
 	case PrometheusOperatorCanonicalName:
 		return versions.PrometheusOperator
 	case ThanosCanonicalName:
@@ -176,8 +169,6 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 // first argument
 func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string) {
 	switch utility {
-	case PrometheusCanonicalName:
-		versions.Prometheus = desiredVersion
 	case PrometheusOperatorCanonicalName:
 		versions.PrometheusOperator = desiredVersion
 	case ThanosCanonicalName:
