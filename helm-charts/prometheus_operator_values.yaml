@@ -25,7 +25,7 @@ commonLabels: {}
 ## Create default rules for monitoring the cluster
 ##
 defaultRules:
-  create: true
+  create: false
   rules:
     alertmanager: true
     etcd: true
@@ -2017,6 +2017,30 @@ prometheus:
       - nginx
     endpoints:
       - port: metrics
+        interval: 30s
+        path: /metrics
+        scheme: http
+  - name: thanos-querier
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: querier
+    namespaceSelector:
+      matchNames:
+      - prometheus
+    endpoints:
+      - port: http
+        interval: 30s
+        path: /metrics
+        scheme: http
+  - name: thanos-query-frontend
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: query-frontend
+    namespaceSelector:
+      matchNames:
+      - prometheus
+    endpoints:
+      - port: http
         interval: 30s
         path: /metrics
         scheme: http

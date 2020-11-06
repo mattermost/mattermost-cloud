@@ -113,7 +113,7 @@ querier:
 
   ## Number of Thanos Querier replicas to deploy
   ##
-  replicaCount: 1
+  replicaCount: 2
 
   ## StrategyType, can be set to RollingUpdate or Recreate by default.
   ##
@@ -285,7 +285,7 @@ querier:
   ## Autoscaling parameters
   ##
   autoscaling:
-    enabled: true
+    enabled: false
     minReplicas: 1
     maxReplicas: 8
     targetCPU: 50
@@ -429,10 +429,10 @@ metrics:
   ## Prometheus Operator ServiceMonitor configuration
   ##
   serviceMonitor:
-    enabled: true
+    enabled: false
     ## Namespace in which Prometheus is running
     ##
-    # namespace: monitoring
+    namespace: prometheus
     ## Labels to add to the ServiceMonitor object
     ##
     # labels:
