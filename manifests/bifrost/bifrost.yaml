@@ -84,3 +84,7 @@ spec:
         podSelector:
           matchLabels:
             app: mattermost
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            app: mattermost-update-check
