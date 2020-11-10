@@ -269,7 +269,7 @@ func init() {
 	logger = log.New()
 	blastCommand.PersistentFlags().String("server", "http://localhost:8075", "Location of the Provisioning Server to load test")
 	blastCommand.PersistentFlags().Int("runs", 1, "Number of times to repeat the test")
-	blastCommand.PersistentFlags().Int("batch", 5, "Specify the number of Installations in each batch. Installations in a batch are install serially and batches are installed in parallel.")
+	blastCommand.PersistentFlags().Int("batch", 5, "Specify the number of Installations in each batch. Installations in a batch are installed serially and batches are installed in parallel.")
 	blastCommand.PersistentFlags().Int("total", 20, "Number of Installations to provision")
 }
 
