@@ -62,12 +62,7 @@ func (f *fluentbit) CreateOrUpgrade() error {
 	logger := f.logger.WithField("fluentbit-action", "upgrade")
 	h := f.NewHelmDeployment(logger)
 
-	err := h.TryMigrate()
-	if err != nil {
-		return errors.Wrap(err, "failed to migrate fluent-bit release")
-	}
-
-	err = h.Update()
+	err := h.Update()
 	if err != nil {
 		return err
 	}

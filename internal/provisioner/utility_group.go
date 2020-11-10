@@ -165,10 +165,5 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 		}
 	}
 
-	err := helm2Cleanup(logger, group.kops.GetKubeConfigPath())
-	if err != nil {
-		return errors.Wrap(err, "failed to cleanup Helm 2")
-	}
-
 	return nil
 }

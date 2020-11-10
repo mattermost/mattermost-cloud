@@ -91,10 +91,6 @@ func (t *thanos) CreateOrUpgrade() error {
 	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
 
 	h := t.NewHelmDeployment(dns, grpcDNS)
-	err = h.TryMigrate()
-	if err != nil {
-		return errors.Wrap(err, "failed to migrate thanos release")
-	}
 
 	err = h.Update()
 	if err != nil {

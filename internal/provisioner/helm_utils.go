@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
@@ -259,77 +258,4 @@ func (d *helmDeployment) Version() (string, error) {
 	}
 
 	return "", errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
-}
-
-// TryMigrate migrates Helm release from version 2 to 3 if it exists.
-func (d *helmDeployment) TryMigrate() error {
-	logger := d.logger.WithField("operation", "migrate")
-
-	hasTiller, err := tillerExists(logger, d.kops.GetKubeConfigPath())
-	if err != nil {
-		return errors.Wrap(err, "failed to check if Tiller exists on cluster")
-	}
-	if !hasTiller {
-		logger.Debugf("Tiller does not exist on cluster, skipping migration")
-		return nil
-	}
-
-	listV2, err := d.ListV2()
-	if err != nil {
-		return errors.Wrap(err, "failed to list Helm 2 releases")
-	}
-
-	listV3, err := d.List()
-	if err != nil {
-		return errors.Wrap(err, "failed to list Helm 3 releases")
-	}
-
-	release := d.chartDeploymentName
-	if listV2.containsRelease(release) && !listV3.containsRelease(release) {
-		logger.Debugf("Release '%s' found with Helm 2 and not found with Helm 3. Starting the migration...", release)
-		return MigrateRelease(logger, d.kops.GetKubeConfigPath(), release)
-	}
-
-	logger.Debugf("Skipping migration of release '%s'", release)
-	return nil
-}
-
-func tillerExists(logger log.FieldLogger, kubeConfigPath string) (bool, error) {
-	helm2, err := helm.New(logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to initialize Helm 2 client")
-	}
-
-	args := []string{
-		"version",
-		"--kubeconfig", kubeConfigPath,
-	}
-
-	_, err = helm2.RunCommandRaw(args...)
-	if err == nil {
-		return true, nil
-	}
-
-	if ee, ok := err.(*exec.ExitError); ok {
-		if strings.Contains(string(ee.Stderr), "Error: could not find tiller") {
-			return false, nil
-		}
-	}
-
-	return false, err
-}
-
-func helm2Cleanup(logger log.FieldLogger, kubeConfigPath string) error {
-	log := logger.WithField("operation", "cleanup")
-
-	hasTiller, err := tillerExists(log, kubeConfigPath)
-	if err != nil {
-		return errors.Wrap(err, "failed to check if Tiller exists on cluster")
-	}
-	if !hasTiller {
-		logger.Debugf("Tiller does not exist on cluster, skipping cleanup")
-		return nil
-	}
-
-	return CleanupTiller(log, kubeConfigPath)
 }
