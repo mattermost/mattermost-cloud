@@ -129,6 +129,30 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
+			"invalid single tenant db replicas",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNS:      "domain4321.com",
+				Database: model.InstallationDatabaseSingleTenantRDSPostgres,
+				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{
+					ReplicasCount: 33,
+				},
+			},
+		},
+		{
+			"ignore invalid replicas if db not single tenant",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNS:      "domain4321.com",
+				Database: model.InstallationDatabaseMultiTenantRDSPostgres,
+				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{
+					ReplicasCount: 33,
+				},
+			},
+		},
+		{
 			"dns has space",
 			true,
 			&model.CreateInstallationRequest{

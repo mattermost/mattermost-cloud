@@ -101,16 +101,22 @@ func TestInstallations(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
+	dbConfig := model.SingleTenantDatabaseConfig{
+		PrimaryInstanceType: "db.r5.large",
+		ReplicaInstanceType: "db.r5.medium",
+		ReplicasCount:       4,
+	}
 	installation4 := &model.Installation{
-		OwnerID:   ownerID2,
-		Version:   "version",
-		DNS:       "dns4.example.com",
-		Database:  model.InstallationDatabaseMysqlOperator,
-		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
-		Affinity:  model.InstallationAffinityIsolated,
-		GroupID:   &groupID2,
-		State:     model.InstallationStateCreationRequested,
+		OwnerID:                    ownerID2,
+		Version:                    "version",
+		DNS:                        "dns4.example.com",
+		Database:                   model.InstallationDatabaseMysqlOperator,
+		Filestore:                  model.InstallationFilestoreMinioOperator,
+		Size:                       mmv1alpha1.Size100String,
+		Affinity:                   model.InstallationAffinityIsolated,
+		GroupID:                    &groupID2,
+		State:                      model.InstallationStateCreationRequested,
+		SingleTenantDatabaseConfig: &dbConfig,
 	}
 
 	err = sqlStore.CreateInstallation(installation4, nil)
@@ -391,6 +397,39 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 	installations, err = sqlStore.GetUnlockedInstallationsPendingWork()
 	require.NoError(t, err)
 	require.Empty(t, installations)
+}
+
+func TestGetSingleTenantDatabaseConfigForInstallation(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	dbConfig := &model.SingleTenantDatabaseConfig{
+		PrimaryInstanceType: "db.r5.large",
+		ReplicaInstanceType: "db.r5.xlarge",
+		ReplicasCount:       11,
+	}
+
+	installation1 := model.Installation{
+		DNS:                        "dns1.com",
+		SingleTenantDatabaseConfig: dbConfig,
+	}
+	err := sqlStore.CreateInstallation(&installation1, nil)
+	require.NoError(t, err)
+
+	fetchedDBConfig, err := sqlStore.GetSingleTenantDatabaseConfigForInstallation(installation1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, dbConfig, fetchedDBConfig)
+
+	t.Run("no db config for installation", func(t *testing.T) {
+		installation := model.Installation{}
+		err := sqlStore.CreateInstallation(&installation, nil)
+		require.NoError(t, err)
+
+		_, err = sqlStore.GetSingleTenantDatabaseConfigForInstallation(installation.ID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not exist")
+	})
 }
 
 func TestLockInstallation(t *testing.T) {

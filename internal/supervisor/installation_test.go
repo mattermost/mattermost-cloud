@@ -162,6 +162,10 @@ func (s *mockInstallationStore) GetMultitenantDatabaseForInstallationID(installa
 	return nil, nil
 }
 
+func (s *mockInstallationStore) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
+	return nil, nil
+}
+
 func (s *mockInstallationStore) GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error) {
 	return nil, nil
 }

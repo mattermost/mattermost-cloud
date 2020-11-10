@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
@@ -92,6 +95,7 @@ type Service struct {
 	kms                   kmsiface.KMSAPI
 	dynamodb              dynamodbiface.DynamoDBAPI
 	sts                   stsiface.STSAPI
+	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
 }
 
 // NewService creates a new instance of Service.
@@ -108,6 +112,7 @@ func NewService(sess *session.Session) *Service {
 		kms:                   kms.New(sess),
 		dynamodb:              dynamodb.New(sess),
 		sts:                   sts.New(sess),
+		appAutoscaling:        applicationautoscaling.New(sess),
 	}
 }
 
