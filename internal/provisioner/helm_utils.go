@@ -161,7 +161,8 @@ func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLo
 		"--debug",
 		"delete",
 		"--kubeconfig", configPath,
-		"--purge", chart.chartDeploymentName,
+		"--namespace", chart.namespace,
+		chart.chartDeploymentName,
 	}
 
 	helmClient, err := helm.New(logger)
