@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -19,25 +18,24 @@ var databaseCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) error {
 		port, _ := command.Flags().GetString("webhook-listener-port")
 
-		logger.Infof("Starting cloud webhook listener on port %s", port)
-
 		c := make(chan *model.WebhookPayload)
-		go databaseTests(command, c)
 
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			webhookHandler(w, r, c)
-		})
-		logger.Fatal(http.ListenAndServe(":"+port, nil))
+		shutdown := startWebhookListener(port, c)
+		defer shutdown()
+
+		results := runDatabaseTests(command, c)
+		printResults(results)
 
 		return nil
 	},
 }
 
-func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
+func runDatabaseTests(command *cobra.Command, c chan *model.WebhookPayload) []string {
 	serverAddress, _ := command.Flags().GetString("server")
 	webhookURL, _ := command.Flags().GetString("webhook-url")
 	installationDomain, _ := command.Flags().GetString("installation-domain")
 	version, _ := command.Flags().GetString("version")
+	license, _ := command.Flags().GetString("license")
 
 	databaseTypes := []string{
 		model.InstallationDatabaseMultiTenantRDSPostgres,
@@ -48,6 +46,7 @@ func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	}
 
 	client := model.NewClient(serverAddress)
+	testResults := []string{}
 
 	testWebhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
 		OwnerID: "ctest-database-tests",
@@ -55,7 +54,7 @@ func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	})
 	if err != nil {
 		logger.WithError(err).Error("Failed to create test webhook")
-		return
+		return testResults
 	}
 	logger.Info("Test webhook created")
 
@@ -69,18 +68,6 @@ func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	}
 	defer deleteWebhook()
 
-	testResults := []string{}
-	printResults := func() {
-		printSeparator()
-		logger.Info("DATABASE TEST RESULTS")
-		printSeparator()
-		for _, result := range testResults {
-			logger.Info(result)
-		}
-		printSeparator()
-	}
-	defer printResults()
-
 	for _, databaseType := range databaseTypes {
 		printSeparator()
 		logger.Infof("Running database test %s", databaseType)
@@ -90,6 +77,7 @@ func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
 			OwnerID:   "ctest-database-tests",
 			DNS:       fmt.Sprintf("ctest-%s.%s", databaseType, installationDomain),
 			Version:   version,
+			License:   license,
 			Affinity:  model.InstallationAffinityMultiTenant,
 			Database:  databaseType,
 			Filestore: model.InstallationFilestoreMultiTenantAwsS3,
@@ -101,7 +89,7 @@ func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
 		if err != nil {
 			logger.WithError(err).Error("Installation test failed")
 			testResults = append(testResults, fmt.Sprintf("FAIL: %s", databaseType))
-			return
+			return testResults
 		}
 
 		now := time.Now()
@@ -112,4 +100,6 @@ func databaseTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	}
 
 	logger.Info("Tests Completed")
+
+	return testResults
 }
