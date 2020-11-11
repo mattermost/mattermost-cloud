@@ -84,7 +84,7 @@ func helmRepoAdd(repoName, repoURL string, logger log.FieldLogger) error {
 		repoURL,
 	}
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -105,7 +105,7 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 		"update",
 	}
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -141,7 +141,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		arguments = append(arguments, "--version", chart.desiredVersion)
 	}
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to create helm wrapper")
 	}
@@ -221,7 +221,7 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 		"cmd": "helm3",
 	})
 
-	helmClient, err := helm.NewV3(logger)
+	helmClient, err := helm.New(logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create helm wrapper")
 	}
