@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -19,21 +18,19 @@ var filestoreCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) error {
 		port, _ := command.Flags().GetString("webhook-listener-port")
 
-		logger.Infof("Starting cloud webhook listener on port %s", port)
-
 		c := make(chan *model.WebhookPayload)
-		go filestoreTests(command, c)
 
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			webhookHandler(w, r, c)
-		})
-		logger.Fatal(http.ListenAndServe(":"+port, nil))
+		shutdown := startWebhookListener(port, c)
+		defer shutdown()
+
+		results := runFilestoreTests(command, c)
+		printResults(results)
 
 		return nil
 	},
 }
 
-func filestoreTests(command *cobra.Command, c chan *model.WebhookPayload) {
+func runFilestoreTests(command *cobra.Command, c chan *model.WebhookPayload) []string {
 	serverAddress, _ := command.Flags().GetString("server")
 	webhookURL, _ := command.Flags().GetString("webhook-url")
 	installationDomain, _ := command.Flags().GetString("installation-domain")
@@ -48,6 +45,7 @@ func filestoreTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	}
 
 	client := model.NewClient(serverAddress)
+	testResults := []string{}
 
 	testWebhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
 		OwnerID: "ctest-filestore-tests",
@@ -55,7 +53,7 @@ func filestoreTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	})
 	if err != nil {
 		logger.WithError(err).Error("Failed to create test webhook")
-		return
+		return testResults
 	}
 	logger.Info("Test webhook created")
 
@@ -68,18 +66,6 @@ func filestoreTests(command *cobra.Command, c chan *model.WebhookPayload) {
 		logger.Info("Test webhook deleted")
 	}
 	defer deleteWebhook()
-
-	testResults := []string{}
-	printResults := func() {
-		printSeparator()
-		logger.Info("FILESTORE TEST RESULTS")
-		printSeparator()
-		for _, result := range testResults {
-			logger.Info(result)
-		}
-		printSeparator()
-	}
-	defer printResults()
 
 	for _, filestoreType := range filestoreTypes {
 		printSeparator()
@@ -102,7 +88,7 @@ func filestoreTests(command *cobra.Command, c chan *model.WebhookPayload) {
 		if err != nil {
 			logger.WithError(err).Error("Installation test failed")
 			testResults = append(testResults, fmt.Sprintf("FAIL: %s", filestoreType))
-			return
+			return testResults
 		}
 
 		now := time.Now()
@@ -113,4 +99,6 @@ func filestoreTests(command *cobra.Command, c chan *model.WebhookPayload) {
 	}
 
 	logger.Info("Tests Completed")
+
+	return testResults
 }
