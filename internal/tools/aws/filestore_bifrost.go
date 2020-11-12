@@ -7,7 +7,6 @@ package aws
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
@@ -16,15 +15,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// S3MultitenantFilestore is a filestore backed by a shared AWS S3 bucket.
-type S3MultitenantFilestore struct {
+// BifrostFilestore is a filestore backed by a shared AWS S3 bucket with access
+// controlled by bifrost.
+type BifrostFilestore struct {
 	installationID string
 	awsClient      *Client
 }
 
-// NewS3MultitenantFilestore returns a new NewS3MultitenantFilestore interface.
-func NewS3MultitenantFilestore(installationID string, awsClient *Client) *S3MultitenantFilestore {
-	return &S3MultitenantFilestore{
+// NewBifrostFilestore returns a new NewBifrostFilestore interface.
+func NewBifrostFilestore(installationID string, awsClient *Client) *BifrostFilestore {
+	return &BifrostFilestore{
 		installationID: installationID,
 		awsClient:      awsClient,
 	}
@@ -32,24 +32,24 @@ func NewS3MultitenantFilestore(installationID string, awsClient *Client) *S3Mult
 
 // Provision completes all the steps necessary to provision an S3 multitenant
 // filestore.
-func (f *S3MultitenantFilestore) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+func (f *BifrostFilestore) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	err := f.s3FilestoreProvision(store, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to provision AWS multitenant S3 filestore")
+		return errors.Wrap(err, "failed to provision bifrost filestore")
 	}
 
 	return nil
 }
 
 // Teardown removes all AWS resources related to a shared S3 filestore.
-func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+func (f *BifrostFilestore) Teardown(keepData bool, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	awsID := CloudID(f.installationID)
 
 	logger = logger.WithFields(log.Fields{
 		"awsID":          awsID,
-		"filestore-type": "s3-multitenant",
+		"filestore-type": "bifrost",
 	})
-	logger.Info("Tearing down AWS S3 filestore")
+	logger.Info("Tearing down bifrost filestore")
 
 	bucketName, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
@@ -73,16 +73,6 @@ func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.Installatio
 
 	logger = logger.WithField("s3-bucket-name", bucketName)
 
-	err = f.awsClient.iamEnsureUserDeleted(awsID, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete AWS IAM user")
-	}
-
-	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretDeleted(awsID, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete IAM access key secret")
-	}
-
 	if keepData {
 		logger.Info("AWS S3 bucket was left intact due to the keep-data setting of this server")
 		return nil
@@ -90,23 +80,23 @@ func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.Installatio
 
 	err = f.awsClient.S3EnsureBucketDirectoryDeleted(bucketName, f.installationID, logger)
 	if err != nil {
-		return errors.Wrap(err, "unable to ensure that AWS S3 filestore was deleted")
+		return errors.Wrap(err, "failed to ensure that bifrost filestore was deleted")
 	}
 
-	logger.Debug("AWS multitenant S3 filestore was deleted")
+	logger.Debug("Bifrost filestore teardown complete")
 	return nil
 }
 
 // GenerateFilestoreSpecAndSecret creates the k8s filestore spec and secret for
 // accessing the shared S3 bucket.
-func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
+func (f *BifrostFilestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
 
 	logger = logger.WithFields(log.Fields{
 		"awsID":          awsID,
-		"filestore-type": "s3-multitenant",
+		"filestore-type": "bifrost",
 	})
-	logger.Debug("Generating S3 multitenant filestore information")
+	logger.Debug("Generating Bifrost filestore information")
 
 	bucketName, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
@@ -115,19 +105,16 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 
 	logger = logger.WithField("s3-bucket-name", bucketName)
 
-	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	// Although no secrets or credentials are needed for bifrost, the operator
+	// expects certain values so we set dummy values instead.
 	filestoreSecretName := fmt.Sprintf("%s-iam-access-key", f.installationID)
 	filestoreSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: filestoreSecretName,
 		},
 		StringData: map[string]string{
-			"accesskey": iamAccessKey.ID,
-			"secretkey": iamAccessKey.Secret,
+			"accesskey": "bifrost",
+			"secretkey": "bifrost",
 		},
 	}
 
@@ -143,64 +130,52 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 		Secret:         filestoreSecretName,
 	}
 
-	logger.Debug("AWS multitenant S3 filestore configuration generated for cluster installation")
+	logger.Debug("Bifrost filestore configuration generated for cluster installation")
 
 	return filestoreSpec, filestoreSecret, nil
 }
 
 // s3FilestoreProvision provisions a shared S3 filestore for an installation.
-func (f *S3MultitenantFilestore) s3FilestoreProvision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+func (f *BifrostFilestore) s3FilestoreProvision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	awsID := CloudID(f.installationID)
 
 	logger = logger.WithFields(log.Fields{
 		"awsID":          awsID,
-		"filestore-type": "s3-multitenant",
+		"filestore-type": "bifrost",
 	})
-	logger.Info("Provisioning AWS multitenant S3 filestore")
+	logger.Info("Provisioning bifrost filestore")
 
-	bucketName, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	// Bifrost filestores don't require any setup. The only check that we will
+	// make is that the multitenant bucket exsists for the shared filestore.
+	_, err := getMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to find multitenant bucket")
 	}
 
-	logger = logger.WithField("s3-bucket-name", bucketName)
-
-	user, err := f.awsClient.iamEnsureUserCreated(awsID, logger)
-	if err != nil {
-		return err
-	}
-
-	// The IAM policy lookup requires the AWS account ID for the ARN. The user
-	// object contains this ID so we will user that.
-	arn, err := arn.Parse(*user.Arn)
-	if err != nil {
-		return err
-	}
-	policyARN := fmt.Sprintf("arn:aws:iam::%s:policy/%s", arn.AccountID, awsID)
-	policy, err := f.awsClient.iamEnsureS3PolicyCreated(awsID, policyARN, bucketName, f.installationID, logger)
-	if err != nil {
-		return err
-	}
-	err = f.awsClient.iamEnsurePolicyAttached(awsID, policyARN, logger)
-	if err != nil {
-		return err
-	}
-	logger.WithFields(log.Fields{
-		"iam-policy-name": *policy.PolicyName,
-		"iam-user-name":   *user.UserName,
-	}).Debug("AWS IAM policy attached to user")
-
-	ak, err := f.awsClient.iamEnsureAccessKeyCreated(awsID, logger)
-	if err != nil {
-		return err
-	}
-	logger.WithField("iam-user-name", *user.UserName).Debug("AWS IAM user access key created")
-
-	err = f.awsClient.secretsManagerEnsureIAMAccessKeySecretCreated(awsID, ak, logger)
-	if err != nil {
-		return err
-	}
-	logger.WithField("iam-user-name", *user.UserName).Debug("AWS secrets manager secret created")
-
 	return nil
+}
+
+// GenerateBifrostUtilitySecret creates the secret needed by the bifrost service
+// to access the shared S3 bucket for a given cluster.
+func (a *Client) GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
+	bucketName, err := getMultitenantBucketNameForCluster(clusterID, a)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get multitenant bucket name")
+	}
+
+	bifrostIAMCreds, err := a.secretsManagerGetIAMAccessKeyFromSecretName(bucketName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get IAM user credential secret for bifrost")
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "bifrost",
+		},
+		StringData: map[string]string{
+			"Bucket":          bucketName,
+			"AccessKeyID":     bifrostIAMCreds.ID,
+			"SecretAccessKey": bifrostIAMCreds.Secret,
+		},
+	}, nil
 }

@@ -59,9 +59,6 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]string)
 	}
-	if _, ok := request.DesiredUtilityVersions[PrometheusCanonicalName]; !ok {
-		request.DesiredUtilityVersions[PrometheusCanonicalName] = PrometheusDefaultVersion
-	}
 	if _, ok := request.DesiredUtilityVersions[PrometheusOperatorCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PrometheusOperatorCanonicalName] = PrometheusOperatorDefaultVersion
 	}

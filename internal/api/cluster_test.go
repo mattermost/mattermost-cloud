@@ -1146,20 +1146,19 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 			Provider: model.ProviderAWS,
 			Zones:    []string{"zone"},
 			DesiredUtilityVersions: map[string]string{
-				"prometheus": "10.3.0",
-				"nginx":      "stable",
+				"prometheus-operator": "9.4.4",
+				"nginx":               "stable",
 			},
 		})
 
 	require.NoError(t, err)
 	utilityMetadata, err := client.GetClusterUtilities(c.ID)
 
-	assert.Equal(t, "", utilityMetadata.ActualVersions.Prometheus)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
 	assert.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
 
 	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
-	assert.Equal(t, "10.3.0", utilityMetadata.DesiredVersions.Prometheus)
+	assert.Equal(t, "9.4.4", utilityMetadata.DesiredVersions.PrometheusOperator)
 	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
 }
 

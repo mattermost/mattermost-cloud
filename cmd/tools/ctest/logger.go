@@ -14,23 +14,23 @@ var logger *log.Logger
 
 func init() {
 	logger = log.New()
+	logger.SetLevel(log.DebugLevel)
+	log.SetOutput(os.Stdout)
 	logger.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
-	// Output to stdout instead of the default stderr.
-	log.SetOutput(os.Stdout)
 }
 
-type logrusWriter struct {
-	logger log.FieldLogger
+func printSeparator() {
+	logger.Info("====================================================")
 }
 
-func (w *logrusWriter) Write(b []byte) (int, error) {
-	n := len(b)
-	if n > 0 && b[n-1] == '\n' {
-		b = b[:n-1]
+func printResults(results []string) {
+	printSeparator()
+	logger.Info("TEST RESULTS")
+	printSeparator()
+	for _, result := range results {
+		logger.Info(result)
 	}
-
-	w.logger.Warning(string(b))
-	return n, nil
+	printSeparator()
 }

@@ -615,15 +615,24 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 		mattermostEnv = map[string]model.EnvVar{}
 	}
 
+	// General overrides.
 	mattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
 	mattermostEnv["MM_SERVICESETTINGS_ENABLELOCALMODE"] = model.EnvVar{Value: "true"}
 
+	// Filestore overrides.
 	if !installation.InternalFilestore() {
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "true"}
 	}
-
-	if installation.Filestore == model.InstallationFilestoreMultiTenantAwsS3 {
+	if installation.Filestore == model.InstallationFilestoreMultiTenantAwsS3 ||
+		installation.Filestore == model.InstallationFilestoreBifrost {
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3PATHPREFIX"] = model.EnvVar{Value: installation.ID}
+	}
+	if installation.Filestore == model.InstallationFilestoreBifrost {
+		mattermostEnv["MM_CLOUD_FILESTORE_BIFROST"] = model.EnvVar{Value: "true"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3ENDPOINT"] = model.EnvVar{Value: "bifrost.bifrost:80"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SIGNV2"] = model.EnvVar{Value: "false"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "false"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSL"] = model.EnvVar{Value: "false"}
 	}
 
 	return mattermostEnv

@@ -21,6 +21,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type mockInstallationStore struct {
@@ -158,6 +159,10 @@ func (s *mockInstallationStore) UpdateMultitenantDatabase(multitenantDatabase *m
 }
 
 func (s *mockInstallationStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
 	return nil, nil
 }
 
@@ -314,6 +319,10 @@ func (a *mockAWS) S3FilestoreTeardown(installationID string, keepBucket bool, lo
 }
 
 func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string, logger log.FieldLogger) (*aws.IAMAccessKey, error) {
+	return nil, nil
+}
+
+func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
 	return nil, nil
 }
 

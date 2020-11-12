@@ -29,6 +29,9 @@ func init() {
 	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator or aws-s3")
 	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+	installationCreateCmd.Flags().String("rds-primary-instance", "", "The machine instance type used for primary replica of database cluster. Works only with single tenant RDS databases.")
+	installationCreateCmd.Flags().String("rds-replica-instance", "", "The machine instance type used for reader replicas of database cluster. Works only with single tenant RDS databases.")
+	installationCreateCmd.Flags().Int("rds-replicas-count", 0, "The number of reader replicas of database cluster. Min: 0, Max: 15. Works only with single tenant RDS databases.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
@@ -120,6 +123,20 @@ var installationCreateCmd = &cobra.Command{
 			Filestore:     filestore,
 			MattermostEnv: envVarMap,
 			Annotations:   annotations,
+		}
+
+		if model.IsSingleTenantRDS(database) {
+			rdsPrimaryInstance, _ := command.Flags().GetString("rds-primary-instance")
+			rdsReplicaInstance, _ := command.Flags().GetString("rds-replica-instance")
+			rdsReplicasCount, _ := command.Flags().GetInt("rds-replicas-count")
+
+			dbConfig := model.SingleTenantDatabaseRequest{
+				PrimaryInstanceType: rdsPrimaryInstance,
+				ReplicaInstanceType: rdsReplicaInstance,
+				ReplicasCount:       rdsReplicasCount,
+			}
+
+			request.SingleTenantDatabaseConfig = dbConfig
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

@@ -25,7 +25,7 @@ commonLabels: {}
 ## Create default rules for monitoring the cluster
 ##
 defaultRules:
-  create: true
+  create: false
   rules:
     alertmanager: true
     etcd: true
@@ -427,25 +427,24 @@ alertmanager:
     ## Assign custom affinity rules to the alertmanager instance
     ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
     ##
-    affinity: {}
-    # nodeAffinity:
-    #   requiredDuringSchedulingIgnoredDuringExecution:
-    #     nodeSelectorTerms:
-    #     - matchExpressions:
-    #       - key: kubernetes.io/e2e-az-name
-    #         operator: In
-    #         values:
-    #         - e2e-az1
-    #         - e2e-az2
-
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+            - key: "kops.k8s.io/instancegroup"
+              operator: In
+              values:
+              - nodes-utilities
     ## If specified, the pod's tolerations.
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
-    tolerations: []
-    # - key: "key"
-    #   operator: "Equal"
-    #   value: "value"
-    #   effect: "NoSchedule"
+    tolerations:
+    - key: "utilities"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
 
     ## SecurityContext holds pod-level security attributes and common container settings.
     ## This defaults to non root user with uid 1000 and gid 2000.	*v1.PodSecurityContext	false
@@ -1074,6 +1073,21 @@ kube-state-metrics:
     create: true
   podSecurityPolicy:
     enabled: true
+  affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: type
+          operator: In
+          values:
+          - utilities
+  tolerations:
+  - key: "utilities"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
 
 ## Deploy node exporter as a daemonset to all nodes
 ##
@@ -1164,8 +1178,21 @@ prometheusOperator:
       priorityClassName: ""
       podAnnotations: {}
       nodeSelector: {}
-      affinity: {}
-      tolerations: []
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: "kops.k8s.io/instancegroup"
+                operator: In
+                values:
+                - nodes-utilities
+      tolerations:
+      - key: "utilities"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
 
   ## Namespaces to scope the interaction of the Prometheus Operator and the apiserver (allow list).
   ## This is mutually exclusive with denyNamespaces. Setting this to an empty object will disable the configuration
@@ -1301,28 +1328,21 @@ prometheusOperator:
   ##
   nodeSelector: {}
 
-  ## Tolerations for use with node taints
-  ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  ##
-  tolerations: []
-  # - key: "key"
-  #   operator: "Equal"
-  #   value: "value"
-  #   effect: "NoSchedule"
-
-  ## Assign custom affinity rules to the prometheus operator
-  ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-  ##
-  affinity: {}
-    # nodeAffinity:
-    #   requiredDuringSchedulingIgnoredDuringExecution:
-    #     nodeSelectorTerms:
-    #     - matchExpressions:
-    #       - key: kubernetes.io/e2e-az-name
-    #         operator: In
-    #         values:
-    #         - e2e-az1
-    #         - e2e-az2
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: "kops.k8s.io/instancegroup"
+            operator: In
+            values:
+            - nodes-utilities
+  tolerations:
+  - key: "utilities"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
 
   securityContext:
     fsGroup: 65534
@@ -1481,7 +1501,7 @@ prometheus:
 
   ingress:
     enabled: true
-    annotations: 
+    annotations:
       kubernetes.io/ingress.class: nginx-controller
     labels: {}
     ## Hostnames.
@@ -1611,14 +1631,24 @@ prometheus:
       tag: v2.18.2
       sha: ""
 
-    ## Tolerations for use with node taints
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+            - key: "kops.k8s.io/instancegroup"
+              operator: In
+              values:
+              - nodes-utilities
+    ## If specified, the pod's tolerations.
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
-    tolerations: []
-    #  - key: "key"
-    #    operator: "Equal"
-    #    value: "value"
-    #    effect: "NoSchedule"
+    tolerations:
+    - key: "utilities"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
 
     ## Alertmanagers to which alerts will be sent
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/api.md#alertmanagerendpoints
@@ -1805,20 +1835,6 @@ prometheus:
     ##
     podAntiAffinityTopologyKey: kubernetes.io/hostname
 
-    ## Assign custom affinity rules to the prometheus instance
-    ## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-    ##
-    affinity: {}
-    # nodeAffinity:
-    #   requiredDuringSchedulingIgnoredDuringExecution:
-    #     nodeSelectorTerms:
-    #     - matchExpressions:
-    #       - key: kubernetes.io/e2e-az-name
-    #         operator: In
-    #         values:
-    #         - e2e-az1
-    #         - e2e-az2
-
     ## The remote_read spec configuration for Prometheus.
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/api.md#remotereadspec
     remoteRead: []
@@ -1840,8 +1856,8 @@ prometheus:
         memory: 6Gi
       limits:
         cpu: "3"
-        memory: 15Gi
-      
+        memory: 60Gi
+
     ## Prometheus StorageSpec for persistent data
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/user-guides/storage.md
     ##
@@ -2001,6 +2017,30 @@ prometheus:
       - nginx
     endpoints:
       - port: metrics
+        interval: 30s
+        path: /metrics
+        scheme: http
+  - name: thanos-querier
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: querier
+    namespaceSelector:
+      matchNames:
+      - prometheus
+    endpoints:
+      - port: http
+        interval: 30s
+        path: /metrics
+        scheme: http
+  - name: thanos-query-frontend
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: query-frontend
+    namespaceSelector:
+      matchNames:
+      - prometheus
+    endpoints:
+      - port: http
         interval: 30s
         path: /metrics
         scheme: http

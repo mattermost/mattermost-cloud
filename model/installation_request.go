@@ -17,6 +17,14 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
+// requireAnnotatedInstallations if set, installations need to be annotated with at least one annotation.
+var requireAnnotatedInstallations bool
+
+// SetRequireAnnotatedInstallations is called with a value based on a CLI flag.
+func SetRequireAnnotatedInstallations(val bool) {
+	requireAnnotatedInstallations = val
+}
+
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
 	OwnerID         string
@@ -32,6 +40,8 @@ type CreateInstallationRequest struct {
 	APISecurityLock bool
 	MattermostEnv   EnvVarMap
 	Annotations     []string
+	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
+	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
@@ -56,6 +66,9 @@ func (request *CreateInstallationRequest) SetDefaults() {
 	}
 	if request.Filestore == "" {
 		request.Filestore = InstallationFilestoreMinioOperator
+	}
+	if IsSingleTenantRDS(request.Database) {
+		request.SingleTenantDatabaseConfig.SetDefaults()
 	}
 }
 
@@ -85,10 +98,21 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Errorf("unsupported filestore %s", request.Filestore)
 	}
 	err = request.MattermostEnv.Validate()
+	if requireAnnotatedInstallations {
+		if len(request.Annotations) == 0 {
+			return errors.Errorf("at least one annotation is required")
+		}
+	}
+
 	if err != nil {
 		return errors.Wrap(err, "invalid env var settings")
 	}
-
+	if IsSingleTenantRDS(request.Database) {
+		err = request.SingleTenantDatabaseConfig.Validate()
+		if err != nil {
+			return errors.Wrap(err, "single tenant database config is invalid")
+		}
+	}
 	return checkSpaces(request)
 }
 

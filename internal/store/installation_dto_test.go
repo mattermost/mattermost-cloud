@@ -33,18 +33,25 @@ func TestInstallationDTOs(t *testing.T) {
 	require.NoError(t, err)
 	annotations := []*model.Annotation{&annotation1, &annotation2}
 
+	singleTenantDBConfig := &model.SingleTenantDatabaseConfig{
+		PrimaryInstanceType: "db.r5.large",
+		ReplicaInstanceType: "db.r5.xlarge",
+		ReplicasCount:       11,
+	}
+
 	groupID1 := model.NewID()
 
 	installation1 := &model.Installation{
-		OwnerID:   "owner1",
-		Version:   "version",
-		DNS:       "dns.example.com",
-		Database:  model.InstallationDatabaseMysqlOperator,
-		Filestore: model.InstallationFilestoreMinioOperator,
-		Size:      mmv1alpha1.Size100String,
-		Affinity:  model.InstallationAffinityIsolated,
-		GroupID:   &groupID1,
-		State:     model.InstallationStateCreationRequested,
+		OwnerID:                    "owner1",
+		Version:                    "version",
+		DNS:                        "dns.example.com",
+		Database:                   model.InstallationDatabaseMysqlOperator,
+		Filestore:                  model.InstallationFilestoreMinioOperator,
+		Size:                       mmv1alpha1.Size100String,
+		Affinity:                   model.InstallationAffinityIsolated,
+		GroupID:                    &groupID1,
+		State:                      model.InstallationStateCreationRequested,
+		SingleTenantDatabaseConfig: singleTenantDBConfig,
 	}
 
 	installation2 := &model.Installation{
