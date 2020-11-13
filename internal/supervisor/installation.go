@@ -96,10 +96,6 @@ type InstallationSupervisorSchedulingOptions struct {
 	balanceInstallations               bool
 	clusterResourceThreshold           int
 	clusterResourceThresholdScaleValue int
-	keepDatabaseData                   bool
-	keepFilestoreData                  bool
-	resourceUtil                       *utils.ResourceUtil
-	logger                             log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
