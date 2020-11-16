@@ -57,6 +57,9 @@ func init() {
 	blastCommand.PersistentFlags().Int("runs", 1, "Number of times to repeat the test")
 	blastCommand.PersistentFlags().Int("batch", 5, "Specify the number of Installations in each batch. Installations in a batch are install serially and batches are installed in parallel.")
 	blastCommand.PersistentFlags().Int("total", 20, "Number of Installations to provision")
+	blastCommand.PersistentFlags().String("database", cloud.InstallationDatabaseMultiTenantRDSPostgres, "Specify the type of database with which to create Installations")
+	blastCommand.PersistentFlags().String("filestore", cloud.InstallationFilestoreMultiTenantAwsS3, "Specify the filestore type with which to create Installations")
+	blastCommand.PersistentFlags().String("size", mmv1alpha1.Size1000String, "Specify the size of the created Installations")
 }
 
 // Type returns ErrorReportType for errorReport objects
@@ -73,10 +76,13 @@ func (c *completedReport) Type() ReportType {
 // Blaster is aware of its own reports (errors and completed reports),
 // and contains internal state that pertains to the entire test run.
 type Blaster struct {
-	client  *cloud.Client
-	testID  string
-	group   *cloud.Group
-	reports []Report
+	client      *cloud.Client
+	testID      string
+	group       *cloud.Group
+	reports     []Report
+	database    string
+	filestore   string
+	installSize string
 }
 
 // NewBlaster creates a new Blaster with which to blast the
@@ -94,10 +100,17 @@ var blastCommand = &cobra.Command{
 		batchSize, _ := cmd.Flags().GetInt("batch")
 		total, _ := cmd.Flags().GetInt("total")
 		runs, _ := cmd.Flags().GetInt("runs")
+		database, _ := cmd.Flags().GetString("database")
+		filestore, _ := cmd.Flags().GetString("filestore")
+		installSize, _ := cmd.Flags().GetString("size")
 
 		logger.SetLevel(log.DebugLevel)
 		logger.Infof("Server address %s", serverAddress)
 		logger.WithField("server", serverAddress)
+		if err := isValidInput(database, filestore, installSize); err != nil {
+			return errors.Wrap(err, "failed user input validation")
+		}
+
 		blaster := NewBlaster(serverAddress)
 		err := blaster.createGroup()
 		if err != nil {
@@ -384,9 +397,9 @@ func (b *Blaster) createInstallation() (*cloud.Installation, error) {
 		&cloud.CreateInstallationRequest{
 			OwnerID:         b.testID,
 			GroupID:         b.group.ID,
-			Database:        cloud.InstallationDatabaseMultiTenantRDSPostgres,
-			Filestore:       cloud.InstallationFilestoreMultiTenantAwsS3,
-			Size:            mmv1alpha1.Size1000String,
+			Database:        b.database,
+			Filestore:       b.filestore,
+			Size:            b.installSize,
 			Affinity:        cloud.InstallationAffinityMultiTenant,
 			DNS:             fmt.Sprintf("%s-%s.loadtest.dev.cloud.mattermost.com", b.testID, cloud.NewID()[:6]),
 			APISecurityLock: false,
@@ -395,6 +408,55 @@ func (b *Blaster) createInstallation() (*cloud.Installation, error) {
 		return nil, errors.Wrap(err, "failed to create Installation")
 	}
 	return installationDTO.Installation, nil
+}
+
+func isValidInput(database, filestore, installSize string) error {
+	databaseCheck := func() error {
+		for _, validDB := range []string{
+			cloud.InstallationDatabaseMysqlOperator,
+			cloud.InstallationDatabaseSingleTenantRDSMySQL,
+			cloud.InstallationDatabaseSingleTenantRDSPostgres,
+			cloud.InstallationDatabaseMultiTenantRDSMySQL,
+			cloud.InstallationDatabaseMultiTenantRDSPostgres,
+		} {
+			if validDB == database {
+				return nil
+			}
+		}
+		return errors.Errorf("invalid database requested: unknown database type %s", database)
+	}
+
+	filestoreCheck := func() error {
+		for _, validFilestore := range []string{
+			cloud.InstallationFilestoreMinioOperator,
+			cloud.InstallationFilestoreAwsS3,
+			cloud.InstallationFilestoreMultiTenantAwsS3,
+			cloud.InstallationFilestoreBifrost,
+		} {
+			if validFilestore == filestore {
+				return nil
+			}
+		}
+		return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
+	}
+
+	installSizeCheck := func() error {
+		_, err := mmv1alpha1.GetClusterSize(installSize)
+		if err == nil {
+			return nil
+		}
+		return errors.Wrapf(err, "%s", installSize)
+	}
+
+	validityChecks := []func() error{databaseCheck, filestoreCheck, installSizeCheck}
+	for _, check := range validityChecks {
+		err := check()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func main() {
