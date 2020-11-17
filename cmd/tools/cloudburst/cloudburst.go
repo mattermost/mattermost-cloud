@@ -411,34 +411,17 @@ func (b *Blaster) createInstallation() (*cloud.Installation, error) {
 }
 
 func isValidInput(database, filestore, installSize string) error {
-	databaseCheck := func() error {
-		if !cloud.IsSupportedDatabase(database) {
-			return errors.Errorf("invalid database requested: unknown database type %s", database)
-		}
-		return nil
+	if !cloud.IsSupportedDatabase(database) {
+		return errors.Errorf("invalid database requested: unknown database type %s", database)
 	}
 
-	filestoreCheck := func() error {
-		if !cloud.IsSupportedFilestore(filestore) {
-			return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
-		}
-		return nil
+	if !cloud.IsSupportedFilestore(filestore) {
+		return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
 	}
 
-	installSizeCheck := func() error {
-		_, err := mmv1alpha1.GetClusterSize(installSize)
-		if err == nil {
-			return nil
-		}
+	_, err := mmv1alpha1.GetClusterSize(installSize)
+	if err != nil {
 		return errors.Wrapf(err, "%s", installSize)
-	}
-
-	validityChecks := []func() error{databaseCheck, filestoreCheck, installSizeCheck}
-	for _, check := range validityChecks {
-		err := check()
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
