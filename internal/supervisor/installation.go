@@ -1093,3 +1093,7 @@ func annotationsToIDs(annotations []*model.Annotation) []string {
 	}
 	return ids
 }
+
+func elapsedTimeInSeconds(createAtMillis int64) float64 {
+	return float64(time.Now().Unix()*1000-createAtMillis) / 1000
+}

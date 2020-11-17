@@ -9,7 +9,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -51,18 +50,16 @@ type ClusterInstallationSupervisor struct {
 	aws         aws.AWS
 	instanceID  string
 	logger      log.FieldLogger
-	metrics     *metrics.CloudMetrics
 }
 
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
-func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterInstallationSupervisor {
+func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *ClusterInstallationSupervisor {
 	return &ClusterInstallationSupervisor{
 		store:       store,
 		provisioner: clusterInstallationProvisioner,
 		aws:         aws,
 		instanceID:  instanceID,
 		logger:      logger,
-		metrics:     metrics,
 	}
 }
 
@@ -247,12 +244,5 @@ func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clus
 	}
 
 	logger.Info("Cluster installation finished reconciling")
-	s.metrics.ClusterInstallationCreationDurationHist.Observe(
-		elapsedTimeInSeconds(clusterInstallation.CreateAt))
-
 	return model.ClusterInstallationStateStable
-}
-
-func elapsedTimeInSeconds(createAtMillis int64) float64 {
-	return float64(time.Now().Unix()*1000-createAtMillis) / 1000
 }
