@@ -294,7 +294,6 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 		"kops",
 		"kubectl",
 		"helm",
-		"helm3",
 	}
 
 	for _, requiredUtility := range utilities {
@@ -302,11 +301,6 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 		if err != nil {
 			return errors.Errorf("failed to find %s on the PATH", requiredUtility)
 		}
-	}
-
-	err := checkHelm2to3Plugin()
-	if err != nil {
-		return errors.Wrap(err, "failed to run check for Helm 3 2to3 plugin")
 	}
 
 	homedir, err := os.UserHomeDir()
@@ -349,16 +343,6 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 	}
 
 	return nil
-}
-
-func checkHelm2to3Plugin() error {
-	helm3, err := exec.LookPath("helm3")
-	if err != nil {
-		return errors.Wrap(err, "failed to lookup path for helm3")
-	}
-
-	cmd := exec.Command(helm3, "2to3")
-	return cmd.Run()
 }
 
 // deprecationWarnings performs all checks for deprecated settings and warns if
