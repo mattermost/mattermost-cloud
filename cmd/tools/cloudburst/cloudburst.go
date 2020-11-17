@@ -412,32 +412,17 @@ func (b *Blaster) createInstallation() (*cloud.Installation, error) {
 
 func isValidInput(database, filestore, installSize string) error {
 	databaseCheck := func() error {
-		for _, validDB := range []string{
-			cloud.InstallationDatabaseMysqlOperator,
-			cloud.InstallationDatabaseSingleTenantRDSMySQL,
-			cloud.InstallationDatabaseSingleTenantRDSPostgres,
-			cloud.InstallationDatabaseMultiTenantRDSMySQL,
-			cloud.InstallationDatabaseMultiTenantRDSPostgres,
-		} {
-			if validDB == database {
-				return nil
-			}
+		if !cloud.IsSupportedDatabase(database) {
+			return errors.Errorf("invalid database requested: unknown database type %s", database)
 		}
-		return errors.Errorf("invalid database requested: unknown database type %s", database)
+		return nil
 	}
 
 	filestoreCheck := func() error {
-		for _, validFilestore := range []string{
-			cloud.InstallationFilestoreMinioOperator,
-			cloud.InstallationFilestoreAwsS3,
-			cloud.InstallationFilestoreMultiTenantAwsS3,
-			cloud.InstallationFilestoreBifrost,
-		} {
-			if validFilestore == filestore {
-				return nil
-			}
+		if !cloud.IsSupportedFilestore(filestore) {
+			return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
 		}
-		return errors.Errorf("invalid filestore requested: unknown filestore type %s", filestore)
+		return nil
 	}
 
 	installSizeCheck := func() error {
