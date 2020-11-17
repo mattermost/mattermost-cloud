@@ -32,7 +32,6 @@ import (
 )
 
 const (
-	clusterRootDir        = "clusters"
 	defaultLocalServerAPI = "http://localhost:8075"
 )
 
@@ -41,24 +40,29 @@ var instanceID string
 func init() {
 	instanceID = model.NewID()
 
+	// General
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
+	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
+	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
+	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
+	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
+
+	// Supervisors
+	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
 	serverCmd.PersistentFlags().Bool("cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
 	serverCmd.PersistentFlags().Bool("group-supervisor", false, "Whether this server will run an installation group supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
-	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
-	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 
-	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
+	// Scheduling and installation options
+	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
 	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
-	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
-	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
-	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
 }
 
@@ -130,6 +134,7 @@ var serverCmd = &cobra.Command{
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
+		balancedInstallationScheduling, _ := command.Flags().GetBool("balanced-installation-scheduling")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -155,6 +160,7 @@ var serverCmd = &cobra.Command{
 			"store-version":                          currentVersion,
 			"state-store":                            s3StateStore,
 			"working-directory":                      wd,
+			"balanced-installation-scheduling":       balancedInstallationScheduling,
 			"cluster-resource-threshold":             clusterResourceThreshold,
 			"cluster-resource-threshold-scale-value": clusterResourceThresholdScaleValue,
 			"use-existing-aws-resources":             useExistingResources,
@@ -212,7 +218,8 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, clusterResourceThreshold, clusterResourceThresholdScaleValue, keepDatabaseData, keepFilestoreData, resourceUtil, logger))
+			scheduling := supervisor.NewInstallationSupervisorSchedulingOptions(balancedInstallationScheduling, clusterResourceThreshold, clusterResourceThresholdScaleValue)
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
@@ -341,12 +348,7 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 // deprecationWarnings performs all checks for deprecated settings and warns if
 // any are found.
 func deprecationWarnings(logger logrus.FieldLogger, cmd *cobra.Command) {
-	_, err := os.Stat(clusterRootDir)
-	if err == nil {
-		logger.Warn("[Deprecation] The directory './clusters' was found; this is no longer used by the kops provisioner")
-		logger.Warn("[Deprecation] Any remaining terraform in this directory should be manually moved to remote state")
-		logger.Warn("[Deprecation] Instructions for doing this can be found in the README")
-	}
+	// Add deprecation logic here.
 }
 
 // getHumanReadableID  represents  a  best  effort  attempt  to  retrieve  an

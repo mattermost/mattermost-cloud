@@ -24,3 +24,13 @@ func init() {
 func printSeparator() {
 	logger.Info("====================================================")
 }
+
+func printResults(results []string) {
+	printSeparator()
+	logger.Info("TEST RESULTS")
+	printSeparator()
+	for _, result := range results {
+		logger.Info(result)
+	}
+	printSeparator()
+}
