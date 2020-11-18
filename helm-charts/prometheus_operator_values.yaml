@@ -1785,7 +1785,7 @@ prometheus:
 
     ## How long to retain metrics
     ##
-    retention: 7d
+    retention: 5d
 
     ## Maximum size of metrics
     ##
@@ -1868,7 +1868,7 @@ prometheus:
          accessModes: ["ReadWriteOnce"]
          resources:
            requests:
-             storage: 100Gi
+             storage: 200Gi
 #       selector: {}
 
     # Additional volumes on the output StatefulSet definition.
