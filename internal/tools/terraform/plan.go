@@ -18,9 +18,9 @@ import (
 )
 
 type terraformOutput struct {
-	Sensitive bool        `json:"sensitive"`
-	Type      string      `json:"type"`
-	Value     interface{} `json:"value"`
+	Sensitive bool            `json:"sensitive"`
+	Type      json.RawMessage `json:"type"`
+	Value     interface{}     `json:"value"`
 }
 
 // Init invokes terraform init.
