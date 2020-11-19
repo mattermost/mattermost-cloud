@@ -66,6 +66,7 @@ func init() {
 	groupCmd.AddCommand(groupGetCmd)
 	groupCmd.AddCommand(groupListCmd)
 	groupCmd.AddCommand(groupGetStatusCmd)
+	groupCmd.AddCommand(groupGetGroupsStatusCmd)
 	groupCmd.AddCommand(groupJoinCmd)
 	groupCmd.AddCommand(groupLeaveCmd)
 }
@@ -332,6 +333,32 @@ var groupLeaveCmd = &cobra.Command{
 		err := client.LeaveGroup(installationID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to leave group")
+		}
+
+		return nil
+	},
+}
+
+var groupGetGroupsStatusCmd = &cobra.Command{
+	Use:   "statuses",
+	Short: "Get Status from all groups.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		groupStatus, err := client.GetGroupsStatus()
+		if err != nil {
+			return errors.Wrap(err, "failed to query group status")
+		}
+		if groupStatus == nil {
+			return nil
+		}
+
+		err = printJSON(groupStatus)
+		if err != nil {
+			return err
 		}
 
 		return nil
