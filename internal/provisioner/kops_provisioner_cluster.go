@@ -327,7 +327,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete service metrics-server")
 	}
 
-	logger.Info("Cleaning up some metrics-server resources to reapply")
 	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete(ctx, "v1beta1.metrics.k8s.io", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("APIService v1beta1.metrics.k8s.io not found; skipping...")
