@@ -335,6 +335,14 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete APIService v1beta1.metrics.k8s.io")
 	}
 
+	logger.Info("Cleaning up some prometheus-adapter resources to reapply")
+	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete(ctx, "v1beta1.custom.metrics.k8s.io", metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("APIService v1beta1.metrics.k8s.io not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete APIService v1beta1.custom.metrics.k8s.io")
+	}
+
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
