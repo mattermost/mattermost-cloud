@@ -40,11 +40,18 @@ func init() {
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
-	clusterProvisionCmd.Flags().String("prometheus-operator-version", "", "The version of Prometheus Operator to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("thanos-version", "", "The version of Thanos to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of Teleport to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
+	clusterProvisionCmd.Flags().String("prometheus-operator-version", "", "The version of the Prometheus Operator Helm chart")
+	clusterProvisionCmd.Flags().String("thanos-version", "", "The version of the Thanos Helm chart")
+	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of the Fluent-Bit Helm chart")
+	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of the NGINX Helm chart")
+	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
+
+	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The git hash of the desired chart value file's version for Prometheus Operator")
+	clusterProvisionCmd.Flags().String("thanos-values", "", "The git hash of the desired chart value file's version for Thanos")
+	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The git hash of the desired chart value file's version for Fluent-Bit")
+	clusterProvisionCmd.Flags().String("nginx-values", "", "The git hash of the desired chart value file's version for NGINX")
+	clusterProvisionCmd.Flags().String("teleport-values", "", "The git hash of the desired chart value file's version for Teleport")
+
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -518,26 +525,32 @@ func processUtilityFlags(command *cobra.Command) map[string]model.UtilityVersion
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
 
+	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
+	thanosValues, _ := command.Flags().GetString("thanos-values")
+	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")
+	nginxValues, _ := command.Flags().GetString("nginx-values")
+	teleportValues, _ := command.Flags().GetString("teleport-values")
+
 	utilityVersions := make(map[string]model.UtilityVersion)
 
-	if prometheusOperatorVersion != "" {
-		utilityVersions[model.PrometheusOperatorCanonicalName] = &model.HelmUtilityVersion{Chart: prometheusOperatorVersion}
+	if prometheusOperatorVersion != "" && prometheusOperatorValues != "" {
+		utilityVersions[model.PrometheusOperatorCanonicalName] = &model.HelmUtilityVersion{Chart: prometheusOperatorVersion, ValuesPath: prometheusOperatorValues}
 	}
 
-	if thanosVersion != "" {
-		utilityVersions[model.ThanosCanonicalName] = &model.HelmUtilityVersion{Chart: thanosVersion}
+	if thanosVersion != "" && thanosValues != "" {
+		utilityVersions[model.ThanosCanonicalName] = &model.HelmUtilityVersion{Chart: thanosVersion, ValuesPath: thanosValues}
 	}
 
-	if fluentbitVersion != "" {
-		utilityVersions[model.FluentbitCanonicalName] = &model.HelmUtilityVersion{Chart: fluentbitVersion}
+	if fluentbitVersion != "" && fluentbitValues != "" {
+		utilityVersions[model.FluentbitCanonicalName] = &model.HelmUtilityVersion{Chart: fluentbitVersion, ValuesPath: fluentbitValues}
 	}
 
-	if nginxVersion != "" {
-		utilityVersions[model.NginxCanonicalName] = &model.HelmUtilityVersion{Chart: nginxVersion}
+	if nginxVersion != "" && nginxValues != "" {
+		utilityVersions[model.NginxCanonicalName] = &model.HelmUtilityVersion{Chart: nginxVersion, ValuesPath: nginxValues}
 	}
 
-	if teleportVersion != "" {
-		utilityVersions[model.TeleportCanonicalName] = &model.HelmUtilityVersion{Chart: teleportVersion}
+	if teleportVersion != "" && teleportValues != "" {
+		utilityVersions[model.TeleportCanonicalName] = &model.HelmUtilityVersion{Chart: teleportVersion, ValuesPath: teleportValues}
 	}
 
 	return utilityVersions

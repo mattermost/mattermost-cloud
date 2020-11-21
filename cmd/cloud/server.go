@@ -64,6 +64,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
+
+	serverCmd.PersistentFlags().String("utility-group-values", "", "Gitlab repository from which to fetch utility values")
 }
 
 var serverCmd = &cobra.Command{

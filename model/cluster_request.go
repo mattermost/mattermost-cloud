@@ -322,6 +322,34 @@ type ProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]UtilityVersion `json:"utility-versions,omitempty"`
 }
 
+type rawProvisionClusterRequest struct {
+	DesiredUtilityVersions map[string]json.RawMessage `json:"utility-versions,omitempty"`
+}
+
+func (request *ProvisionClusterRequest) UnmarshalJSON(bytes []byte) error {
+	raw := new(rawProvisionClusterRequest)
+	err := json.Unmarshal(bytes, raw)
+	if err != nil {
+		return err
+	}
+	// TODO this is copy-pasted from CreateClusterRequest; create a
+	// unmarshalUtilityVersionFromJSON or something helper
+	utilityVersions := make(map[string]UtilityVersion)
+	for utility, rawVersion := range raw.DesiredUtilityVersions {
+		version := new(HelmUtilityVersion)
+		err := json.Unmarshal(rawVersion, version)
+		if err != nil {
+			return err
+		}
+		utilityVersions[utility] = version
+	}
+
+	request.DesiredUtilityVersions = utilityVersions
+
+	return nil
+
+}
+
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
 func NewProvisionClusterRequestFromReader(reader io.Reader) (*ProvisionClusterRequest, error) {
 	var provisionClusterRequest ProvisionClusterRequest

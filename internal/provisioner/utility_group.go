@@ -165,9 +165,9 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	return nil
 }
 
-func (provisioner *KopsProvisioner) buildValuesPath(utilityPath, valuesPath string) string {
-	if valuesPath == "" {
+func (provisioner *KopsProvisioner) buildValuesPath(utilityPath, version string) string {
+	if version == "" {
 		return fmt.Sprintf("helm-charts/%s", utilityPath)
 	}
-	return fmt.Sprintf("%s/%s/-/raw/%s", provisioner.valuesPath, valuesPath, utilityPath)
+	return fmt.Sprintf("%s/-/raw/%s/%s", provisioner.valuesPath, version, utilityPath)
 }
