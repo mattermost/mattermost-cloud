@@ -47,6 +47,10 @@ type rawCreateClusterRequest struct {
 	Annotations            []string                   `json:"annotations,omitempty"`
 }
 
+// UnmarshalJSON allows CreateClusterRequests to be unmarshaled by the
+// standard library. A custom implementation of this method is
+// necessary due to the inclusion of the polymorphic UtilityVersion
+// type
 func (request *CreateClusterRequest) UnmarshalJSON(bytes []byte) error {
 	raw := new(rawCreateClusterRequest)
 	err := json.Unmarshal(bytes, raw)
@@ -325,6 +329,10 @@ type rawProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]json.RawMessage `json:"utility-versions,omitempty"`
 }
 
+// UnmarshalJSON allows CreateClusterRequests to be unmarshaled by the
+// standard library. A custom implementation of this method is
+// necessary due to the inclusion of the polymorphic UtilityVersion
+// type
 func (request *ProvisionClusterRequest) UnmarshalJSON(bytes []byte) error {
 	raw := new(rawProvisionClusterRequest)
 	err := json.Unmarshal(bytes, raw)

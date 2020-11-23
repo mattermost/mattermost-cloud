@@ -38,6 +38,9 @@ var (
 	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0"}
 )
 
+// UtilityVersion is an interface that provides the necessary methods
+// to discover the numerical version of the Utility as well as an
+// identifier necessary in order to fetch any other configuration
 type UtilityVersion interface {
 	Version() string
 	SetVersion(version string)
@@ -92,6 +95,8 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+// UtilityGroupVersions holds the concrete metadata for any cluster
+// utilities
 type UtilityGroupVersions struct {
 	PrometheusOperator *HelmUtilityVersion
 	Thanos             *HelmUtilityVersion
@@ -243,23 +248,30 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 	}
 }
 
+// HelmUtilityVersion holds the chart version and the version of the
+// values file
 type HelmUtilityVersion struct {
 	Chart      string
 	ValuesPath string
 }
 
+// Version returns the Helm chart version
 func (u *HelmUtilityVersion) Version() string {
 	return u.Chart
 }
 
+// Values returns the name of the branch on which to find the correct
+// values file
 func (u *HelmUtilityVersion) Values() string {
 	return u.ValuesPath
 }
 
+// SetValues sets the ValuesPath and satisfies the UtilityVersion interface
 func (u *HelmUtilityVersion) SetValues(valuesLocation string) {
 	u.ValuesPath = valuesLocation
 }
 
+// SetVersion sets the chart version and satisfies the UtilityVersion interface
 func (u *HelmUtilityVersion) SetVersion(version string) {
 	u.Chart = version
 }
