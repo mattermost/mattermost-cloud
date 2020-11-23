@@ -16,15 +16,20 @@ import (
 func TestNewCreateClusterRequestFromReader(t *testing.T) {
 	defaultCreateClusterRequest := func() *model.CreateClusterRequest {
 		return &model.CreateClusterRequest{
-			Provider:               "aws",
-			Version:                "latest",
-			MasterInstanceType:     "t3.medium",
-			MasterCount:            1,
-			NodeInstanceType:       "m5.large",
-			NodeMinCount:           2,
-			NodeMaxCount:           2,
-			Zones:                  []string{"us-east-1a"},
-			DesiredUtilityVersions: map[string]string{"fluentbit": "2.8.7", "nginx": "2.15.0", "prometheus-operator": "9.4.4", "thanos": "2.4.3", "teleport": "0.3.0"},
+			Provider:           "aws",
+			Version:            "latest",
+			MasterInstanceType: "t3.medium",
+			MasterCount:        1,
+			NodeInstanceType:   "m5.large",
+			NodeMinCount:       2,
+			NodeMaxCount:       2,
+			Zones:              []string{"us-east-1a"},
+			DesiredUtilityVersions: map[string]model.UtilityVersion{
+				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7"},
+				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0"},
+				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
+				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3"},
+				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0"}},
 		}
 	}
 
@@ -77,12 +82,13 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"zone1", "zone2"},
-			DesiredUtilityVersions: map[string]string{
-				"fluentbit":           "2.8.7",
-				"nginx":               "2.15.0",
-				"prometheus-operator": "9.4.4",
-				"thanos":              "2.4.3",
-				"teleport":            "0.3.0"},
+			DesiredUtilityVersions: map[string]model.UtilityVersion{
+				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7"},
+				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0"},
+				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
+				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3"},
+				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0"},
+			},
 		}, clusterRequest)
 	})
 }

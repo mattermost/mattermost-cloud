@@ -100,7 +100,7 @@ func TestNewHelmDeploymentWithZoneIDError(t *testing.T) {
 		AnyTimes()
 
 	kops := &kops.Cmd{}
-	fluentbit, err := newFluentbitHandle("1.2.3", provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(&model.HelmUtilityVersion{Chart: "1.2.3"}, provisioner, awsClient, kops, logger)
 	require.NoError(t, err, "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 
@@ -132,7 +132,7 @@ func TestNewHelmDeploymentWithoutFindingAuditTag(t *testing.T) {
 		AnyTimes()
 
 	kops := &kops.Cmd{}
-	fluentbit, err := newFluentbitHandle("1.2.3", provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(&model.HelmUtilityVersion{Chart: "1.2.3"}, provisioner, awsClient, kops, logger)
 	require.NoError(t, err, "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 
@@ -163,7 +163,7 @@ func TestNewHelmDeploymentWithNillTag(t *testing.T) {
 		AnyTimes()
 
 	kops := &kops.Cmd{}
-	fluentbit, err := newFluentbitHandle("1.2.3", provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(&model.HelmUtilityVersion{Chart: "1.2.3"}, provisioner, awsClient, kops, logger)
 	require.NoError(t, err, "should not error when creating new fluentbit handler")
 	require.NotNil(t, fluentbit, "fluentbit should not be nil")
 
