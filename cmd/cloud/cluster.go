@@ -37,11 +37,11 @@ func init() {
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion.Version(), "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion.Version(), "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterProvisionCmd.Flags().String("prometheus-operator-values", model.PrometheusOperatorDefaultVersion.Values(), "The branch name of the desired chart value file's version for Prometheus Operator")
-	clusterProvisionCmd.Flags().String("thanos-values", model.ThanosDefaultVersion.Values(), "The branch name of the desired chart value file's version for Thanos")
-	clusterProvisionCmd.Flags().String("fluentbit-values", model.FluentbitDefaultVersion.Values(), "The branch name of the desired chart value file's version for Fluent-Bit")
-	clusterProvisionCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
-	clusterProvisionCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
+	clusterCreateCmd.Flags().String("prometheus-operator-values", model.PrometheusOperatorDefaultVersion.Values(), "The branch name of the desired chart value file's version for Prometheus Operator")
+	clusterCreateCmd.Flags().String("thanos-values", model.ThanosDefaultVersion.Values(), "The branch name of the desired chart value file's version for Thanos")
+	clusterCreateCmd.Flags().String("fluentbit-values", model.FluentbitDefaultVersion.Values(), "The branch name of the desired chart value file's version for Fluent-Bit")
+	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
+	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
