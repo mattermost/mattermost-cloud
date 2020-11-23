@@ -25,11 +25,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMaxCount:       2,
 			Zones:              []string{"us-east-1a"},
 			DesiredUtilityVersions: map[string]model.UtilityVersion{
-				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7"},
-				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0"},
-				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
-				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3"},
-				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0"}},
+				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "production"},
+				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "production"},
+				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "production"},
+				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3", ValuesPath: "production"},
+				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "production"}},
 		}
 	}
 
@@ -83,11 +83,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMaxCount:       2,
 			Zones:              []string{"zone1", "zone2"},
 			DesiredUtilityVersions: map[string]model.UtilityVersion{
-				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7"},
-				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0"},
-				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
-				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3"},
-				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0"},
+				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "production"},
+				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "production"},
+				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "production"},
+				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3", ValuesPath: "production"},
+				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "production"},
 			},
 		}, clusterRequest)
 	})
