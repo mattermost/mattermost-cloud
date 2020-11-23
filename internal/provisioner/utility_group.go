@@ -149,14 +149,22 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	for repoName, repoURL := range helmRepos {
 		err := helmRepoAdd(repoName, repoURL, logger)
 		if err != nil {
-			return errors.Wrap(err, "unable to add helm repos")
+			return errors.Wrap(err, "failed to add helm repos")
 		}
 	}
 
 	for _, utility := range group.utilities {
 		err := utility.CreateOrUpgrade()
 		if err != nil {
-			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+			logger.WithError(err).Error("failed to upgrade one of the cluster utilities")
+			err = utility.Destroy()
+			if err != nil {
+				return errors.Wrap(err, "failed to delete cluster utility which could not be upgraded")
+			}
+			err = utility.CreateOrUpgrade()
+			if err != nil {
+				return errors.Wrap(err, "failed to re-create cluster utility after failed upgrade and successful destroy")
+			}
 		}
 
 		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
