@@ -46,11 +46,11 @@ func init() {
 	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of the NGINX Helm chart")
 	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
 
-	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The git hash of the desired chart value file's version for Prometheus Operator")
-	clusterProvisionCmd.Flags().String("thanos-values", "", "The git hash of the desired chart value file's version for Thanos")
-	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The git hash of the desired chart value file's version for Fluent-Bit")
-	clusterProvisionCmd.Flags().String("nginx-values", "", "The git hash of the desired chart value file's version for NGINX")
-	clusterProvisionCmd.Flags().String("teleport-values", "", "The git hash of the desired chart value file's version for Teleport")
+	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
+	clusterProvisionCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
+	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The branch name of the desired chart value file's version for Fluent-Bit")
+	clusterProvisionCmd.Flags().String("nginx-values", "", "The branch name of the desired chart value file's version for NGINX")
+	clusterProvisionCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 

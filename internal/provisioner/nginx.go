@@ -86,7 +86,8 @@ func (n *nginx) ActualVersion() model.UtilityVersion {
 	}
 
 	return &model.HelmUtilityVersion{
-		Chart: strings.TrimPrefix(n.actualVersion.Version(), "ingress-nginx-"),
+		Chart:      strings.TrimPrefix(n.actualVersion.Version(), "ingress-nginx-"),
+		ValuesPath: n.actualVersion.Values(),
 	}
 }
 

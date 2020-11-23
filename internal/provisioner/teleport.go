@@ -99,7 +99,10 @@ func (n *teleport) ActualVersion() model.UtilityVersion {
 	if n.actualVersion == nil {
 		return nil
 	}
-	return &model.HelmUtilityVersion{Chart: strings.TrimPrefix(n.actualVersion.Version(), "teleport-")}
+	return &model.HelmUtilityVersion{
+		Chart:      strings.TrimPrefix(n.actualVersion.Version(), "teleport-"),
+		ValuesPath: n.actualVersion.Values(),
+	}
 }
 
 func (n *teleport) Destroy() error {

@@ -255,7 +255,7 @@ func (d *helmDeployment) Version() (*model.HelmUtilityVersion, error) {
 
 	for _, release := range output.asSlice() {
 		if release.Name == d.chartDeploymentName {
-			return &model.HelmUtilityVersion{Chart: release.Chart}, nil
+			return &model.HelmUtilityVersion{Chart: release.Chart, ValuesPath: d.desiredVersion.Values()}, nil
 		}
 	}
 
