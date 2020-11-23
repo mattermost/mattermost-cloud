@@ -27,15 +27,15 @@ const (
 
 var (
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
-	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4"}
+	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "production"}
 	// ThanosDefaultVersion defines the default version for the Helm chart
-	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "2.4.3"}
+	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "2.4.3", ValuesPath: "production"}
 	// NginxDefaultVersion defines the default version for the Helm chart
-	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0"}
+	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "production"}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "2.8.7"}
+	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "production"}
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0"}
+	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "production"}
 )
 
 // UtilityVersion is an interface that provides the necessary methods

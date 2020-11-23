@@ -139,6 +139,9 @@ var serverCmd = &cobra.Command{
 		balancedInstallationScheduling, _ := command.Flags().GetBool("balanced-installation-scheduling")
 
 		valuesPath, _ := command.Flags().GetString("utility-group-values")
+		if valuesPath == "" {
+			return errors.Errorf("a Gitlab repository for values for the utility group must be specified and cannot be blank")
+		}
 
 		wd, err := os.Getwd()
 		if err != nil {
