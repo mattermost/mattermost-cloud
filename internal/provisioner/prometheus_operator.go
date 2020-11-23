@@ -30,6 +30,7 @@ type prometheusOperator struct {
 	provisioner    *KopsProvisioner
 	desiredVersion string
 	actualVersion  string
+	dns            string
 }
 
 func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheusOperator, error) {
@@ -130,6 +131,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	app := "prometheus"
 	dns := fmt.Sprintf("%s.%s.%s", p.cluster.ID, app, privateDomainName)
 
+	p.dns = dns
 	h := p.NewHelmDeployment(dns)
 
 	err = h.Update()
@@ -167,6 +169,15 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 
 func (p *prometheusOperator) Destroy() error {
 	logger := p.logger.WithField("prometheus-action", "destroy")
+
+	if p.dns == "" {
+		return errors.New("failed to delete prometheus which has probably never existed; the dns field being blank")
+	}
+	helm := p.NewHelmDeployment(p.dns)
+	err := helm.Delete()
+	if err != nil {
+		return errors.Wrap(err, "couldn't delete the Helm deployment")
+	}
 
 	privateDomainName, err := p.awsClient.GetPrivateZoneDomainName(logger)
 	if err != nil {
