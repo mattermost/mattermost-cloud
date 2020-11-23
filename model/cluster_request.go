@@ -63,21 +63,20 @@ func (request *CreateClusterRequest) UnmarshalJSON(bytes []byte) error {
 		utilityVersions[utility] = version
 	}
 
-	request = &CreateClusterRequest{
-		Provider:               raw.Provider,
-		Zones:                  raw.Zones,
-		Version:                raw.Version,
-		KopsAMI:                raw.KopsAMI,
-		MasterInstanceType:     raw.MasterInstanceType,
-		MasterCount:            raw.MasterCount,
-		NodeInstanceType:       raw.NodeInstanceType,
-		NodeMinCount:           raw.NodeMinCount,
-		NodeMaxCount:           raw.NodeMaxCount,
-		AllowInstallations:     raw.AllowInstallations,
-		APISecurityLock:        raw.APISecurityLock,
-		DesiredUtilityVersions: utilityVersions,
-		Annotations:            raw.Annotations,
-	}
+	request.DesiredUtilityVersions = utilityVersions
+
+	request.Provider = raw.Provider
+	request.Zones = raw.Zones
+	request.Version = raw.Version
+	request.KopsAMI = raw.KopsAMI
+	request.MasterInstanceType = raw.MasterInstanceType
+	request.MasterCount = raw.MasterCount
+	request.NodeInstanceType = raw.NodeInstanceType
+	request.NodeMinCount = raw.NodeMinCount
+	request.NodeMaxCount = raw.NodeMaxCount
+	request.AllowInstallations = raw.AllowInstallations
+	request.APISecurityLock = raw.APISecurityLock
+	request.Annotations = raw.Annotations
 
 	return nil
 }

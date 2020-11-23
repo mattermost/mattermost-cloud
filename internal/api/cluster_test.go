@@ -1157,7 +1157,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	var nilVersion *model.HelmUtilityVersion = nil
 	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Nginx)
 	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Fluentbit)
-	assert.Equal(t, nilVersion, utilityMetadata.DesiredVersions.Nginx)
+	assert.Equal(t, &model.HelmUtilityVersion{Chart: "stable"}, utilityMetadata.DesiredVersions.Nginx)
 	assert.Equal(t, &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: ""}, utilityMetadata.DesiredVersions.PrometheusOperator)
 	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
 }
