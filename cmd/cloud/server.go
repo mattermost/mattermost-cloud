@@ -140,7 +140,7 @@ var serverCmd = &cobra.Command{
 
 		valuesPath, _ := command.Flags().GetString("utility-group-values")
 		if valuesPath == "" {
-			return errors.Errorf("a Gitlab repository for values for the utility group must be specified and cannot be blank")
+			return errors.New("a Gitlab repository for values for the utility group must be specified and cannot be blank")
 		}
 
 		wd, err := os.Getwd()
