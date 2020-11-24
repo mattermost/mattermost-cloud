@@ -121,7 +121,6 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
-	logger.Warnf("helm deployment: %+v", chart)
 	arguments := []string{
 		"--debug",
 		"upgrade",
