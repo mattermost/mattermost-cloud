@@ -223,7 +223,7 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 	return &model.GroupStatus{
 		InstallationsTotal:          totalCount,
 		InstallationsUpdated:        updatedCount,
-		InstallationsUnstable:       unstableCount,
+		InstallationsUpdating:       unstableCount,
 		InstallationsAwaitingUpdate: awaitingUpdateCount,
 	}, nil
 }

@@ -13,7 +13,7 @@ import (
 type GroupStatus struct {
 	InstallationsTotal          int64
 	InstallationsUpdated        int64
-	InstallationsUnstable       int64
+	InstallationsUpdating       int64
 	InstallationsAwaitingUpdate int64
 }
 
