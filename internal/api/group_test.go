@@ -520,7 +520,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          0,
 			InstallationsUpdated:        0,
-			InstallationsUnstable:       0,
+			InstallationsUpdating:       0,
 			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := client.GetGroupStatus(group.ID)
@@ -532,7 +532,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          0,
 			InstallationsUpdated:        0,
-			InstallationsUnstable:       0,
+			InstallationsUpdating:       0,
 			InstallationsAwaitingUpdate: 0,
 		}
 		ignoredGroup, err := client.CreateGroup(&model.CreateGroupRequest{
@@ -555,7 +555,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          6,
 			InstallationsUpdated:        2,
-			InstallationsUnstable:       3,
+			InstallationsUpdating:       3,
 			InstallationsAwaitingUpdate: 1,
 		}
 		var differentSequence int64 = -1
@@ -647,7 +647,7 @@ func TestGroupsStatus(t *testing.T) {
 				Status: model.GroupStatus{
 					InstallationsTotal:          0,
 					InstallationsUpdated:        0,
-					InstallationsUnstable:       0,
+					InstallationsUpdating:       0,
 					InstallationsAwaitingUpdate: 0,
 				},
 			},
@@ -656,7 +656,7 @@ func TestGroupsStatus(t *testing.T) {
 				Status: model.GroupStatus{
 					InstallationsTotal:          0,
 					InstallationsUpdated:        0,
-					InstallationsUnstable:       0,
+					InstallationsUpdating:       0,
 					InstallationsAwaitingUpdate: 0,
 				},
 			},
@@ -673,7 +673,7 @@ func TestGroupsStatus(t *testing.T) {
 				Status: model.GroupStatus{
 					InstallationsTotal:          6,
 					InstallationsUpdated:        2,
-					InstallationsUnstable:       3,
+					InstallationsUpdating:       3,
 					InstallationsAwaitingUpdate: 1,
 				},
 			},
@@ -682,7 +682,7 @@ func TestGroupsStatus(t *testing.T) {
 				Status: model.GroupStatus{
 					InstallationsTotal:          0,
 					InstallationsUpdated:        0,
-					InstallationsUnstable:       0,
+					InstallationsUpdating:       0,
 					InstallationsAwaitingUpdate: 0,
 				},
 			},
