@@ -99,7 +99,7 @@ func (n *nginx) ValuesPath() string {
 	if n.desiredVersion == nil {
 		return ""
 	}
-	return n.provisioner.buildValuesPath("nginx_values.yaml", n.desiredVersion.Values())
+	return n.desiredVersion.Values()
 }
 
 func (n *nginx) Migrate() error {

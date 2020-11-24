@@ -166,7 +166,7 @@ func (p *prometheusOperator) ValuesPath() string {
 	if p.desiredVersion == nil {
 		return ""
 	}
-	return p.provisioner.buildValuesPath("prometheus_operator_values.yaml", p.desiredVersion.Values())
+	return p.desiredVersion.Values()
 }
 
 func (p *prometheusOperator) Destroy() error {

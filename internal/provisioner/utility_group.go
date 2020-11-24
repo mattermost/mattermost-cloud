@@ -5,8 +5,6 @@
 package provisioner
 
 import (
-	"fmt"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -163,16 +161,4 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	}
 
 	return nil
-}
-
-// buildValuesPath produces the correct path to the utility
-// specified. utilityPath represents the name of the file in which
-// values reside. version refers to the remote branch name holding the
-// Utility values file. If version is blank, the files are assumed to
-// reside locally in $(cwd)/helm-charts/
-func (provisioner *KopsProvisioner) buildValuesPath(utilityPath, version string) string {
-	if version == "" {
-		return fmt.Sprintf("helm-charts/%s", utilityPath)
-	}
-	return fmt.Sprintf("%s/-/raw/%s/%s", provisioner.valuesPath, version, utilityPath)
 }

@@ -76,7 +76,7 @@ func (n *teleport) ValuesPath() string {
 	if n.desiredVersion == nil {
 		return ""
 	}
-	return n.provisioner.buildValuesPath("teleport_values.yaml", n.desiredVersion.Values())
+	return n.desiredVersion.Values()
 }
 
 func (n *teleport) CreateOrUpgrade() error {

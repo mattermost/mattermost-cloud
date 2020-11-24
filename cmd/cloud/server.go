@@ -64,8 +64,6 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
-
-	serverCmd.PersistentFlags().String("utility-group-values", "", "Gitlab repository from which to fetch utility values")
 }
 
 var serverCmd = &cobra.Command{
@@ -138,11 +136,6 @@ var serverCmd = &cobra.Command{
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
 		balancedInstallationScheduling, _ := command.Flags().GetBool("balanced-installation-scheduling")
 
-		valuesPath, _ := command.Flags().GetString("utility-group-values")
-		if valuesPath == "" {
-			return errors.New("a Gitlab repository for values for the utility group must be specified and cannot be blank")
-		}
-
 		wd, err := os.Getwd()
 		if err != nil {
 			wd = "error getting working directory"
@@ -210,7 +203,6 @@ var serverCmd = &cobra.Command{
 		kopsProvisioner := provisioner.NewKopsProvisioner(
 			s3StateStore,
 			owner,
-			valuesPath,
 			useExistingResources,
 			allowListCIDRRange,
 			resourceUtil,

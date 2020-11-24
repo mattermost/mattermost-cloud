@@ -65,7 +65,7 @@ func (t *thanos) ValuesPath() string {
 	if t.desiredVersion == nil {
 		return ""
 	}
-	return t.provisioner.buildValuesPath("thanos_values.yaml", t.desiredVersion.Values())
+	return t.desiredVersion.Values()
 }
 
 func (t *thanos) CreateOrUpgrade() error {

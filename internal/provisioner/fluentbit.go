@@ -148,7 +148,7 @@ func (f *fluentbit) ValuesPath() string {
 	if f.desiredVersion == nil {
 		return ""
 	}
-	return f.provisioner.buildValuesPath("fluent-bit_values.yaml", f.desiredVersion.Values())
+	return f.desiredVersion.Values()
 }
 
 func (f *fluentbit) updateVersion(h *helmDeployment) error {

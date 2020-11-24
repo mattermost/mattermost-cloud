@@ -41,12 +41,11 @@ type KopsProvisioner struct {
 	resourceUtil            *utils.ResourceUtil
 	logger                  log.FieldLogger
 	store                   model.InstallationDatabaseStoreInterface
-	valuesPath              string
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 // TODO(gsagula): Consider replacing all these paramaters with a struct for readability.
-func NewKopsProvisioner(s3StateStore, owner, valuesPath string, useExistingAWSResources bool, allowCIDRRangeList []string,
+func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, allowCIDRRangeList []string,
 	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
 
 	logger = logger.WithField("provisioner", "kops")
@@ -59,7 +58,6 @@ func NewKopsProvisioner(s3StateStore, owner, valuesPath string, useExistingAWSRe
 		resourceUtil:            resourceUtil,
 		owner:                   owner,
 		store:                   store,
-		valuesPath:              valuesPath,
 	}
 }
 
