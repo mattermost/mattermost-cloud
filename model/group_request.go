@@ -24,20 +24,13 @@ type CreateGroupRequest struct {
 	MattermostEnv   EnvVarMap
 }
 
-// SetDefaults sets the default values for a group create request.
-func (request *CreateGroupRequest) SetDefaults() {
-	if request.MaxRolling == 0 {
-		request.MaxRolling = 1
-	}
-}
-
 // Validate validates the values of a group create request.
 func (request *CreateGroupRequest) Validate() error {
 	if len(request.Name) == 0 {
 		return errors.New("must specify name")
 	}
-	if request.MaxRolling < 1 {
-		return errors.New("max rolling must be 1 or greater")
+	if request.MaxRolling < 0 {
+		return errors.New("max rolling must be 0 or greater")
 	}
 	err := request.MattermostEnv.Validate()
 	if err != nil {
@@ -55,7 +48,6 @@ func NewCreateGroupRequestFromReader(reader io.Reader) (*CreateGroupRequest, err
 		return nil, errors.Wrap(err, "failed to decode create group request")
 	}
 
-	createGroupRequest.SetDefaults()
 	err = createGroupRequest.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid group create request")
@@ -121,8 +113,8 @@ func (p *PatchGroupRequest) Validate() error {
 	if p.Name != nil && len(*p.Name) == 0 {
 		return errors.New("provided name update value was blank")
 	}
-	if p.MaxRolling != nil && *p.MaxRolling < 1 {
-		return errors.New("max rolling must be 1 or greater")
+	if p.MaxRolling != nil && *p.MaxRolling < 0 {
+		return errors.New("max rolling must be 0 or greater")
 	}
 	// EnvVarMap validation is skipped as all configurations of this now imply
 	// a specific patch action should be taken.

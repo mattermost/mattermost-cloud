@@ -55,8 +55,6 @@ func TestCreateGroupRequestValid(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			tc.request.SetDefaults()
-
 			if tc.requireError {
 				assert.Error(t, tc.request.Validate())
 			} else {

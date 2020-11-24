@@ -943,8 +943,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		err = sqlStore.CreateGroup(group)
 		require.NoError(t, err)
 		// Group Sequence always set to 0 when created so we need to update it.
-		group.Sequence = 2
-		err = sqlStore.UpdateGroup(group)
+		err = sqlStore.UpdateGroup(group, true)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1388,7 +1387,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		// Group Sequence always set to 0 when created so we need to update it
 		// by calling group update once.
 		oldSequence := group.Sequence
-		err = sqlStore.UpdateGroup(group)
+		err = sqlStore.UpdateGroup(group, true)
 		require.NoError(t, err)
 		require.NotEqual(t, oldSequence, group.Sequence)
 
