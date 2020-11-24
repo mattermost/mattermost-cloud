@@ -667,24 +667,22 @@ func TestGroupsStatus(t *testing.T) {
 	})
 
 	t.Run("count installations", func(t *testing.T) {
-		expectedStatus := &[]model.GroupsStatus{
-			{
-				ID: group.ID,
-				Status: model.GroupStatus{
-					InstallationsTotal:          6,
-					InstallationsUpdated:        2,
-					InstallationsUpdating:       3,
-					InstallationsAwaitingUpdate: 1,
-				},
+		expectedStatusGroup1 := &model.GroupsStatus{
+			ID: group.ID,
+			Status: model.GroupStatus{
+				InstallationsTotal:          6,
+				InstallationsUpdated:        2,
+				InstallationsUpdating:       3,
+				InstallationsAwaitingUpdate: 1,
 			},
-			{
-				ID: group2.ID,
-				Status: model.GroupStatus{
-					InstallationsTotal:          0,
-					InstallationsUpdated:        0,
-					InstallationsUpdating:       0,
-					InstallationsAwaitingUpdate: 0,
-				},
+		}
+		expectedStatusGroup2 := &model.GroupsStatus{
+			ID: group2.ID,
+			Status: model.GroupStatus{
+				InstallationsTotal:          0,
+				InstallationsUpdated:        0,
+				InstallationsUpdating:       0,
+				InstallationsAwaitingUpdate: 0,
 			},
 		}
 		var differentSequence int64 = -1
@@ -702,7 +700,15 @@ func TestGroupsStatus(t *testing.T) {
 
 		groupsStatus, err := client.GetGroupsStatus()
 		require.NoError(t, err)
-		assert.Equal(t, expectedStatus, groupsStatus)
+		require.NotNil(t, groupsStatus)
+		assert.Len(t, *groupsStatus, 2)
+		for _, gs := range *groupsStatus {
+			if gs.ID == group.ID {
+				assert.Equal(t, expectedStatusGroup1, &gs)
+			} else if gs.ID == group2.ID {
+				assert.Equal(t, expectedStatusGroup2, &gs)
+			}
+		}
 	})
 
 }
