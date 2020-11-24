@@ -20,6 +20,7 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupsRouter := apiRouter.PathPrefix("/groups").Subrouter()
 	groupsRouter.Handle("", addContext(handleGetGroups)).Methods("GET")
 	groupsRouter.Handle("", addContext(handleCreateGroup)).Methods("POST")
+	groupsRouter.Handle("/status", addContext(handleGetGroupsStatus)).Methods("GET")
 
 	groupRouter := apiRouter.PathPrefix("/group/{group:[A-Za-z0-9]{26}}").Subrouter()
 	groupRouter.Handle("", addContext(handleGetGroup)).Methods("GET")
@@ -226,4 +227,48 @@ func handleGetGroupStatus(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, groupStatus)
+}
+
+// handleGetGroupsStatus responds to GET /api/groups/status,
+// returning the rollout status of all groups.
+func handleGetGroupsStatus(c *Context, w http.ResponseWriter, r *http.Request) {
+	filter := &model.GroupFilter{
+		PerPage:        model.AllPerPage,
+		IncludeDeleted: false,
+	}
+
+	groups, err := c.Store.GetGroups(filter)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query groups")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if groups == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var groupsStatus []model.GroupsStatus
+
+	for _, group := range groups {
+		var groupStatus model.GroupsStatus
+		status, err := c.Store.GetGroupStatus(group.ID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to query group status")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if status == nil {
+			continue
+		}
+
+		groupStatus.ID = group.ID
+		groupStatus.Status = *status
+
+		groupsStatus = append(groupsStatus, groupStatus)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, groupsStatus)
 }
