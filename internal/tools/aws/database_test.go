@@ -90,6 +90,11 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 			}, nil).
 			Times(1),
 
+		// Get single tenant database configuration.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().GetSingleTenantDatabaseConfigForInstallation(a.InstallationA.ID).
+			Return(&model.SingleTenantDatabaseConfig{PrimaryInstanceType: "db.r5.large", ReplicaInstanceType: "db.r5.small", ReplicasCount: 1}, nil).
+			Times(1),
+
 		// Retrive the Availability Zones.
 		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
 			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
@@ -170,6 +175,11 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 			Do(func(input *kms.DescribeKeyInput) {
 				a.Assert().Equal(*input.KeyId, a.ResourceARN)
 			}).
+			Times(1),
+
+		// Get single tenant database configuration.
+		a.Mocks.Model.DatabaseInstallationStore.EXPECT().GetSingleTenantDatabaseConfigForInstallation(a.InstallationA.ID).
+			Return(&model.SingleTenantDatabaseConfig{PrimaryInstanceType: "db.r5.large", ReplicaInstanceType: "db.r5.small", ReplicasCount: 1}, nil).
 			Times(1),
 
 		// Retrive the Availability Zones.
@@ -313,6 +323,20 @@ func (a *AWSTestSuite) SetExpectCreateDBInstance() {
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 			}).
 			Times(1),
+
+		a.Mocks.API.RDS.EXPECT().
+			DescribeDBInstances(gomock.Any()).
+			Return(nil, errors.New("db cluster instance does not exist")).
+			Do(func(input *rds.DescribeDBInstancesInput) {
+				a.Assert().Equal(*input.DBInstanceIdentifier, RDSReplicaInstanceID(a.InstallationA.ID, 0))
+			}),
+
+		a.Mocks.API.RDS.EXPECT().
+			CreateDBInstance(gomock.Any()).Return(nil, nil).
+			Do(func(input *rds.CreateDBInstanceInput) {
+				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
+				a.Assert().Equal(*input.DBInstanceIdentifier, RDSReplicaInstanceID(a.InstallationA.ID, 0))
+			}),
 
 		a.Mocks.Log.Logger.EXPECT().WithField("db-instance-name", RDSMasterInstanceID(a.InstallationA.ID)).
 			Return(testlib.NewLoggerEntry()).

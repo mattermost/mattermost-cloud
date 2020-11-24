@@ -5,7 +5,10 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
@@ -36,4 +39,32 @@ func webhookHandler(w http.ResponseWriter, r *http.Request, c chan *model.Webhoo
 	logger.Debugf("[ %s | %s ] %s -> %s", wType, webhook.ID[0:4], webhook.OldState, webhook.NewState)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func startWebhookListener(port string, c chan *model.WebhookPayload) func() {
+	logger.Infof("Starting cloud webhook listener on port %s", port)
+
+	srv := &http.Server{Addr: fmt.Sprintf(":%s", port)}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		webhookHandler(w, r, c)
+	})
+
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			logger.WithError(err).Fatal("Failed to run webhook listener")
+		}
+	}()
+
+	shutdown := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			logger.WithError(err).Error("Failed to gracefully shutdown webhook listener")
+		}
+	}
+
+	return shutdown
 }

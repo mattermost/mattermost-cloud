@@ -73,9 +73,14 @@ func KMSKeyDescriptionRDS(awsID string) string {
 	return fmt.Sprintf("Key used for encrypting databases in the RDS cluster %v", awsID)
 }
 
-// RDSMasterInstanceID formats the name used for RDS database instances.
+// RDSMasterInstanceID formats the name used for RDS database master instances.
 func RDSMasterInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-master", CloudID(installationID))
+}
+
+// RDSReplicaInstanceID formats the name used for RDS database replica instances.
+func RDSReplicaInstanceID(installationID string, id int) string {
+	return fmt.Sprintf("%s-replica-%d", CloudID(installationID), id)
 }
 
 // RDSMigrationInstanceID formats the name used for migrated RDS database instances.

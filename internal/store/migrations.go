@@ -1170,4 +1170,16 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.22.0"), semver.MustParse("0.23.0"), func(e execer) error {
+		// Add SingleTenantDatabaseConfigRaw column for installations.
+		_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN SingleTenantDatabaseConfigRaw BYTEA NULL;
+				`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

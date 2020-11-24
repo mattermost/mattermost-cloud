@@ -7,6 +7,7 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -20,15 +21,16 @@ func init() {
 		Select(
 			"ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
-			"MattermostEnvRaw", "CreateAt", "DeleteAt", "APISecurityLock",
-			"LockAcquiredBy", "LockAcquiredAt",
+			"MattermostEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
 		).
 		From("Installation")
 }
 
 type rawInstallation struct {
 	*model.Installation
-	MattermostEnvRaw []byte
+	MattermostEnvRaw              []byte
+	SingleTenantDatabaseConfigRaw []byte
 }
 
 type rawInstallations []*rawInstallation
@@ -43,8 +45,17 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 	}
-
 	r.Installation.MattermostEnv = *mattermostEnv
+
+	if r.SingleTenantDatabaseConfigRaw != nil {
+		singleTenantDBConfig := &model.SingleTenantDatabaseConfig{}
+		err = json.Unmarshal(r.SingleTenantDatabaseConfigRaw, singleTenantDBConfig)
+		if err != nil {
+			return nil, err
+		}
+		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig
+	}
+
 	return r.Installation, nil
 }
 
@@ -203,6 +214,35 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 	return installations, nil
 }
 
+// GetSingleTenantDatabaseConfigForInstallation fetches single tenant database configuration
+// for specified installation.
+func (sqlStore *SQLStore) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
+	builder := sq.Select("SingleTenantDatabaseConfigRaw").
+		From("Installation").
+		Where("ID = ?", installationID)
+
+	dbConfig := struct {
+		SingleTenantDatabaseConfigRaw []byte
+	}{}
+
+	err := sqlStore.getBuilder(sqlStore.db, &dbConfig, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get single tenant database configuration by installationID")
+	}
+
+	if dbConfig.SingleTenantDatabaseConfigRaw == nil {
+		return nil, fmt.Errorf("single tenant database configuration does not exist for installation")
+	}
+
+	singleTenantDBConfig := model.SingleTenantDatabaseConfig{}
+	err = json.Unmarshal(dbConfig.SingleTenantDatabaseConfigRaw, &singleTenantDBConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshall single tenant database configuration")
+	}
+
+	return &singleTenantDBConfig, nil
+}
+
 // CreateInstallation records the given installation to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, annotations []*model.Annotation) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
@@ -245,29 +285,41 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
+	insertsMap := map[string]interface{}{
+		"ID":               installation.ID,
+		"OwnerID":          installation.OwnerID,
+		"GroupID":          installation.GroupID,
+		"GroupSequence":    nil,
+		"Version":          installation.Version,
+		"Image":            installation.Image,
+		"DNS":              installation.DNS,
+		"Database":         installation.Database,
+		"Filestore":        installation.Filestore,
+		"Size":             installation.Size,
+		"Affinity":         installation.Affinity,
+		"State":            installation.State,
+		"License":          installation.License,
+		"MattermostEnvRaw": []byte(envJSON),
+		"CreateAt":         installation.CreateAt,
+		"DeleteAt":         0,
+		"APISecurityLock":  installation.APISecurityLock,
+		"LockAcquiredBy":   nil,
+		"LockAcquiredAt":   0,
+	}
+
+	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
+	if err != nil {
+		return errors.Wrap(err, "unable to marshal SingleTenantDatabaseConfig")
+	}
+
+	// For Postgres we cannot set typed nil as it is not mapped to NULL value.
+	if singleTenantDBConfJSON != nil {
+		insertsMap["SingleTenantDatabaseConfigRaw"] = singleTenantDBConfJSON
+	}
+
 	_, err = sqlStore.execBuilder(db, sq.
 		Insert("Installation").
-		SetMap(map[string]interface{}{
-			"ID":               installation.ID,
-			"OwnerID":          installation.OwnerID,
-			"GroupID":          installation.GroupID,
-			"GroupSequence":    nil,
-			"Version":          installation.Version,
-			"Image":            installation.Image,
-			"DNS":              installation.DNS,
-			"Database":         installation.Database,
-			"Filestore":        installation.Filestore,
-			"Size":             installation.Size,
-			"Affinity":         installation.Affinity,
-			"State":            installation.State,
-			"License":          installation.License,
-			"MattermostEnvRaw": []byte(envJSON),
-			"CreateAt":         installation.CreateAt,
-			"DeleteAt":         0,
-			"APISecurityLock":  installation.APISecurityLock,
-			"LockAcquiredBy":   nil,
-			"LockAcquiredAt":   0,
-		}),
+		SetMap(insertsMap),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create installation")

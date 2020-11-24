@@ -53,6 +53,7 @@ type installationStore interface {
 	UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
 	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
+	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error)
 
 	GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error)
 
@@ -76,31 +77,46 @@ type installationProvisioner interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type InstallationSupervisor struct {
-	store                              installationStore
-	provisioner                        installationProvisioner
-	aws                                aws.AWS
-	instanceID                         string
+	store             installationStore
+	provisioner       installationProvisioner
+	aws               aws.AWS
+	instanceID        string
+	keepDatabaseData  bool
+	keepFilestoreData bool
+	scheduling        InstallationSupervisorSchedulingOptions
+	resourceUtil      *utils.ResourceUtil
+	logger            log.FieldLogger
+}
+
+// InstallationSupervisorSchedulingOptions are the various options that control
+// how installation scheduling occurs.
+type InstallationSupervisorSchedulingOptions struct {
+	balanceInstallations               bool
 	clusterResourceThreshold           int
 	clusterResourceThresholdScaleValue int
-	keepDatabaseData                   bool
-	keepFilestoreData                  bool
-	resourceUtil                       *utils.ResourceUtil
-	logger                             log.FieldLogger
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, threshold, thresholdScaleValue int, keepDatabaseData, keepFilestoreData bool, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, keepDatabaseData, keepFilestoreData bool, scheduling InstallationSupervisorSchedulingOptions, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
 	return &InstallationSupervisor{
-		store:                              store,
-		provisioner:                        installationProvisioner,
-		aws:                                aws,
-		instanceID:                         instanceID,
-		clusterResourceThreshold:           threshold,
-		clusterResourceThresholdScaleValue: thresholdScaleValue,
-		keepDatabaseData:                   keepDatabaseData,
-		keepFilestoreData:                  keepFilestoreData,
-		resourceUtil:                       resourceUtil,
-		logger:                             logger,
+		store:             store,
+		provisioner:       installationProvisioner,
+		aws:               aws,
+		instanceID:        instanceID,
+		keepDatabaseData:  keepDatabaseData,
+		keepFilestoreData: keepFilestoreData,
+		scheduling:        scheduling,
+		resourceUtil:      resourceUtil,
+		logger:            logger,
+	}
+}
+
+// NewInstallationSupervisorSchedulingOptions creates a new InstallationSupervisorSchedulingOptions.
+func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clusterResourceThreshold, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
+	return InstallationSupervisorSchedulingOptions{
+		balanceInstallations:               balanceInstallations,
+		clusterResourceThreshold:           clusterResourceThreshold,
+		clusterResourceThresholdScaleValue: clusterResourceThresholdScaleValue,
 	}
 }
 
@@ -308,6 +324,11 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		return model.InstallationStateCreationRequested
 	}
 
+	if s.scheduling.balanceInstallations {
+		logger.Info("Attempting to schedule installation on the lowest-utilized cluster")
+		clusters = s.prioritizeLowerUtilizedClusters(clusters, installation, instanceID, logger)
+	}
+
 	for _, cluster := range clusters {
 		clusterInstallation := s.createClusterInstallation(cluster, installation, instanceID, logger)
 		if clusterInstallation != nil {
@@ -321,6 +342,64 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	return model.InstallationStateCreationNoCompatibleClusters
 }
 
+// prioritizeLowerUtilizedClusters attempts filter the given cluster list and
+// order it by lowest resource usage first. This should be considered best
+// effort.
+// Note the following:
+//   - This check is done without locking to avoid creating additional
+//     congestion.
+//   - Resource usage ordering is done by taking an average of CPU + memory
+//     percentages.
+//   - The returned list will generally be in order of lowest-to-highest
+//     resource usage, but the only guarantee is that the first cluster in the
+//     list will be the lowest at the time it was checked.
+//   - When scheduling an installation, all of the standard scheduling checks
+//     should be performed again under cluster lock.
+func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*model.Cluster, installation *model.Installation, instanceID string, logger log.FieldLogger) []*model.Cluster {
+	lowestResourcePercent := 10000
+	var filteredPrioritizedClusters []*model.Cluster
+
+	for _, cluster := range clusters {
+		if !s.installationCanBeScheduledOnCluster(cluster, installation, logger) {
+			continue
+		}
+
+		clusterResources, err := s.provisioner.GetClusterResources(cluster, true)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster resources")
+			continue
+		}
+		size, err := mmv1alpha1.GetClusterSize(installation.Size)
+		if err != nil {
+			logger.WithError(err).Error("Invalid cluster installation size")
+			continue
+		}
+
+		installationCPURequirement := size.CalculateCPUMilliRequirement(
+			installation.InternalDatabase(),
+			installation.InternalFilestore(),
+		)
+		installationMemRequirement := size.CalculateMemoryMilliRequirement(
+			installation.InternalDatabase(),
+			installation.InternalFilestore(),
+		)
+		cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
+		memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
+		combinedPercent := (cpuPercent + memoryPercent) / 2
+		logger.Debugf("Cluster %s analyzed with %d%% expected resource usage", cluster.ID, combinedPercent)
+		if combinedPercent < lowestResourcePercent {
+			// This is the lowest utilized cluster so far so prepend.
+			filteredPrioritizedClusters = append([]*model.Cluster{cluster}, filteredPrioritizedClusters...)
+			lowestResourcePercent = combinedPercent
+		} else {
+			// Otherwise just append it to the end of the list.
+			filteredPrioritizedClusters = append(filteredPrioritizedClusters, cluster)
+		}
+	}
+
+	return filteredPrioritizedClusters
+}
+
 // createClusterInstallation attempts to schedule a cluster installation onto the given cluster.
 func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluster, installation *model.Installation, instanceID string, logger log.FieldLogger) *model.ClusterInstallation {
 	clusterLock := newClusterLock(cluster.ID, instanceID, s.store, logger)
@@ -330,47 +409,8 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	}
 	defer clusterLock.Unlock()
 
-	if cluster.State != model.ClusterStateStable {
-		logger.Debugf("Cluster %s is not stable (currently %s)", cluster.ID, cluster.State)
+	if !s.installationCanBeScheduledOnCluster(cluster, installation, logger) {
 		return nil
-	}
-	if !cluster.AllowInstallations {
-		logger.Debugf("Cluster %s is set to not allow for new installation scheduling", cluster.ID)
-		return nil
-	}
-
-	existingClusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:   model.AllPerPage,
-		ClusterID: cluster.ID,
-	})
-
-	////////////////////////////////////////////////////////////////////////////
-	//                              MULTI-TENANCY                             //
-	////////////////////////////////////////////////////////////////////////////
-	// Current model:                                                         //
-	// - isolation=true  | 1 cluster installations                            //
-	// - isolation=false | X cluster installations, where "X" is as many as   //
-	//                     will fit with the given CPU and Memory threshold.  //
-	////////////////////////////////////////////////////////////////////////////
-	if installation.Affinity == model.InstallationAffinityIsolated {
-		if len(existingClusterInstallations) > 0 {
-			logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
-			return nil
-		}
-	} else {
-		if len(existingClusterInstallations) == 1 {
-			// This should be the only scenario where we need to check if the
-			// cluster installation running requires isolation or not.
-			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID, true, false)
-			if err != nil {
-				logger.WithError(err).Warn("Unable to find installation")
-				return nil
-			}
-			if installation.Affinity == model.InstallationAffinityIsolated {
-				logger.Debugf("Cluster %s already has an isolated installation %s", cluster.ID, installation.ID)
-				return nil
-			}
-		}
 	}
 
 	// Begin final resource check.
@@ -397,13 +437,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
 
-	if cpuPercent > s.clusterResourceThreshold || memoryPercent > s.clusterResourceThreshold {
-		if s.clusterResourceThresholdScaleValue == 0 ||
+	if cpuPercent > s.scheduling.clusterResourceThreshold || memoryPercent > s.scheduling.clusterResourceThreshold {
+		if s.scheduling.clusterResourceThresholdScaleValue == 0 ||
 			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
 			cluster.State != model.ClusterStateStable {
 			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%% (+%dm), Memory=%d%% (+%dMi)",
 				cluster.ID,
-				s.clusterResourceThreshold,
+				s.scheduling.clusterResourceThreshold,
 				cpuPercent, installationCPURequirement,
 				memoryPercent, installationMemRequirement/1048576000, // Have to convert to Mi
 			)
@@ -415,7 +455,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		// updating the cluster. We should try to reuse some of the API flow
 		// that already does this.
 
-		newWorkerCount := cluster.ProvisionerMetadataKops.NodeMinCount + int64(s.clusterResourceThresholdScaleValue)
+		newWorkerCount := cluster.ProvisionerMetadataKops.NodeMinCount + int64(s.scheduling.clusterResourceThresholdScaleValue)
 		if newWorkerCount > cluster.ProvisionerMetadataKops.NodeMaxCount {
 			newWorkerCount = cluster.ProvisionerMetadataKops.NodeMaxCount
 		}
@@ -480,6 +520,60 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%", cluster.ID, cpuPercent, memoryPercent)
 
 	return clusterInstallation
+}
+
+// installationCanBeScheduledOnCluster checks if the given installation can be
+// scheduled on the given cluster in regards to configuration and state. This
+// does not include resource checks.
+func (s *InstallationSupervisor) installationCanBeScheduledOnCluster(cluster *model.Cluster, installation *model.Installation, logger log.FieldLogger) bool {
+	if cluster.State != model.ClusterStateStable {
+		logger.Debugf("Cluster %s is not stable (currently %s)", cluster.ID, cluster.State)
+		return false
+	}
+	if !cluster.AllowInstallations {
+		logger.Debugf("Cluster %s is set to not allow for new installation scheduling", cluster.ID)
+		return false
+	}
+
+	existingClusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		PerPage:   model.AllPerPage,
+		ClusterID: cluster.ID,
+	})
+	if err != nil {
+		logger.WithError(err).Error("Failed to get existing cluster installations")
+		return false
+	}
+
+	////////////////////////////////////////////////////////////////////////////
+	//                              MULTI-TENANCY                             //
+	////////////////////////////////////////////////////////////////////////////
+	// Current model:                                                         //
+	// - isolation=true  | 1 cluster installations                            //
+	// - isolation=false | X cluster installations, where "X" is as many as   //
+	//                     will fit with the given CPU and Memory threshold.  //
+	////////////////////////////////////////////////////////////////////////////
+	if installation.Affinity == model.InstallationAffinityIsolated {
+		if len(existingClusterInstallations) > 0 {
+			logger.Debugf("Cluster %s already has %d installations", cluster.ID, len(existingClusterInstallations))
+			return false
+		}
+	} else {
+		if len(existingClusterInstallations) == 1 {
+			// This should be the only scenario where we need to check if the
+			// cluster installation running requires isolation or not.
+			installation, err := s.store.GetInstallation(existingClusterInstallations[0].InstallationID, true, false)
+			if err != nil {
+				logger.WithError(err).Error("Failed to get existing installation")
+				return false
+			}
+			if installation.Affinity == model.InstallationAffinityIsolated {
+				logger.Debugf("Cluster %s already has an isolated installation %s", cluster.ID, installation.ID)
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func (s *InstallationSupervisor) preProvisionInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {

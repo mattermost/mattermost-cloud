@@ -162,19 +162,20 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	installation := model.Installation{
-		OwnerID:         createInstallationRequest.OwnerID,
-		GroupID:         &createInstallationRequest.GroupID,
-		Version:         createInstallationRequest.Version,
-		Image:           createInstallationRequest.Image,
-		DNS:             createInstallationRequest.DNS,
-		Database:        createInstallationRequest.Database,
-		Filestore:       createInstallationRequest.Filestore,
-		License:         createInstallationRequest.License,
-		Size:            createInstallationRequest.Size,
-		Affinity:        createInstallationRequest.Affinity,
-		APISecurityLock: createInstallationRequest.APISecurityLock,
-		MattermostEnv:   createInstallationRequest.MattermostEnv,
-		State:           model.InstallationStateCreationRequested,
+		OwnerID:                    createInstallationRequest.OwnerID,
+		GroupID:                    &createInstallationRequest.GroupID,
+		Version:                    createInstallationRequest.Version,
+		Image:                      createInstallationRequest.Image,
+		DNS:                        createInstallationRequest.DNS,
+		Database:                   createInstallationRequest.Database,
+		Filestore:                  createInstallationRequest.Filestore,
+		License:                    createInstallationRequest.License,
+		Size:                       createInstallationRequest.Size,
+		Affinity:                   createInstallationRequest.Affinity,
+		APISecurityLock:            createInstallationRequest.APISecurityLock,
+		MattermostEnv:              createInstallationRequest.MattermostEnv,
+		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
+		State:                      model.InstallationStateCreationRequested,
 	}
 
 	annotations, err := model.AnnotationsFromStringSlice(createInstallationRequest.Annotations)
