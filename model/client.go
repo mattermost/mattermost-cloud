@@ -802,6 +802,26 @@ func (c *Client) GetGroupStatus(groupID string) (*GroupStatus, error) {
 	}
 }
 
+// GetGroupsStatus fetches the status for all groups.
+func (c *Client) GetGroupsStatus() (*[]GroupsStatus, error) {
+	resp, err := c.doGet(c.buildURL("/api/groups/status"))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return GroupsStatusFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // JoinGroup joins an installation to the given group, leaving any existing group.
 func (c *Client) JoinGroup(groupID, installationID string) error {
 	resp, err := c.doPut(c.buildURL("/api/installation/%s/group/%s", installationID, groupID), nil)

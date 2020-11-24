@@ -13,8 +13,14 @@ import (
 type GroupStatus struct {
 	InstallationsTotal          int64
 	InstallationsUpdated        int64
-	InstallationsUnstable       int64
+	InstallationsUpdating       int64
 	InstallationsAwaitingUpdate int64
+}
+
+// GroupsStatus represents the status of a groups.
+type GroupsStatus struct {
+	ID     string
+	Status GroupStatus
 }
 
 // GroupStatusFromReader decodes a json-encoded group status from the given io.Reader.
@@ -27,4 +33,16 @@ func GroupStatusFromReader(reader io.Reader) (*GroupStatus, error) {
 	}
 
 	return &groupStatus, nil
+}
+
+// GroupsStatusFromReader decodes a json-encoded groups status from the given io.Reader.
+func GroupsStatusFromReader(reader io.Reader) (*[]GroupsStatus, error) {
+	groupsStatus := []GroupsStatus{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&groupsStatus)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return &groupsStatus, nil
 }
