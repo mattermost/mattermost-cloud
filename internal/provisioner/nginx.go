@@ -122,7 +122,6 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "nginx",
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.service.internal.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *awsACMCert.CertificateArn, *awsACMPrivateCert.CertificateArn),
-		valuesPath:          n.ValuesPath(),
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,

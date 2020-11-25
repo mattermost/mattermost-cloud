@@ -188,7 +188,6 @@ func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeploym
 		logger:              t.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          t.ValuesPath(),
 		desiredVersion:      t.desiredVersion,
 	}
 }

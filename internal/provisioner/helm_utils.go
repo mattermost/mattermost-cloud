@@ -25,7 +25,6 @@ type helmDeployment struct {
 	chartName           string
 	namespace           string
 	setArgument         string
-	valuesPath          string
 	desiredVersion      model.UtilityVersion
 
 	cluster         *model.Cluster
@@ -127,7 +126,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		chart.chartDeploymentName,
 		chart.chartName,
 		"--kubeconfig", configPath,
-		"-f", chart.valuesPath,
+		"-f", chart.desiredVersion.Values(),
 		"--namespace", chart.namespace,
 		"--install",
 		"--create-namespace",

@@ -204,7 +204,6 @@ func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeploy
 		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
-		valuesPath:          p.ValuesPath(),
 		desiredVersion:      p.desiredVersion,
 	}
 }
