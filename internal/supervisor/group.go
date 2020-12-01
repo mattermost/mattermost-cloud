@@ -5,6 +5,7 @@
 package supervisor
 
 import (
+	"math/rand"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -72,8 +73,12 @@ func (s *GroupSupervisor) Do() error {
 
 // Supervise schedules the required work on the given group.
 func (s *GroupSupervisor) Supervise(group *model.Group) {
+	rollingIsPaused := group.MaxRolling == 0
 	logger := s.logger.WithFields(log.Fields{
-		"group": group.ID,
+		"groupID":         group.ID,
+		"groupName":       group.Name,
+		"maxRolling":      group.MaxRolling,
+		"rollingIsPaused": rollingIsPaused,
 	})
 
 	groupLock := newGroupLock(group.ID, s.instanceID, s.store, logger)
@@ -84,6 +89,11 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 
 	logger.Debug("Supervising group")
 
+	if rollingIsPaused {
+		logger.Warn("Group rolling update is paused (MaxRolling=0); skipping...")
+		return
+	}
+
 	groupMetadata, err := s.store.GetGroupRollingMetadata(group.ID)
 	if err != nil {
 		logger.WithError(err).Error("Unable to get installations in group")
@@ -91,7 +101,6 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"maxRolling":            group.MaxRolling,
 		"installations-total":   groupMetadata.InstallationTotalCount,
 		"installations-rolling": groupMetadata.InstallationNonStableCount,
 	})
@@ -100,6 +109,12 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 		logger.Infof("Group already has %d rolling installations with a max of %d", groupMetadata.InstallationNonStableCount, group.MaxRolling)
 		return
 	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(groupMetadata.InstallationIDsToBeRolled), func(i, j int) {
+		groupMetadata.InstallationIDsToBeRolled[i], groupMetadata.InstallationIDsToBeRolled[j] =
+			groupMetadata.InstallationIDsToBeRolled[j], groupMetadata.InstallationIDsToBeRolled[i]
+	})
 
 	var moved int64
 	for _, id := range groupMetadata.InstallationIDsToBeRolled {

@@ -141,7 +141,7 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if patchGroupRequest.Apply(group) {
-		err := c.Store.UpdateGroup(group)
+		err := c.Store.UpdateGroup(group, patchGroupRequest.ForceSequenceUpdate)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update group")
 			w.WriteHeader(http.StatusInternalServerError)

@@ -356,7 +356,7 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 	require.Len(t, groups, 1)
 
 	group1.Version = "new-version"
-	err = sqlStore.UpdateGroup(group1)
+	err = sqlStore.UpdateGroup(group1, false)
 	require.NoError(t, err)
 
 	groups, err = sqlStore.GetUnlockedGroupsPendingWork()
@@ -499,7 +499,7 @@ func TestUpdateGroup(t *testing.T) {
 
 	oldSequence := group1.Sequence
 
-	err = sqlStore.UpdateGroup(group1)
+	err = sqlStore.UpdateGroup(group1, false)
 	require.NoError(t, err)
 	assert.Equal(t, oldSequence+1, group1.Sequence)
 
@@ -507,9 +507,25 @@ func TestUpdateGroup(t *testing.T) {
 	group1.Sequence = 9001
 	group1.Version = "version4"
 
-	err = sqlStore.UpdateGroup(group1)
+	err = sqlStore.UpdateGroup(group1, false)
 	require.NoError(t, err)
 	assert.Equal(t, oldSequence+1, group1.Sequence)
+
+	oldSequence = group1.Sequence
+	group1.Name = "name4"
+	err = sqlStore.UpdateGroup(group1, false)
+	require.NoError(t, err)
+	assert.Equal(t, oldSequence, group1.Sequence)
+
+	group1.Description = "description4"
+	err = sqlStore.UpdateGroup(group1, false)
+	require.NoError(t, err)
+	assert.Equal(t, oldSequence, group1.Sequence)
+
+	group1.MaxRolling = 9001
+	err = sqlStore.UpdateGroup(group1, false)
+	require.NoError(t, err)
+	assert.Equal(t, oldSequence, group1.Sequence)
 
 	actualGroup1, err := sqlStore.GetGroup(group1.ID)
 	require.NoError(t, err)
