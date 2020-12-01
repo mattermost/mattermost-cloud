@@ -254,13 +254,3 @@ func (u *HelmUtilityVersion) Version() string {
 func (u *HelmUtilityVersion) Values() string {
 	return u.ValuesPath
 }
-
-// SetValues sets the ValuesPath and satisfies the UtilityVersion interface
-func (u *HelmUtilityVersion) SetValues(valuesLocation string) {
-	u.ValuesPath = valuesLocation
-}
-
-// SetVersion sets the chart version and satisfies the UtilityVersion interface
-func (u *HelmUtilityVersion) SetVersion(version string) {
-	u.Chart = version
-}
