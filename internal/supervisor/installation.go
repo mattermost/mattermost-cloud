@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
@@ -86,6 +87,7 @@ type InstallationSupervisor struct {
 	scheduling        InstallationSupervisorSchedulingOptions
 	resourceUtil      *utils.ResourceUtil
 	logger            log.FieldLogger
+	metrics           *metrics.CloudMetrics
 }
 
 // InstallationSupervisorSchedulingOptions are the various options that control
@@ -97,7 +99,7 @@ type InstallationSupervisorSchedulingOptions struct {
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, keepDatabaseData, keepFilestoreData bool, scheduling InstallationSupervisorSchedulingOptions, resourceUtil *utils.ResourceUtil, logger log.FieldLogger) *InstallationSupervisor {
+func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, keepDatabaseData, keepFilestoreData bool, scheduling InstallationSupervisorSchedulingOptions, resourceUtil *utils.ResourceUtil, logger log.FieldLogger, metrics *metrics.CloudMetrics) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -108,6 +110,7 @@ func NewInstallationSupervisor(store installationStore, installationProvisioner 
 		scheduling:        scheduling,
 		resourceUtil:      resourceUtil,
 		logger:            logger,
+		metrics:           metrics,
 	}
 }
 
@@ -1035,6 +1038,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 
 func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
 	logger.Info("Finished final creation tasks")
+	s.metrics.InstallationCreationDurationHist.Observe(elapsedTimeInSeconds(installation.CreateAt))
 	return model.InstallationStateStable
 }
 
@@ -1088,4 +1092,8 @@ func annotationsToIDs(annotations []*model.Annotation) []string {
 		ids = append(ids, ann.ID)
 	}
 	return ids
+}
+
+func elapsedTimeInSeconds(createAtMillis int64) float64 {
+	return float64(time.Now().Unix()*1000-createAtMillis) / 1000
 }
