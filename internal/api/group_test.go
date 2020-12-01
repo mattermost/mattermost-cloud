@@ -520,7 +520,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          0,
 			InstallationsUpdated:        0,
-			InstallationsUnstable:       0,
+			InstallationsUpdating:       0,
 			InstallationsAwaitingUpdate: 0,
 		}
 		groupStatus, err := client.GetGroupStatus(group.ID)
@@ -532,7 +532,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          0,
 			InstallationsUpdated:        0,
-			InstallationsUnstable:       0,
+			InstallationsUpdating:       0,
 			InstallationsAwaitingUpdate: 0,
 		}
 		ignoredGroup, err := client.CreateGroup(&model.CreateGroupRequest{
@@ -555,7 +555,7 @@ func TestGroupStatus(t *testing.T) {
 		expectedStatus := &model.GroupStatus{
 			InstallationsTotal:          6,
 			InstallationsUpdated:        2,
-			InstallationsUnstable:       3,
+			InstallationsUpdating:       3,
 			InstallationsAwaitingUpdate: 1,
 		}
 		var differentSequence int64 = -1
@@ -581,4 +581,134 @@ func TestGroupStatus(t *testing.T) {
 		require.Nil(t, groupStatus)
 		require.Nil(t, err)
 	})
+}
+
+func TestGroupsStatus(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+	installationsCreated := 0
+
+	// helper function for creating installations
+	newInstallation := func(groupId *string, sequence *int64, state string) *model.Installation {
+		installationsCreated += 1 // Increment to generate unique DNS for each installation
+
+		createRequest := &model.CreateInstallationRequest{
+			OwnerID:  "owner",
+			Version:  "version",
+			DNS:      fmt.Sprintf("dns%d.example.com", installationsCreated),
+			Affinity: model.InstallationAffinityIsolated,
+		}
+		if groupId != nil {
+			createRequest.GroupID = *groupId
+		}
+
+		installation, err := client.CreateInstallation(createRequest)
+		require.NoError(t, err)
+
+		installation.State = state
+		installation.GroupSequence = sequence
+		err = sqlStore.UpdateInstallation(installation.Installation)
+		require.NoError(t, err)
+
+		return installation.Installation
+	}
+
+	group, err := client.CreateGroup(&model.CreateGroupRequest{
+		Name:        "group1",
+		Description: "description",
+		Version:     "version",
+		Image:       "sample/image",
+	})
+	require.NoError(t, err)
+
+	group2, err := client.CreateGroup(&model.CreateGroupRequest{
+		Name:        "group2",
+		Description: "description",
+		Version:     "version",
+		Image:       "sample/image",
+	})
+	require.NoError(t, err)
+
+	t.Run("empty groups", func(t *testing.T) {
+		expectedStatus := &[]model.GroupsStatus{
+			{
+				ID: group.ID,
+				Status: model.GroupStatus{
+					InstallationsTotal:          0,
+					InstallationsUpdated:        0,
+					InstallationsUpdating:       0,
+					InstallationsAwaitingUpdate: 0,
+				},
+			},
+			{
+				ID: group2.ID,
+				Status: model.GroupStatus{
+					InstallationsTotal:          0,
+					InstallationsUpdated:        0,
+					InstallationsUpdating:       0,
+					InstallationsAwaitingUpdate: 0,
+				},
+			},
+		}
+		groupsStatus, err := client.GetGroupsStatus()
+		require.NoError(t, err)
+		assert.Equal(t, expectedStatus, groupsStatus)
+	})
+
+	t.Run("count installations", func(t *testing.T) {
+		expectedStatusGroup1 := &model.GroupsStatus{
+			ID: group.ID,
+			Status: model.GroupStatus{
+				InstallationsTotal:          6,
+				InstallationsUpdated:        2,
+				InstallationsUpdating:       3,
+				InstallationsAwaitingUpdate: 1,
+			},
+		}
+		expectedStatusGroup2 := &model.GroupsStatus{
+			ID: group2.ID,
+			Status: model.GroupStatus{
+				InstallationsTotal:          0,
+				InstallationsUpdated:        0,
+				InstallationsUpdating:       0,
+				InstallationsAwaitingUpdate: 0,
+			},
+		}
+		var differentSequence int64 = -1
+
+		// rolled out stable
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateStable)
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateStable)
+		// rolled out not stable
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateUpdateInProgress)
+		newInstallation(&group.ID, &group.Sequence, model.InstallationStateCreationDNS)
+		// not rolled out stable
+		newInstallation(&group.ID, &differentSequence, model.InstallationStateStable)
+		// not rolled out unstable
+		newInstallation(&group.ID, &differentSequence, model.InstallationStateUpdateInProgress)
+
+		groupsStatus, err := client.GetGroupsStatus()
+		require.NoError(t, err)
+		require.NotNil(t, groupsStatus)
+		assert.Len(t, *groupsStatus, 2)
+		for _, gs := range *groupsStatus {
+			if gs.ID == group.ID {
+				assert.Equal(t, expectedStatusGroup1, &gs)
+			} else if gs.ID == group2.ID {
+				assert.Equal(t, expectedStatusGroup2, &gs)
+			}
+		}
+	})
+
 }
