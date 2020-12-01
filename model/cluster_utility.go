@@ -38,17 +38,6 @@ var (
 	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"}
 )
 
-// UtilityVersion is an interface that provides the necessary methods
-// to discover the numerical version of the Utility as well as an
-// identifier necessary in order to fetch any other configuration
-type UtilityVersion interface {
-	Version() string
-	SetVersion(version string)
-
-	Values() string
-	SetValues(valuesLocation string)
-}
-
 // UnmarshalJSON is a custom JSON unmarshaler that can handle both the
 // old Version string type and the new type. It is entirely
 // self-contained, including types, so that it can be easily removed
