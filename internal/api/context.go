@@ -50,7 +50,7 @@ type Store interface {
 	CreateGroup(group *model.Group) error
 	GetGroup(groupID string) (*model.Group, error)
 	GetGroups(filter *model.GroupFilter) ([]*model.Group, error)
-	UpdateGroup(group *model.Group) error
+	UpdateGroup(group *model.Group, forceSequenceUpdate bool) error
 	LockGroup(groupID, lockerID string) (bool, error)
 	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
 	LockGroupAPI(groupID string) error

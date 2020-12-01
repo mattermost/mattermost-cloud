@@ -330,19 +330,32 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 // UpdateGroup updates the given group in the database. If a value was updated
 // that will possibly affect installation config then update the group sequence
 // number.
-func (sqlStore *SQLStore) UpdateGroup(group *model.Group) error {
-	// Update the sequence number, but don't trust the group sequence number
-	// that was passed in.
+func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bool) error {
 	originalGroup, err := sqlStore.GetGroup(group.ID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to lookup original group")
 	}
-	group.Sequence = originalGroup.Sequence + 1
 
+	originalEnvVarMap, err := originalGroup.MattermostEnv.ToJSON()
+	if err != nil {
+		return errors.Wrap(err, "failed to create original EnvVarMap JSON")
+	}
 	envVarMap, err := group.MattermostEnv.ToJSON()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create new EnvVarMap JSON")
 	}
+
+	// Values that don't bump the group sequence number:
+	// - Name
+	// - Description
+	// - MaxRolling
+	if forceUpdateSequence ||
+		originalGroup.Version != group.Version ||
+		originalGroup.Image != group.Image ||
+		string(originalEnvVarMap) != string(envVarMap) {
+		group.Sequence = originalGroup.Sequence + 1
+	}
+
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Update(`"Group"`).
 		SetMap(map[string]interface{}{

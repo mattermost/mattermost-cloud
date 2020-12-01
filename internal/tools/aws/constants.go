@@ -194,7 +194,7 @@ const (
 
 	// DefaultRDSMultitenantDatabasePostgresCountLimit is the maximum number of
 	// schemas allowed in a Posgres multitenant RDS database cluster.
-	DefaultRDSMultitenantDatabasePostgresCountLimit = 100
+	DefaultRDSMultitenantDatabasePostgresCountLimit = 200
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
