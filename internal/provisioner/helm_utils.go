@@ -25,7 +25,7 @@ type helmDeployment struct {
 	chartName           string
 	namespace           string
 	setArgument         string
-	desiredVersion      model.UtilityVersion
+	desiredVersion      *model.HelmUtilityVersion
 
 	cluster         *model.Cluster
 	kopsProvisioner *KopsProvisioner

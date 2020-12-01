@@ -1145,7 +1145,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 		&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Zones:    []string{"zone"},
-			DesiredUtilityVersions: map[string]model.UtilityVersion{
+			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
 				"nginx":               &model.HelmUtilityVersion{Chart: "stable"},
 			},

@@ -28,8 +28,8 @@ type prometheusOperator struct {
 	kops           *kops.Cmd
 	logger         log.FieldLogger
 	provisioner    *KopsProvisioner
-	desiredVersion model.UtilityVersion
-	actualVersion  model.UtilityVersion
+	desiredVersion *model.HelmUtilityVersion
+	actualVersion  *model.HelmUtilityVersion
 }
 
 func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheusOperator, error) {
@@ -212,11 +212,11 @@ func (p *prometheusOperator) Name() string {
 	return model.PrometheusOperatorCanonicalName
 }
 
-func (p *prometheusOperator) DesiredVersion() model.UtilityVersion {
+func (p *prometheusOperator) DesiredVersion() *model.HelmUtilityVersion {
 	return p.desiredVersion
 }
 
-func (p *prometheusOperator) ActualVersion() model.UtilityVersion {
+func (p *prometheusOperator) ActualVersion() *model.HelmUtilityVersion {
 	if p.actualVersion == nil {
 		return nil
 	}

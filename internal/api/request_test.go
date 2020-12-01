@@ -24,12 +24,12 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"us-east-1a"},
-			DesiredUtilityVersions: map[string]model.UtilityVersion{
-				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "production"},
-				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "production"},
-				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "production"},
-				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3", ValuesPath: "production"},
-				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "production"}},
+			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
+				"fluentbit":           {Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
+				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
+				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
+				"thanos":              {Chart: "2.4.3", ValuesPath: "helm-charts/thanos_values.yaml"},
+				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"}},
 		}
 	}
 
@@ -82,12 +82,12 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"zone1", "zone2"},
-			DesiredUtilityVersions: map[string]model.UtilityVersion{
-				"fluentbit":           &model.HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "production"},
-				"nginx":               &model.HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "production"},
-				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "production"},
-				"thanos":              &model.HelmUtilityVersion{Chart: "2.4.3", ValuesPath: "production"},
-				"teleport":            &model.HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "production"},
+			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
+				"fluentbit":           {Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
+				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
+				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
+				"thanos":              {Chart: "2.4.3", ValuesPath: "helm-charts/thanos_values.yaml"},
+				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"},
 			},
 		}, clusterRequest)
 	})

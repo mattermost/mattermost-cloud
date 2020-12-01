@@ -24,8 +24,8 @@ type thanos struct {
 	kops           *kops.Cmd
 	logger         log.FieldLogger
 	provisioner    *KopsProvisioner
-	actualVersion  model.UtilityVersion
-	desiredVersion model.UtilityVersion
+	actualVersion  *model.HelmUtilityVersion
+	desiredVersion *model.HelmUtilityVersion
 }
 
 func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*thanos, error) {
@@ -196,11 +196,11 @@ func (t *thanos) Name() string {
 	return model.ThanosCanonicalName
 }
 
-func (t *thanos) DesiredVersion() model.UtilityVersion {
+func (t *thanos) DesiredVersion() *model.HelmUtilityVersion {
 	return t.desiredVersion
 }
 
-func (t *thanos) ActualVersion() model.UtilityVersion {
+func (t *thanos) ActualVersion() *model.HelmUtilityVersion {
 	if t.actualVersion == nil {
 		return nil
 	}

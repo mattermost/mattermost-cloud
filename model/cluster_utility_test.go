@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var nilHuv *HelmUtilityVersion // provides a typed nil; never initialize this
+
 func TestSetUtilityVersion(t *testing.T) {
 	u := &UtilityGroupVersions{
 		PrometheusOperator: &HelmUtilityVersion{Chart: ""},
@@ -33,11 +35,11 @@ func TestGetUtilityVersion(t *testing.T) {
 		Fluentbit:          &HelmUtilityVersion{Chart: "6"},
 	}
 
-	assert.Equal(t, getUtilityVersion(u, PrometheusOperatorCanonicalName), &HelmUtilityVersion{Chart: "3"})
-	assert.Equal(t, getUtilityVersion(u, ThanosCanonicalName), &HelmUtilityVersion{Chart: "4"})
-	assert.Equal(t, getUtilityVersion(u, NginxCanonicalName), &HelmUtilityVersion{Chart: "5"})
-	assert.Equal(t, getUtilityVersion(u, FluentbitCanonicalName), &HelmUtilityVersion{Chart: "6"})
-	assert.Equal(t, getUtilityVersion(u, "anything else"), nil)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "3"}, getUtilityVersion(u, PrometheusOperatorCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "4"}, getUtilityVersion(u, ThanosCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "5"}, getUtilityVersion(u, NginxCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "6"}, getUtilityVersion(u, FluentbitCanonicalName))
+	assert.Equal(t, nilHuv, getUtilityVersion(u, "anything else"))
 }
 
 func TestSetActualVersion(t *testing.T) {
@@ -55,8 +57,8 @@ func TestSetDesired(t *testing.T) {
 	c := &Cluster{}
 
 	assert.Nil(t, c.UtilityMetadata)
-	err := c.SetUtilityDesiredVersions(map[string]UtilityVersion{
-		NginxCanonicalName: &HelmUtilityVersion{Chart: "1.9.9"},
+	err := c.SetUtilityDesiredVersions(map[string]*HelmUtilityVersion{
+		NginxCanonicalName: {Chart: "1.9.9"},
 	})
 	require.NoError(t, err)
 
@@ -110,7 +112,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-0.3.0"}, version)
 
 	version = c.ActualUtilityVersion("something else that doesn't exist")
-	assert.Equal(t, nil, version)
+	assert.Equal(t, version, nilHuv)
 }
 
 func TestGetDesiredVersion(t *testing.T) {
@@ -149,5 +151,5 @@ func TestGetDesiredVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "12345"}, version)
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
-	assert.Equal(t, nil, version)
+	assert.Equal(t, nilHuv, version)
 }

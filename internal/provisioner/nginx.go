@@ -20,11 +20,11 @@ type nginx struct {
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
 	logger         log.FieldLogger
-	actualVersion  model.UtilityVersion
-	desiredVersion model.UtilityVersion
+	actualVersion  *model.HelmUtilityVersion
+	desiredVersion *model.HelmUtilityVersion
 }
 
-func newNginxHandle(desiredVersion model.UtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
@@ -76,11 +76,11 @@ func (n *nginx) CreateOrUpgrade() error {
 	return err
 }
 
-func (n *nginx) DesiredVersion() model.UtilityVersion {
+func (n *nginx) DesiredVersion() *model.HelmUtilityVersion {
 	return n.desiredVersion
 }
 
-func (n *nginx) ActualVersion() model.UtilityVersion {
+func (n *nginx) ActualVersion() *model.HelmUtilityVersion {
 	if n.actualVersion == nil {
 		return nil
 	}

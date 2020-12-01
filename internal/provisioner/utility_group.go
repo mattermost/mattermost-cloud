@@ -32,11 +32,11 @@ type Utility interface {
 	// at the time of Create or Upgrade. This version will remain valid
 	// unless something interacts with the cluster out of band, at which
 	// time it will be invalid until Upgrade is called again
-	ActualVersion() model.UtilityVersion
+	ActualVersion() *model.HelmUtilityVersion
 
 	// DesiredVersion returns the utility's target version, which has been
 	// requested, but may not yet have been reconciled
-	DesiredVersion() model.UtilityVersion
+	DesiredVersion() *model.HelmUtilityVersion
 
 	// Name returns the canonical string-version name for the utility,
 	// used throughout the application

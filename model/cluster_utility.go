@@ -134,7 +134,7 @@ func NewUtilityMetadata(metadataBytes []byte) (*UtilityMetadata, error) {
 
 // SetUtilityActualVersion stores the provided version for the
 // provided utility in the UtilityMetadata JSON []byte in this Cluster
-func (c *Cluster) SetUtilityActualVersion(utility string, version UtilityVersion) error {
+func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVersion) error {
 	metadata := &UtilityMetadata{}
 	if c.UtilityMetadata != nil {
 		metadata = c.UtilityMetadata
@@ -149,7 +149,7 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version UtilityVersion
 // SetUtilityDesiredVersions takes a map of string to string representing
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
-func (c *Cluster) SetUtilityDesiredVersions(versions map[string]UtilityVersion) error {
+func (c *Cluster) SetUtilityDesiredVersions(versions map[string]*HelmUtilityVersion) error {
 	// If a version is originally not provided, we want to install the
 	// "stable" version. However, if a version is specified, the user
 	// might later want to move the version back to tracking the stable
@@ -176,7 +176,7 @@ func (c *Cluster) SetUtilityDesiredVersions(versions map[string]UtilityVersion) 
 
 // DesiredUtilityVersion fetches the desired version of a utility from the
 // Cluster object
-func (c *Cluster) DesiredUtilityVersion(utility string) UtilityVersion {
+func (c *Cluster) DesiredUtilityVersion(utility string) *HelmUtilityVersion {
 	// some clusters may only be using pinned stable version, so an
 	// empty UtilityMetadata field is possible; in this context it means
 	// "utility"'s desired version is nothing
@@ -189,7 +189,7 @@ func (c *Cluster) DesiredUtilityVersion(utility string) UtilityVersion {
 
 // ActualUtilityVersion fetches the desired version of a utility from the
 // Cluster object
-func (c *Cluster) ActualUtilityVersion(utility string) UtilityVersion {
+func (c *Cluster) ActualUtilityVersion(utility string) *HelmUtilityVersion {
 	return getUtilityVersion(c.UtilityMetadata.ActualVersions, utility)
 }
 
@@ -208,7 +208,7 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 
 // Gets the version for a utility from a utilityVersions struct using
 // the utility's name's string representation for lookup
-func getUtilityVersion(versions UtilityGroupVersions, utility string) UtilityVersion {
+func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtilityVersion {
 	switch utility {
 	case PrometheusOperatorCanonicalName:
 		return versions.PrometheusOperator
@@ -229,22 +229,22 @@ func getUtilityVersion(versions UtilityGroupVersions, utility string) UtilityVer
 // utility whose name's string representation matches one of the known
 // utilities with a version field in utilityVersion struct in the
 // first argument
-func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVersion UtilityVersion) {
+func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVersion *HelmUtilityVersion) {
 	if desiredVersion == nil {
 		return
 	}
 
 	switch utility {
 	case PrometheusOperatorCanonicalName:
-		versions.PrometheusOperator = desiredVersion.(*HelmUtilityVersion)
+		versions.PrometheusOperator = desiredVersion
 	case ThanosCanonicalName:
-		versions.Thanos = desiredVersion.(*HelmUtilityVersion)
+		versions.Thanos = desiredVersion
 	case NginxCanonicalName:
-		versions.Nginx = desiredVersion.(*HelmUtilityVersion)
+		versions.Nginx = desiredVersion
 	case FluentbitCanonicalName:
-		versions.Fluentbit = desiredVersion.(*HelmUtilityVersion)
+		versions.Fluentbit = desiredVersion
 	case TeleportCanonicalName:
-		versions.Teleport = desiredVersion.(*HelmUtilityVersion)
+		versions.Teleport = desiredVersion
 	}
 }
 

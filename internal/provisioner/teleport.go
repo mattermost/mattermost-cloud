@@ -23,11 +23,11 @@ type teleport struct {
 	kops           *kops.Cmd
 	cluster        *model.Cluster
 	logger         log.FieldLogger
-	desiredVersion model.UtilityVersion
-	actualVersion  model.UtilityVersion
+	desiredVersion *model.HelmUtilityVersion
+	actualVersion  *model.HelmUtilityVersion
 }
 
-func newTeleportHandle(cluster *model.Cluster, desiredVersion model.UtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*teleport, error) {
+func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*teleport, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Teleport handle with nil logger")
 	}
@@ -90,11 +90,11 @@ func (n *teleport) CreateOrUpgrade() error {
 	return err
 }
 
-func (n *teleport) DesiredVersion() model.UtilityVersion {
+func (n *teleport) DesiredVersion() *model.HelmUtilityVersion {
 	return n.desiredVersion
 }
 
-func (n *teleport) ActualVersion() model.UtilityVersion {
+func (n *teleport) ActualVersion() *model.HelmUtilityVersion {
 	if n.actualVersion == nil {
 		return nil
 	}

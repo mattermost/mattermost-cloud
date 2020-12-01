@@ -524,7 +524,7 @@ var clusterShowStateReport = &cobra.Command{
 	},
 }
 
-func processUtilityFlags(command *cobra.Command) map[string]model.UtilityVersion {
+func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
 	prometheusOperatorVersion, _ := command.Flags().GetString("prometheus-operator-version")
 	thanosVersion, _ := command.Flags().GetString("thanos-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
@@ -537,7 +537,7 @@ func processUtilityFlags(command *cobra.Command) map[string]model.UtilityVersion
 	nginxValues, _ := command.Flags().GetString("nginx-values")
 	teleportValues, _ := command.Flags().GetString("teleport-values")
 
-	utilityVersions := make(map[string]model.UtilityVersion)
+	utilityVersions := make(map[string]*model.HelmUtilityVersion)
 
 	if prometheusOperatorVersion != "" && prometheusOperatorValues != "" {
 		utilityVersions[model.PrometheusOperatorCanonicalName] = &model.HelmUtilityVersion{Chart: prometheusOperatorVersion, ValuesPath: prometheusOperatorValues}

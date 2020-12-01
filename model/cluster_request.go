@@ -15,74 +15,19 @@ import (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider               string                    `json:"provider,omitempty"`
-	Zones                  []string                  `json:"zones,omitempty"`
-	Version                string                    `json:"version,omitempty"`
-	KopsAMI                string                    `json:"kops-ami,omitempty"`
-	MasterInstanceType     string                    `json:"master-instance-type,omitempty"`
-	MasterCount            int64                     `json:"master-count,omitempty"`
-	NodeInstanceType       string                    `json:"node-instance-type,omitempty"`
-	NodeMinCount           int64                     `json:"node-min-count,omitempty"`
-	NodeMaxCount           int64                     `json:"node-max-count,omitempty"`
-	AllowInstallations     bool                      `json:"allow-installations,omitempty"`
-	APISecurityLock        bool                      `json:"api-security-lock,omitempty"`
-	DesiredUtilityVersions map[string]UtilityVersion `json:"utility-versions,omitempty"`
-	Annotations            []string                  `json:"annotations,omitempty"`
-}
-
-// rawCreateClusterRequest specifies the parameters for a new cluster.
-type rawCreateClusterRequest struct {
-	Provider               string                     `json:"provider,omitempty"`
-	Zones                  []string                   `json:"zones,omitempty"`
-	Version                string                     `json:"version,omitempty"`
-	KopsAMI                string                     `json:"kops-ami,omitempty"`
-	MasterInstanceType     string                     `json:"master-instance-type,omitempty"`
-	MasterCount            int64                      `json:"master-count,omitempty"`
-	NodeInstanceType       string                     `json:"node-instance-type,omitempty"`
-	NodeMinCount           int64                      `json:"node-min-count,omitempty"`
-	NodeMaxCount           int64                      `json:"node-max-count,omitempty"`
-	AllowInstallations     bool                       `json:"allow-installations,omitempty"`
-	APISecurityLock        bool                       `json:"api-security-lock,omitempty"`
-	DesiredUtilityVersions map[string]json.RawMessage `json:"utility-versions,omitempty"`
-	Annotations            []string                   `json:"annotations,omitempty"`
-}
-
-// UnmarshalJSON allows CreateClusterRequests to be unmarshaled by the
-// standard library. A custom implementation of this method is
-// necessary due to the inclusion of the polymorphic UtilityVersion
-// type
-func (request *CreateClusterRequest) UnmarshalJSON(bytes []byte) error {
-	raw := new(rawCreateClusterRequest)
-	err := json.Unmarshal(bytes, raw)
-	if err != nil {
-		return err
-	}
-	utilityVersions := make(map[string]UtilityVersion)
-	for utility, rawVersion := range raw.DesiredUtilityVersions {
-		version := new(HelmUtilityVersion)
-		err := json.Unmarshal(rawVersion, version)
-		if err != nil {
-			return err
-		}
-		utilityVersions[utility] = version
-	}
-
-	request.DesiredUtilityVersions = utilityVersions
-
-	request.Provider = raw.Provider
-	request.Zones = raw.Zones
-	request.Version = raw.Version
-	request.KopsAMI = raw.KopsAMI
-	request.MasterInstanceType = raw.MasterInstanceType
-	request.MasterCount = raw.MasterCount
-	request.NodeInstanceType = raw.NodeInstanceType
-	request.NodeMinCount = raw.NodeMinCount
-	request.NodeMaxCount = raw.NodeMaxCount
-	request.AllowInstallations = raw.AllowInstallations
-	request.APISecurityLock = raw.APISecurityLock
-	request.Annotations = raw.Annotations
-
-	return nil
+	Provider               string                         `json:"provider,omitempty"`
+	Zones                  []string                       `json:"zones,omitempty"`
+	Version                string                         `json:"version,omitempty"`
+	KopsAMI                string                         `json:"kops-ami,omitempty"`
+	MasterInstanceType     string                         `json:"master-instance-type,omitempty"`
+	MasterCount            int64                          `json:"master-count,omitempty"`
+	NodeInstanceType       string                         `json:"node-instance-type,omitempty"`
+	NodeMinCount           int64                          `json:"node-min-count,omitempty"`
+	NodeMaxCount           int64                          `json:"node-max-count,omitempty"`
+	AllowInstallations     bool                           `json:"allow-installations,omitempty"`
+	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
+	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
+	Annotations            []string                       `json:"annotations,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -112,7 +57,7 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.NodeMaxCount = request.NodeMinCount
 	}
 	if request.DesiredUtilityVersions == nil {
-		request.DesiredUtilityVersions = make(map[string]UtilityVersion)
+		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
 	if _, ok := request.DesiredUtilityVersions[PrometheusOperatorCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PrometheusOperatorCanonicalName] = PrometheusOperatorDefaultVersion
@@ -322,39 +267,7 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
-	DesiredUtilityVersions map[string]UtilityVersion `json:"utility-versions,omitempty"`
-}
-
-type rawProvisionClusterRequest struct {
-	DesiredUtilityVersions map[string]json.RawMessage `json:"utility-versions,omitempty"`
-}
-
-// UnmarshalJSON allows CreateClusterRequests to be unmarshaled by the
-// standard library. A custom implementation of this method is
-// necessary due to the inclusion of the polymorphic UtilityVersion
-// type
-func (request *ProvisionClusterRequest) UnmarshalJSON(bytes []byte) error {
-	raw := new(rawProvisionClusterRequest)
-	err := json.Unmarshal(bytes, raw)
-	if err != nil {
-		return err
-	}
-	// TODO this is copy-pasted from CreateClusterRequest; create a
-	// unmarshalUtilityVersionFromJSON or something helper
-	utilityVersions := make(map[string]UtilityVersion)
-	for utility, rawVersion := range raw.DesiredUtilityVersions {
-		version := new(HelmUtilityVersion)
-		err := json.Unmarshal(rawVersion, version)
-		if err != nil {
-			return err
-		}
-		utilityVersions[utility] = version
-	}
-
-	request.DesiredUtilityVersions = utilityVersions
-
-	return nil
-
+	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.
