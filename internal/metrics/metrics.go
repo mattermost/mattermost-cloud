@@ -12,8 +12,7 @@ import (
 // CloudMetrics holds all of the metrics needed to properly instrument
 // the Provisioning server
 type CloudMetrics struct {
-	InstallationCreationDurationHist        prometheus.Histogram
-	ClusterInstallationCreationDurationHist prometheus.Histogram
+	InstallationCreationDurationHist prometheus.Histogram
 }
 
 // New creates a new Prometheus-based Metrics object to be used
