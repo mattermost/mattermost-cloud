@@ -12,23 +12,23 @@ spec:
     namespace: kube-system
   version: v1beta1
   versionPriority: 100
-  ---
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRole
-  metadata:
-    name: prometheus-adapter
-  rules:
-    - apiGroups:
-        - ""
-      resources:
-        - nodes
-        - namespaces
-        - pods
-        - services
-      verbs:
-        - get
-        - list
-        - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-adapter
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - namespaces
+      - pods
+      - services
+    verbs:
+      - get
+      - list
+      - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
