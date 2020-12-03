@@ -110,7 +110,6 @@ var blastCommand = &cobra.Command{
 		if err := isValidInput(database, filestore, installSize); err != nil {
 			return errors.Wrap(err, "failed user input validation")
 		}
-
 		blaster := NewBlaster(serverAddress)
 		err := blaster.createGroup()
 		if err != nil {

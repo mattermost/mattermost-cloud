@@ -1145,20 +1145,20 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 		&model.CreateClusterRequest{
 			Provider: model.ProviderAWS,
 			Zones:    []string{"zone"},
-			DesiredUtilityVersions: map[string]string{
-				"prometheus-operator": "9.4.4",
-				"nginx":               "stable",
+			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
+				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
+				"nginx":               &model.HelmUtilityVersion{Chart: "stable"},
 			},
 		})
 
 	require.NoError(t, err)
 	utilityMetadata, err := client.GetClusterUtilities(c.ID)
 
-	assert.Equal(t, "", utilityMetadata.ActualVersions.Nginx)
-	assert.Equal(t, "", utilityMetadata.ActualVersions.Fluentbit)
-
-	assert.Equal(t, "", utilityMetadata.DesiredVersions.Nginx)
-	assert.Equal(t, "9.4.4", utilityMetadata.DesiredVersions.PrometheusOperator)
+	var nilVersion *model.HelmUtilityVersion = nil
+	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Nginx)
+	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Fluentbit)
+	assert.Equal(t, &model.HelmUtilityVersion{Chart: "stable"}, utilityMetadata.DesiredVersions.Nginx)
+	assert.Equal(t, &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: ""}, utilityMetadata.DesiredVersions.PrometheusOperator)
 	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
 }
 

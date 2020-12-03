@@ -32,19 +32,32 @@ func init() {
 	clusterCreateCmd.Flags().Int64("size-node-count", 0, "The number of k8s worker nodes. Overwrites value from 'size'.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
-	clusterCreateCmd.Flags().String("prometheus-operator-version", model.PrometheusOperatorDefaultVersion, "The version of Prometheus Operator to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("thanos-version", model.ThanosDefaultVersion, "The version of Thanos to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion, "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion, "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion, "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("prometheus-operator-version", model.PrometheusOperatorDefaultVersion.Version(), "The version of Prometheus Operator to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("thanos-version", model.ThanosDefaultVersion.Version(), "The version of Thanos to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion.Version(), "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion.Version(), "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("prometheus-operator-values", model.PrometheusOperatorDefaultVersion.Values(), "The branch name of the desired chart value file's version for Prometheus Operator")
+	clusterCreateCmd.Flags().String("thanos-values", model.ThanosDefaultVersion.Values(), "The branch name of the desired chart value file's version for Thanos")
+	clusterCreateCmd.Flags().String("fluentbit-values", model.FluentbitDefaultVersion.Values(), "The branch name of the desired chart value file's version for Fluent-Bit")
+	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
+	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
+
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
-	clusterProvisionCmd.Flags().String("prometheus-operator-version", "", "The version of Prometheus Operator to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("thanos-version", "", "The version of Thanos to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of Fluentbit to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of Nginx to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
-	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of Teleport to provision, no change if omitted. Use \"stable\" as an argument to this command to indicate that you wish to remove the pinned version and return the utility to tracking the latest version.")
+	clusterProvisionCmd.Flags().String("prometheus-operator-version", "", "The version of the Prometheus Operator Helm chart")
+	clusterProvisionCmd.Flags().String("thanos-version", "", "The version of the Thanos Helm chart")
+	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of the Fluent-Bit Helm chart")
+	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of the NGINX Helm chart")
+	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
+
+	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
+	clusterProvisionCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
+	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The branch name of the desired chart value file's version for Fluent-Bit")
+	clusterProvisionCmd.Flags().String("nginx-values", "", "The branch name of the desired chart value file's version for NGINX")
+	clusterProvisionCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
+
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -511,33 +524,39 @@ var clusterShowStateReport = &cobra.Command{
 	},
 }
 
-func processUtilityFlags(command *cobra.Command) map[string]string {
+func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
 	prometheusOperatorVersion, _ := command.Flags().GetString("prometheus-operator-version")
 	thanosVersion, _ := command.Flags().GetString("thanos-version")
 	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
 
-	utilityVersions := make(map[string]string)
+	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
+	thanosValues, _ := command.Flags().GetString("thanos-values")
+	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")
+	nginxValues, _ := command.Flags().GetString("nginx-values")
+	teleportValues, _ := command.Flags().GetString("teleport-values")
 
-	if prometheusOperatorVersion != "" {
-		utilityVersions[model.PrometheusOperatorCanonicalName] = prometheusOperatorVersion
+	utilityVersions := make(map[string]*model.HelmUtilityVersion)
+
+	if prometheusOperatorVersion != "" && prometheusOperatorValues != "" {
+		utilityVersions[model.PrometheusOperatorCanonicalName] = &model.HelmUtilityVersion{Chart: prometheusOperatorVersion, ValuesPath: prometheusOperatorValues}
 	}
 
-	if thanosVersion != "" {
-		utilityVersions[model.ThanosCanonicalName] = thanosVersion
+	if thanosVersion != "" && thanosValues != "" {
+		utilityVersions[model.ThanosCanonicalName] = &model.HelmUtilityVersion{Chart: thanosVersion, ValuesPath: thanosValues}
 	}
 
-	if fluentbitVersion != "" {
-		utilityVersions[model.FluentbitCanonicalName] = fluentbitVersion
+	if fluentbitVersion != "" && fluentbitValues != "" {
+		utilityVersions[model.FluentbitCanonicalName] = &model.HelmUtilityVersion{Chart: fluentbitVersion, ValuesPath: fluentbitValues}
 	}
 
-	if nginxVersion != "" {
-		utilityVersions[model.NginxCanonicalName] = nginxVersion
+	if nginxVersion != "" && nginxValues != "" {
+		utilityVersions[model.NginxCanonicalName] = &model.HelmUtilityVersion{Chart: nginxVersion, ValuesPath: nginxValues}
 	}
 
-	if teleportVersion != "" {
-		utilityVersions[model.TeleportCanonicalName] = teleportVersion
+	if teleportVersion != "" && teleportValues != "" {
+		utilityVersions[model.TeleportCanonicalName] = &model.HelmUtilityVersion{Chart: teleportVersion, ValuesPath: teleportValues}
 	}
 
 	return utilityVersions

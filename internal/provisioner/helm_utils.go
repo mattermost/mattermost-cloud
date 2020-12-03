@@ -25,8 +25,7 @@ type helmDeployment struct {
 	chartName           string
 	namespace           string
 	setArgument         string
-	valuesPath          string
-	desiredVersion      string
+	desiredVersion      *model.HelmUtilityVersion
 
 	cluster         *model.Cluster
 	kopsProvisioner *KopsProvisioner
@@ -121,13 +120,20 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
+	if chart.desiredVersion.Version() == "" {
+		currentVersion, err := chart.Version()
+		if err != nil {
+			return errors.Wrap(err, "failed to determine current chart version and no desired target version specified")
+		}
+		chart.desiredVersion = currentVersion
+	}
 	arguments := []string{
 		"--debug",
 		"upgrade",
 		chart.chartDeploymentName,
 		chart.chartName,
 		"--kubeconfig", configPath,
-		"-f", chart.valuesPath,
+		"-f", chart.desiredVersion.Values(),
 		"--namespace", chart.namespace,
 		"--install",
 		"--create-namespace",
@@ -137,8 +143,8 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	if chart.setArgument != "" {
 		arguments = append(arguments, "--set", chart.setArgument)
 	}
-	if chart.desiredVersion != "" {
-		arguments = append(arguments, "--version", chart.desiredVersion)
+	if chart.desiredVersion.Version() != "" {
+		arguments = append(arguments, "--version", chart.desiredVersion.Version())
 	}
 
 	helmClient, err := helm.New(logger)
@@ -246,17 +252,17 @@ func (d *helmDeployment) List() (*HelmListOutput, error) {
 
 }
 
-func (d *helmDeployment) Version() (string, error) {
+func (d *helmDeployment) Version() (*model.HelmUtilityVersion, error) {
 	output, err := d.List()
 	if err != nil {
-		return "", errors.Wrap(err, "while getting Helm Deployment version")
+		return nil, errors.Wrap(err, "while getting Helm Deployment version")
 	}
 
 	for _, release := range output.asSlice() {
 		if release.Name == d.chartDeploymentName {
-			return release.Chart, nil
+			return &model.HelmUtilityVersion{Chart: release.Chart, ValuesPath: d.desiredVersion.Values()}, nil
 		}
 	}
 
-	return "", errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
+	return nil, errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
 }
