@@ -120,10 +120,13 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
-	if chart.desiredVersion.Version() == "" {
+	if chart.desiredVersion == nil || chart.desiredVersion.Version() == "" {
 		currentVersion, err := chart.Version()
 		if err != nil {
 			return errors.Wrap(err, "failed to determine current chart version and no desired target version specified")
+		}
+		if currentVersion.Values() == "" {
+			return errors.New("path to values file must not be empty")
 		}
 		chart.desiredVersion = currentVersion
 	}

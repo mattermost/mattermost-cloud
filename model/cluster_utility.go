@@ -94,6 +94,16 @@ type UtilityGroupVersions struct {
 	Teleport           *HelmUtilityVersion
 }
 
+func (u UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
+	return map[string]*HelmUtilityVersion{
+		PrometheusOperatorCanonicalName: u.PrometheusOperator,
+		ThanosCanonicalName:             u.Thanos,
+		NginxCanonicalName:              u.Nginx,
+		FluentbitCanonicalName:          u.Fluentbit,
+		TeleportCanonicalName:           u.Teleport,
+	}
+}
+
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
@@ -130,6 +140,7 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVe
 	}
 
 	setUtilityVersion(&metadata.ActualVersions, utility, version)
+	setUtilityVersion(&metadata.DesiredVersions, utility, nil)
 
 	c.UtilityMetadata = metadata
 	return nil
@@ -139,27 +150,24 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVe
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
 func (c *Cluster) SetUtilityDesiredVersions(versions map[string]*HelmUtilityVersion) error {
-	// If a version is originally not provided, we want to install the
-	// "stable" version. However, if a version is specified, the user
-	// might later want to move the version back to tracking the stable
-	// release.
+	desiredVersions := make(map[string]*HelmUtilityVersion)
+	if c.UtilityMetadata == nil {
+		c.UtilityMetadata = new(UtilityMetadata)
+	}
+	// at create time there will be no actual versions and it's ok
+	// create will have defaults
+	for k, v := range c.UtilityMetadata.ActualVersions.AsMap() {
+		desiredVersions[k] = v
+	}
+
 	for utility, version := range versions {
-		if version == nil {
-			versions[utility] = nil
-		}
+		desiredVersions[utility] = version
 	}
 
-	metadata := &UtilityMetadata{}
-	if c.UtilityMetadata != nil {
-		metadata = c.UtilityMetadata
+	for utility, version := range desiredVersions {
+		setUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility, version)
 	}
 
-	// assign new desired versions to the object
-	for utility, version := range versions {
-		setUtilityVersion(&metadata.DesiredVersions, utility, version)
-	}
-
-	c.UtilityMetadata = metadata
 	return nil
 }
 
@@ -219,10 +227,6 @@ func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtili
 // utilities with a version field in utilityVersion struct in the
 // first argument
 func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVersion *HelmUtilityVersion) {
-	if desiredVersion == nil {
-		return
-	}
-
 	switch utility {
 	case PrometheusOperatorCanonicalName:
 		versions.PrometheusOperator = desiredVersion
