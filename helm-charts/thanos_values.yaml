@@ -113,7 +113,7 @@ querier:
 
   ## Number of Thanos Querier replicas to deploy
   ##
-  replicaCount: 2
+  replicaCount: 1
 
   ## StrategyType, can be set to RollingUpdate or Recreate by default.
   ##
