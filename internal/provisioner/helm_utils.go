@@ -10,7 +10,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
+
+	"net/url"
+	"os"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -130,6 +134,10 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		}
 		chart.desiredVersion = currentVersion
 	}
+
+	censoredPath := chart.desiredVersion.ValuesPath
+	chart.desiredVersion.ValuesPath = applyGitlabTokenIfPresent(chart.desiredVersion.ValuesPath)
+
 	arguments := []string{
 		"--debug",
 		"upgrade",
@@ -149,6 +157,11 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	if chart.desiredVersion.Version() != "" {
 		arguments = append(arguments, "--version", chart.desiredVersion.Version())
 	}
+
+	defer func(chart *helmDeployment) {
+		// so that we don't store the GitLab secret in the database
+		chart.desiredVersion.ValuesPath = censoredPath
+	}(&chart)
 
 	helmClient, err := helm.New(logger)
 	if err != nil {
@@ -268,4 +281,18 @@ func (d *helmDeployment) Version() (*model.HelmUtilityVersion, error) {
 	}
 
 	return nil, errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
+}
+
+func applyGitlabTokenIfPresent(original string) string {
+	if os.Getenv(model.GitlabOAuthTokenKey) == "" {
+		return original
+	}
+	// gitlab token is set, so apply it to GitLab values path URLs
+	valPathURL, err := url.Parse(original)
+	if err == nil && strings.HasPrefix(valPathURL.Host, "gitlab") {
+		original = os.ExpandEnv(fmt.Sprintf("%s&private_token=$%s",
+			original,
+			model.GitlabOAuthTokenKey))
+	}
+	return original
 }

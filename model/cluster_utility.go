@@ -23,6 +23,10 @@ const (
 	FluentbitCanonicalName = "fluentbit"
 	// TeleportCanonicalName is the canonical string representation of teleport
 	TeleportCanonicalName = "teleport"
+	// GitlabOAuthTokenKey is the name of the Environment Variable which
+	// may contain an OAuth token for accessing GitLab repositories over
+	// HTTPS, used for fetching values files
+	GitlabOAuthTokenKey = "GITLAB_OAUTH_TOKEN"
 )
 
 var (
