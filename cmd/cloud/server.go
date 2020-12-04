@@ -25,6 +25,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -47,6 +48,7 @@ func init() {
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().Bool("debug-helm", false, "Whether to include Helm output in debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
 
@@ -80,6 +82,9 @@ var serverCmd = &cobra.Command{
 		if debugMode {
 			logger.SetLevel(logrus.DebugLevel)
 		}
+
+		debugHelm, _ := command.Flags().GetBool("debug-helm")
+		helm.SetVerboseHelmLogging(debugHelm)
 
 		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
 		if machineLogs {

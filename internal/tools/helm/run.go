@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 
@@ -12,13 +13,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const helmLoggingEnvironmentVariable string = "MM_CLOUD_VERBOSE_HELM_OUTPUT"
+
+func SetVerboseHelmLogging(enable bool) {
+	if enable {
+		os.Setenv(helmLoggingEnvironmentVariable, "true")
+	} else {
+		os.Setenv(helmLoggingEnvironmentVariable, "")
+	}
+}
+
 func outputLogger(line string, logger log.FieldLogger) {
 	line = strings.TrimSpace(line)
 	if len(line) == 0 {
 		return
 	}
 
-	logger.Debugf("[helm] %s", line)
+	if os.Getenv("MM_CLOUD_VERBOSE_HELM_OUTPUT") != "" {
+		logger.Debugf("[helm] %s", line)
+	}
 }
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
