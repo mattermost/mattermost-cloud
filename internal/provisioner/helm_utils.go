@@ -290,9 +290,9 @@ func applyGitlabTokenIfPresent(original string) string {
 	// gitlab token is set, so apply it to GitLab values path URLs
 	valPathURL, err := url.Parse(original)
 	if err == nil && strings.HasPrefix(valPathURL.Host, "gitlab") {
-		original = os.ExpandEnv(fmt.Sprintf("%s&private_token=$%s",
+		original = fmt.Sprintf("%s&private_token=$%s",
 			original,
-			model.GitlabOAuthTokenKey))
+			model.GitlabOAuthTokenKey)
 	}
 	return original
 }

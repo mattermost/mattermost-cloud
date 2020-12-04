@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 
@@ -53,6 +54,12 @@ func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]by
 		"cmd":  cmd.Path,
 		"args": cmd.Args,
 	}).Info("Invoking command")
+
+	expandedArgs := []string{}
+	for _, arg := range cmd.Args {
+		expandedArgs = append(expandedArgs, os.ExpandEnv(arg))
+	}
+	cmd.Args = expandedArgs
 
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
