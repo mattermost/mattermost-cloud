@@ -15,6 +15,10 @@ import (
 
 const helmLoggingEnvironmentVariable string = "MM_CLOUD_VERBOSE_HELM_OUTPUT"
 
+// SetVerboseHelmLogging controls an environment variable which
+// signals whether or not the stdout output from Helm should be
+// included as DEBUG level logs or not. True turns them on, false
+// turns them off.
 func SetVerboseHelmLogging(enable bool) {
 	if enable {
 		os.Setenv(helmLoggingEnvironmentVariable, "true")
