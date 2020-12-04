@@ -2020,10 +2020,10 @@ prometheus:
         interval: 30s
         path: /metrics
         scheme: http
-  - name: thanos-querier
+  - name: thanos-query
     selector:
       matchLabels:
-        app.kubernetes.io/component: querier
+        app.kubernetes.io/component: query
     namespaceSelector:
       matchNames:
       - prometheus

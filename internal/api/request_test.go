@@ -28,7 +28,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"fluentbit":           {Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
-				"thanos":              {Chart: "2.4.3", ValuesPath: "helm-charts/thanos_values.yaml"},
+				"thanos":              {Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"},
 				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"}},
 		}
 	}
@@ -86,7 +86,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"fluentbit":           {Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
-				"thanos":              {Chart: "2.4.3", ValuesPath: "helm-charts/thanos_values.yaml"},
+				"thanos":              {Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"},
 				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"},
 			},
 		}, clusterRequest)

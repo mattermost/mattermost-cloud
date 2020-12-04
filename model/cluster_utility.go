@@ -29,7 +29,7 @@ var (
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
 	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"}
 	// ThanosDefaultVersion defines the default version for the Helm chart
-	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "2.4.3", ValuesPath: "helm-charts/thanos_values.yaml"}
+	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"}
 	// NginxDefaultVersion defines the default version for the Helm chart
 	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
