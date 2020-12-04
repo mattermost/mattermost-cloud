@@ -32,15 +32,19 @@ type Utility interface {
 	// at the time of Create or Upgrade. This version will remain valid
 	// unless something interacts with the cluster out of band, at which
 	// time it will be invalid until Upgrade is called again
-	ActualVersion() string
+	ActualVersion() *model.HelmUtilityVersion
 
 	// DesiredVersion returns the utility's target version, which has been
 	// requested, but may not yet have been reconciled
-	DesiredVersion() string
+	DesiredVersion() *model.HelmUtilityVersion
 
 	// Name returns the canonical string-version name for the utility,
 	// used throughout the application
 	Name() string
+
+	// ValuesPath returns the location where the values file(s) are
+	// stored for this utility
+	ValuesPath() string
 }
 
 // utilityGroup  holds  the  metadata  needed  to  manage  a  specific
@@ -66,12 +70,9 @@ var helmRepos = map[string]string{
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	desiredVersion, err := cluster.DesiredUtilityVersion(model.NginxCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	nginx, err := newNginxHandle(desiredVersion, provisioner, awsClient, kops, logger)
+	nginx, err := newNginxHandle(
+		cluster.DesiredUtilityVersion(model.NginxCanonicalName),
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
@@ -86,22 +87,16 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.FluentbitCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	fluentbit, err := newFluentbitHandle(desiredVersion, provisioner, awsClient, kops, logger)
+	fluentbit, err := newFluentbitHandle(
+		cluster.DesiredUtilityVersion(model.FluentbitCanonicalName),
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
-	desiredVersion, err = cluster.DesiredUtilityVersion(model.TeleportCanonicalName)
-	if err != nil {
-		return nil, err
-	}
-
-	teleport, err := newTeleportHandle(cluster, desiredVersion, provisioner, awsClient, kops, logger)
+	teleport, err := newTeleportHandle(
+		cluster, cluster.DesiredUtilityVersion(model.TeleportCanonicalName),
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}

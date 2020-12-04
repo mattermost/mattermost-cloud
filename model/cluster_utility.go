@@ -6,7 +6,10 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -22,32 +25,80 @@ const (
 	TeleportCanonicalName = "teleport"
 )
 
-const (
+var (
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
-	PrometheusOperatorDefaultVersion = "9.4.4"
+	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"}
 	// ThanosDefaultVersion defines the default version for the Helm chart
-	ThanosDefaultVersion = "2.4.3"
+	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"}
 	// NginxDefaultVersion defines the default version for the Helm chart
-	NginxDefaultVersion = "2.15.0"
+	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitDefaultVersion = "2.8.7"
+	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"}
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportDefaultVersion = "0.3.0"
+	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"}
 )
+
+// UnmarshalJSON is a custom JSON unmarshaler that can handle both the
+// old Version string type and the new type. It is entirely
+// self-contained, including types, so that it can be easily removed
+// when no more clusters exist with the old version format.
+// TODO DELETE THIS
+func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
+	type utilityGroupVersions struct {
+		PrometheusOperator *HelmUtilityVersion
+		Thanos             *HelmUtilityVersion
+		Nginx              *HelmUtilityVersion
+		Fluentbit          *HelmUtilityVersion
+		Teleport           *HelmUtilityVersion
+	}
+	type oldUtilityGroupVersions struct {
+		PrometheusOperator string
+		Thanos             string
+		Nginx              string
+		Fluentbit          string
+		Teleport           string
+	}
+
+	var utilGrpVers *utilityGroupVersions = &utilityGroupVersions{}
+	var oldUtilGrpVers *oldUtilityGroupVersions = &oldUtilityGroupVersions{}
+	err := json.Unmarshal(bytes, utilGrpVers)
+	if err != nil {
+		secondErr := json.Unmarshal(bytes, oldUtilGrpVers)
+		if secondErr != nil {
+			return fmt.Errorf("%s and %s", errors.Wrap(err, "failed to unmarshal to new HelmUtilityVersion"), errors.Wrap(secondErr, "failed to unmarshal to old HelmUtilityVersion type"))
+		}
+
+		h.PrometheusOperator = &HelmUtilityVersion{Chart: oldUtilGrpVers.PrometheusOperator}
+		h.Thanos = &HelmUtilityVersion{Chart: oldUtilGrpVers.Thanos}
+		h.Nginx = &HelmUtilityVersion{Chart: oldUtilGrpVers.Nginx}
+		h.Fluentbit = &HelmUtilityVersion{Chart: oldUtilGrpVers.Fluentbit}
+		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
+		return nil
+	}
+
+	h.PrometheusOperator = utilGrpVers.PrometheusOperator
+	h.Thanos = utilGrpVers.Thanos
+	h.Nginx = utilGrpVers.Nginx
+	h.Fluentbit = utilGrpVers.Fluentbit
+	h.Teleport = utilGrpVers.Teleport
+	return nil
+}
+
+// UtilityGroupVersions holds the concrete metadata for any cluster
+// utilities
+type UtilityGroupVersions struct {
+	PrometheusOperator *HelmUtilityVersion
+	Thanos             *HelmUtilityVersion
+	Nginx              *HelmUtilityVersion
+	Fluentbit          *HelmUtilityVersion
+	Teleport           *HelmUtilityVersion
+}
 
 // UtilityMetadata is a container struct for any metadata related to
 // cluster utilities that needs to be persisted in the database
 type UtilityMetadata struct {
-	DesiredVersions utilityVersions
-	ActualVersions  utilityVersions
-}
-
-type utilityVersions struct {
-	PrometheusOperator string
-	Thanos             string
-	Nginx              string
-	Fluentbit          string
-	Teleport           string
+	DesiredVersions UtilityGroupVersions
+	ActualVersions  UtilityGroupVersions
 }
 
 // NewUtilityMetadata creates an instance of UtilityMetadata given the raw
@@ -72,7 +123,7 @@ func NewUtilityMetadata(metadataBytes []byte) (*UtilityMetadata, error) {
 
 // SetUtilityActualVersion stores the provided version for the
 // provided utility in the UtilityMetadata JSON []byte in this Cluster
-func (c *Cluster) SetUtilityActualVersion(utility string, version string) error {
+func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVersion) error {
 	metadata := &UtilityMetadata{}
 	if c.UtilityMetadata != nil {
 		metadata = c.UtilityMetadata
@@ -87,14 +138,14 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version string) error 
 // SetUtilityDesiredVersions takes a map of string to string representing
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
-func (c *Cluster) SetUtilityDesiredVersions(versions map[string]string) error {
+func (c *Cluster) SetUtilityDesiredVersions(versions map[string]*HelmUtilityVersion) error {
 	// If a version is originally not provided, we want to install the
 	// "stable" version. However, if a version is specified, the user
 	// might later want to move the version back to tracking the stable
 	// release.
 	for utility, version := range versions {
-		if version == "stable" {
-			versions[utility] = ""
+		if version == nil {
+			versions[utility] = nil
 		}
 	}
 
@@ -114,21 +165,21 @@ func (c *Cluster) SetUtilityDesiredVersions(versions map[string]string) error {
 
 // DesiredUtilityVersion fetches the desired version of a utility from the
 // Cluster object
-func (c *Cluster) DesiredUtilityVersion(utility string) (string, error) {
+func (c *Cluster) DesiredUtilityVersion(utility string) *HelmUtilityVersion {
 	// some clusters may only be using pinned stable version, so an
 	// empty UtilityMetadata field is possible; in this context it means
 	// "utility"'s desired version is nothing
 	if c.UtilityMetadata == nil {
-		return "", nil
+		return nil
 	}
 
-	return getUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility), nil
+	return getUtilityVersion(c.UtilityMetadata.DesiredVersions, utility)
 }
 
 // ActualUtilityVersion fetches the desired version of a utility from the
 // Cluster object
-func (c *Cluster) ActualUtilityVersion(utility string) (string, error) {
-	return getUtilityVersion(&c.UtilityMetadata.ActualVersions, utility), nil
+func (c *Cluster) ActualUtilityVersion(utility string) *HelmUtilityVersion {
+	return getUtilityVersion(c.UtilityMetadata.ActualVersions, utility)
 }
 
 // UtilityMetadataFromReader produces a UtilityMetadata object from
@@ -146,7 +197,7 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 
 // Gets the version for a utility from a utilityVersions struct using
 // the utility's name's string representation for lookup
-func getUtilityVersion(versions *utilityVersions, utility string) string {
+func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtilityVersion {
 	switch utility {
 	case PrometheusOperatorCanonicalName:
 		return versions.PrometheusOperator
@@ -160,14 +211,18 @@ func getUtilityVersion(versions *utilityVersions, utility string) string {
 		return versions.Teleport
 	}
 
-	return ""
+	return nil
 }
 
 // setUtilityVersion will assign the version in desiredVersion to the
 // utility whose name's string representation matches one of the known
 // utilities with a version field in utilityVersion struct in the
 // first argument
-func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string) {
+func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVersion *HelmUtilityVersion) {
+	if desiredVersion == nil {
+		return
+	}
+
 	switch utility {
 	case PrometheusOperatorCanonicalName:
 		versions.PrometheusOperator = desiredVersion
@@ -180,4 +235,22 @@ func setUtilityVersion(versions *utilityVersions, utility, desiredVersion string
 	case TeleportCanonicalName:
 		versions.Teleport = desiredVersion
 	}
+}
+
+// HelmUtilityVersion holds the chart version and the version of the
+// values file
+type HelmUtilityVersion struct {
+	Chart      string
+	ValuesPath string
+}
+
+// Version returns the Helm chart version
+func (u *HelmUtilityVersion) Version() string {
+	return u.Chart
+}
+
+// Values returns the name of the branch on which to find the correct
+// values file
+func (u *HelmUtilityVersion) Values() string {
+	return u.ValuesPath
 }

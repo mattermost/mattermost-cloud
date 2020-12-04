@@ -20,11 +20,11 @@ type fluentbit struct {
 	awsClient      aws.AWS
 	kops           *kops.Cmd
 	logger         log.FieldLogger
-	desiredVersion string
-	actualVersion  string
+	desiredVersion *model.HelmUtilityVersion
+	actualVersion  *model.HelmUtilityVersion
 }
 
-func newFluentbitHandle(version string, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
+func newFluentbitHandle(version *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
 	}
@@ -71,12 +71,18 @@ func (f *fluentbit) CreateOrUpgrade() error {
 	return err
 }
 
-func (f *fluentbit) DesiredVersion() string {
+func (f *fluentbit) DesiredVersion() *model.HelmUtilityVersion {
 	return f.desiredVersion
 }
 
-func (f *fluentbit) ActualVersion() string {
-	return strings.TrimPrefix(f.actualVersion, "fluent-bit-")
+func (f *fluentbit) ActualVersion() *model.HelmUtilityVersion {
+	if f.actualVersion == nil {
+		return nil
+	}
+	return &model.HelmUtilityVersion{
+		Chart:      strings.TrimPrefix(f.actualVersion.Version(), "fluent-bit-"),
+		ValuesPath: f.actualVersion.Values(),
+	}
 }
 
 func (f *fluentbit) Name() string {
@@ -130,12 +136,18 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 @INCLUDE fluent-bit-output.conf
 %s
 `, elasticSearchDNS, auditLogsConf),
-		valuesPath:      "helm-charts/fluent-bit_values.yaml",
 		kopsProvisioner: f.provisioner,
 		kops:            f.kops,
 		logger:          f.logger,
 		desiredVersion:  f.desiredVersion,
 	}
+}
+
+func (f *fluentbit) ValuesPath() string {
+	if f.desiredVersion == nil {
+		return ""
+	}
+	return f.desiredVersion.Values()
 }
 
 func (f *fluentbit) updateVersion(h *helmDeployment) error {

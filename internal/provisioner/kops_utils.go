@@ -103,7 +103,7 @@ func getPrivateLoadBalancerEndpoint(ctx context.Context, namespace string, logge
 			return "", err
 		}
 		for _, service := range services.Items {
-			if strings.HasSuffix(service.Name, "internal") || strings.HasSuffix(service.Name, "querier") {
+			if strings.HasSuffix(service.Name, "internal") || strings.HasSuffix(service.Name, "query") {
 				if service.Status.LoadBalancer.Ingress != nil {
 					endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
 					if endpoint == "" {

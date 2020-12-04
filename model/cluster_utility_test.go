@@ -11,157 +11,145 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var nilHuv *HelmUtilityVersion // provides a typed nil; never initialize this
+
 func TestSetUtilityVersion(t *testing.T) {
-	u := &utilityVersions{
-		PrometheusOperator: "",
-		Nginx:              "",
-		Fluentbit:          "",
+	u := &UtilityGroupVersions{
+		PrometheusOperator: &HelmUtilityVersion{Chart: ""},
+		Nginx:              &HelmUtilityVersion{Chart: ""},
+		Fluentbit:          &HelmUtilityVersion{Chart: ""},
 	}
 
-	setUtilityVersion(u, NginxCanonicalName, "0.9")
-	assert.Equal(t, u.Nginx, "0.9")
+	setUtilityVersion(u, NginxCanonicalName, &HelmUtilityVersion{Chart: "0.9"})
+	assert.Equal(t, u.Nginx, &HelmUtilityVersion{Chart: "0.9"})
 
-	setUtilityVersion(u, "an_error", "9")
-	assert.Equal(t, u.Nginx, "0.9")
+	setUtilityVersion(u, "an_error", &HelmUtilityVersion{Chart: "9"})
+	assert.Equal(t, u.Nginx, &HelmUtilityVersion{Chart: "0.9"})
 }
 
 func TestGetUtilityVersion(t *testing.T) {
-	u := &utilityVersions{
-		PrometheusOperator: "3",
-		Thanos:             "4",
-		Nginx:              "5",
-		Fluentbit:          "6",
+	u := UtilityGroupVersions{
+		PrometheusOperator: &HelmUtilityVersion{Chart: "3"},
+		Thanos:             &HelmUtilityVersion{Chart: "4"},
+		Nginx:              &HelmUtilityVersion{Chart: "5"},
+		Fluentbit:          &HelmUtilityVersion{Chart: "6"},
 	}
 
-	assert.Equal(t, getUtilityVersion(u, PrometheusOperatorCanonicalName), "3")
-	assert.Equal(t, getUtilityVersion(u, ThanosCanonicalName), "4")
-	assert.Equal(t, getUtilityVersion(u, NginxCanonicalName), "5")
-	assert.Equal(t, getUtilityVersion(u, FluentbitCanonicalName), "6")
-	assert.Equal(t, getUtilityVersion(u, "anything else"), "")
+	assert.Equal(t, &HelmUtilityVersion{Chart: "3"}, getUtilityVersion(u, PrometheusOperatorCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "4"}, getUtilityVersion(u, ThanosCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "5"}, getUtilityVersion(u, NginxCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "6"}, getUtilityVersion(u, FluentbitCanonicalName))
+	assert.Equal(t, nilHuv, getUtilityVersion(u, "anything else"))
 }
 
 func TestSetActualVersion(t *testing.T) {
 	c := &Cluster{}
 
 	assert.Nil(t, c.UtilityMetadata)
-	err := c.SetUtilityActualVersion(NginxCanonicalName, "1.9.9")
+	err := c.SetUtilityActualVersion(NginxCanonicalName, &HelmUtilityVersion{Chart: "1.9.9"})
 	require.NoError(t, err)
 	assert.NotNil(t, c.UtilityMetadata)
-	version, err := c.ActualUtilityVersion(NginxCanonicalName)
-	require.NoError(t, err)
-	assert.Equal(t, "1.9.9", version)
+	version := c.ActualUtilityVersion(NginxCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "1.9.9"}, version)
 }
 
 func TestSetDesired(t *testing.T) {
 	c := &Cluster{}
 
 	assert.Nil(t, c.UtilityMetadata)
-	err := c.SetUtilityDesiredVersions(map[string]string{
-		NginxCanonicalName: "1.9.9",
+	err := c.SetUtilityDesiredVersions(map[string]*HelmUtilityVersion{
+		NginxCanonicalName: {Chart: "1.9.9"},
 	})
 	require.NoError(t, err)
 
 	assert.NotNil(t, c.UtilityMetadata)
 
-	version, err := c.DesiredUtilityVersion(NginxCanonicalName)
-	require.NoError(t, err)
-	assert.Equal(t, "1.9.9", version)
+	version := c.DesiredUtilityVersion(NginxCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "1.9.9"}, version)
 
-	version, err = c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
+	var nilVersion *HelmUtilityVersion = nil
+	version = c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
 	require.NoError(t, err)
-	assert.Equal(t, "", version)
+	assert.Equal(t, nilVersion, version)
 
-	version, err = c.DesiredUtilityVersion(ThanosCanonicalName)
-	require.NoError(t, err)
-	assert.Equal(t, "", version)
+	version = c.DesiredUtilityVersion(ThanosCanonicalName)
+	assert.Equal(t, nilVersion, version)
 }
 
 func TestGetActualVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
-			DesiredVersions: utilityVersions{
-				PrometheusOperator: "",
-				Thanos:             "",
-				Nginx:              "10.3",
-				Fluentbit:          "1337",
-				Teleport:           "12345",
+			DesiredVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{Chart: ""},
+				Thanos:             &HelmUtilityVersion{Chart: ""},
+				Nginx:              &HelmUtilityVersion{Chart: "10.3"},
+				Fluentbit:          &HelmUtilityVersion{Chart: "1337"},
+				Teleport:           &HelmUtilityVersion{Chart: "12345"},
 			},
-			ActualVersions: utilityVersions{
-				PrometheusOperator: "kube-prometheus-stack-9.4",
-				Thanos:             "thanos-2.4",
-				Nginx:              "nginx-10.2",
-				Fluentbit:          "fluent-bit-0.9",
-				Teleport:           "teleport-0.3.0",
+			ActualVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
+				Thanos:             &HelmUtilityVersion{Chart: "thanos-2.4"},
+				Nginx:              &HelmUtilityVersion{Chart: "nginx-10.2"},
+				Fluentbit:          &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
+				Teleport:           &HelmUtilityVersion{Chart: "teleport-0.3.0"},
 			},
 		},
 	}
 
-	version, err := c.ActualUtilityVersion(PrometheusOperatorCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "kube-prometheus-stack-9.4", version)
+	version := c.ActualUtilityVersion(PrometheusOperatorCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"}, version)
 
-	version, err = c.ActualUtilityVersion(ThanosCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "thanos-2.4", version)
+	version = c.ActualUtilityVersion(ThanosCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "thanos-2.4"}, version)
 
-	version, err = c.ActualUtilityVersion(NginxCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "nginx-10.2", version)
+	version = c.ActualUtilityVersion(NginxCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "nginx-10.2"}, version)
 
-	version, err = c.ActualUtilityVersion(FluentbitCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "fluent-bit-0.9", version)
+	version = c.ActualUtilityVersion(FluentbitCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "fluent-bit-0.9"}, version)
 
-	version, err = c.ActualUtilityVersion(TeleportCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "teleport-0.3.0", version)
+	version = c.ActualUtilityVersion(TeleportCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-0.3.0"}, version)
 
-	version, err = c.ActualUtilityVersion("something else that doesn't exist")
-	assert.NoError(t, err)
-	assert.Equal(t, "", version)
+	version = c.ActualUtilityVersion("something else that doesn't exist")
+	assert.Equal(t, version, nilHuv)
 }
 
 func TestGetDesiredVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
-			DesiredVersions: utilityVersions{
-				PrometheusOperator: "",
-				Thanos:             "",
-				Nginx:              "10.3",
-				Fluentbit:          "1337",
-				Teleport:           "12345",
+			DesiredVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{Chart: ""},
+				Thanos:             &HelmUtilityVersion{Chart: ""},
+				Nginx:              &HelmUtilityVersion{Chart: "10.3"},
+				Fluentbit:          &HelmUtilityVersion{Chart: "1337"},
+				Teleport:           &HelmUtilityVersion{Chart: "12345"},
 			},
-			ActualVersions: utilityVersions{
-				PrometheusOperator: "kube-prometheus-stack-9.4",
-				Thanos:             "thanos-2.4",
-				Nginx:              "nginx-10.2",
-				Fluentbit:          "fluent-bit-0.9",
-				Teleport:           "teleport-0.3.0",
+			ActualVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
+				Thanos:             &HelmUtilityVersion{Chart: "thanos-2.4"},
+				Nginx:              &HelmUtilityVersion{Chart: "nginx-10.2"},
+				Fluentbit:          &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
+				Teleport:           &HelmUtilityVersion{Chart: "teleport-0.3.0"},
 			},
 		},
 	}
 
-	version, err := c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "", version)
+	version := c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: ""}, version)
 
-	version, err = c.DesiredUtilityVersion(ThanosCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "", version)
+	version = c.DesiredUtilityVersion(ThanosCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: ""}, version)
 
-	version, err = c.DesiredUtilityVersion(NginxCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "10.3", version)
+	version = c.DesiredUtilityVersion(NginxCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "10.3"}, version)
 
-	version, err = c.DesiredUtilityVersion(FluentbitCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "1337", version)
+	version = c.DesiredUtilityVersion(FluentbitCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "1337"}, version)
 
-	version, err = c.DesiredUtilityVersion(TeleportCanonicalName)
-	assert.NoError(t, err)
-	assert.Equal(t, "12345", version)
+	version = c.DesiredUtilityVersion(TeleportCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "12345"}, version)
 
-	version, err = c.DesiredUtilityVersion("something else that doesn't exist")
-	assert.NoError(t, err)
-	assert.Equal(t, "", version)
+	version = c.DesiredUtilityVersion("something else that doesn't exist")
+	assert.Equal(t, nilHuv, version)
 }

@@ -128,7 +128,7 @@ If something breaks and reprovisioning is needed, run
 ```bash
 cloud cluster provision --cluster <cluster-ID>
 i.e.
-cloud clusterprovision --cluster tetw1yt3yinjdbhctsstcrybch
+cloud cluster provision --cluster tetw1yt3yinjdbhctsstcrybch
 ```
 
 Then, when the `state` will be `stable`, export the kubeconfig:
