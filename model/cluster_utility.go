@@ -98,13 +98,16 @@ type UtilityGroupVersions struct {
 	Teleport           *HelmUtilityVersion
 }
 
-func (u UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
+// AsMap returns the UtilityGroupVersion represented as a map with the
+// canonical names for each utility as the keys and the members of the
+// struct making up the values
+func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 	return map[string]*HelmUtilityVersion{
-		PrometheusOperatorCanonicalName: u.PrometheusOperator,
-		ThanosCanonicalName:             u.Thanos,
-		NginxCanonicalName:              u.Nginx,
-		FluentbitCanonicalName:          u.Fluentbit,
-		TeleportCanonicalName:           u.Teleport,
+		PrometheusOperatorCanonicalName: h.PrometheusOperator,
+		ThanosCanonicalName:             h.Thanos,
+		NginxCanonicalName:              h.Nginx,
+		FluentbitCanonicalName:          h.Fluentbit,
+		TeleportCanonicalName:           h.Teleport,
 	}
 }
 
