@@ -178,7 +178,7 @@ func (t *thanos) Migrate() error {
 }
 
 func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
-	helmValueArguments := fmt.Sprintf("querier.ingress.hostname=%s,querier.ingress.grpc.hostname=%s,querier.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.provisioner.allowCIDRRangeList, "\\,"))
+	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.provisioner.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
 		chartDeploymentName: "thanos",

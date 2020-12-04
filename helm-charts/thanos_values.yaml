@@ -57,10 +57,10 @@ clusterDomain: cluster.local
 ##
 # existingServiceAccount: my-service-account
 
-## Thanos Querier parameters
+## Thanos Query parameters
 ##
-querier:
-  ## Set to true to enable Thanos Querier component
+query:
+  ## Set to true to enable Thanos Query component
   ##
   enabled: true
 
@@ -72,9 +72,9 @@ querier:
   ##
   serviceAccount:
     annotations: {}
-    ## Provide an existing service account for querier
+    ## Provide an existing service account for query
     ##
-    # existingServiceAccount: querier-service-account
+    # existingServiceAccount: query-service-account
 
   ## Labels to treat as a replica indicator along which data is deduplicated
   ##
@@ -92,26 +92,26 @@ querier:
     ## Evaluated as a template.
     sidecarsNamespace: "{{ .Release.Namespace }}"
 
-  ## Statically configure store APIs to connect with Thanos Querier
+  ## Statically configure store APIs to connect with Thanos Query
   ##
   stores: []
     # - prometheus-operated.prometheus-operator:10901
 
-  ## Querier Service Discovery Configuration
+  ## Query Service Discovery Configuration
   ## Specify content for servicediscovery.yml
   ##
   # sdConfig:
 
-  ## ConfigMap with Querier Service Discovery Configuration
-  ## NOTE: This will override querier.sdConfig
+  ## ConfigMap with Query Service Discovery Configuration
+  ## NOTE: This will override query.sdConfig
   ##
   # existingSDConfigmap:
 
-  ## Extra Flags to passed to Thanos Querier
+  ## Extra Flags to passed to Thanos Query
   ##
   extraFlags: []
 
-  ## Number of Thanos Querier replicas to deploy
+  ## Number of Thanos Query replicas to deploy
   ##
   replicaCount: 2
 
@@ -132,7 +132,7 @@ querier:
             - key: app.kubernetes.io/component
               operator: In
               values:
-              - querier
+              - query
           topologyKey: kubernetes.io/hostname
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -157,7 +157,7 @@ querier:
   ##
   nodeSelector: {}
 
-  ## Annotations for querier pods
+  ## Annotations for query pods
   ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   ##
   podAnnotations: {}
@@ -167,7 +167,7 @@ querier:
   ##
   # priorityClassName: ""
 
-  ## K8s Security Context for Thanos Querier pods
+  ## K8s Security Context for Thanos Query pods
   ## https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
   ##
   securityContext:
@@ -175,7 +175,7 @@ querier:
     fsGroup: 1001
     runAsUser: 1001
 
-  ## Thanos Querier containers' resource requests and limits
+  ## Thanos Query containers' resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
   ##
   resources:
@@ -190,7 +190,7 @@ querier:
       cpu: 50m
       memory: 128Mi
 
-  ## Thanos Querier pods' liveness and readiness probes. Evaluated as a template.
+  ## Thanos Query pods' liveness and readiness probes. Evaluated as a template.
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
   ##
   livenessProbe:
@@ -212,7 +212,7 @@ querier:
     # successThreshold: 1
     # failureThreshold: 6
 
-  ## Thanos Querier GRPC TLS parameters
+  ## Thanos Query GRPC TLS parameters
   ## to configure --grpc-server-tls-cert, --grpc-server-tls-key, --grpc-server-tls-client-ca, --grpc-client-tls-secure, --grpc-client-tls-cert, --grpc-client-tls-key, --grpc-client-tls-ca, --grpc-client-server-name
   ## ref: https://github.com/thanos-io/thanos/blob/master/docs/components/query.md#flags
   grpcTLS:
@@ -247,7 +247,7 @@ querier:
     # type: ClusterIP
     # type: ClusterIP
     type: LoadBalancer
-    ## Thanos Querier service clusterIP IP
+    ## Thanos Query service clusterIP IP
     ##
     # clusterIP: None
     ## HTTP Port
@@ -291,7 +291,7 @@ querier:
     targetCPU: 50
     targetMemory: 50
 
-  ## Querier Pod Disruption Budget configuration
+  ## Query Pod Disruption Budget configuration
   ## ref: https://kubernetes.io/docs/tasks/run-application/configure-pdb/
   ##
   pdb:
@@ -303,7 +303,7 @@ querier:
     ##
     # maxUnavailable: 1
 
-  ## Configure the ingress resource that allows you to access Thanos Querier
+  ## Configure the ingress resource that allows you to access Thanos Query
   ## ref: http://kubernetes.io/docs/user-guide/ingress/
   ##
   ingress:
