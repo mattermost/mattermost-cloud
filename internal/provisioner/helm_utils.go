@@ -136,6 +136,11 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	}
 
 	censoredPath := chart.desiredVersion.ValuesPath
+	defer func(chart *helmDeployment, censoredPath string) {
+		// so that we don't store the GitLab secret in the database
+		chart.desiredVersion.ValuesPath = censoredPath
+	}(&chart, censoredPath)
+
 	chart.desiredVersion.ValuesPath = applyGitlabTokenIfPresent(chart.desiredVersion.ValuesPath)
 
 	arguments := []string{
@@ -157,11 +162,6 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	if chart.desiredVersion.Version() != "" {
 		arguments = append(arguments, "--version", chart.desiredVersion.Version())
 	}
-
-	defer func(chart *helmDeployment) {
-		// so that we don't store the GitLab secret in the database
-		chart.desiredVersion.ValuesPath = censoredPath
-	}(&chart)
 
 	helmClient, err := helm.New(logger)
 	if err != nil {
