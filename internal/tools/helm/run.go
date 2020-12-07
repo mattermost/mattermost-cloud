@@ -39,7 +39,7 @@ func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
 
 	if os.Getenv("MM_CLOUD_VERBOSE_HELM_OUTPUT") != "" {
-		return exechelper.Run(cmd, c.logger, outputLogger)
+		return exechelper.RunWithEnv(cmd, c.logger, outputLogger)
 	}
-	return exechelper.Run(cmd, c.logger, func(line string, logger log.FieldLogger) {})
+	return exechelper.RunWithEnv(cmd, c.logger, func(line string, logger log.FieldLogger) {})
 }
