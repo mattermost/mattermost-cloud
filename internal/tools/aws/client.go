@@ -71,6 +71,7 @@ type AWS interface {
 	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
 
 	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
+	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 }
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
