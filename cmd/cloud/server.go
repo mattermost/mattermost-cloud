@@ -67,6 +67,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
+	serverCmd.PersistentFlags().String("gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 }
 
 var serverCmd = &cobra.Command{
@@ -85,6 +86,11 @@ var serverCmd = &cobra.Command{
 
 		debugHelm, _ := command.Flags().GetBool("debug-helm")
 		helm.SetVerboseHelmLogging(debugHelm)
+
+		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
+		if gitlabOAuthToken != "" {
+			os.Setenv(model.GitlabOAuthTokenKey, gitlabOAuthToken)
+		}
 
 		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
 		if machineLogs {
