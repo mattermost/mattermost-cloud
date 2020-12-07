@@ -32,14 +32,14 @@ func outputLogger(line string, logger log.FieldLogger) {
 	if len(line) == 0 {
 		return
 	}
-
-	if os.Getenv("MM_CLOUD_VERBOSE_HELM_OUTPUT") != "" {
-		logger.Debugf("[helm] %s", line)
-	}
+	logger.Debugf("[helm] %s", line)
 }
 
 func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
 
-	return exechelper.Run(cmd, c.logger, outputLogger)
+	if os.Getenv("MM_CLOUD_VERBOSE_HELM_OUTPUT") != "" {
+		return exechelper.Run(cmd, c.logger, outputLogger)
+	}
+	return exechelper.Run(cmd, c.logger, func(line string, logger log.FieldLogger) {})
 }
