@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 
@@ -22,6 +23,27 @@ import (
 
 // OutputLogger allows custom logging of the run command output.
 type OutputLogger func(line string, logger log.FieldLogger)
+
+// RunWithEnv applies environment variables in the command arguments list and
+// then invokes cmd.Run, both logging and returning STDOUT and STDERR,
+// optionally transforming the output first.
+func RunWithEnv(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]byte, []byte, error) {
+	logger = setupLogger(logger, cmd)
+
+	expandedArgs := []string{}
+	for _, arg := range cmd.Args {
+		expandedArgs = append(expandedArgs, os.ExpandEnv(arg))
+	}
+	cmd.Args = expandedArgs
+
+	return run(cmd, logger, outputLogger)
+}
+
+// Run invokes cmd.Run, both logging and returning STDOUT and STDERR, optionally transforming the output first.
+func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]byte, []byte, error) {
+	logger = setupLogger(logger, cmd)
+	return run(cmd, logger, outputLogger)
+}
 
 func bufferAndLog(reader io.Reader, buffer *bytes.Buffer, logger log.FieldLogger, outputLogger OutputLogger) error {
 	scanner := bufio.NewScanner(io.TeeReader(reader, buffer))
@@ -40,20 +62,7 @@ func bufferAndLog(reader io.Reader, buffer *bytes.Buffer, logger log.FieldLogger
 	return nil
 }
 
-// Run invokes cmd.Run, both logging and returning STDOUT and STDERR, optionally transforming the output first.
-func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]byte, []byte, error) {
-	// Generate a unique identifier for the command invocation by which to group logs.
-	runID := model.NewID()
-
-	logger = logger.WithFields(log.Fields{
-		"run": runID,
-	})
-
-	logger.WithFields(log.Fields{
-		"cmd":  cmd.Path,
-		"args": cmd.Args,
-	}).Info("Invoking command")
-
+func run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]byte, []byte, error) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 	rStdout, wStdout := io.Pipe()
@@ -98,4 +107,20 @@ func Run(cmd *exec.Cmd, logger log.FieldLogger, outputLogger OutputLogger) ([]by
 	}
 
 	return stdout.Bytes(), stderr.Bytes(), nil
+}
+
+func setupLogger(logger log.FieldLogger, cmd *exec.Cmd) log.FieldLogger {
+	// Generate a unique identifier for the command invocation by which to group logs.
+	runID := model.NewID()
+
+	logger = logger.WithFields(log.Fields{
+		"run": runID,
+	})
+
+	logger.WithFields(log.Fields{
+		"cmd":  cmd.Path,
+		"args": cmd.Args,
+	}).Info("Invoking command")
+
+	return logger
 }

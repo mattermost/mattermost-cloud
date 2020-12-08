@@ -25,6 +25,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -48,6 +49,7 @@ func init() {
 	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	serverCmd.PersistentFlags().StringSlice("vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().Bool("debug-helm", false, "Whether to include Helm output in debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
 
@@ -66,6 +68,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
+	serverCmd.PersistentFlags().String("gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 }
 
 var serverCmd = &cobra.Command{
@@ -80,6 +83,14 @@ var serverCmd = &cobra.Command{
 		debugMode := debug || (devMode && flagIsUnset(command, "debug"))
 		if debugMode {
 			logger.SetLevel(logrus.DebugLevel)
+		}
+
+		debugHelm, _ := command.Flags().GetBool("debug-helm")
+		helm.SetVerboseHelmLogging(debugHelm)
+
+		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
+		if gitlabOAuthToken != "" {
+			os.Setenv(model.GitlabOAuthTokenKey, gitlabOAuthToken)
 		}
 
 		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
