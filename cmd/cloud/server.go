@@ -199,6 +199,11 @@ var serverCmd = &cobra.Command{
 		}
 		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 
+		environment, err := awsClient.GetCloudEnvironmentName()
+		if err != nil {
+			return errors.Wrap(err, "getting the AWS Cloud environment")
+		}
+
 		err = checkRequirements(awsConfig, s3StateStore)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
@@ -252,6 +257,7 @@ var serverCmd = &cobra.Command{
 			Store:       sqlStore,
 			Supervisor:  supervisor,
 			Provisioner: kopsProvisioner,
+			Environment: environment,
 			Logger:      logger,
 		})
 

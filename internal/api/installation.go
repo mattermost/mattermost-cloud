@@ -198,7 +198,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		NewState:  model.InstallationStateCreationRequested,
 		OldState:  "n/a",
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS},
+		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": c.Environment},
 	}
 	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -245,7 +245,7 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 			NewState:  newState,
 			OldState:  installationDTO.State,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installationDTO.DNS},
+			ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
 		}
 		installationDTO.State = newState
 
@@ -323,7 +323,7 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 			NewState:  newState,
 			OldState:  oldState,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installationDTO.DNS},
+			ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
 		}
 		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 		if err != nil {
@@ -507,7 +507,7 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS},
+		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
 	}
 	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -566,7 +566,7 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS},
+		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
 	}
 	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -616,7 +616,7 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 			NewState:  newState,
 			OldState:  installationDTO.State,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installationDTO.DNS},
+			ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
 		}
 		installationDTO.State = newState
 
