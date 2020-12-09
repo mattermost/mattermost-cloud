@@ -1,18 +1,4 @@
 ---
-apiVersion: apiregistration.k8s.io/v1beta1
-kind: APIService
-metadata:
-  name: v1beta1.metrics.k8s.io
-spec:
-  group: metrics.k8s.io
-  groupPriorityMinimum: 100
-  insecureSkipTLSVerify: true
-  service:
-    name: prometheus-adapter
-    namespace: kube-system
-  version: v1beta1
-  versionPriority: 100
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -25,6 +11,9 @@ rules:
       - namespaces
       - pods
       - services
+      - nodes/stats
+      - namespaces
+      - configmaps
     verbs:
       - get
       - list
@@ -41,9 +30,13 @@ metadata:
 rules:
   - apiGroups:
       - custom.metrics.k8s.io
+      - metrics.k8s.io
     resources:
       - pods
       - nodes
+      - nodes/stats
+      - namespaces
+      - configmaps
     verbs:
       - get
       - list
@@ -83,6 +76,7 @@ rules:
   - apiGroups:
       # I assumed here should need also metrics.k8s.io but seems it doesn't
       - custom.metrics.k8s.io
+      - metrics.k8s.io
     resources:
       - '*'
     verbs:
@@ -158,30 +152,49 @@ data:
       metricsQuery: sum(rate(<<.Series>>{<<.LabelMatchers>>}[1m])) by (<<.GroupBy>>)
     resourceRules:
       cpu:
-        containerQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>,container!="POD",container!="",pod!=""}[1m])) by (<<.GroupBy>>)
-        nodeQuery: sum(1 - rate(node_cpu_seconds_total{mode="idle"}[1m]) * on(namespace, pod) group_left(node) node_namespace_pod:kube_pod_info:{<<.LabelMatchers>>}) by (<<.GroupBy>>)
-        resources:
-          overrides:
-            node:
-              resource: node
-            namespace:
-              resource: namespace
-            pod:
-              resource: pod
-        containerLabel: container
-      memory:
-        containerQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!="",pod!=""}) by (<<.GroupBy>>)
-        nodeQuery: sum(node_memory_MemTotal_bytes{job="node-exporter",<<.LabelMatchers>>} - node_memory_MemAvailable_bytes{job="node-exporter",<<.LabelMatchers>>}) by (<<.GroupBy>>)
+        containerQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>}[1m])) by (<<.GroupBy>>)
+        nodeQuery: sum(rate(container_cpu_usage_seconds_total{<<.LabelMatchers>>, id='/'}[1m])) by (<<.GroupBy>>)
         resources:
           overrides:
             instance:
               resource: node
             namespace:
               resource: namespace
-            pod:
+            pod_name:
               resource: pod
-        containerLabel: container
+        containerLabel: container_name
+      memory:
+        containerQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>}) by (<<.GroupBy>>)
+        nodeQuery: sum(container_memory_working_set_bytes{<<.LabelMatchers>>,id='/'}) by (<<.GroupBy>>)
+        resources:
+          overrides:
+            instance:
+              resource: node
+            namespace:
+              resource: namespace
+            pod_name:
+              resource: pod
+        containerLabel: container_name
       window: 1m
+    externalRules:
+    - seriesQuery: '{__name__=~"^.*_queue_(length|size)$",namespace!=""}'
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+      name:
+        matches: ^.*_queue_(length|size)$
+        as: "$0"
+      metricsQuery: max(<<.Series>>{<<.LabelMatchers>>})
+    - seriesQuery: '{__name__=~"^.*_queue$",namespace!=""}'
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+      name:
+        matches: ^.*_queue$
+        as: "$0"
+      metricsQuery: max(<<.Series>>{<<.LabelMatchers>>})
 kind: ConfigMap
 metadata:
   name: adapter-config
@@ -226,9 +239,9 @@ spec:
             - --config=/etc/adapter/config.yaml
             - --logtostderr=true
             - --metrics-relist-interval=1m
-            - --prometheus-url=http://prometheus-operated.prometheus.svc.cluster.local:9090/
+            - --prometheus-url=http://prometheus-operator-kube-p-prometheus.prometheus.svc.cluster.local.:9090/
             - --secure-port=6443
-          image: quay.io/coreos/k8s-prometheus-adapter-amd64:v0.8.2
+          image: quay.io/coreos/k8s-prometheus-adapter-amd64:v0.6.0
           imagePullPolicy: IfNotPresent
           name: prometheus-adapter
           ports:
@@ -294,4 +307,3 @@ kind: ServiceAccount
 metadata:
   name: prometheus-adapter
   namespace: kube-system
-
