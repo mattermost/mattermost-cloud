@@ -1868,7 +1868,7 @@ prometheus:
          accessModes: ["ReadWriteOnce"]
          resources:
            requests:
-             storage: 200Gi
+             storage: 300Gi
 #       selector: {}
 
     # Additional volumes on the output StatefulSet definition.
