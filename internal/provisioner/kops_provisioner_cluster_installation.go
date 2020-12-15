@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
@@ -31,20 +30,15 @@ func (provisioner *KopsProvisioner) CreateClusterInstallation(cluster *model.Clu
 	})
 	logger.Info("Creating cluster installation")
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
+		return errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	_, err = k8sClient.CreateOrUpdateNamespace(clusterInstallation.Namespace)
@@ -166,20 +160,15 @@ func (provisioner *KopsProvisioner) HibernateClusterInstallation(cluster *model.
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
+		return errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kubernetes client")
+		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	ctx := context.TODO()
@@ -214,20 +203,15 @@ func (provisioner *KopsProvisioner) UpdateClusterInstallation(cluster *model.Clu
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
+		return errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kubernetes client")
+		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	name := makeClusterInstallationName(clusterInstallation)
@@ -419,25 +403,15 @@ func (provisioner *KopsProvisioner) DeleteClusterInstallation(cluster *model.Clu
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
+		return errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	if cluster.ProvisionerMetadataKops.Name == "" {
-		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
-		return nil
-	}
-
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	name := makeClusterInstallationName(clusterInstallation)
@@ -480,25 +454,15 @@ func (provisioner *KopsProvisioner) GetClusterInstallationResource(cluster *mode
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kops wrapper")
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	if cluster.ProvisionerMetadataKops.Name == "" {
-		logger.Infof("Cluster %s has no name, assuming cluster installation never existed.", cluster.ID)
-		return nil, nil
-	}
-
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	name := makeClusterInstallationName(clusterInstallation)
@@ -526,20 +490,15 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kops wrapper")
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to construct k8s client")
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	ctx := context.TODO()
