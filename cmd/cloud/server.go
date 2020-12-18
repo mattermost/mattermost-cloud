@@ -228,6 +228,7 @@ var serverCmd = &cobra.Command{
 			logger,
 			sqlStore,
 		)
+		defer kopsProvisioner.Teardown()
 
 		cloudMetrics := metrics.New()
 
