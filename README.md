@@ -145,7 +145,7 @@ To create an installation, run:
 ```bash
 cloud installation create --owner <your-name> --dns <your-dns-record> --size 100users --affinity multitenant
 i.e. in test account
-cloud installation create --owner stelios --dns stelios.test.mattermost.cloud --size 100users --affinity multitenant
+cloud installation create --owner stelios --dns stelios.test.cloud.mattermost.com --size 100users --affinity multitenant
 ```
 
 Check its creation progress on the first window where the API runs or run `cloud installation list`
@@ -175,7 +175,7 @@ cloud installation list
         "GroupID": "",
         "Version": "stable",
         "Image": "mattermost/mattermost-enterprise-edition",
-        "DNS": "stelios.test.mattermost.cloud",
+        "DNS": "stelios.test.cloud.mattermost.com",
         "Database": "mysql-operator",
         "Filestore": "minio-operator",
         "License": "",
