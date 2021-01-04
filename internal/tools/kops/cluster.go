@@ -15,7 +15,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataRequestedState, zones, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups []string) error {
+func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataRequestedState, zones, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups, allowSSHCIDRS []string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -32,6 +32,7 @@ func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataR
 		arg("master-size", kopsRequest.MasterInstanceType),
 		arg("target", "terraform"),
 		arg("out", c.GetOutputDirectory()),
+		arg("ssh-access", strings.Join(allowSSHCIDRS, ",")),
 		arg("output", "json"),
 	}
 

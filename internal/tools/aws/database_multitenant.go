@@ -227,6 +227,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 				installationSecret.MasterPassword,
 				rdsCluster,
 			)
+		databaseConnectionCheck = databaseConnectionString
 	}
 	secretStringData := map[string]string{
 		"DB_CONNECTION_STRING":              databaseConnectionString,

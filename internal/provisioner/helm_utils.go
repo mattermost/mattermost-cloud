@@ -10,7 +10,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
+
+	"net/url"
+	"os"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -120,13 +124,25 @@ func helmRepoUpdate(logger log.FieldLogger) error {
 
 // upgradeHelmChart is used to upgrade Helm deployments.
 func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
-	if chart.desiredVersion.Version() == "" {
+	if chart.desiredVersion == nil || chart.desiredVersion.Version() == "" {
 		currentVersion, err := chart.Version()
 		if err != nil {
 			return errors.Wrap(err, "failed to determine current chart version and no desired target version specified")
 		}
+		if currentVersion.Values() == "" {
+			return errors.New("path to values file must not be empty")
+		}
 		chart.desiredVersion = currentVersion
 	}
+
+	censoredPath := chart.desiredVersion.ValuesPath
+	defer func(chart *helmDeployment, censoredPath string) {
+		// so that we don't store the GitLab secret in the database
+		chart.desiredVersion.ValuesPath = censoredPath
+	}(&chart, censoredPath)
+
+	chart.desiredVersion.ValuesPath = applyGitlabTokenIfPresent(chart.desiredVersion.ValuesPath)
+
 	arguments := []string{
 		"--debug",
 		"upgrade",
@@ -265,4 +281,18 @@ func (d *helmDeployment) Version() (*model.HelmUtilityVersion, error) {
 	}
 
 	return nil, errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
+}
+
+func applyGitlabTokenIfPresent(original string) string {
+	if os.Getenv(model.GitlabOAuthTokenKey) == "" {
+		return original
+	}
+	// gitlab token is set, so apply it to GitLab values path URLs
+	valPathURL, err := url.Parse(original)
+	if err == nil && strings.HasPrefix(valPathURL.Host, "gitlab") {
+		original = fmt.Sprintf("%s&private_token=$%s",
+			original,
+			model.GitlabOAuthTokenKey)
+	}
+	return original
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -46,7 +47,9 @@ func init() {
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
+	serverCmd.PersistentFlags().StringSlice("vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
+	serverCmd.PersistentFlags().Bool("debug-helm", false, "Whether to include Helm output in debug logs.")
 	serverCmd.PersistentFlags().Bool("machine-readable-logs", false, "Output the logs in machine readable format.")
 	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
 
@@ -65,6 +68,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
+	serverCmd.PersistentFlags().String("gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 }
 
 var serverCmd = &cobra.Command{
@@ -81,6 +85,14 @@ var serverCmd = &cobra.Command{
 			logger.SetLevel(logrus.DebugLevel)
 		}
 
+		debugHelm, _ := command.Flags().GetBool("debug-helm")
+		helm.SetVerboseHelmLogging(debugHelm)
+
+		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
+		if gitlabOAuthToken != "" {
+			os.Setenv(model.GitlabOAuthTokenKey, gitlabOAuthToken)
+		}
+
 		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
 		if machineLogs {
 			logger.SetFormatter(&logrus.JSONFormatter{})
@@ -92,6 +104,11 @@ var serverCmd = &cobra.Command{
 		allowListCIDRRange, _ := command.Flags().GetStringSlice("allow-list-cidr-range")
 		if len(allowListCIDRRange) == 0 {
 			return errors.New("allow-list-cidr-range must have at least one value")
+		}
+
+		vpnListCIDR, _ := command.Flags().GetStringSlice("vpn-list-cidr")
+		if len(vpnListCIDR) == 0 {
+			return errors.New("vpn-list-cidr must have at least one value")
 		}
 
 		logger := logger.WithField("instance", instanceID)
@@ -193,6 +210,11 @@ var serverCmd = &cobra.Command{
 		}
 		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 
+		environment, err := awsClient.GetCloudEnvironmentName()
+		if err != nil {
+			return errors.Wrap(err, "getting the AWS Cloud environment")
+		}
+
 		err = checkRequirements(awsConfig, s3StateStore)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
@@ -206,10 +228,12 @@ var serverCmd = &cobra.Command{
 			owner,
 			useExistingResources,
 			allowListCIDRRange,
+			vpnListCIDR,
 			resourceUtil,
 			logger,
 			sqlStore,
 		)
+		defer kopsProvisioner.Teardown()
 
 		cloudMetrics := metrics.New()
 
@@ -245,6 +269,7 @@ var serverCmd = &cobra.Command{
 			Store:       sqlStore,
 			Supervisor:  supervisor,
 			Provisioner: kopsProvisioner,
+			Environment: environment,
 			Logger:      logger,
 		})
 

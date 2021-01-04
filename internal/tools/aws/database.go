@@ -176,6 +176,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 				installationSecret.MasterPassword,
 				rdsCluster,
 			)
+		databaseConnectionCheck = databaseConnectionString
 	default:
 		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
 	}
