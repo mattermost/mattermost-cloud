@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	allowMMExternal = "external-mm-allow"
+	allowMMExternal     = "external-mm-allow"
 	allowMMExternalBeta = "external-mm-v1beta-allow"
 )
 
@@ -42,7 +42,7 @@ func (kc *KubeClient) updateLabelsNetworkPolicy(networkPolicy *networkingv1.Netw
 	if networkPolicy.GetName() == allowMMExternalBeta {
 		networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{
 			"installation.mattermost.com/installation": installationName,
-			"app":                                      "mattermost",
+			"app": "mattermost",
 		}
 		return
 	}

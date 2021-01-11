@@ -84,7 +84,7 @@ func (mr *MockDatabaseMockRecorder) Snapshot(store, logger interface{}) *gomock.
 // GenerateDatabaseSpecAndSecret mocks base method
 func (m *MockDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger logrus.FieldLogger) (*v1alpha1.Database, *v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateDatabaseSpecAndSecret", store, logger)
+	ret := m.ctrl.Call(m, "GenerateDatabaseSecret", store, logger)
 	ret0, _ := ret[0].(*v1alpha1.Database)
 	ret1, _ := ret[1].(*v1.Secret)
 	ret2, _ := ret[2].(error)
@@ -94,7 +94,7 @@ func (m *MockDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDat
 // GenerateDatabaseSpecAndSecret indicates an expected call of GenerateDatabaseSpecAndSecret
 func (mr *MockDatabaseMockRecorder) GenerateDatabaseSpecAndSecret(store, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDatabaseSpecAndSecret", reflect.TypeOf((*MockDatabase)(nil).GenerateDatabaseSpecAndSecret), store, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDatabaseSecret", reflect.TypeOf((*MockDatabase)(nil).GenerateDatabaseSpecAndSecret), store, logger)
 }
 
 // MockInstallationDatabaseStoreInterface is a mock of InstallationDatabaseStoreInterface interface

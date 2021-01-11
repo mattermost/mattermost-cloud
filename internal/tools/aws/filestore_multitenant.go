@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -99,7 +98,7 @@ func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.Installatio
 
 // GenerateFilestoreSpecAndSecret creates the k8s filestore spec and secret for
 // accessing the shared S3 bucket.
-func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
+func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.FilestoreConfig, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
 
 	logger = logger.WithFields(log.Fields{
@@ -137,15 +136,15 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 		S3RegionURL = "s3." + awsRegion + ".amazonaws.com"
 	}
 
-	filestoreSpec := &mmv1alpha1.Minio{
-		ExternalURL:    S3RegionURL,
-		ExternalBucket: bucketName,
-		Secret:         filestoreSecretName,
+	filestoreConfig := &model.FilestoreConfig{
+		URL:    S3RegionURL,
+		Bucket: bucketName,
+		Secret: filestoreSecretName,
 	}
 
 	logger.Debug("AWS multitenant S3 filestore configuration generated for cluster installation")
 
-	return filestoreSpec, filestoreSecret, nil
+	return filestoreConfig, filestoreSecret, nil
 }
 
 // s3FilestoreProvision provisions a shared S3 filestore for an installation.

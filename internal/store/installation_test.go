@@ -50,6 +50,7 @@ func TestInstallations(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
+		CRVersion: model.V1betaCRVersion,
 		State:     model.InstallationStateCreationRequested,
 	}
 
@@ -76,6 +77,7 @@ func TestInstallations(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
+		CRVersion: model.V1alphaCRVersion,
 		State:     model.InstallationStateStable,
 	}
 
@@ -616,10 +618,11 @@ func TestUpdateInstallation(t *testing.T) {
 				},
 			},
 		},
-		Size:     mmv1alpha1.Size100String,
-		Affinity: model.InstallationAffinityIsolated,
-		GroupID:  &groupID1,
-		State:    model.InstallationStateCreationRequested,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID1,
+		CRVersion: model.V1alphaCRVersion,
+		State:     model.InstallationStateCreationRequested,
 	}
 
 	err = sqlStore.CreateInstallation(installation1, nil)
@@ -648,6 +651,7 @@ func TestUpdateInstallation(t *testing.T) {
 	installation1.Size = mmv1alpha1.Size1000String
 	installation1.Affinity = model.InstallationAffinityIsolated
 	installation1.GroupID = &groupID2
+	installation1.CRVersion = model.V1betaCRVersion
 	installation1.State = model.InstallationStateDeletionRequested
 
 	err = sqlStore.UpdateInstallation(installation1)

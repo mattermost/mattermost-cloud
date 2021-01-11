@@ -1182,4 +1182,16 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.23.0"), semver.MustParse("0.24.0"), func(e execer) error {
+		// Add CRVersion column for installations.
+		_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN CRVersion TEXT NOT NULL DEFAULT 'mattermost.com/v1alpha1';
+				`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

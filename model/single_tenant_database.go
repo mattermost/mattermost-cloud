@@ -7,8 +7,9 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 // SingleTenantDatabaseConfig represents configuration for the database when used

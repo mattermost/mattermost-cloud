@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -178,7 +180,15 @@ type mockInstallationProvisioner struct {
 	CustomClusterResources    *k8s.ClusterResources
 }
 
-func (p *mockInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error {
+func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
+	return p
+}
+
+func (p *mockInstallationProvisioner) IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	return true, nil
+}
+
+func (p *mockInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
 
@@ -196,17 +206,6 @@ func (p *mockInstallationProvisioner) DeleteClusterInstallation(cluster *model.C
 
 func (p *mockInstallationProvisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
 	return true, nil
-}
-
-func (p *mockInstallationProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
-	return &mmv1alpha1.ClusterInstallation{
-			Spec: mmv1alpha1.ClusterInstallationSpec{},
-			Status: mmv1alpha1.ClusterInstallationStatus{
-				State:    mmv1alpha1.Stable,
-				Endpoint: "example-dns.mattermost.cloud",
-			},
-		},
-		nil
 }
 
 func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {

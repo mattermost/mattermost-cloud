@@ -5,7 +5,6 @@
 package model
 
 import (
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -40,7 +39,7 @@ type Database interface {
 	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
 	Teardown(store InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error
 	Snapshot(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
-	GenerateDatabaseSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error)
+	GenerateDatabaseSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error)
 }
 
 // InstallationDatabaseStoreInterface is the interface necessary for SQLStore
@@ -91,10 +90,10 @@ func (d *MysqlOperatorDatabase) Teardown(store InstallationDatabaseStoreInterfac
 	return nil
 }
 
-// GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
+// GenerateDatabaseSecret creates the k8s database spec and secret for
 // accessing the MySQL operator database.
-func (d *MysqlOperatorDatabase) GenerateDatabaseSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
-	return nil, nil, nil
+func (d *MysqlOperatorDatabase) GenerateDatabaseSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error) {
+	return nil, nil
 }
 
 // InternalDatabase returns true if the installation's database is internal
