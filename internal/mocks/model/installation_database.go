@@ -10,7 +10,6 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	model "github.com/mattermost/mattermost-cloud/model"
-	v1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	reflect "reflect"
@@ -81,20 +80,19 @@ func (mr *MockDatabaseMockRecorder) Snapshot(store, logger interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockDatabase)(nil).Snapshot), store, logger)
 }
 
-// GenerateDatabaseSpecAndSecret mocks base method
-func (m *MockDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger logrus.FieldLogger) (*v1alpha1.Database, *v1.Secret, error) {
+// GenerateDatabaseSecret mocks base method
+func (m *MockDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseStoreInterface, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateDatabaseSecret", store, logger)
-	ret0, _ := ret[0].(*v1alpha1.Database)
-	ret1, _ := ret[1].(*v1.Secret)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(*v1.Secret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// GenerateDatabaseSpecAndSecret indicates an expected call of GenerateDatabaseSpecAndSecret
-func (mr *MockDatabaseMockRecorder) GenerateDatabaseSpecAndSecret(store, logger interface{}) *gomock.Call {
+// GenerateDatabaseSecret indicates an expected call of GenerateDatabaseSecret
+func (mr *MockDatabaseMockRecorder) GenerateDatabaseSecret(store, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDatabaseSecret", reflect.TypeOf((*MockDatabase)(nil).GenerateDatabaseSpecAndSecret), store, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDatabaseSecret", reflect.TypeOf((*MockDatabase)(nil).GenerateDatabaseSecret), store, logger)
 }
 
 // MockInstallationDatabaseStoreInterface is a mock of InstallationDatabaseStoreInterface interface
