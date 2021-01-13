@@ -38,8 +38,8 @@ var (
 	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"}
 	// NginxDefaultVersion defines the default version for the Helm chart
 	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"}
-	// NginxIntenalDefaultVersion defines the default version for the Helm chart
-	NginxIntenalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"}
+	// NginxInternalDefaultVersion defines the default version for the Helm chart
+	NginxInternalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
 	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"}
 	// TeleportDefaultVersion defines the default version for the Helm chart
@@ -115,6 +115,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		PrometheusOperatorCanonicalName: h.PrometheusOperator,
 		ThanosCanonicalName:             h.Thanos,
 		NginxCanonicalName:              h.Nginx,
+		NginxInternalCanonicalName:      h.NginxInternal,
 		FluentbitCanonicalName:          h.Fluentbit,
 		TeleportCanonicalName:           h.Teleport,
 	}

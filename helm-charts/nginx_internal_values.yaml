@@ -15,6 +15,7 @@ controller:
       service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
       service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
       service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+    externalTrafficPolicy: Local
 
     enableHttp: true
     enableHttps: true

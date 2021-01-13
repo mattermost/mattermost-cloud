@@ -36,13 +36,13 @@ func init() {
 	clusterCreateCmd.Flags().String("thanos-version", model.ThanosDefaultVersion.Version(), "The version of Thanos to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("fluentbit-version", model.FluentbitDefaultVersion.Version(), "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion.Version(), "The version of Nginx Internal to provision. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("nginx-internal-version", model.NginxIntenalDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("nginx-internal-version", model.NginxInternalDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion.Version(), "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", model.PrometheusOperatorDefaultVersion.Values(), "The branch name of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", model.ThanosDefaultVersion.Values(), "The branch name of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", model.FluentbitDefaultVersion.Values(), "The branch name of the desired chart value file's version for Fluent-Bit")
 	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
-	clusterCreateCmd.Flags().String("nginx-internal-values", model.NginxIntenalDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX Internal")
+	clusterCreateCmd.Flags().String("nginx-internal-values", model.NginxInternalDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
@@ -52,6 +52,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("thanos-version", "", "The version of the Thanos Helm chart")
 	clusterProvisionCmd.Flags().String("fluentbit-version", "", "The version of the Fluent-Bit Helm chart")
 	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of the NGINX Helm chart")
+	clusterProvisionCmd.Flags().String("nginx-internal-version", "", "The version of the internal NGINX Helm chart")
 	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
