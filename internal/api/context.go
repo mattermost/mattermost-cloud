@@ -89,6 +89,7 @@ type Context struct {
 	Supervisor  Supervisor
 	Provisioner Provisioner
 	RequestID   string
+	Environment string
 	Logger      logrus.FieldLogger
 }
 

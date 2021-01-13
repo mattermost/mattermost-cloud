@@ -31,6 +31,9 @@ const (
 	// cluster's human name so that the VPC's owner can be identified
 	VpcClusterOwnerKey = "tag:CloudClusterOwner"
 
+	// VpcNameTagKey is the tag key used to store name of the VPC.
+	VpcNameTagKey = "tag:Name"
+
 	// VpcClusterOwnerValueNone is the tag value for VpcClusterOwnerKey when
 	// there is no cluster running in the VPC.
 	VpcClusterOwnerValueNone = "none"
@@ -194,7 +197,7 @@ const (
 
 	// DefaultRDSMultitenantDatabasePostgresCountLimit is the maximum number of
 	// schemas allowed in a Posgres multitenant RDS database cluster.
-	DefaultRDSMultitenantDatabasePostgresCountLimit = 200
+	DefaultRDSMultitenantDatabasePostgresCountLimit = 300
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.

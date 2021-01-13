@@ -41,7 +41,21 @@ spec:
       - namespaceSelector:
           matchLabels:
             name: nginx
-
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: external-mm-v1beta-allow
+spec:
+  podSelector: {}
+  ingress:
+    - ports:
+        - port: 8065
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              name: nginx
 ---
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1

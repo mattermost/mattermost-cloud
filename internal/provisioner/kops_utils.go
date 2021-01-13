@@ -38,7 +38,7 @@ func verifyTerraformAndKopsMatch(kopsName string, terraformClient *terraform.Cmd
 		return nil
 	}
 	if out != kopsName {
-		return fmt.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsName)
+		return errors.Errorf("terraform cluster_name (%s) does not match kops_name from provided ID (%s)", out, kopsName)
 	}
 
 	return nil
@@ -128,18 +128,14 @@ func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model
 		"cluster":         cluster.ID,
 		"nginx-namespace": namespace,
 	})
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to export kubecfg")
+		return "", errors.Wrap(err, "failed to get kops config from cache")
 	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
 		return "", err
 	}
@@ -161,6 +157,7 @@ func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model
 			}
 		}
 	}
+
 	return "", errors.New("failed to get NGINX load balancer endpoint")
 }
 

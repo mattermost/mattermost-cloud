@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +20,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 )
@@ -29,35 +27,6 @@ import (
 // DefaultKubernetesVersion is the default value for a kubernetes cluster
 // version value.
 const DefaultKubernetesVersion = "0.0.0"
-
-// KopsProvisioner provisions clusters using kops+terraform.
-type KopsProvisioner struct {
-	s3StateStore            string
-	privateSubnetIds        string
-	publicSubnetIds         string
-	allowCIDRRangeList      []string
-	owner                   string
-	useExistingAWSResources bool
-	resourceUtil            *utils.ResourceUtil
-	logger                  log.FieldLogger
-	store                   model.InstallationDatabaseStoreInterface
-}
-
-// NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, allowCIDRRangeList []string, resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
-
-	logger = logger.WithField("provisioner", "kops")
-
-	return &KopsProvisioner{
-		s3StateStore:            s3StateStore,
-		useExistingAWSResources: useExistingAWSResources,
-		allowCIDRRangeList:      allowCIDRRangeList,
-		logger:                  logger,
-		resourceUtil:            resourceUtil,
-		owner:                   owner,
-		store:                   store,
-	}
-}
 
 // PrepareCluster ensures a cluster object is ready for provisioning.
 func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) bool {
@@ -83,6 +52,19 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	if !isAMIValid {
 		return errors.Errorf("invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
 	}
+
+	environment, err := awsClient.GetCloudEnvironmentName()
+	if err != nil {
+		return errors.Wrap(err, "getting the AWS Cloud environment")
+	}
+
+	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", environment)
+	cncVPCCIDR, err := awsClient.GetCIDRByVPCTag(cncVPCName, logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get the CIDR for the VPC Name %s", cncVPCName)
+	}
+	allowSSHCIDRS := []string{cncVPCCIDR}
+	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.vpnCIDRList...)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
@@ -110,6 +92,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		clusterResources.PublicSubnetsIDs,
 		clusterResources.MasterSecurityGroupIDs,
 		clusterResources.WorkerSecurityGroupIDs,
+		allowSSHCIDRS,
 	)
 	if err != nil {
 		releaseErr := awsClient.ReleaseVpc(cluster.ID, logger)
@@ -209,20 +192,13 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	kopsMetadata := cluster.ProvisionerMetadataKops
-
 	logger.Info("Provisioning cluster")
+
+	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kops client from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
@@ -232,7 +208,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 
 	// Begin deploying the mattermost operator.
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kopsClient.GetKubeConfigPath(), logger)
 	if err != nil {
 		return err
 	}
@@ -310,7 +286,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete service metrics-server")
 	}
 
-	logger.Info("Cleaning up some metrics-server resources to reapply")
 	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete(ctx, "v1beta1.metrics.k8s.io", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("APIService v1beta1.metrics.k8s.io not found; skipping...")
@@ -438,13 +413,13 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}
 	}
 
-	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
+	iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
 	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
-	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(kopsClient, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
@@ -674,20 +649,20 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
-	}
-	defer kops.Close()
-
 	// Use these vars to keep track of which resources need to be deleted.
 	var skipDeleteKops, skipDeleteTerraform bool
 
 	logger.Info("Deleting cluster")
 
-	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
+	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "couldn't greate new utility group handle while deleting the cluster")
+		return errors.Wrap(err, "failed to get kops client from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	ugh, err := newUtilityGroupHandle(kopsClient, provisioner, cluster, awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}
 
 	err = ugh.DestroyUtilityGroup()
@@ -701,7 +676,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to detach custom node policy")
 	}
 
-	_, err = kops.GetCluster(kopsMetadata.Name)
+	_, err = kopsClient.GetCluster(kopsMetadata.Name)
 	if err != nil {
 		logger.WithError(err).Error("Failed kops get cluster check: proceeding assuming kops and terraform resources were never created")
 		skipDeleteKops = true
@@ -709,14 +684,14 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	}
 
 	if !skipDeleteKops {
-		err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+		err = kopsClient.UpdateCluster(kopsMetadata.Name, kopsClient.GetOutputDirectory())
 		if err != nil {
 			return errors.Wrap(err, "failed to run kops update")
 		}
 	}
 
 	if !skipDeleteTerraform {
-		terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+		terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.s3StateStore, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to create terraform wrapper")
 		}
@@ -740,7 +715,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	}
 
 	if !skipDeleteKops {
-		err = kops.DeleteCluster(kopsMetadata.Name)
+		err = kopsClient.DeleteCluster(kopsMetadata.Name)
 		if err != nil {
 			return errors.Wrap(err, "failed to run kops delete")
 		}
@@ -748,8 +723,10 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	err = awsClient.ReleaseVpc(cluster.ID, logger)
 	if err != nil {
-		return errors.Wrap(err, "unable to release VPC")
+		return errors.Wrap(err, "failed to release cluster VPC")
 	}
+
+	provisioner.invalidateCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
 
 	logger.Info("Successfully deleted cluster")
 
@@ -760,20 +737,15 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create kops wrapper")
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to construct k8s client")
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	ctx := context.TODO()
@@ -831,18 +803,13 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 
 	logger.Info("Refreshing kops metadata")
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to create kops wrapper")
+		return errors.Wrap(err, "failed to get kops client from cache")
 	}
-	defer kops.Close()
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	err = kops.ExportKubecfg(cluster.ProvisionerMetadataKops.Name)
-	if err != nil {
-		return errors.Wrap(err, "failed to export kubecfg")
-	}
-
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(kopsClient.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to construct k8s client")
 	}
@@ -856,7 +823,7 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 	// to match the version syntax used in kops.
 	cluster.ProvisionerMetadataKops.Version = strings.TrimLeft(versionInfo.GitVersion, "v")
 
-	err = kops.UpdateMetadata(cluster.ProvisionerMetadataKops)
+	err = kopsClient.UpdateMetadata(cluster.ProvisionerMetadataKops)
 	if err != nil {
 		return errors.Wrap(err, "failed to update metadata from kops state")
 	}

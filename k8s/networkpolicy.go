@@ -14,6 +14,7 @@ import (
 
 const (
 	allowMMExternal = "external-mm-allow"
+	allowMMExternalBeta = "external-mm-v1beta-allow"
 )
 
 func (kc *KubeClient) createOrUpdateNetworkPolicyV1(namespace string, networkPolicy *networkingv1.NetworkPolicy) (metav1.Object, error) {
@@ -31,12 +32,18 @@ func (kc *KubeClient) createOrUpdateNetworkPolicyV1(namespace string, networkPol
 }
 
 func (kc *KubeClient) updateLabelsNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy, installationName string) {
-	if networkPolicy.GetName() != allowMMExternal {
+	if networkPolicy.GetName() == allowMMExternal {
+		networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{
+			"v1alpha1.mattermost.com/installation": installationName,
+			"app":                                  "mattermost",
+		}
 		return
 	}
-
-	networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{
-		"v1alpha1.mattermost.com/installation": installationName,
-		"app":                                  "mattermost",
+	if networkPolicy.GetName() == allowMMExternalBeta {
+		networkPolicy.Spec.PodSelector.MatchLabels = map[string]string{
+			"installation.mattermost.com/installation": installationName,
+			"app":                                      "mattermost",
+		}
+		return
 	}
 }

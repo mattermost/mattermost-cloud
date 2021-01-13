@@ -333,6 +333,10 @@ func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, logger log.Fiel
 	return nil, nil
 }
 
+func (a *mockAWS) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error) {
+	return "", nil
+}
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
 
