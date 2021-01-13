@@ -242,6 +242,7 @@ spec:
                 operator: In
                 values:
                 - nodes-utilities
+            weight: 1
       containers:
         - args:
             - --cert-dir=/var/run/serving-cert
