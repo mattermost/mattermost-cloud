@@ -220,7 +220,7 @@ metadata:
   name: prometheus-adapter
   namespace: kube-system
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       name: prometheus-adapter
@@ -233,6 +233,15 @@ spec:
       labels:
         name: prometheus-adapter
     spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: kops.k8s.io/instancegroup
+                operator: In
+                values:
+                - nodes-utilities
       containers:
         - args:
             - --cert-dir=/var/run/serving-cert
