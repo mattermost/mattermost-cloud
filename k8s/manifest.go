@@ -75,7 +75,7 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 	})
 
 	var failures int
-	resources := bytes.Split(data, []byte("---"))
+	resources := bytes.Split(data, []byte("\n---"))
 	for _, resource := range resources {
 		if len(resource) == 0 {
 			continue
