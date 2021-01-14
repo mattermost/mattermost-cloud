@@ -342,3 +342,18 @@ func (mr *MockAWSMockRecorder) GenerateBifrostUtilitySecret(clusterID, logger in
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateBifrostUtilitySecret", reflect.TypeOf((*MockAWS)(nil).GenerateBifrostUtilitySecret), clusterID, logger)
 }
+
+// GetCIDRByVPCTag mocks base method
+func (m *MockAWS) GetCIDRByVPCTag(vpcTagName string, logger logrus.FieldLogger) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCIDRByVPCTag", vpcTagName, logger)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCIDRByVPCTag indicates an expected call of GetCIDRByVPCTag
+func (mr *MockAWSMockRecorder) GetCIDRByVPCTag(vpcTagName, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCIDRByVPCTag", reflect.TypeOf((*MockAWS)(nil).GetCIDRByVPCTag), vpcTagName, logger)
+}

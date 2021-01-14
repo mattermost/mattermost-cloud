@@ -160,6 +160,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		NewState:  model.ClusterStateCreationRequested,
 		OldState:  "n/a",
 		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"Environment": c.Environment},
 	}
 	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -205,6 +206,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 			NewState:  newState,
 			OldState:  clusterDTO.State,
 			Timestamp: time.Now().UnixNano(),
+			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 		clusterDTO.State = newState
 
@@ -278,6 +280,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 			NewState:  newState,
 			OldState:  clusterDTO.State,
 			Timestamp: time.Now().UnixNano(),
+			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 		clusterDTO.State = newState
 
@@ -399,6 +402,7 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 				NewState:  newState,
 				OldState:  oldState,
 				Timestamp: time.Now().UnixNano(),
+				ExtraData: map[string]string{"Environment": c.Environment},
 			}
 
 			err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
@@ -477,6 +481,7 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				NewState:  newState,
 				OldState:  oldState,
 				Timestamp: time.Now().UnixNano(),
+				ExtraData: map[string]string{"Environment": c.Environment},
 			}
 
 			err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
@@ -546,6 +551,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			NewState:  newState,
 			OldState:  clusterDTO.State,
 			Timestamp: time.Now().UnixNano(),
+			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 		clusterDTO.State = newState
 

@@ -47,6 +47,11 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 	}, nil
 }
 
+// SetLogger sets a new logger for kops commands.
+func (c *Cmd) SetLogger(logger log.FieldLogger) {
+	c.logger = logger
+}
+
 // GetTempDir returns the root temporary directory used by kops.
 func (c *Cmd) GetTempDir() string {
 	return c.tempDir

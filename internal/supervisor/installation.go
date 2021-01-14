@@ -214,13 +214,19 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		return
 	}
 
+	environment, err := s.aws.GetCloudEnvironmentName()
+	if err != nil {
+		logger.WithError(err).Error("getting the AWS Cloud environment")
+		return
+	}
+
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeInstallation,
 		ID:        installation.ID,
 		NewState:  installation.State,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS},
+		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": environment},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -479,12 +485,19 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			return nil
 		}
 
+		environment, err := s.aws.GetCloudEnvironmentName()
+		if err != nil {
+			logger.WithError(err).Error("getting the AWS Cloud environment")
+			return nil
+		}
+
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
 			ID:        cluster.ID,
 			NewState:  model.ClusterStateResizeRequested,
 			OldState:  model.ClusterStateStable,
 			Timestamp: time.Now().UnixNano(),
+			ExtraData: map[string]string{"Environment": environment},
 		}
 
 		err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
@@ -508,12 +521,19 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		return nil
 	}
 
+	environment, err := s.aws.GetCloudEnvironmentName()
+	if err != nil {
+		logger.WithError(err).Error("getting the AWS Cloud environment")
+		return nil
+	}
+
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeClusterInstallation,
 		ID:        clusterInstallation.ID,
 		NewState:  model.ClusterInstallationStateCreationRequested,
 		OldState:  "n/a",
 		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"Environment": environment},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -735,12 +755,19 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 				return installation.State
 			}
 
+			environment, err := s.aws.GetCloudEnvironmentName()
+			if err != nil {
+				logger.WithError(err).Error("getting the AWS Cloud environment")
+				return installation.State
+			}
+
 			webhookPayload := &model.WebhookPayload{
 				Type:      model.TypeClusterInstallation,
 				ID:        clusterInstallation.ID,
 				NewState:  clusterInstallation.State,
 				OldState:  oldState,
 				Timestamp: time.Now().UnixNano(),
+				ExtraData: map[string]string{"Environment": environment},
 			}
 			err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 			if err != nil {
