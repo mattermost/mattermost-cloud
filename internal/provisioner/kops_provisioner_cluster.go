@@ -309,6 +309,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
+			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermost_crd.yaml",
+			DeployNamespace: mattermostOperatorNamespace,
+		}, {
 			Path:            "manifests/operator-manifests/mattermost/service_account.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
