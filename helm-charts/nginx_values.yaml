@@ -43,12 +43,12 @@ controller:
     keep-alive: "3600"
     proxy-max-temp-file-size: "0"
     use-proxy-protocol: "true"
-    real-ip-header: "proxy_protocol"
+    real-ip-header: "X-Real-IP"
     set-real-ip-from: "0.0.0.0/0"
     proxy-read-timeout: "3600"
     proxy-send-timeout: "3600"
     use-forwarded-headers: "true"
-    force-ssl-redirect: "false"
+    force-ssl-redirect: "true"
 
   resources:
    limits:
