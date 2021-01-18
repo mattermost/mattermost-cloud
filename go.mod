@@ -14,7 +14,7 @@ require (
 	github.com/gosuri/uilive v0.0.4
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
-	github.com/mattermost/mattermost-operator v1.11.2-0.20201216193450-e467d2e54786
+	github.com/mattermost/mattermost-operator v1.12.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/pborman/uuid v1.2.1
