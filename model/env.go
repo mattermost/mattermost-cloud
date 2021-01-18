@@ -6,6 +6,7 @@ package model
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -120,6 +121,13 @@ func (em *EnvVarMap) ToEnvList() []corev1.EnvVar {
 			ValueFrom: env.ValueFrom,
 		})
 	}
+
+	// To retain consistent order of environment variables - sort the array.
+	// Changing the order of env vars, even if they did not change will cause
+	// rotation of Cluster Installation's pods.
+	sort.Slice(envList, func(i, j int) bool {
+		return envList[i].Name < envList[j].Name
+	})
 
 	return envList
 }
