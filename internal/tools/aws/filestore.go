@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +72,7 @@ func (f *S3Filestore) Teardown(keepData bool, store model.InstallationDatabaseSt
 
 // GenerateFilestoreSpecAndSecret creates the k8s filestore spec and secret for
 // accessing the S3 bucket.
-func (f *S3Filestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
+func (f *S3Filestore) GenerateFilestoreSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.FilestoreConfig, *corev1.Secret, error) {
 	awsID := CloudID(f.installationID)
 	iamAccessKey, err := f.awsClient.secretsManagerGetIAMAccessKey(awsID)
 	if err != nil {
@@ -97,15 +96,15 @@ func (f *S3Filestore) GenerateFilestoreSpecAndSecret(store model.InstallationDat
 		S3RegionURL = "s3." + awsRegion + ".amazonaws.com"
 	}
 
-	filestoreSpec := &mmv1alpha1.Minio{
-		ExternalURL:    S3RegionURL,
-		ExternalBucket: awsID,
-		Secret:         filestoreSecretName,
+	filestoreConfig := &model.FilestoreConfig{
+		URL:    S3RegionURL,
+		Bucket: awsID,
+		Secret: filestoreSecretName,
 	}
 
 	logger.Debug("Cluster installation configured to use an AWS S3 filestore")
 
-	return filestoreSpec, filestoreSecret, nil
+	return filestoreConfig, filestoreSecret, nil
 }
 
 // s3FilestoreProvision provisions an S3 filestore for an installation.

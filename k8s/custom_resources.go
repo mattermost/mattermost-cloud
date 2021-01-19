@@ -66,14 +66,14 @@ func (kc *KubeClient) createOrUpdateCustomResourceDefinitionV1(crd *apixv1.Custo
 
 func (kc *KubeClient) createOrUpdateClusterInstallation(namespace string, ci *mmv1alpha1.ClusterInstallation) (metav1.Object, error) {
 	ctx := context.TODO()
-	_, err := kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Get(ctx, ci.GetName(), metav1.GetOptions{})
+	_, err := kc.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(namespace).Get(ctx, ci.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		return kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Create(ctx, ci, metav1.CreateOptions{})
+		return kc.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(namespace).Create(ctx, ci, metav1.CreateOptions{})
 	}
 
-	return kc.MattermostClientset.MattermostV1alpha1().ClusterInstallations(namespace).Update(ctx, ci, metav1.UpdateOptions{})
+	return kc.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(namespace).Update(ctx, ci, metav1.UpdateOptions{})
 }

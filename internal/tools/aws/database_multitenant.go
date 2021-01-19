@@ -24,8 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
-
 	// Database drivers
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -161,12 +159,12 @@ func (d *RDSMultitenantDatabase) Snapshot(store model.InstallationDatabaseStoreI
 	return errors.New("not implemented")
 }
 
-// GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
+// GenerateDatabaseSecret creates the k8s database spec and secret for
 // accessing a single database inside a RDS multitenant cluster.
-func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
+func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error) {
 	err := d.IsValid()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "multitenant database configuration is invalid")
+		return nil, errors.Wrap(err, "multitenant database configuration is invalid")
 	}
 
 	installationDatabaseName := MattermostRDSDatabaseName(d.installationID)
@@ -178,19 +176,19 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 
 	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to query for the multitenant database")
+		return nil, errors.Wrap(err, "failed to query for the multitenant database")
 	}
 
 	// TODO: probably split this up.
 	unlock, err := d.lockMultitenantDatabase(multitenantDatabase.ID, store, logger)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to lock multitenant database")
+		return nil, errors.Wrap(err, "failed to lock multitenant database")
 	}
 	defer unlock()
 
 	rdsCluster, err := d.describeRDSCluster(multitenantDatabase.ID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to describe RDS cluster")
+		return nil, errors.Wrap(err, "failed to describe RDS cluster")
 	}
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
@@ -201,12 +199,12 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 		SecretId: &installationSecretName,
 	})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get secret value for database")
+		return nil, errors.Wrap(err, "failed to get secret value for database")
 	}
 
 	installationSecret, err := unmarshalSecretPayload(*result.SecretString)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to unmarshal secret payload")
+		return nil, errors.Wrap(err, "failed to unmarshal secret payload")
 	}
 
 	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
@@ -244,13 +242,9 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSpecAndSecret(store model.Insta
 		StringData: secretStringData,
 	}
 
-	databaseSpec := &mmv1alpha1.Database{
-		Secret: installationSecretName,
-	}
-
 	logger.Debug("AWS RDS multitenant database configuration generated for cluster installation")
 
-	return databaseSpec, databaseSecret, nil
+	return databaseSecret, nil
 }
 
 // Teardown removes all AWS resources related to a RDS multitenant database.

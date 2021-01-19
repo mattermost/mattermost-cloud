@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 // RDSDatabase is a database backed by AWS RDS.
@@ -130,9 +129,9 @@ func (d *RDSDatabase) Snapshot(store model.InstallationDatabaseStoreInterface, l
 	return nil
 }
 
-// GenerateDatabaseSpecAndSecret creates the k8s database spec and secret for
+// GenerateDatabaseSecret creates the k8s database spec and secret for
 // accessing the RDS database.
-func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Database, *corev1.Secret, error) {
+func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error) {
 	awsID := CloudID(d.installationID)
 
 	logger = logger.WithFields(log.Fields{
@@ -142,18 +141,18 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 
 	installationSecret, err := d.client.secretsManagerGetRDSSecret(awsID, logger)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	dbClusters, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
 		DBClusterIdentifier: aws.String(awsID),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if len(dbClusters.DBClusters) != 1 {
-		return nil, nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(dbClusters.DBClusters))
+		return nil, fmt.Errorf("expected 1 DB cluster, but got %d", len(dbClusters.DBClusters))
 	}
 	rdsCluster := dbClusters.DBClusters[0]
 
@@ -178,7 +177,7 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 			)
 		databaseConnectionCheck = databaseConnectionString
 	default:
-		return nil, nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
+		return nil, errors.Errorf("%s is an invalid database engine type", d.databaseType)
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
@@ -197,13 +196,9 @@ func (d *RDSDatabase) GenerateDatabaseSpecAndSecret(store model.InstallationData
 		StringData: secretStringData,
 	}
 
-	databaseSpec := &mmv1alpha1.Database{
-		Secret: databaseSecretName,
-	}
-
 	logger.Debug("AWS multitenant database configuration generated for cluster installation")
 
-	return databaseSpec, databaseSecret, nil
+	return databaseSecret, nil
 }
 
 func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.FieldLogger) error {

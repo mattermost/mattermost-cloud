@@ -7,7 +7,6 @@ package model
 import (
 	log "github.com/sirupsen/logrus"
 
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -29,7 +28,14 @@ const (
 type Filestore interface {
 	Provision(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
 	Teardown(keepData bool, store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
-	GenerateFilestoreSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error)
+	GenerateFilestoreSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*FilestoreConfig, *corev1.Secret, error)
+}
+
+// FilestoreConfig represent universal configuration of the File store.
+type FilestoreConfig struct {
+	URL    string
+	Bucket string
+	Secret string
 }
 
 // MinioOperatorFilestore is a filestore backed by the MinIO operator.
@@ -59,7 +65,7 @@ func (f *MinioOperatorFilestore) Teardown(keepData bool, store InstallationDatab
 
 // GenerateFilestoreSpecAndSecret creates the k8s filestore spec and secret for
 // accessing the MinIO operator filestore.
-func (f *MinioOperatorFilestore) GenerateFilestoreSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*mmv1alpha1.Minio, *corev1.Secret, error) {
+func (f *MinioOperatorFilestore) GenerateFilestoreSpecAndSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*FilestoreConfig, *corev1.Secret, error) {
 	return nil, nil, nil
 }
 
