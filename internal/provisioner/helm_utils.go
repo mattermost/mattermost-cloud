@@ -144,6 +144,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	chart.desiredVersion.ValuesPath = applyGitlabTokenIfPresent(chart.desiredVersion.ValuesPath)
 
 	arguments := []string{
+		"--debug",
 		"upgrade",
 		chart.chartDeploymentName,
 		chart.chartName,
@@ -179,6 +180,7 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 // deleteHelmChart is used to delete Helm charts.
 func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	arguments := []string{
+		"--debug",
 		"delete",
 		"--kubeconfig", configPath,
 		"--namespace", chart.namespace,
