@@ -296,6 +296,12 @@ type gitlabValuesFileResponse struct {
 	Content string `json:"content"`
 }
 
+// fetchFromGitlabIfNecessary returns the path of the values file. If
+// this is a local path or a non-Gitlab URL, the path is simply
+// returned unchanged. If a Gitlab URL is provided, the values file is
+// fetched and stored in the OS's temp dir and the filename of the
+// file is returned. It is the responsibility of the caller to clean
+// up this file when it is no longer needed.
 func fetchFromGitlabIfNecessary(path string) (string, error) {
 	gitlabKey := os.Getenv(model.GitlabOAuthTokenKey)
 	if gitlabKey == "" {
