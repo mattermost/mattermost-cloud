@@ -7,14 +7,16 @@ package provisioner
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
-
-	"net/url"
-	"os"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -141,7 +143,11 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 		chart.desiredVersion.ValuesPath = censoredPath
 	}(&chart, censoredPath)
 
-	chart.desiredVersion.ValuesPath = applyGitlabTokenIfPresent(chart.desiredVersion.ValuesPath)
+	var err error
+	chart.desiredVersion.ValuesPath, err = fetchFromGitlabIfNecessary(chart.desiredVersion.ValuesPath)
+	if err != nil {
+		return errors.Wrap(err, "failed to get values file")
+	}
 
 	arguments := []string{
 		"--debug",
@@ -283,16 +289,66 @@ func (d *helmDeployment) Version() (*model.HelmUtilityVersion, error) {
 	return nil, errors.Errorf("unable to get version for chart %s", d.chartDeploymentName)
 }
 
-func applyGitlabTokenIfPresent(original string) string {
-	if os.Getenv(model.GitlabOAuthTokenKey) == "" {
-		return original
+type gitlabValuesFileResponse struct {
+	Content string `json:"content"`
+}
+
+const temporaryValuesFile string = "/tmp/helm-values.yaml"
+
+func fetchFromGitlabIfNecessary(path string) (string, error) {
+	gitlabKey := os.Getenv(model.GitlabOAuthTokenKey)
+	if gitlabKey == "" {
+		return path, nil
 	}
-	// gitlab token is set, so apply it to GitLab values path URLs
-	valPathURL, err := url.Parse(original)
-	if err == nil && strings.HasPrefix(valPathURL.Host, "gitlab") {
-		original = fmt.Sprintf("%s&private_token=$%s",
-			original,
-			model.GitlabOAuthTokenKey)
+
+	valPathURL, err := url.Parse(path)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse Helm values file path or URL")
 	}
-	return original
+
+	// silently allow other public non-Gitlab URLs
+	if !strings.HasPrefix(valPathURL.Host, "gitlab") {
+		return path, nil
+	}
+
+	// if Gitlab, fetch the file using the API
+	path = fmt.Sprintf("%s&private_token=%s", path, gitlabKey)
+
+	resp, err := http.Get(path)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to request the values file from Gitlab")
+	}
+	if resp.StatusCode >= 400 {
+		return "", errors.Errorf("request to Gitlab failed with status: %s", resp.Status)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read body from Gitlab response")
+	}
+
+	valuesFileBytes := new(gitlabValuesFileResponse)
+	err = json.Unmarshal(body, valuesFileBytes)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to unmarshal JSON in Gitlab response")
+	}
+
+	if _, err = os.Stat(temporaryValuesFile); err == nil { // file exists
+		err = os.Remove(temporaryValuesFile)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to overwrite an existing Helm values file to store the new one")
+		}
+	}
+
+	content, err := base64.StdEncoding.DecodeString(valuesFileBytes.Content)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to decode base64-encoded YAML file")
+	}
+
+	err = ioutil.WriteFile(temporaryValuesFile, []byte(content), 0777)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to write values file to disk for Helm to read")
+	}
+
+	return temporaryValuesFile, nil
 }
