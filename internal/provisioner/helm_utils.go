@@ -144,12 +144,13 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	}(&chart, censoredPath)
 
 	var err error
-	chart.desiredVersion.ValuesPath, err = fetchFromGitlabIfNecessary(chart.desiredVersion.ValuesPath)
+	var cleanup func(string)
+	chart.desiredVersion.ValuesPath, cleanup, err = fetchFromGitlabIfNecessary(chart.desiredVersion.ValuesPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to get values file")
 	}
-	if strings.HasPrefix(chart.desiredVersion.ValuesPath, os.TempDir()) {
-		defer os.Remove(chart.desiredVersion.ValuesPath)
+	if cleanup != nil {
+		defer cleanup(chart.desiredVersion.ValuesPath)
 	}
 
 	arguments := []string{
@@ -300,22 +301,23 @@ type gitlabValuesFileResponse struct {
 // this is a local path or a non-Gitlab URL, the path is simply
 // returned unchanged. If a Gitlab URL is provided, the values file is
 // fetched and stored in the OS's temp dir and the filename of the
-// file is returned. It is the responsibility of the caller to clean
-// up this file when it is no longer needed.
-func fetchFromGitlabIfNecessary(path string) (string, error) {
+// file is returned. If a temp file is created, a cleanup routine will
+// be returned as the second return value, otherwise that value will
+// be nil
+func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 	gitlabKey := os.Getenv(model.GitlabOAuthTokenKey)
 	if gitlabKey == "" {
-		return path, nil
+		return path, nil, nil
 	}
 
 	valPathURL, err := url.Parse(path)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to parse Helm values file path or URL")
+		return "", nil, errors.Wrap(err, "failed to parse Helm values file path or URL")
 	}
 
 	// silently allow other public non-Gitlab URLs
 	if !strings.HasPrefix(valPathURL.Host, "gitlab") {
-		return path, nil
+		return path, nil, nil
 	}
 
 	// if Gitlab, fetch the file using the API
@@ -323,37 +325,41 @@ func fetchFromGitlabIfNecessary(path string) (string, error) {
 
 	resp, err := http.Get(path)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to request the values file from Gitlab")
+		return "", nil, errors.Wrap(err, "failed to request the values file from Gitlab")
 	}
 	if resp.StatusCode >= 400 {
-		return "", errors.Errorf("request to Gitlab failed with status: %s", resp.Status)
+		return "", nil, errors.Errorf("request to Gitlab failed with status: %s", resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read body from Gitlab response")
+		return "", nil, errors.Wrap(err, "failed to read body from Gitlab response")
 	}
 
 	valuesFileBytes := new(gitlabValuesFileResponse)
 	err = json.Unmarshal(body, valuesFileBytes)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal JSON in Gitlab response")
+		return "", nil, errors.Wrap(err, "failed to unmarshal JSON in Gitlab response")
 	}
 
 	temporaryValuesFile, err := ioutil.TempFile(os.TempDir(), "helm-values-file-")
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create temporary file for Helm values file")
+		return "", nil, errors.Wrap(err, "failed to create temporary file for Helm values file")
 	}
 
 	content, err := base64.StdEncoding.DecodeString(valuesFileBytes.Content)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to decode base64-encoded YAML file")
+		return "", nil, errors.Wrap(err, "failed to decode base64-encoded YAML file")
 	}
 
 	err = ioutil.WriteFile(temporaryValuesFile.Name(), []byte(content), 0600)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to write values file to disk for Helm to read")
+		return "", nil, errors.Wrap(err, "failed to write values file to disk for Helm to read")
 	}
 
-	return temporaryValuesFile.Name(), nil
+	return temporaryValuesFile.Name(), func(path string) {
+		if strings.HasPrefix(path, os.TempDir()) {
+			defer os.Remove(path)
+		}
+	}, nil
 }
