@@ -148,6 +148,9 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 	if err != nil {
 		return errors.Wrap(err, "failed to get values file")
 	}
+	if strings.HasPrefix(chart.desiredVersion.ValuesPath, os.TempDir()) {
+		defer os.Remove(chart.desiredVersion.ValuesPath)
+	}
 
 	arguments := []string{
 		"--debug",
@@ -293,8 +296,6 @@ type gitlabValuesFileResponse struct {
 	Content string `json:"content"`
 }
 
-const temporaryValuesFile string = "/tmp/helm-values.yaml"
-
 func fetchFromGitlabIfNecessary(path string) (string, error) {
 	gitlabKey := os.Getenv(model.GitlabOAuthTokenKey)
 	if gitlabKey == "" {
@@ -333,11 +334,9 @@ func fetchFromGitlabIfNecessary(path string) (string, error) {
 		return "", errors.Wrap(err, "failed to unmarshal JSON in Gitlab response")
 	}
 
-	if _, err = os.Stat(temporaryValuesFile); err == nil { // file exists
-		err = os.Remove(temporaryValuesFile)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to overwrite an existing Helm values file to store the new one")
-		}
+	temporaryValuesFile, err := ioutil.TempFile(os.TempDir(), "helm-values-file-")
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create temporary file for Helm values file")
 	}
 
 	content, err := base64.StdEncoding.DecodeString(valuesFileBytes.Content)
@@ -345,10 +344,10 @@ func fetchFromGitlabIfNecessary(path string) (string, error) {
 		return "", errors.Wrap(err, "failed to decode base64-encoded YAML file")
 	}
 
-	err = ioutil.WriteFile(temporaryValuesFile, []byte(content), 0777)
+	err = ioutil.WriteFile(temporaryValuesFile.Name(), []byte(content), 0600)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to write values file to disk for Helm to read")
 	}
 
-	return temporaryValuesFile, nil
+	return temporaryValuesFile.Name(), nil
 }
