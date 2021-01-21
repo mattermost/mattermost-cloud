@@ -359,7 +359,7 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 
 	return temporaryValuesFile.Name(), func(path string) {
 		if strings.HasPrefix(path, os.TempDir()) {
-			defer os.Remove(path)
+			os.Remove(path)
 		}
 	}, nil
 }
