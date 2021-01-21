@@ -16,7 +16,7 @@ const (
 	// V1betaCRVersion is a Mattermost CR beta version.
 	V1betaCRVersion = "installation.mattermost.com/v1beta1"
 	// DefaultCRVersion is a default CR version used for new installations.
-	DefaultCRVersion = V1alphaCRVersion
+	DefaultCRVersion = V1betaCRVersion
 )
 
 // Installation represents a Mattermost installation.
