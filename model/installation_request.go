@@ -197,12 +197,13 @@ func (request *GetInstallationRequest) ApplyToURL(u *url.URL) {
 type GetInstallationsRequest struct {
 	OwnerID                     string
 	GroupID                     string
+	State                       string
+	DNS                         string
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
 	Page                        int
 	PerPage                     int
 	IncludeDeleted              bool
-	DNS                         string
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
@@ -210,6 +211,8 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("owner", request.OwnerID)
 	q.Add("group", request.GroupID)
+	q.Add("state", request.State)
+	q.Add("dns_name", request.DNS)
 	if !request.IncludeGroupConfig {
 		q.Add("include_group_config", "false")
 	}
@@ -220,9 +223,6 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("per_page", strconv.Itoa(request.PerPage))
 	if request.IncludeDeleted {
 		q.Add("include_deleted", "true")
-	}
-	if request.DNS != "" {
-		q.Add("dns_name", request.DNS)
 	}
 	u.RawQuery = q.Encode()
 }

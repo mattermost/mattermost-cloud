@@ -65,10 +65,11 @@ type InstallationsCount struct {
 type InstallationFilter struct {
 	OwnerID        string
 	GroupID        string
+	State          string
+	DNS            string
 	Page           int
 	PerPage        int
 	IncludeDeleted bool
-	DNS            string
 }
 
 // Clone returns a deep copy the installation.
