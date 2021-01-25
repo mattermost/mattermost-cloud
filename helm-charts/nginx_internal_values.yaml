@@ -48,7 +48,7 @@ controller:
      cpu: 1000m
      memory: 500Mi
    requests:
-     cpu: 100mm
+     cpu: 100m
      memory: 100Mi
 
   autoscaling:
