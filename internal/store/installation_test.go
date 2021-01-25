@@ -77,7 +77,7 @@ func TestInstallations(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
-		CRVersion: model.V1alphaCRVersion,
+		CRVersion: model.DefaultCRVersion,
 		State:     model.InstallationStateStable,
 	}
 
@@ -621,7 +621,7 @@ func TestUpdateInstallation(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
-		CRVersion: model.V1alphaCRVersion,
+		CRVersion: model.DefaultCRVersion,
 		State:     model.InstallationStateCreationRequested,
 	}
 
