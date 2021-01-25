@@ -3,34 +3,23 @@
 ##
 controller:
   ingressClass: nginx-controller
+  image:
+    pullPolicy: IfNotPresent
+  publishService:
+    enabled: true
+  metrics:
+    enabled: true
 
   service:
-    enabled: true
     annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+      service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+      service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: '3600'
 
-    internal:
-      enabled: true
-      annotations:
-        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
-        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
-        service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
-      externalTrafficPolicy: Local
-
-    enableHttp: true
-    enableHttps: true
     targetPorts:
-      http: 80
-      https: special
+      https: http
     type: LoadBalancer
-
-  containerPort:
-    http: 80
-    https: 443
-    special: 8000
 
   extraVolumeMounts:
   ## Additional volumeMounts to the controller main container.
@@ -50,18 +39,16 @@ controller:
     http-snippet: |
       proxy_cache_path /cache/nginx levels=1:2 keys_zone=mattermost_test_cache:10m max_size=10g inactive=120m use_temp_path=off;
       proxy_cache_path /cache/mattermost levels=1:2 keys_zone=mattermost_cache:10m max_size=10g inactive=120m use_temp_path=off;
+    server-tokens: "false"
     keep-alive: "3600"
     proxy-max-temp-file-size: "0"
-    # Will add custom configuration options to Nginx https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
-    ssl-redirect: "false"
-    force-ssl-redirect: "false"
-    # remove the version of nginx from the responses
-    server-tokens: "false"
-    server-snippet: |
-      listen 8000;
-      if ( $server_port = 80 ) {
-         return 308 https://$host$request_uri;
-      }
+    use-proxy-protocol: "true"
+    real-ip-header: "X-Real-IP"
+    set-real-ip-from: "0.0.0.0/0"
+    proxy-read-timeout: "3600"
+    proxy-send-timeout: "3600"
+    use-forwarded-headers: "true"
+    force-ssl-redirect: "true"
 
   resources:
    limits:
@@ -73,12 +60,10 @@ controller:
 
   autoscaling:
     enabled: true
-    minReplicas: 1
-    maxReplicas: 8
-    targetCPUUtilizationPercentage: 400
-    targetMemoryUtilizationPercentage: 400
-  metrics:
-     enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 200
+    targetMemoryUtilizationPercentage: 200
 
 defaultBackend:
   enabled: true

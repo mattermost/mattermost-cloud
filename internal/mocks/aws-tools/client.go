@@ -100,6 +100,21 @@ func (mr *MockAWSMockRecorder) GetAndClaimVpcResources(clusterID, owner, logger 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAndClaimVpcResources", reflect.TypeOf((*MockAWS)(nil).GetAndClaimVpcResources), clusterID, owner, logger)
 }
 
+// GetVpcResources mocks base method
+func (m *MockAWS) GetVpcResources(clusterID string, logger logrus.FieldLogger) (aws.ClusterResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVpcResources", clusterID, logger)
+	ret0, _ := ret[0].(aws.ClusterResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVpcResources indicates an expected call of GetVpcResources
+func (mr *MockAWSMockRecorder) GetVpcResources(clusterID, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVpcResources", reflect.TypeOf((*MockAWS)(nil).GetVpcResources), clusterID, logger)
+}
+
 // ReleaseVpc mocks base method
 func (m *MockAWS) ReleaseVpc(clusterID string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()

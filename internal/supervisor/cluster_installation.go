@@ -7,13 +7,13 @@ package supervisor
 import (
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
-
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 // clusterInstallationStore abstracts the database operations required to query installations.
@@ -32,12 +32,9 @@ type clusterInstallationStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
-// provisioner abstracts the provisioning operations required by the cluster installation supervisor.
+// clusterInstallationProvisioner abstracts the provisioning operations required by the cluster installation supervisor.
 type clusterInstallationProvisioner interface {
-	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error
-	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error)
+	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
 }
 
 // ClusterInstallationSupervisor finds cluster installations pending work and effects the required changes.
@@ -202,7 +199,8 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 }
 
 func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-	err := s.provisioner.CreateClusterInstallation(cluster, installation, clusterInstallation, s.aws)
+	err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		CreateClusterInstallation(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")
 		return model.ClusterInstallationStateCreationRequested
@@ -219,7 +217,8 @@ func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstall
 }
 
 func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-	err := s.provisioner.DeleteClusterInstallation(cluster, installation, clusterInstallation)
+	err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		DeleteClusterInstallation(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete cluster installation")
 		return model.ClusterInstallationStateDeletionFailed
@@ -236,15 +235,14 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 }
 
 func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-	cr, err := s.provisioner.GetClusterInstallationResource(cluster, installation, clusterInstallation)
+	isReady, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		IsResourceReady(cluster, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster installation resource")
 		return model.ClusterInstallationStateReconciling
 	}
 
-	if cr.Status.State != mmv1alpha1.Stable ||
-		cr.Spec.Replicas != cr.Status.Replicas ||
-		cr.Spec.Version != cr.Status.Version {
+	if !isReady {
 		logger.Info("Cluster installation is still reconciling")
 		return model.ClusterInstallationStateReconciling
 	}

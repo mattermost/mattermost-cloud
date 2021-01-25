@@ -1502,7 +1502,7 @@ prometheus:
   ingress:
     enabled: true
     annotations:
-      kubernetes.io/ingress.class: nginx-controller
+      kubernetes.io/ingress.class: nginx-internal
     labels: {}
     ## Hostnames.
     ## Must be provided if Ingress is enabled.
