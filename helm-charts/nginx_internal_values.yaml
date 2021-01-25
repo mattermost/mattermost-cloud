@@ -48,8 +48,8 @@ controller:
      cpu: 1000m
      memory: 500Mi
    requests:
-     cpu: 500m
-     memory: 250Mi
+     cpu: 100mm
+     memory: 100Mi
 
   autoscaling:
     enabled: true
