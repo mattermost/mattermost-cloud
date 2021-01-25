@@ -1785,7 +1785,7 @@ prometheus:
 
     ## How long to retain metrics
     ##
-    retention: 2d
+    retention: 1d
 
     ## Maximum size of metrics
     ##
@@ -1852,11 +1852,11 @@ prometheus:
     ##
     resources:
       requests:
-        cpu: 500m
-        memory: 6Gi
+        cpu: 250m
+        memory: 500Mi
       limits:
-        cpu: "3"
-        memory: 60Gi
+        cpu: 1000m
+        memory: 4Gi
 
     ## Prometheus StorageSpec for persistent data
     ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/master/Documentation/user-guides/storage.md
@@ -1868,7 +1868,7 @@ prometheus:
          accessModes: ["ReadWriteOnce"]
          resources:
            requests:
-             storage: 300Gi
+             storage: 20Gi
 #       selector: {}
 
     # Additional volumes on the output StatefulSet definition.
