@@ -150,11 +150,14 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	if filter.GroupID != "" {
 		builder = builder.Where("GroupID = ?", filter.GroupID)
 	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
+	if filter.State != "" {
+		builder = builder.Where("State = ?", filter.State)
 	}
 	if filter.DNS != "" {
 		builder = builder.Where("DNS = ?", filter.DNS)
+	}
+	if !filter.IncludeDeleted {
+		builder = builder.Where("DeleteAt = 0")
 	}
 
 	return builder

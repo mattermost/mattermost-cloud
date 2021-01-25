@@ -51,13 +51,14 @@ func init() {
 
 	installationListCmd.Flags().String("owner", "", "The owner by which to filter installations.")
 	installationListCmd.Flags().String("group", "", "The group ID by which to filter installations.")
+	installationListCmd.Flags().String("state", "", "The state by which to filter results by.")
+	installationListCmd.Flags().String("dns", "", "The dns by which to filter results by.")
 	installationListCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installations or not.")
 	installationListCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
 	installationListCmd.Flags().Int("page", 0, "The page of installations to fetch, starting at 0.")
 	installationListCmd.Flags().Int("per-page", 100, "The number of installations to fetch per page.")
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
 	installationListCmd.Flags().Bool("table", false, "Whether to display the returned installation list in a table or not.")
-	installationListCmd.Flags().String("dns", "", "The dns to filter results by.")
 
 	installationHibernateCmd.Flags().String("installation", "", "The id of the installation to put into hibernation.")
 	installationHibernateCmd.MarkFlagRequired("installation")
@@ -318,20 +319,22 @@ var installationListCmd = &cobra.Command{
 
 		owner, _ := command.Flags().GetString("owner")
 		group, _ := command.Flags().GetString("group")
+		state, _ := command.Flags().GetString("state")
+		dns, _ := command.Flags().GetString("dns")
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
-		dns, _ := command.Flags().GetString("dns")
 		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 			OwnerID:                     owner,
 			GroupID:                     group,
+			State:                       state,
+			DNS:                         dns,
 			IncludeGroupConfig:          includeGroupConfig,
 			IncludeGroupConfigOverrides: includeGroupConfigOverrides,
 			Page:                        page,
 			PerPage:                     perPage,
-			DNS:                         dns,
 			IncludeDeleted:              includeDeleted,
 		})
 		if err != nil {
