@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+const hibernationReplicaCount = -1
+
 // ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
 type ClusterInstallationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
@@ -155,7 +157,7 @@ func (provisioner *kopsCIAlpha) HibernateClusterInstallation(cluster *model.Clus
 	// The current way to do this is to set a negative replica count in the
 	// k8s custom resource.
 	// TODO: enhance hibernation to include database and/or filestore.
-	cr.Spec.Replicas = -1
+	cr.Spec.Replicas = hibernationReplicaCount
 
 	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -413,8 +415,14 @@ func (provisioner *kopsCIAlpha) IsResourceReady(cluster *model.Cluster, clusterI
 		return false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
 
+	// Perform hibernation logic correction.
+	expectedReplicas := cr.Spec.Replicas
+	if expectedReplicas == hibernationReplicaCount {
+		expectedReplicas = 0
+	}
+
 	if cr.Status.State != mmv1alpha1.Stable ||
-		cr.Spec.Replicas != cr.Status.Replicas ||
+		expectedReplicas != cr.Status.Replicas ||
 		cr.Spec.Version != cr.Status.Version {
 		return false, nil
 	}
