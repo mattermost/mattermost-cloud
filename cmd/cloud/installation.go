@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const hiddenLicense = "hidden (--hide-license=true)"
+
 func init() {
 	installationCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 	installationCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
@@ -47,14 +49,16 @@ func init() {
 	installationGetCmd.Flags().String("installation", "", "The id of the installation to be fetched.")
 	installationGetCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installation or not.")
 	installationGetCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installation or not.")
+	installationGetCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
 	installationGetCmd.MarkFlagRequired("installation")
 
-	installationListCmd.Flags().String("owner", "", "The owner by which to filter installations.")
-	installationListCmd.Flags().String("group", "", "The group ID by which to filter installations.")
-	installationListCmd.Flags().String("state", "", "The state by which to filter results by.")
-	installationListCmd.Flags().String("dns", "", "The dns by which to filter results by.")
+	installationListCmd.Flags().String("owner", "", "The owner ID to filter installations by.")
+	installationListCmd.Flags().String("group", "", "The group ID to filter installations.")
+	installationListCmd.Flags().String("state", "", "The state to filter installations by.")
+	installationListCmd.Flags().String("dns", "", "The dns name to filter installations by.")
 	installationListCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installations or not.")
 	installationListCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
+	installationListCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
 	installationListCmd.Flags().Int("page", 0, "The page of installations to fetch, starting at 0.")
 	installationListCmd.Flags().Int("per-page", 100, "The number of installations to fetch per page.")
 	installationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted installations.")
@@ -287,6 +291,7 @@ var installationGetCmd = &cobra.Command{
 		installationID, _ := command.Flags().GetString("installation")
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
+		hideLicense, _ := command.Flags().GetBool("hide-license")
 
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{
 			IncludeGroupConfig:          includeGroupConfig,
@@ -297,6 +302,9 @@ var installationGetCmd = &cobra.Command{
 		}
 		if installation == nil {
 			return nil
+		}
+		if hideLicense && len(installation.License) != 0 {
+			installation.License = hiddenLicense
 		}
 
 		err = printJSON(installation)
@@ -323,6 +331,7 @@ var installationListCmd = &cobra.Command{
 		dns, _ := command.Flags().GetString("dns")
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
+		hideLicense, _ := command.Flags().GetBool("hide-license")
 		page, _ := command.Flags().GetInt("page")
 		perPage, _ := command.Flags().GetInt("per-page")
 		includeDeleted, _ := command.Flags().GetBool("include-deleted")
@@ -339,6 +348,14 @@ var installationListCmd = &cobra.Command{
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query installations")
+		}
+
+		if hideLicense {
+			for _, installation := range installations {
+				if len(installation.License) != 0 {
+					installation.License = hiddenLicense
+				}
+			}
 		}
 
 		outputToTable, _ := command.Flags().GetBool("table")
