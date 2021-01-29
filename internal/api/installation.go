@@ -72,8 +72,6 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 // handleGetInstallations responds to GET /api/installations, returning the specified page of installations.
 func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) {
 	var err error
-	owner := r.URL.Query().Get("owner")
-	group := r.URL.Query().Get("group")
 
 	page, perPage, includeDeleted, err := parsePaging(r.URL)
 	if err != nil {
@@ -89,11 +87,15 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	owner := r.URL.Query().Get("owner")
+	group := r.URL.Query().Get("group")
+	state := r.URL.Query().Get("state")
 	dns := r.URL.Query().Get("dns_name")
 
 	filter := &model.InstallationFilter{
 		OwnerID:        owner,
 		GroupID:        group,
+		State:          state,
 		Page:           page,
 		PerPage:        perPage,
 		IncludeDeleted: includeDeleted,
@@ -175,6 +177,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		APISecurityLock:            createInstallationRequest.APISecurityLock,
 		MattermostEnv:              createInstallationRequest.MattermostEnv,
 		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
+		CRVersion:                  model.DefaultCRVersion,
 		State:                      model.InstallationStateCreationRequested,
 	}
 

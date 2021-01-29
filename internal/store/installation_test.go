@@ -50,6 +50,7 @@ func TestInstallations(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID1,
+		CRVersion: model.V1betaCRVersion,
 		State:     model.InstallationStateCreationRequested,
 	}
 
@@ -76,6 +77,7 @@ func TestInstallations(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID2,
+		CRVersion: model.DefaultCRVersion,
 		State:     model.InstallationStateStable,
 	}
 
@@ -144,20 +146,6 @@ func TestInstallations(t *testing.T) {
 		installation, err := sqlStore.GetInstallation(installation3.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, installation3, installation)
-	})
-
-	t.Run("get installation 3 by name", func(t *testing.T) {
-		installations, err := sqlStore.GetInstallations(
-			&model.InstallationFilter{
-				DNS:     installation3.DNS,
-				PerPage: model.AllPerPage,
-			}, false, false)
-
-		require.Equal(t, 1, len(installations))
-		installation := installations[0]
-
-		require.NoError(t, err)
-		require.Equal(t, installation.ID, installation3.ID)
 	})
 
 	t.Run("get and delete installation 4", func(t *testing.T) {
@@ -294,6 +282,36 @@ func TestInstallations(t *testing.T) {
 				IncludeDeleted: true,
 			},
 			[]*model.Installation{installation4},
+		},
+		{
+			"dns 3",
+			&model.InstallationFilter{
+				DNS:            installation3.DNS,
+				Page:           0,
+				PerPage:        10,
+				IncludeDeleted: false,
+			},
+			[]*model.Installation{installation3},
+		},
+		{
+			"state stable",
+			&model.InstallationFilter{
+				State:          model.InstallationStateStable,
+				Page:           0,
+				PerPage:        10,
+				IncludeDeleted: false,
+			},
+			[]*model.Installation{installation2},
+		},
+		{
+			"state creation-requested",
+			&model.InstallationFilter{
+				State:          model.InstallationStateCreationRequested,
+				Page:           0,
+				PerPage:        10,
+				IncludeDeleted: false,
+			},
+			[]*model.Installation{installation1, installation3},
 		},
 	}
 
@@ -616,10 +634,11 @@ func TestUpdateInstallation(t *testing.T) {
 				},
 			},
 		},
-		Size:     mmv1alpha1.Size100String,
-		Affinity: model.InstallationAffinityIsolated,
-		GroupID:  &groupID1,
-		State:    model.InstallationStateCreationRequested,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID1,
+		CRVersion: model.DefaultCRVersion,
+		State:     model.InstallationStateCreationRequested,
 	}
 
 	err = sqlStore.CreateInstallation(installation1, nil)
@@ -648,6 +667,7 @@ func TestUpdateInstallation(t *testing.T) {
 	installation1.Size = mmv1alpha1.Size1000String
 	installation1.Affinity = model.InstallationAffinityIsolated
 	installation1.GroupID = &groupID2
+	installation1.CRVersion = model.V1betaCRVersion
 	installation1.State = model.InstallationStateDeletionRequested
 
 	err = sqlStore.UpdateInstallation(installation1)

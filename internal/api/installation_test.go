@@ -136,6 +136,7 @@ func TestGetInstallations(t *testing.T) {
 			DNS:      "dns.example.com",
 			Size:     "1000users",
 			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateCreationRequested,
 		}
 		err := sqlStore.CreateInstallation(installation1, annotations)
 		require.NoError(t, err)
@@ -147,6 +148,7 @@ func TestGetInstallations(t *testing.T) {
 			Version:  "version",
 			DNS:      "dns2.example.com",
 			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateCreationRequested,
 		}
 		err = sqlStore.CreateInstallation(installation2, nil)
 		require.NoError(t, err)
@@ -158,6 +160,7 @@ func TestGetInstallations(t *testing.T) {
 			Version:  "version",
 			DNS:      "dns3.example.com",
 			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateCreationRequested,
 		}
 		err = sqlStore.CreateInstallation(installation3, nil)
 		require.NoError(t, err)
@@ -169,6 +172,7 @@ func TestGetInstallations(t *testing.T) {
 			Version:  "version",
 			DNS:      "dns4.example.com",
 			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateCreationRequested,
 		}
 		err = sqlStore.CreateInstallation(installation4, nil)
 		require.NoError(t, err)
@@ -256,12 +260,42 @@ func TestGetInstallations(t *testing.T) {
 				{
 					"filter by owner",
 					&model.GetInstallationsRequest{
+						OwnerID:        ownerID1,
 						Page:           0,
 						PerPage:        100,
-						OwnerID:        ownerID1,
 						IncludeDeleted: false,
 					},
 					[]*model.Installation{installation1, installation3},
+				},
+				{
+					"filter by dns",
+					&model.GetInstallationsRequest{
+						DNS:            installation1.DNS,
+						Page:           0,
+						PerPage:        100,
+						IncludeDeleted: false,
+					},
+					[]*model.Installation{installation1},
+				},
+				{
+					"filter by state creation-requested",
+					&model.GetInstallationsRequest{
+						State:          model.InstallationStateCreationRequested,
+						Page:           0,
+						PerPage:        100,
+						IncludeDeleted: false,
+					},
+					[]*model.Installation{installation1, installation2, installation3},
+				},
+				{
+					"filter by state stable",
+					&model.GetInstallationsRequest{
+						State:          model.InstallationStateStable,
+						Page:           0,
+						PerPage:        100,
+						IncludeDeleted: false,
+					},
+					[]*model.Installation{},
 				},
 			}
 
@@ -415,6 +449,7 @@ func TestCreateInstallation(t *testing.T) {
 		require.Equal(t, "dns.example.com", installation.DNS)
 		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
 		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
+		require.Equal(t, model.DefaultCRVersion, installation.CRVersion)
 		require.Empty(t, installation.LockAcquiredBy)
 		require.EqualValues(t, 0, installation.LockAcquiredAt)
 		require.NotEqual(t, 0, installation.CreateAt)
@@ -437,6 +472,7 @@ func TestCreateInstallation(t *testing.T) {
 		require.Equal(t, "dns1.example.com", installation.DNS)
 		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
 		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
+		require.Equal(t, model.DefaultCRVersion, installation.CRVersion)
 		require.Empty(t, installation.LockAcquiredBy)
 		require.EqualValues(t, 0, installation.LockAcquiredAt)
 		require.NotEqual(t, 0, installation.CreateAt)

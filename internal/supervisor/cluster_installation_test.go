@@ -7,14 +7,13 @@ package supervisor_test
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
-
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 type mockClusterInstallationStore struct {
@@ -63,7 +62,11 @@ func (s *mockClusterInstallationStore) GetWebhooks(filter *model.WebhookFilter) 
 
 type mockClusterInstallationProvisioner struct{}
 
-func (p *mockClusterInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation, awsClient aws.AWS) error {
+func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
+	return p
+}
+
+func (p *mockClusterInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
 
@@ -75,15 +78,16 @@ func (p *mockClusterInstallationProvisioner) UpdateClusterInstallation(cluster *
 	return nil
 }
 
-func (p *mockClusterInstallationProvisioner) GetClusterInstallationResource(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) (*mmv1alpha1.ClusterInstallation, error) {
-	return &mmv1alpha1.ClusterInstallation{
-			Spec: mmv1alpha1.ClusterInstallationSpec{},
-			Status: mmv1alpha1.ClusterInstallationStatus{
-				State:    mmv1alpha1.Stable,
-				Endpoint: "example-dns.mattermost.cloud",
-			},
-		},
-		nil
+func (p *mockClusterInstallationProvisioner) IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	return true, nil
+}
+
+func (p *mockClusterInstallationProvisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	return nil
+}
+
+func (p *mockClusterInstallationProvisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	return false, nil
 }
 
 func TestClusterInstallationSupervisorDo(t *testing.T) {

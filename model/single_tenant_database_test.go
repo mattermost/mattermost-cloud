@@ -6,9 +6,10 @@ package model_test
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestNewSingleTenantDatabaseConfigurationFromReader(t *testing.T) {

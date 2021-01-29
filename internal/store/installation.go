@@ -22,7 +22,7 @@ func init() {
 			"ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
 			"MattermostEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
-			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
+			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
 		From("Installation")
 }
@@ -150,11 +150,14 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	if filter.GroupID != "" {
 		builder = builder.Where("GroupID = ?", filter.GroupID)
 	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
+	if filter.State != "" {
+		builder = builder.Where("State = ?", filter.State)
 	}
 	if filter.DNS != "" {
 		builder = builder.Where("DNS = ?", filter.DNS)
+	}
+	if !filter.IncludeDeleted {
+		builder = builder.Where("DeleteAt = 0")
 	}
 
 	return builder
@@ -305,6 +308,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"APISecurityLock":  installation.APISecurityLock,
 		"LockAcquiredBy":   nil,
 		"LockAcquiredAt":   0,
+		"CRVersion":        installation.CRVersion,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -354,6 +358,7 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 			"License":          installation.License,
 			"MattermostEnvRaw": []byte(envJSON),
 			"State":            installation.State,
+			"CRVersion":        installation.CRVersion,
 		}).
 		Where("ID = ?", installation.ID),
 	)
