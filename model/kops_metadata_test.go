@@ -29,3 +29,21 @@ func TestNewKopsMetadata(t *testing.T) {
 		require.Equal(t, "name", kopsMetadata.Name)
 	})
 }
+
+func TestValidateChangeRequest(t *testing.T) {
+	var km model.KopsMetadata
+
+	t.Run("nil ChangeRequest", func(t *testing.T) {
+		require.Error(t, km.ValidateChangeRequest())
+	})
+
+	t.Run("empty ChangeRequest", func(t *testing.T) {
+		km.ChangeRequest = &model.KopsMetadataRequestedState{}
+		require.Error(t, km.ValidateChangeRequest())
+	})
+
+	t.Run("valid ChangeRequest", func(t *testing.T) {
+		km.ChangeRequest.Version = "1.0.0"
+		require.NoError(t, km.ValidateChangeRequest())
+	})
+}

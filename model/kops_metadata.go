@@ -6,6 +6,8 @@ package model
 
 import (
 	"encoding/json"
+
+	"github.com/pkg/errors"
 )
 
 // KopsMetadata is the provisioner metadata stored in a model.Cluster.
@@ -31,6 +33,26 @@ type KopsMetadataRequestedState struct {
 	NodeInstanceType   string `json:"NodeInstanceType,omitempty"`
 	NodeMinCount       int64  `json:"NodeMinCount,omitempty"`
 	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
+}
+
+// ValidateChangeRequest ensures that the ChangeRequest has at least one
+// actionable value.
+func (km *KopsMetadata) ValidateChangeRequest() error {
+	if km.ChangeRequest == nil {
+		return errors.New("the KopsMetadata ChangeRequest is nil")
+	}
+
+	if len(km.ChangeRequest.Version) == 0 &&
+		len(km.ChangeRequest.AMI) == 0 &&
+		len(km.ChangeRequest.MasterInstanceType) == 0 &&
+		len(km.ChangeRequest.NodeInstanceType) == 0 &&
+		km.MasterCount == 0 &&
+		km.NodeMinCount == 0 &&
+		km.NodeMaxCount == 0 {
+		return errors.New("the KopsMetadata ChangeRequest has no change values set")
+	}
+
+	return nil
 }
 
 // ClearChangeRequest clears the kops metadata change request.

@@ -45,12 +45,21 @@ func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) bool 
 func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	isAMIValid, err := awsClient.IsValidAMI(cluster.ProvisionerMetadataKops.AMI, logger)
+	kopsMetadata := cluster.ProvisionerMetadataKops
+
+	err := kopsMetadata.ValidateChangeRequest()
 	if err != nil {
-		return errors.Wrapf(err, "error checking the AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
+		return errors.Wrap(err, "KopsMetadata ChangeRequest failed validation")
 	}
-	if !isAMIValid {
-		return errors.Errorf("invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
+
+	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
+		isAMIValid, err := awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		}
+		if !isAMIValid {
+			return errors.Errorf("invalid AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		}
 	}
 
 	environment, err := awsClient.GetCloudEnvironmentName()
@@ -65,8 +74,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	}
 	allowSSHCIDRS := []string{cncVPCCIDR}
 	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.vpnCIDRList...)
-
-	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
 	kops, err := kops.New(provisioner.s3StateStore, logger)
@@ -441,15 +448,22 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	isAMIValid, err := awsClient.IsValidAMI(cluster.ProvisionerMetadataKops.AMI, logger)
+	kopsMetadata := cluster.ProvisionerMetadataKops
+
+	err := kopsMetadata.ValidateChangeRequest()
 	if err != nil {
-		return errors.Wrapf(err, "error checking the AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
-	}
-	if !isAMIValid {
-		return errors.Errorf("invalid AWS AMI Image %s", cluster.ProvisionerMetadataKops.AMI)
+		return errors.Wrap(err, "KopsMetadata ChangeRequest failed validation")
 	}
 
-	kopsMetadata := cluster.ProvisionerMetadataKops
+	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
+		isAMIValid, err := awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		}
+		if !isAMIValid {
+			return errors.Errorf("invalid AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		}
+	}
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
@@ -554,6 +568,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
+
+	err := kopsMetadata.ValidateChangeRequest()
+	if err != nil {
+		return errors.Wrap(err, "KopsMetadata ChangeRequest failed validation")
+	}
 
 	kops, err := kops.New(provisioner.s3StateStore, logger)
 	if err != nil {
