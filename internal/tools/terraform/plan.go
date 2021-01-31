@@ -126,11 +126,17 @@ func (c *Cmd) Output(variable string) (string, bool, error) {
 }
 
 // Version invokes terraform version and returns the value.
-func (c *Cmd) Version() (string, error) {
+func (c *Cmd) Version(removeUpgradeWarning bool) (string, error) {
 	stdout, _, err := c.run("version")
 	trimmed := strings.TrimSuffix(string(stdout), "\n")
 	if err != nil {
 		return trimmed, errors.Wrap(err, "failed to invoke terraform version")
+	}
+
+	// The terraform version command will print an upgrade warning if running
+	// an older version. Optionally attempt to remove the warning before returning.
+	if removeUpgradeWarning {
+		trimmed = strings.Split(trimmed, "\n")[0]
 	}
 
 	return trimmed, nil

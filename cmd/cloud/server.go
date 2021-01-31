@@ -26,6 +26,8 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -212,10 +214,10 @@ var serverCmd = &cobra.Command{
 
 		environment, err := awsClient.GetCloudEnvironmentName()
 		if err != nil {
-			return errors.Wrap(err, "getting the AWS Cloud environment")
+			return errors.Wrap(err, "failed to get the AWS Cloud environment name")
 		}
 
-		err = checkRequirements(awsConfig, s3StateStore)
+		err = checkRequirements(awsConfig, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
 		}
@@ -316,21 +318,53 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
-	utilities := []string{
-		"terraform",
-		"kops",
-		"kubectl",
-		"helm",
-	}
+func checkRequirements(awsConfig *sdkAWS.Config, logger logrus.FieldLogger) error {
+	// Check for required tool binaries.
+	silentLogger := logrus.New()
+	silentLogger.Out = ioutil.Discard
 
-	for _, requiredUtility := range utilities {
-		_, err := exec.LookPath(requiredUtility)
+	terraformClient, err := terraform.New(".", "dummy-remote-state", silentLogger)
+	if err != nil {
+		return errors.Wrap(err, "failed terraform client health check")
+	}
+	version, err := terraformClient.Version(true)
+	if err != nil {
+		return errors.Wrap(err, "failed to get terraform version")
+	}
+	logger.Infof("[startup-check] Using terraform: %s", version)
+
+	kopsClient, err := kops.New("dummy-state-store", silentLogger)
+	if err != nil {
+		return errors.Wrap(err, "failed kops client health check")
+	}
+	version, err = kopsClient.Version()
+	if err != nil {
+		return errors.Wrap(err, "failed to get kops version")
+	}
+	logger.Infof("[startup-check] Using kops: %s", version)
+
+	helmClient, err := helm.New(silentLogger)
+	if err != nil {
+		return errors.Wrap(err, "failed helm client health check")
+	}
+	version, err = helmClient.Version()
+	if err != nil {
+		return errors.Wrap(err, "failed to get helm version")
+	}
+	logger.Infof("[startup-check] Using helm: %s", version)
+
+	// Check for extra tools that don't have a wrapper, but are still required.
+	extraTools := []string{
+		"kubectl",
+	}
+	for _, extraTool := range extraTools {
+		_, err := exec.LookPath(extraTool)
 		if err != nil {
-			return errors.Errorf("failed to find %s on the PATH", requiredUtility)
+			return errors.Errorf("failed to find %s on the PATH", extraTool)
 		}
 	}
 
+	// Check for SSH keys.
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return errors.Wrap(err, "failed to determine the current user's home directory")
@@ -363,11 +397,6 @@ func checkRequirements(awsConfig *sdkAWS.Config, s3StateStore string) error {
 	}()
 	if !hasKeys {
 		return errors.Errorf("failed to find an SSH key in %s", homedir)
-	}
-	client := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
-	_, err = client.GetCloudEnvironmentName()
-	if err != nil {
-		return errors.Wrap(err, "failed to establish a connection with AWS")
 	}
 
 	return nil
