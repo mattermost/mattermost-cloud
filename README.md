@@ -29,7 +29,7 @@ The following is required to properly run the cloud server.
 1. Install [Go](https://golang.org/doc/install)
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
-3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.17.X
+3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.18.X
 4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.4.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
@@ -228,7 +228,7 @@ terraform apply
 
 Tip: a quick and reliable way to get access to a cluster's terraform files and state is to use the `cloud workbench cluster` command. This will checkout the correct files locally in the same manner that the provisioning process uses.
 
-For more information on this change and reasoning for it, check out the [kops release notes](https://github.com/kubernetes/kops/releases/tag/v1.17.0).
+For more information on this change and reasoning for it, check out the [kops release notes](https://github.com/kubernetes/kops/releases/tag/v1.18.3).
 
 #### Cluster reprovisioning steps for new NGINX deployment
 
