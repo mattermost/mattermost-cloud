@@ -5,8 +5,10 @@
 package helm
 
 import (
-	"github.com/pkg/errors"
 	"os/exec"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // RunGenericCommand runs any given helm command.
@@ -23,4 +25,15 @@ func (c *Cmd) RunGenericCommand(arg ...string) error {
 func (c *Cmd) RunCommandRaw(arg ...string) ([]byte, error) {
 	cmd := exec.Command(c.helmPath, arg...)
 	return cmd.Output()
+}
+
+// Version invokes helm version and returns the value.
+func (c *Cmd) Version() (string, error) {
+	stdout, _, err := c.run("version")
+	trimmed := strings.TrimSuffix(string(stdout), "\n")
+	if err != nil {
+		return trimmed, errors.Wrap(err, "failed to invoke helm version")
+	}
+
+	return trimmed, nil
 }
