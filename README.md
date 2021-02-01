@@ -27,9 +27,9 @@ The following is required to properly run the cloud server.
 ##### Note: when versions are specified, it is extremely important to follow the requirement. Newer versions will often not work as expected
 
 1. Install [Go](https://golang.org/doc/install)
-2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.11.14
+2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.12.29
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
-3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.17.X
+3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.18.X
 4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.4.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
@@ -220,6 +220,7 @@ terraform plan
 # Run these commands as necessary. The exact names may differ; use what is outputted by terraform plan
 terraform state mv aws_route.0-0-0-0--0 aws_route.route-0-0-0-0--0
 terraform state mv aws_vpc_ipv4_cidr_block_association.10-1-0-0--16 aws_vpc_ipv4_cidr_block_association.cidr-10-1-0-0--16
+terraform state list | grep aws_autoscaling_attachment | xargs -L1 terraform state rm
 terraform plan
 # Ensure these resources are no longer being destroyed and recreated
 terraform apply
@@ -227,7 +228,7 @@ terraform apply
 
 Tip: a quick and reliable way to get access to a cluster's terraform files and state is to use the `cloud workbench cluster` command. This will checkout the correct files locally in the same manner that the provisioning process uses.
 
-For more information on this change and reasoning for it, check out the [kops release notes](https://github.com/kubernetes/kops/releases/tag/v1.17.0).
+For more information on this change and reasoning for it, check out the [kops release notes](https://github.com/kubernetes/kops/releases/tag/v1.18.3).
 
 #### Cluster reprovisioning steps for new NGINX deployment
 

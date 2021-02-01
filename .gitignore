@@ -5,3 +5,5 @@ coverage.out
 /.idea
 build/_output/
 bin/*
+build/kops
+build/kubectl
