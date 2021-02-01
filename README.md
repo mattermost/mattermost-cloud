@@ -220,6 +220,7 @@ terraform plan
 # Run these commands as necessary. The exact names may differ; use what is outputted by terraform plan
 terraform state mv aws_route.0-0-0-0--0 aws_route.route-0-0-0-0--0
 terraform state mv aws_vpc_ipv4_cidr_block_association.10-1-0-0--16 aws_vpc_ipv4_cidr_block_association.cidr-10-1-0-0--16
+terraform state list | grep aws_autoscaling_attachment | xargs -L1 terraform state rm
 terraform plan
 # Ensure these resources are no longer being destroyed and recreated
 terraform apply

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -92,7 +91,6 @@ func (c *Cmd) SetCluster(name, setValue string) error {
 
 // RollingUpdateCluster invokes kops rolling-update cluster, using the context of the created Cmd.
 func (c *Cmd) RollingUpdateCluster(name string) error {
-	time.Sleep(5 * time.Second)
 	_, _, err := c.run(
 		"rolling-update",
 		"cluster",
