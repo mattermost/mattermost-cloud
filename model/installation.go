@@ -35,6 +35,7 @@ type Installation struct {
 	Size                       string
 	Affinity                   string
 	State                      string
+	CRVersion                  string
 	CreateAt                   int64
 	DeleteAt                   int64
 	APISecurityLock            bool
@@ -42,8 +43,6 @@ type Installation struct {
 	LockAcquiredAt             int64
 	GroupOverrides             map[string]string           `json:"GroupOverrides,omitempty"`
 	SingleTenantDatabaseConfig *SingleTenantDatabaseConfig `json:"SingleTenantDatabaseConfig,omitempty"`
-	// CRVersion is a Custom Resource version that should represent Installation on the cluster.
-	CRVersion string `json:"CRVersion,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be
