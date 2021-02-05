@@ -134,7 +134,7 @@ const (
 
 	// HibernatingInstallationResourceRecordIDPrefix is a prefix given to AWS
 	// route53 resource records when the installation it points to is hibernating.
-	HibernatingInstallationResourceRecordIDPrefix = "[hybernating] "
+	HibernatingInstallationResourceRecordIDPrefix = "[hibernating] "
 
 	// CustomNodePolicyName is the name of the custom IAM policy that will be
 	// attached in Kops Instance Profile.
