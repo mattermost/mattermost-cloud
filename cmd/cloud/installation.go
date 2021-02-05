@@ -38,8 +38,9 @@ func init() {
 	installationCreateCmd.MarkFlagRequired("dns")
 
 	installationUpdateCmd.Flags().String("installation", "", "The id of the installation to be updated.")
-	installationUpdateCmd.Flags().String("version", "stable", "The Mattermost version to target.")
+	installationUpdateCmd.Flags().String("owner", "", "The new owner value of this installation.")
 	installationUpdateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
+	installationUpdateCmd.Flags().String("version", "stable", "The Mattermost version to target.")
 	installationUpdateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
@@ -183,6 +184,7 @@ var installationUpdateCmd = &cobra.Command{
 		}
 
 		request := &model.PatchInstallationRequest{
+			OwnerID:       getStringFlagPointer(command, "owner"),
 			Version:       getStringFlagPointer(command, "version"),
 			Image:         getStringFlagPointer(command, "image"),
 			Size:          getStringFlagPointer(command, "size"),

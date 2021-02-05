@@ -314,6 +314,17 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			&model.Installation{},
 		},
 		{
+			"ownerID only",
+			true,
+			&model.PatchInstallationRequest{
+				OwnerID: sToP("new-owner"),
+			},
+			&model.Installation{},
+			&model.Installation{
+				OwnerID: "new-owner",
+			},
+		},
+		{
 			"version only",
 			true,
 			&model.PatchInstallationRequest{
@@ -434,6 +445,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 			"complex",
 			true,
 			&model.PatchInstallationRequest{
+				OwnerID: sToP("new-owner"),
 				Version: sToP("patch-version"),
 				Size:    sToP("miniSingleton"),
 				MattermostEnv: model.EnvVarMap{
@@ -442,6 +454,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				},
 			},
 			&model.Installation{
+				OwnerID: "owner",
 				Version: "version1",
 				Image:   "image1",
 				License: "license1",
@@ -451,6 +464,7 @@ func TestPatchInstallationRequestApply(t *testing.T) {
 				},
 			},
 			&model.Installation{
+				OwnerID: "new-owner",
 				Version: "patch-version",
 				Image:   "image1",
 				License: "license1",
