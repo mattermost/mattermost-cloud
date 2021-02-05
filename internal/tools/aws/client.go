@@ -60,6 +60,7 @@ type AWS interface {
 
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
 	CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+	UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error
 	IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool
 	DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error
 	DeletePublicCNAME(dnsName string, logger log.FieldLogger) error

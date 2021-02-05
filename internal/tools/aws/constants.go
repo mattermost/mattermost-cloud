@@ -132,6 +132,10 @@ const (
 	// zone ID in AWS Route53.
 	DefaultPublicCloudDNSTagValue = "public"
 
+	// HibernatingInstallationResourceRecordIDPrefix is a prefix given to AWS
+	// route53 resource records when the installation it points to is hibernating.
+	HibernatingInstallationResourceRecordIDPrefix = "[hybernating] "
+
 	// CustomNodePolicyName is the name of the custom IAM policy that will be
 	// attached in Kops Instance Profile.
 	CustomNodePolicyName = "cloud-provisioning-node-policy"

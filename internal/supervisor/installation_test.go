@@ -292,6 +292,10 @@ func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logge
 	return nil
 }
 
+func (a *mockAWS) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error {
+	return nil
+}
+
 func (a *mockAWS) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool {
 	return false
 }
