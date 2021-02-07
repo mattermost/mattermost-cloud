@@ -127,13 +127,19 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	elasticSearchDNS := fmt.Sprintf("elasticsearch.%s", privateDomainName)
 	return &helmDeployment{
 		chartDeploymentName: "fluent-bit",
-		chartName:           "stable/fluent-bit",
+		chartName:           "fluent/fluent-bit",
 		namespace:           "fluent-bit",
-		setArgument: fmt.Sprintf(`backend.es.host=%s,rawConfig=
-@INCLUDE fluent-bit-service.conf
-@INCLUDE fluent-bit-input.conf
-@INCLUDE fluent-bit-filter.conf
-@INCLUDE fluent-bit-output.conf
+		setArgument: fmt.Sprintf(`config.outputs=[OUTPUT]
+	Name  es
+	Match *
+	Host  %s
+	Port  80
+	Logstash_Format On
+	Retry_Limit False
+	Type  _doc
+	Time_Key @timestamp
+	Replace_Dots On
+	Logstash_Prefix logstash
 %s
 `, elasticSearchDNS, auditLogsConf),
 		kopsProvisioner: f.provisioner,
