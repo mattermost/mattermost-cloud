@@ -35,9 +35,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultLocalServerAPI = "http://localhost:8075"
-)
+const defaultLocalServerAPI = "http://localhost:8075"
 
 var instanceID string
 
