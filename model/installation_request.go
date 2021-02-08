@@ -229,8 +229,9 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 
 // PatchInstallationRequest specifies the parameters for an updated installation.
 type PatchInstallationRequest struct {
-	Version       *string
+	OwnerID       *string
 	Image         *string
+	Version       *string
 	Size          *string
 	License       *string
 	MattermostEnv EnvVarMap
@@ -260,6 +261,10 @@ func (p *PatchInstallationRequest) Validate() error {
 func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	var applied bool
 
+	if p.OwnerID != nil && *p.OwnerID != installation.OwnerID {
+		applied = true
+		installation.OwnerID = *p.OwnerID
+	}
 	if p.Version != nil && *p.Version != installation.Version {
 		applied = true
 		installation.Version = *p.Version
