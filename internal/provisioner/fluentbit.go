@@ -112,12 +112,12 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 		hostPort := strings.Split(tag.Value, ":")
 		if len(hostPort) == 2 {
 			auditLogsConf = fmt.Sprintf(`[OUTPUT]
-	Name  forward
-	Match  *
-	Host  %s
-	Port  %s
-	tls  On
-	tls.verify  Off`, hostPort[0], hostPort[1])
+    Name  forward
+    Match  *
+    Host  %s
+    Port  %s
+    tls  On
+    tls.verify  Off`, hostPort[0], hostPort[1])
 		} else {
 			logger.Info("AuditLogsCoreSecurity tag is missing from R53 hosted zone, " +
 				"fluent-bit will be configured without forwarding to audit logs to Security")
@@ -130,16 +130,16 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 		chartName:           "fluent/fluent-bit",
 		namespace:           "fluent-bit",
 		setArgument: fmt.Sprintf(`config.outputs=[OUTPUT]
-	Name  es
-	Match *
-	Host  %s
-	Port  80
-	Logstash_Format On
-	Retry_Limit False
-	Type  _doc
-	Time_Key @timestamp
-	Replace_Dots On
-	Logstash_Prefix logstash
+    Name  es
+    Match *
+    Host  %s
+    Port  80
+    Logstash_Format On
+    Retry_Limit False
+    Type  _doc
+    Time_Key @timestamp
+    Replace_Dots On
+    Logstash_Prefix logstash
 %s
 `, elasticSearchDNS, auditLogsConf),
 		kopsProvisioner: f.provisioner,

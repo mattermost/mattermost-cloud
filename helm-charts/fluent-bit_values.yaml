@@ -9,7 +9,7 @@ replicaCount: 1
 image:
   repository: fluent/fluent-bit
   pullPolicy: Always
-  tag: 1.6.10
+  tag: latest
 
 testFramework:
   image:
@@ -22,7 +22,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  create: true
+  create: false
   annotations: {}
   name:
 
@@ -56,6 +56,7 @@ securityContext:
   # runAsUser: 1000
 
 service:
+  enabled: false
   type: ClusterIP
   port: 2020
   labels: {}
@@ -94,15 +95,9 @@ dashboards:
   labelKey: grafana_dashboard
   annotations: {}
 
-livenessProbe:
-  httpGet:
-    path: /
-    port: http
+livenessProbe: {}
 
-readinessProbe:
-  httpGet:
-    path: /
-    port: http
+readinessProbe: {}
 
 resources:
   {}
