@@ -252,7 +252,7 @@ func (a *Client) updateResourceRecordIDs(hostedZoneID, dnsName, newID string, lo
 	}
 
 	recordSet := recordSets[0]
-	if recordSet.SetIdentifier == aws.String(newID) {
+	if *recordSet.SetIdentifier == newID {
 		return nil
 	}
 
@@ -302,6 +302,9 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	if len(changes) == 0 {
 		logger.Warn("Unable to find any DNS records; skipping...")
 		return nil
+	}
+	if len(recordSets) != 1 {
+		return errors.Errorf("expected exactly 1 resource record, but found %d", len(changes))
 	}
 
 	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
