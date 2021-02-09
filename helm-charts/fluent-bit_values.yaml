@@ -9,7 +9,6 @@ replicaCount: 1
 image:
   repository: fluent/fluent-bit
   pullPolicy: Always
-  tag: latest
 
 testFramework:
   image:
@@ -22,7 +21,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  create: false
+  create: true
   annotations: {}
   name:
 
@@ -56,7 +55,6 @@ securityContext:
   # runAsUser: 1000
 
 service:
-  enabled: false
   type: ClusterIP
   port: 2020
   labels: {}
@@ -152,10 +150,14 @@ networkPolicy:
 config:
   service: |
     [SERVICE]
-        Flush        1
-        Daemon       Off
-        Log_Level    info
+        Flush 1
+        Daemon Off
+        Log_Level info
         Parsers_File parsers.conf
+        Parsers_File custom_parsers.conf
+        HTTP_Server On
+        HTTP_Listen 0.0.0.0
+        HTTP_Port {{ .Values.service.port }}
   ## https://docs.fluentbit.io/manual/pipeline/inputs
   inputs: |
     [INPUT]
