@@ -14,6 +14,7 @@ type GroupStatus struct {
 	InstallationsTotal          int64
 	InstallationsUpdated        int64
 	InstallationsUpdating       int64
+	InstallationsHibernating    int64
 	InstallationsAwaitingUpdate int64
 }
 

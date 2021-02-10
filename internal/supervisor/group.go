@@ -101,12 +101,12 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 	}
 
 	logger = logger.WithFields(log.Fields{
-		"installations-total":   groupMetadata.InstallationTotalCount,
-		"installations-rolling": groupMetadata.InstallationNonStableCount,
+		"installations-total":   groupMetadata.InstallationsTotalCount,
+		"installations-rolling": groupMetadata.InstallationsRolling,
 	})
 
-	if int64(groupMetadata.InstallationNonStableCount) >= group.MaxRolling {
-		logger.Infof("Group already has %d rolling installations with a max of %d", groupMetadata.InstallationNonStableCount, group.MaxRolling)
+	if int64(groupMetadata.InstallationsRolling) >= group.MaxRolling {
+		logger.Infof("Group already has %d rolling installations with a max of %d", groupMetadata.InstallationsRolling, group.MaxRolling)
 		return
 	}
 
@@ -118,7 +118,7 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 
 	var moved int64
 	for _, id := range groupMetadata.InstallationIDsToBeRolled {
-		if groupMetadata.InstallationNonStableCount+moved >= group.MaxRolling {
+		if groupMetadata.InstallationsRolling+moved >= group.MaxRolling {
 			// We have bumped up against the max rolling count with the new
 			// installations added to the rolling pool.
 			break
