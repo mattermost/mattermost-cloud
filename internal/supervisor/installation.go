@@ -935,7 +935,7 @@ func (s *InstallationSupervisor) waitForHibernationStable(installation *model.In
 		return model.InstallationStateHibernationInProgress
 	}
 
-	logger.Info("Finished updating installation")
+	logger.Info("Finished hibernating installation")
 
 	return model.InstallationStateHibernating
 }
