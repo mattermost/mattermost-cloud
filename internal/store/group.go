@@ -81,6 +81,7 @@ func (sqlStore *SQLStore) GetUnlockedGroupsPendingWork() ([]*model.Group, error)
 			Select("ID").
 			From("Installation").
 			Where("GroupID = ?", rawGroup.ID).
+			Where("State = ?", model.InstallationStateStable).
 			Where("(GroupSequence IS NULL OR GroupSequence != ?)", rawGroup.Sequence).
 			Where("DeleteAt = 0").
 			Limit(1)
@@ -99,10 +100,9 @@ func (sqlStore *SQLStore) GetUnlockedGroupsPendingWork() ([]*model.Group, error)
 // GroupRollingMetadata is a batch of information about a group where installatons
 // are being rolled to match a new config.
 type GroupRollingMetadata struct {
-	InstallationIDsToBeRolled  []string
-	InstallationTotalCount     int64
-	InstallationStableCount    int64
-	InstallationNonStableCount int64
+	InstallationIDsToBeRolled []string
+	InstallationsTotalCount   int64
+	InstallationsRolling      int64
 }
 
 // GetGroupRollingMetadata returns installation IDs and metadata related to
@@ -111,11 +111,6 @@ type GroupRollingMetadata struct {
 // Note: custom SQL queries are used here instead of calling GetInstallations().
 // This is done for performance as we don't need the actual installation objects
 // in most cases.
-//
-// TODO: currently the installations returned are only those that are in the
-// group AND not on the latest sequence AND are in stable state. This is a
-// best-case scenario that probably won't work in the long run. Other non-stable
-// states will probably need to be added once they have been properly tested.
 func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRollingMetadata, error) {
 	group, err := sqlStore.GetGroup(groupID)
 	if err != nil {
@@ -137,32 +132,30 @@ func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRolling
 		metadata.InstallationIDsToBeRolled = append(metadata.InstallationIDsToBeRolled, installation.ID)
 	}
 
-	count, err := sqlStore.countInstallationsInGroup(group)
+	metadata.InstallationsTotalCount, err = sqlStore.countInstallationsInGroup(group)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
 	}
-	metadata.InstallationTotalCount = count
 
-	var stableResult countResult
+	var stableOrHibernateResult countResult
 	installationBuilder := sq.
 		Select("Count (*)").
 		From("Installation").
 		Where("GroupID = ?", group.ID).
-		Where("State = ?", model.InstallationStateStable).
+		Where("(State = ? OR State = ?)", model.InstallationStateStable, model.InstallationStateHibernating).
 		Where("DeleteAt = 0")
-	err = sqlStore.selectBuilder(sqlStore.db, &stableResult, installationBuilder)
+	err = sqlStore.selectBuilder(sqlStore.db, &stableOrHibernateResult, installationBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for stable installations count in a group")
 	}
-	count, err = stableResult.value()
+	count, err := stableOrHibernateResult.value()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get count result of stable installations")
 	}
-	metadata.InstallationStableCount = count
-	metadata.InstallationNonStableCount = metadata.InstallationTotalCount - metadata.InstallationStableCount
+	metadata.InstallationsRolling = metadata.InstallationsTotalCount - count
 
-	if metadata.InstallationNonStableCount < 0 {
-		return nil, errors.Errorf("found more stable installations (%d) than total installations (%d)", metadata.InstallationStableCount, metadata.InstallationTotalCount)
+	if metadata.InstallationsRolling < 0 {
+		return nil, errors.Errorf("found more stable+hibernating installations (%d) than total installations (%d)", count, metadata.InstallationsTotalCount)
 	}
 
 	return metadata, nil
@@ -213,17 +206,34 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 		return nil, errors.Wrap(err, "failed to get count result of rolled out installations")
 	}
 
+	var hibernatingResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("State = ?", model.InstallationStateHibernating).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &hibernatingResult, installationBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for hibernating installations")
+	}
+	hibernatingCount, err := hibernatingResult.value()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get count result of hibernating installations")
+	}
+
 	totalCount, err := sqlStore.countInstallationsInGroup(group)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
 	}
 
-	unstableCount := totalCount - updatedCount - awaitingUpdateCount
+	updatingCount := totalCount - updatedCount - awaitingUpdateCount - hibernatingCount
 
 	return &model.GroupStatus{
 		InstallationsTotal:          totalCount,
 		InstallationsUpdated:        updatedCount,
-		InstallationsUpdating:       unstableCount,
+		InstallationsUpdating:       updatingCount,
+		InstallationsHibernating:    hibernatingCount,
 		InstallationsAwaitingUpdate: awaitingUpdateCount,
 	}, nil
 }

@@ -674,6 +674,12 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, installation.DNS, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed update installation route53 record to the standard ID value")
+		return installation.State
+	}
+
 	// Before starting, we check the installation and group sequence numbers and
 	// sync them if they are not already. This is used to check if the group
 	// configuration has changed during the upgrade process or not.
@@ -682,7 +688,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 		logger.Debugf("Updating installation to group configuration sequence %d", *installation.GroupSequence)
 
-		err := s.store.UpdateInstallationGroupSequence(installation)
+		err = s.store.UpdateInstallationGroupSequence(installation)
 		if err != nil {
 			logger.WithError(err).Errorf("Failed to set installation sequence to %d", *installation.GroupSequence)
 			return installation.State
@@ -840,6 +846,12 @@ func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstalla
 }
 
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed update installation route53 record with hibernation prefix")
+		return installation.State
+	}
+
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		PerPage:        model.AllPerPage,
 		InstallationID: installation.ID,
@@ -923,7 +935,7 @@ func (s *InstallationSupervisor) waitForHibernationStable(installation *model.In
 		return model.InstallationStateHibernationInProgress
 	}
 
-	logger.Info("Finished updating installation")
+	logger.Info("Finished hibernating installation")
 
 	return model.InstallationStateHibernating
 }

@@ -155,9 +155,10 @@ func (provisioner *kopsCIAlpha) HibernateClusterInstallation(cluster *model.Clus
 	// Hibernation is currently considered changing the Mattermost app deployment
 	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
 	// The current way to do this is to set a negative replica count in the
-	// k8s custom resource.
+	// k8s custom resource. Custom ingress annotations are also used.
 	// TODO: enhance hibernation to include database and/or filestore.
 	cr.Spec.Replicas = hibernationReplicaCount
+	cr.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
 
 	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -251,6 +252,8 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
 	cr.Spec.MattermostEnv = mattermostEnv.ToEnvList()
+
+	cr.Spec.IngressAnnotations = getIngressAnnotations()
 
 	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -650,4 +653,13 @@ func getIngressAnnotations() map[string]string {
 				  proxy_cache_key "$host$request_uri$cookie_user";`,
 		"nginx.org/server-snippets": "gzip on;",
 	}
+}
+
+// getHibernatingIngressAnnotations returns ingress annotations used by
+// hibernating Mattermost installations.
+func getHibernatingIngressAnnotations() map[string]string {
+	annotations := getIngressAnnotations()
+	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
+
+	return annotations
 }

@@ -121,9 +121,10 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 	// Hibernation is currently considered changing the Mattermost app deployment
 	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
 	// The current way to do this is to set a negative replica count in the
-	// k8s custom resource.
+	// k8s custom resource. Custom ingress annotations are also used.
 	// TODO: enhance hibernation to include database and/or filestore.
 	cr.Spec.Replicas = int32Ptr(0)
+	cr.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -217,6 +218,8 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
 	mattermost.Spec.MattermostEnv = mattermostEnv.ToEnvList()
+
+	mattermost.Spec.IngressAnnotations = getIngressAnnotations()
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {

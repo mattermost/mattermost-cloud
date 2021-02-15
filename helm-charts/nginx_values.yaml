@@ -49,6 +49,9 @@ controller:
     proxy-send-timeout: "3600"
     use-forwarded-headers: "true"
     force-ssl-redirect: "true"
+    server-snippet: |
+      proxy_intercept_errors on;
+      error_page 410 "http://127.0.0.1:8076/api/v1/installation/wakeup?dns=$host&uri=$uri";
 
   resources:
    limits:

@@ -176,13 +176,26 @@ func (a *Client) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogge
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPrivateCloudDNSTagValue,
 	}, logger)
-
 	if err != nil {
 		logger.WithError(err).Debugf("couldn't look up zone ID for DNS name %s", dnsName)
 		return false
 	}
 
 	return a.isProvisionedCNAME(id, dnsName, logger)
+}
+
+// UpdatePublicRecordIDForCNAME updates the record ID for the record corresponding
+// to a DNS value in the public hosted zone.
+func (a *Client) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error {
+	id, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPublicCloudDNSTagValue,
+	}, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to find the public hosted zone")
+	}
+
+	return a.updateResourceRecordIDs(id, dnsName, newID, logger)
 }
 
 // DeletePublicCNAME deletes a AWS route53 record for a public domain name.
@@ -212,72 +225,86 @@ func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) erro
 }
 
 func (a *Client) isProvisionedCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) bool {
-	nextRecordName := dnsName
-	for {
-		recordList, err := a.Service().route53.ListResourceRecordSets(
-			&route53.ListResourceRecordSetsInput{
-				HostedZoneId:    &hostedZoneID,
-				StartRecordName: &nextRecordName,
-			})
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName, logger)
+	if err != nil {
+		logger.WithError(err).Errorf("failed to get record sets for dns name %s", dnsName)
+		return false
+	}
 
-		if err != nil {
-			logger.WithError(err).Debugf("couldn't find record list for %s", dnsName)
-			return false
+	for _, recordSet := range recordSets {
+		if recordSet.Name != nil && dnsName == strings.TrimRight(*recordSet.Name, ".") {
+			return true
 		}
-
-		for _, recordSet := range recordList.ResourceRecordSets {
-			if recordSet.Name != nil && dnsName == strings.TrimRight(*recordSet.Name, ".") {
-				return true
-			}
-		}
-
-		if !*recordList.IsTruncated {
-			break
-		}
-
-		nextRecordName = *recordList.NextRecordName
-		logger.Debugf("DNS query found more than one page of records; running another query with record-name=%s", nextRecordName)
 	}
 
 	return false
 }
 
+func (a *Client) updateResourceRecordIDs(hostedZoneID, dnsName, newID string, logger log.FieldLogger) error {
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName, logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
+	}
+
+	// There should only be one returned record.
+	if len(recordSets) != 1 {
+		return errors.Errorf("expected exactly 1 resource record, but found %d", len(recordSets))
+	}
+
+	recordSet := recordSets[0]
+	if *recordSet.SetIdentifier == newID {
+		return nil
+	}
+
+	newRecordSet := *recordSet
+	newRecordSet.SetIdentifier = aws.String(newID)
+
+	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
+		ChangeBatch: &route53.ChangeBatch{
+			Changes: []*route53.Change{
+				{
+					Action:            aws.String("UPSERT"),
+					ResourceRecordSet: &newRecordSet,
+				},
+				{
+					Action:            aws.String("DELETE"),
+					ResourceRecordSet: recordSet,
+				},
+			},
+		},
+		HostedZoneId: &hostedZoneID,
+	})
+	if err != nil {
+		return err
+	}
+
+	logger.WithFields(log.Fields{
+		"route53-dns-value":      dnsName,
+		"route53-hosted-zone-id": hostedZoneID,
+	}).Debugf("AWS route53 record update response: %s", prettyRoute53Response(resp))
+
+	return nil
+}
+
 func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
-	nextRecordName := dnsName
-	var recordSets []*route53.ResourceRecordSet
-	for {
-		recordList, err := a.Service().route53.ListResourceRecordSets(
-			&route53.ListResourceRecordSetsInput{
-				HostedZoneId:    &hostedZoneID,
-				StartRecordName: &nextRecordName,
-			})
-		if err != nil {
-			return err
-		}
-
-		recordSets = append(recordSets, recordList.ResourceRecordSets...)
-
-		if !*recordList.IsTruncated {
-			break
-		}
-
-		// Too many records were received. We need to keep going.
-		nextRecordName = *recordList.NextRecordName
-		logger.Debugf("DNS query found more than one page of records; running another query with record-name=%s", nextRecordName)
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName, logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
 	}
 
 	var changes []*route53.Change
 	for _, recordSet := range recordSets {
-		if strings.Trim(*recordSet.Name, ".") == dnsName {
-			changes = append(changes, &route53.Change{
-				Action:            aws.String("DELETE"),
-				ResourceRecordSet: recordSet,
-			})
-		}
+		changes = append(changes, &route53.Change{
+			Action:            aws.String("DELETE"),
+			ResourceRecordSet: recordSet,
+		})
 	}
 	if len(changes) == 0 {
 		logger.Warn("Unable to find any DNS records; skipping...")
 		return nil
+	}
+	if len(recordSets) != 1 {
+		return errors.Errorf("expected exactly 1 resource record, but found %d", len(changes))
 	}
 
 	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
@@ -295,6 +322,37 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	}).Debugf("AWS route53 delete response: %s", prettyRoute53Response(resp))
 
 	return nil
+}
+
+func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string, logger log.FieldLogger) ([]*route53.ResourceRecordSet, error) {
+	nextRecordName := dnsName
+	var recordSets []*route53.ResourceRecordSet
+	for {
+		recordList, err := a.Service().route53.ListResourceRecordSets(
+			&route53.ListResourceRecordSetsInput{
+				HostedZoneId:    &hostedZoneID,
+				StartRecordName: &nextRecordName,
+			})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to list resource records")
+		}
+
+		for _, recordSet := range recordList.ResourceRecordSets {
+			if strings.TrimRight(*recordSet.Name, ".") == dnsName {
+				recordSets = append(recordSets, recordSet)
+			}
+		}
+
+		if !*recordList.IsTruncated {
+			break
+		}
+
+		// Too many records were received. We need to keep going.
+		nextRecordName = *recordList.NextRecordName
+		logger.Debugf("DNS query found more than one page of records; running another query with record-name=%s", nextRecordName)
+	}
+
+	return recordSets, nil
 }
 
 // getHostedZoneIDWithTag returns R53 hosted zone ID for a given tag
