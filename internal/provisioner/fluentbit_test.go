@@ -47,7 +47,7 @@ func TestNewHelmDeploymentWithAuditLogsConfiguration(t *testing.T) {
 
 	helmDeployment := fluentbit.NewHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
-	assert.Equal(t, "config.outputs=[OUTPUT]\n\tName  es\n\tMatch *\n\tHost  elasticsearch.mockDns\n\tPort  80\n\tLogstash_Format On\n\tRetry_Limit False\n\tType  _doc\n\tTime_Key @timestamp\n\tReplace_Dots On\n\tLogstash_Prefix logstash\n[OUTPUT]\n\tName  forward\n\tMatch  *\n\tHost  expectedURL\n\tPort  12345\n\ttls  On\n\ttls.verify  Off\n", helmDeployment.setArgument)
+	assert.Equal(t, "config.outputs=[OUTPUT]\n    Name  es\n    Match *\n    Host  elasticsearch.mockDns\n    Port  80\n    Logstash_Format On\n    Retry_Limit False\n    Type  _doc\n    Time_Key @timestamp\n    Replace_Dots On\n    Logstash_Prefix logstash\n[OUTPUT]\n    Name  forward\n    Match  *\n    Host  expectedURL\n    Port  12345\n    tls  On\n    tls.verify  Off\n", helmDeployment.setArgument)
 }
 
 func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
@@ -78,7 +78,7 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 
 	helmDeployment := fluentbit.NewHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
-	assert.Equal(t, "config.outputs=[OUTPUT]\n\tName  es\n\tMatch *\n\tHost  elasticsearch.mockDns\n\tPort  80\n\tLogstash_Format On\n\tRetry_Limit False\n\tType  _doc\n\tTime_Key @timestamp\n\tReplace_Dots On\n\tLogstash_Prefix logstash\n\n", helmDeployment.setArgument)
+	assert.Equal(t, "config.outputs=[OUTPUT]\n    Name  es\n    Match *\n    Host  elasticsearch.mockDns\n    Port  80\n    Logstash_Format On\n    Retry_Limit False\n    Type  _doc\n    Time_Key @timestamp\n    Replace_Dots On\n    Logstash_Prefix logstash\n\n", helmDeployment.setArgument)
 }
 
 func TestNewHelmDeploymentWithZoneIDError(t *testing.T) {
@@ -106,7 +106,7 @@ func TestNewHelmDeploymentWithZoneIDError(t *testing.T) {
 
 	helmDeployment := fluentbit.NewHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
-	assert.Equal(t, "config.outputs=[OUTPUT]\n\tName  es\n\tMatch *\n\tHost  elasticsearch.mockDns\n\tPort  80\n\tLogstash_Format On\n\tRetry_Limit False\n\tType  _doc\n\tTime_Key @timestamp\n\tReplace_Dots On\n\tLogstash_Prefix logstash\n\n", helmDeployment.setArgument)
+	assert.Equal(t, "config.outputs=[OUTPUT]\n    Name  es\n    Match *\n    Host  elasticsearch.mockDns\n    Port  80\n    Logstash_Format On\n    Retry_Limit False\n    Type  _doc\n    Time_Key @timestamp\n    Replace_Dots On\n    Logstash_Prefix logstash\n\n", helmDeployment.setArgument)
 }
 
 func TestNewHelmDeploymentWithoutFindingAuditTag(t *testing.T) {
@@ -138,7 +138,7 @@ func TestNewHelmDeploymentWithoutFindingAuditTag(t *testing.T) {
 
 	helmDeployment := fluentbit.NewHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
-	assert.Equal(t, "config.outputs=[OUTPUT]\n\tName  es\n\tMatch *\n\tHost  elasticsearch.mockDns\n\tPort  80\n\tLogstash_Format On\n\tRetry_Limit False\n\tType  _doc\n\tTime_Key @timestamp\n\tReplace_Dots On\n\tLogstash_Prefix logstash\n\n", helmDeployment.setArgument)
+	assert.Equal(t, "config.outputs=[OUTPUT]\n    Name  es\n    Match *\n    Host  elasticsearch.mockDns\n    Port  80\n    Logstash_Format On\n    Retry_Limit False\n    Type  _doc\n    Time_Key @timestamp\n    Replace_Dots On\n    Logstash_Prefix logstash\n\n", helmDeployment.setArgument)
 }
 
 func TestNewHelmDeploymentWithNillTag(t *testing.T) {
@@ -169,5 +169,5 @@ func TestNewHelmDeploymentWithNillTag(t *testing.T) {
 
 	helmDeployment := fluentbit.NewHelmDeployment(logger)
 	require.NotNil(t, helmDeployment, "helmDeployment should not be nil")
-	assert.Equal(t, "config.outputs=[OUTPUT]\n\tName  es\n\tMatch *\n\tHost  elasticsearch.mockDns\n\tPort  80\n\tLogstash_Format On\n\tRetry_Limit False\n\tType  _doc\n\tTime_Key @timestamp\n\tReplace_Dots On\n\tLogstash_Prefix logstash\n\n", helmDeployment.setArgument)
+	assert.Equal(t, "config.outputs=[OUTPUT]\n    Name  es\n    Match *\n    Host  elasticsearch.mockDns\n    Port  80\n    Logstash_Format On\n    Retry_Limit False\n    Type  _doc\n    Time_Key @timestamp\n    Replace_Dots On\n    Logstash_Prefix logstash\n\n", helmDeployment.setArgument)
 }

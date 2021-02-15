@@ -108,7 +108,9 @@ resources:
 
 nodeSelector: {}
 
-tolerations: []
+tolerations:
+  - key: node-role.kubernetes.io/master
+    effect: NoSchedule
 
 affinity: {}
 
@@ -177,6 +179,18 @@ config:
         Max_Entries     1000
         Read_From_Tail  true
         Strip_Underscores  false
+    [INPUT]
+        Name              tail
+        Path              /var/log/kube-apiserver-audit.log
+        Parser            docker
+        DB                /var/log/audit.db
+        Tag               audit.*
+        Refresh_Interval  5
+        Mem_Buf_Limit     35MB
+        Buffer_Chunk_Size 2MB
+        Buffer_Max_Size   10MB
+        Skip_Long_Lines   On
+        Key               kubernetes-audit
   ## https://docs.fluentbit.io/manual/pipeline/filters
   filters: |
     [FILTER]
