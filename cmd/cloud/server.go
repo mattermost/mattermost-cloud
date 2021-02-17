@@ -69,6 +69,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
 	serverCmd.PersistentFlags().String("gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
+	serverCmd.PersistentFlags().Bool("force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 }
 
 var serverCmd = &cobra.Command{
@@ -100,6 +101,8 @@ var serverCmd = &cobra.Command{
 
 		requireAnnotatedInstallations, _ := command.Flags().GetBool("require-annotated-installations")
 		model.SetRequireAnnotatedInstallations(requireAnnotatedInstallations)
+
+		forceCRUpgrade, _ := command.Flags().GetBool("force-cr-upgrade")
 
 		allowListCIDRRange, _ := command.Flags().GetStringSlice("allow-list-cidr-range")
 		if len(allowListCIDRRange) == 0 {
@@ -184,6 +187,7 @@ var serverCmd = &cobra.Command{
 			"use-existing-aws-resources":             useExistingResources,
 			"keep-database-data":                     keepDatabaseData,
 			"keep-filestore-data":                    keepFilestoreData,
+			"force-cr-upgrade":                       forceCRUpgrade,
 			"debug":                                  debugMode,
 			"dev-mode":                               devMode,
 		}).Info("Starting Mattermost Provisioning Server")
@@ -246,7 +250,7 @@ var serverCmd = &cobra.Command{
 		}
 		if installationSupervisor {
 			scheduling := supervisor.NewInstallationSupervisorSchedulingOptions(balancedInstallationScheduling, clusterResourceThreshold, clusterResourceThresholdScaleValue)
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, forceCRUpgrade))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))

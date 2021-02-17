@@ -7,6 +7,9 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/mattermost/mattermost-operator/pkg/client/v1beta1/clientset/versioned/typed/mattermost/v1beta1"
 
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -158,6 +161,12 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 	installationName, err := provisioner.prepareClusterInstallationEnv(clusterInstallation, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
+	}
+
+	// Always try to run migration. If ClusterInstallation already does not exist nothing will happen.
+	err = provisioner.migrateFromClusterInstallation(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate ClusterInstallation to Mattermost")
 	}
 
 	ctx := context.TODO()
@@ -412,6 +421,91 @@ func (provisioner *kopsCIBeta) getMattermostCustomResource(cluster *model.Cluste
 	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
 
 	return cr, nil
+}
+
+func (provisioner *kopsCIBeta) migrateFromClusterInstallation(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	name := makeClusterInstallationName(clusterInstallation)
+	ciClient := k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace)
+	mmClient := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace)
+
+	ctx := context.TODO()
+	cr, err := ciClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return nil
+		}
+
+		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	if cr.Spec.Migrate {
+		if cr.Status.Migration.Error != "" {
+			err = errors.Errorf("error while migrating ClusterInstallation: %s", cr.Status.Migration.Error)
+			logger.Error(err)
+			return err
+		}
+
+		logger.Infof("Migration already in progress, status: %s", cr.Status.Migration.Status)
+		return provisioner.waitForMigration(name, mmClient, logger)
+	}
+
+	logger.Infof("Starting CR migration to Mattermost")
+
+	cr.Spec.Migrate = true
+	cr, err = ciClient.Update(ctx, cr, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to start migration of the ClusterInstallation")
+	}
+
+	return provisioner.waitForMigration(name, mmClient, logger)
+}
+
+func (provisioner *kopsCIBeta) waitForMigration(name string, mmClient v1beta1.MattermostInterface, logger log.FieldLogger) error {
+	timeout := time.After(10 * time.Minute)
+	errCount := 0
+
+	for {
+		migrated, err := isMigrated(name, mmClient)
+		if err != nil {
+			errCount += 1
+			logger.Errorf("failed to check %d times if ClusterInstallation is migrated: %s", errCount, err.Error())
+			// Do not fail on first error in case of some minor API Server hiccup
+			if errCount >= 3 {
+				return errors.Wrap(err, "failed to check if ClusterInstallation is migrated")
+			}
+		} else {
+			errCount = 0
+		}
+
+		if migrated {
+			return nil
+		}
+
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for ClusterInstallation to migrate")
+		default:
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+func isMigrated(name string, mmClient v1beta1.MattermostInterface) (bool, error) {
+	ctx := context.Background()
+
+	mm, err := mmClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, errors.Wrapf(err, "failed to get Mattermost CR: %s", name)
+	}
+
+	if mm.Status.State != mmv1beta1.Stable {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func int32Ptr(i int) *int32 {
