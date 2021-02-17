@@ -467,7 +467,7 @@ func (provisioner *kopsCIBeta) waitForMigration(name string, mmClient v1beta1.Ma
 	for {
 		migrated, err := isMigrated(name, mmClient)
 		if err != nil {
-			errCount += 1
+			errCount ++
 			logger.Errorf("failed to check %d times if ClusterInstallation is migrated: %s", errCount, err.Error())
 			// Do not fail on first error in case of some minor API Server hiccup
 			if errCount >= 3 {
