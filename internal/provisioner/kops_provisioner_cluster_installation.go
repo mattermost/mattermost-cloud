@@ -26,6 +26,7 @@ const hibernationReplicaCount = -1
 // ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
 type ClusterInstallationProvisioner interface {
 	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
 	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
@@ -45,6 +46,15 @@ func (provisioner *KopsProvisioner) ClusterInstallationProvisioner(crVersion str
 
 type kopsCIAlpha struct {
 	*KopsProvisioner
+}
+
+func (provisioner *kopsCIAlpha) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+	logger.Info("Ensuring migration for v1alpha1 is not supported")
+	return true, nil
 }
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.

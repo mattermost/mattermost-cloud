@@ -772,6 +772,17 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 			return failedClusterInstallationState(clusterInstallation.State)
 		}
 
+		isReady, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+			EnsureCRMigrated(cluster, clusterInstallation)
+		if err != nil {
+			logger.WithError(err).Error("Failed to migrate cluster installation CR")
+			return installation.State
+		}
+		if !isReady {
+			logger.Info("Cluster installation CR migration not finished")
+			return installation.State
+		}
+
 		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
 			UpdateClusterInstallation(cluster, installation, clusterInstallation)
 		if err != nil {

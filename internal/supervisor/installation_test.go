@@ -200,6 +200,10 @@ func (p *mockInstallationProvisioner) UpdateClusterInstallation(cluster *model.C
 	return nil
 }
 
+func (p *mockInstallationProvisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	return true, nil
+}
+
 func (p *mockInstallationProvisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
