@@ -121,7 +121,7 @@ func isValidDNS(dns string) error {
 		return errors.Errorf("fully qualified domain names must be less than 254 characters in length. Provided name %s was %d characters long", dns, len(dns))
 	}
 	subdomain := strings.SplitN(dns, ".", 2)[0]
-	if len(subdomain) >= 64 || len(subdomain) < 3 {
+	if len(subdomain) >= 64 || len(subdomain) < 2 {
 		return errors.Errorf("DNS subdomain names must be between 3 and 64 characters, but name was %d long. DNS=%s", len(dns), dns)
 	}
 	// check that domain matches regex for valid names
