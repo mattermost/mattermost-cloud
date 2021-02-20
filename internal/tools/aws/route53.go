@@ -324,32 +324,40 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	return nil
 }
 
+// getRecordSetsForDNS returns up to 10 record sets for a given DNS name and
+// relies on API payload ordering behavior to function correctly. Why is this
+// the case, you ask? Well...
+// "Stay Awhile and Listen" - Deckard Cain
+//
+// Route53 records can't be filtered by the API based on the DNS value. Instead,
+// they offer the ability to return records starting at a given DNS value. We
+// use this and rely on the ordering always being alphabetical so if there are
+// any duplicate records for a given domain then they will be immediately after
+// the returned result. The returned payload also contains an indicator if there
+// are more records to parse through. We no longer fetch these extra pages as
+// this doesn't scale and leads to rate limiting issues. As such, this should
+// only be called when expecting less than 10 records for a given DNS value and
+// we will cross our fingers that the records will always be ordered correctly.
 func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string, logger log.FieldLogger) ([]*route53.ResourceRecordSet, error) {
-	nextRecordName := dnsName
 	var recordSets []*route53.ResourceRecordSet
-	for {
-		recordList, err := a.Service().route53.ListResourceRecordSets(
-			&route53.ListResourceRecordSetsInput{
-				HostedZoneId:    &hostedZoneID,
-				StartRecordName: &nextRecordName,
-			})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to list resource records")
-		}
+	recordList, err := a.Service().route53.ListResourceRecordSets(
+		&route53.ListResourceRecordSetsInput{
+			HostedZoneId:    &hostedZoneID,
+			StartRecordName: &dnsName,
+			MaxItems:        aws.String("10"),
+		})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list resource records")
+	}
 
-		for _, recordSet := range recordList.ResourceRecordSets {
-			if strings.TrimRight(*recordSet.Name, ".") == dnsName {
-				recordSets = append(recordSets, recordSet)
-			}
+	for _, recordSet := range recordList.ResourceRecordSets {
+		if strings.TrimRight(*recordSet.Name, ".") == dnsName {
+			recordSets = append(recordSets, recordSet)
 		}
+	}
 
-		if !*recordList.IsTruncated {
-			break
-		}
-
-		// Too many records were received. We need to keep going.
-		nextRecordName = *recordList.NextRecordName
-		logger.Debugf("DNS query found more than one page of records; running another query with record-name=%s", nextRecordName)
+	if len(recordSets) >= 10 {
+		return recordSets, errors.New("max record set (10) reached for the given DNS value; results are probably incomplete")
 	}
 
 	return recordSets, nil

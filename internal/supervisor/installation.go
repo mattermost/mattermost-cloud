@@ -676,7 +676,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, installation.DNS, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed update installation route53 record to the standard ID value")
+		logger.WithError(err).Warn("Failed to update the installation route53 record to the standard ID value")
 		return installation.State
 	}
 
@@ -848,7 +848,7 @@ func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstalla
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed update installation route53 record with hibernation prefix")
+		logger.WithError(err).Warn("Failed to update the installation route53 record with hibernation prefix")
 		return installation.State
 	}
 
