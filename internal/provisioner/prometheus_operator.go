@@ -68,15 +68,6 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 func (p *prometheusOperator) CreateOrUpgrade() error {
 	logger := p.logger.WithField("prometheus-action", "create")
 
-	environment, err := p.awsClient.GetCloudEnvironmentName()
-	if err != nil {
-		return errors.Wrap(err, "failed to get environment name for thanos objstore secret")
-	}
-
-	if environment == "" {
-		return errors.New("cannot create a thanos objstore secret if environment is empty")
-	}
-
 	awsRegion := os.Getenv("AWS_REGION")
 	if awsRegion == "" {
 		awsRegion = aws.DefaultAWSRegion
@@ -85,7 +76,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	secretData := map[string]interface{}{
 		"type": "s3",
 		"config": map[string]string{
-			"bucket":   fmt.Sprintf("cloud-%s-prometheus-metrics", environment),
+			"bucket":   fmt.Sprintf("cloud-%s-prometheus-metrics", p.awsClient.GetCloudEnvironmentName()),
 			"endpoint": fmt.Sprintf("s3.%s.amazonaws.com", awsRegion),
 		},
 	}

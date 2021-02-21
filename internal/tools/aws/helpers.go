@@ -185,12 +185,7 @@ func getMultitenantBucketNameForCluster(clusterID string, client *Client) (strin
 }
 
 func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error) {
-	envName, err := client.GetCloudEnvironmentName()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get cloud environment name")
-	}
-
-	bucketName := MattermostMultitenantS3Name(envName, vpcID)
+	bucketName := MattermostMultitenantS3Name(client.GetCloudEnvironmentName(), vpcID)
 
 	tags, err := client.Service().s3.GetBucketTagging(&s3.GetBucketTaggingInput{
 		Bucket: aws.String(bucketName),

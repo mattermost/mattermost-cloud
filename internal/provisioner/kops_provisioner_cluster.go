@@ -62,12 +62,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		}
 	}
 
-	environment, err := awsClient.GetCloudEnvironmentName()
-	if err != nil {
-		return errors.Wrap(err, "getting the AWS Cloud environment")
-	}
-
-	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", environment)
+	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", awsClient.GetCloudEnvironmentName())
 	cncVPCCIDR, err := awsClient.GetCIDRByVPCTag(cncVPCName, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get the CIDR for the VPC Name %s", cncVPCName)

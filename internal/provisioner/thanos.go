@@ -71,15 +71,6 @@ func (t *thanos) ValuesPath() string {
 func (t *thanos) CreateOrUpgrade() error {
 	logger := t.logger.WithField("thanos-action", "create")
 
-	environment, err := t.awsClient.GetCloudEnvironmentName()
-	if err != nil {
-		return errors.Wrap(err, "failed to get environment name for thanos objstore secret")
-	}
-
-	if environment == "" {
-		return errors.New("cannot create a thanos objstore secret if environment is empty")
-	}
-
 	awsRegion := os.Getenv("AWS_REGION")
 	if awsRegion == "" {
 		awsRegion = aws.DefaultAWSRegion

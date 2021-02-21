@@ -208,14 +208,12 @@ var serverCmd = &cobra.Command{
 			// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
 			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
 		}
-		awsClient := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
-
-		environment, err := awsClient.GetCloudEnvironmentName()
+		awsClient, err := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
 		if err != nil {
-			return errors.Wrap(err, "failed to get the AWS Cloud environment name")
+			return errors.Wrap(err, "failed to build AWS client")
 		}
 
-		err = checkRequirements(awsConfig, logger)
+		err = checkRequirements(logger)
 		if err != nil {
 			return errors.Wrap(err, "failed health check")
 		}
@@ -269,7 +267,7 @@ var serverCmd = &cobra.Command{
 			Store:       sqlStore,
 			Supervisor:  supervisor,
 			Provisioner: kopsProvisioner,
-			Environment: environment,
+			Environment: awsClient.GetCloudEnvironmentName(),
 			Logger:      logger,
 		})
 
@@ -316,7 +314,7 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func checkRequirements(awsConfig *sdkAWS.Config, logger logrus.FieldLogger) error {
+func checkRequirements(logger logrus.FieldLogger) error {
 	// Check for required tool binaries.
 	silentLogger := logrus.New()
 	silentLogger.Out = ioutil.Discard

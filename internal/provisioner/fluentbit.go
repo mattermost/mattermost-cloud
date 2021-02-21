@@ -96,32 +96,28 @@ func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	}
 
 	var auditLogsConf string
-	zoneID, err := f.awsClient.GetPrivateZoneIDForDefaultTag(logger)
-	if err != nil {
-		logger.WithError(err).Error("unable to get Private Zone ID with the default tag, skipping setup...")
-	} else {
-		tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, zoneID, logger)
-		if err != nil {
-			logger.WithError(err).Errorf("unable to find %s", aws.DefaultAuditLogsCoreSecurityTagKey)
-		}
-		if tag == nil {
-			logger.Infof("%s is missing, skipping setup...", aws.DefaultAuditLogsCoreSecurityTagKey)
-			tag = &aws.Tag{}
-		}
 
-		hostPort := strings.Split(tag.Value, ":")
-		if len(hostPort) == 2 {
-			auditLogsConf = fmt.Sprintf(`[OUTPUT]
+	tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, f.awsClient.GetPrivateHostedZoneID(), logger)
+	if err != nil {
+		logger.WithError(err).Errorf("unable to find %s", aws.DefaultAuditLogsCoreSecurityTagKey)
+	}
+	if tag == nil {
+		logger.Infof("%s is missing, skipping setup...", aws.DefaultAuditLogsCoreSecurityTagKey)
+		tag = &aws.Tag{}
+	}
+
+	hostPort := strings.Split(tag.Value, ":")
+	if len(hostPort) == 2 {
+		auditLogsConf = fmt.Sprintf(`[OUTPUT]
 	Name  forward
 	Match  *
 	Host  %s
 	Port  %s
 	tls  On
 	tls.verify  Off`, hostPort[0], hostPort[1])
-		} else {
-			logger.Info("AuditLogsCoreSecurity tag is missing from R53 hosted zone, " +
-				"fluent-bit will be configured without forwarding to audit logs to Security")
-		}
+	} else {
+		logger.Info("AuditLogsCoreSecurity tag is missing from R53 hosted zone, " +
+			"fluent-bit will be configured without forwarding to audit logs to Security")
 	}
 
 	elasticSearchDNS := fmt.Sprintf("elasticsearch.%s", privateDomainName)
