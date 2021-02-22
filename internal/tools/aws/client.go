@@ -45,8 +45,7 @@ import (
 type AWS interface {
 	GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error)
 
-	GetAccountAliases() (*iam.ListAccountAliasesOutput, error)
-	GetCloudEnvironmentName() (string, error)
+	GetCloudEnvironmentName() string
 
 	GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error)
 	GetVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
@@ -55,7 +54,7 @@ type AWS interface {
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
-	GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error)
+	GetPrivateHostedZoneID() string
 	GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error)
 
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
@@ -76,13 +75,39 @@ type AWS interface {
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 }
 
+// Client is a client for interacting with AWS resources in a single AWS account.
+type Client struct {
+	store   model.InstallationDatabaseStoreInterface
+	logger  log.FieldLogger
+	cache   *cache
+	service *Service
+	config  *aws.Config
+	mux     *sync.Mutex
+}
+
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
-func NewAWSClientWithConfig(config *aws.Config, logger log.FieldLogger) *Client {
-	return &Client{
+func NewAWSClientWithConfig(config *aws.Config, logger log.FieldLogger) (*Client, error) {
+	client := &Client{
 		logger: logger,
 		config: config,
 		mux:    &sync.Mutex{},
+		cache:  &cache{},
 	}
+	err := client.buildCache()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build AWS client cache")
+	}
+	err = client.validateCache()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid client cache")
+	}
+
+	return client, nil
+}
+
+type cache struct {
+	environment string
+	route53     *route53Cache
 }
 
 // Service hold AWS clients for each service.
@@ -119,15 +144,6 @@ func NewService(sess *session.Session) *Service {
 	}
 }
 
-// Client is a client for interacting with AWS resources.
-type Client struct {
-	store   model.InstallationDatabaseStoreInterface
-	logger  log.FieldLogger
-	service *Service
-	config  *aws.Config
-	mux     *sync.Mutex
-}
-
 // Service contructs an AWS session if not yet successfully done and returns AWS clients.
 func (c *Client) Service() *Service {
 	if c.service == nil {
@@ -146,6 +162,43 @@ func (c *Client) Service() *Service {
 	return c.service
 }
 
+func (c *Client) buildCache() error {
+	err := c.buildCloudEnvironmentNameCache()
+	if err != nil {
+		return errors.Wrap(err, "failed to lookup AWS environment value")
+	}
+
+	err = c.buildRoute53Cache()
+	if err != nil {
+		return errors.Wrap(err, "failed to build route53 cache")
+	}
+
+	c.logger.WithFields(log.Fields{
+		"environment":            c.cache.environment,
+		"private-hosted-zone-id": c.cache.route53.privateHostedZoneID,
+		"public-hosted-zone-id":  c.cache.route53.publicHostedZoneID,
+	}).Info("AWS client cache initialized")
+
+	return nil
+}
+
+func (c *Client) validateCache() error {
+	if c.cache == nil || c.cache.route53 == nil {
+		return errors.New("cache has not been properly initialized")
+	}
+	if len(c.cache.environment) == 0 {
+		return errors.New("environment cache value is empty")
+	}
+	if len(c.cache.route53.privateHostedZoneID) == 0 {
+		return errors.New("private hosted zone ID cache value is empty")
+	}
+	if len(c.cache.route53.publicHostedZoneID) == 0 {
+		return errors.New("public hosted zone ID cache value is empty")
+	}
+
+	return nil
+}
+
 // AddSQLStore adds SQLStore functionality to the AWS client.
 func (c *Client) AddSQLStore(store model.InstallationDatabaseStoreInterface) {
 	if !c.HasSQLStore() {
@@ -162,25 +215,32 @@ func (c *Client) HasSQLStore() bool {
 
 // GetCloudEnvironmentName looks for a standard cloud account environment name
 // and returns it.
-func (c *Client) GetCloudEnvironmentName() (string, error) {
+func (c *Client) GetCloudEnvironmentName() string {
+	return c.cache.environment
+}
+
+// buildCloudEnvironmentNameCache looks for a standard cloud account environment
+// name and chacnes it in the AWS client.
+func (c *Client) buildCloudEnvironmentNameCache() error {
 	accountAliases, err := c.GetAccountAliases()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get account aliases")
+		return errors.Wrap(err, "failed to get account aliases")
 	}
 	if len(accountAliases.AccountAliases) < 1 {
-		return "", errors.New("account alias not defined")
+		return errors.New("account alias not defined")
 	}
 
 	for _, alias := range accountAliases.AccountAliases {
 		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
 			envName := strings.Split(*alias, "-")[2]
 			if len(envName) == 0 {
-				return "", errors.New("environment name value was empty")
+				return errors.New("environment name value was empty")
 			}
 
-			return envName, nil
+			c.cache.environment = envName
+			return nil
 		}
 	}
 
-	return "", errors.New("account environment name could not be found from account aliases")
+	return errors.New("account environment name could not be found from account aliases")
 }

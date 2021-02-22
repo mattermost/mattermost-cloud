@@ -40,18 +40,9 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 		return nil, errors.New("cannot create a connection to Teleport if the Kops command provided is nil")
 	}
 
-	environment, err := awsClient.GetCloudEnvironmentName()
-	if err != nil {
-		return nil, err
-	}
-
-	if environment == "" {
-		return nil, errors.New("cannot create a connection to Teleport if the environment is empty")
-	}
-
 	return &teleport{
 		awsClient:      awsClient,
-		environment:    environment,
+		environment:    awsClient.GetCloudEnvironmentName(),
 		provisioner:    provisioner,
 		kops:           kops,
 		cluster:        cluster,
