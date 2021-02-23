@@ -129,19 +129,13 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 		return
 	}
 
-	environment, err := s.aws.GetCloudEnvironmentName()
-	if err != nil {
-		logger.WithError(err).Error("getting the AWS Cloud environment")
-		return
-	}
-
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeCluster,
 		ID:        cluster.ID,
 		NewState:  newState,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"Environment": environment},
+		ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {

@@ -211,19 +211,13 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		return
 	}
 
-	environment, err := s.aws.GetCloudEnvironmentName()
-	if err != nil {
-		logger.WithError(err).Error("getting the AWS Cloud environment")
-		return
-	}
-
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeInstallation,
 		ID:        installation.ID,
 		NewState:  installation.State,
 		OldState:  oldState,
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": environment},
+		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.aws.GetCloudEnvironmentName()},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -482,19 +476,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			return nil
 		}
 
-		environment, err := s.aws.GetCloudEnvironmentName()
-		if err != nil {
-			logger.WithError(err).Error("getting the AWS Cloud environment")
-			return nil
-		}
-
 		webhookPayload := &model.WebhookPayload{
 			Type:      model.TypeCluster,
 			ID:        cluster.ID,
 			NewState:  model.ClusterStateResizeRequested,
 			OldState:  model.ClusterStateStable,
 			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"Environment": environment},
+			ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
 		}
 
 		err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
@@ -518,19 +506,13 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		return nil
 	}
 
-	environment, err := s.aws.GetCloudEnvironmentName()
-	if err != nil {
-		logger.WithError(err).Error("getting the AWS Cloud environment")
-		return nil
-	}
-
 	webhookPayload := &model.WebhookPayload{
 		Type:      model.TypeClusterInstallation,
 		ID:        clusterInstallation.ID,
 		NewState:  model.ClusterInstallationStateCreationRequested,
 		OldState:  "n/a",
 		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"Environment": environment},
+		ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
 	}
 	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 	if err != nil {
@@ -674,12 +656,6 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, installation.DNS, logger)
-	if err != nil {
-		logger.WithError(err).Warn("Failed update installation route53 record to the standard ID value")
-		return installation.State
-	}
-
 	// Before starting, we check the installation and group sequence numbers and
 	// sync them if they are not already. This is used to check if the group
 	// configuration has changed during the upgrade process or not.
@@ -688,7 +664,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 		logger.Debugf("Updating installation to group configuration sequence %d", *installation.GroupSequence)
 
-		err = s.store.UpdateInstallationGroupSequence(installation)
+		err := s.store.UpdateInstallationGroupSequence(installation)
 		if err != nil {
 			logger.WithError(err).Errorf("Failed to set installation sequence to %d", *installation.GroupSequence)
 			return installation.State
@@ -759,19 +735,13 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 				return installation.State
 			}
 
-			environment, err := s.aws.GetCloudEnvironmentName()
-			if err != nil {
-				logger.WithError(err).Error("getting the AWS Cloud environment")
-				return installation.State
-			}
-
 			webhookPayload := &model.WebhookPayload{
 				Type:      model.TypeClusterInstallation,
 				ID:        clusterInstallation.ID,
 				NewState:  clusterInstallation.State,
 				OldState:  oldState,
 				Timestamp: time.Now().UnixNano(),
-				ExtraData: map[string]string{"Environment": environment},
+				ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
 			}
 			err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
 			if err != nil {
@@ -800,6 +770,12 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 	}
 	if !stable {
 		return model.InstallationStateUpdateInProgress
+	}
+
+	err = s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, installation.DNS, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to update the installation route53 record to the standard ID value")
+		return installation.State
 	}
 
 	logger.Info("Finished updating installation")
@@ -848,7 +824,7 @@ func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstalla
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed update installation route53 record with hibernation prefix")
+		logger.WithError(err).Warn("Failed to update the installation route53 record with hibernation prefix")
 		return installation.State
 	}
 

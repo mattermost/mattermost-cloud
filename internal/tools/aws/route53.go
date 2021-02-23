@@ -23,52 +23,83 @@ const (
 	hostedZonePrefix       = "/hostedzone/"
 )
 
-// CreatePublicCNAME creates a record in Route53 for a public domain name.
-func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
-	id, err := a.getHostedZoneIDWithTag(Tag{
+type route53Cache struct {
+	privateHostedZoneID string
+	publicHostedZoneID  string
+}
+
+func (a *Client) buildRoute53Cache() error {
+	privateID, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPublicCloudDNSTagValue,
-	}, logger)
+		Value: DefaultPrivateCloudDNSTagValue,
+	}, a.logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to create a public CNAME: %s", dnsName)
+		return errors.Wrap(err, "failed to get private hosted zone ID")
 	}
 
-	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
+	publicID, err := a.getHostedZoneIDWithTag(Tag{
+		Key:   DefaultCloudDNSTagKey,
+		Value: DefaultPublicCloudDNSTagValue,
+	}, a.logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get public hosted zone ID")
+	}
+
+	a.cache.route53 = &route53Cache{
+		privateHostedZoneID: privateID,
+		publicHostedZoneID:  publicID,
+	}
+
+	return nil
+}
+
+// GetPublicHostedZoneID returns the public R53 hosted zone ID for the AWS
+// account.
+func (a *Client) GetPublicHostedZoneID() string {
+	return a.cache.route53.publicHostedZoneID
+}
+
+// CreatePublicCNAME creates a record in Route53 for a public domain name.
+func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+	return a.createCNAME(a.GetPublicHostedZoneID(), dnsName, dnsEndpoints, logger)
+}
+
+// UpdatePublicRecordIDForCNAME updates the record ID for the record corresponding
+// to a DNS value in the public hosted zone.
+func (a *Client) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error {
+	return a.updateResourceRecordIDs(a.GetPublicHostedZoneID(), dnsName, newID, logger)
+}
+
+// DeletePublicCNAME deletes a AWS route53 record for a public domain name.
+func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
+	return a.deleteCNAME(a.GetPublicHostedZoneID(), dnsName, logger)
+}
+
+// GetPrivateHostedZoneID returns the private R53 hosted zone ID for the AWS
+// account.
+func (a *Client) GetPrivateHostedZoneID() string {
+	return a.cache.route53.privateHostedZoneID
 }
 
 // CreatePrivateCNAME creates a record in Route53 for a private domain name.
 func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
-	id, err := a.getHostedZoneIDWithTag(Tag{
-		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPrivateCloudDNSTagValue,
-	}, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to create a private CNAME: %s", dnsName)
-	}
+	return a.createCNAME(a.GetPrivateHostedZoneID(), dnsName, dnsEndpoints, logger)
+}
 
-	return a.createCNAME(id, dnsName, dnsEndpoints, logger)
+// IsProvisionedPrivateCNAME returns true if a record has been registered in the
+// private hosted zone for the given CNAME (full FQDN required as input)
+func (a *Client) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool {
+	return a.isProvisionedCNAME(a.GetPrivateHostedZoneID(), dnsName, logger)
 }
 
 // GetPrivateZoneDomainName gets the private Route53 domain name.
 func (a *Client) GetPrivateZoneDomainName(logger log.FieldLogger) (string, error) {
-	id, err := a.GetPrivateZoneIDForDefaultTag(logger)
-	if err != nil {
-		return "", err
-	}
-	return a.getZoneDNS(id, logger)
+	return a.getZoneDNS(a.GetPrivateHostedZoneID(), logger)
 }
 
-// GetPrivateZoneIDForDefaultTag returns the Private R53 hosted zone ID for the default tag `MattermostCloudDNS`
-func (a *Client) GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error) {
-	tag := Tag{
-		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPrivateCloudDNSTagValue,
-	}
-	id, err := a.getHostedZoneIDWithTag(tag, logger)
-	if err != nil {
-		return "", errors.Wrap(err, "unable to get private domain name")
-	}
-	return id, nil
+// DeletePrivateCNAME deletes an AWS route53 record for a private domain name.
+func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error {
+	return a.deleteCNAME(a.GetPrivateHostedZoneID(), dnsName, logger)
 }
 
 // GetTagByKeyAndZoneID returns a Tag of a given tag:key and of a given route53 id
@@ -167,61 +198,6 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 	}).Debugf("AWS Route53 create response: %s", prettyRoute53Response(resp))
 
 	return nil
-}
-
-// IsProvisionedPrivateCNAME returns true if a record has been
-// registered for the given CNAME (full FQDN required as input)
-func (a *Client) IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool {
-	id, err := a.getHostedZoneIDWithTag(Tag{
-		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPrivateCloudDNSTagValue,
-	}, logger)
-	if err != nil {
-		logger.WithError(err).Debugf("couldn't look up zone ID for DNS name %s", dnsName)
-		return false
-	}
-
-	return a.isProvisionedCNAME(id, dnsName, logger)
-}
-
-// UpdatePublicRecordIDForCNAME updates the record ID for the record corresponding
-// to a DNS value in the public hosted zone.
-func (a *Client) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error {
-	id, err := a.getHostedZoneIDWithTag(Tag{
-		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPublicCloudDNSTagValue,
-	}, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to find the public hosted zone")
-	}
-
-	return a.updateResourceRecordIDs(id, dnsName, newID, logger)
-}
-
-// DeletePublicCNAME deletes a AWS route53 record for a public domain name.
-func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
-	id, err := a.getHostedZoneIDWithTag(Tag{
-		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPublicCloudDNSTagValue,
-	}, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to delete a public CNAME: %s", dnsName)
-	}
-
-	return a.deleteCNAME(id, dnsName, logger)
-}
-
-// DeletePrivateCNAME deletes a AWS route53 record for a private domain name.
-func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error {
-	id, err := a.getHostedZoneIDWithTag(Tag{
-		Key:   DefaultCloudDNSTagKey,
-		Value: DefaultPrivateCloudDNSTagValue,
-	}, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to delete a private CNAME: %s", dnsName)
-	}
-
-	return a.deleteCNAME(id, dnsName, logger)
 }
 
 func (a *Client) isProvisionedCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) bool {
@@ -324,32 +300,40 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	return nil
 }
 
+// getRecordSetsForDNS returns up to 10 record sets for a given DNS name and
+// relies on API payload ordering behavior to function correctly. Why is this
+// the case, you ask? Well...
+// "Stay Awhile and Listen" - Deckard Cain
+//
+// Route53 records can't be filtered by the API based on the DNS value. Instead,
+// they offer the ability to return records starting at a given DNS value. We
+// use this and rely on the ordering always being alphabetical so if there are
+// any duplicate records for a given domain then they will be immediately after
+// the returned result. The returned payload also contains an indicator if there
+// are more records to parse through. We no longer fetch these extra pages as
+// this doesn't scale and leads to rate limiting issues. As such, this should
+// only be called when expecting less than 10 records for a given DNS value and
+// we will cross our fingers that the records will always be ordered correctly.
 func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string, logger log.FieldLogger) ([]*route53.ResourceRecordSet, error) {
-	nextRecordName := dnsName
 	var recordSets []*route53.ResourceRecordSet
-	for {
-		recordList, err := a.Service().route53.ListResourceRecordSets(
-			&route53.ListResourceRecordSetsInput{
-				HostedZoneId:    &hostedZoneID,
-				StartRecordName: &nextRecordName,
-			})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to list resource records")
-		}
+	recordList, err := a.Service().route53.ListResourceRecordSets(
+		&route53.ListResourceRecordSetsInput{
+			HostedZoneId:    &hostedZoneID,
+			StartRecordName: &dnsName,
+			MaxItems:        aws.String("10"),
+		})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list resource records")
+	}
 
-		for _, recordSet := range recordList.ResourceRecordSets {
-			if strings.TrimRight(*recordSet.Name, ".") == dnsName {
-				recordSets = append(recordSets, recordSet)
-			}
+	for _, recordSet := range recordList.ResourceRecordSets {
+		if strings.TrimRight(*recordSet.Name, ".") == dnsName {
+			recordSets = append(recordSets, recordSet)
 		}
+	}
 
-		if !*recordList.IsTruncated {
-			break
-		}
-
-		// Too many records were received. We need to keep going.
-		nextRecordName = *recordList.NextRecordName
-		logger.Debugf("DNS query found more than one page of records; running another query with record-name=%s", nextRecordName)
+	if len(recordSets) >= 10 {
+		return recordSets, errors.New("max record set (10) reached for the given DNS value; results are probably incomplete")
 	}
 
 	return recordSets, nil
@@ -361,13 +345,13 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string
 	for {
 		zoneList, err := a.Service().route53.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
 		if err != nil {
-			return "", errors.Wrapf(err, "listing hosted all zones")
+			return "", errors.Wrapf(err, "failed to list all hosted zones")
 		}
 
 		for _, zone := range zoneList.HostedZones {
 			id, err := parseHostedZoneResourceID(zone)
 			if err != nil {
-				return "", errors.Wrapf(err, "when parsing hosted zone: %s", zone.String())
+				return "", errors.Wrapf(err, "failed to parse hosted zone ID: %s", zone.String())
 			}
 
 			tagList, err := a.Service().route53.ListTagsForResource(&route53.ListTagsForResourceInput{
@@ -375,7 +359,7 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string
 				ResourceType: aws.String(hostedZoneResourceType),
 			})
 			if err != nil {
-				return "", err
+				return "", errors.Wrap(err, "failed to get tag list for hosted zone")
 			}
 
 			for _, resourceTag := range tagList.ResourceTagSet.Tags {

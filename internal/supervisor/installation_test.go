@@ -11,7 +11,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/aws/aws-sdk-go/service/acm"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -234,12 +233,8 @@ func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.Field
 	return nil, nil
 }
 
-func (a *mockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
-	return nil, nil
-}
-
-func (a *mockAWS) GetCloudEnvironmentName() (string, error) {
-	return "test", nil
+func (a *mockAWS) GetCloudEnvironmentName() string {
+	return "test"
 }
 
 func (a *mockAWS) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error {
@@ -280,8 +275,8 @@ func (a *mockAWS) GetTagByKeyAndZoneID(key string, id string, logger log.FieldLo
 		Value: "examplevalue",
 	}, nil
 }
-func (a *mockAWS) GetPrivateZoneIDForDefaultTag(logger log.FieldLogger) (string, error) {
-	return "EXAMPLER53ID", nil
+func (a *mockAWS) GetPrivateHostedZoneID() string {
+	return "EXAMPLER53ID"
 }
 
 func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {

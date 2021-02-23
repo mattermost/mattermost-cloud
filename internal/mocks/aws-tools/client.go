@@ -9,7 +9,6 @@ package mocks
 
 import (
 	acm "github.com/aws/aws-sdk-go/service/acm"
-	iam "github.com/aws/aws-sdk-go/service/iam"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	logrus "github.com/sirupsen/logrus"
@@ -55,28 +54,12 @@ func (mr *MockAWSMockRecorder) GetCertificateSummaryByTag(key, value, logger int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificateSummaryByTag", reflect.TypeOf((*MockAWS)(nil).GetCertificateSummaryByTag), key, value, logger)
 }
 
-// GetAccountAliases mocks base method
-func (m *MockAWS) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAccountAliases")
-	ret0, _ := ret[0].(*iam.ListAccountAliasesOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAccountAliases indicates an expected call of GetAccountAliases
-func (mr *MockAWSMockRecorder) GetAccountAliases() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountAliases", reflect.TypeOf((*MockAWS)(nil).GetAccountAliases))
-}
-
 // GetCloudEnvironmentName mocks base method
-func (m *MockAWS) GetCloudEnvironmentName() (string, error) {
+func (m *MockAWS) GetCloudEnvironmentName() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCloudEnvironmentName")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // GetCloudEnvironmentName indicates an expected call of GetCloudEnvironmentName
@@ -172,19 +155,18 @@ func (mr *MockAWSMockRecorder) GetPrivateZoneDomainName(logger interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateZoneDomainName", reflect.TypeOf((*MockAWS)(nil).GetPrivateZoneDomainName), logger)
 }
 
-// GetPrivateZoneIDForDefaultTag mocks base method
-func (m *MockAWS) GetPrivateZoneIDForDefaultTag(logger logrus.FieldLogger) (string, error) {
+// GetPrivateHostedZoneID mocks base method
+func (m *MockAWS) GetPrivateHostedZoneID() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPrivateZoneIDForDefaultTag", logger)
+	ret := m.ctrl.Call(m, "GetPrivateHostedZoneID")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
-// GetPrivateZoneIDForDefaultTag indicates an expected call of GetPrivateZoneIDForDefaultTag
-func (mr *MockAWSMockRecorder) GetPrivateZoneIDForDefaultTag(logger interface{}) *gomock.Call {
+// GetPrivateHostedZoneID indicates an expected call of GetPrivateHostedZoneID
+func (mr *MockAWSMockRecorder) GetPrivateHostedZoneID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateZoneIDForDefaultTag", reflect.TypeOf((*MockAWS)(nil).GetPrivateZoneIDForDefaultTag), logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateHostedZoneID", reflect.TypeOf((*MockAWS)(nil).GetPrivateHostedZoneID))
 }
 
 // GetTagByKeyAndZoneID mocks base method
