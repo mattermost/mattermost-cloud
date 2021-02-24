@@ -65,6 +65,7 @@ var helmRepos = map[string]string{
 	"ingress-nginx":        "https://kubernetes.github.io/ingress-nginx",
 	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
 	"bitnami":              "https://charts.bitnami.com/bitnami",
+	"fluent"              	"https://fluent.github.io/helm-charts",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
