@@ -60,7 +60,6 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"stable":               "https://charts.helm.sh/stable",
 	"chartmuseum":          "https://chartmuseum.internal.core.cloud.mattermost.com",
 	"ingress-nginx":        "https://kubernetes.github.io/ingress-nginx",
 	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
