@@ -553,13 +553,19 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		}
 	}
 
+	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
+	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy")
+	}
+
 	logger.Info("Successfully upgraded cluster")
 
 	return nil
 }
 
 // ResizeCluster resizes a cluster.
-func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -653,6 +659,12 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 			kops.ValidateCluster(kopsMetadata.Name, false)
 			return err
 		}
+	}
+
+	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
+	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
 	logger.Info("Successfully resized cluster")
