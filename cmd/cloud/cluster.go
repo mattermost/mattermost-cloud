@@ -71,6 +71,12 @@ func init() {
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
 	clusterUpgradeCmd.Flags().String("version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
+	clusterUpgradeCmd.Flags().Bool("use-rotator", true, "Whether the cluster will be upgraded using the node rotator.")
+	clusterUpgradeCmd.Flags().Int("max-scaling", 5, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes the number of nodes is the maximum number.")
+	clusterUpgradeCmd.Flags().Int("max-drain-retries", 10, "The number of times to retry a node drain.")
+	clusterUpgradeCmd.Flags().Int("evict-grace-period", 600, "The pod eviction grace period when draining in seconds.")
+	clusterUpgradeCmd.Flags().Int("wait-between-rotations", 60, "Τhe time to wait between each rotation of a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-drains", 60, "The time to wait between each node drain in a group of nodes.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
@@ -286,10 +292,26 @@ var clusterUpgradeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
+		useRotator, _ := command.Flags().GetBool("use-rotator")
+		maxScaling, _ := command.Flags().GetInt("max-scaling")
+		maxDrainRetries, _ := command.Flags().GetInt("max-drain-retries")
+		evictGracePeriod, _ := command.Flags().GetInt("evict-grace-period")
+		waitBetweenRotations, _ := command.Flags().GetInt("wait-between-rotations")
+		waitBetweenDrains, _ := command.Flags().GetInt("wait-between-drains")
+
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:           &useRotator,
+			MaxScaling:           &maxScaling,
+			MaxDrainRetries:      &maxDrainRetries,
+			EvictGracePeriod:     &evictGracePeriod,
+			WaitBetweenRotations: &waitBetweenRotations,
+			WaitBetweenDrains:    &waitBetweenDrains,
+		}
 
 		request := &model.PatchUpgradeClusterRequest{
-			Version: getStringFlagPointer(command, "version"),
-			KopsAMI: getStringFlagPointer(command, "kops-ami"),
+			Version:       getStringFlagPointer(command, "version"),
+			KopsAMI:       getStringFlagPointer(command, "kops-ami"),
+			RotatorConfig: &rotatorConfig,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

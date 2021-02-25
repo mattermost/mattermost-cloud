@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/json"
 
+	"github.com/mattermost/rotator/rotator"
 	"github.com/pkg/errors"
 )
 
@@ -21,6 +22,7 @@ type KopsMetadata struct {
 	NodeMinCount       int64
 	NodeMaxCount       int64
 	ChangeRequest      *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
+	RotatorRequest     *RotatorMetadata            `json:"RotatorRequest,omitempty"`
 	Warnings           []string                    `json:"Warnings,omitempty"`
 }
 
@@ -33,6 +35,22 @@ type KopsMetadataRequestedState struct {
 	NodeInstanceType   string `json:"NodeInstanceType,omitempty"`
 	NodeMinCount       int64  `json:"NodeMinCount,omitempty"`
 	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
+}
+
+// RotatorMetadata is the metadata for the Rotator tool
+type RotatorMetadata struct {
+	Status *rotator.RotatorMetadata
+	Config *RotatorConfig
+}
+
+// RotatorConfig is the config setup for the Rotator tool run
+type RotatorConfig struct {
+	UseRotator           *bool `json:"use-rotator,omitempty"`
+	MaxScaling           *int  `json:"max-scaling,omitempty"`
+	MaxDrainRetries      *int  `json:"max-drain-retries,omitempty"`
+	EvictGracePeriod     *int  `json:"evict-grace-period,omitempty"`
+	WaitBetweenRotations *int  `json:"wait-between-rotations,omitempty"`
+	WaitBetweenDrains    *int  `json:"wait-between-drains,omitempty"`
 }
 
 // ValidateChangeRequest ensures that the ChangeRequest has at least one
@@ -58,6 +76,11 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 // ClearChangeRequest clears the kops metadata change request.
 func (km *KopsMetadata) ClearChangeRequest() {
 	km.ChangeRequest = nil
+}
+
+// ClearRotatorRequest clears the kops metadata rotator request.
+func (km *KopsMetadata) ClearRotatorRequest() {
+	km.RotatorRequest = nil
 }
 
 // ClearWarnings clears the kops metadata warnings.
