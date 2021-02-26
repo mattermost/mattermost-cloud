@@ -601,7 +601,7 @@ func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) e
 	if rotatorMetadata == nil {
 		rotatorMetadata = &rotator.RotatorMetadata{}
 	}
-	rotatorMetadata, err = rotator.InitRotateCluster(&clusterRotator, rotatorMetadata)
+	rotatorMetadata, err = rotator.InitRotateCluster(&clusterRotator, rotatorMetadata, logger)
 	if err != nil {
 		cluster.ProvisionerMetadataKops.RotatorRequest.Status = rotatorMetadata
 		return err
