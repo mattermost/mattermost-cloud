@@ -32,7 +32,7 @@ type clusterProvisioner interface {
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
-	ResizeCluster(cluster *model.Cluster) error
+	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
 	RefreshKopsMetadata(cluster *model.Cluster) error
 }
@@ -210,7 +210,7 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 }
 
 func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.ResizeCluster(cluster)
+	err := s.provisioner.ResizeCluster(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to resize cluster")
 		return model.ClusterStateResizeFailed
