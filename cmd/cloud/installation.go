@@ -83,6 +83,7 @@ func init() {
 	installationCmd.AddCommand(installationListCmd)
 	installationCmd.AddCommand(installationShowStateReport)
 	installationCmd.AddCommand(installationAnnotationCmd)
+	installationCmd.AddCommand(installationsGetStatuses)
 }
 
 var installationCmd = &cobra.Command{
@@ -375,6 +376,32 @@ var installationListCmd = &cobra.Command{
 		}
 
 		err = printJSON(installations)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var installationsGetStatuses = &cobra.Command{
+	Use:   "status",
+	Short: "Get status information for all installations.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationsStatus, err := client.GetInstallationsStatus()
+		if err != nil {
+			return errors.Wrap(err, "failed to query installation status")
+		}
+		if installationsStatus == nil {
+			return nil
+		}
+
+		err = printJSON(installationsStatus)
 		if err != nil {
 			return err
 		}

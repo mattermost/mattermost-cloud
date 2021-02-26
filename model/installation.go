@@ -57,7 +57,7 @@ type Installation struct {
 
 // InstallationsCount represents the number of installations
 type InstallationsCount struct {
-	Count int
+	Count int64
 }
 
 // InstallationFilter describes the parameters used to constrain a set of installations.
@@ -191,7 +191,7 @@ func InstallationsFromReader(reader io.Reader) ([]*Installation, error) {
 
 // InstallationsCountFromReader decodes a json-encoded installations count data from the
 // given io.Reader
-func InstallationsCountFromReader(reader io.Reader) (int, error) {
+func InstallationsCountFromReader(reader io.Reader) (int64, error) {
 	installationsCount := InstallationsCount{}
 	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&installationsCount)

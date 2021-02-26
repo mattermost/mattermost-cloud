@@ -1146,8 +1146,8 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 			Provider: model.ProviderAWS,
 			Zones:    []string{"zone"},
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"prometheus-operator": &model.HelmUtilityVersion{Chart: "9.4.4"},
-				"nginx":               &model.HelmUtilityVersion{Chart: "stable"},
+				"prometheus-operator": {Chart: "9.4.4"},
+				"nginx":               {Chart: "stable"},
 			},
 		})
 

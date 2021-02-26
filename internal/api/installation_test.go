@@ -312,7 +312,7 @@ func TestGetInstallations(t *testing.T) {
 			testCases := []struct {
 				Description    string
 				IncludeDeleted bool
-				Expected       int
+				Expected       int64
 			}{
 				{
 					"count without deleted",
@@ -332,6 +332,15 @@ func TestGetInstallations(t *testing.T) {
 					require.Equal(t, testCase.Expected, installations)
 				})
 			}
+		})
+
+		t.Run("check installations status", func(t *testing.T) {
+			status, err := client.GetInstallationsStatus()
+			require.NoError(t, err)
+			assert.Equal(t, int64(3), status.InstallationsTotal)
+			assert.Equal(t, int64(0), status.InstallationsStable)
+			assert.Equal(t, int64(0), status.InstallationsHibernating)
+			assert.Equal(t, int64(3), status.InstallationsUpdating)
 		})
 	})
 }

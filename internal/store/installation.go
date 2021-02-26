@@ -163,23 +163,72 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	return builder
 }
 
-// GetInstallationsCount returns the number of installations filtered by the deletedat
-// field
-func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int, error) {
-	builder := sq.Select("COUNT(*) as InstallationsCount").From("Installation")
+// GetInstallationsCount returns the number of installations filtered by the
+// deleteAt field.
+func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, error) {
+	var totalResult countResult
+	installationBuilder := sq.
+		Select("Count (*)").
+		From("Installation")
 	if !includeDeleted {
-		builder = builder.Where("DeleteAt = 0")
+		installationBuilder = installationBuilder.Where("DeleteAt = 0")
 	}
-	var numberOfInstallations int
-	query, _, err := builder.ToSql()
+	err := sqlStore.selectBuilder(sqlStore.db, &totalResult, installationBuilder)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to parse query for installations count")
+		return 0, errors.Wrap(err, "failed to query for total installations")
 	}
-	err = sqlStore.get(sqlStore.db, &numberOfInstallations, query)
+	totalCount, err := totalResult.value()
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to query for installations count")
+		return 0, errors.Wrap(err, "failed to get count result of total installations")
 	}
-	return numberOfInstallations, nil
+
+	return totalCount, nil
+}
+
+// GetInstallationsStatus returns status of all installations which aren't
+// deleted.
+func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, error) {
+	totalCount, err := sqlStore.GetInstallationsCount(false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get total installation count")
+	}
+
+	var stableResult countResult
+	installationBuilder := sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("State = ?", model.InstallationStateStable).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &stableResult, installationBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for stable installations")
+	}
+	stableCount, err := stableResult.value()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get count result of stable installations")
+	}
+
+	var hibernatingResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("State = ?", model.InstallationStateHibernating).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &hibernatingResult, installationBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for hibernating installations")
+	}
+	hibernatingCount, err := hibernatingResult.value()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get count result of hibernating installations")
+	}
+
+	return &model.InstallationsStatus{
+		InstallationsTotal:       totalCount,
+		InstallationsStable:      stableCount,
+		InstallationsHibernating: hibernatingCount,
+		InstallationsUpdating:    totalCount - stableCount - hibernatingCount,
+	}, nil
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.

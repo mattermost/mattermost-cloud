@@ -37,13 +37,13 @@ func GroupStatusFromReader(reader io.Reader) (*GroupStatus, error) {
 }
 
 // GroupsStatusFromReader decodes a json-encoded groups status from the given io.Reader.
-func GroupsStatusFromReader(reader io.Reader) (*[]GroupsStatus, error) {
-	groupsStatus := []GroupsStatus{}
+func GroupsStatusFromReader(reader io.Reader) ([]*GroupsStatus, error) {
+	groupsStatus := []*GroupsStatus{}
 	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&groupsStatus)
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
 
-	return &groupsStatus, nil
+	return groupsStatus, nil
 }
