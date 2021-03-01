@@ -166,20 +166,13 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 // GetInstallationsCount returns the number of installations filtered by the
 // deleteAt field.
 func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, error) {
-	var totalResult countResult
-	installationBuilder := sq.
-		Select("Count (*)").
-		From("Installation")
-	if !includeDeleted {
-		installationBuilder = installationBuilder.Where("DeleteAt = 0")
-	}
-	err := sqlStore.selectBuilder(sqlStore.db, &totalResult, installationBuilder)
+	stateCounts, err := sqlStore.getInstallationCountsByState(includeDeleted)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to query for total installations")
+		return 0, errors.Wrap(err, "failed to query installation state counts")
 	}
-	totalCount, err := totalResult.value()
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to get count result of total installations")
+	var totalCount int64
+	for _, count := range stateCounts {
+		totalCount += count
 	}
 
 	return totalCount, nil
@@ -188,40 +181,17 @@ func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, err
 // GetInstallationsStatus returns status of all installations which aren't
 // deleted.
 func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, error) {
-	totalCount, err := sqlStore.GetInstallationsCount(false)
+	stateCounts, err := sqlStore.getInstallationCountsByState(false)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get total installation count")
+		return nil, errors.Wrap(err, "failed to query installation state counts")
 	}
 
-	var stableResult countResult
-	installationBuilder := sq.
-		Select("Count (*)").
-		From("Installation").
-		Where("State = ?", model.InstallationStateStable).
-		Where("DeleteAt = 0")
-	err = sqlStore.selectBuilder(sqlStore.db, &stableResult, installationBuilder)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for stable installations")
+	var totalCount int64
+	for _, count := range stateCounts {
+		totalCount += count
 	}
-	stableCount, err := stableResult.value()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get count result of stable installations")
-	}
-
-	var hibernatingResult countResult
-	installationBuilder = sq.
-		Select("Count (*)").
-		From("Installation").
-		Where("State = ?", model.InstallationStateHibernating).
-		Where("DeleteAt = 0")
-	err = sqlStore.selectBuilder(sqlStore.db, &hibernatingResult, installationBuilder)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for hibernating installations")
-	}
-	hibernatingCount, err := hibernatingResult.value()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get count result of hibernating installations")
-	}
+	stableCount := stateCounts[model.InstallationStateStable]
+	hibernatingCount := stateCounts[model.InstallationStateHibernating]
 
 	return &model.InstallationsStatus{
 		InstallationsTotal:       totalCount,
@@ -229,6 +199,35 @@ func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, 
 		InstallationsHibernating: hibernatingCount,
 		InstallationsUpdating:    totalCount - stableCount - hibernatingCount,
 	}, nil
+}
+
+// getInstallationCountsByState returns the number of installations in each
+// state.
+func (sqlStore *SQLStore) getInstallationCountsByState(includeDeleted bool) (map[string]int64, error) {
+	type Count struct {
+		Count int64
+		State string
+	}
+	var counts []Count
+
+	installationBuilder := sq.
+		Select("Count (*) as Count, State").
+		From("Installation").
+		GroupBy("State")
+	if !includeDeleted {
+		installationBuilder = installationBuilder.Where("DeleteAt = 0")
+	}
+	err := sqlStore.selectBuilder(sqlStore.db, &counts, installationBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for installations by state")
+	}
+
+	result := make(map[string]int64)
+	for _, count := range counts {
+		result[count.State] = count.Count
+	}
+
+	return result, nil
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
