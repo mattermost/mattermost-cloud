@@ -163,23 +163,71 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	return builder
 }
 
-// GetInstallationsCount returns the number of installations filtered by the deletedat
-// field
-func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int, error) {
-	builder := sq.Select("COUNT(*) as InstallationsCount").From("Installation")
+// GetInstallationsCount returns the number of installations filtered by the
+// deleteAt field.
+func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, error) {
+	stateCounts, err := sqlStore.getInstallationCountsByState(includeDeleted)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to query installation state counts")
+	}
+	var totalCount int64
+	for _, count := range stateCounts {
+		totalCount += count
+	}
+
+	return totalCount, nil
+}
+
+// GetInstallationsStatus returns status of all installations which aren't
+// deleted.
+func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, error) {
+	stateCounts, err := sqlStore.getInstallationCountsByState(false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query installation state counts")
+	}
+
+	var totalCount int64
+	for _, count := range stateCounts {
+		totalCount += count
+	}
+	stableCount := stateCounts[model.InstallationStateStable]
+	hibernatingCount := stateCounts[model.InstallationStateHibernating]
+
+	return &model.InstallationsStatus{
+		InstallationsTotal:       totalCount,
+		InstallationsStable:      stableCount,
+		InstallationsHibernating: hibernatingCount,
+		InstallationsUpdating:    totalCount - stableCount - hibernatingCount,
+	}, nil
+}
+
+// getInstallationCountsByState returns the number of installations in each
+// state.
+func (sqlStore *SQLStore) getInstallationCountsByState(includeDeleted bool) (map[string]int64, error) {
+	type Count struct {
+		Count int64
+		State string
+	}
+	var counts []Count
+
+	installationBuilder := sq.
+		Select("Count (*) as Count, State").
+		From("Installation").
+		GroupBy("State")
 	if !includeDeleted {
-		builder = builder.Where("DeleteAt = 0")
+		installationBuilder = installationBuilder.Where("DeleteAt = 0")
 	}
-	var numberOfInstallations int
-	query, _, err := builder.ToSql()
+	err := sqlStore.selectBuilder(sqlStore.db, &counts, installationBuilder)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to parse query for installations count")
+		return nil, errors.Wrap(err, "failed to query for installations by state")
 	}
-	err = sqlStore.get(sqlStore.db, &numberOfInstallations, query)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to query for installations count")
+
+	result := make(map[string]int64)
+	for _, count := range counts {
+		result[count.State] = count.Count
 	}
-	return numberOfInstallations, nil
+
+	return result, nil
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.

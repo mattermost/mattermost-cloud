@@ -34,7 +34,8 @@ type Store interface {
 	GetInstallationDTO(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.InstallationDTO, error)
 	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
 	GetInstallationDTOs(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.InstallationDTO, error)
-	GetInstallationsCount(includeDeleted bool) (int, error)
+	GetInstallationsCount(includeDeleted bool) (int64, error)
+	GetInstallationsStatus() (*model.InstallationsStatus, error)
 	UpdateInstallation(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
