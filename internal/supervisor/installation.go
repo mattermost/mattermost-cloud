@@ -21,6 +21,10 @@ import (
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
+const (
+	latestCRVersion = model.V1betaCRVersion
+)
+
 // installationStore abstracts the database operations required to query installations.
 type installationStore interface {
 	GetClusters(clusterFilter *model.ClusterFilter) ([]*model.Cluster, error)
@@ -34,6 +38,7 @@ type installationStore interface {
 	UpdateInstallation(installation *model.Installation) error
 	UpdateInstallationGroupSequence(installation *model.Installation) error
 	UpdateInstallationState(*model.Installation) error
+	UpdateInstallationCRVersion(installationID, crVersion string) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 	DeleteInstallation(installationID string) error
@@ -85,6 +90,7 @@ type InstallationSupervisor struct {
 	resourceUtil      *utils.ResourceUtil
 	logger            log.FieldLogger
 	metrics           *metrics.CloudMetrics
+	forceCRUpgrade    bool
 }
 
 // InstallationSupervisorSchedulingOptions are the various options that control
@@ -96,7 +102,18 @@ type InstallationSupervisorSchedulingOptions struct {
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
-func NewInstallationSupervisor(store installationStore, installationProvisioner installationProvisioner, aws aws.AWS, instanceID string, keepDatabaseData, keepFilestoreData bool, scheduling InstallationSupervisorSchedulingOptions, resourceUtil *utils.ResourceUtil, logger log.FieldLogger, metrics *metrics.CloudMetrics) *InstallationSupervisor {
+func NewInstallationSupervisor(
+	store installationStore,
+	installationProvisioner installationProvisioner,
+	aws aws.AWS,
+	instanceID string,
+	keepDatabaseData,
+	keepFilestoreData bool,
+	scheduling InstallationSupervisorSchedulingOptions,
+	resourceUtil *utils.ResourceUtil,
+	logger log.FieldLogger,
+	metrics *metrics.CloudMetrics,
+	forceCRUpgrade bool) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -108,6 +125,7 @@ func NewInstallationSupervisor(store installationStore, installationProvisioner 
 		resourceUtil:      resourceUtil,
 		logger:            logger,
 		metrics:           metrics,
+		forceCRUpgrade:    forceCRUpgrade,
 	}
 }
 
@@ -671,6 +689,17 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		}
 	}
 
+	if s.forceCRUpgrade && installation.CRVersion != latestCRVersion {
+		installation.CRVersion = latestCRVersion
+		logger.Infof("Updating Installation CR Version to '%s'", latestCRVersion)
+
+		err := s.store.UpdateInstallationCRVersion(installation.ID, latestCRVersion)
+		if err != nil {
+			logger.WithError(err).Error("Failed to update installation CRVersion")
+			return installation.State
+		}
+	}
+
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		PerPage:        model.AllPerPage,
 		InstallationID: installation.ID,
@@ -717,6 +746,17 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		if cluster == nil {
 			logger.Errorf("Failed to find cluster %s", clusterInstallation.ClusterID)
 			return failedClusterInstallationState(clusterInstallation.State)
+		}
+
+		isReady, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+			EnsureCRMigrated(cluster, clusterInstallation)
+		if err != nil {
+			logger.WithError(err).Error("Failed to migrate cluster installation CR")
+			return installation.State
+		}
+		if !isReady {
+			logger.Info("Cluster installation CR migration not finished")
+			return installation.State
 		}
 
 		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).

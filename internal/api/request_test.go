@@ -25,7 +25,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMaxCount:       2,
 			Zones:              []string{"us-east-1a"},
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":           {Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
+				"fluentbit":           {Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
 				"nginx-internal":      {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"},
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
@@ -85,7 +85,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMaxCount:       2,
 			Zones:              []string{"zone1", "zone2"},
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":           {Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
+				"fluentbit":           {Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
 				"nginx-internal":      {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"},
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},

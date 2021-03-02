@@ -41,7 +41,7 @@ var (
 	// NginxInternalDefaultVersion defines the default version for the Helm chart
 	NginxInternalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "2.8.7", ValuesPath: "helm-charts/fluent-bit_values.yaml"}
+	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"}
 	// TeleportDefaultVersion defines the default version for the Helm chart
 	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"}
 )

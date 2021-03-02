@@ -60,11 +60,11 @@ type utilityGroup struct {
 
 // List of repos to add during helm setup
 var helmRepos = map[string]string{
-	"stable":               "https://charts.helm.sh/stable",
 	"chartmuseum":          "https://chartmuseum.internal.core.cloud.mattermost.com",
 	"ingress-nginx":        "https://kubernetes.github.io/ingress-nginx",
 	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
 	"bitnami":              "https://charts.bitnami.com/bitnami",
+	"fluent":               "https://fluent.github.io/helm-charts",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
