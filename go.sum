@@ -69,7 +69,6 @@ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmV
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
 github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
-github.com/aws/aws-sdk-go v1.35.21/go.mod h1:tlPOdRjfxPBpNIwqDj61rmsnA85v9jc0Ps9+muhnW+k=
 github.com/aws/aws-sdk-go v1.36.7 h1:XoJPAjKoqvdL531XGWxKYn5eGX/xMoXzMN5fBtoyfSY=
 github.com/aws/aws-sdk-go v1.36.7/go.mod h1:hcU610XS61/+aQV88ixoOzUoG7v3b31pl2zKMmprdro=
 github.com/banzaicloud/k8s-objectmatcher v1.4.1/go.mod h1:j+N22VwgVfa0ajVtNxOz2G72aSOL21lpB7qV2GDrr/I=
@@ -424,8 +423,8 @@ github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7
 github.com/mattermost/blubr v0.0.0-20200113232543-f0ce67760aeb/go.mod h1:Tk99160Gy8m4rJPKIgYZrYneLepPCx5KPB3rp9+iK00=
 github.com/mattermost/mattermost-operator v1.13.0 h1:zwHN0UvlWevMZdyl6TEmco7IA1K1KCVURTITc2vbI2U=
 github.com/mattermost/mattermost-operator v1.13.0/go.mod h1:qRK8AqEU4lPH3DmWja5MsH36zkm/EJ6UPV8XCixabjk=
-github.com/mattermost/rotator v0.0.0-20210225115736-5e1a4be5925b h1:ZCplwuM6Hqm4YzV1+O2xT7C+ydZg8+yzvbI6weABZUo=
-github.com/mattermost/rotator v0.0.0-20210225115736-5e1a4be5925b/go.mod h1:Bnu4mlr8/w22YR4JnpvWQ8Y4ctaSrPje2BAd7nf+v7w=
+github.com/mattermost/rotator v0.1.0 h1:V6vWdJlQzWCrL29ViLzrdgeFTjgrncqz+7+/3Rs6Zf4=
+github.com/mattermost/rotator v0.1.0/go.mod h1:Bnu4mlr8/w22YR4JnpvWQ8Y4ctaSrPje2BAd7nf+v7w=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.7/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
