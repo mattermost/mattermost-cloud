@@ -792,6 +792,37 @@ func TestUpdateInstallationState(t *testing.T) {
 	assert.NotEqual(t, storedInstallation.Version, installation1.Version)
 }
 
+func TestUpdateInstallationCRVersion(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err := sqlStore.CreateInstallation(installation1, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	err = sqlStore.UpdateInstallationCRVersion(installation1.ID, model.V1betaCRVersion)
+	require.NoError(t, err)
+
+	storedInstallation, err := sqlStore.GetInstallation(installation1.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, storedInstallation.CRVersion, model.V1betaCRVersion)
+}
+
 func TestDeleteInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)

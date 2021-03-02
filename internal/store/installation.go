@@ -407,6 +407,22 @@ func (sqlStore *SQLStore) UpdateInstallationState(installation *model.Installati
 	return nil
 }
 
+// UpdateInstallationCRVersion updates the given installation CRVersion.
+func (sqlStore *SQLStore) UpdateInstallationCRVersion(installationID, crVersion string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"CRVersion": crVersion,
+		}).
+		Where("ID = ?", installationID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation")
+	}
+
+	return nil
+}
+
 // DeleteInstallation marks the given installation as deleted, but does not remove the record from the
 // database.
 func (sqlStore *SQLStore) DeleteInstallation(id string) error {
