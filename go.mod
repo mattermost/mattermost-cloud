@@ -15,7 +15,7 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattermost/mattermost-operator v1.13.0
-	github.com/mattermost/rotator v0.1.0
+	github.com/mattermost/rotator v0.1.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/pborman/uuid v1.2.1
@@ -25,9 +25,9 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.0
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.19.2
+	k8s.io/api v0.18.15
 	k8s.io/apiextensions-apiserver v0.18.8
-	k8s.io/apimachinery v0.19.2
-	k8s.io/client-go v0.19.2
+	k8s.io/apimachinery v0.18.15
+	k8s.io/client-go v0.18.15
 	k8s.io/kube-aggregator v0.18.8
 )
