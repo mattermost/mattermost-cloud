@@ -29,6 +29,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const databaseName = "mattermost-prod"
+
 // SQLDatabaseManager is an interface that describes operations to query and to
 // close connection with a database. It's used mainly to implement a client that
 // needs to perform non-complex queries in a SQL database instance.
@@ -771,12 +773,17 @@ func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseNam
 
 	err = d.ensureDatabaseIsCreated(ctx, installationDatabaseName)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create schema in multitenant RDS cluster %s", rdsID)
+		return errors.Wrapf(err, "failed to create database in multitenant RDS cluster %s", rdsID)
 	}
 
 	installationSecret, err := d.ensureMultitenantDatabaseSecretIsCreated(rdsCluster.DBClusterIdentifier, &vpcID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get a secret for installation")
+	}
+
+	err = d.ensureSchemaIsCreated(installationDatabaseName, *rdsCluster.Endpoint, installationSecret)
+	if err != nil {
+		return errors.Wrap(err, "failed to create database schema for installation")
 	}
 
 	err = d.ensureDatabaseUserIsCreated(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
@@ -794,22 +801,11 @@ func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseNam
 
 func (d *RDSMultitenantDatabase) connectRDSCluster(endpoint, username, password string) (func(logger log.FieldLogger), error) {
 	if d.db == nil {
-		var db SQLDatabaseManager
 		var err error
-		switch d.databaseType {
-		case model.DatabaseEngineTypeMySQL:
-			db, err = sql.Open("mysql", RDSMySQLConnString(rdsMySQLDefaultSchema, endpoint, username, password))
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to connect multitenant RDS cluster endpoint %s", endpoint)
-			}
-		case model.DatabaseEngineTypePostgres:
-			db, err = sql.Open("postgres", RDSPostgresConnString(rdsPostgresDefaultSchema, endpoint, username, password))
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to connect to postgres database")
-			}
+		d.db, err = d.createDatabaseConnection(endpoint, username, password)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to connect multitenant RDS cluster endpoint %s", endpoint)
 		}
-
-		d.db = db
 	}
 
 	closeFunc := func(logger log.FieldLogger) {
@@ -909,6 +905,40 @@ func (d *RDSMultitenantDatabase) dropDatabaseIfExists(ctx context.Context, datab
 	if err != nil {
 		return errors.Wrap(err, "failed to run drop database SQL command")
 	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) createDatabaseConnection(endpoint, username, password string, schemas ...string) (SQLDatabaseManager, error) {
+	if len(schemas) > 1 {
+		return nil, errors.New("cannot pass more than one schemas")
+	}
+
+	var schema string
+	switch d.databaseType {
+	case model.DatabaseEngineTypeMySQL:
+		schema = rdsMySQLDefaultSchema
+		if len(schemas) == 1 {
+			schema = schemas[0]
+		}
+		return sql.Open("mysql", RDSMySQLConnString(schema, endpoint, username, password))
+	case model.DatabaseEngineTypePostgres:
+		schema = rdsPostgresDefaultSchema
+		if len(schemas) == 1 {
+			schema = schemas[0]
+		}
+		return sql.Open("postgres", RDSPostgresConnString(schema, endpoint, username, password))
+	default:
+		return nil, errors.New("databaseType not supported")
+	}
+}
+
+func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(schema, endpoint string, secret *RDSSecret) error {
+	databaseConn, err := d.createDatabaseConnection(endpoint, secret.MasterUsername, secret.MasterPassword, databaseName)
+	if err != nil {
+		return err
+	}
+	defer databaseConn.Close()
 
 	return nil
 }
