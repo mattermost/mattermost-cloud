@@ -15,7 +15,11 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattermost/mattermost-operator v1.13.0
+<<<<<<< HEAD
 	github.com/mattermost/rotator v0.1.1
+=======
+	github.com/mattermost/rotator v0.1.2
+>>>>>>> 2b6e4e1... MM-30932 Include rotator v0.1.2
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/pborman/uuid v1.2.1
