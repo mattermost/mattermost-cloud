@@ -771,7 +771,12 @@ func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseNam
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
-	err = d.ensureDatabaseIsCreated(ctx, installationDatabaseName)
+	err = d.ensureDatabaseIsCreated(ctx)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create database in multitenant RDS cluster %s", rdsID)
+	}
+
+	err = d.ensureSchemaIsCreated(ctx, installationDatabaseName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create database in multitenant RDS cluster %s", rdsID)
 	}
@@ -818,7 +823,7 @@ func (d *RDSMultitenantDatabase) connectRDSCluster(endpoint, username, password 
 	return closeFunc, nil
 }
 
-func (d *RDSMultitenantDatabase) ensureDatabaseIsCreated(ctx context.Context, databaseName string) error {
+func (d *RDSMultitenantDatabase) ensureDatabaseIsCreated(ctx context.Context) error {
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
 		// Query placeholders don't seem to work with argument database.
 		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
@@ -841,6 +846,26 @@ func (d *RDSMultitenantDatabase) ensureDatabaseIsCreated(ctx context.Context, da
 		_, err = d.db.QueryContext(ctx, query)
 		if err != nil {
 			return errors.Wrap(err, "failed to run create database SQL command")
+		}
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(ctx context.Context, schemaName string) error {
+	if d.databaseType == model.DatabaseEngineTypeMySQL {
+		// Query placeholders don't seem to work with argument database.
+		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s CHARACTER SET ?", schemaName)
+		_, err := d.db.QueryContext(ctx, query, "utf8mb4")
+		if err != nil {
+			return errors.Wrap(err, "failed to run create schema SQL command")
+		}
+	} else {
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schemaName)
+		_, err := d.db.QueryContext(ctx, query)
+		if err != nil {
+			return errors.Wrap(err, "failed to run create schema SQL command")
 		}
 	}
 
@@ -938,6 +963,7 @@ func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(schema, endpoint string, 
 	if err != nil {
 		return err
 	}
+
 	defer databaseConn.Close()
 
 	return nil
