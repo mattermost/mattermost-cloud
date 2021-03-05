@@ -29,7 +29,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const databaseName = "mattermost-prod"
+const databaseName = "mattermost_prod"
 
 // SQLDatabaseManager is an interface that describes operations to query and to
 // close connection with a database. It's used mainly to implement a client that
@@ -677,6 +677,17 @@ func (d *RDSMultitenantDatabase) dropDatabaseAndDeleteSecret(rdsClusterID, rdsCl
 		return errors.Wrapf(err, "failed to drop multitenant RDS database name %s", databaseName)
 	}
 
+	installationUsername := fmt.Sprintf("user_%s", d.installationID)
+	err = d.dropSchemaIfExists(ctx, installationUsername, databaseName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to drop from RDS Schema name %s", databaseName)
+	}
+
+	err = d.dropUserIfExists(ctx, installationUsername)
+	if err != nil {
+		return errors.Wrapf(err, "failed to drop USER %s from RDS", installationUsername)
+	}
+
 	multitenantDatabaseSecretName := RDSMultitenantSecretName(d.installationID)
 
 	_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
@@ -752,7 +763,7 @@ func (d *RDSMultitenantDatabase) isRDSClusterEndpointsReady(rdsClusterID string)
 	return true, nil
 }
 
-func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationSchemaName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -776,19 +787,14 @@ func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseNam
 		return errors.Wrapf(err, "failed to create database in multitenant RDS cluster %s", rdsID)
 	}
 
-	err = d.ensureSchemaIsCreated(ctx, installationDatabaseName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create database in multitenant RDS cluster %s", rdsID)
-	}
+	//err = d.ensureSchemaIsCreated(ctx, installationDatabaseName)
+	//if err != nil {
+	//	return errors.Wrapf(err, "failed to create database in multitenant RDS cluster %s", rdsID)
+	//}
 
 	installationSecret, err := d.ensureMultitenantDatabaseSecretIsCreated(rdsCluster.DBClusterIdentifier, &vpcID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get a secret for installation")
-	}
-
-	err = d.ensureSchemaIsCreated(installationDatabaseName, *rdsCluster.Endpoint, installationSecret)
-	if err != nil {
-		return errors.Wrap(err, "failed to create database schema for installation")
 	}
 
 	err = d.ensureDatabaseUserIsCreated(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
@@ -796,9 +802,14 @@ func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseNam
 		return errors.Wrap(err, "failed to create Mattermost database user")
 	}
 
-	err = d.ensureDatabaseUserHasFullPermissions(ctx, installationDatabaseName, installationSecret.MasterUsername)
+	err = d.ensureUserHasCreatePermissionsOnDatabase(ctx, installationSecret.MasterUsername)
 	if err != nil {
-		return errors.Wrap(err, "failed to grant permissions to Mattermost database user")
+		return errors.Wrap(err, "failed to grant permissions to Mattermost Schema user")
+	}
+
+	err = d.ensureSchemaIsCreated(ctx, installationSchemaName, *rdsCluster.Endpoint, installationSecret)
+	if err != nil {
+		return errors.Wrap(err, "failed to create database schema for installation")
 	}
 
 	return nil
@@ -852,26 +863,6 @@ func (d *RDSMultitenantDatabase) ensureDatabaseIsCreated(ctx context.Context) er
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(ctx context.Context, schemaName string) error {
-	if d.databaseType == model.DatabaseEngineTypeMySQL {
-		// Query placeholders don't seem to work with argument database.
-		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
-		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s CHARACTER SET ?", schemaName)
-		_, err := d.db.QueryContext(ctx, query, "utf8mb4")
-		if err != nil {
-			return errors.Wrap(err, "failed to run create schema SQL command")
-		}
-	} else {
-		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schemaName)
-		_, err := d.db.QueryContext(ctx, query)
-		if err != nil {
-			return errors.Wrap(err, "failed to run create schema SQL command")
-		}
-	}
-
-	return nil
-}
-
 func (d *RDSMultitenantDatabase) ensureDatabaseUserIsCreated(ctx context.Context, username, password string) error {
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
 		_, err := d.db.QueryContext(ctx, "CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ? REQUIRE SSL", username, "%", password)
@@ -901,7 +892,27 @@ func (d *RDSMultitenantDatabase) ensureDatabaseUserIsCreated(ctx context.Context
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) ensureDatabaseUserHasFullPermissions(ctx context.Context, databaseName, username string) error {
+//func (d *RDSMultitenantDatabase) ensureDatabaseUserHasFullPermissions(ctx context.Context, databaseName, username string) error {
+//	if d.databaseType == model.DatabaseEngineTypeMySQL {
+//		// Query placeholders don't seem to work with argument database.
+//		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
+//		query := fmt.Sprintf("GRANT ALL PRIVILEGES ON %s.* TO ?@?", databaseName)
+//		_, err := d.db.QueryContext(ctx, query, username, "%")
+//		if err != nil {
+//			return errors.Wrap(err, "failed to run privilege grant SQL command")
+//		}
+//	} else {
+//		query := fmt.Sprintf("GRANT ALL PRIVILEGES ON DATABASE %s TO %s", databaseName, username)
+//		_, err := d.db.QueryContext(ctx, query)
+//		if err != nil {
+//			return errors.Wrap(err, "failed to run privilege grant SQL command")
+//		}
+//	}
+//
+//	return nil
+//}
+
+func (d *RDSMultitenantDatabase) ensureUserHasCreatePermissionsOnDatabase(ctx context.Context, username string) error {
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
 		// Query placeholders don't seem to work with argument database.
 		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
@@ -911,20 +922,19 @@ func (d *RDSMultitenantDatabase) ensureDatabaseUserHasFullPermissions(ctx contex
 			return errors.Wrap(err, "failed to run privilege grant SQL command")
 		}
 	} else {
-		query := fmt.Sprintf("GRANT ALL PRIVILEGES ON DATABASE %s TO %s", databaseName, username)
+		query := fmt.Sprintf("GRANT CREATE ON DATABASE %s TO %s", databaseName, username)
 		_, err := d.db.QueryContext(ctx, query)
 		if err != nil {
-			return errors.Wrap(err, "failed to run privilege grant SQL command")
+			return errors.Wrap(err, "failed to run privilege grant CREATE for database SQL command")
 		}
 	}
-
 	return nil
 }
 
 func (d *RDSMultitenantDatabase) dropDatabaseIfExists(ctx context.Context, databaseName string) error {
 	// Query placeholders don't seem to work with argument database.
 	// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
-	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
+	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s CASCADE", databaseName)
 
 	_, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -958,13 +968,83 @@ func (d *RDSMultitenantDatabase) createDatabaseConnection(endpoint, username, pa
 	}
 }
 
-func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(schema, endpoint string, secret *RDSSecret) error {
+func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(ctx context.Context, schema, endpoint string, secret *RDSSecret) error {
 	databaseConn, err := d.createDatabaseConnection(endpoint, secret.MasterUsername, secret.MasterPassword, databaseName)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to connect to logical Database with username:%s", secret.MasterUsername)
+	}
+
+	if d.databaseType == model.DatabaseEngineTypeMySQL {
+		// Query placeholders don't seem to work with argument database.
+		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s CHARACTER SET ?", schema)
+		_, err := databaseConn.QueryContext(ctx, query, "utf8mb4")
+		if err != nil {
+			return errors.Wrap(err, "failed to run create schema mySQL command")
+		}
+	} else {
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)
+		_, err := databaseConn.QueryContext(ctx, query)
+		if err != nil {
+			return errors.Wrap(err, "failed to run create schema PostgreSQL command")
+		}
 	}
 
 	defer databaseConn.Close()
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) dropSchemaIfExists(ctx context.Context, username, schema string) error {
+
+	if d.databaseType == model.DatabaseEngineTypeMySQL {
+		// Query placeholders don't seem to work with argument database.
+		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
+
+		query := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CHARACTER SET ?", schema)
+		_, err := d.db.QueryContext(ctx, query, "utf8mb4")
+		if err != nil {
+			return errors.Wrap(err, "failed to run DROP schema mySQL command")
+		}
+	} else {
+		query := fmt.Sprintf("GRANT %s TO current_user", username)
+		_, err := d.db.QueryContext(ctx, query)
+		if err != nil {
+			return errors.Wrapf(err, "failed to GRANT installation user %s to master user PostgreSQL command", username)
+		}
+		query = fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", schema)
+		_, err = d.db.QueryContext(ctx, query)
+		if err != nil {
+			return errors.Wrap(err, "failed to run DROP schema PostgreSQL command")
+		}
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) dropUserIfExists(ctx context.Context, username string) error {
+	if d.databaseType == model.DatabaseEngineTypeMySQL {
+		// Query placeholders don't seem to work with argument database.
+		// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
+
+		query := fmt.Sprintf("DROP USER IF EXISTS %s CHARACTER SET ?", username)
+		_, err := d.db.QueryContext(ctx, query, "utf8mb4")
+		if err != nil {
+			return errors.Wrap(err, "failed to run DROP schema mySQL command")
+		}
+	} else {
+		//REASSIGN OWNED BY user_3un6hbn943fa5jtmbp4tfjbd9y TO mmcloud;
+		query := fmt.Sprintf("REVOKE CREATE ON DATABASE %s FROM %s", databaseName, username)
+		_, err := d.db.QueryContext(ctx, query)
+		if err != nil {
+			return errors.Wrapf(err, "failed to REVOKE CREATE permissions from %s ", username)
+		}
+		query = fmt.Sprintf("DROP USER IF EXISTS %s", username)
+		_, err = d.db.QueryContext(ctx, query)
+		if err != nil {
+			return errors.Wrapf(err, "failed to run DROP USER PostgreSQL command for %s", username)
+		}
+	}
 
 	return nil
 }

@@ -12,6 +12,7 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/gorilla/mux v1.8.0
 	github.com/gosuri/uilive v0.0.4
+	github.com/instrumenta/kubeval v0.0.0-20201118090229-529b532b1ea1 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattermost/mattermost-operator v1.13.0
