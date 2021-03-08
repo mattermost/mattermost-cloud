@@ -61,6 +61,7 @@ func (r *rawBackupsMetadata) toBackupsMetadata() ([]*model.BackupMetadata, error
 	return backupsMeta, nil
 }
 
+// IsBackupRunning checks if any backup is currently running or requested for specified installation.
 func (sqlStore *SQLStore) IsBackupRunning(installationID string) (bool, error) {
 	var totalResult countResult
 	builder := sq.
@@ -150,7 +151,7 @@ func (sqlStore *SQLStore) GetBackupMetadata(id string) (*model.BackupMetadata, e
 	return backupMetadata, nil
 }
 
-// GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
+// GetUnlockedBackupMetadataPendingWork returns an unlocked backups metadata in a pending state.
 func (sqlStore *SQLStore) GetUnlockedBackupMetadataPendingWork() ([]*model.BackupMetadata, error) {
 	builder := backupMetadataSelect.
 		Where(sq.Eq{
@@ -187,7 +188,7 @@ func (sqlStore *SQLStore) UpdateBackupSchedulingData(backupMeta *model.BackupMet
 		})
 }
 
-// UpdateBackupSchedulingData updates the given backup metadata data residency and ClusterInstallationID.
+// UpdateBackupStartTime updates the given backup start time.
 func (sqlStore *SQLStore) UpdateBackupStartTime(backupMeta *model.BackupMetadata) error {
 	return sqlStore.updateBackupMetadataFields(
 		backupMeta.ID, map[string]interface{}{
