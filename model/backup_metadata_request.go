@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// BackupRequest represents request for installation backup.
 type BackupRequest struct {
 	InstallationID string
 }
