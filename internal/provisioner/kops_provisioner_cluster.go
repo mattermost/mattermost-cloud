@@ -16,12 +16,15 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	rotatorModel "github.com/mattermost/rotator/model"
+	"github.com/mattermost/rotator/rotator"
 )
 
 // DefaultKubernetesVersion is the default value for a kubernetes cluster
@@ -535,6 +538,14 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		return err
 	}
 
+	if *cluster.ProvisionerMetadataKops.RotatorRequest.Config.UseRotator {
+		logger.Info("Using node rotator for node upgrade")
+		err = provisioner.RotateClusterNodes(cluster)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = kops.RollingUpdateCluster(kopsMetadata.Name)
 	if err != nil {
 		return err
@@ -560,6 +571,47 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	}
 
 	logger.Info("Successfully upgraded cluster")
+
+	return nil
+}
+
+// RotateClusterNodes rotates k8s cluster nodes using the Mattermost node rotator
+func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kops client from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	k8sClient, err := k8s.NewFromFile(kopsClient.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+	clientset, err := kubernetes.NewForConfig(k8sClient.GetConfig())
+
+	clusterRotator := rotatorModel.Cluster{
+		ClusterID:            cluster.ID,
+		MaxScaling:           *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxScaling,
+		RotateMasters:        true,
+		RotateWorkers:        true,
+		MaxDrainRetries:      *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxDrainRetries,
+		EvictGracePeriod:     *cluster.ProvisionerMetadataKops.RotatorRequest.Config.EvictGracePeriod,
+		WaitBetweenRotations: *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenRotations,
+		WaitBetweenDrains:    *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenDrains,
+		ClientSet:            clientset,
+	}
+
+	rotatorMetadata := cluster.ProvisionerMetadataKops.RotatorRequest.Status
+	if rotatorMetadata == nil {
+		rotatorMetadata = &rotator.RotatorMetadata{}
+	}
+	rotatorMetadata, err = rotator.InitRotateCluster(&clusterRotator, rotatorMetadata, logger)
+	if err != nil {
+		cluster.ProvisionerMetadataKops.RotatorRequest.Status = rotatorMetadata
+		return err
+	}
 
 	return nil
 }

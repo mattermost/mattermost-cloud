@@ -77,7 +77,8 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 				ChangeRequest: &model.KopsMetadataRequestedState{},
 			},
 			&model.KopsMetadata{
-				ChangeRequest: &model.KopsMetadataRequestedState{},
+				ChangeRequest:  &model.KopsMetadataRequestedState{},
+				RotatorRequest: &model.RotatorMetadata{},
 			},
 		},
 		{
@@ -93,6 +94,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 				ChangeRequest: &model.KopsMetadataRequestedState{
 					Version: "version1",
 				},
+				RotatorRequest: &model.RotatorMetadata{},
 			},
 		},
 		{
@@ -108,6 +110,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 				ChangeRequest: &model.KopsMetadataRequestedState{
 					AMI: "image1",
 				},
+				RotatorRequest: &model.RotatorMetadata{},
 			},
 		},
 		{
@@ -127,6 +130,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 					Version: "version1",
 					AMI:     "image1",
 				},
+				RotatorRequest: &model.RotatorMetadata{},
 			},
 		},
 	}

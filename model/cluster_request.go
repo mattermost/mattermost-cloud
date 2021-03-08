@@ -154,8 +154,9 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 
 // PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
-	Version *string `json:"version,omitempty"`
-	KopsAMI *string `json:"kops-ami,omitempty"`
+	Version       *string        `json:"version,omitempty"`
+	KopsAMI       *string        `json:"kops-ami,omitempty"`
+	RotatorConfig *RotatorConfig `json:"rotatorConfig,omitempty"`
 }
 
 // Validate validates the values of a cluster upgrade request.
@@ -181,8 +182,13 @@ func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
 		changes.AMI = *p.KopsAMI
 	}
 
+	if metadata.RotatorRequest == nil {
+		metadata.RotatorRequest = &RotatorMetadata{}
+	}
+
 	if applied {
 		metadata.ChangeRequest = changes
+		metadata.RotatorRequest.Config = p.RotatorConfig
 	}
 
 	return applied
