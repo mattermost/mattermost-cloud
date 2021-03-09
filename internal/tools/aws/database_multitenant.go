@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -92,6 +93,45 @@ func (d *RDSMultitenantDatabase) MaxSupportedDatabases() int {
 	return DefaultRDSMultitenantDatabasePostgresCountLimit
 }
 
+// RefreshResourceMetadata ensures various multitenant database resource's
+// metadata are correct.
+func (d *RDSMultitenantDatabase) RefreshResourceMetadata(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	return d.updateMultitenantDatabase(store, logger)
+}
+
+func (d *RDSMultitenantDatabase) updateMultitenantDatabase(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	database, unlockFn, err := d.getAndLockAssignedMultitenantDatabase(store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get and lock assigned database")
+	}
+	if database == nil {
+		return errors.Wrap(err, "failed to find assigned multitenant database")
+	}
+	defer unlockFn()
+
+	logger = logger.WithField("assigned-database", database.ID)
+
+	rdsCluster, err := d.describeRDSCluster(database.ID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
+	}
+
+	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate total database weight")
+	}
+	roundedUpWeight := int(math.Ceil(weight))
+
+	err = d.updateCounterTag(rdsCluster.DBClusterArn, roundedUpWeight)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update tag:counter in RDS cluster ID %s", *rdsCluster.DBClusterIdentifier)
+	}
+
+	logger.Debugf("Multitenant database %s counter value updated to %d", database.ID, roundedUpWeight)
+
+	return nil
+}
+
 // Provision claims a multitenant RDS cluster and creates a database schema for
 // the installation.
 func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
@@ -143,11 +183,17 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrap(err, "failed to run provisioning sql commands")
 	}
 
-	err = d.updateCounterTag(rdsCluster.DBClusterArn, database.Installations.Count())
+	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate total database weight")
+	}
+	roundedUpWeight := int(math.Ceil(weight))
+
+	err = d.updateCounterTag(rdsCluster.DBClusterArn, roundedUpWeight)
 	if err != nil {
 		return errors.Wrapf(err, "failed to update tag:counter in RDS cluster ID %s", *rdsCluster.DBClusterIdentifier)
 	}
-	logger.Debugf("Multitenant database %s counter value updated to %d", database.ID, database.Installations.Count())
+	logger.Debugf("Multitenant database %s counter value updated to %d", database.ID, roundedUpWeight)
 
 	logger.Infof("Installation %s assigned to multitenant database", d.installationID)
 
@@ -626,25 +672,22 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 		return errors.Wrap(err, "failed to drop database or delete secret")
 	}
 
-	numInstallations := database.Installations.Count()
-
-	err = d.updateCounterTag(rdsCluster.DBClusterArn, numInstallations-1)
+	database.Installations.Remove(d.installationID)
+	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
 	if err != nil {
-		return errors.Wrap(err, "failed to update counter tag")
+		return errors.Wrap(err, "failed to calculate total database weight")
+	}
+	roundedUpWeight := int(math.Ceil(weight))
+
+	err = d.updateCounterTag(rdsCluster.DBClusterArn, roundedUpWeight)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update tag:counter in RDS cluster ID %s", *rdsCluster.DBClusterIdentifier)
 	}
 
-	// We need to update the tag before removing the installation ID from the
-	// datastore. However, if this operation fails, tag:counter in RDS needs to
-	// return to the original value.
-	// TODO: improve handling this.
-	database.Installations.Remove(d.installationID)
+	logger.Debugf("Multitenant database %s counter value updated to %d", database.ID, roundedUpWeight)
+
 	err = store.UpdateMultitenantDatabase(database)
 	if err != nil {
-		logger.WithError(err).Warnf("Failed to remove multitenant database from datastore. Rolling tag:counter value back to %d", numInstallations)
-		updateTagErr := d.updateCounterTag(rdsCluster.DBClusterArn, numInstallations)
-		if updateTagErr != nil {
-			logger.WithError(err).Errorf("Failed to roll back tag:counter. Value is still %d", numInstallations-1)
-		}
 		return errors.Wrapf(err, "failed to remove installation ID %s from multitenant datastore", d.installationID)
 	}
 
