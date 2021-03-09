@@ -13,17 +13,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewBackupRequestFromReader(t *testing.T) {
+func TestNewInstallationBackupRequestFromReader(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		backupRequest, err := NewBackupRequestFromReader(bytes.NewReader([]byte(
+		backupRequest, err := NewInstallationBackupRequestFromReader(bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &BackupRequest{}, backupRequest)
+		require.Equal(t, &InstallationBackupRequest{}, backupRequest)
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		backupRequest, err := NewBackupRequestFromReader(bytes.NewReader([]byte(
+		backupRequest, err := NewInstallationBackupRequestFromReader(bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -31,16 +31,16 @@ func TestNewBackupRequestFromReader(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		backupRequest, err := NewBackupRequestFromReader(bytes.NewReader([]byte(
+		backupRequest, err := NewInstallationBackupRequestFromReader(bytes.NewReader([]byte(
 			`{"InstallationID":"installation-1"}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &BackupRequest{InstallationID: "installation-1"}, backupRequest)
+		require.Equal(t, &InstallationBackupRequest{InstallationID: "installation-1"}, backupRequest)
 	})
 }
 
-func TestGetBackupsMetadataRequest_ApplyToURL(t *testing.T) {
-	req := &GetBackupsMetadataRequest{
+func TestGetInstallationBackupsRequest_ApplyToURL(t *testing.T) {
+	req := &GetInstallationBackupsRequest{
 		InstallationID:        "my-installation",
 		ClusterInstallationID: "my-ci",
 		State:                 "failed",

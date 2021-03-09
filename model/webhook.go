@@ -17,8 +17,8 @@ const (
 	// TypeClusterInstallation is the string value that represents a cluster
 	// installation.
 	TypeClusterInstallation = "cluster_installaton"
-	// TypeBackup is the string value that represents a backup.
-	TypeBackup = "backup"
+	// TypeInstallationBackup is the string value that represents an installation backup.
+	TypeInstallationBackup = "installation_backup"
 )
 
 // Webhook is

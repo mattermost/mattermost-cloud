@@ -13,15 +13,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// BackupRequest represents request for installation backup.
-type BackupRequest struct {
+// InstallationBackupRequest represents request for installation backup.
+type InstallationBackupRequest struct {
 	InstallationID string
 }
 
-// NewBackupRequestFromReader will create a BackupMetadata from an
+// NewInstallationBackupRequestFromReader will create a InstallationBackup from an
 // io.Reader with JSON data.
-func NewBackupRequestFromReader(reader io.Reader) (*BackupRequest, error) {
-	var backupRequest BackupRequest
+func NewInstallationBackupRequestFromReader(reader io.Reader) (*InstallationBackupRequest, error) {
+	var backupRequest InstallationBackupRequest
 	err := json.NewDecoder(reader).Decode(&backupRequest)
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode backup request")
@@ -30,8 +30,8 @@ func NewBackupRequestFromReader(reader io.Reader) (*BackupRequest, error) {
 	return &backupRequest, nil
 }
 
-// GetBackupsMetadataRequest describes the parameters to request a list of installation backups.
-type GetBackupsMetadataRequest struct {
+// GetInstallationBackupsRequest describes the parameters to request a list of installation backups.
+type GetInstallationBackupsRequest struct {
 	InstallationID        string
 	ClusterInstallationID string
 	State                 string
@@ -41,7 +41,7 @@ type GetBackupsMetadataRequest struct {
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
-func (request *GetBackupsMetadataRequest) ApplyToURL(u *url.URL) {
+func (request *GetInstallationBackupsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("installation", request.InstallationID)
 	q.Add("cluster_installation", request.ClusterInstallationID)

@@ -12,17 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewBackupMetadataFromReader(t *testing.T) {
+func TestNewInstallationBackupFromReader(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		backupMetadata, err := NewBackupMetadataFromReader(bytes.NewReader([]byte(
+		backupMetadata, err := NewInstallationBackupFromReader(bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &BackupMetadata{}, backupMetadata)
+		require.Equal(t, &InstallationBackup{}, backupMetadata)
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		backupMetadata, err := NewBackupMetadataFromReader(bytes.NewReader([]byte(
+		backupMetadata, err := NewInstallationBackupFromReader(bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -30,25 +30,25 @@ func TestNewBackupMetadataFromReader(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		backupMetadata, err := NewBackupMetadataFromReader(bytes.NewReader([]byte(
+		backupMetadata, err := NewInstallationBackupFromReader(bytes.NewReader([]byte(
 			`{"ID":"metadata-1", "StartAt": 100, "InstallationID":"installation-1"}`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, &BackupMetadata{ID: "metadata-1", StartAt: 100, InstallationID: "installation-1"}, backupMetadata)
+		require.Equal(t, &InstallationBackup{ID: "metadata-1", StartAt: 100, InstallationID: "installation-1"}, backupMetadata)
 	})
 }
 
-func TestNewBackupsMetadataFromReader(t *testing.T) {
+func TestNewInstallationBackupsFromReader(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		backupsMetadata, err := NewBackupsMetadataFromReader(bytes.NewReader([]byte(
+		backupsMetadata, err := NewInstallationBackupsFromReader(bytes.NewReader([]byte(
 			``,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, []*BackupMetadata{}, backupsMetadata)
+		require.Equal(t, []*InstallationBackup{}, backupsMetadata)
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		backupsMetadata, err := NewBackupsMetadataFromReader(bytes.NewReader([]byte(
+		backupsMetadata, err := NewInstallationBackupsFromReader(bytes.NewReader([]byte(
 			`{test`,
 		)))
 		require.Error(t, err)
@@ -56,14 +56,14 @@ func TestNewBackupsMetadataFromReader(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		backupsMetadata, err := NewBackupsMetadataFromReader(bytes.NewReader([]byte(
+		backupsMetadata, err := NewInstallationBackupsFromReader(bytes.NewReader([]byte(
 			`[
   {"ID":"metadata-1", "StartAt": 100, "InstallationID":"installation-1"},
   {"ID":"metadata-2", "RequestAt": 101, "InstallationID":"installation-2"}
 ]`,
 		)))
 		require.NoError(t, err)
-		require.Equal(t, []*BackupMetadata{
+		require.Equal(t, []*InstallationBackup{
 			{ID: "metadata-1", StartAt: 100, InstallationID: "installation-1"},
 			{ID: "metadata-2", RequestAt: 101, InstallationID: "installation-2"},
 		}, backupsMetadata)
