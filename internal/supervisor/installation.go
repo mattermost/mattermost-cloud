@@ -57,6 +57,7 @@ type installationStore interface {
 	GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
 	GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error)
+	GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error)
 	CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
 	UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
@@ -275,6 +276,9 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 
 	case model.InstallationStateHibernationInProgress:
 		return s.waitForHibernationStable(installation, instanceID, logger)
+
+	case model.InstallationStateWakeUpRequested:
+		return s.wakeUpInstallation(installation, instanceID, logger)
 
 	case model.InstallationStateDeletionRequested,
 		model.InstallationStateDeletionInProgress:
@@ -868,6 +872,12 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 		return installation.State
 	}
 
+	err = s.resourceUtil.GetDatabase(installation).RefreshResourceMetadata(s.store, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to update database resource metadata")
+		return installation.State
+	}
+
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		PerPage:        model.AllPerPage,
 		InstallationID: installation.ID,
@@ -954,6 +964,16 @@ func (s *InstallationSupervisor) waitForHibernationStable(installation *model.In
 	logger.Info("Finished hibernating installation")
 
 	return model.InstallationStateHibernating
+}
+
+func (s *InstallationSupervisor) wakeUpInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	err := s.resourceUtil.GetDatabase(installation).RefreshResourceMetadata(s.store, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to update database resource metadata")
+		return installation.State
+	}
+
+	return s.updateInstallation(installation, instanceID, logger)
 }
 
 func (s *InstallationSupervisor) deleteInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {

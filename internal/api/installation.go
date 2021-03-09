@@ -563,7 +563,7 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	oldState := installationDTO.State
-	newState := model.InstallationStateUpdateRequested
+	newState := model.InstallationStateWakeUpRequested
 
 	if !installationDTO.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to wake up installation while in state %s", installationDTO.State)

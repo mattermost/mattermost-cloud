@@ -150,6 +150,10 @@ func (s *mockInstallationStore) GetMultitenantDatabases(filter *model.Multitenan
 	return nil, nil
 }
 
+func (s *mockInstallationStore) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
+	return 0, nil
+}
+
 func (s *mockInstallationStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
 	return nil
 }
@@ -1557,6 +1561,44 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateHibernating)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateStable)
+	})
+
+	t.Run("wake up requested, cluster installations stable", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, false)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster, nil)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateWakeUpRequested,
+		}
+
+		err = sqlStore.CreateInstallation(installation, nil)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateStable,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateUpdateInProgress)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateReconciling)
 	})
 
 	t.Run("deletion requested, cluster installations stable", func(t *testing.T) {
