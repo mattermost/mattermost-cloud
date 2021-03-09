@@ -129,6 +129,8 @@ func (i *Installation) ValidTransitionState(newState string) bool {
 		return validTransitionToInstallationStateCreationRequested(i.State)
 	case InstallationStateHibernationRequested:
 		return validTransitionToInstallationStateHibernationRequested(i.State)
+	case InstallationStateWakeUpRequested:
+		return validTransitionToInstallationStateWakeUpRequested(i.State)
 	case InstallationStateUpdateRequested:
 		return validTransitionToInstallationStateUpdateRequested(i.State)
 	case InstallationStateDeletionRequested:

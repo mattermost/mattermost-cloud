@@ -116,6 +116,10 @@ func (d *RDSMultitenantDatabase) updateMultitenantDatabase(store model.Installat
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
 	}
 
+	return d.updateCounterTagWithCurrentWeight(database, rdsCluster, store, logger)
+}
+
+func (d *RDSMultitenantDatabase) updateCounterTagWithCurrentWeight(database *model.MultitenantDatabase, rdsCluster *rds.DBCluster, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate total database weight")
@@ -183,17 +187,10 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 		return errors.Wrap(err, "failed to run provisioning sql commands")
 	}
 
-	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
+	err = d.updateCounterTagWithCurrentWeight(database, rdsCluster, store, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to calculate total database weight")
+		return errors.Wrap(err, "failed to update counter tag with current weight")
 	}
-	roundedUpWeight := int(math.Ceil(weight))
-
-	err = d.updateCounterTag(rdsCluster.DBClusterArn, roundedUpWeight)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update tag:counter in RDS cluster ID %s", *rdsCluster.DBClusterIdentifier)
-	}
-	logger.Debugf("Multitenant database %s counter value updated to %d", database.ID, roundedUpWeight)
 
 	logger.Infof("Installation %s assigned to multitenant database", d.installationID)
 
@@ -673,18 +670,10 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 	}
 
 	database.Installations.Remove(d.installationID)
-	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
+	err = d.updateCounterTagWithCurrentWeight(database, rdsCluster, store, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to calculate total database weight")
+		return errors.Wrap(err, "failed to update counter tag with current weight")
 	}
-	roundedUpWeight := int(math.Ceil(weight))
-
-	err = d.updateCounterTag(rdsCluster.DBClusterArn, roundedUpWeight)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update tag:counter in RDS cluster ID %s", *rdsCluster.DBClusterIdentifier)
-	}
-
-	logger.Debugf("Multitenant database %s counter value updated to %d", database.ID, roundedUpWeight)
 
 	err = store.UpdateMultitenantDatabase(database)
 	if err != nil {
