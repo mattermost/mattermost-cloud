@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package store
 
 import (
@@ -17,8 +21,17 @@ var backupMetadataSelect sq.SelectBuilder
 
 func init() {
 	backupMetadataSelect = sq.
-		Select(
-			"ID", "InstallationID", "ClusterInstallationID", "DataResidenceRaw", "State", "RequestAt", "StartAt", "DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
+		Select("ID",
+			"InstallationID",
+			"ClusterInstallationID",
+			"DataResidenceRaw",
+			"State",
+			"RequestAt",
+			"StartAt",
+			"DeleteAt",
+			"APISecurityLock",
+			"LockAcquiredBy",
+			"LockAcquiredAt",
 		).
 		From(backupMetadataTable)
 }

@@ -1,8 +1,15 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package store
 
 import (
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/pborman/uuid"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -262,8 +269,10 @@ func TestUpdateBackupMetadata(t *testing.T) {
 }
 
 func setupBasicInstallation(t *testing.T, sqlStore *SQLStore) *model.Installation {
+	model.NewID()
 	installation := &model.Installation{
 		State: model.InstallationStateStable,
+		DNS:   fmt.Sprintf("dns-%s", uuid.NewRandom().String()[:6]),
 	}
 
 	err := sqlStore.CreateInstallation(installation, nil)
