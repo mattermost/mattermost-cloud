@@ -165,10 +165,6 @@ func (p *PatchUpgradeClusterRequest) Validate() error {
 		return errors.Errorf("unsupported cluster version %s", *p.Version)
 	}
 
-	if p.RotatorConfig == nil {
-		return errors.Errorf("empty rotator config should not be passed")
-	}
-
 	if p.RotatorConfig != nil {
 		if p.RotatorConfig.UseRotator == nil {
 			return errors.Errorf("Rotator config use rotator should be set")
