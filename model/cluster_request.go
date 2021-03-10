@@ -167,24 +167,24 @@ func (p *PatchUpgradeClusterRequest) Validate() error {
 
 	if p.RotatorConfig != nil {
 		if p.RotatorConfig.UseRotator == nil {
-			return errors.Errorf("Rotator config use rotator should be set")
+			return errors.Errorf("rotator config use rotator should be set")
 		}
 
 		if *p.RotatorConfig.UseRotator {
 			if p.RotatorConfig.EvictGracePeriod == nil {
-				return errors.Errorf("Rotator config evict grace period should be set")
+				return errors.Errorf("rotator config evict grace period should be set")
 			}
 			if p.RotatorConfig.MaxDrainRetries == nil {
-				return errors.Errorf("Rotator config max drain retries should be set")
+				return errors.Errorf("rotator config max drain retries should be set")
 			}
 			if p.RotatorConfig.MaxScaling == nil {
-				return errors.Errorf("Rotator config max scaling should be set")
+				return errors.Errorf("rotator config max scaling should be set")
 			}
 			if p.RotatorConfig.WaitBetweenDrains == nil {
-				return errors.Errorf("Rotator config wait between drains should be set")
+				return errors.Errorf("rotator config wait between drains should be set")
 			}
 			if p.RotatorConfig.WaitBetweenRotations == nil {
-				return errors.Errorf("Rotator config wait between rotations should be set")
+				return errors.Errorf("rotator config wait between rotations should be set")
 			}
 		}
 	}
