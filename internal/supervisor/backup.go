@@ -39,8 +39,8 @@ type installationBackupStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
-// BackupOperator operates backup jobs on a cluster.
-type BackupOperator interface {
+// BackupProvisioner provisions backup jobs on a cluster.
+type BackupProvisioner interface {
 	TriggerBackup(backupMeta *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error)
 	CheckBackupStatus(backupMeta *model.InstallationBackup, cluster *model.Cluster) (int64, error)
 	CleanupBackup(backup *model.InstallationBackup, cluster *model.Cluster) error
@@ -56,13 +56,13 @@ type BackupSupervisor struct {
 	instanceID string
 	logger     log.FieldLogger
 
-	backupOperator BackupOperator
+	backupOperator BackupProvisioner
 }
 
 // NewBackupSupervisor creates a new BackupSupervisor.
 func NewBackupSupervisor(
 	store installationBackupStore,
-	backupOperator BackupOperator,
+	backupOperator BackupProvisioner,
 	aws aws.AWS,
 	instanceID string,
 	logger log.FieldLogger) *BackupSupervisor {
@@ -146,7 +146,7 @@ func (s *BackupSupervisor) Supervise(backup *model.InstallationBackup) {
 	}
 
 	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
+		Type:      model.TypeInstallationBackup,
 		ID:        backup.ID,
 		NewState:  string(backup.State),
 		OldState:  string(oldState),

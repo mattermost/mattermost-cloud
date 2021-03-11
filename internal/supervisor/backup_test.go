@@ -98,20 +98,20 @@ func (s mockBackupStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webh
 	return nil, nil
 }
 
-type mockBackupOperator struct {
+type mockBackupProvisioner struct {
 	BackupStartTime int64
 	err             error
 }
 
-func (b *mockBackupOperator) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
+func (b *mockBackupProvisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
 	return &model.S3DataResidence{URL: "file-store.com"}, b.err
 }
 
-func (b *mockBackupOperator) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+func (b *mockBackupProvisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
 	return b.BackupStartTime, b.err
 }
 
-func (b *mockBackupOperator) CleanupBackup(backup *model.InstallationBackup, cluster *model.Cluster) error {
+func (b *mockBackupProvisioner) CleanupBackup(backup *model.InstallationBackup, cluster *model.Cluster) error {
 	return nil
 }
 
@@ -119,7 +119,7 @@ func TestBackupSupervisorDo(t *testing.T) {
 	t.Run("no backup pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockBackupStore{}
-		mockBackupOp := &mockBackupOperator{}
+		mockBackupOp := &mockBackupProvisioner{}
 
 		backupSupervisor := supervisor.NewBackupSupervisor(mockStore, mockBackupOp, &mockAWS{}, "instanceID", logger)
 		err := backupSupervisor.Do()
@@ -153,7 +153,7 @@ func TestBackupSupervisorDo(t *testing.T) {
 			UnlockChan: make(chan interface{}),
 		}
 
-		backupSupervisor := supervisor.NewBackupSupervisor(mockStore, &mockBackupOperator{}, &mockAWS{}, "instanceID", logger)
+		backupSupervisor := supervisor.NewBackupSupervisor(mockStore, &mockBackupProvisioner{}, &mockAWS{}, "instanceID", logger)
 		err := backupSupervisor.Do()
 		require.NoError(t, err)
 
@@ -167,7 +167,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("trigger backup", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		mockBackupOp := &mockBackupOperator{}
+		mockBackupOp := &mockBackupProvisioner{}
 
 		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
 
@@ -192,7 +192,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("do not trigger backup if installation not hibernated", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		mockBackupOp := &mockBackupOperator{}
+		mockBackupOp := &mockBackupProvisioner{}
 
 		installation, _ := setupBackupRequiredResources(t, sqlStore)
 		installation.State = model.InstallationStateStable
@@ -218,7 +218,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("set backup as failed if installation deleted", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		mockBackupOp := &mockBackupOperator{}
+		mockBackupOp := &mockBackupProvisioner{}
 
 		backupMeta := &model.InstallationBackup{
 			InstallationID: "deleted-installation-id",
@@ -239,27 +239,27 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("check backup status", func(t *testing.T) {
 		for _, testCase := range []struct {
 			description   string
-			mockBackupOp  *mockBackupOperator
+			mockBackupOp  *mockBackupProvisioner
 			expectedState model.InstallationBackupState
 		}{
 			{
 				description:   "when backup finished",
-				mockBackupOp:  &mockBackupOperator{BackupStartTime: 100},
+				mockBackupOp:  &mockBackupProvisioner{BackupStartTime: 100},
 				expectedState: model.InstallationBackupStateBackupSucceeded,
 			},
 			{
 				description:   "when still in progress",
-				mockBackupOp:  &mockBackupOperator{BackupStartTime: -1},
+				mockBackupOp:  &mockBackupProvisioner{BackupStartTime: -1},
 				expectedState: model.InstallationBackupStateBackupInProgress,
 			},
 			{
 				description:   "when non terminal error",
-				mockBackupOp:  &mockBackupOperator{BackupStartTime: -1, err: errors.New("some error")},
+				mockBackupOp:  &mockBackupProvisioner{BackupStartTime: -1, err: errors.New("some error")},
 				expectedState: model.InstallationBackupStateBackupInProgress,
 			},
 			{
 				description:   "when terminal error",
-				mockBackupOp:  &mockBackupOperator{BackupStartTime: -1, err: provisioner.ErrJobBackoffLimitReached},
+				mockBackupOp:  &mockBackupProvisioner{BackupStartTime: -1, err: provisioner.ErrJobBackoffLimitReached},
 				expectedState: model.InstallationBackupStateBackupFailed,
 			},
 		} {

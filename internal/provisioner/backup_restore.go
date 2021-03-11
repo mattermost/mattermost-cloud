@@ -26,6 +26,7 @@ import (
 const (
 	// Run job with only one attempt to avoid possibility of waking up workspace before retry.
 	backupRestoreBackoffLimit int32 = 0
+	backupAction = "backup"
 )
 
 // ErrJobBackoffLimitReached indicates that job failed all possible attempts and there is no reason for retrying.
@@ -82,8 +83,8 @@ func (o BackupOperator) TriggerBackup(
 
 	envVars = append(envVars, o.prepareEnvs(dataResidence, storageEndpoint, fileStoreCfg.Secret, dbSecret)...)
 
-	backupJobName := jobName("backup", backup.ID)
-	job := o.createBackupRestoreJob(backupJobName, installation.ID, "backup", envVars)
+	backupJobName := jobName(backupAction, backup.ID)
+	job := o.createBackupRestoreJob(backupJobName, installation.ID, backupAction, envVars)
 
 	ctx := context.Background()
 	job, err := jobsClient.Create(ctx, job, metav1.CreateOptions{})
@@ -117,7 +118,7 @@ func (o BackupOperator) TriggerBackup(
 // returns job start time, when the job finished or -1 if it is still running.
 func (o BackupOperator) CheckBackupStatus(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) (int64, error) {
 	ctx := context.Background()
-	job, err := jobsClient.Get(ctx, jobName("backup", backup.ID), metav1.GetOptions{})
+	job, err := jobsClient.Get(ctx, jobName(backupAction, backup.ID), metav1.GetOptions{})
 	if err != nil {
 		return -1, errors.Wrap(err, "failed to get backup job")
 	}
@@ -153,7 +154,7 @@ func (o BackupOperator) CheckBackupStatus(jobsClient v1.JobInterface, backup *mo
 
 // CleanupBackup removes backup job from the cluster if it exists.
 func (o BackupOperator) CleanupBackup(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) error {
-	backupJobName := jobName("backup", backup.ID)
+	backupJobName := jobName(backupAction, backup.ID)
 
 	ctx := context.Background()
 	err := jobsClient.Delete(ctx, backupJobName, metav1.DeleteOptions{})
