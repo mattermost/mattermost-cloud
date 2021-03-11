@@ -16,7 +16,7 @@ import (
 
 func TestGetCachedKopsClient(t *testing.T) {
 	logger := testlib.MakeLogger(t)
-	provisioner := NewKopsProvisioner("s3statestore", "test", true, []string{}, []string{}, nil, logger, nil)
+	provisioner := NewKopsProvisioner(ProvisioningParams{}, nil, logger, nil, nil)
 
 	// Using &kops.Cmd{} here because kops.New() checks for the binary in your
 	// PATH which isn't needed for the test and fails in CI/CD.

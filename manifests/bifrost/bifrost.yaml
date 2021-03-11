@@ -88,3 +88,7 @@ spec:
         podSelector:
           matchLabels:
             app: mattermost-update-check
+      - namespaceSelector: {}
+        podSelector:
+          matchLabels:
+            app: backup-restore

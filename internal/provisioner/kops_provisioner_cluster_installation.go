@@ -21,7 +21,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-const hibernationReplicaCount = -1
+const (
+	hibernationReplicaCount = -1
+	bifrostEndpoint         = "bifrost.bifrost:80"
+)
 
 // ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
 type ClusterInstallationProvisioner interface {
@@ -632,7 +635,7 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 	}
 	if installation.Filestore == model.InstallationFilestoreBifrost {
 		mattermostEnv["MM_CLOUD_FILESTORE_BIFROST"] = model.EnvVar{Value: "true"}
-		mattermostEnv["MM_FILESETTINGS_AMAZONS3ENDPOINT"] = model.EnvVar{Value: "bifrost.bifrost:80"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3ENDPOINT"] = model.EnvVar{Value: bifrostEndpoint}
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SIGNV2"] = model.EnvVar{Value: "false"}
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "false"}
 		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSL"] = model.EnvVar{Value: "false"}
