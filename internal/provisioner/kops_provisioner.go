@@ -14,6 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
+// ProvisioningParams represent configuration used during various provisioning operations.
 type ProvisioningParams struct {
 	S3StateStore            string
 	AllowCIDRRangeList      []string
