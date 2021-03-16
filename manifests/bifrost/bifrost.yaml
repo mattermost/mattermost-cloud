@@ -93,7 +93,7 @@ spec:
         podSelector:
           matchLabels:
             app: mattermost-update-check
-      - namespaceSelector: { }
+      - namespaceSelector: {}
         podSelector:
           matchLabels:
             app: backup-restore
