@@ -115,6 +115,7 @@ func (c *Cmd) UpdateCluster(name, dir string) error {
 		"--yes",
 		arg("target", "terraform"),
 		arg("out", dir),
+		arg("admin", "87600h"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops update cluster")

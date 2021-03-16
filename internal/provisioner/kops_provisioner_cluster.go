@@ -29,7 +29,10 @@ import (
 
 // DefaultKubernetesVersion is the default value for a kubernetes cluster
 // version value.
-const DefaultKubernetesVersion = "0.0.0"
+const (
+	DefaultKubernetesVersion = "0.0.0"
+	igFilename               = "ig-nodes.yaml"
+)
 
 // PrepareCluster ensures a cluster object is ready for provisioning.
 func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) bool {
@@ -658,29 +661,32 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 
 	logger.Info("Resizing cluster")
 
-	igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, "nodes")
-	if err != nil {
-		return err
-	}
+	for igName, changeMetadata := range kopsMetadata.GetWorkerNodesResizeChanges() {
+		logger.Infof("Resizing instance group %s to %d nodes", igName, changeMetadata.NodeMinCount)
 
-	igManifest, err = grossKopsReplaceSize(
-		igManifest,
-		kopsMetadata.ChangeRequest.NodeInstanceType,
-		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMinCount),
-		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMaxCount),
-	)
-	if err != nil {
-		return err
-	}
+		igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, igName)
+		if err != nil {
+			return err
+		}
 
-	igFilename := "ig-nodes.yaml"
-	err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
-	if err != nil {
-		return err
-	}
-	_, err = kops.Replace(igFilename)
-	if err != nil {
-		return err
+		igManifest, err = grossKopsReplaceSize(
+			igManifest,
+			kopsMetadata.ChangeRequest.NodeInstanceType,
+			fmt.Sprintf("%d", changeMetadata.NodeMinCount),
+			fmt.Sprintf("%d", changeMetadata.NodeMaxCount),
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to update instance group yaml file")
+		}
+
+		err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
+		if err != nil {
+			return errors.Wrap(err, "failed to write instance group yaml file")
+		}
+		_, err = kops.Replace(igFilename)
+		if err != nil {
+			return errors.Wrap(err, "failed to replace instance group resources")
+		}
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
