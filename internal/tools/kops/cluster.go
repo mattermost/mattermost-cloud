@@ -43,8 +43,8 @@ func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataR
 	if kopsRequest.AMI != "" {
 		args = append(args, arg("image", kopsRequest.AMI))
 	}
-	if cloud == "aws" {
-		args = append(args, arg("networking", "amazon-vpc-routed-eni"))
+	if kopsRequest.Networking != "" {
+		args = append(args, arg("networking", kopsRequest.Networking))
 	}
 
 	if len(privateSubnetIds) != 0 {

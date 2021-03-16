@@ -28,10 +28,12 @@ type CreateClusterRequest struct {
 	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Annotations            []string                       `json:"annotations,omitempty"`
+	Networking             string                         `json:"networking,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
 func (request *CreateClusterRequest) SetDefaults() {
+	
 	if len(request.Provider) == 0 {
 		request.Provider = ProviderAWS
 	}
@@ -56,6 +58,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if request.NodeMaxCount == 0 {
 		request.NodeMaxCount = request.NodeMinCount
 	}
+	if len(request.Networking) == 0 {
+		request.Networking = "amazon-vpc-routed-eni"
+	}
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
@@ -77,6 +82,7 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[TeleportCanonicalName]; !ok {
 		request.DesiredUtilityVersions[TeleportCanonicalName] = TeleportDefaultVersion
 	}
+
 }
 
 // Validate validates the values of a cluster create request.
@@ -97,7 +103,7 @@ func (request *CreateClusterRequest) Validate() error {
 		return errors.Errorf("node min (%d) and max (%d) counts must match", request.NodeMinCount, request.NodeMaxCount)
 	}
 	// TODO: check zones and instance types?
-
+	// TODO: networking validation
 	return nil
 }
 

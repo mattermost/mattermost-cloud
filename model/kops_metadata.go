@@ -49,6 +49,7 @@ type KopsMetadataRequestedState struct {
 	NodeInstanceType   string `json:"NodeInstanceType,omitempty"`
 	NodeMinCount       int64  `json:"NodeMinCount,omitempty"`
 	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
+	Networking         string `json:"networking,omitempty"`
 }
 
 // RotatorMetadata is the metadata for the Rotator tool
