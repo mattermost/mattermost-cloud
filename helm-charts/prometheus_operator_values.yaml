@@ -2044,6 +2044,18 @@ prometheus:
         interval: 30s
         path: /metrics
         scheme: http
+  - name: bifrost
+    selector:
+      matchLabels:
+        kubernetes.io/name: "bifrost"
+    namespaceSelector:
+      matchNames:
+      - bifrost
+    endpoints:
+      - port: service
+        interval: 30s
+        path: /metrics
+        scheme: http
 
   additionalPodMonitors: []
   ## Name of the PodMonitor to create

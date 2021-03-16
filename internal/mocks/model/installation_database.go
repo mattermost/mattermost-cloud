@@ -95,6 +95,20 @@ func (mr *MockDatabaseMockRecorder) GenerateDatabaseSecret(store, logger interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateDatabaseSecret", reflect.TypeOf((*MockDatabase)(nil).GenerateDatabaseSecret), store, logger)
 }
 
+// RefreshResourceMetadata mocks base method
+func (m *MockDatabase) RefreshResourceMetadata(store model.InstallationDatabaseStoreInterface, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshResourceMetadata", store, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RefreshResourceMetadata indicates an expected call of RefreshResourceMetadata
+func (mr *MockDatabaseMockRecorder) RefreshResourceMetadata(store, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshResourceMetadata", reflect.TypeOf((*MockDatabase)(nil).RefreshResourceMetadata), store, logger)
+}
+
 // MockInstallationDatabaseStoreInterface is a mock of InstallationDatabaseStoreInterface interface
 type MockInstallationDatabaseStoreInterface struct {
 	ctrl     *gomock.Controller
@@ -176,6 +190,21 @@ func (m *MockInstallationDatabaseStoreInterface) GetMultitenantDatabaseForInstal
 func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetMultitenantDatabaseForInstallationID(installationID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantDatabaseForInstallationID", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetMultitenantDatabaseForInstallationID), installationID)
+}
+
+// GetInstallationsTotalDatabaseWeight mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstallationsTotalDatabaseWeight", installationIDs)
+	ret0, _ := ret[0].(float64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstallationsTotalDatabaseWeight indicates an expected call of GetInstallationsTotalDatabaseWeight
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetInstallationsTotalDatabaseWeight(installationIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstallationsTotalDatabaseWeight", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetInstallationsTotalDatabaseWeight), installationIDs)
 }
 
 // CreateMultitenantDatabase mocks base method

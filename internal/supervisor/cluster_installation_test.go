@@ -63,31 +63,7 @@ func (s *mockClusterInstallationStore) GetWebhooks(filter *model.WebhookFilter) 
 type mockClusterInstallationProvisioner struct{}
 
 func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
-	return p
-}
-
-func (p *mockClusterInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	return nil
-}
-
-func (p *mockClusterInstallationProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) error {
-	return nil
-}
-
-func (p *mockClusterInstallationProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterIntallation *model.ClusterInstallation) error {
-	return nil
-}
-
-func (p *mockClusterInstallationProvisioner) IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	return true, nil
-}
-
-func (p *mockClusterInstallationProvisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	return nil
-}
-
-func (p *mockClusterInstallationProvisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	return false, nil
+	return &mockInstallationProvisioner{}
 }
 
 func TestClusterInstallationSupervisorDo(t *testing.T) {

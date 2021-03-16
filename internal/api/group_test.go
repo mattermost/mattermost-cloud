@@ -641,7 +641,7 @@ func TestGroupsStatus(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("empty groups", func(t *testing.T) {
-		expectedStatus := &[]model.GroupsStatus{
+		expectedStatus := []*model.GroupsStatus{
 			{
 				ID: group.ID,
 				Status: model.GroupStatus{
@@ -701,12 +701,12 @@ func TestGroupsStatus(t *testing.T) {
 		groupsStatus, err := client.GetGroupsStatus()
 		require.NoError(t, err)
 		require.NotNil(t, groupsStatus)
-		assert.Len(t, *groupsStatus, 2)
-		for _, gs := range *groupsStatus {
+		assert.Len(t, groupsStatus, 2)
+		for _, gs := range groupsStatus {
 			if gs.ID == group.ID {
-				assert.Equal(t, expectedStatusGroup1, &gs)
+				assert.Equal(t, expectedStatusGroup1, gs)
 			} else if gs.ID == group2.ID {
-				assert.Equal(t, expectedStatusGroup2, &gs)
+				assert.Equal(t, expectedStatusGroup2, gs)
 			}
 		}
 	})

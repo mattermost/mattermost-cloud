@@ -19,7 +19,7 @@ var installationSelect sq.SelectBuilder
 func init() {
 	installationSelect = sq.
 		Select(
-			"ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
+			"Installation.ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
 			"MattermostEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
@@ -144,6 +144,9 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 			Offset(uint64(filter.Page * filter.PerPage))
 	}
 
+	if len(filter.InstallationIDs) != 0 {
+		builder = builder.Where(sq.Eq{"Installation.ID": filter.InstallationIDs})
+	}
 	if filter.OwnerID != "" {
 		builder = builder.Where("OwnerID = ?", filter.OwnerID)
 	}
@@ -163,23 +166,71 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	return builder
 }
 
-// GetInstallationsCount returns the number of installations filtered by the deletedat
-// field
-func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int, error) {
-	builder := sq.Select("COUNT(*) as InstallationsCount").From("Installation")
+// GetInstallationsCount returns the number of installations filtered by the
+// deleteAt field.
+func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, error) {
+	stateCounts, err := sqlStore.getInstallationCountsByState(includeDeleted)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to query installation state counts")
+	}
+	var totalCount int64
+	for _, count := range stateCounts {
+		totalCount += count
+	}
+
+	return totalCount, nil
+}
+
+// GetInstallationsStatus returns status of all installations which aren't
+// deleted.
+func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, error) {
+	stateCounts, err := sqlStore.getInstallationCountsByState(false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query installation state counts")
+	}
+
+	var totalCount int64
+	for _, count := range stateCounts {
+		totalCount += count
+	}
+	stableCount := stateCounts[model.InstallationStateStable]
+	hibernatingCount := stateCounts[model.InstallationStateHibernating]
+
+	return &model.InstallationsStatus{
+		InstallationsTotal:       totalCount,
+		InstallationsStable:      stableCount,
+		InstallationsHibernating: hibernatingCount,
+		InstallationsUpdating:    totalCount - stableCount - hibernatingCount,
+	}, nil
+}
+
+// getInstallationCountsByState returns the number of installations in each
+// state.
+func (sqlStore *SQLStore) getInstallationCountsByState(includeDeleted bool) (map[string]int64, error) {
+	type Count struct {
+		Count int64
+		State string
+	}
+	var counts []Count
+
+	installationBuilder := sq.
+		Select("Count (*) as Count, State").
+		From("Installation").
+		GroupBy("State")
 	if !includeDeleted {
-		builder = builder.Where("DeleteAt = 0")
+		installationBuilder = installationBuilder.Where("DeleteAt = 0")
 	}
-	var numberOfInstallations int
-	query, _, err := builder.ToSql()
+	err := sqlStore.selectBuilder(sqlStore.db, &counts, installationBuilder)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to parse query for installations count")
+		return nil, errors.Wrap(err, "failed to query for installations by state")
 	}
-	err = sqlStore.get(sqlStore.db, &numberOfInstallations, query)
-	if err != nil {
-		return 0, errors.Wrap(err, "failed to query for installations count")
+
+	result := make(map[string]int64)
+	for _, count := range counts {
+		result[count.State] = count.Count
 	}
-	return numberOfInstallations, nil
+
+	return result, nil
 }
 
 // GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
@@ -405,6 +456,42 @@ func (sqlStore *SQLStore) UpdateInstallationState(installation *model.Installati
 	}
 
 	return nil
+}
+
+// UpdateInstallationCRVersion updates the given installation CRVersion.
+func (sqlStore *SQLStore) UpdateInstallationCRVersion(installationID, crVersion string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"CRVersion": crVersion,
+		}).
+		Where("ID = ?", installationID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation")
+	}
+
+	return nil
+}
+
+// GetInstallationsTotalDatabaseWeight returns the total weight value of the
+// provided installations.
+func (sqlStore *SQLStore) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
+	installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
+		InstallationIDs: installationIDs,
+		PerPage:         model.AllPerPage,
+		IncludeDeleted:  false,
+	}, false, false)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to lookup installations in database")
+	}
+
+	var totalWeight float64
+	for _, installation := range installations {
+		totalWeight += installation.GetDatabaseWeight()
+	}
+
+	return totalWeight, nil
 }
 
 // DeleteInstallation marks the given installation as deleted, but does not remove the record from the

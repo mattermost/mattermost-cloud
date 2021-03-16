@@ -17,6 +17,11 @@ const (
 	V1betaCRVersion = "installation.mattermost.com/v1beta1"
 	// DefaultCRVersion is a default CR version used for new installations.
 	DefaultCRVersion = V1betaCRVersion
+	// DefaultDatabaseWeight is the default weight of a small or average-sized
+	// installation that isn't hibernating.
+	DefaultDatabaseWeight float64 = 1
+	// HibernatingDatabaseWeight is the weight of a hibernating installation.
+	HibernatingDatabaseWeight float64 = .75
 )
 
 // Installation represents a Mattermost installation.
@@ -57,18 +62,19 @@ type Installation struct {
 
 // InstallationsCount represents the number of installations
 type InstallationsCount struct {
-	Count int
+	Count int64
 }
 
 // InstallationFilter describes the parameters used to constrain a set of installations.
 type InstallationFilter struct {
-	OwnerID        string
-	GroupID        string
-	State          string
-	DNS            string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	InstallationIDs []string
+	OwnerID         string
+	GroupID         string
+	State           string
+	DNS             string
+	Page            int
+	PerPage         int
+	IncludeDeleted  bool
 }
 
 // Clone returns a deep copy the installation.
@@ -86,6 +92,18 @@ func (i *Installation) ToDTO(annotations []*Annotation) *InstallationDTO {
 		Installation: i,
 		Annotations:  annotations,
 	}
+}
+
+// GetDatabaseWeight returns a value corresponding to the
+// TODO: maybe consider installation size in the future as well?
+func (i *Installation) GetDatabaseWeight() float64 {
+	if i.State == InstallationStateHibernationRequested ||
+		i.State == InstallationStateHibernationInProgress ||
+		i.State == InstallationStateHibernating {
+		return HibernatingDatabaseWeight
+	}
+
+	return DefaultDatabaseWeight
 }
 
 // IsInGroup returns if the installation is in a group or not.
@@ -191,7 +209,7 @@ func InstallationsFromReader(reader io.Reader) ([]*Installation, error) {
 
 // InstallationsCountFromReader decodes a json-encoded installations count data from the
 // given io.Reader
-func InstallationsCountFromReader(reader io.Reader) (int, error) {
+func InstallationsCountFromReader(reader io.Reader) (int64, error) {
 	installationsCount := InstallationsCount{}
 	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&installationsCount)

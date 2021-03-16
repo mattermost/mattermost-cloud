@@ -24,8 +24,9 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 
 	installationsRouter := apiRouter.PathPrefix("/installations").Subrouter()
 	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
-	installationsRouter.Handle("/count", addContext(handleGetNumberOfInstallations)).Methods("GET")
 	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")
+	installationsRouter.Handle("/count", addContext(handleGetNumberOfInstallations)).Methods("GET")
+	installationsRouter.Handle("/status", addContext(handleGetInstallationsStatus)).Methods("GET")
 
 	installationRouter := apiRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
 	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
@@ -131,9 +132,25 @@ func handleGetNumberOfInstallations(c *Context, w http.ResponseWriter, r *http.R
 		return
 	}
 	result := model.InstallationsCount{Count: installationsCount}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, result)
+}
+
+// handleGetInstallationsStatus responds to GET /api/installations/status,
+// returning the status of all non-deleted installations
+func handleGetInstallationsStatus(c *Context, w http.ResponseWriter, r *http.Request) {
+	installationsStatus, err := c.Store.GetInstallationsStatus()
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query for installations status")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, installationsStatus)
 }
 
 // handleCreateInstallation responds to POST /api/installations, beginning the process of creating
@@ -546,7 +563,7 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	oldState := installationDTO.State
-	newState := model.InstallationStateUpdateRequested
+	newState := model.InstallationStateWakeUpRequested
 
 	if !installationDTO.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to wake up installation while in state %s", installationDTO.State)

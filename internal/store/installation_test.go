@@ -792,6 +792,203 @@ func TestUpdateInstallationState(t *testing.T) {
 	assert.NotEqual(t, storedInstallation.Version, installation1.Version)
 }
 
+func TestGetInstallationsStatus(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns1.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err := sqlStore.CreateInstallation(installation1, nil)
+	require.NoError(t, err)
+
+	status, err := sqlStore.GetInstallationsStatus()
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), status.InstallationsTotal)
+	assert.Equal(t, int64(0), status.InstallationsStable)
+	assert.Equal(t, int64(0), status.InstallationsHibernating)
+	assert.Equal(t, int64(1), status.InstallationsUpdating)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation2 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns2.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.ClusterInstallationStateStable,
+	}
+
+	err = sqlStore.CreateInstallation(installation2, nil)
+	require.NoError(t, err)
+
+	status, err = sqlStore.GetInstallationsStatus()
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), status.InstallationsTotal)
+	assert.Equal(t, int64(1), status.InstallationsStable)
+	assert.Equal(t, int64(0), status.InstallationsHibernating)
+	assert.Equal(t, int64(1), status.InstallationsUpdating)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation3 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateHibernating,
+	}
+
+	err = sqlStore.CreateInstallation(installation3, nil)
+	require.NoError(t, err)
+
+	status, err = sqlStore.GetInstallationsStatus()
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), status.InstallationsTotal)
+	assert.Equal(t, int64(1), status.InstallationsStable)
+	assert.Equal(t, int64(1), status.InstallationsHibernating)
+	assert.Equal(t, int64(1), status.InstallationsUpdating)
+
+	time.Sleep(1 * time.Millisecond)
+
+	err = sqlStore.DeleteInstallation(installation1.ID)
+	require.NoError(t, err)
+
+	status, err = sqlStore.GetInstallationsStatus()
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), status.InstallationsTotal)
+	assert.Equal(t, int64(1), status.InstallationsStable)
+	assert.Equal(t, int64(1), status.InstallationsHibernating)
+	assert.Equal(t, int64(0), status.InstallationsUpdating)
+}
+
+func TestUpdateInstallationCRVersion(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateCreationRequested,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err := sqlStore.CreateInstallation(installation1, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	err = sqlStore.UpdateInstallationCRVersion(installation1.ID, model.V1betaCRVersion)
+	require.NoError(t, err)
+
+	storedInstallation, err := sqlStore.GetInstallation(installation1.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, storedInstallation.CRVersion, model.V1betaCRVersion)
+}
+
+func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns1.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateStable,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err := sqlStore.CreateInstallation(installation1, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation2 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns2.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateStable,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err = sqlStore.CreateInstallation(installation2, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation3 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateHibernating,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err = sqlStore.CreateInstallation(installation3, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation1.ID})
+	require.NoError(t, err)
+	assert.Equal(t, installation1.GetDatabaseWeight(), totalWeight)
+	assert.Equal(t, model.DefaultDatabaseWeight, totalWeight)
+
+	totalWeight, err = sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation3.ID})
+	require.NoError(t, err)
+	assert.Equal(t, installation3.GetDatabaseWeight(), totalWeight)
+	assert.Equal(t, model.HibernatingDatabaseWeight, totalWeight)
+
+	totalWeight, err = sqlStore.GetInstallationsTotalDatabaseWeight([]string{
+		installation1.ID,
+		installation2.ID,
+		installation3.ID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, installation1.GetDatabaseWeight()+installation2.GetDatabaseWeight()+installation3.GetDatabaseWeight(), totalWeight)
+}
+
 func TestDeleteInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)

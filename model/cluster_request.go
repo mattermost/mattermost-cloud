@@ -160,14 +160,39 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 
 // PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
-	Version *string `json:"version,omitempty"`
-	KopsAMI *string `json:"kops-ami,omitempty"`
+	Version       *string        `json:"version,omitempty"`
+	KopsAMI       *string        `json:"kops-ami,omitempty"`
+	RotatorConfig *RotatorConfig `json:"rotatorConfig,omitempty"`
 }
 
 // Validate validates the values of a cluster upgrade request.
 func (p *PatchUpgradeClusterRequest) Validate() error {
 	if p.Version != nil && !ValidClusterVersion(*p.Version) {
 		return errors.Errorf("unsupported cluster version %s", *p.Version)
+	}
+
+	if p.RotatorConfig != nil {
+		if p.RotatorConfig.UseRotator == nil {
+			return errors.Errorf("rotator config use rotator should be set")
+		}
+
+		if *p.RotatorConfig.UseRotator {
+			if p.RotatorConfig.EvictGracePeriod == nil {
+				return errors.Errorf("rotator config evict grace period should be set")
+			}
+			if p.RotatorConfig.MaxDrainRetries == nil {
+				return errors.Errorf("rotator config max drain retries should be set")
+			}
+			if p.RotatorConfig.MaxScaling == nil {
+				return errors.Errorf("rotator config max scaling should be set")
+			}
+			if p.RotatorConfig.WaitBetweenDrains == nil {
+				return errors.Errorf("rotator config wait between drains should be set")
+			}
+			if p.RotatorConfig.WaitBetweenRotations == nil {
+				return errors.Errorf("rotator config wait between rotations should be set")
+			}
+		}
 	}
 
 	return nil
@@ -187,8 +212,13 @@ func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
 		changes.AMI = *p.KopsAMI
 	}
 
+	if metadata.RotatorRequest == nil {
+		metadata.RotatorRequest = &RotatorMetadata{}
+	}
+
 	if applied {
 		metadata.ChangeRequest = changes
+		metadata.RotatorRequest.Config = p.RotatorConfig
 	}
 
 	return applied

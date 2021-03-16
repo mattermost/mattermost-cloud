@@ -441,7 +441,7 @@ func (c *Client) GetInstallations(request *GetInstallationsRequest) ([]*Installa
 }
 
 // GetInstallationsCount returns then number of installations filtered by deleted field
-func (c *Client) GetInstallationsCount(includeDeleted bool) (int, error) {
+func (c *Client) GetInstallationsCount(includeDeleted bool) (int64, error) {
 	u, err := url.Parse(c.buildURL("/api/installations/count"))
 	if err != nil {
 		return 0, err
@@ -509,6 +509,26 @@ func (c *Client) WakeupInstallation(installationID string) (*InstallationDTO, er
 	switch resp.StatusCode {
 	case http.StatusAccepted:
 		return InstallationDTOFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallationsStatus fetches the status for all installations.
+func (c *Client) GetInstallationsStatus() (*InstallationsStatus, error) {
+	resp, err := c.doGet(c.buildURL("/api/installations/status"))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return InstallationsStatusFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -803,7 +823,7 @@ func (c *Client) GetGroupStatus(groupID string) (*GroupStatus, error) {
 }
 
 // GetGroupsStatus fetches the status for all groups.
-func (c *Client) GetGroupsStatus() (*[]GroupsStatus, error) {
+func (c *Client) GetGroupsStatus() ([]*GroupsStatus, error) {
 	resp, err := c.doGet(c.buildURL("/api/groups/status"))
 	if err != nil {
 		return nil, err

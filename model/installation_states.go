@@ -34,6 +34,9 @@ const (
 	InstallationStateHibernationInProgress = "hibernation-in-progress"
 	// InstallationStateHibernating is an installation that is hibernating.
 	InstallationStateHibernating = "hibernating"
+	// InstallationStateWakeUpRequested is an installation that is about to be
+	// woken up from hibernation.
+	InstallationStateWakeUpRequested = "wake-up-requested"
 	// InstallationStateUpdateRequested is an installation that is about to undergo an update.
 	InstallationStateUpdateRequested = "update-requested"
 	// InstallationStateUpdateInProgress is an installation that is being updated.
@@ -72,6 +75,7 @@ var AllInstallationStates = []string{
 	InstallationStateHibernationRequested,
 	InstallationStateHibernationInProgress,
 	InstallationStateHibernating,
+	InstallationStateWakeUpRequested,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateUpdateFailed,
@@ -96,6 +100,7 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateCreationDNS,
 	InstallationStateHibernationRequested,
 	InstallationStateHibernationInProgress,
+	InstallationStateWakeUpRequested,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateDeletionRequested,
@@ -111,6 +116,7 @@ var AllInstallationStatesPendingWork = []string{
 var AllInstallationRequestStates = []string{
 	InstallationStateCreationRequested,
 	InstallationStateHibernationRequested,
+	InstallationStateWakeUpRequested,
 	InstallationStateUpdateRequested,
 	InstallationStateDeletionRequested,
 }
@@ -123,6 +129,8 @@ func (i *Installation) ValidTransitionState(newState string) bool {
 		return validTransitionToInstallationStateCreationRequested(i.State)
 	case InstallationStateHibernationRequested:
 		return validTransitionToInstallationStateHibernationRequested(i.State)
+	case InstallationStateWakeUpRequested:
+		return validTransitionToInstallationStateWakeUpRequested(i.State)
 	case InstallationStateUpdateRequested:
 		return validTransitionToInstallationStateUpdateRequested(i.State)
 	case InstallationStateDeletionRequested:
@@ -151,10 +159,18 @@ func validTransitionToInstallationStateHibernationRequested(currentState string)
 	return false
 }
 
+func validTransitionToInstallationStateWakeUpRequested(currentState string) bool {
+	switch currentState {
+	case InstallationStateHibernating:
+		return true
+	}
+
+	return false
+}
+
 func validTransitionToInstallationStateUpdateRequested(currentState string) bool {
 	switch currentState {
 	case InstallationStateStable,
-		InstallationStateHibernating,
 		InstallationStateUpdateRequested,
 		InstallationStateUpdateInProgress,
 		InstallationStateUpdateFailed:
