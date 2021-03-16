@@ -44,6 +44,7 @@ func init() {
 	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
 	clusterCreateCmd.Flags().String("nginx-internal-values", model.NginxInternalDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
+	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use. weave, calico, canal, amazon-vpc-routed-eni")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
@@ -135,6 +136,7 @@ var clusterCreateCmd = &cobra.Command{
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 		annotations, _ := command.Flags().GetStringArray("annotation")
+		networking, _ := command.Flags().GetString("networking")
 
 		request := &model.CreateClusterRequest{
 			Provider:               provider,
@@ -144,6 +146,7 @@ var clusterCreateCmd = &cobra.Command{
 			AllowInstallations:     allowInstallations,
 			DesiredUtilityVersions: processUtilityFlags(command),
 			Annotations:            annotations,
+			Networking:             networking,
 		}
 
 		size, _ := command.Flags().GetString("size")
