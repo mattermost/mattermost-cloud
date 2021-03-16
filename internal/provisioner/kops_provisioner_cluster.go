@@ -538,11 +538,13 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		return err
 	}
 
-	if *cluster.ProvisionerMetadataKops.RotatorRequest.Config.UseRotator {
-		logger.Info("Using node rotator for node upgrade")
-		err = provisioner.RotateClusterNodes(cluster)
-		if err != nil {
-			return err
+	if cluster.ProvisionerMetadataKops.RotatorRequest.Config != nil {
+		if *cluster.ProvisionerMetadataKops.RotatorRequest.Config.UseRotator {
+			logger.Info("Using node rotator for node upgrade")
+			err = provisioner.RotateClusterNodes(cluster)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

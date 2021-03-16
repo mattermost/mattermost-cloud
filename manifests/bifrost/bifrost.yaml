@@ -17,12 +17,12 @@ spec:
       - name: bifrost
         command:
         - /bifrost
-        image: mattermost/bifrost:cloud-1
+        image: mattermost/bifrost:v1.0.1
         imagePullPolicy: IfNotPresent
         env:
         - name: BIFROST_SERVICESETTINGS_HOST
           value: "0.0.0.0:8087"
-        - name: BIFROST_SERVICESETTINGS_HEALTHHOST
+        - name: BIFROST_SERVICESETTINGS_SERVICEHOST
           value: "0.0.0.0:8099"
         - name: BIFROST_LOGSETTINGS_CONSOLEJSON
           value: "true"
@@ -65,8 +65,13 @@ spec:
     name: bifrost
   ports:
   - port: 80
+    name: bifrost
     protocol: TCP
     targetPort: 8087
+  - port: 8099
+    name: service
+    protocol: TCP
+    targetPort: 8099
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -88,7 +93,23 @@ spec:
         podSelector:
           matchLabels:
             app: mattermost-update-check
-      - namespaceSelector: {}
+      - namespaceSelector: { }
         podSelector:
           matchLabels:
             app: backup-restore
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-metrics
+  namespace: bifrost
+spec:
+  podSelector: {}
+  ingress:
+  - ports:
+    - port: 8099
+      protocol: TCP
+    from:
+      - namespaceSelector:
+          matchLabels:
+            name: prometheus
