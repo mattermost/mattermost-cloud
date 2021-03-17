@@ -71,18 +71,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrapf(err, "failed to get the CIDR for the VPC Name %s", cncVPCName)
 	}
 	allowSSHCIDRS := []string{cncVPCCIDR}
-	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.vpnCIDRList...)
+	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.params.VpnCIDRList...)
 
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kops, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
 	defer kops.Close()
 
 	var clusterResources aws.ClusterResources
-	if provisioner.useExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, provisioner.owner, logger)
+	if provisioner.params.UseExistingAWSResources {
+		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to create kops cluster")
 	}
 
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		}
 	}
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kops, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
@@ -511,7 +511,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		return err
 	}
 
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
@@ -629,7 +629,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "KopsMetadata ChangeRequest failed validation")
 	}
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kops, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
@@ -640,7 +640,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
@@ -774,7 +774,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	}
 
 	if !skipDeleteTerraform {
-		terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.s3StateStore, logger)
+		terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to create terraform wrapper")
 		}
