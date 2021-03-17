@@ -33,7 +33,7 @@ type CreateClusterRequest struct {
 
 // SetDefaults sets the default values for a cluster create request.
 func (request *CreateClusterRequest) SetDefaults() {
-	
+
 	if len(request.Provider) == 0 {
 		request.Provider = ProviderAWS
 	}
@@ -103,8 +103,27 @@ func (request *CreateClusterRequest) Validate() error {
 		return errors.Errorf("node min (%d) and max (%d) counts must match", request.NodeMinCount, request.NodeMaxCount)
 	}
 	// TODO: check zones and instance types?
-	// TODO: networking validation
+
+	if !contains(getSupportedCniList(), request.Networking) {
+		return errors.Errorf("unsupported cluster networking option %s", request.Networking)
+	}
 	return nil
+}
+
+// starting with three supported CNI networking options, we can add more as required
+func getSupportedCniList() []string {
+	return []string{"amazon-vpc-routed-eni", "weave", "canal"}
+}
+
+//  contains checks if a string is present in a slice
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }
 
 // NewCreateClusterRequestFromReader will create a CreateClusterRequest from an
