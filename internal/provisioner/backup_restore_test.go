@@ -242,7 +242,7 @@ func TestBackupOperator_CleanupBackup(t *testing.T) {
 		k8sClient := fake.NewSimpleClientset()
 		jobClinet := k8sClient.BatchV1().Jobs("installation-1")
 
-		err := operator.CleanupBackup(jobClinet, backup, logrus.New())
+		err := operator.CleanupBackupJob(jobClinet, backup, logrus.New())
 		require.NoError(t, err)
 	})
 
@@ -254,7 +254,7 @@ func TestBackupOperator_CleanupBackup(t *testing.T) {
 		k8sClient := fake.NewSimpleClientset(existing)
 		jobClinet := k8sClient.BatchV1().Jobs("installation-1")
 
-		err := operator.CleanupBackup(jobClinet, backup, logrus.New())
+		err := operator.CleanupBackupJob(jobClinet, backup, logrus.New())
 		require.NoError(t, err)
 
 		_, err = jobClinet.Get(context.Background(), "database-backup-backup-1", metav1.GetOptions{})

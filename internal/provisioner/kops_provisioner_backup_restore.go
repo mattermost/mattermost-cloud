@@ -32,7 +32,7 @@ func (provisioner *KopsProvisioner) TriggerBackup(backup *model.InstallationBack
 	}
 	// InstallationBackup is not supported for local MinIO storage, therefore this should not happen
 	if filestoreCfg == nil || filestoreSecret == nil {
-		return nil, errors.New("file store secret and config cannot be empty for backup")
+		return nil, errors.New("filestore secret and config cannot be empty for backup")
 	}
 	dbSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSecret(provisioner.store, logger)
 	if err != nil {
@@ -69,14 +69,14 @@ func (provisioner *KopsProvisioner) CheckBackupStatus(backup *model.Installation
 	return provisioner.backupOperator.CheckBackupStatus(jobsClient, backup, logger)
 }
 
-// CleanupBackup deletes backup job from the cluster if it exists.
-func (provisioner *KopsProvisioner) CleanupBackup(backup *model.InstallationBackup, cluster *model.Cluster) error {
+// CleanupBackupJob deletes backup job from the cluster if it exists.
+func (provisioner *KopsProvisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
 		"backup":       backup.ID,
 	})
-	logger.Info("Cleaning up backup for installation")
+	logger.Info("Cleaning up backup job for installation")
 
 	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
@@ -86,5 +86,5 @@ func (provisioner *KopsProvisioner) CleanupBackup(backup *model.InstallationBack
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
-	return provisioner.backupOperator.CleanupBackup(jobsClient, backup, logger)
+	return provisioner.backupOperator.CleanupBackupJob(jobsClient, backup, logger)
 }

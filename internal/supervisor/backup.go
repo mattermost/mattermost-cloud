@@ -43,7 +43,7 @@ type installationBackupStore interface {
 type BackupProvisioner interface {
 	TriggerBackup(backupMeta *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error)
 	CheckBackupStatus(backupMeta *model.InstallationBackup, cluster *model.Cluster) (int64, error)
-	CleanupBackup(backup *model.InstallationBackup, cluster *model.Cluster) error
+	CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error
 }
 
 // BackupSupervisor finds backup pending work and effects the required changes.
