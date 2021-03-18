@@ -115,3 +115,38 @@ func lockInstallation(c *Context, installationID string) (*model.InstallationDTO
 		})
 	}
 }
+
+// lockInstallationBackup synchronizes access to the given installation backup across
+// potentially multiple provisioning servers.
+func lockInstallationBackup(c *Context, backupID string) (*model.InstallationBackup, int, func()) {
+	backup, err := c.Store.GetInstallationBackup(backupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query backup metadata")
+		return nil, http.StatusInternalServerError, nil
+	}
+	if backup == nil {
+		return nil, http.StatusNotFound, nil
+	}
+
+	locked, err := c.Store.LockInstallationBackup(backupID, c.RequestID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to lock backup")
+		return nil, http.StatusInternalServerError, nil
+	} else if !locked {
+		c.Logger.Error("failed to acquire lock for backup")
+		return nil, http.StatusConflict, nil
+	}
+
+	unlockOnce := sync.Once{}
+
+	return backup, 0, func() {
+		unlockOnce.Do(func() {
+			unlocked, err := c.Store.UnlockInstallationBackup(backup.ID, c.RequestID, false)
+			if err != nil {
+				c.Logger.WithError(err).Errorf("failed to unlock backup")
+			} else if unlocked != true {
+				c.Logger.Warn("failed to release lock for backup")
+			}
+		})
+	}
+}

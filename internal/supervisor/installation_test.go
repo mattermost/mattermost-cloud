@@ -182,6 +182,22 @@ func (s *mockInstallationStore) GetAnnotationsForInstallation(installationID str
 	return nil, nil
 }
 
+func (s *mockInstallationStore) GetInstallationBackups(filter *model.InstallationBackupFilter) ([]*model.InstallationBackup, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) UpdateInstallationBackupState(backup *model.InstallationBackup) error {
+	return nil
+}
+
+func (s *mockInstallationStore) LockInstallationBackups(backupIDs []string, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources
@@ -254,6 +270,10 @@ func (a *mockAWS) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldL
 }
 
 func (a *mockAWS) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) S3EnsureObjectDeleted(bucketName, path string) error {
 	return nil
 }
 
@@ -1751,6 +1771,54 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor.Supervise(installation)
 		expectInstallationState(t, sqlStore, installation, model.InstallationStateDeletionInProgress)
 		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateDeletionRequested)
+	})
+
+	t.Run("deletion requested, delete backups", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, false)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster, nil)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateDeletionRequested,
+		}
+		err = sqlStore.CreateInstallation(installation, nil)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateDeleted,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		backup := &model.InstallationBackup{
+			InstallationID:        installation.ID,
+			ClusterInstallationID: clusterInstallation.ID,
+			State:                 model.InstallationBackupStateBackupSucceeded,
+		}
+		err = sqlStore.CreateInstallationBackup(backup)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateDeletionFinalCleanup)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateDeleted)
+		fetchedBackup, err := sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationBackupStateDeletionRequested, fetchedBackup.State)
 	})
 
 	t.Run("creation requested, cluster installations deleted", func(t *testing.T) {

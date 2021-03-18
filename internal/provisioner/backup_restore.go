@@ -156,8 +156,9 @@ func (o BackupOperator) CheckBackupStatus(jobsClient v1.JobInterface, backup *mo
 func (o BackupOperator) CleanupBackupJob(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) error {
 	backupJobName := jobName(backupAction, backup.ID)
 
+	deletePropagation := metav1.DeletePropagationBackground
 	ctx := context.Background()
-	err := jobsClient.Delete(ctx, backupJobName, metav1.DeleteOptions{})
+	err := jobsClient.Delete(ctx, backupJobName, metav1.DeleteOptions{PropagationPolicy: &deletePropagation})
 	if k8sErrors.IsNotFound(err) {
 		logger.Warnf("backup job %q does not exist, assuming already deleted", backupJobName)
 		return nil

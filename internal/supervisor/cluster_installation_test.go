@@ -56,6 +56,10 @@ func (s *mockClusterInstallationStore) DeleteClusterInstallation(clusterInstalla
 	return nil
 }
 
+func (s *mockClusterInstallationStore) GetInstallationBackups(filter *model.InstallationBackupFilter) ([]*model.InstallationBackup, error) {
+	return nil, nil
+}
+
 func (s *mockClusterInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
 	return nil, nil
 }
@@ -182,6 +186,39 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				expectClusterInstallationState(t, sqlStore, clusterInstallation, tc.ExpectedState)
 			})
 		}
+	})
+
+	t.Run("cannot delete when backup is running", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+
+		cluster := &model.Cluster{}
+		err := sqlStore.CreateCluster(cluster, nil)
+		require.NoError(t, err)
+
+		installation := &model.Installation{}
+		err = sqlStore.CreateInstallation(installation, nil)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateDeletionRequested,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		backup := &model.InstallationBackup{
+			ClusterInstallationID: clusterInstallation.ID,
+			State:                 model.InstallationBackupStateBackupRequested,
+		}
+		err = sqlStore.CreateInstallationBackup(backup)
+		require.NoError(t, err)
+
+		supervisor.Supervise(clusterInstallation)
+		expectClusterInstallationState(t, sqlStore, clusterInstallation, model.ClusterInstallationStateDeletionRequested)
 	})
 
 	t.Run("transition", func(t *testing.T) {

@@ -25,6 +25,9 @@ func init() {
 	securityGroupCmd.PersistentFlags().String("group", "", "The id of the group.")
 	securityGroupCmd.MarkPersistentFlagRequired("group")
 
+	securityBackupCmd.PersistentFlags().String("backup", "", "The id of the backup.")
+	securityBackupCmd.MarkPersistentFlagRequired("backup")
+
 	securityCmd.AddCommand(securityClusterCmd)
 	securityClusterCmd.AddCommand(securityClusterLockAPICmd)
 	securityClusterCmd.AddCommand(securityClusterUnlockAPICmd)
@@ -40,6 +43,10 @@ func init() {
 	securityCmd.AddCommand(securityGroupCmd)
 	securityGroupCmd.AddCommand(securityGroupLockAPICmd)
 	securityGroupCmd.AddCommand(securityGroupUnlockAPICmd)
+
+	securityCmd.AddCommand(securityBackupCmd)
+	securityBackupCmd.AddCommand(securityBackupLockAPICmd)
+	securityBackupCmd.AddCommand(securityBackupUnlockAPICmd)
 }
 
 var securityCmd = &cobra.Command{
@@ -213,6 +220,49 @@ var securityGroupUnlockAPICmd = &cobra.Command{
 		err := client.UnlockAPIForGroup(groupID)
 		if err != nil {
 			return errors.Wrap(err, "failed to unlock group API")
+		}
+
+		return nil
+	},
+}
+
+var securityBackupCmd = &cobra.Command{
+	Use:   "backup",
+	Short: "Manage security locks for backup resources.",
+}
+
+var securityBackupLockAPICmd = &cobra.Command{
+	Use:   "api-lock",
+	Short: "Lock API changes on a given backup",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		backupID, _ := command.Flags().GetString("backup")
+		err := client.LockAPIForBackup(backupID)
+		if err != nil {
+			return errors.Wrap(err, "failed to lock backup API")
+		}
+
+		return nil
+	},
+}
+
+var securityBackupUnlockAPICmd = &cobra.Command{
+	Use:   "api-unlock",
+	Short: "Unlock API changes on a given backup",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		backupID, _ := command.Flags().GetString("backup")
+		err := client.UnlockAPIForBackup(backupID)
+		if err != nil {
+			return errors.Wrap(err, "failed to unlock backup API")
 		}
 
 		return nil

@@ -84,6 +84,7 @@ func init() {
 	installationCmd.AddCommand(installationShowStateReport)
 	installationCmd.AddCommand(installationAnnotationCmd)
 	installationCmd.AddCommand(installationsGetStatuses)
+	installationCmd.AddCommand(backupCmd)
 }
 
 var installationCmd = &cobra.Command{
