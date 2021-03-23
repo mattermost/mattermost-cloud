@@ -6,6 +6,7 @@ package model
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/mattermost/rotator/rotator"
 	"github.com/pkg/errors"
@@ -13,17 +14,30 @@ import (
 
 // KopsMetadata is the provisioner metadata stored in a model.Cluster.
 type KopsMetadata struct {
-	Name               string
-	Version            string
-	AMI                string
-	MasterInstanceType string
-	MasterCount        int64
-	NodeInstanceType   string
-	NodeMinCount       int64
-	NodeMaxCount       int64
-	ChangeRequest      *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
-	RotatorRequest     *RotatorMetadata            `json:"RotatorRequest,omitempty"`
-	Warnings           []string                    `json:"Warnings,omitempty"`
+	Name                 string
+	Version              string
+	AMI                  string
+	MasterInstanceType   string
+	MasterCount          int64
+	NodeInstanceType     string
+	NodeMinCount         int64
+	NodeMaxCount         int64
+	MasterInstanceGroups KopsInstanceGroupsMetadata
+	NodeInstanceGroups   KopsInstanceGroupsMetadata
+	CustomInstanceGroups KopsInstanceGroupsMetadata
+	ChangeRequest        *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
+	RotatorRequest       *RotatorMetadata            `json:"RotatorRequest,omitempty"`
+	Warnings             []string                    `json:"Warnings,omitempty"`
+}
+
+// KopsInstanceGroupsMetadata is a map of instance group names to their metadata.
+type KopsInstanceGroupsMetadata map[string]KopsInstanceGroupMetadata
+
+// KopsInstanceGroupMetadata is the metadata of an instance group.
+type KopsInstanceGroupMetadata struct {
+	NodeInstanceType string
+	NodeMinCount     int64
+	NodeMaxCount     int64
 }
 
 // KopsMetadataRequestedState is the requested state for kops metadata.
@@ -73,6 +87,83 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 	return nil
 }
 
+// GetWorkerNodesResizeChanges calculates instance group resizing based on the
+// curent ChangeRequest.
+func (km *KopsMetadata) GetWorkerNodesResizeChanges() KopsInstanceGroupsMetadata {
+	difference := km.ChangeRequest.NodeMinCount - km.NodeMinCount
+
+	if difference < 0 {
+		return km.getDecreasedWorkerNodesResizeChanges(difference)
+	}
+	if difference > 0 {
+		return km.getIncreasedWorkerNodesResizeChanges(difference)
+	}
+
+	return km.NodeInstanceGroups
+}
+
+func (km *KopsMetadata) getIncreasedWorkerNodesResizeChanges(count int64) KopsInstanceGroupsMetadata {
+	changes := km.NodeInstanceGroups
+	orderedKeys := changes.getStableIterationOrder()
+	currentBalanceCount := int64(1)
+	for {
+		for _, key := range orderedKeys {
+			ig := changes[key]
+			if ig.NodeMinCount >= currentBalanceCount {
+				continue
+			}
+
+			changes[key] = KopsInstanceGroupMetadata{
+				NodeMinCount: ig.NodeMinCount + 1,
+				NodeMaxCount: ig.NodeMinCount + 1,
+			}
+
+			count--
+			if count == 0 {
+				return changes
+			}
+		}
+		currentBalanceCount++
+	}
+}
+
+func (km *KopsMetadata) getDecreasedWorkerNodesResizeChanges(count int64) KopsInstanceGroupsMetadata {
+	changes := km.NodeInstanceGroups
+	orderedKeys := changes.getStableIterationOrder()
+
+	// For removing nodes, we want to work our way down starting with the end of
+	// of list of IGs. This just seems to make a bit more sense.
+	sort.Sort(sort.Reverse(sort.StringSlice(orderedKeys)))
+
+	// Find the current highest IG node count to work backwards from.
+	var currentBalanceCount int64
+	for _, ig := range changes {
+		if ig.NodeMinCount > currentBalanceCount {
+			currentBalanceCount = ig.NodeMinCount
+		}
+	}
+
+	for {
+		for _, key := range orderedKeys {
+			ig := changes[key]
+			if ig.NodeMinCount <= currentBalanceCount {
+				continue
+			}
+
+			changes[key] = KopsInstanceGroupMetadata{
+				NodeMinCount: ig.NodeMinCount - 1,
+				NodeMaxCount: ig.NodeMinCount - 1,
+			}
+
+			count++
+			if count == 0 {
+				return changes
+			}
+		}
+		currentBalanceCount--
+	}
+}
+
 // ClearChangeRequest clears the kops metadata change request.
 func (km *KopsMetadata) ClearChangeRequest() {
 	km.ChangeRequest = nil
@@ -91,6 +182,16 @@ func (km *KopsMetadata) ClearWarnings() {
 // AddWarning adds a warning the kops metadata warning list.
 func (km *KopsMetadata) AddWarning(warning string) {
 	km.Warnings = append(km.Warnings, warning)
+}
+
+func (igm *KopsInstanceGroupsMetadata) getStableIterationOrder() []string {
+	keys := make([]string, 0, len(*igm))
+	for k := range *igm {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	return keys
 }
 
 // NewKopsMetadata creates an instance of KopsMetadata given the raw provisioner metadata.

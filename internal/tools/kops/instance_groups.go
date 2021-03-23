@@ -51,8 +51,12 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 		return err
 	}
 
-	var masterIGCount, NodeIGCount, nodeMinCount, nodeMaxCount int64
-	var masterMachineType, nodeInstanceType, AMI string
+	metadata.MasterInstanceGroups = make(model.KopsInstanceGroupsMetadata)
+	metadata.NodeInstanceGroups = make(model.KopsInstanceGroupsMetadata)
+	metadata.CustomInstanceGroups = make(model.KopsInstanceGroupsMetadata)
+
+	var masterIGCount, nodeIGCount, nodeMinCount, nodeMaxCount int64
+	var masterMachineType, AMI string
 	for _, ig := range instanceGroups {
 		switch ig.Spec.Role {
 		case "Master":
@@ -73,13 +77,12 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			}
 
 			masterIGCount++
-		case "Node":
-			// TODO: temp fix while we dont support multiple igs
-			if ig.Metadata.Name == "nodes-utilities" {
-				c.logger.Debug("Skipping utility group")
-				continue
+			metadata.MasterInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
+				NodeInstanceType: ig.Spec.MachineType,
+				NodeMinCount:     ig.Spec.MinSize,
+				NodeMaxCount:     ig.Spec.MaxSize,
 			}
-
+		case "Node":
 			if AMI == "" {
 				AMI = ig.Spec.Image
 			} else if AMI != ig.Spec.Image {
@@ -88,10 +91,22 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}
 
-			NodeIGCount++
-			nodeInstanceType = ig.Spec.MachineType
-			nodeMinCount = ig.Spec.MinSize
-			nodeMaxCount = ig.Spec.MaxSize
+			if strings.HasPrefix(ig.Metadata.Name, "nodes") {
+				nodeIGCount++
+				nodeMinCount += ig.Spec.MinSize
+				nodeMaxCount += ig.Spec.MaxSize
+				metadata.NodeInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
+					NodeInstanceType: ig.Spec.MachineType,
+					NodeMinCount:     ig.Spec.MinSize,
+					NodeMaxCount:     ig.Spec.MaxSize,
+				}
+			} else {
+				metadata.CustomInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
+					NodeInstanceType: ig.Spec.MachineType,
+					NodeMinCount:     ig.Spec.MinSize,
+					NodeMaxCount:     ig.Spec.MaxSize,
+				}
+			}
 		default:
 			warning := fmt.Sprintf("Instance group %s has unknown role %s", ig.Metadata.Name, ig.Spec.Role)
 			metadata.AddWarning(warning)
@@ -104,8 +119,8 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 		metadata.AddWarning(warning)
 		c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 	}
-	if NodeIGCount != 1 {
-		warning := fmt.Sprintf("expected exactly 1 node instance group, but found %d", NodeIGCount)
+	if nodeIGCount == 0 {
+		warning := "Failed to find any node instance groups"
 		metadata.AddWarning(warning)
 		c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 	}
@@ -113,7 +128,6 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.AMI = AMI
 	metadata.MasterInstanceType = masterMachineType
 	metadata.MasterCount = masterIGCount
-	metadata.NodeInstanceType = nodeInstanceType
 	metadata.NodeMinCount = nodeMinCount
 	metadata.NodeMaxCount = nodeMaxCount
 
