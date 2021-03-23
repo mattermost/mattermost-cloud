@@ -24,7 +24,7 @@ type KopsMetadata struct {
 	ChangeRequest      *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
 	RotatorRequest     *RotatorMetadata            `json:"RotatorRequest,omitempty"`
 	Warnings           []string                    `json:"Warnings,omitempty"`
-	Networking         string                      `json:"networking,omitempty"`
+	Networking         interface{}                 `json:"networking,omitempty"`
 }
 
 // KopsMetadataRequestedState is the requested state for kops metadata.

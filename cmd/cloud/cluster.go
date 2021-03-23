@@ -476,7 +476,7 @@ var clusterListCmd = &cobra.Command{
 					cluster.State,
 					cluster.ProvisionerMetadataKops.Version,
 					fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
-					fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
+					fmt.Sprintf("%d x %s (max %d) %s", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount, cluster.ProvisionerMetadataKops.Networking),
 				})
 			}
 			table.Render()
