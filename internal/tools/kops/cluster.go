@@ -5,6 +5,7 @@
 package kops
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"strings"
@@ -193,6 +194,33 @@ func (c *Cmd) GetCluster(name string) (string, error) {
 	}
 
 	return trimmed, nil
+}
+
+// GetClusterSpecInfoFromJSON invokes kops get cluster, using the context of the created Cmd, and
+// returns the stdout.
+func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (interface{}, error) {
+	var clusterdata map[string]interface{}
+	stdout, _, err := c.run(
+		"get",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+		arg("output", "json"),
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to invoke kops get cluster")
+	}
+
+	err = json.Unmarshal(stdout, &clusterdata)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to unmarshal JSON output from kops get cluster")
+	}
+	data := clusterdata["spec"].(map[string]interface{})[subData]
+
+	if err != nil {
+		return "", errors.Wrap(err, "failed to retrive cluster specification value for "+subData)
+	}
+	return data, nil
 }
 
 // Replace invokes kops replace, using the context of the created Cmd, and
