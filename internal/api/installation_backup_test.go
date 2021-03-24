@@ -148,42 +148,42 @@ func TestGetInstallationBackups(t *testing.T) {
 	}{
 		{
 			description: "all",
-			filter:      model.GetInstallationBackupsRequest{PerPage: model.AllPerPage, IncludeDeleted: true},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.AllPagesWithDeleted()},
 			found:       append(backup, deletedMeta),
 		},
 		{
 			description: "all not deleted",
-			filter:      model.GetInstallationBackupsRequest{PerPage: model.AllPerPage, IncludeDeleted: false},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.AllPagesNotDeleted()},
 			found:       backup,
 		},
 		{
 			description: "1 per page",
-			filter:      model.GetInstallationBackupsRequest{PerPage: 1},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.Paging{PerPage: 1}},
 			found:       []*model.InstallationBackup{backup[4]},
 		},
 		{
 			description: "2nd page",
-			filter:      model.GetInstallationBackupsRequest{PerPage: 1, Page: 1},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.Paging{PerPage: 1, Page: 1}},
 			found:       []*model.InstallationBackup{backup[3]},
 		},
 		{
 			description: "filter by installation ID",
-			filter:      model.GetInstallationBackupsRequest{PerPage: model.AllPerPage, InstallationID: installation1.ID},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.AllPagesNotDeleted(), InstallationID: installation1.ID},
 			found:       []*model.InstallationBackup{backup[0], backup[1]},
 		},
 		{
 			description: "filter by cluster installation ID",
-			filter:      model.GetInstallationBackupsRequest{PerPage: model.AllPerPage, ClusterInstallationID: "ci1"},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.AllPagesNotDeleted(), ClusterInstallationID: "ci1"},
 			found:       []*model.InstallationBackup{backup[3], backup[4]},
 		},
 		{
 			description: "filter by state",
-			filter:      model.GetInstallationBackupsRequest{PerPage: model.AllPerPage, State: string(model.InstallationBackupStateBackupRequested)},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.AllPagesNotDeleted(), State: string(model.InstallationBackupStateBackupRequested)},
 			found:       []*model.InstallationBackup{backup[0], backup[2], backup[3]},
 		},
 		{
 			description: "no results",
-			filter:      model.GetInstallationBackupsRequest{PerPage: model.AllPerPage, InstallationID: "no-existent"},
+			filter:      model.GetInstallationBackupsRequest{Paging: model.AllPagesNotDeleted(), InstallationID: "no-existent"},
 			found:       []*model.InstallationBackup{},
 		},
 	} {

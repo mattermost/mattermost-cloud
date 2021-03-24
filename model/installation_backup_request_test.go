@@ -44,9 +44,11 @@ func TestGetInstallationBackupsRequest_ApplyToURL(t *testing.T) {
 		InstallationID:        "my-installation",
 		ClusterInstallationID: "my-ci",
 		State:                 "failed",
-		Page:                  1,
-		PerPage:               5,
-		IncludeDeleted:        true,
+		Paging: Paging{
+			Page:           1,
+			PerPage:        5,
+			IncludeDeleted: true,
+		},
 	}
 
 	u, err := url.Parse("https://provisioner/backups")

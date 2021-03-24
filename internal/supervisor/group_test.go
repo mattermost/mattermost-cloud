@@ -128,7 +128,7 @@ func TestGroupSupervisor(t *testing.T) {
 		t.Helper()
 
 		installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
-			PerPage: model.AllPerPage,
+			Paging: model.AllPagesNotDeleted(),
 		}, true, true)
 		require.NoError(t, err)
 		require.Len(t, installations, expectedCount)
@@ -141,7 +141,7 @@ func TestGroupSupervisor(t *testing.T) {
 		t.Helper()
 
 		installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
-			PerPage: model.AllPerPage,
+			Paging: model.AllPagesNotDeleted(),
 		}, true, true)
 		require.NoError(t, err)
 

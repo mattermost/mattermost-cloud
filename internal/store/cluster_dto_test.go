@@ -68,7 +68,7 @@ func TestClusterDTOs(t *testing.T) {
 	})
 
 	t.Run("get cluster DTOs", func(t *testing.T) {
-		clusterDTOs, err := sqlStore.GetClusterDTOs(&model.ClusterFilter{PerPage: model.AllPerPage, IncludeDeleted: true})
+		clusterDTOs, err := sqlStore.GetClusterDTOs(&model.ClusterFilter{Paging: model.AllPagesWithDeleted()})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(clusterDTOs))
 

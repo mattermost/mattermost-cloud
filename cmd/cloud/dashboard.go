@@ -51,9 +51,7 @@ var dashboardCmd = &cobra.Command{
 
 			// Clusters
 			clusters, err := client.GetClusters(&model.GetClustersRequest{
-				Page:           0,
-				PerPage:        model.AllPerPage,
-				IncludeDeleted: false,
+				Paging: model.AllPagesNotDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query clusters")
@@ -78,9 +76,7 @@ var dashboardCmd = &cobra.Command{
 
 			// Installations
 			installations, err := client.GetInstallations(&model.GetInstallationsRequest{
-				Page:           0,
-				PerPage:        model.AllPerPage,
-				IncludeDeleted: false,
+				Paging: model.AllPagesNotDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query installations")
@@ -107,9 +103,7 @@ var dashboardCmd = &cobra.Command{
 			})
 
 			clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
-				Page:           0,
-				PerPage:        model.AllPerPage,
-				IncludeDeleted: false,
+				Paging: model.AllPagesNotDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query clusters")

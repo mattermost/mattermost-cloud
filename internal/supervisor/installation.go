@@ -316,7 +316,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
@@ -329,8 +329,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	}
 
 	clusterFilter := &model.ClusterFilter{
-		PerPage:        model.AllPerPage,
-		IncludeDeleted: false,
+		Paging: model.AllPagesNotDeleted(),
 	}
 
 	// Get only clusters that have all annotations present on the installation.
@@ -565,7 +564,7 @@ func (s *InstallationSupervisor) installationCanBeScheduledOnCluster(cluster *mo
 	}
 
 	existingClusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:   model.AllPerPage,
+		Paging:    model.AllPagesNotDeleted(),
 		ClusterID: cluster.ID,
 	})
 	if err != nil {
@@ -643,7 +642,7 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
@@ -710,7 +709,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 	}
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installation.ID,
 	})
 	if err != nil {
@@ -729,8 +728,8 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 		// Fetch the same cluster installations again, now that we have the locks.
 		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage: model.AllPerPage,
-			IDs:     clusterInstallationIDs,
+			Paging: model.AllPagesNotDeleted(),
+			IDs:    clusterInstallationIDs,
 		})
 		if err != nil {
 			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
@@ -833,7 +832,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 // the provisioner's config.
 func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstallationConfig(installation *model.Installation, logger log.FieldLogger) (bool, error) {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installation.ID,
 	})
 	if err != nil {
@@ -880,7 +879,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 	}
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installation.ID,
 	})
 	if err != nil {
@@ -904,8 +903,8 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 
 	// Fetch the same cluster installations again, now that we have the locks.
 	clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage: model.AllPerPage,
-		IDs:     clusterInstallationIDs,
+		Paging: model.AllPagesNotDeleted(),
+		IDs:    clusterInstallationIDs,
 	})
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
@@ -976,9 +975,8 @@ func (s *InstallationSupervisor) wakeUpInstallation(installation *model.Installa
 
 func (s *InstallationSupervisor) deleteInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesWithDeleted(),
 		InstallationID: installation.ID,
-		IncludeDeleted: true,
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
@@ -996,9 +994,8 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 
 		// Fetch the same cluster installations again, now that we have the locks.
 		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage:        model.AllPerPage,
-			IDs:            clusterInstallationIDs,
-			IncludeDeleted: true,
+			Paging: model.AllPagesWithDeleted(),
+			IDs:    clusterInstallationIDs,
 		})
 		if err != nil {
 			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
@@ -1124,7 +1121,7 @@ func (s *InstallationSupervisor) deleteBackups(installation *model.Installation,
 
 	backups, err := s.store.GetInstallationBackups(&model.InstallationBackupFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		return false, errors.Wrap(err, "failed to list backup")
@@ -1145,8 +1142,8 @@ func (s *InstallationSupervisor) deleteBackups(installation *model.Installation,
 
 	// Fetch the same backups again, now that we have the locks.
 	backups, err = s.store.GetInstallationBackups(&model.InstallationBackupFilter{
-		PerPage: model.AllPerPage,
-		IDs:     backupIDs,
+		Paging: model.AllPagesNotDeleted(),
+		IDs:    backupIDs,
 	})
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to fetch %d installation backups by ids", len(backups))
@@ -1218,7 +1215,7 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installation *model.Installation, logger log.FieldLogger) (bool, error) {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")

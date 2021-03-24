@@ -415,7 +415,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	expectClusterInstallations := func(t *testing.T, sqlStore *store.SQLStore, installation *model.Installation, expectedCount int, state string) {
 		t.Helper()
 		clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage:        model.AllPerPage,
+			Paging:         model.AllPagesNotDeleted(),
 			InstallationID: installation.ID,
 		})
 		require.NoError(t, err)
@@ -428,7 +428,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	expectClusterInstallationsOnCluster := func(t *testing.T, sqlStore *store.SQLStore, cluster *model.Cluster, expectedCount int) {
 		t.Helper()
 		clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage:   model.AllPerPage,
+			Paging:    model.AllPagesNotDeleted(),
 			ClusterID: cluster.ID,
 		})
 		require.NoError(t, err)

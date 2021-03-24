@@ -24,9 +24,7 @@ func initDatabases(apiRouter *mux.Router, context *Context) {
 // handleGetDatabases responds to GET /api/databases, returning a list of
 // multitenant databases.
 func handleGetDatabases(c *Context, w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	page, perPage, _, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -37,8 +35,7 @@ func handleGetDatabases(c *Context, w http.ResponseWriter, r *http.Request) {
 	filter := &model.MultitenantDatabaseFilter{
 		VpcID:                 vpcID,
 		DatabaseType:          databaseType,
-		Page:                  page,
-		PerPage:               perPage,
+		Paging:                paging,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
 	}
 

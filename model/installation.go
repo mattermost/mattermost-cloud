@@ -67,14 +67,12 @@ type InstallationsCount struct {
 
 // InstallationFilter describes the parameters used to constrain a set of installations.
 type InstallationFilter struct {
+	Paging
 	InstallationIDs []string
 	OwnerID         string
 	GroupID         string
 	State           string
 	DNS             string
-	Page            int
-	PerPage         int
-	IncludeDeleted  bool
 }
 
 // Clone returns a deep copy the installation.

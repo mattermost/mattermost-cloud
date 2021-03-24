@@ -92,9 +92,7 @@ func init() {
 	clusterGetCmd.Flags().String("cluster", "", "The id of the cluster to be fetched.")
 	clusterGetCmd.MarkFlagRequired("cluster")
 
-	clusterListCmd.Flags().Int("page", 0, "The page of clusters to fetch, starting at 0.")
-	clusterListCmd.Flags().Int("per-page", 100, "The number of clusters to fetch per page.")
-	clusterListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted clusters.")
+	registerPagingFlags(clusterListCmd)
 	clusterListCmd.Flags().Bool("table", false, "Whether to display the returned cluster list in a table or not")
 
 	clusterUtilitiesCmd.Flags().String("cluster", "", "The id of the cluster whose utilities are to be fetched.")
@@ -449,13 +447,10 @@ var clusterListCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
-		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		paging := parsePagingFlags(command)
+
 		clusters, err := client.GetClusters(&model.GetClustersRequest{
-			Page:           page,
-			PerPage:        perPage,
-			IncludeDeleted: includeDeleted,
+			Paging: paging,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query clusters")

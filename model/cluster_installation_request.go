@@ -8,18 +8,15 @@ import (
 	"encoding/json"
 	"io"
 	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 )
 
 // GetClusterInstallationsRequest describes the parameters to request a list of cluster installations.
 type GetClusterInstallationsRequest struct {
+	Paging
 	ClusterID      string
 	InstallationID string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
@@ -27,11 +24,8 @@ func (request *GetClusterInstallationsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("cluster", request.ClusterID)
 	q.Add("installation", request.InstallationID)
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }
 

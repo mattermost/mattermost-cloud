@@ -112,9 +112,11 @@ func TestGetClustersRequestApplyToURL(t *testing.T) {
 		require.NoError(t, err)
 
 		getClustersRequest := &model.GetClustersRequest{
-			Page:           10,
-			PerPage:        123,
-			IncludeDeleted: true,
+			Paging: model.Paging{
+				Page:           10,
+				PerPage:        123,
+				IncludeDeleted: true,
+			},
 		}
 		getClustersRequest.ApplyToURL(u)
 

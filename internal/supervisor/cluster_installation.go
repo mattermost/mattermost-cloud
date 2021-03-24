@@ -216,7 +216,7 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 	backups, err := s.store.GetInstallationBackups(&model.InstallationBackupFilter{
 		ClusterInstallationID: clusterInstallation.ID,
 		States:                model.AllInstallationBackupsStatesRunning,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Error("Failed to get installation backups running in cluster installation namespace")

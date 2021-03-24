@@ -67,27 +67,27 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, cluster2, actualCluster2)
 
-		actualClusters, err := sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 0, IncludeDeleted: false})
+		actualClusters, err := sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 0, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Empty(t, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: false})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: false})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: true})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: true})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{PerPage: model.AllPerPage, IncludeDeleted: true})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.AllPagesWithDeleted()})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 	})
@@ -186,23 +186,23 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, cluster2, actualCluster2)
 
-		actualClusters, err := sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 0, IncludeDeleted: false})
+		actualClusters, err := sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 0, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Empty(t, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: false})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: false})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster2}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 1, IncludeDeleted: true})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1}, actualClusters)
 
-		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Page: 0, PerPage: 10, IncludeDeleted: true})
+		actualClusters, err = sqlStore.GetClusters(&model.ClusterFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Cluster{cluster1, cluster2}, actualClusters)
 
@@ -448,7 +448,7 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	t.Run("filter for: test + multi-tenant", func(t *testing.T) {
 		filter := &model.ClusterFilter{
-			PerPage:     model.AllPerPage,
+			Paging:      model.AllPagesNotDeleted(),
 			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[2].ID, annotations[3].ID}},
 		}
 
@@ -463,7 +463,7 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	t.Run("filter for: private", func(t *testing.T) {
 		filter := &model.ClusterFilter{
-			PerPage:     model.AllPerPage,
+			Paging:      model.AllPagesNotDeleted(),
 			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[4].ID}},
 		}
 
@@ -476,7 +476,7 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	t.Run("filter for: my-annotation + test + multi-tenant", func(t *testing.T) {
 		filter := &model.ClusterFilter{
-			PerPage:     model.AllPerPage,
+			Paging:      model.AllPagesNotDeleted(),
 			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[1].ID, annotations[2].ID, annotations[3].ID}},
 		}
 
@@ -489,7 +489,7 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	t.Run("filter for: private + abcd", func(t *testing.T) {
 		filter := &model.ClusterFilter{
-			PerPage:     model.AllPerPage,
+			Paging:      model.AllPagesNotDeleted(),
 			Annotations: &model.AnnotationsFilter{MatchAllIDs: []string{annotations[4].ID, annotations[0].ID}},
 		}
 
@@ -501,7 +501,7 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	t.Run("filter without annotations", func(t *testing.T) {
 		filter := &model.ClusterFilter{
-			PerPage: model.AllPerPage,
+			Paging: model.AllPagesNotDeleted(),
 		}
 
 		filteredClusters, err := sqlStore.GetClusters(filter)
@@ -511,7 +511,7 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	t.Run("filter providing no IDs", func(t *testing.T) {
 		filter := &model.ClusterFilter{
-			PerPage: model.AllPerPage,
+			Paging: model.AllPagesNotDeleted(),
 			Annotations: &model.AnnotationsFilter{
 				MatchAllIDs: []string{},
 			},

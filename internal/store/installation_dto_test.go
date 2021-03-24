@@ -83,7 +83,7 @@ func TestInstallationDTOs(t *testing.T) {
 
 	t.Run("get installation DTOs", func(t *testing.T) {
 		installationDTOs, err := sqlStore.GetInstallationDTOs(
-			&model.InstallationFilter{PerPage: model.AllPerPage, IncludeDeleted: true},
+			&model.InstallationFilter{Paging: model.AllPagesWithDeleted()},
 			false,
 			false,
 		)

@@ -82,7 +82,7 @@ func TestAnnotations_Cluster(t *testing.T) {
 	})
 
 	t.Run("get annotations for clusters", func(t *testing.T) {
-		annotationsForClusters, err := sqlStore.GetAnnotationsForClusters(&model.ClusterFilter{PerPage: model.AllPerPage})
+		annotationsForClusters, err := sqlStore.GetAnnotationsForClusters(&model.ClusterFilter{Paging: model.AllPagesNotDeleted()})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(annotationsForClusters))
 		assert.True(t, model.ContainsAnnotation(annotationsForClusters[cluster1.ID], &annotation1))
@@ -192,7 +192,7 @@ func TestAnnotations_Installation(t *testing.T) {
 	})
 
 	t.Run("get annotations for installations", func(t *testing.T) {
-		annotationsForInstallations, err := sqlStore.GetAnnotationsForInstallations(&model.InstallationFilter{PerPage: model.AllPerPage})
+		annotationsForInstallations, err := sqlStore.GetAnnotationsForInstallations(&model.InstallationFilter{Paging: model.AllPagesNotDeleted()})
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(annotationsForInstallations))
 		assert.True(t, model.ContainsAnnotation(annotationsForInstallations[installation1.ID], &annotation1))

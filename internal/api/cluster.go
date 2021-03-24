@@ -64,7 +64,7 @@ func handleGetCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // handleGetClusters responds to GET /api/clusters, returning the specified page of clusters.
 func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -72,9 +72,7 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := &model.ClusterFilter{
-		Page:           page,
-		PerPage:        perPage,
-		IncludeDeleted: includeDeleted,
+		Paging: paging,
 	}
 
 	clusters, err := c.Store.GetClusterDTOs(filter)
@@ -528,9 +526,8 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	clusterInstallations, err := c.Store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		ClusterID:      clusterDTO.ID,
-		IncludeDeleted: false,
-		PerPage:        model.AllPerPage,
+		ClusterID: clusterDTO.ID,
+		Paging:    model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get cluster installations")
