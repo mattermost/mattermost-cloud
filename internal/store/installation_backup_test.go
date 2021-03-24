@@ -118,7 +118,7 @@ func TestGetInstallationBackupsMetadata(t *testing.T) {
 		time.Sleep(1 * time.Millisecond) // Ensure RequestAt is different for all installations.
 	}
 
-	err = sqlStore.DeleteBackup(backupsMeta[2].ID)
+	err = sqlStore.DeleteInstallationBackup(backupsMeta[2].ID)
 	require.NoError(t, err)
 
 	for _, testCase := range []struct {
@@ -148,8 +148,13 @@ func TestGetInstallationBackupsMetadata(t *testing.T) {
 		},
 		{
 			description: "fetch requested installations",
-			filter:      &model.InstallationBackupFilter{State: model.InstallationBackupStateBackupRequested, PerPage: model.AllPerPage},
+			filter:      &model.InstallationBackupFilter{States: []model.InstallationBackupState{model.InstallationBackupStateBackupRequested}, PerPage: model.AllPerPage},
 			fetchedIds:  []string{backupsMeta[3].ID, backupsMeta[0].ID},
+		},
+		{
+			description: "fetch with IDs",
+			filter:      &model.InstallationBackupFilter{IDs: []string{backupsMeta[0].ID, backupsMeta[3].ID, backupsMeta[4].ID}, PerPage: model.AllPerPage},
+			fetchedIds:  []string{backupsMeta[4].ID, backupsMeta[3].ID, backupsMeta[0].ID},
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

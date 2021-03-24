@@ -586,6 +586,81 @@ func (c *Client) DeleteInstallationAnnotation(installationID string, annotationN
 	}
 }
 
+// CreateInstallationBackup triggers backup for the given installation.
+func (c *Client) CreateInstallationBackup(installationID string) (*InstallationBackup, error) {
+	resp, err := c.doPost(c.buildURL("/api/installations/backups"), &InstallationBackupRequest{InstallationID: installationID})
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewInstallationBackupFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallationBackups returns list of installation backups.
+func (c *Client) GetInstallationBackups(request *GetInstallationBackupsRequest) ([]*InstallationBackup, error) {
+	u, err := url.Parse(c.buildURL("/api/installations/backups"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewInstallationBackupsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallationBackup returns given installation backup.
+func (c *Client) GetInstallationBackup(backupID string) (*InstallationBackup, error) {
+	resp, err := c.doGet(c.buildURL("/api/installations/backup/%s", backupID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewInstallationBackupFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteInstallationBackup deletes given installation backup.
+func (c *Client) DeleteInstallationBackup(backupID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/installations/backup/%s", backupID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // GetClusterInstallation fetches the specified cluster installation from the configured provisioning server.
 func (c *Client) GetClusterInstallation(clusterInstallationID string) (*ClusterInstallation, error) {
 	resp, err := c.doGet(c.buildURL("/api/cluster_installation/%s", clusterInstallationID))
@@ -1023,6 +1098,16 @@ func (c *Client) LockAPIForGroup(groupID string) error {
 // UnlockAPIForGroup unlocks API changes for a given group.
 func (c *Client) UnlockAPIForGroup(groupID string) error {
 	return c.makeSecurityCall("group", groupID, "api", "unlock")
+}
+
+// LockAPIForBackup locks API changes for a given backup.
+func (c *Client) LockAPIForBackup(backupID string) error {
+	return c.makeSecurityCall("installation/backup", backupID, "api", "lock")
+}
+
+// UnlockAPIForBackup unlocks API changes for a given backup.
+func (c *Client) UnlockAPIForBackup(backupID string) error {
+	return c.makeSecurityCall("installation/backup", backupID, "api", "unlock")
 }
 
 func (c *Client) makeSecurityCall(resourceType, id, securityType, action string) error {

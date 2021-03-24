@@ -1255,6 +1255,21 @@ func TestDeleteInstallation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("while backup is running", func(t *testing.T) {
+		backup1 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupRequested}
+		backup2 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupSucceeded}
+		err = sqlStore.CreateInstallationBackup(backup1)
+		require.NoError(t, err)
+		err = sqlStore.CreateInstallationBackup(backup2)
+		require.NoError(t, err)
+
+		err = client.DeleteInstallation(installation1.ID)
+		require.EqualError(t, err, "failed with status code 400")
+
+		err = sqlStore.DeleteInstallationBackup(backup1.ID)
+		require.NoError(t, err)
+	})
+
 	t.Run("while", func(t *testing.T) {
 		validDeletingStates := []string{
 			model.InstallationStateStable,

@@ -7,6 +7,8 @@ package supervisor
 import (
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
@@ -21,9 +23,10 @@ type installationBackupStore interface {
 	UpdateInstallationBackupState(backupMeta *model.InstallationBackup) error
 	UpdateInstallationBackupSchedulingData(backupMeta *model.InstallationBackup) error
 	UpdateInstallationBackupStartTime(backupMeta *model.InstallationBackup) error
+	DeleteInstallationBackup(id string) error
 
-	LockInstallationBackup(installationID, lockerID string) (bool, error)
-	UnlockInstallationBackup(installationID, lockerID string, force bool) (bool, error)
+	LockInstallationBackups(backupIDs []string, lockerID string) (bool, error)
+	UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error)
 
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	LockInstallation(installationID, lockerID string) (bool, error)
@@ -162,17 +165,20 @@ func (s *BackupSupervisor) Supervise(backup *model.InstallationBackup) {
 }
 
 // transitionBackup works with the given backup to transition it to a final state.
-func (s *BackupSupervisor) transitionBackup(backupMetadata *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
-	switch backupMetadata.State {
+func (s *BackupSupervisor) transitionBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
+	switch backup.State {
 	case model.InstallationBackupStateBackupRequested:
-		return s.triggerBackup(backupMetadata, instanceID, logger)
+		return s.triggerBackup(backup, instanceID, logger)
 
 	case model.InstallationBackupStateBackupInProgress:
-		return s.monitorBackup(backupMetadata, instanceID, logger)
+		return s.monitorBackup(backup, instanceID, logger)
+
+	case model.InstallationBackupStateDeletionRequested:
+		return s.deleteBackup(backup, instanceID, logger)
 
 	default:
-		logger.Warnf("Found backup pending work in unexpected state %s", backupMetadata.State)
-		return backupMetadata.State
+		logger.Warnf("Found backup pending work in unexpected state %s", backup.State)
+		return backup.State
 	}
 }
 
@@ -248,13 +254,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 }
 
 func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
-	backupCI, err := s.store.GetClusterInstallation(backup.ClusterInstallationID)
-	if err != nil {
-		logger.WithError(err).Error("Failed to get cluster installations")
-		return backup.State
-	}
-
-	cluster, err := s.store.GetCluster(backupCI.ClusterID)
+	cluster, err := s.getClusterForBackup(backup)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster")
 		return backup.State
@@ -284,4 +284,51 @@ func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, insta
 	}
 
 	return model.InstallationBackupStateBackupSucceeded
+}
+
+func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
+	cluster, err := s.getClusterForBackup(backup)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get cluster for backup")
+		return backup.State
+	}
+
+	err = s.backupOperator.CleanupBackupJob(backup, cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to cleanup backup from cluster")
+		return backup.State
+	}
+
+	if backup.DataResidence.URL != aws.S3URL {
+		logger.WithError(err).Error("Only backups from S3 can be deleted")
+		return model.InstallationBackupStateDeletionFailed
+	}
+
+	err = s.aws.S3EnsureObjectDeleted(backup.DataResidence.Bucket, backup.DataResidence.FullPath())
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete backup from S3")
+		return backup.State
+	}
+
+	err = s.store.DeleteInstallationBackup(backup.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to mark backup as deleted")
+		return backup.State
+	}
+
+	return model.InstallationBackupStateDeleted
+}
+
+func (s *BackupSupervisor) getClusterForBackup(backup *model.InstallationBackup) (*model.Cluster, error) {
+	backupCI, err := s.store.GetClusterInstallation(backup.ClusterInstallationID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get cluster installations")
+	}
+
+	cluster, err := s.store.GetCluster(backupCI.ClusterID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to get cluster")
+	}
+
+	return cluster, nil
 }

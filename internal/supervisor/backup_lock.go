@@ -9,28 +9,37 @@ import (
 )
 
 type backupLockStore interface {
-	LockInstallationBackup(backupID, lockerID string) (bool, error)
-	UnlockInstallationBackup(backupID, lockerID string, force bool) (bool, error)
+	LockInstallationBackups(backupsID []string, lockerID string) (bool, error)
+	UnlockInstallationBackups(backupsID []string, lockerID string, force bool) (bool, error)
 }
 
 type backupLock struct {
-	backupID string
-	lockerID string
-	store    backupLockStore
-	logger   log.FieldLogger
+	backupsID []string
+	lockerID  string
+	store     backupLockStore
+	logger    log.FieldLogger
 }
 
 func newBackupLock(backupID, lockerID string, store backupLockStore, logger log.FieldLogger) *backupLock {
 	return &backupLock{
-		backupID: backupID,
-		lockerID: lockerID,
-		store:    store,
-		logger:   logger,
+		backupsID: []string{backupID},
+		lockerID:  lockerID,
+		store:     store,
+		logger:    logger,
+	}
+}
+
+func newBackupsLock(backupsID []string, lockerID string, store backupLockStore, logger log.FieldLogger) *backupLock {
+	return &backupLock{
+		backupsID: backupsID,
+		lockerID:  lockerID,
+		store:     store,
+		logger:    logger,
 	}
 }
 
 func (l *backupLock) TryLock() bool {
-	locked, err := l.store.LockInstallationBackup(l.backupID, l.lockerID)
+	locked, err := l.store.LockInstallationBackups(l.backupsID, l.lockerID)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to lock backup")
 		return false
@@ -40,7 +49,7 @@ func (l *backupLock) TryLock() bool {
 }
 
 func (l *backupLock) Unlock() {
-	unlocked, err := l.store.UnlockInstallationBackup(l.backupID, l.lockerID, false)
+	unlocked, err := l.store.UnlockInstallationBackups(l.backupsID, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock backup")
 	} else if unlocked != true {

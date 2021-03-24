@@ -103,3 +103,16 @@ func (a *Client) S3EnsureBucketDirectoryDeleted(bucketName, directory string, lo
 
 	return nil
 }
+
+// S3EnsureObjectDeleted is used to ensure that the file is deleted.
+func (a *Client) S3EnsureObjectDeleted(bucketName, path string) error {
+	_, err := a.Service().s3.DeleteObject(&s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(path),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to delete object")
+	}
+
+	return nil
+}
