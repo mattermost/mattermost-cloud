@@ -265,11 +265,7 @@ func (sqlStore *SQLStore) UnlockInstallationBackups(backupIDs []string, lockerID
 }
 
 func (sqlStore *SQLStore) applyInstallationBackupFilter(builder sq.SelectBuilder, filter *model.InstallationBackupFilter) sq.SelectBuilder {
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if len(filter.IDs) > 0 {
 		builder = builder.Where(sq.Eq{"ID": filter.IDs})
@@ -284,9 +280,6 @@ func (sqlStore *SQLStore) applyInstallationBackupFilter(builder sq.SelectBuilder
 		builder = builder.Where(sq.Eq{
 			"State": filter.States,
 		})
-	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
 	}
 
 	return builder

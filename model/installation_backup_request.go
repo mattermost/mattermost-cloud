@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 )
@@ -32,12 +31,10 @@ func NewInstallationBackupRequestFromReader(reader io.Reader) (*InstallationBack
 
 // GetInstallationBackupsRequest describes the parameters to request a list of installation backups.
 type GetInstallationBackupsRequest struct {
+	Paging
 	InstallationID        string
 	ClusterInstallationID string
 	State                 string
-	Page                  int
-	PerPage               int
-	IncludeDeleted        bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
@@ -46,10 +43,7 @@ func (request *GetInstallationBackupsRequest) ApplyToURL(u *url.URL) {
 	q.Add("installation", request.InstallationID)
 	q.Add("cluster_installation", request.ClusterInstallationID)
 	q.Add("state", request.State)
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }

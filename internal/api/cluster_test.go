@@ -45,9 +45,7 @@ func TestClusters(t *testing.T) {
 
 	t.Run("no clusters", func(t *testing.T) {
 		clusters, err := client.GetClusters(&model.GetClustersRequest{
-			Page:           0,
-			PerPage:        10,
-			IncludeDeleted: true,
+			Paging: model.AllPagesWithDeleted(),
 		})
 		require.NoError(t, err)
 		require.Empty(t, clusters)
@@ -146,9 +144,11 @@ func TestClusters(t *testing.T) {
 
 		t.Run("get clusters, page 0, perPage 2, exclude deleted", func(t *testing.T) {
 			clusters, err := client.GetClusters(&model.GetClustersRequest{
-				Page:           0,
-				PerPage:        2,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        2,
+					IncludeDeleted: false,
+				},
 			})
 			require.NoError(t, err)
 			require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
@@ -156,9 +156,11 @@ func TestClusters(t *testing.T) {
 
 		t.Run("get clusters, page 1, perPage 2, exclude deleted", func(t *testing.T) {
 			clusters, err := client.GetClusters(&model.GetClustersRequest{
-				Page:           1,
-				PerPage:        2,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           1,
+					PerPage:        2,
+					IncludeDeleted: false,
+				},
 			})
 			require.NoError(t, err)
 			require.Equal(t, []*model.ClusterDTO{cluster3.ToDTO(nil)}, clusters)
@@ -180,9 +182,11 @@ func TestClusters(t *testing.T) {
 		t.Run("get clusters after deletion request", func(t *testing.T) {
 			t.Run("page 0, perPage 2, exclude deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           0,
-					PerPage:        2,
-					IncludeDeleted: false,
+					Paging: model.Paging{
+						Page:           0,
+						PerPage:        2,
+						IncludeDeleted: false,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
@@ -190,9 +194,11 @@ func TestClusters(t *testing.T) {
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           1,
-					PerPage:        2,
-					IncludeDeleted: false,
+					Paging: model.Paging{
+						Page:           1,
+						PerPage:        2,
+						IncludeDeleted: false,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
@@ -200,9 +206,11 @@ func TestClusters(t *testing.T) {
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           0,
-					PerPage:        2,
-					IncludeDeleted: true,
+					Paging: model.Paging{
+						Page:           0,
+						PerPage:        2,
+						IncludeDeleted: true,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
@@ -210,9 +218,11 @@ func TestClusters(t *testing.T) {
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           1,
-					PerPage:        2,
-					IncludeDeleted: true,
+					Paging: model.Paging{
+						Page:           1,
+						PerPage:        2,
+						IncludeDeleted: true,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
@@ -229,9 +239,11 @@ func TestClusters(t *testing.T) {
 		t.Run("get clusters after actual deletion", func(t *testing.T) {
 			t.Run("page 0, perPage 2, exclude deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           0,
-					PerPage:        2,
-					IncludeDeleted: false,
+					Paging: model.Paging{
+						Page:           0,
+						PerPage:        2,
+						IncludeDeleted: false,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster1, cluster3}, clusters)
@@ -239,9 +251,11 @@ func TestClusters(t *testing.T) {
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           1,
-					PerPage:        2,
-					IncludeDeleted: false,
+					Paging: model.Paging{
+						Page:           1,
+						PerPage:        2,
+						IncludeDeleted: false,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{}, clusters)
@@ -249,9 +263,11 @@ func TestClusters(t *testing.T) {
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           0,
-					PerPage:        2,
-					IncludeDeleted: true,
+					Paging: model.Paging{
+						Page:           0,
+						PerPage:        2,
+						IncludeDeleted: true,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
@@ -259,9 +275,11 @@ func TestClusters(t *testing.T) {
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
 				clusters, err := client.GetClusters(&model.GetClustersRequest{
-					Page:           1,
-					PerPage:        2,
-					IncludeDeleted: true,
+					Paging: model.Paging{
+						Page:           1,
+						PerPage:        2,
+						IncludeDeleted: true,
+					},
 				})
 				require.NoError(t, err)
 				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)

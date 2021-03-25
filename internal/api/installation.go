@@ -77,7 +77,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -97,13 +97,11 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 	dns := r.URL.Query().Get("dns_name")
 
 	filter := &model.InstallationFilter{
-		OwnerID:        owner,
-		GroupID:        group,
-		State:          state,
-		Page:           page,
-		PerPage:        perPage,
-		IncludeDeleted: includeDeleted,
-		DNS:            dns,
+		OwnerID: owner,
+		GroupID: group,
+		State:   state,
+		Paging:  paging,
+		DNS:     dns,
 	}
 
 	installations, err := c.Store.GetInstallationDTOs(filter, includeGroupConfig, includeGroupConfigOverrides)
@@ -635,7 +633,7 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	runningBackups, err := c.Store.GetInstallationBackups(&model.InstallationBackupFilter{
 		InstallationID: installationID,
 		States:         model.AllInstallationBackupsStatesRunning,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get list of running backups")

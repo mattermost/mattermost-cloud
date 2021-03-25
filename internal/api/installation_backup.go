@@ -96,7 +96,7 @@ func handleGetInstallationBackups(c *Context, w http.ResponseWriter, r *http.Req
 	c.Logger = c.Logger.
 		WithField("action", "list-installation-backups")
 
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -115,9 +115,7 @@ func handleGetInstallationBackups(c *Context, w http.ResponseWriter, r *http.Req
 		InstallationID:        installationID,
 		ClusterInstallationID: clusterInstallationID,
 		States:                states,
-		Page:                  page,
-		PerPage:               perPage,
-		IncludeDeleted:        includeDeleted,
+		Paging:                paging,
 	}
 
 	backupsMeta, err := c.Store.GetInstallationBackups(filter)

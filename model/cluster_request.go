@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 )
@@ -121,19 +120,14 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 
 // GetClustersRequest describes the parameters to request a list of clusters.
 type GetClustersRequest struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetClustersRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }
 

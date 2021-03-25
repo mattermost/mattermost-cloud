@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -195,15 +194,13 @@ func (request *GetInstallationRequest) ApplyToURL(u *url.URL) {
 
 // GetInstallationsRequest describes the parameters to request a list of installations.
 type GetInstallationsRequest struct {
+	Paging
 	OwnerID                     string
 	GroupID                     string
 	State                       string
 	DNS                         string
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
-	Page                        int
-	PerPage                     int
-	IncludeDeleted              bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
@@ -219,11 +216,8 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	if !request.IncludeGroupConfigOverrides {
 		q.Add("include_group_config_overrides", "false")
 	}
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }
 

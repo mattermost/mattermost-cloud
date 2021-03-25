@@ -74,11 +74,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 	builder := multitenantDatabaseSelect.
 		OrderBy("CreateAt ASC")
 
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if len(filter.InstallationID) > 0 {
 		builder = builder.
@@ -125,7 +121,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 	multitenantDatabases, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID:        installationID,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for multitenant databases")

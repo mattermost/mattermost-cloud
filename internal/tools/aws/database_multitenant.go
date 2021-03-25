@@ -333,7 +333,7 @@ func (d *RDSMultitenantDatabase) getAndLockAssignedMultitenantDatabase(store mod
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID:        d.installationID,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to query for multitenant databases")
@@ -372,7 +372,7 @@ func (d *RDSMultitenantDatabase) assignInstallationToMultitenantDatabaseAndLock(
 		DatabaseType:          d.databaseType,
 		MaxInstallationsLimit: d.MaxSupportedDatabases(),
 		VpcID:                 vpcID,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to get available multitenant databases")

@@ -32,10 +32,8 @@ type Webhook struct {
 
 // WebhookFilter describes the parameters used to constrain a set of webhooks.
 type WebhookFilter struct {
-	OwnerID        string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
+	OwnerID string
 }
 
 // WebhookPayload is the payload sent in every webhook.

@@ -25,10 +25,8 @@ func init() {
 	webhookGetCmd.MarkFlagRequired("webhook")
 
 	webhookListCmd.Flags().String("owner", "", "The owner by which to filter webhooks.")
-	webhookListCmd.Flags().Int("page", 0, "The page of webhooks to fetch, starting at 0.")
-	webhookListCmd.Flags().Int("per-page", 100, "The number of webhooks to fetch per page.")
-	webhookListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted webhooks.")
 	webhookListCmd.Flags().Bool("table", false, "Whether to display the returned webhook list in a table or not")
+	registerPagingFlags(webhookListCmd)
 
 	webhookDeleteCmd.Flags().String("webhook", "", "The id of the webhook to be deleted.")
 	webhookDeleteCmd.MarkFlagRequired("webhook")
@@ -110,14 +108,10 @@ var webhookListCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		owner, _ := command.Flags().GetString("owner")
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
-		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		paging := parsePagingFlags(command)
 		webhooks, err := client.GetWebhooks(&model.GetWebhooksRequest{
-			OwnerID:        owner,
-			Page:           page,
-			PerPage:        perPage,
-			IncludeDeleted: includeDeleted,
+			OwnerID: owner,
+			Paging:  paging,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query webhooks")

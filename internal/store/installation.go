@@ -138,11 +138,7 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 }
 
 func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filter *model.InstallationFilter) sq.SelectBuilder {
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if len(filter.InstallationIDs) != 0 {
 		builder = builder.Where(sq.Eq{"Installation.ID": filter.InstallationIDs})
@@ -158,9 +154,6 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 	}
 	if filter.DNS != "" {
 		builder = builder.Where("DNS = ?", filter.DNS)
-	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
 	}
 
 	return builder
@@ -479,8 +472,7 @@ func (sqlStore *SQLStore) UpdateInstallationCRVersion(installationID, crVersion 
 func (sqlStore *SQLStore) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
 	installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
 		InstallationIDs: installationIDs,
-		PerPage:         model.AllPerPage,
-		IncludeDeleted:  false,
+		Paging:          model.AllPagesNotDeleted(),
 	}, false, false)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to lookup installations in database")

@@ -399,8 +399,7 @@ func (c *Client) GetInstallationByDNS(DNS string, request *GetInstallationReques
 	installations, err := c.GetInstallations(&GetInstallationsRequest{
 		IncludeGroupConfig:          request.IncludeGroupConfig,
 		IncludeGroupConfigOverrides: request.IncludeGroupConfigOverrides,
-		IncludeDeleted:              false,
-		PerPage:                     AllPerPage,
+		Paging:                      AllPagesNotDeleted(),
 		DNS:                         DNS,
 	})
 	if err != nil {

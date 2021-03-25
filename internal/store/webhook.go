@@ -39,17 +39,10 @@ func (sqlStore *SQLStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Web
 	builder := webhookSelect.
 		OrderBy("CreateAt ASC")
 
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if filter.OwnerID != "" {
 		builder = builder.Where("OwnerID = ?", filter.OwnerID)
-	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
 	}
 
 	var webhooks []*model.Webhook

@@ -28,9 +28,7 @@ type Group struct {
 
 // GroupFilter describes the parameters used to constrain a set of groups.
 type GroupFilter struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
 }
 
 // Clone returns a deep copy the group.

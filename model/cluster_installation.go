@@ -25,12 +25,10 @@ type ClusterInstallation struct {
 
 // ClusterInstallationFilter describes the parameters used to constrain a set of cluster installations.
 type ClusterInstallationFilter struct {
+	Paging
 	IDs            []string
 	InstallationID string
 	ClusterID      string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
 }
 
 // Clone returns a deep copy the cluster installation.

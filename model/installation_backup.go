@@ -82,13 +82,11 @@ var AllInstallationBackupsStatesRunning = []InstallationBackupState{
 
 // InstallationBackupFilter describes the parameters used to constrain a set of backup.
 type InstallationBackupFilter struct {
+	Paging
 	IDs                   []string
 	InstallationID        string
 	ClusterInstallationID string
 	States                []InstallationBackupState
-	Page                  int
-	PerPage               int
-	IncludeDeleted        bool
 }
 
 // NewInstallationBackupFromReader will create a InstallationBackup from an

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"github.com/spf13/cobra"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -41,4 +42,22 @@ func parseEnvVarInput(rawInput []string, clear bool) (model.EnvVarMap, error) {
 	}
 
 	return envVarMap, nil
+}
+
+func registerPagingFlags(cmd *cobra.Command) {
+	cmd.Flags().Int("page", 0, "The page to fetch, starting at 0.")
+	cmd.Flags().Int("per-page", 100, "The number of objects to fetch per page.")
+	cmd.Flags().Bool("include-deleted", false, "Whether to include deleted objects.")
+}
+
+func parsePagingFlags(cmd *cobra.Command) model.Paging {
+	page, _ := cmd.Flags().GetInt("page")
+	perPage, _ := cmd.Flags().GetInt("per-page")
+	includeDeleted, _ := cmd.Flags().GetBool("include-deleted")
+
+	return model.Paging{
+		Page:           page,
+		PerPage:        perPage,
+		IncludeDeleted: includeDeleted,
+	}
 }

@@ -22,9 +22,7 @@ func init() {
 
 	backupListCmd.Flags().String("installation", "", "The installation id for which the backups should be listed.")
 	backupListCmd.Flags().String("state", "", "The state to filter backups by.")
-	backupListCmd.Flags().Int("page", 0, "The page of backups to fetch, starting at 0.")
-	backupListCmd.Flags().Int("per-page", 100, "The number of backups to fetch per page.")
-	backupListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted backups.")
+	registerPagingFlags(backupListCmd)
 	backupListCmd.Flags().Bool("table", false, "Whether to display the returned backup list in a table or not.")
 
 	backupGetCmd.Flags().String("backup", "", "The id of the backup to get.")
@@ -76,17 +74,13 @@ var backupListCmd = &cobra.Command{
 		installationID, _ := command.Flags().GetString("installation")
 		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
 		state, _ := command.Flags().GetString("state")
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
-		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		paging := parsePagingFlags(command)
 
 		request := &model.GetInstallationBackupsRequest{
 			InstallationID:        installationID,
 			ClusterInstallationID: clusterInstallationID,
 			State:                 state,
-			Page:                  page,
-			PerPage:               perPage,
-			IncludeDeleted:        includeDeleted,
+			Paging:                paging,
 		}
 
 		backups, err := client.GetInstallationBackups(request)

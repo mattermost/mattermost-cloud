@@ -45,9 +45,7 @@ func TestGetGroups(t *testing.T) {
 
 	t.Run("no groups", func(t *testing.T) {
 		groups, err := client.GetGroups(&model.GetGroupsRequest{
-			Page:           0,
-			PerPage:        10,
-			IncludeDeleted: true,
+			Paging: model.AllPagesWithDeleted(),
 		})
 		require.NoError(t, err)
 		require.Empty(t, groups)
@@ -151,9 +149,11 @@ func TestGetGroups(t *testing.T) {
 				{
 					"page 0, perPage 2, exclude deleted",
 					&model.GetGroupsRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.Group{group1, group2},
 				},
@@ -161,9 +161,11 @@ func TestGetGroups(t *testing.T) {
 				{
 					"page 1, perPage 2, exclude deleted",
 					&model.GetGroupsRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.Group{group3},
 				},
@@ -171,9 +173,11 @@ func TestGetGroups(t *testing.T) {
 				{
 					"page 0, perPage 2, include deleted",
 					&model.GetGroupsRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.Group{group1, group2},
 				},
@@ -181,9 +185,11 @@ func TestGetGroups(t *testing.T) {
 				{
 					"page 1, perPage 2, include deleted",
 					&model.GetGroupsRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.Group{group3, group4},
 				},

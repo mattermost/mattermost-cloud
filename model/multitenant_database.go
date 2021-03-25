@@ -59,13 +59,12 @@ func (i *MultitenantDatabaseInstallations) Remove(installationID string) {
 // MultitenantDatabaseFilter filters results based on a specific installation ID, Vpc ID and a number of
 // installation's limit.
 type MultitenantDatabaseFilter struct {
+	Paging
 	LockerID              string
 	InstallationID        string
 	VpcID                 string
 	DatabaseType          string
 	MaxInstallationsLimit int
-	Page                  int
-	PerPage               int
 }
 
 // MultitenantDatabasesFromReader decodes a json-encoded list of multitenant databases from the given io.Reader.

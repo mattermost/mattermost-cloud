@@ -105,7 +105,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetNotFound() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 2,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -114,7 +114,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 3,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -125,7 +125,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintZero() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 1,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -134,7 +134,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintZero() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintFilterNotNil() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 0,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -149,7 +149,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintAll() {
 
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -164,7 +164,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLockerIDConstraintAll() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		LockerID:              s.installationID0,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -174,7 +174,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLockerIDConstraintAll() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		PerPage: model.AllPerPage,
+		Paging: model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -182,7 +182,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabase() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		PerPage: model.AllPerPage,
+		Paging: model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -237,7 +237,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		VpcID:                 "vpc_id0",
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -246,7 +246,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 	databases, err = s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		VpcID:                 "does_not_exist",
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Nil(databases)

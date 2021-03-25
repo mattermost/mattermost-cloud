@@ -23,10 +23,8 @@ func init() {
 
 	clusterInstallationListCmd.Flags().String("cluster", "", "The cluster by which to filter cluster installations.")
 	clusterInstallationListCmd.Flags().String("installation", "", "The installation by which to filter cluster installations.")
-	clusterInstallationListCmd.Flags().Int("page", 0, "The page of cluster installations to fetch, starting at 0.")
-	clusterInstallationListCmd.Flags().Int("per-page", 100, "The number of cluster installations to fetch per page.")
-	clusterInstallationListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted cluster installations.")
 	clusterInstallationListCmd.Flags().Bool("table", false, "Whether to display the returned cluster installation list in a table or not")
+	registerPagingFlags(clusterInstallationListCmd)
 
 	clusterInstallationConfigCmd.PersistentFlags().String("cluster-installation", "", "The id of the cluster installation.")
 	clusterInstallationConfigCmd.MarkFlagRequired("cluster-installation")
@@ -99,16 +97,12 @@ var clusterInstallationListCmd = &cobra.Command{
 
 		cluster, _ := command.Flags().GetString("cluster")
 		installation, _ := command.Flags().GetString("installation")
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
-		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		paging := parsePagingFlags(command)
 
 		clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
 			ClusterID:      cluster,
 			InstallationID: installation,
-			Page:           page,
-			PerPage:        perPage,
-			IncludeDeleted: includeDeleted,
+			Paging:         paging,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query cluster installations")

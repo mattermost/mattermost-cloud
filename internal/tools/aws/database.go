@@ -222,7 +222,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 	}
 
 	clusterInstallations, err := d.client.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installationID,
 	})
 	if err != nil {

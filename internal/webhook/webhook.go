@@ -21,8 +21,7 @@ type webhookStore interface {
 // SendToAllWebhooks sends a given payload to all webhooks.
 func SendToAllWebhooks(store webhookStore, payload *model.WebhookPayload, logger *log.Entry) error {
 	hooks, err := store.GetWebhooks(&model.WebhookFilter{
-		PerPage:        model.AllPerPage,
-		IncludeDeleted: false,
+		Paging: model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "Failed to find webhooks")

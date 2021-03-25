@@ -208,7 +208,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 
 	clusterInstallationFilter := &model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	}
 	clusterInstallations, err := s.store.GetClusterInstallations(clusterInstallationFilter)
 	if err != nil {
