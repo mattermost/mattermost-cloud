@@ -7,7 +7,7 @@ affinity:
         - key: "kops.k8s.io/instancegroup"
           operator: In
           values:
-          - nodes-utilities
+          - utilities
 
 tolerations:
 - key: "utilities"

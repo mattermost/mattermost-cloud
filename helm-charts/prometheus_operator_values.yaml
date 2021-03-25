@@ -436,7 +436,7 @@ alertmanager:
             - key: "kops.k8s.io/instancegroup"
               operator: In
               values:
-              - nodes-utilities
+              - utilities
     ## If specified, the pod's tolerations.
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
@@ -1187,7 +1187,7 @@ prometheusOperator:
               - key: "kops.k8s.io/instancegroup"
                 operator: In
                 values:
-                - nodes-utilities
+                - utilities
       tolerations:
       - key: "utilities"
         operator: "Equal"
@@ -1337,7 +1337,7 @@ prometheusOperator:
           - key: "kops.k8s.io/instancegroup"
             operator: In
             values:
-            - nodes-utilities
+            - utilities
   tolerations:
   - key: "utilities"
     operator: "Equal"
@@ -1640,7 +1640,7 @@ prometheus:
             - key: "kops.k8s.io/instancegroup"
               operator: In
               values:
-              - nodes-utilities
+              - utilities
     ## If specified, the pod's tolerations.
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
