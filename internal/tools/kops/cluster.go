@@ -218,7 +218,7 @@ func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (interface
 	data := clusterdata["spec"].(map[string]interface{})[subData]
 
 	if err != nil {
-		return "", errors.Wrap(err, "failed to retrive cluster specification value for "+subData)
+		return "", errors.Wrapf(err, "failed to retrieve cluster specification value for %s", subData)
 	}
 	return data, nil
 }

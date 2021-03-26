@@ -468,7 +468,7 @@ var clusterListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES"})
+			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "NETWORKING"})
 
 			for _, cluster := range clusters {
 				table.Append([]string{
