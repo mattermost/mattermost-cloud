@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/mattermost/mattermost-cloud/model"
 
@@ -105,7 +106,12 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 	if filter.MaxInstallationsLimit != model.NoInstallationsLimit {
 		var filteredDatabases []*model.MultitenantDatabase
 		for _, database := range databases {
-			if len(database.Installations) < int(filter.MaxInstallationsLimit) {
+			totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight(database.Installations)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to calculate total weight for database")
+			}
+
+			if int(math.Ceil(totalWeight)) < filter.MaxInstallationsLimit {
 				filteredDatabases = append(filteredDatabases, database)
 			}
 		}
