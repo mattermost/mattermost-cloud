@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/suite"
@@ -251,4 +254,80 @@ func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 	s.Assert().NoError(err)
 	s.Assert().Nil(databases)
 	s.Assert().Equal(0, len(databases))
+}
+
+func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
+	sqlStore := MakeTestSQLStore(t, testlib.MakeLogger(t))
+
+	// 2 + 6.75 = 8.75
+	installations := []*model.Installation{
+		{DNS: "test0.dns.com", State: model.InstallationStateStable},
+		{DNS: "test1.dns.com", State: model.InstallationStateStable},
+		{DNS: "test2.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test3.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test4.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test5.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test6.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test7.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test8.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test9.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test10.dns.com", State: model.InstallationStateHibernating},
+	}
+	installationIDs := model.MultitenantDatabaseInstallations{}
+	for i := range installations {
+		err := sqlStore.CreateInstallation(installations[i], nil)
+		require.NoError(t, err)
+
+		installationIDs = append(installationIDs, installations[i].ID)
+	}
+
+	database1 := &model.MultitenantDatabase{
+		ID:            "database_id0",
+		VpcID:         "vpc_id0",
+		Installations: installationIDs,
+	}
+
+	err := sqlStore.CreateMultitenantDatabase(database1)
+	require.NoError(t, err)
+
+	for _, testCase := range []struct {
+		description      string
+		maxInstallations int
+		databases        []*model.MultitenantDatabase
+	}{
+		{
+			description:      "found when high limit",
+			maxInstallations: 100,
+			databases:        []*model.MultitenantDatabase{database1},
+		},
+		{
+			description:      "found when 1 more than current count",
+			maxInstallations: 12,
+			databases:        []*model.MultitenantDatabase{database1},
+		},
+		{
+			description:      "found when counting hibernated as .75",
+			maxInstallations: 10,
+			databases:        []*model.MultitenantDatabase{database1},
+		},
+		{
+			description:      "not found when ceiling weight",
+			maxInstallations: 9,
+			databases:        nil,
+		},
+		{
+			description:      "not found when less than counted weight",
+			maxInstallations: 7,
+			databases:        nil,
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			dbs, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+				Paging:                model.AllPagesNotDeleted(),
+				MaxInstallationsLimit: testCase.maxInstallations,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, testCase.databases, dbs)
+		})
+	}
 }
