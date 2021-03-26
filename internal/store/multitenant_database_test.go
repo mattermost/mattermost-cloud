@@ -336,7 +336,7 @@ func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			dbs, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-				Paging:                model.AllPagesNotDeleted(),
+				PerPage: model.AllPerPage,
 				MaxInstallationsLimit: testCase.maxInstallations,
 			})
 			require.NoError(t, err)
