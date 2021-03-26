@@ -39,11 +39,23 @@ type TestMultitenantDatabaseSuite struct {
 func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.sqlStore = MakeTestSQLStore(s.t, testlib.MakeLogger(s.t))
 
-	s.installationID0 = "intalllation_id0"
-	s.installationID1 = "intalllation_id1"
-	s.installationID2 = "intalllation_id2"
-	s.installationID3 = "intalllation_id3"
-	s.installationID4 = "intalllation_id4"
+	installations := []*model.Installation{
+		{DNS: "dns0.com"},
+		{DNS: "dns1.com"},
+		{DNS: "dns2.com"},
+		{DNS: "dns3.com"},
+		{DNS: "dns4.com"},
+	}
+	for i := range installations {
+		err := s.sqlStore.CreateInstallation(installations[i], nil)
+		require.NoError(s.t, err)
+	}
+
+	s.installationID0 = installations[0].ID
+	s.installationID1 = installations[1].ID
+	s.installationID2 = installations[2].ID
+	s.installationID3 = installations[3].ID
+	s.installationID4 = installations[4].ID
 
 	s.lockerID = s.installationID0
 
@@ -258,6 +270,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 
 func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, testlib.MakeLogger(t))
+	defer CloseConnection(t, sqlStore)
 
 	// 2 + 6.75 = 8.75
 	installations := []*model.Installation{
