@@ -33,7 +33,6 @@ type CreateClusterRequest struct {
 
 // SetDefaults sets the default values for a cluster create request.
 func (request *CreateClusterRequest) SetDefaults() {
-
 	if len(request.Provider) == 0 {
 		request.Provider = ProviderAWS
 	}
@@ -82,7 +81,6 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[TeleportCanonicalName]; !ok {
 		request.DesiredUtilityVersions[TeleportCanonicalName] = TeleportDefaultVersion
 	}
-
 }
 
 // Validate validates the values of a cluster create request.
@@ -122,7 +120,6 @@ func contains(s []string, str string) bool {
 			return true
 		}
 	}
-
 	return false
 }
 

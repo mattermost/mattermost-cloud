@@ -104,7 +104,6 @@ Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which 
 ```bash
     cloud cluster create --networking weave
 ```
-
 You will get a response like this one:
 ```bash
 [
