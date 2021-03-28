@@ -104,18 +104,18 @@ func (request *CreateClusterRequest) Validate() error {
 	}
 	// TODO: check zones and instance types?
 
-	if !contains(getSupportedCniList(), request.Networking) {
+	if !contains(GetSupportedCniList(), request.Networking) {
 		return errors.Errorf("unsupported cluster networking option %s", request.Networking)
 	}
 	return nil
 }
 
-// starting with three supported CNI networking options, we can add more as required
-func getSupportedCniList() []string {
-	return []string{"amazon-vpc-routed-eni", "weave", "canal"}
+// GetSupportedCniList starting with three supported CNI networking options, we can add more as required
+func GetSupportedCniList() []string {
+	return []string{"amazon-vpc-routed-eni", "amazonvpc", "weave", "canal"}
 }
 
-//  contains checks if a string is present in a slice
+// contains checks if a string is present in a slice
 func contains(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {

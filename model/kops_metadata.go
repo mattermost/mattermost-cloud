@@ -28,7 +28,7 @@ type KopsMetadata struct {
 	ChangeRequest        *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
 	RotatorRequest       *RotatorMetadata            `json:"RotatorRequest,omitempty"`
 	Warnings             []string                    `json:"Warnings,omitempty"`
-	Networking           interface{}                 `json:"Networking,omitempty"`
+	Networking           string                      `json:"Networking,omitempty"`
 }
 
 // KopsInstanceGroupsMetadata is a map of instance group names to their metadata.

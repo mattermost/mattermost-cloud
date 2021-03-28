@@ -198,7 +198,7 @@ func (c *Cmd) GetCluster(name string) (string, error) {
 
 // GetClusterSpecInfoFromJSON invokes kops get cluster, using the context of the created Cmd, and
 // returns the stdout.
-func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (interface{}, error) {
+func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (string, error) {
 	var clusterdata map[string]interface{}
 	stdout, _, err := c.run(
 		"get",
@@ -215,12 +215,21 @@ func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (interface
 	if err != nil {
 		return "", errors.Wrap(err, "failed to unmarshal JSON output from kops get cluster")
 	}
-	data := clusterdata["spec"].(map[string]interface{})[subData]
-
+	data, err := json.Marshal(clusterdata["spec"].(map[string]interface{})[subData])
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to retrieve cluster specification value for %s", subData)
+		return "", errors.Wrapf(err, "failed to marshal cluster specification value for %s", subData)
 	}
-	return data, nil
+	return getCurrentCni(string(data)), nil
+}
+
+// getCurrentCni, it get the current CNI value for the cluster
+func getCurrentCni(network string) string {
+	for _, CNI := range model.GetSupportedCniList() {
+		if strings.Contains(network, CNI) {
+			return CNI
+		}
+	}
+	return ""
 }
 
 // Replace invokes kops replace, using the context of the created Cmd, and
