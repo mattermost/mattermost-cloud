@@ -5,6 +5,9 @@
 package aws
 
 import (
+	"fmt"
+	"math"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -102,4 +105,75 @@ func (a *Client) S3EnsureBucketDirectoryDeleted(bucketName, directory string, lo
 	}
 
 	return nil
+}
+
+// S3LargeCopy uses the "Upload Part - Copy API" from AWS to copy
+// srcBucketName/srcBucketKey to destBucketName/destBucketKey in the
+// case that the file being copied may be greater than 5GB in size
+func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBucketKey *string) error {
+	request, response := a.service.s3.CreateMultipartUploadRequest(
+		&s3.CreateMultipartUploadInput{
+			Bucket: destBucketName,
+			Key:    destBucketKey,
+		})
+	err := request.Send()
+	if err != nil {
+		return err
+	}
+
+	uploadID := response.UploadId
+	copySource := fmt.Sprintf("%s/%s", *srcBucketName, *srcBucketKey)
+
+	objectMetadata, err := a.service.s3.HeadObject(
+		&s3.HeadObjectInput{
+			Bucket: srcBucketName,
+			Key:    srcBucketKey,
+		})
+	if err != nil {
+		return err
+	}
+
+	objectSize := *objectMetadata.ContentLength
+	var (
+		partSize     int64 = 5 * 1024 * 1024 // 5 MB parts like the example
+		bytePosition int64 = 0
+		partNum      int64 = 1
+	)
+	completedParts := []*s3.CompletedPart{}
+	for ; bytePosition < objectSize; partNum++ {
+		// The last part might be smaller than partSize, so check to make sure
+		// that lastByte isn't beyond the end of the object.
+		lastByte := int(math.Min(float64(bytePosition+partSize-1), float64(objectSize-1)))
+		bytesRange := fmt.Sprintf("bytes=%d-%d", bytePosition, lastByte)
+		resp, err := a.service.s3.UploadPartCopy(
+			&s3.UploadPartCopyInput{
+				Bucket:          destBucketName,
+				CopySource:      &copySource,
+				CopySourceRange: &bytesRange,
+				Key:             destBucketKey,
+				PartNumber:      &partNum,
+				UploadId:        uploadID,
+			})
+		if err != nil {
+			return err
+		}
+		bytePosition += partSize
+		partNumber := partNum // copy this because AWS wants a pointer
+		completedParts = append(completedParts,
+			&s3.CompletedPart{
+				ETag:       resp.CopyPartResult.ETag,
+				PartNumber: &partNumber,
+			})
+	}
+
+	_, err = a.service.s3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+		Bucket:              srcBucketName,
+		ExpectedBucketOwner: new(string),
+		Key:                 srcBucketKey,
+		MultipartUpload: &s3.CompletedMultipartUpload{
+			Parts: completedParts,
+		},
+		UploadId: uploadID,
+	})
+	return err
 }
