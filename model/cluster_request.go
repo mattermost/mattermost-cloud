@@ -27,6 +27,7 @@ type CreateClusterRequest struct {
 	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Annotations            []string                       `json:"annotations,omitempty"`
+	Networking             string                         `json:"networking,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -54,6 +55,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	}
 	if request.NodeMaxCount == 0 {
 		request.NodeMaxCount = request.NodeMinCount
+	}
+	if len(request.Networking) == 0 {
+		request.Networking = "amazon-vpc-routed-eni"
 	}
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
@@ -97,7 +101,25 @@ func (request *CreateClusterRequest) Validate() error {
 	}
 	// TODO: check zones and instance types?
 
+	if !contains(GetSupportedCniList(), request.Networking) {
+		return errors.Errorf("unsupported cluster networking option %s", request.Networking)
+	}
 	return nil
+}
+
+// GetSupportedCniList starting with three supported CNI networking options, we can add more as required
+func GetSupportedCniList() []string {
+	return []string{"amazon-vpc-routed-eni", "amazonvpc", "weave", "canal", "calico"}
+}
+
+// contains checks if a string is present in a slice
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
 
 // NewCreateClusterRequestFromReader will create a CreateClusterRequest from an

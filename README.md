@@ -100,6 +100,10 @@ cloud cluster create --zones <availabiity-zone> --size SizeAlef500
 i.e.
 cloud cluster create --zones us-east-1c --size SizeAlef500
 ```
+Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which can be overridden using `--networking` flag. Supported network providers are weave, canal, calico, amazon-vpc-routed-eni.e.g
+```bash
+    cloud cluster create --networking weave
+```
 You will get a response like this one:
 ```bash
 [

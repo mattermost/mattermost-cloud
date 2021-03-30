@@ -25,6 +25,7 @@ type Cluster struct {
 	APISecurityLock         bool
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
+	Networking              string
 }
 
 // Clone returns a deep copy the cluster.
