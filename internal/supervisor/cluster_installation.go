@@ -29,6 +29,8 @@ type clusterInstallationStore interface {
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(clusterInstallationID string) error
 
+	GetInstallationBackups(filter *model.InstallationBackupFilter) ([]*model.InstallationBackup, error)
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -211,7 +213,21 @@ func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstall
 }
 
 func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-	err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+	backups, err := s.store.GetInstallationBackups(&model.InstallationBackupFilter{
+		ClusterInstallationID: clusterInstallation.ID,
+		States:                model.AllInstallationBackupsStatesRunning,
+		Paging:                model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		logger.WithError(err).Error("Failed to get installation backups running in cluster installation namespace")
+		return clusterInstallation.State
+	}
+	if len(backups) > 0 {
+		logger.Warn("Cannot delete cluster installation while backups are running in its namespace")
+		return clusterInstallation.State
+	}
+
+	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
 		DeleteClusterInstallation(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete cluster installation")

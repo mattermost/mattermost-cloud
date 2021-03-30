@@ -43,9 +43,7 @@ func init() {
 	groupGetCmd.Flags().String("group", "", "The id of the group to be fetched.")
 	groupGetCmd.MarkFlagRequired("group")
 
-	groupListCmd.Flags().Int("page", 0, "The page of groups to fetch, starting at 0.")
-	groupListCmd.Flags().Int("per-page", 100, "The number of groups to fetch per page.")
-	groupListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted groups.")
+	registerPagingFlags(groupListCmd)
 	groupListCmd.Flags().Bool("table", false, "Whether to display the returned group list in a table or not")
 
 	groupGetStatusCmd.Flags().String("group", "", "The id of the group of which the status should be fetched.")
@@ -230,13 +228,9 @@ var groupListCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
-		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		paging := parsePagingFlags(command)
 		groups, err := client.GetGroups(&model.GetGroupsRequest{
-			Page:           page,
-			PerPage:        perPage,
-			IncludeDeleted: includeDeleted,
+			Paging: paging,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query groups")

@@ -55,9 +55,8 @@ func (f *BifrostFilestore) Teardown(keepData bool, store model.InstallationDatab
 		// Perform a manual check to see if no cluster installations were ever
 		// created for this installation.
 		clusterInstallations, ciErr := store.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage:        model.AllPerPage,
+			Paging:         model.AllPagesWithDeleted(),
 			InstallationID: f.installationID,
-			IncludeDeleted: true,
 		})
 		if ciErr != nil {
 			return errors.Wrap(ciErr, "failed to query cluster installations")

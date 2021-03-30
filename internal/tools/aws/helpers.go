@@ -214,9 +214,8 @@ func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error
 // installations are currently not supported.
 func getVPCForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (*ec2.Vpc, error) {
 	clusterInstallations, err := store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesWithDeleted(),
 		InstallationID: installationID,
-		IncludeDeleted: true,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query cluster installations")

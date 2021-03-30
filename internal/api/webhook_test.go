@@ -106,9 +106,7 @@ func TestGetWebhooks(t *testing.T) {
 
 	t.Run("no webhooks", func(t *testing.T) {
 		webhooks, err := client.GetWebhooks(&model.GetWebhooksRequest{
-			Page:           0,
-			PerPage:        10,
-			IncludeDeleted: true,
+			Paging: model.AllPagesNotDeleted(),
 		})
 		require.NoError(t, err)
 		require.Empty(t, webhooks)
@@ -206,9 +204,11 @@ func TestGetWebhooks(t *testing.T) {
 				{
 					"page 0, perPage 2, exclude deleted",
 					&model.GetWebhooksRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.Webhook{webhook1, webhook2},
 				},
@@ -216,9 +216,11 @@ func TestGetWebhooks(t *testing.T) {
 				{
 					"page 1, perPage 2, exclude deleted",
 					&model.GetWebhooksRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.Webhook{webhook3},
 				},
@@ -226,9 +228,11 @@ func TestGetWebhooks(t *testing.T) {
 				{
 					"page 0, perPage 2, include deleted",
 					&model.GetWebhooksRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.Webhook{webhook1, webhook2},
 				},
@@ -236,19 +240,19 @@ func TestGetWebhooks(t *testing.T) {
 				{
 					"page 1, perPage 2, include deleted",
 					&model.GetWebhooksRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.Webhook{webhook3, webhook4},
 				},
 				{
 					"filter by owner",
 					&model.GetWebhooksRequest{
-						Page:           0,
-						PerPage:        100,
-						OwnerID:        ownerID1,
-						IncludeDeleted: false,
+						OwnerID: ownerID1,
+						Paging:  model.AllPagesNotDeleted(),
 					},
 					[]*model.Webhook{webhook1, webhook3},
 				},

@@ -7,6 +7,8 @@ package supervisor_test
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -51,11 +53,15 @@ func (s mockBackupStore) UpdateInstallationBackupStartTime(backupMeta *model.Ins
 	panic("implement me")
 }
 
-func (s mockBackupStore) LockInstallationBackup(installationID, lockerID string) (bool, error) {
+func (s mockBackupStore) DeleteInstallationBackup(backupID string) error {
+	panic("implement me")
+}
+
+func (s mockBackupStore) LockInstallationBackups(backupIDs []string, lockerID string) (bool, error) {
 	return true, nil
 }
 
-func (s *mockBackupStore) UnlockInstallationBackup(installationID, lockerID string, force bool) (bool, error) {
+func (s *mockBackupStore) UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error) {
 	if s.UnlockChan != nil {
 		close(s.UnlockChan)
 	}
@@ -104,7 +110,7 @@ type mockBackupProvisioner struct {
 }
 
 func (b *mockBackupProvisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
-	return &model.S3DataResidence{URL: "file-store.com"}, b.err
+	return &model.S3DataResidence{URL: aws.S3URL}, b.err
 }
 
 func (b *mockBackupProvisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
@@ -186,7 +192,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, model.InstallationBackupStateBackupInProgress, backupMeta.State)
 		assert.Equal(t, clusterInstallation.ID, backupMeta.ClusterInstallationID)
-		assert.Equal(t, "file-store.com", backupMeta.DataResidence.URL)
+		assert.Equal(t, aws.S3URL, backupMeta.DataResidence.URL)
 	})
 
 	t.Run("do not trigger backup if installation not hibernated", func(t *testing.T) {
@@ -290,6 +296,86 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 				}
 			})
 		}
+	})
+
+	t.Run("cleanup backup", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		mockBackupOp := &mockBackupProvisioner{}
+
+		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
+
+		backup := &model.InstallationBackup{
+			InstallationID:        installation.ID,
+			ClusterInstallationID: clusterInstallation.ID,
+			State:                 model.InstallationBackupStateDeletionRequested,
+		}
+		err := sqlStore.CreateInstallationBackup(backup)
+		require.NoError(t, err)
+
+		backup.DataResidence = &model.S3DataResidence{
+			Region:     "us-east",
+			URL:        aws.S3URL,
+			Bucket:     "my-bucket",
+			PathPrefix: installation.ID,
+			ObjectKey:  "backup-123",
+		}
+		err = sqlStore.UpdateInstallationBackupSchedulingData(backup)
+		require.NoError(t, err)
+
+		backupSupervisor := supervisor.NewBackupSupervisor(sqlStore, mockBackupOp, &mockAWS{}, "instanceID", logger)
+		backupSupervisor.Supervise(backup)
+
+		// Assert
+		backup, err = sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationBackupStateDeleted, backup.State)
+		assert.NotEqualValues(t, 0, backup.DeleteAt)
+	})
+
+	t.Run("full backup lifecycle", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		mockBackupOp := &mockBackupProvisioner{}
+
+		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
+
+		backup := &model.InstallationBackup{
+			InstallationID:        installation.ID,
+			ClusterInstallationID: clusterInstallation.ID,
+			State:                 model.InstallationBackupStateBackupRequested,
+		}
+		err := sqlStore.CreateInstallationBackup(backup)
+		require.NoError(t, err)
+
+		// Requested -> InProgress
+		backupSupervisor := supervisor.NewBackupSupervisor(sqlStore, mockBackupOp, &mockAWS{}, "instanceID", logger)
+		backupSupervisor.Supervise(backup)
+
+		backup, err = sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationBackupStateBackupInProgress, backup.State)
+		assert.Equal(t, clusterInstallation.ID, backup.ClusterInstallationID)
+
+		// In progress -> Succeeded
+		mockBackupOp.BackupStartTime = 100
+		backupSupervisor.Supervise(backup)
+
+		backup, err = sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationBackupStateBackupSucceeded, backup.State)
+
+		// Deletion requested -> Deleted
+		backup.State = model.InstallationBackupStateDeletionRequested
+		err = sqlStore.UpdateInstallationBackupState(backup)
+		require.NoError(t, err)
+
+		backupSupervisor.Supervise(backup)
+
+		backup, err = sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationBackupStateDeleted, backup.State)
+		assert.NotEqualValues(t, 0, backup.DeleteAt)
 	})
 }
 

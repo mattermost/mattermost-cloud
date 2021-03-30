@@ -45,9 +45,7 @@ func TestGetInstallations(t *testing.T) {
 
 	t.Run("no installations", func(t *testing.T) {
 		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
-			Page:           0,
-			PerPage:        10,
-			IncludeDeleted: true,
+			Paging: model.AllPagesWithDeleted(),
 		})
 		require.NoError(t, err)
 		require.Empty(t, installations)
@@ -221,9 +219,11 @@ func TestGetInstallations(t *testing.T) {
 				{
 					"page 0, perPage 2, exclude deleted",
 					&model.GetInstallationsRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.Installation{installation1, installation2},
 				},
@@ -231,9 +231,11 @@ func TestGetInstallations(t *testing.T) {
 				{
 					"page 1, perPage 2, exclude deleted",
 					&model.GetInstallationsRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.Installation{installation3},
 				},
@@ -241,9 +243,11 @@ func TestGetInstallations(t *testing.T) {
 				{
 					"page 0, perPage 2, include deleted",
 					&model.GetInstallationsRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.Installation{installation1, installation2},
 				},
@@ -251,49 +255,43 @@ func TestGetInstallations(t *testing.T) {
 				{
 					"page 1, perPage 2, include deleted",
 					&model.GetInstallationsRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.Installation{installation3, installation4},
 				},
 				{
 					"filter by owner",
 					&model.GetInstallationsRequest{
-						OwnerID:        ownerID1,
-						Page:           0,
-						PerPage:        100,
-						IncludeDeleted: false,
+						OwnerID: ownerID1,
+						Paging:  model.AllPagesNotDeleted(),
 					},
 					[]*model.Installation{installation1, installation3},
 				},
 				{
 					"filter by dns",
 					&model.GetInstallationsRequest{
-						DNS:            installation1.DNS,
-						Page:           0,
-						PerPage:        100,
-						IncludeDeleted: false,
+						DNS:    installation1.DNS,
+						Paging: model.AllPagesNotDeleted(),
 					},
 					[]*model.Installation{installation1},
 				},
 				{
 					"filter by state creation-requested",
 					&model.GetInstallationsRequest{
-						State:          model.InstallationStateCreationRequested,
-						Page:           0,
-						PerPage:        100,
-						IncludeDeleted: false,
+						State:  model.InstallationStateCreationRequested,
+						Paging: model.AllPagesNotDeleted(),
 					},
 					[]*model.Installation{installation1, installation2, installation3},
 				},
 				{
 					"filter by state stable",
 					&model.GetInstallationsRequest{
-						State:          model.InstallationStateStable,
-						Page:           0,
-						PerPage:        100,
-						IncludeDeleted: false,
+						State:  model.InstallationStateStable,
+						Paging: model.AllPagesNotDeleted(),
 					},
 					[]*model.Installation{},
 				},
@@ -1252,6 +1250,21 @@ func TestDeleteInstallation(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 403")
 
 		err = sqlStore.UnlockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("while backup is running", func(t *testing.T) {
+		backup1 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupRequested}
+		backup2 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupSucceeded}
+		err = sqlStore.CreateInstallationBackup(backup1)
+		require.NoError(t, err)
+		err = sqlStore.CreateInstallationBackup(backup2)
+		require.NoError(t, err)
+
+		err = client.DeleteInstallation(installation1.ID)
+		require.EqualError(t, err, "failed with status code 400")
+
+		err = sqlStore.DeleteInstallationBackup(backup1.ID)
 		require.NoError(t, err)
 	})
 

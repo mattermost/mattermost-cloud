@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 )
@@ -140,19 +139,14 @@ func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error
 
 // GetGroupsRequest describes the parameters to request a list of groups.
 type GetGroupsRequest struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }
 

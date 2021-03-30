@@ -53,27 +53,27 @@ func TestWebhooks(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, webhook2, actualWebhook2)
 
-		actualWebhooks, err := sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 0, IncludeDeleted: false})
+		actualWebhooks, err := sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 0, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Empty(t, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 1, IncludeDeleted: false})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 10, IncludeDeleted: false})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1, webhook2}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 1, IncludeDeleted: true})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 10, IncludeDeleted: true})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1, webhook2}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{PerPage: model.AllPerPage, IncludeDeleted: true})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.AllPagesWithDeleted()})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1, webhook2}, actualWebhooks)
 	})
@@ -113,23 +113,23 @@ func TestWebhooks(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, webhook2, actualWebhook2)
 
-		actualWebhooks, err := sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 0, IncludeDeleted: false})
+		actualWebhooks, err := sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 0, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Empty(t, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 1, IncludeDeleted: false})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook2}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 10, IncludeDeleted: false})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: false}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook2}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 1, IncludeDeleted: true})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 1, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1}, actualWebhooks)
 
-		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Page: 0, PerPage: 10, IncludeDeleted: true})
+		actualWebhooks, err = sqlStore.GetWebhooks(&model.WebhookFilter{Paging: model.Paging{Page: 0, PerPage: 10, IncludeDeleted: true}})
 		require.NoError(t, err)
 		require.Equal(t, []*model.Webhook{webhook1, webhook2}, actualWebhooks)
 

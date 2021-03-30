@@ -339,6 +339,20 @@ func (mr *MockAWSMockRecorder) S3EnsureBucketDeleted(bucketName, logger interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3EnsureBucketDeleted", reflect.TypeOf((*MockAWS)(nil).S3EnsureBucketDeleted), bucketName, logger)
 }
 
+// S3EnsureObjectDeleted mocks base method
+func (m *MockAWS) S3EnsureObjectDeleted(bucketName, path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "S3EnsureObjectDeleted", bucketName, path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// S3EnsureObjectDeleted indicates an expected call of S3EnsureObjectDeleted
+func (mr *MockAWSMockRecorder) S3EnsureObjectDeleted(bucketName, path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3EnsureObjectDeleted", reflect.TypeOf((*MockAWS)(nil).S3EnsureObjectDeleted), bucketName, path)
+}
+
 // GenerateBifrostUtilitySecret mocks base method
 func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()

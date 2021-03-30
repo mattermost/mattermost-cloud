@@ -81,7 +81,7 @@ func (sqlStore *SQLStore) IsInstallationBackupRunning(installationID string) (bo
 		Select("Count (*)").
 		From(backupTable).
 		Where("InstallationID = ?", installationID).
-		Where(sq.Eq{"State": model.AllInstallationBackupStatesPendingWork}).
+		Where(sq.Eq{"State": model.AllInstallationBackupsStatesRunning}).
 		Where("DeleteAt = 0")
 	err := sqlStore.selectBuilder(sqlStore.db, &totalResult, builder)
 	if err != nil {
@@ -217,9 +217,9 @@ func (sqlStore *SQLStore) UpdateInstallationBackupState(backup *model.Installati
 		})
 }
 
-// DeleteBackup marks the given backup as deleted, but does not remove
+// DeleteInstallationBackup marks the given backup as deleted, but does not remove
 // the record from the database.
-func (sqlStore *SQLStore) DeleteBackup(id string) error {
+func (sqlStore *SQLStore) DeleteInstallationBackup(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(backupTable).
 		Set("DeleteAt", GetMillis()).
@@ -249,29 +249,37 @@ func (sqlStore *SQLStore) LockInstallationBackup(backupID, lockerID string) (boo
 	return sqlStore.lockRows(backupTable, []string{backupID}, lockerID)
 }
 
+// LockInstallationBackups marks backups as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockInstallationBackups(backupIDs []string, lockerID string) (bool, error) {
+	return sqlStore.lockRows(backupTable, backupIDs, lockerID)
+}
+
 // UnlockInstallationBackup releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockInstallationBackup(backupID, lockerID string, force bool) (bool, error) {
 	return sqlStore.unlockRows(backupTable, []string{backupID}, lockerID, force)
 }
 
-func (sqlStore *SQLStore) applyInstallationBackupFilter(builder sq.SelectBuilder, filter *model.InstallationBackupFilter) sq.SelectBuilder {
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+// UnlockInstallationBackups releases a locks previously acquired against a caller.
+func (sqlStore *SQLStore) UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows(backupTable, backupIDs, lockerID, force)
+}
 
+func (sqlStore *SQLStore) applyInstallationBackupFilter(builder sq.SelectBuilder, filter *model.InstallationBackupFilter) sq.SelectBuilder {
+	builder = applyPagingFilter(builder, filter.Paging)
+
+	if len(filter.IDs) > 0 {
+		builder = builder.Where(sq.Eq{"ID": filter.IDs})
+	}
 	if filter.InstallationID != "" {
 		builder = builder.Where("InstallationID = ?", filter.InstallationID)
 	}
 	if filter.ClusterInstallationID != "" {
 		builder = builder.Where("ClusterInstallationID = ?", filter.ClusterInstallationID)
 	}
-	if filter.State != "" {
-		builder = builder.Where("State = ?", filter.State)
-	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
+	if len(filter.States) > 0 {
+		builder = builder.Where(sq.Eq{
+			"State": filter.States,
+		})
 	}
 
 	return builder

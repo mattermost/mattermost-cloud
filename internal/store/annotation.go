@@ -213,9 +213,9 @@ func (sqlStore *SQLStore) DeleteClusterAnnotation(clusterID string, annotationNa
 	defer tx.RollbackUnlessCommitted()
 
 	clusterInstallations, err := sqlStore.getClusterInstallations(tx, &model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
-		ClusterID:      clusterID,
-		IncludeDeleted: false},
+		Paging:    model.AllPagesNotDeleted(),
+		ClusterID: clusterID,
+	},
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to get cluster installations")
@@ -327,9 +327,9 @@ func (sqlStore *SQLStore) CreateInstallationAnnotations(installationID string, a
 	}
 
 	clusterInstallations, err := sqlStore.getClusterInstallations(tx, &model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installationID,
-		IncludeDeleted: false},
+	},
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cluster installations")

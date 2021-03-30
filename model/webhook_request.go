@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 )
@@ -52,20 +51,15 @@ func NewCreateWebhookRequestFromReader(reader io.Reader) (*CreateWebhookRequest,
 
 // GetWebhooksRequest describes the parameters to request a list of webhooks.
 type GetWebhooksRequest struct {
-	OwnerID        string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
+	OwnerID string
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetWebhooksRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	q.Add("owner", request.OwnerID)
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }

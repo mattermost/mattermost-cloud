@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/mattermost/mattermost-cloud/model"
 
@@ -74,11 +75,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 	builder := multitenantDatabaseSelect.
 		OrderBy("CreateAt ASC")
 
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if len(filter.InstallationID) > 0 {
 		builder = builder.
@@ -109,7 +106,12 @@ func (sqlStore *SQLStore) GetMultitenantDatabases(filter *model.MultitenantDatab
 	if filter.MaxInstallationsLimit != model.NoInstallationsLimit {
 		var filteredDatabases []*model.MultitenantDatabase
 		for _, database := range databases {
-			if len(database.Installations) < int(filter.MaxInstallationsLimit) {
+			totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight(database.Installations)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to calculate total weight for database")
+			}
+
+			if int(math.Ceil(totalWeight)) < filter.MaxInstallationsLimit {
 				filteredDatabases = append(filteredDatabases, database)
 			}
 		}
@@ -125,7 +127,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 	multitenantDatabases, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		InstallationID:        installationID,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for multitenant databases")

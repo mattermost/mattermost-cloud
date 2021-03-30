@@ -461,6 +461,10 @@ func (provisioner *kopsCIBeta) migrateFromClusterInstallation(clusterInstallatio
 	}
 
 	if cr.Spec.Migrate {
+		if cr.Status.Migration == nil {
+			logger.Warn("Installation migration waiting to start")
+			return false, nil
+		}
 		if cr.Status.Migration.Error != "" {
 			return false, errors.Errorf("error while migrating ClusterInstallation: %s", cr.Status.Migration.Error)
 		}

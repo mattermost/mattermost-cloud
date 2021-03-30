@@ -66,6 +66,11 @@ type installationStore interface {
 
 	GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error)
 
+	GetInstallationBackups(filter *model.InstallationBackupFilter) ([]*model.InstallationBackup, error)
+	UpdateInstallationBackupState(backup *model.InstallationBackup) error
+	LockInstallationBackups(backupIDs []string, lockerID string) (bool, error)
+	UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error)
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -285,7 +290,7 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 		return s.deleteInstallation(installation, instanceID, logger)
 
 	case model.InstallationStateDeletionFinalCleanup:
-		return s.finalDeletionCleanup(installation, logger)
+		return s.finalDeletionCleanup(installation, instanceID, logger)
 
 	default:
 		logger.Warnf("Found installation pending work in unexpected state %s", installation.State)
@@ -311,7 +316,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
@@ -324,8 +329,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	}
 
 	clusterFilter := &model.ClusterFilter{
-		PerPage:        model.AllPerPage,
-		IncludeDeleted: false,
+		Paging: model.AllPagesNotDeleted(),
 	}
 
 	// Get only clusters that have all annotations present on the installation.
@@ -336,7 +340,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		return model.InstallationStateCreationRequested
 	}
 	if len(annotations) > 0 {
-		clusterFilter.Annotations = &model.AnnotationsFilter{MatchAllIDs: annotationsToIDs(annotations)}
+		clusterFilter.Annotations = &model.AnnotationsFilter{MatchAllIDs: getAnnotationsIDs(annotations)}
 	}
 
 	// Proceed to requesting cluster installation creation on any available clusters.
@@ -560,7 +564,7 @@ func (s *InstallationSupervisor) installationCanBeScheduledOnCluster(cluster *mo
 	}
 
 	existingClusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:   model.AllPerPage,
+		Paging:    model.AllPagesNotDeleted(),
 		ClusterID: cluster.ID,
 	})
 	if err != nil {
@@ -638,7 +642,7 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
@@ -705,7 +709,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 	}
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installation.ID,
 	})
 	if err != nil {
@@ -713,12 +717,8 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		return installation.State
 	}
 
-	var clusterInstallationIDs []string
+	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
 	if len(clusterInstallations) > 0 {
-		for _, clusterInstallation := range clusterInstallations {
-			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
-		}
-
 		clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
 		if !clusterInstallationLocks.TryLock() {
 			logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
@@ -728,8 +728,8 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 		// Fetch the same cluster installations again, now that we have the locks.
 		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage: model.AllPerPage,
-			IDs:     clusterInstallationIDs,
+			Paging: model.AllPagesNotDeleted(),
+			IDs:    clusterInstallationIDs,
 		})
 		if err != nil {
 			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
@@ -832,7 +832,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 // the provisioner's config.
 func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstallationConfig(installation *model.Installation, logger log.FieldLogger) (bool, error) {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installation.ID,
 	})
 	if err != nil {
@@ -879,7 +879,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 	}
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installation.ID,
 	})
 	if err != nil {
@@ -892,10 +892,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 		return installation.State
 	}
 
-	var clusterInstallationIDs []string
-	for _, clusterInstallation := range clusterInstallations {
-		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
-	}
+	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
 
 	clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
 	if !clusterInstallationLocks.TryLock() {
@@ -906,8 +903,8 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 
 	// Fetch the same cluster installations again, now that we have the locks.
 	clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage: model.AllPerPage,
-		IDs:     clusterInstallationIDs,
+		Paging: model.AllPagesNotDeleted(),
+		IDs:    clusterInstallationIDs,
 	})
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
@@ -978,21 +975,16 @@ func (s *InstallationSupervisor) wakeUpInstallation(installation *model.Installa
 
 func (s *InstallationSupervisor) deleteInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesWithDeleted(),
 		InstallationID: installation.ID,
-		IncludeDeleted: true,
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
 		return installation.State
 	}
 
-	var clusterInstallationIDs []string
+	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
 	if len(clusterInstallations) > 0 {
-		for _, clusterInstallation := range clusterInstallations {
-			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
-		}
-
 		clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
 		if !clusterInstallationLocks.TryLock() {
 			logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
@@ -1002,9 +994,8 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 
 		// Fetch the same cluster installations again, now that we have the locks.
 		clusterInstallations, err = s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-			PerPage:        model.AllPerPage,
-			IDs:            clusterInstallationIDs,
-			IncludeDeleted: true,
+			Paging: model.AllPagesWithDeleted(),
+			IDs:    clusterInstallationIDs,
 		})
 		if err != nil {
 			logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
@@ -1078,14 +1069,28 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 		return model.InstallationStateDeletionInProgress
 	}
 
-	return s.finalDeletionCleanup(installation, logger)
+	return s.finalDeletionCleanup(installation, instanceID, logger)
 }
 
-func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Installation, logger log.FieldLogger) string {
+func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.aws.DeletePublicCNAME(installation.DNS, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete installation DNS")
 		return model.InstallationStateDeletionFinalCleanup
+	}
+
+	// Backups are stored in Installations file store, therefore if file store is deleted
+	// the backups will be deleted also.
+	if !s.keepFilestoreData {
+		finished, err := s.deleteBackups(installation, instanceID, logger)
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete backups")
+			return model.InstallationStateDeletionFinalCleanup
+		}
+		if !finished {
+			logger.Info("Installation backups deletion in progress")
+			return model.InstallationStateDeletionFinalCleanup
+		}
 	}
 
 	err = s.resourceUtil.GetDatabase(installation).Teardown(s.store, s.keepDatabaseData, logger)
@@ -1111,6 +1116,89 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 	return model.InstallationStateDeleted
 }
 
+func (s *InstallationSupervisor) deleteBackups(installation *model.Installation, instanceID string, logger log.FieldLogger) (bool, error) {
+	logger.Info("Deleting installation backups")
+
+	backups, err := s.store.GetInstallationBackups(&model.InstallationBackupFilter{
+		InstallationID: installation.ID,
+		Paging:         model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to list backup")
+	}
+
+	if len(backups) == 0 {
+		logger.Info("No existing backups found for installation")
+		return true, nil
+	}
+
+	backupIDs := getInstallationBackupsIDs(backups)
+
+	installationBackupsLocks := newBackupsLock(backupIDs, instanceID, s.store, logger)
+	if !installationBackupsLocks.TryLock() {
+		return false, errors.Errorf("Failed to lock %d installation backups", len(backups))
+	}
+	defer installationBackupsLocks.Unlock()
+
+	// Fetch the same backups again, now that we have the locks.
+	backups, err = s.store.GetInstallationBackups(&model.InstallationBackupFilter{
+		Paging: model.AllPagesNotDeleted(),
+		IDs:    backupIDs,
+	})
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch %d installation backups by ids", len(backups))
+	}
+
+	if len(backups) != len(backupIDs) {
+		logger.Warnf("Found only %d installation backups after locking, expected %d", len(backups), len(backupIDs))
+	}
+
+	deletedBackups := 0
+	deletingBackups := 0
+	deletionFailedBackups := 0
+
+	for _, backup := range backups {
+		switch backup.State {
+		case model.InstallationBackupStateDeleted:
+			deletedBackups++
+			continue
+		case model.InstallationBackupStateDeletionRequested:
+			deletingBackups++
+			continue
+		case model.InstallationBackupStateDeletionFailed:
+			deletionFailedBackups++
+			continue
+		}
+
+		logger.Debugf("Deleting installation backup %q in state %q", backup.ID, backup.State)
+		backup.State = model.InstallationBackupStateDeletionRequested
+		err = s.store.UpdateInstallationBackupState(backup)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to mark istallation backup %s for deletion", backup.ID)
+		}
+		deletingBackups++
+	}
+
+	logger.Debugf(
+		"Found %d installation backups, %d deleting, %d deleted, %d failed",
+		len(backups),
+		deletingBackups,
+		deletedBackups,
+		deletionFailedBackups,
+	)
+
+	if deletionFailedBackups > 0 {
+		return false, errors.Errorf("Failed to delete %d installation backups", deletionFailedBackups)
+	}
+
+	if deletingBackups > 0 {
+		logger.Infof("Installation backups deletion in progress, deleting backups %d", deletingBackups)
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
 	logger.Info("Finished final creation tasks")
 	s.metrics.InstallationCreationDurationHist.Observe(elapsedTimeInSeconds(installation.CreateAt))
@@ -1127,7 +1215,7 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installation *model.Installation, logger log.FieldLogger) (bool, error) {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
@@ -1160,8 +1248,23 @@ func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installati
 	return false, nil
 }
 
-// annotationsToIDs parses slice of annotations to slice of strings containing annotations IDs.
-func annotationsToIDs(annotations []*model.Annotation) []string {
+func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {
+	clusterInstallationIDs := make([]string, 0, len(clusterInstallations))
+	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+	}
+	return clusterInstallationIDs
+}
+
+func getInstallationBackupsIDs(backups []*model.InstallationBackup) []string {
+	backupIDs := make([]string, 0, len(backups))
+	for _, backup := range backups {
+		backupIDs = append(backupIDs, backup.ID)
+	}
+	return backupIDs
+}
+
+func getAnnotationsIDs(annotations []*model.Annotation) []string {
 	ids := make([]string, 0, len(annotations))
 	for _, ann := range annotations {
 		ids = append(ids, ann.ID)

@@ -118,7 +118,7 @@ func TestGetInstallationBackupsMetadata(t *testing.T) {
 		time.Sleep(1 * time.Millisecond) // Ensure RequestAt is different for all installations.
 	}
 
-	err = sqlStore.DeleteBackup(backupsMeta[2].ID)
+	err = sqlStore.DeleteInstallationBackup(backupsMeta[2].ID)
 	require.NoError(t, err)
 
 	for _, testCase := range []struct {
@@ -128,28 +128,33 @@ func TestGetInstallationBackupsMetadata(t *testing.T) {
 	}{
 		{
 			description: "fetch all not deleted",
-			filter:      &model.InstallationBackupFilter{PerPage: model.AllPerPage},
+			filter:      &model.InstallationBackupFilter{Paging: model.AllPagesNotDeleted()},
 			fetchedIds:  []string{backupsMeta[4].ID, backupsMeta[3].ID, backupsMeta[1].ID, backupsMeta[0].ID},
 		},
 		{
 			description: "fetch all for installation 1",
-			filter:      &model.InstallationBackupFilter{InstallationID: installation1.ID, IncludeDeleted: true, PerPage: model.AllPerPage},
+			filter:      &model.InstallationBackupFilter{InstallationID: installation1.ID, Paging: model.AllPagesWithDeleted()},
 			fetchedIds:  []string{backupsMeta[2].ID, backupsMeta[1].ID, backupsMeta[0].ID},
 		},
 		{
 			description: "fetch all for cluster installation ",
-			filter:      &model.InstallationBackupFilter{ClusterInstallationID: clusterInstallation.ID, PerPage: model.AllPerPage},
+			filter:      &model.InstallationBackupFilter{ClusterInstallationID: clusterInstallation.ID, Paging: model.AllPagesNotDeleted()},
 			fetchedIds:  []string{backupsMeta[1].ID, backupsMeta[0].ID},
 		},
 		{
 			description: "fetch for installation 1 without deleted",
-			filter:      &model.InstallationBackupFilter{InstallationID: installation1.ID, IncludeDeleted: false, PerPage: model.AllPerPage},
+			filter:      &model.InstallationBackupFilter{InstallationID: installation1.ID, Paging: model.AllPagesNotDeleted()},
 			fetchedIds:  []string{backupsMeta[1].ID, backupsMeta[0].ID},
 		},
 		{
 			description: "fetch requested installations",
-			filter:      &model.InstallationBackupFilter{State: model.InstallationBackupStateBackupRequested, PerPage: model.AllPerPage},
+			filter:      &model.InstallationBackupFilter{States: []model.InstallationBackupState{model.InstallationBackupStateBackupRequested}, Paging: model.AllPagesNotDeleted()},
 			fetchedIds:  []string{backupsMeta[3].ID, backupsMeta[0].ID},
+		},
+		{
+			description: "fetch with IDs",
+			filter:      &model.InstallationBackupFilter{IDs: []string{backupsMeta[0].ID, backupsMeta[3].ID, backupsMeta[4].ID}, Paging: model.AllPagesNotDeleted()},
+			fetchedIds:  []string{backupsMeta[4].ID, backupsMeta[3].ID, backupsMeta[0].ID},
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

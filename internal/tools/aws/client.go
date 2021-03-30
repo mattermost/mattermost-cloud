@@ -70,6 +70,7 @@ type AWS interface {
 
 	DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error
 	S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error
+	S3EnsureObjectDeleted(bucketName, path string) error
 
 	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)

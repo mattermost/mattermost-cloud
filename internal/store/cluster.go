@@ -119,15 +119,7 @@ func (sqlStore *SQLStore) GetClusters(filter *model.ClusterFilter) ([]*model.Clu
 }
 
 func (sqlStore *SQLStore) applyClustersFilter(builder sq.SelectBuilder, filter *model.ClusterFilter) sq.SelectBuilder {
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
-
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if filter.Annotations != nil && len(filter.Annotations.MatchAllIDs) > 0 {
 		builder = builder.Join(fmt.Sprintf("%s ON Cluster.ID=%s.ClusterID", clusterAnnotationTable, clusterAnnotationTable)).

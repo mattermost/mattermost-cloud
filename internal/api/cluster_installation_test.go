@@ -44,9 +44,7 @@ func TestGetClusterInstallations(t *testing.T) {
 
 	t.Run("no cluster installations", func(t *testing.T) {
 		clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
-			Page:           0,
-			PerPage:        10,
-			IncludeDeleted: true,
+			Paging: model.AllPagesWithDeleted(),
 		})
 		require.NoError(t, err)
 		require.Empty(t, clusterInstallations)
@@ -159,9 +157,11 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"page 0, perPage 2, exclude deleted",
 					&model.GetClusterInstallationsRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.ClusterInstallation{clusterInstallation1, clusterInstallation2},
 				},
@@ -169,9 +169,11 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"page 1, perPage 2, exclude deleted",
 					&model.GetClusterInstallationsRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: false,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: false,
+						},
 					},
 					[]*model.ClusterInstallation{clusterInstallation3},
 				},
@@ -179,9 +181,11 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"page 0, perPage 2, include deleted",
 					&model.GetClusterInstallationsRequest{
-						Page:           0,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           0,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.ClusterInstallation{clusterInstallation1, clusterInstallation2},
 				},
@@ -189,9 +193,11 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"page 1, perPage 2, include deleted",
 					&model.GetClusterInstallationsRequest{
-						Page:           1,
-						PerPage:        2,
-						IncludeDeleted: true,
+						Paging: model.Paging{
+							Page:           1,
+							PerPage:        2,
+							IncludeDeleted: true,
+						},
 					},
 					[]*model.ClusterInstallation{clusterInstallation3, clusterInstallation4},
 				},
@@ -199,10 +205,8 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"filter by cluster",
 					&model.GetClusterInstallationsRequest{
-						Page:           0,
-						PerPage:        100,
-						ClusterID:      clusterID1,
-						IncludeDeleted: false,
+						ClusterID: clusterID1,
+						Paging:    model.AllPagesNotDeleted(),
 					},
 					[]*model.ClusterInstallation{clusterInstallation1, clusterInstallation2},
 				},
@@ -210,10 +214,8 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"filter by installation",
 					&model.GetClusterInstallationsRequest{
-						Page:           0,
-						PerPage:        100,
 						InstallationID: installationID1,
-						IncludeDeleted: false,
+						Paging:         model.AllPagesNotDeleted(),
 					},
 					[]*model.ClusterInstallation{clusterInstallation1, clusterInstallation3},
 				},
@@ -221,11 +223,9 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"filter by cluster + installation",
 					&model.GetClusterInstallationsRequest{
-						Page:           0,
-						PerPage:        100,
 						ClusterID:      clusterID2,
 						InstallationID: installationID2,
-						IncludeDeleted: false,
+						Paging:         model.AllPagesNotDeleted(),
 					},
 					[]*model.ClusterInstallation{},
 				},
@@ -233,11 +233,9 @@ func TestGetClusterInstallations(t *testing.T) {
 				{
 					"filter by cluster + installation, include deleted",
 					&model.GetClusterInstallationsRequest{
-						Page:           0,
-						PerPage:        100,
 						ClusterID:      clusterID2,
 						InstallationID: installationID2,
-						IncludeDeleted: true,
+						Paging:         model.AllPagesWithDeleted(),
 					},
 					[]*model.ClusterInstallation{clusterInstallation4},
 				},
