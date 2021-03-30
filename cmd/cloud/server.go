@@ -19,6 +19,7 @@ import (
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
+	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
@@ -62,6 +63,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("backup-supervisor", false, "Whether this server will run a backup supervisor or not.")
+	serverCmd.PersistentFlags().Bool("import-supervisor", false, "Whether this server will run a workspace import supervisor or not.")
+	serverCmd.PersistentFlags().String("awat", "http://localhost:8077", "The location of the Automatic Workspace Archive Translator if the import supervisor is being used")
 
 	// Scheduling and installation options
 	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
@@ -151,7 +154,8 @@ var serverCmd = &cobra.Command{
 		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
 		backupSupervisor, _ := command.Flags().GetBool("backup-supervisor")
-		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor && !backupSupervisor {
+		importSupervisor, _ := command.Flags().GetBool("import-supervisor")
+		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor && !backupSupervisor && !importSupervisor {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -185,6 +189,7 @@ var serverCmd = &cobra.Command{
 			"installation-supervisor":                installationSupervisor,
 			"cluster-installation-supervisor":        clusterInstallationSupervisor,
 			"backup-supervisor":                      backupSupervisor,
+			"import-supervisor":                      importSupervisor,
 			"store-version":                          currentVersion,
 			"state-store":                            s3StateStore,
 			"working-directory":                      wd,
@@ -269,6 +274,13 @@ var serverCmd = &cobra.Command{
 		}
 		if backupSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
+		}
+		if importSupervisor {
+			awatAddress, _ := command.Flags().GetString("awat")
+			if awatAddress == "" {
+				return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
+			}
+			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a

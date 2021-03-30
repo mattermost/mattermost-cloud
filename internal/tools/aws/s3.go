@@ -7,6 +7,7 @@ package aws
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -130,12 +131,12 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 			Key:    srcBucketKey,
 		})
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to get object metadata for %s/%s", *srcBucketName, *srcBucketKey)
 	}
 
 	objectSize := *objectMetadata.ContentLength
 	var (
-		partSize     int64 = 5 * 1024 * 1024 // 5 MB parts like the example
+		partSize     int64 = 5 * 1024 * 1024 // 5 MB parts
 		bytePosition int64 = 0
 		partNum      int64 = 1
 	)
@@ -145,6 +146,7 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 		// that lastByte isn't beyond the end of the object.
 		lastByte := int(math.Min(float64(bytePosition+partSize-1), float64(objectSize-1)))
 		bytesRange := fmt.Sprintf("bytes=%d-%d", bytePosition, lastByte)
+
 		resp, err := a.service.s3.UploadPartCopy(
 			&s3.UploadPartCopyInput{
 				Bucket:          destBucketName,
@@ -155,21 +157,23 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 				UploadId:        uploadID,
 			})
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to upload part %d", partNum)
 		}
 		bytePosition += partSize
 		partNumber := partNum // copy this because AWS wants a pointer
+
+		// for some reason the ETag comes back from AWS surrounded with quotes???
+		etag := strings.TrimPrefix(strings.TrimSuffix(*resp.CopyPartResult.ETag, "\""), "\"")
 		completedParts = append(completedParts,
 			&s3.CompletedPart{
-				ETag:       resp.CopyPartResult.ETag,
+				ETag:       &etag,
 				PartNumber: &partNumber,
 			})
 	}
 
 	_, err = a.service.s3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
-		Bucket:              srcBucketName,
-		ExpectedBucketOwner: new(string),
-		Key:                 srcBucketKey,
+		Bucket: destBucketName,
+		Key:    destBucketKey,
 		MultipartUpload: &s3.CompletedMultipartUpload{
 			Parts: completedParts,
 		},
