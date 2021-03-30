@@ -110,7 +110,7 @@ func (request *CreateClusterRequest) Validate() error {
 
 // GetSupportedCniList starting with three supported CNI networking options, we can add more as required
 func GetSupportedCniList() []string {
-	return []string{"amazon-vpc-routed-eni", "amazonvpc", "weave", "canal"}
+	return []string{"amazon-vpc-routed-eni", "amazonvpc", "weave", "canal", "calico"}
 }
 
 // contains checks if a string is present in a slice

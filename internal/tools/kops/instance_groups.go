@@ -125,7 +125,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 		c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 	}
 
-	clusterData, err := c.GetClusterSpecInfoFromJSON(metadata.Name, "networking")
+	networking, err := c.GetClusterSpecInfoFromJSON(metadata.Name, "networking")
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.MasterCount = masterIGCount
 	metadata.NodeMinCount = nodeMinCount
 	metadata.NodeMaxCount = nodeMaxCount
-	metadata.Networking = clusterData
+	metadata.Networking = networking
 
 	return nil
 }
