@@ -68,18 +68,21 @@ func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return errors.Errorf("Installation %s not found for Import %s", imprt.InstallationID, imprt.ID)
 	}
 
-	destKey := fmt.Sprintf("%s/import/%s", installation.ID, imprt.Resource)
 	source := strings.SplitN(imprt.Resource, "/", 2)
 	if len(source) != 2 {
 		return errors.Errorf("failed to parse bucket/key from Import %s Resource %s", imprt.ID, imprt.Resource)
 	}
 	srcBucket := source[0]
 	srcKey := source[1]
+	destKey := fmt.Sprintf("%s/import/%s", installation.ID, srcKey)
 
 	// XXX TODO handle single tenant bucket names
 	destBucket, err := toolsAWS.GetMultitenantBucketNameForInstallation(installation.ID, is.store, is.awsClient)
 
 	is.logger.Debugf("copying %s/%s to %s/%s", srcBucket, srcKey, destBucket, destKey)
-	is.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey)
+	err = is.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey)
+	if err != nil {
+		return err
+	}
 	return nil
 }
