@@ -27,6 +27,7 @@ const (
 	// Run job with only one attempt to avoid possibility of waking up workspace before retry.
 	backupRestoreBackoffLimit int32 = 0
 	backupAction                    = "backup"
+	restoreAction                   = "restore"
 )
 
 // ErrJobBackoffLimitReached indicates that job failed all possible attempts and there is no reason for retrying.
@@ -81,34 +82,14 @@ func (o BackupOperator) TriggerBackup(
 		dataResidence.PathPrefix = installation.ID
 	}
 
-	envVars = append(envVars, o.prepareEnvs(dataResidence, storageEndpoint, fileStoreCfg.Secret, dbSecret)...)
+	envVars = append(envVars, prepareEnvs(dataResidence, storageEndpoint, fileStoreCfg.Secret, dbSecret)...)
 
-	backupJobName := jobName(backupAction, backup.ID)
+	backupJobName := makeJobName(backupAction, backup.ID)
 	job := o.createBackupRestoreJob(backupJobName, installation.ID, backupAction, envVars)
 
-	ctx := context.Background()
-	job, err := jobsClient.Create(ctx, job, metav1.CreateOptions{})
+	err := o.startJob(jobsClient, job, logger)
 	if err != nil {
-		if !k8sErrors.IsAlreadyExists(err) {
-			return nil, errors.Wrap(err, "failed to create backup job")
-		}
-		logger.Warn("Backup job already exists")
-	}
-
-	// Wait for 5 seconds for job to start, if it won't it will be caught on next round.
-	err = wait.Poll(time.Second, 5*time.Second, func() (bool, error) {
-		job, err = jobsClient.Get(ctx, backupJobName, metav1.GetOptions{})
-		if err != nil {
-			return false, errors.Wrap(err, "failed to get backup job")
-		}
-		if job.Status.Active == 0 && job.Status.CompletionTime == nil {
-			logger.Info("Backup job not yet started")
-			return false, nil
-		}
-		return true, nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "Backup job not yet started")
+		return nil, errors.Wrap(err, "Failed to start backup job")
 	}
 
 	return &dataResidence, nil
@@ -117,67 +98,143 @@ func (o BackupOperator) TriggerBackup(
 // CheckBackupStatus checks status of backup job,
 // returns job start time, when the job finished or -1 if it is still running.
 func (o BackupOperator) CheckBackupStatus(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) (int64, error) {
-	ctx := context.Background()
-	job, err := jobsClient.Get(ctx, jobName(backupAction, backup.ID), metav1.GetOptions{})
+	return o.checkJobStatus(jobsClient, makeJobName(backupAction, backup.ID), logger, extractStartTime)
+}
+
+// CleanupBackupJob removes backup job from the cluster if it exists.
+func (o BackupOperator) CleanupBackupJob(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) error {
+	return o.cleanupJob(jobsClient, makeJobName(backupAction, backup.ID), logger)
+}
+
+// TriggerRestore creates new restore job and waits for it to start.
+func (o BackupOperator) TriggerRestore(
+	jobsClient v1.JobInterface,
+	backup *model.InstallationBackup,
+	installation *model.Installation,
+	fileStoreCfg *model.FilestoreConfig,
+	dbSecret string,
+	logger log.FieldLogger) error {
+
+	if backup.DataResidence == nil {
+		return errors.New("Installation backup is invalid - data residence is nil")
+	}
+
+	storageEndpoint := backup.DataResidence.URL
+	var envVars []corev1.EnvVar
+
+	if installation.Filestore == model.InstallationFilestoreBifrost {
+		storageEndpoint = bifrostEndpoint
+		envVars = bifrostEnvs()
+	}
+
+	envVars = append(envVars, prepareEnvs(*backup.DataResidence, storageEndpoint, fileStoreCfg.Secret, dbSecret)...)
+
+	restoreJobName := makeJobName(restoreAction, backup.ID)
+	job := o.createBackupRestoreJob(restoreJobName, installation.ID, restoreAction, envVars)
+
+	err := o.startJob(jobsClient, job, logger)
 	if err != nil {
-		return -1, errors.Wrap(err, "failed to get backup job")
+		return errors.Wrap(err, "Failed to start restore job")
+	}
+	return nil
+}
+
+// CheckRestoreStatus checks status of restore job,
+// returns job start time, when the job finished or -1 if it is still running.
+func (o BackupOperator) CheckRestoreStatus(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) (int64, error) {
+	return o.checkJobStatus(jobsClient, makeJobName(restoreAction, backup.ID), logger, extractCompletionTime)
+}
+
+// CleanupRestoreJob removes restore job from the cluster if it exists.
+func (o BackupOperator) CleanupRestoreJob(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) error {
+	return o.cleanupJob(jobsClient, makeJobName(restoreAction, backup.ID), logger)
+}
+
+// startJob creates job if does not exists and waits for it to start.
+func (o BackupOperator) startJob(jobsClient v1.JobInterface, job *batchv1.Job, logger log.FieldLogger) error {
+	jobName := job.Name
+
+	ctx := context.Background()
+	job, err := jobsClient.Create(ctx, job, metav1.CreateOptions{})
+	if err != nil {
+		if !k8sErrors.IsAlreadyExists(err) {
+			return errors.Wrap(err, "failed to create restore job")
+		}
+		logger.Warnf("Job %q already exists", jobName)
+	}
+
+	// Wait for 5 seconds for job to start, if it won't it will be caught on next round.
+	err = wait.Poll(time.Second, 5*time.Second, func() (bool, error) {
+		job, err = jobsClient.Get(ctx, jobName, metav1.GetOptions{})
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to get %q job", jobName)
+		}
+		if job.Status.Active == 0 && job.Status.CompletionTime == nil {
+			logger.Infof("Job %q not yet started", jobName)
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		return errors.Wrapf(err, "Job %q not yet started", jobName)
+	}
+	return nil
+}
+
+func (o BackupOperator) checkJobStatus(
+	jobsClient v1.JobInterface,
+	jobName string,
+	logger log.FieldLogger,
+	extractTimestampFunc func(job *batchv1.Job, logger log.FieldLogger) int64) (int64, error) {
+	ctx := context.Background()
+	job, err := jobsClient.Get(ctx, jobName, metav1.GetOptions{})
+	if err != nil {
+		return -1, errors.Wrap(err, "failed to get job")
 	}
 
 	if job.Status.Succeeded > 0 {
-		logger.Info("Backup finished with success")
-		return o.extractStartTime(job, logger), nil
+		logger.Info("Job finished with success")
+		return extractTimestampFunc(job, logger), nil
 	}
 
 	if job.Status.Failed > 0 {
-		logger.Warnf("Backup job failed %d times", job.Status.Failed)
+		logger.Warnf("Job failed %d times", job.Status.Failed)
 	}
 
 	if job.Status.Active > 0 {
-		logger.Info("Backup job is still running")
+		logger.Info("Job is still running")
 		return -1, nil
 	}
 
 	if job.Status.Failed == 0 {
-		logger.Info("Backup job not started yet")
+		logger.Info("Job not started yet")
 		return -1, nil
 	}
 
 	backoffLimit := getInt32(job.Spec.BackoffLimit)
 	if job.Status.Failed > backoffLimit {
-		logger.Error("Backup job reached backoff limit")
+		logger.Error("Job reached backoff limit")
 		return -1, ErrJobBackoffLimitReached
 	}
 
-	logger.Infof("Backup job waiting for retry, will be retried at most %d more times", backoffLimit+1-job.Status.Failed)
+	logger.Infof("Job waiting for retry, will be retried at most %d more times", backoffLimit+1-job.Status.Failed)
 	return -1, nil
 }
 
-// CleanupBackupJob removes backup job from the cluster if it exists.
-func (o BackupOperator) CleanupBackupJob(jobsClient v1.JobInterface, backup *model.InstallationBackup, logger log.FieldLogger) error {
-	backupJobName := jobName(backupAction, backup.ID)
-
+func (o BackupOperator) cleanupJob(jobsClient v1.JobInterface, jobName string, logger log.FieldLogger) error {
 	deletePropagation := metav1.DeletePropagationBackground
 	ctx := context.Background()
-	err := jobsClient.Delete(ctx, backupJobName, metav1.DeleteOptions{PropagationPolicy: &deletePropagation})
+	err := jobsClient.Delete(ctx, jobName, metav1.DeleteOptions{PropagationPolicy: &deletePropagation})
 	if k8sErrors.IsNotFound(err) {
-		logger.Warnf("backup job %q does not exist, assuming already deleted", backupJobName)
+		logger.Warnf("Job %q does not exist, assuming already deleted", jobName)
 		return nil
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to delete backup job")
+		return errors.Wrap(err, "failed to delete job")
 	}
 
-	logger.Info("backup job successfully marked for deletion")
+	logger.Info("Job successfully marked for deletion")
 	return nil
-}
-
-func (o BackupOperator) extractStartTime(job *batchv1.Job, logger log.FieldLogger) int64 {
-	if job.Status.StartTime != nil {
-		return asMillis(*job.Status.StartTime)
-	}
-
-	logger.Warn("failed to get job start time, using creation timestamp")
-	return asMillis(job.CreationTimestamp)
 }
 
 func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, envs []corev1.EnvVar) *batchv1.Job {
@@ -226,11 +283,11 @@ func (o BackupOperator) createBackupRestoreContainer(action string, envs []corev
 	}
 }
 
-func (o BackupOperator) prepareEnvs(dataRes model.S3DataResidence, endpoint string, fileStoreSecret, dbSecret string) []corev1.EnvVar {
+func prepareEnvs(dataRes model.S3DataResidence, endpoint string, fileStoreSecret, dbSecret string) []corev1.EnvVar {
 	envs := []corev1.EnvVar{
 		{
 			Name:  "BRT_STORAGE_REGION",
-			Value: o.awsRegion,
+			Value: dataRes.Region,
 		},
 		{
 			Name:  "BRT_STORAGE_BUCKET",
@@ -289,11 +346,29 @@ func envSourceFromSecret(secretName, key string) *corev1.EnvVarSource {
 	}
 }
 
+func extractStartTime(job *batchv1.Job, logger log.FieldLogger) int64 {
+	if job.Status.StartTime != nil {
+		return asMillis(*job.Status.StartTime)
+	}
+
+	logger.Warn("failed to get job start time, using creation timestamp")
+	return asMillis(job.CreationTimestamp)
+}
+
+func extractCompletionTime(job *batchv1.Job, logger log.FieldLogger) int64 {
+	if job.Status.CompletionTime != nil {
+		return asMillis(*job.Status.CompletionTime)
+	}
+
+	logger.Warn("failed to get job completion time, using current time")
+	return asMillis(metav1.Now())
+}
+
 func backupObjectKey(id string) string {
 	return fmt.Sprintf("backup-%s", id)
 }
 
-func jobName(action, id string) string {
+func makeJobName(action, id string) string {
 	return fmt.Sprintf("database-%s-%s", action, id)
 }
 
