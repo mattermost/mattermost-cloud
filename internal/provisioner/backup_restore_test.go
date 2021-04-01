@@ -87,12 +87,14 @@ func TestOperator_TriggerBackup(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, "backup-restore", createdJob.Labels["app"])
+			assert.Equal(t, "backup", createdJob.Labels["action"])
 			assert.Equal(t, "installation-1", createdJob.Namespace)
 			assert.Equal(t, backupRestoreBackoffLimit, *createdJob.Spec.BackoffLimit)
 			assert.Equal(t, int32(100), *createdJob.Spec.TTLSecondsAfterFinished)
 
 			podTemplate := createdJob.Spec.Template
 			assert.Equal(t, "backup-restore", podTemplate.Labels["app"])
+			assert.Equal(t, "backup", podTemplate.Labels["action"])
 			assert.Equal(t, "mattermost/backup-restore:test", podTemplate.Spec.Containers[0].Image)
 
 			assert.Equal(t, []string{"backup"}, podTemplate.Spec.Containers[0].Args)
@@ -249,7 +251,7 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 			job, err = jobClinet.Update(context.Background(), job, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
-			t.Run("return start time when succeeded", func(t *testing.T) {
+			t.Run("return timestamp when succeeded", func(t *testing.T) {
 				timestamp, err := testCase.checkFunc(jobClinet, backupMeta, logrus.New())
 				require.NoError(t, err)
 				assert.Equal(t, testCase.expectedTimestamp, timestamp)
@@ -371,12 +373,14 @@ func TestOperator_TriggerRestore(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, "backup-restore", createdJob.Labels["app"])
+			assert.Equal(t, "restore", createdJob.Labels["action"])
 			assert.Equal(t, "installation-1", createdJob.Namespace)
 			assert.Equal(t, backupRestoreBackoffLimit, *createdJob.Spec.BackoffLimit)
 			assert.Equal(t, int32(100), *createdJob.Spec.TTLSecondsAfterFinished)
 
 			podTemplate := createdJob.Spec.Template
 			assert.Equal(t, "backup-restore", podTemplate.Labels["app"])
+			assert.Equal(t, "restore", podTemplate.Labels["action"])
 			assert.Equal(t, "mattermost/backup-restore:test", podTemplate.Spec.Containers[0].Image)
 
 			assert.Equal(t, []string{"restore"}, podTemplate.Spec.Containers[0].Args)

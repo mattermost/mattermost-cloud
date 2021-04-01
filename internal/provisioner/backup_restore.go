@@ -244,12 +244,18 @@ func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, e
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    map[string]string{"app": "backup-restore"},
+			Labels:    map[string]string{
+				"app": "backup-restore",
+				"action": action,
+			},
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "backup-restore"},
+					Labels: map[string]string{
+						"app": "backup-restore",
+						"action": action,
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
