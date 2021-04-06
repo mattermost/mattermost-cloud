@@ -51,7 +51,7 @@ controller:
     force-ssl-redirect: "true"
     server-snippet: |
       proxy_intercept_errors on;
-      error_page 410 "http://127.0.0.1:8076/api/v1/installation/wakeup?dns=$host&uri=$uri";
+      error_page 410 "http://127.0.0.1:8076/api/v1/installation/wakeup?dns=$host&uri=$request_uri";
 
   resources:
    limits:
