@@ -280,7 +280,7 @@ var serverCmd = &cobra.Command{
 			if awatAddress == "" {
 				return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 			}
-			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, logger))
+			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, kopsProvisioner, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
