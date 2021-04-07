@@ -13,6 +13,7 @@ func (c *Cmd) ExportKubecfg(name string) error {
 		"kubecfg",
 		arg("name", name),
 		arg("state", "s3://", c.s3StateStore),
+		arg("admin", "87600h"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops export kubecfg")

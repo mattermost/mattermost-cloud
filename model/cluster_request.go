@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 )
@@ -28,6 +27,7 @@ type CreateClusterRequest struct {
 	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Annotations            []string                       `json:"annotations,omitempty"`
+	Networking             string                         `json:"networking,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -55,6 +55,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	}
 	if request.NodeMaxCount == 0 {
 		request.NodeMaxCount = request.NodeMinCount
+	}
+	if len(request.Networking) == 0 {
+		request.Networking = "amazon-vpc-routed-eni"
 	}
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
@@ -98,7 +101,25 @@ func (request *CreateClusterRequest) Validate() error {
 	}
 	// TODO: check zones and instance types?
 
+	if !contains(GetSupportedCniList(), request.Networking) {
+		return errors.Errorf("unsupported cluster networking option %s", request.Networking)
+	}
 	return nil
+}
+
+// GetSupportedCniList starting with three supported CNI networking options, we can add more as required
+func GetSupportedCniList() []string {
+	return []string{"amazon-vpc-routed-eni", "amazonvpc", "weave", "canal", "calico"}
+}
+
+// contains checks if a string is present in a slice
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
 
 // NewCreateClusterRequestFromReader will create a CreateClusterRequest from an
@@ -121,19 +142,14 @@ func NewCreateClusterRequestFromReader(reader io.Reader) (*CreateClusterRequest,
 
 // GetClustersRequest describes the parameters to request a list of clusters.
 type GetClustersRequest struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetClustersRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
-	q.Add("page", strconv.Itoa(request.Page))
-	q.Add("per_page", strconv.Itoa(request.PerPage))
-	if request.IncludeDeleted {
-		q.Add("include_deleted", "true")
-	}
+	request.Paging.AddToQuery(q)
+
 	u.RawQuery = q.Encode()
 }
 
@@ -154,14 +170,39 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 
 // PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
-	Version *string `json:"version,omitempty"`
-	KopsAMI *string `json:"kops-ami,omitempty"`
+	Version       *string        `json:"version,omitempty"`
+	KopsAMI       *string        `json:"kops-ami,omitempty"`
+	RotatorConfig *RotatorConfig `json:"rotatorConfig,omitempty"`
 }
 
 // Validate validates the values of a cluster upgrade request.
 func (p *PatchUpgradeClusterRequest) Validate() error {
 	if p.Version != nil && !ValidClusterVersion(*p.Version) {
 		return errors.Errorf("unsupported cluster version %s", *p.Version)
+	}
+
+	if p.RotatorConfig != nil {
+		if p.RotatorConfig.UseRotator == nil {
+			return errors.Errorf("rotator config use rotator should be set")
+		}
+
+		if *p.RotatorConfig.UseRotator {
+			if p.RotatorConfig.EvictGracePeriod == nil {
+				return errors.Errorf("rotator config evict grace period should be set")
+			}
+			if p.RotatorConfig.MaxDrainRetries == nil {
+				return errors.Errorf("rotator config max drain retries should be set")
+			}
+			if p.RotatorConfig.MaxScaling == nil {
+				return errors.Errorf("rotator config max scaling should be set")
+			}
+			if p.RotatorConfig.WaitBetweenDrains == nil {
+				return errors.Errorf("rotator config wait between drains should be set")
+			}
+			if p.RotatorConfig.WaitBetweenRotations == nil {
+				return errors.Errorf("rotator config wait between rotations should be set")
+			}
+		}
 	}
 
 	return nil
@@ -181,8 +222,13 @@ func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
 		changes.AMI = *p.KopsAMI
 	}
 
+	if metadata.RotatorRequest == nil {
+		metadata.RotatorRequest = &RotatorMetadata{}
+	}
+
 	if applied {
 		metadata.ChangeRequest = changes
+		metadata.RotatorRequest.Config = p.RotatorConfig
 	}
 
 	return applied

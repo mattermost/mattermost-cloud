@@ -17,6 +17,8 @@ const (
 	// TypeClusterInstallation is the string value that represents a cluster
 	// installation.
 	TypeClusterInstallation = "cluster_installaton"
+	// TypeInstallationBackup is the string value that represents an installation backup.
+	TypeInstallationBackup = "installation_backup"
 )
 
 // Webhook is
@@ -30,10 +32,8 @@ type Webhook struct {
 
 // WebhookFilter describes the parameters used to constrain a set of webhooks.
 type WebhookFilter struct {
-	OwnerID        string
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
+	Paging
+	OwnerID string
 }
 
 // WebhookPayload is the payload sent in every webhook.

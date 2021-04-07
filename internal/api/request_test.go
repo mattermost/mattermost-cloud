@@ -24,6 +24,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"us-east-1a"},
+			Networking:         "amazon-vpc-routed-eni",
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":           {Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
@@ -84,6 +85,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"zone1", "zone2"},
+			Networking:         "amazon-vpc-routed-eni",
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":           {Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
@@ -112,9 +114,11 @@ func TestGetClustersRequestApplyToURL(t *testing.T) {
 		require.NoError(t, err)
 
 		getClustersRequest := &model.GetClustersRequest{
-			Page:           10,
-			PerPage:        123,
-			IncludeDeleted: true,
+			Paging: model.Paging{
+				Page:           10,
+				PerPage:        123,
+				IncludeDeleted: true,
+			},
 		}
 		getClustersRequest.ApplyToURL(u)
 

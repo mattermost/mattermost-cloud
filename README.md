@@ -29,8 +29,8 @@ The following is required to properly run the cloud server.
 1. Install [Go](https://golang.org/doc/install)
 2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.12.29
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
-3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.18.X
-4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.4.X
+3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.19.X
+4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.5.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
 
@@ -99,6 +99,10 @@ In a different terminal/window, to create a cluster:
 cloud cluster create --zones <availabiity-zone> --size SizeAlef500
 i.e.
 cloud cluster create --zones us-east-1c --size SizeAlef500
+```
+Note: Provisioner's default network provider is **amazon-vpc-routed-eni** which can be overridden using `--networking` flag. Supported network providers are weave, canal, calico, amazon-vpc-routed-eni.e.g
+```bash
+    cloud cluster create --networking weave
 ```
 You will get a response like this one:
 ```bash

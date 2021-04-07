@@ -189,127 +189,117 @@ func TestInstallations(t *testing.T) {
 		{
 			"page 0, perPage 0",
 			&model.InstallationFilter{
-				Page:           0,
-				PerPage:        0,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        0,
+					IncludeDeleted: false,
+				},
 			},
 			nil,
 		},
 		{
 			"page 0, perPage 1",
 			&model.InstallationFilter{
-				Page:           0,
-				PerPage:        1,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        1,
+					IncludeDeleted: false,
+				},
 			},
 			[]*model.Installation{installation1},
 		},
 		{
 			"page 0, perPage 10",
 			&model.InstallationFilter{
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        10,
+					IncludeDeleted: false,
+				},
 			},
 			[]*model.Installation{installation1, installation2, installation3},
 		},
 		{
 			"page 0, perPage 10, include deleted",
 			&model.InstallationFilter{
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: true,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        10,
+					IncludeDeleted: true,
+				},
 			},
 			[]*model.Installation{installation1, installation2, installation3, installation4},
 		},
 		{
 			"owner 1",
 			&model.InstallationFilter{
-				OwnerID:        ownerID1,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				OwnerID: ownerID1,
+				Paging:  model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation1, installation2},
 		},
 		{
 			"owner 1, include deleted",
 			&model.InstallationFilter{
-				OwnerID:        ownerID1,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: true,
+				OwnerID: ownerID1,
+				Paging:  model.AllPagesWithDeleted(),
 			},
 			[]*model.Installation{installation1, installation2},
 		},
 		{
 			"owner 2",
 			&model.InstallationFilter{
-				OwnerID:        ownerID2,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				OwnerID: ownerID2,
+				Paging:  model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation3},
 		},
 		{
 			"owner 2, include deleted",
 			&model.InstallationFilter{
-				OwnerID:        ownerID2,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: true,
+				OwnerID: ownerID2,
+				Paging:  model.AllPagesWithDeleted(),
 			},
 			[]*model.Installation{installation3, installation4},
 		},
 		{
 			"group 1",
 			&model.InstallationFilter{
-				GroupID:        groupID1,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: true,
+				GroupID: groupID1,
+				Paging:  model.AllPagesWithDeleted(),
 			},
 			[]*model.Installation{installation1, installation3},
 		},
 		{
 			"owner 2, group 2, include deleted",
 			&model.InstallationFilter{
-				OwnerID:        ownerID2,
-				GroupID:        groupID2,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: true,
+				OwnerID: ownerID2,
+				GroupID: groupID2,
+				Paging:  model.AllPagesWithDeleted(),
 			},
 			[]*model.Installation{installation4},
 		},
 		{
 			"dns 3",
 			&model.InstallationFilter{
-				DNS:            installation3.DNS,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				DNS:    installation3.DNS,
+				Paging: model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation3},
 		},
 		{
 			"state stable",
 			&model.InstallationFilter{
-				State:          model.InstallationStateStable,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				State:  model.InstallationStateStable,
+				Paging: model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation2},
 		},
 		{
 			"state creation-requested",
 			&model.InstallationFilter{
-				State:          model.InstallationStateCreationRequested,
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				State:  model.InstallationStateCreationRequested,
+				Paging: model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation1, installation3},
 		},
@@ -909,6 +899,84 @@ func TestUpdateInstallationCRVersion(t *testing.T) {
 	storedInstallation, err := sqlStore.GetInstallation(installation1.ID, false, false)
 	require.NoError(t, err)
 	assert.Equal(t, storedInstallation.CRVersion, model.V1betaCRVersion)
+}
+
+func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation1 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns1.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateStable,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err := sqlStore.CreateInstallation(installation1, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation2 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns2.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateStable,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err = sqlStore.CreateInstallation(installation2, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation3 := &model.Installation{
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		DNS:       "dns3.example.com",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateHibernating,
+		CRVersion: model.V1alphaCRVersion,
+	}
+
+	err = sqlStore.CreateInstallation(installation3, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation1.ID})
+	require.NoError(t, err)
+	assert.Equal(t, installation1.GetDatabaseWeight(), totalWeight)
+	assert.Equal(t, model.DefaultDatabaseWeight, totalWeight)
+
+	totalWeight, err = sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation3.ID})
+	require.NoError(t, err)
+	assert.Equal(t, installation3.GetDatabaseWeight(), totalWeight)
+	assert.Equal(t, model.HibernatingDatabaseWeight, totalWeight)
+
+	totalWeight, err = sqlStore.GetInstallationsTotalDatabaseWeight([]string{
+		installation1.ID,
+		installation2.ID,
+		installation3.ID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, installation1.GetDatabaseWeight()+installation2.GetDatabaseWeight()+installation3.GetDatabaseWeight(), totalWeight)
 }
 
 func TestDeleteInstallation(t *testing.T) {

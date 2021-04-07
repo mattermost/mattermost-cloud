@@ -33,6 +33,10 @@ func initSecurity(apiRouter *mux.Router, context *Context) {
 	securityGroupRouter := securityRouter.PathPrefix("/group/{group:[A-Za-z0-9]{26}}").Subrouter()
 	securityGroupRouter.Handle("/api/lock", addContext(handleGroupLockAPI)).Methods("POST")
 	securityGroupRouter.Handle("/api/unlock", addContext(handleGroupUnlockAPI)).Methods("POST")
+
+	securityBackupRouter := securityRouter.PathPrefix("/installation/backup/{backup:[A-Za-z0-9]{26}}").Subrouter()
+	securityBackupRouter.Handle("/api/lock", addContext(handleBackupLockAPI)).Methods("POST")
+	securityBackupRouter.Handle("/api/unlock", addContext(handleBackupUnlockAPI)).Methods("POST")
 }
 
 // handleClusterLockAPI responds to POST /api/security/cluster/{cluster}/api/lock,
@@ -267,6 +271,66 @@ func handleGroupUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
 		err = c.Store.UnlockGroupAPI(group.ID)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to unlock group API")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleBackupLockAPI responds to POST /api/security/installation/backup/{backup}/api/lock,
+// locking API changes for this installation backup.
+func handleBackupLockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	backupID := vars["backup"]
+	c.Logger = c.Logger.WithField("backup", backupID)
+
+	backupMetadata, err := c.Store.GetInstallationBackup(backupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query backup")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if backupMetadata == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if !backupMetadata.APISecurityLock {
+		err = c.Store.LockInstallationBackupAPI(backupMetadata.ID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to lock backup API")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleBackupUnlockAPI responds to POST /api/security/installation/backup/{backup}/api/unlock,
+// unlocking API changes for this backup.
+func handleBackupUnlockAPI(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	backupID := vars["backup"]
+	c.Logger = c.Logger.WithField("backup", backupID)
+
+	backupMetadata, err := c.Store.GetInstallationBackup(backupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query backup")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if backupMetadata == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if backupMetadata.APISecurityLock {
+		err = c.Store.UnlockInstallationBackupAPI(backupMetadata.ID)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to unlock backup API")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

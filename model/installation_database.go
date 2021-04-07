@@ -40,6 +40,7 @@ type Database interface {
 	Teardown(store InstallationDatabaseStoreInterface, keepData bool, logger log.FieldLogger) error
 	Snapshot(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
 	GenerateDatabaseSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error)
+	RefreshResourceMetadata(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error
 }
 
 // InstallationDatabaseStoreInterface is the interface necessary for SQLStore
@@ -51,6 +52,7 @@ type InstallationDatabaseStoreInterface interface {
 	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
 	GetMultitenantDatabaseForInstallationID(installationID string) (*MultitenantDatabase, error)
+	GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error)
 	CreateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 	UpdateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
 	LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error)
@@ -94,6 +96,12 @@ func (d *MysqlOperatorDatabase) Teardown(store InstallationDatabaseStoreInterfac
 // accessing the MySQL operator database.
 func (d *MysqlOperatorDatabase) GenerateDatabaseSecret(store InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error) {
 	return nil, nil
+}
+
+// RefreshResourceMetadata ensures various operator database resource's metadata
+// are correct.
+func (d *MysqlOperatorDatabase) RefreshResourceMetadata(store InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	return nil
 }
 
 // InternalDatabase returns true if the installation's database is internal

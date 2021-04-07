@@ -5,6 +5,7 @@
 package api
 
 import (
+	"github.com/mattermost/mattermost-cloud/model"
 	"net/url"
 	"strconv"
 
@@ -53,23 +54,27 @@ func parseBool(u *url.URL, name string, defaultValue bool) (bool, error) {
 	return value, nil
 }
 
-func parsePaging(u *url.URL) (int, int, bool, error) {
+func parsePaging(u *url.URL) (model.Paging, error) {
 	page, err := parseInt(u, "page", 0)
 	if err != nil {
-		return 0, 0, false, err
+		return model.Paging{}, err
 	}
 
 	perPage, err := parseInt(u, "per_page", 100)
 	if err != nil {
-		return 0, 0, false, err
+		return model.Paging{}, err
 	}
 
 	includeDeleted, err := parseBool(u, "include_deleted", false)
 	if err != nil {
-		return 0, 0, false, err
+		return model.Paging{}, err
 	}
 
-	return page, perPage, includeDeleted, nil
+	return model.Paging{
+		Page:           page,
+		PerPage:        perPage,
+		IncludeDeleted: includeDeleted,
+	}, nil
 }
 
 func parseGroupConfig(u *url.URL) (bool, bool, error) {

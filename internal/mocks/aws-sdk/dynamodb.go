@@ -38,6 +38,56 @@ func (m *MockDynamoDBAPI) EXPECT() *MockDynamoDBAPIMockRecorder {
 	return m.recorder
 }
 
+// BatchExecuteStatement mocks base method
+func (m *MockDynamoDBAPI) BatchExecuteStatement(arg0 *dynamodb.BatchExecuteStatementInput) (*dynamodb.BatchExecuteStatementOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchExecuteStatement", arg0)
+	ret0, _ := ret[0].(*dynamodb.BatchExecuteStatementOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchExecuteStatement indicates an expected call of BatchExecuteStatement
+func (mr *MockDynamoDBAPIMockRecorder) BatchExecuteStatement(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchExecuteStatement", reflect.TypeOf((*MockDynamoDBAPI)(nil).BatchExecuteStatement), arg0)
+}
+
+// BatchExecuteStatementRequest mocks base method
+func (m *MockDynamoDBAPI) BatchExecuteStatementRequest(arg0 *dynamodb.BatchExecuteStatementInput) (*request.Request, *dynamodb.BatchExecuteStatementOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchExecuteStatementRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.BatchExecuteStatementOutput)
+	return ret0, ret1
+}
+
+// BatchExecuteStatementRequest indicates an expected call of BatchExecuteStatementRequest
+func (mr *MockDynamoDBAPIMockRecorder) BatchExecuteStatementRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchExecuteStatementRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).BatchExecuteStatementRequest), arg0)
+}
+
+// BatchExecuteStatementWithContext mocks base method
+func (m *MockDynamoDBAPI) BatchExecuteStatementWithContext(arg0 context.Context, arg1 *dynamodb.BatchExecuteStatementInput, arg2 ...request.Option) (*dynamodb.BatchExecuteStatementOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BatchExecuteStatementWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.BatchExecuteStatementOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchExecuteStatementWithContext indicates an expected call of BatchExecuteStatementWithContext
+func (mr *MockDynamoDBAPIMockRecorder) BatchExecuteStatementWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchExecuteStatementWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).BatchExecuteStatementWithContext), varargs...)
+}
+
 // BatchGetItem mocks base method
 func (m *MockDynamoDBAPI) BatchGetItem(arg0 *dynamodb.BatchGetItemInput) (*dynamodb.BatchGetItemOutput, error) {
 	m.ctrl.T.Helper()
@@ -671,6 +721,56 @@ func (mr *MockDynamoDBAPIMockRecorder) DescribeEndpointsWithContext(arg0, arg1 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeEndpointsWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeEndpointsWithContext), varargs...)
 }
 
+// DescribeExport mocks base method
+func (m *MockDynamoDBAPI) DescribeExport(arg0 *dynamodb.DescribeExportInput) (*dynamodb.DescribeExportOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeExport", arg0)
+	ret0, _ := ret[0].(*dynamodb.DescribeExportOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeExport indicates an expected call of DescribeExport
+func (mr *MockDynamoDBAPIMockRecorder) DescribeExport(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeExport", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeExport), arg0)
+}
+
+// DescribeExportRequest mocks base method
+func (m *MockDynamoDBAPI) DescribeExportRequest(arg0 *dynamodb.DescribeExportInput) (*request.Request, *dynamodb.DescribeExportOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeExportRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.DescribeExportOutput)
+	return ret0, ret1
+}
+
+// DescribeExportRequest indicates an expected call of DescribeExportRequest
+func (mr *MockDynamoDBAPIMockRecorder) DescribeExportRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeExportRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeExportRequest), arg0)
+}
+
+// DescribeExportWithContext mocks base method
+func (m *MockDynamoDBAPI) DescribeExportWithContext(arg0 context.Context, arg1 *dynamodb.DescribeExportInput, arg2 ...request.Option) (*dynamodb.DescribeExportOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeExportWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.DescribeExportOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeExportWithContext indicates an expected call of DescribeExportWithContext
+func (mr *MockDynamoDBAPIMockRecorder) DescribeExportWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeExportWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeExportWithContext), varargs...)
+}
+
 // DescribeGlobalTable mocks base method
 func (m *MockDynamoDBAPI) DescribeGlobalTable(arg0 *dynamodb.DescribeGlobalTableInput) (*dynamodb.DescribeGlobalTableOutput, error) {
 	m.ctrl.T.Helper()
@@ -769,6 +869,56 @@ func (mr *MockDynamoDBAPIMockRecorder) DescribeGlobalTableWithContext(arg0, arg1
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeGlobalTableWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeGlobalTableWithContext), varargs...)
+}
+
+// DescribeKinesisStreamingDestination mocks base method
+func (m *MockDynamoDBAPI) DescribeKinesisStreamingDestination(arg0 *dynamodb.DescribeKinesisStreamingDestinationInput) (*dynamodb.DescribeKinesisStreamingDestinationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeKinesisStreamingDestination", arg0)
+	ret0, _ := ret[0].(*dynamodb.DescribeKinesisStreamingDestinationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeKinesisStreamingDestination indicates an expected call of DescribeKinesisStreamingDestination
+func (mr *MockDynamoDBAPIMockRecorder) DescribeKinesisStreamingDestination(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeKinesisStreamingDestination", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeKinesisStreamingDestination), arg0)
+}
+
+// DescribeKinesisStreamingDestinationRequest mocks base method
+func (m *MockDynamoDBAPI) DescribeKinesisStreamingDestinationRequest(arg0 *dynamodb.DescribeKinesisStreamingDestinationInput) (*request.Request, *dynamodb.DescribeKinesisStreamingDestinationOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeKinesisStreamingDestinationRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.DescribeKinesisStreamingDestinationOutput)
+	return ret0, ret1
+}
+
+// DescribeKinesisStreamingDestinationRequest indicates an expected call of DescribeKinesisStreamingDestinationRequest
+func (mr *MockDynamoDBAPIMockRecorder) DescribeKinesisStreamingDestinationRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeKinesisStreamingDestinationRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeKinesisStreamingDestinationRequest), arg0)
+}
+
+// DescribeKinesisStreamingDestinationWithContext mocks base method
+func (m *MockDynamoDBAPI) DescribeKinesisStreamingDestinationWithContext(arg0 context.Context, arg1 *dynamodb.DescribeKinesisStreamingDestinationInput, arg2 ...request.Option) (*dynamodb.DescribeKinesisStreamingDestinationOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeKinesisStreamingDestinationWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.DescribeKinesisStreamingDestinationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeKinesisStreamingDestinationWithContext indicates an expected call of DescribeKinesisStreamingDestinationWithContext
+func (mr *MockDynamoDBAPIMockRecorder) DescribeKinesisStreamingDestinationWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeKinesisStreamingDestinationWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeKinesisStreamingDestinationWithContext), varargs...)
 }
 
 // DescribeLimits mocks base method
@@ -971,6 +1121,256 @@ func (mr *MockDynamoDBAPIMockRecorder) DescribeTimeToLiveWithContext(arg0, arg1 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTimeToLiveWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).DescribeTimeToLiveWithContext), varargs...)
 }
 
+// DisableKinesisStreamingDestination mocks base method
+func (m *MockDynamoDBAPI) DisableKinesisStreamingDestination(arg0 *dynamodb.DisableKinesisStreamingDestinationInput) (*dynamodb.DisableKinesisStreamingDestinationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableKinesisStreamingDestination", arg0)
+	ret0, _ := ret[0].(*dynamodb.DisableKinesisStreamingDestinationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableKinesisStreamingDestination indicates an expected call of DisableKinesisStreamingDestination
+func (mr *MockDynamoDBAPIMockRecorder) DisableKinesisStreamingDestination(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableKinesisStreamingDestination", reflect.TypeOf((*MockDynamoDBAPI)(nil).DisableKinesisStreamingDestination), arg0)
+}
+
+// DisableKinesisStreamingDestinationRequest mocks base method
+func (m *MockDynamoDBAPI) DisableKinesisStreamingDestinationRequest(arg0 *dynamodb.DisableKinesisStreamingDestinationInput) (*request.Request, *dynamodb.DisableKinesisStreamingDestinationOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableKinesisStreamingDestinationRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.DisableKinesisStreamingDestinationOutput)
+	return ret0, ret1
+}
+
+// DisableKinesisStreamingDestinationRequest indicates an expected call of DisableKinesisStreamingDestinationRequest
+func (mr *MockDynamoDBAPIMockRecorder) DisableKinesisStreamingDestinationRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableKinesisStreamingDestinationRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).DisableKinesisStreamingDestinationRequest), arg0)
+}
+
+// DisableKinesisStreamingDestinationWithContext mocks base method
+func (m *MockDynamoDBAPI) DisableKinesisStreamingDestinationWithContext(arg0 context.Context, arg1 *dynamodb.DisableKinesisStreamingDestinationInput, arg2 ...request.Option) (*dynamodb.DisableKinesisStreamingDestinationOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DisableKinesisStreamingDestinationWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.DisableKinesisStreamingDestinationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableKinesisStreamingDestinationWithContext indicates an expected call of DisableKinesisStreamingDestinationWithContext
+func (mr *MockDynamoDBAPIMockRecorder) DisableKinesisStreamingDestinationWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableKinesisStreamingDestinationWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).DisableKinesisStreamingDestinationWithContext), varargs...)
+}
+
+// EnableKinesisStreamingDestination mocks base method
+func (m *MockDynamoDBAPI) EnableKinesisStreamingDestination(arg0 *dynamodb.EnableKinesisStreamingDestinationInput) (*dynamodb.EnableKinesisStreamingDestinationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableKinesisStreamingDestination", arg0)
+	ret0, _ := ret[0].(*dynamodb.EnableKinesisStreamingDestinationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableKinesisStreamingDestination indicates an expected call of EnableKinesisStreamingDestination
+func (mr *MockDynamoDBAPIMockRecorder) EnableKinesisStreamingDestination(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableKinesisStreamingDestination", reflect.TypeOf((*MockDynamoDBAPI)(nil).EnableKinesisStreamingDestination), arg0)
+}
+
+// EnableKinesisStreamingDestinationRequest mocks base method
+func (m *MockDynamoDBAPI) EnableKinesisStreamingDestinationRequest(arg0 *dynamodb.EnableKinesisStreamingDestinationInput) (*request.Request, *dynamodb.EnableKinesisStreamingDestinationOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableKinesisStreamingDestinationRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.EnableKinesisStreamingDestinationOutput)
+	return ret0, ret1
+}
+
+// EnableKinesisStreamingDestinationRequest indicates an expected call of EnableKinesisStreamingDestinationRequest
+func (mr *MockDynamoDBAPIMockRecorder) EnableKinesisStreamingDestinationRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableKinesisStreamingDestinationRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).EnableKinesisStreamingDestinationRequest), arg0)
+}
+
+// EnableKinesisStreamingDestinationWithContext mocks base method
+func (m *MockDynamoDBAPI) EnableKinesisStreamingDestinationWithContext(arg0 context.Context, arg1 *dynamodb.EnableKinesisStreamingDestinationInput, arg2 ...request.Option) (*dynamodb.EnableKinesisStreamingDestinationOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableKinesisStreamingDestinationWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.EnableKinesisStreamingDestinationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableKinesisStreamingDestinationWithContext indicates an expected call of EnableKinesisStreamingDestinationWithContext
+func (mr *MockDynamoDBAPIMockRecorder) EnableKinesisStreamingDestinationWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableKinesisStreamingDestinationWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).EnableKinesisStreamingDestinationWithContext), varargs...)
+}
+
+// ExecuteStatement mocks base method
+func (m *MockDynamoDBAPI) ExecuteStatement(arg0 *dynamodb.ExecuteStatementInput) (*dynamodb.ExecuteStatementOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteStatement", arg0)
+	ret0, _ := ret[0].(*dynamodb.ExecuteStatementOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteStatement indicates an expected call of ExecuteStatement
+func (mr *MockDynamoDBAPIMockRecorder) ExecuteStatement(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStatement", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExecuteStatement), arg0)
+}
+
+// ExecuteStatementRequest mocks base method
+func (m *MockDynamoDBAPI) ExecuteStatementRequest(arg0 *dynamodb.ExecuteStatementInput) (*request.Request, *dynamodb.ExecuteStatementOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteStatementRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.ExecuteStatementOutput)
+	return ret0, ret1
+}
+
+// ExecuteStatementRequest indicates an expected call of ExecuteStatementRequest
+func (mr *MockDynamoDBAPIMockRecorder) ExecuteStatementRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStatementRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExecuteStatementRequest), arg0)
+}
+
+// ExecuteStatementWithContext mocks base method
+func (m *MockDynamoDBAPI) ExecuteStatementWithContext(arg0 context.Context, arg1 *dynamodb.ExecuteStatementInput, arg2 ...request.Option) (*dynamodb.ExecuteStatementOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteStatementWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.ExecuteStatementOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteStatementWithContext indicates an expected call of ExecuteStatementWithContext
+func (mr *MockDynamoDBAPIMockRecorder) ExecuteStatementWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStatementWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExecuteStatementWithContext), varargs...)
+}
+
+// ExecuteTransaction mocks base method
+func (m *MockDynamoDBAPI) ExecuteTransaction(arg0 *dynamodb.ExecuteTransactionInput) (*dynamodb.ExecuteTransactionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteTransaction", arg0)
+	ret0, _ := ret[0].(*dynamodb.ExecuteTransactionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteTransaction indicates an expected call of ExecuteTransaction
+func (mr *MockDynamoDBAPIMockRecorder) ExecuteTransaction(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTransaction", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExecuteTransaction), arg0)
+}
+
+// ExecuteTransactionRequest mocks base method
+func (m *MockDynamoDBAPI) ExecuteTransactionRequest(arg0 *dynamodb.ExecuteTransactionInput) (*request.Request, *dynamodb.ExecuteTransactionOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteTransactionRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.ExecuteTransactionOutput)
+	return ret0, ret1
+}
+
+// ExecuteTransactionRequest indicates an expected call of ExecuteTransactionRequest
+func (mr *MockDynamoDBAPIMockRecorder) ExecuteTransactionRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTransactionRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExecuteTransactionRequest), arg0)
+}
+
+// ExecuteTransactionWithContext mocks base method
+func (m *MockDynamoDBAPI) ExecuteTransactionWithContext(arg0 context.Context, arg1 *dynamodb.ExecuteTransactionInput, arg2 ...request.Option) (*dynamodb.ExecuteTransactionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteTransactionWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.ExecuteTransactionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteTransactionWithContext indicates an expected call of ExecuteTransactionWithContext
+func (mr *MockDynamoDBAPIMockRecorder) ExecuteTransactionWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTransactionWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExecuteTransactionWithContext), varargs...)
+}
+
+// ExportTableToPointInTime mocks base method
+func (m *MockDynamoDBAPI) ExportTableToPointInTime(arg0 *dynamodb.ExportTableToPointInTimeInput) (*dynamodb.ExportTableToPointInTimeOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportTableToPointInTime", arg0)
+	ret0, _ := ret[0].(*dynamodb.ExportTableToPointInTimeOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExportTableToPointInTime indicates an expected call of ExportTableToPointInTime
+func (mr *MockDynamoDBAPIMockRecorder) ExportTableToPointInTime(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportTableToPointInTime", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExportTableToPointInTime), arg0)
+}
+
+// ExportTableToPointInTimeRequest mocks base method
+func (m *MockDynamoDBAPI) ExportTableToPointInTimeRequest(arg0 *dynamodb.ExportTableToPointInTimeInput) (*request.Request, *dynamodb.ExportTableToPointInTimeOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportTableToPointInTimeRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.ExportTableToPointInTimeOutput)
+	return ret0, ret1
+}
+
+// ExportTableToPointInTimeRequest indicates an expected call of ExportTableToPointInTimeRequest
+func (mr *MockDynamoDBAPIMockRecorder) ExportTableToPointInTimeRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportTableToPointInTimeRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExportTableToPointInTimeRequest), arg0)
+}
+
+// ExportTableToPointInTimeWithContext mocks base method
+func (m *MockDynamoDBAPI) ExportTableToPointInTimeWithContext(arg0 context.Context, arg1 *dynamodb.ExportTableToPointInTimeInput, arg2 ...request.Option) (*dynamodb.ExportTableToPointInTimeOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExportTableToPointInTimeWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.ExportTableToPointInTimeOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExportTableToPointInTimeWithContext indicates an expected call of ExportTableToPointInTimeWithContext
+func (mr *MockDynamoDBAPIMockRecorder) ExportTableToPointInTimeWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportTableToPointInTimeWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).ExportTableToPointInTimeWithContext), varargs...)
+}
+
 // GetItem mocks base method
 func (m *MockDynamoDBAPI) GetItem(arg0 *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 	m.ctrl.T.Helper()
@@ -1152,6 +1552,89 @@ func (mr *MockDynamoDBAPIMockRecorder) ListContributorInsightsWithContext(arg0, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContributorInsightsWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).ListContributorInsightsWithContext), varargs...)
+}
+
+// ListExports mocks base method
+func (m *MockDynamoDBAPI) ListExports(arg0 *dynamodb.ListExportsInput) (*dynamodb.ListExportsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListExports", arg0)
+	ret0, _ := ret[0].(*dynamodb.ListExportsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExports indicates an expected call of ListExports
+func (mr *MockDynamoDBAPIMockRecorder) ListExports(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExports", reflect.TypeOf((*MockDynamoDBAPI)(nil).ListExports), arg0)
+}
+
+// ListExportsPages mocks base method
+func (m *MockDynamoDBAPI) ListExportsPages(arg0 *dynamodb.ListExportsInput, arg1 func(*dynamodb.ListExportsOutput, bool) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListExportsPages", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ListExportsPages indicates an expected call of ListExportsPages
+func (mr *MockDynamoDBAPIMockRecorder) ListExportsPages(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExportsPages", reflect.TypeOf((*MockDynamoDBAPI)(nil).ListExportsPages), arg0, arg1)
+}
+
+// ListExportsPagesWithContext mocks base method
+func (m *MockDynamoDBAPI) ListExportsPagesWithContext(arg0 context.Context, arg1 *dynamodb.ListExportsInput, arg2 func(*dynamodb.ListExportsOutput, bool) bool, arg3 ...request.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExportsPagesWithContext", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ListExportsPagesWithContext indicates an expected call of ListExportsPagesWithContext
+func (mr *MockDynamoDBAPIMockRecorder) ListExportsPagesWithContext(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExportsPagesWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).ListExportsPagesWithContext), varargs...)
+}
+
+// ListExportsRequest mocks base method
+func (m *MockDynamoDBAPI) ListExportsRequest(arg0 *dynamodb.ListExportsInput) (*request.Request, *dynamodb.ListExportsOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListExportsRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*dynamodb.ListExportsOutput)
+	return ret0, ret1
+}
+
+// ListExportsRequest indicates an expected call of ListExportsRequest
+func (mr *MockDynamoDBAPIMockRecorder) ListExportsRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExportsRequest", reflect.TypeOf((*MockDynamoDBAPI)(nil).ListExportsRequest), arg0)
+}
+
+// ListExportsWithContext mocks base method
+func (m *MockDynamoDBAPI) ListExportsWithContext(arg0 context.Context, arg1 *dynamodb.ListExportsInput, arg2 ...request.Option) (*dynamodb.ListExportsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListExportsWithContext", varargs...)
+	ret0, _ := ret[0].(*dynamodb.ListExportsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListExportsWithContext indicates an expected call of ListExportsWithContext
+func (mr *MockDynamoDBAPIMockRecorder) ListExportsWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExportsWithContext", reflect.TypeOf((*MockDynamoDBAPI)(nil).ListExportsWithContext), varargs...)
 }
 
 // ListGlobalTables mocks base method

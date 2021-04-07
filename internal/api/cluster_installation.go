@@ -34,7 +34,7 @@ func handleGetClusterInstallations(c *Context, w http.ResponseWriter, r *http.Re
 	clusterID := r.URL.Query().Get("cluster")
 	installationID := r.URL.Query().Get("installation")
 
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -44,9 +44,7 @@ func handleGetClusterInstallations(c *Context, w http.ResponseWriter, r *http.Re
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      clusterID,
 		InstallationID: installationID,
-		Page:           page,
-		PerPage:        perPage,
-		IncludeDeleted: includeDeleted,
+		Paging:         paging,
 	}
 
 	clusterInstallations, err := c.Store.GetClusterInstallations(filter)

@@ -5,6 +5,7 @@
 package kops
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"strings"
@@ -43,8 +44,8 @@ func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataR
 	if kopsRequest.AMI != "" {
 		args = append(args, arg("image", kopsRequest.AMI))
 	}
-	if cloud == "aws" {
-		args = append(args, arg("networking", "amazon-vpc-routed-eni"))
+	if kopsRequest.Networking != "" {
+		args = append(args, arg("networking", kopsRequest.Networking))
 	}
 
 	if len(privateSubnetIds) != 0 {
@@ -115,6 +116,7 @@ func (c *Cmd) UpdateCluster(name, dir string) error {
 		"--yes",
 		arg("target", "terraform"),
 		arg("out", dir),
+		arg("admin", "87600h"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops update cluster")
@@ -192,6 +194,42 @@ func (c *Cmd) GetCluster(name string) (string, error) {
 	}
 
 	return trimmed, nil
+}
+
+// GetClusterSpecInfoFromJSON invokes kops get cluster, using the context of the created Cmd, and
+// returns the stdout.
+func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (string, error) {
+	var clusterdata map[string]interface{}
+	stdout, _, err := c.run(
+		"get",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+		arg("output", "json"),
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to invoke kops get cluster")
+	}
+
+	err = json.Unmarshal(stdout, &clusterdata)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to unmarshal JSON output from kops get cluster")
+	}
+	data, err := json.Marshal(clusterdata["spec"].(map[string]interface{})[subData])
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to marshal cluster specification value for %s", subData)
+	}
+	return getCurrentCni(string(data)), nil
+}
+
+// getCurrentCni, it get the current CNI value for the cluster
+func getCurrentCni(network string) string {
+	for _, CNI := range model.GetSupportedCniList() {
+		if strings.Contains(network, CNI) {
+			return CNI
+		}
+	}
+	return ""
 }
 
 // Replace invokes kops replace, using the context of the created Cmd, and

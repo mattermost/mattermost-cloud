@@ -5,9 +5,10 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
 
@@ -23,6 +24,8 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	}
 
 	installationsRouter := apiRouter.PathPrefix("/installations").Subrouter()
+	initInstallationBackup(installationsRouter, context)
+
 	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
 	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")
 	installationsRouter.Handle("/count", addContext(handleGetNumberOfInstallations)).Methods("GET")
@@ -74,7 +77,7 @@ func handleGetInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -94,13 +97,11 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 	dns := r.URL.Query().Get("dns_name")
 
 	filter := &model.InstallationFilter{
-		OwnerID:        owner,
-		GroupID:        group,
-		State:          state,
-		Page:           page,
-		PerPage:        perPage,
-		IncludeDeleted: includeDeleted,
-		DNS:            dns,
+		OwnerID: owner,
+		GroupID: group,
+		State:   state,
+		Paging:  paging,
+		DNS:     dns,
 	}
 
 	installations, err := c.Store.GetInstallationDTOs(filter, includeGroupConfig, includeGroupConfigOverrides)
@@ -563,7 +564,7 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	oldState := installationDTO.State
-	newState := model.InstallationStateUpdateRequested
+	newState := model.InstallationStateWakeUpRequested
 
 	if !installationDTO.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to wake up installation while in state %s", installationDTO.State)
@@ -625,6 +626,22 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	if !installationDTO.ValidTransitionState(newState) {
 		c.Logger.Warnf("unable to delete installation while in state %s", installationDTO.State)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	runningBackups, err := c.Store.GetInstallationBackups(&model.InstallationBackupFilter{
+		InstallationID: installationID,
+		States:         model.AllInstallationBackupsStatesRunning,
+		Paging:         model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get list of running backups")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if len(runningBackups) > 0 {
+		c.Logger.Error("there are running backups for the installation, cannot delete")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

@@ -79,7 +79,7 @@ func handleGetWebhooks(c *Context, w http.ResponseWriter, r *http.Request) {
 	var err error
 	owner := r.URL.Query().Get("owner")
 
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -87,10 +87,8 @@ func handleGetWebhooks(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := &model.WebhookFilter{
-		OwnerID:        owner,
-		Page:           page,
-		PerPage:        perPage,
-		IncludeDeleted: includeDeleted,
+		OwnerID: owner,
+		Paging:  paging,
 	}
 
 	webhooks, err := c.Store.GetWebhooks(filter)

@@ -5,6 +5,7 @@
 package provisioner
 
 import (
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -13,34 +14,41 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
+// ProvisioningParams represent configuration used during various provisioning operations.
+type ProvisioningParams struct {
+	S3StateStore            string
+	AllowCIDRRangeList      []string
+	VpnCIDRList             []string
+	Owner                   string
+	UseExistingAWSResources bool
+}
+
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	s3StateStore            string
-	allowCIDRRangeList      []string
-	vpnCIDRList             []string
-	owner                   string
-	useExistingAWSResources bool
-	resourceUtil            *utils.ResourceUtil
-	logger                  log.FieldLogger
-	store                   model.InstallationDatabaseStoreInterface
-	kopsCache               map[string]*kops.Cmd
+	params         ProvisioningParams
+	resourceUtil   *utils.ResourceUtil
+	logger         log.FieldLogger
+	store          model.InstallationDatabaseStoreInterface
+	backupOperator *BackupOperator
+	kopsCache      map[string]*kops.Cmd
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
-func NewKopsProvisioner(s3StateStore, owner string, useExistingAWSResources bool, allowCIDRRangeList, vpnCIDRList []string,
-	resourceUtil *utils.ResourceUtil, logger log.FieldLogger, store model.InstallationDatabaseStoreInterface) *KopsProvisioner {
+func NewKopsProvisioner(
+	provisioningParams ProvisioningParams,
+	resourceUtil *utils.ResourceUtil,
+	logger log.FieldLogger,
+	store model.InstallationDatabaseStoreInterface,
+	backupOperator *BackupOperator) *KopsProvisioner {
 	logger = logger.WithField("provisioner", "kops")
 
 	return &KopsProvisioner{
-		s3StateStore:            s3StateStore,
-		useExistingAWSResources: useExistingAWSResources,
-		allowCIDRRangeList:      allowCIDRRangeList,
-		vpnCIDRList:             vpnCIDRList,
-		logger:                  logger,
-		resourceUtil:            resourceUtil,
-		owner:                   owner,
-		store:                   store,
-		kopsCache:               make(map[string]*kops.Cmd),
+		params:         provisioningParams,
+		logger:         logger,
+		resourceUtil:   resourceUtil,
+		store:          store,
+		backupOperator: backupOperator,
+		kopsCache:      make(map[string]*kops.Cmd),
 	}
 }
 
@@ -72,7 +80,7 @@ func (provisioner *KopsProvisioner) getCachedKopsClient(name string, logger log.
 	}
 
 	logger.Debugf("Building kops client cache for %s", name)
-	kopsClient, err := kops.New(provisioner.s3StateStore, logger)
+	kopsClient, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create kops wrapper")
 	}
@@ -110,4 +118,23 @@ func (provisioner *KopsProvisioner) invalidateCachedKopsClientOnError(err error,
 	}
 
 	provisioner.invalidateCachedKopsClient(name, logger)
+}
+
+func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.FieldLogger) (*k8s.KubeClient, func(err error), error) {
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(clusterName, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
+	}
+	invalidateOnError := func(err error) {
+		provisioner.invalidateCachedKopsClientOnError(err, clusterName, logger)
+	}
+	defer invalidateOnError(err)
+
+	var k8sClient *k8s.KubeClient
+	k8sClient, err = k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient, invalidateOnError, nil
 }

@@ -44,6 +44,7 @@ func init() {
 	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
 	clusterCreateCmd.Flags().String("nginx-internal-values", model.NginxInternalDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
+	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
@@ -71,6 +72,12 @@ func init() {
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
 	clusterUpgradeCmd.Flags().String("version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
+	clusterUpgradeCmd.Flags().Bool("use-rotator", true, "Whether the cluster will be upgraded using the node rotator.")
+	clusterUpgradeCmd.Flags().Int("max-scaling", 5, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes, then the number of nodes will be the maximum number.")
+	clusterUpgradeCmd.Flags().Int("max-drain-retries", 10, "The number of times to retry a node drain.")
+	clusterUpgradeCmd.Flags().Int("evict-grace-period", 600, "The pod eviction grace period when draining in seconds.")
+	clusterUpgradeCmd.Flags().Int("wait-between-rotations", 60, "Τhe time to wait between each rotation of a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-drains", 60, "The time to wait between each node drain in a group of nodes.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
@@ -86,9 +93,7 @@ func init() {
 	clusterGetCmd.Flags().String("cluster", "", "The id of the cluster to be fetched.")
 	clusterGetCmd.MarkFlagRequired("cluster")
 
-	clusterListCmd.Flags().Int("page", 0, "The page of clusters to fetch, starting at 0.")
-	clusterListCmd.Flags().Int("per-page", 100, "The number of clusters to fetch per page.")
-	clusterListCmd.Flags().Bool("include-deleted", false, "Whether to include deleted clusters.")
+	registerPagingFlags(clusterListCmd)
 	clusterListCmd.Flags().Bool("table", false, "Whether to display the returned cluster list in a table or not")
 
 	clusterUtilitiesCmd.Flags().String("cluster", "", "The id of the cluster whose utilities are to be fetched.")
@@ -135,6 +140,7 @@ var clusterCreateCmd = &cobra.Command{
 		zones, _ := command.Flags().GetString("zones")
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 		annotations, _ := command.Flags().GetStringArray("annotation")
+		networking, _ := command.Flags().GetString("networking")
 
 		request := &model.CreateClusterRequest{
 			Provider:               provider,
@@ -144,6 +150,7 @@ var clusterCreateCmd = &cobra.Command{
 			AllowInstallations:     allowInstallations,
 			DesiredUtilityVersions: processUtilityFlags(command),
 			Annotations:            annotations,
+			Networking:             networking,
 		}
 
 		size, _ := command.Flags().GetString("size")
@@ -286,10 +293,26 @@ var clusterUpgradeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
+		useRotator, _ := command.Flags().GetBool("use-rotator")
+		maxScaling, _ := command.Flags().GetInt("max-scaling")
+		maxDrainRetries, _ := command.Flags().GetInt("max-drain-retries")
+		evictGracePeriod, _ := command.Flags().GetInt("evict-grace-period")
+		waitBetweenRotations, _ := command.Flags().GetInt("wait-between-rotations")
+		waitBetweenDrains, _ := command.Flags().GetInt("wait-between-drains")
+
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:           &useRotator,
+			MaxScaling:           &maxScaling,
+			MaxDrainRetries:      &maxDrainRetries,
+			EvictGracePeriod:     &evictGracePeriod,
+			WaitBetweenRotations: &waitBetweenRotations,
+			WaitBetweenDrains:    &waitBetweenDrains,
+		}
 
 		request := &model.PatchUpgradeClusterRequest{
-			Version: getStringFlagPointer(command, "version"),
-			KopsAMI: getStringFlagPointer(command, "kops-ami"),
+			Version:       getStringFlagPointer(command, "version"),
+			KopsAMI:       getStringFlagPointer(command, "kops-ami"),
+			RotatorConfig: &rotatorConfig,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -427,13 +450,10 @@ var clusterListCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
-		includeDeleted, _ := command.Flags().GetBool("include-deleted")
+		paging := parsePagingFlags(command)
+
 		clusters, err := client.GetClusters(&model.GetClustersRequest{
-			Page:           page,
-			PerPage:        perPage,
-			IncludeDeleted: includeDeleted,
+			Paging: paging,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query clusters")
@@ -443,7 +463,7 @@ var clusterListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES"})
+			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "NETWORKING"})
 
 			for _, cluster := range clusters {
 				table.Append([]string{
@@ -452,6 +472,7 @@ var clusterListCmd = &cobra.Command{
 					cluster.ProvisionerMetadataKops.Version,
 					fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
 					fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
+					cluster.ProvisionerMetadataKops.Networking,
 				})
 			}
 			table.Render()

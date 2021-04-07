@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/suite"
@@ -36,11 +39,23 @@ type TestMultitenantDatabaseSuite struct {
 func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.sqlStore = MakeTestSQLStore(s.t, testlib.MakeLogger(s.t))
 
-	s.installationID0 = "intalllation_id0"
-	s.installationID1 = "intalllation_id1"
-	s.installationID2 = "intalllation_id2"
-	s.installationID3 = "intalllation_id3"
-	s.installationID4 = "intalllation_id4"
+	installations := []*model.Installation{
+		{DNS: "dns0.com"},
+		{DNS: "dns1.com"},
+		{DNS: "dns2.com"},
+		{DNS: "dns3.com"},
+		{DNS: "dns4.com"},
+	}
+	for i := range installations {
+		err := s.sqlStore.CreateInstallation(installations[i], nil)
+		require.NoError(s.t, err)
+	}
+
+	s.installationID0 = installations[0].ID
+	s.installationID1 = installations[1].ID
+	s.installationID2 = installations[2].ID
+	s.installationID3 = installations[3].ID
+	s.installationID4 = installations[4].ID
 
 	s.lockerID = s.installationID0
 
@@ -105,7 +120,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetNotFound() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 2,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -114,7 +129,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraint() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 3,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -125,7 +140,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintOne() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintZero() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 1,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -134,7 +149,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintZero() {
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintFilterNotNil() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: 0,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -149,7 +164,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintAll() {
 
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -164,7 +179,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLockerIDConstraintAll() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		LockerID:              s.installationID0,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -174,7 +189,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLockerIDConstraintAll() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		PerPage: model.AllPerPage,
+		Paging: model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -182,7 +197,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetNoLimitConstraint() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabase() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
-		PerPage: model.AllPerPage,
+		Paging: model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
@@ -237,7 +252,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 	databases, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		VpcID:                 "vpc_id0",
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().NotNil(databases)
@@ -246,9 +261,86 @@ func (s *TestMultitenantDatabaseSuite) TestGetDatabasesWithVpcIDFilter() {
 	databases, err = s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		VpcID:                 "does_not_exist",
 		MaxInstallationsLimit: model.NoInstallationsLimit,
-		PerPage:               model.AllPerPage,
+		Paging:                model.AllPagesNotDeleted(),
 	})
 	s.Assert().NoError(err)
 	s.Assert().Nil(databases)
 	s.Assert().Equal(0, len(databases))
+}
+
+func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
+	sqlStore := MakeTestSQLStore(t, testlib.MakeLogger(t))
+	defer CloseConnection(t, sqlStore)
+
+	// 2 + 6.75 = 8.75
+	installations := []*model.Installation{
+		{DNS: "test0.dns.com", State: model.InstallationStateStable},
+		{DNS: "test1.dns.com", State: model.InstallationStateStable},
+		{DNS: "test2.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test3.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test4.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test5.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test6.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test7.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test8.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test9.dns.com", State: model.InstallationStateHibernating},
+		{DNS: "test10.dns.com", State: model.InstallationStateHibernating},
+	}
+	installationIDs := model.MultitenantDatabaseInstallations{}
+	for i := range installations {
+		err := sqlStore.CreateInstallation(installations[i], nil)
+		require.NoError(t, err)
+
+		installationIDs = append(installationIDs, installations[i].ID)
+	}
+
+	database1 := &model.MultitenantDatabase{
+		ID:            "database_id0",
+		VpcID:         "vpc_id0",
+		Installations: installationIDs,
+	}
+
+	err := sqlStore.CreateMultitenantDatabase(database1)
+	require.NoError(t, err)
+
+	for _, testCase := range []struct {
+		description      string
+		maxInstallations int
+		databases        []*model.MultitenantDatabase
+	}{
+		{
+			description:      "found when high limit",
+			maxInstallations: 100,
+			databases:        []*model.MultitenantDatabase{database1},
+		},
+		{
+			description:      "found when 1 more than current count",
+			maxInstallations: 12,
+			databases:        []*model.MultitenantDatabase{database1},
+		},
+		{
+			description:      "found when counting hibernated as .75",
+			maxInstallations: 10,
+			databases:        []*model.MultitenantDatabase{database1},
+		},
+		{
+			description:      "not found when ceiling weight",
+			maxInstallations: 9,
+			databases:        nil,
+		},
+		{
+			description:      "not found when less than counted weight",
+			maxInstallations: 7,
+			databases:        nil,
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			dbs, err := sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+				Paging:                model.AllPagesNotDeleted(),
+				MaxInstallationsLimit: testCase.maxInstallations,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, testCase.databases, dbs)
+		})
+	}
 }

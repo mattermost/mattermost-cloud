@@ -202,6 +202,12 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 	err := s.provisioner.UpgradeCluster(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upgrade cluster")
+		logger.Info("Updating cluster store with latest cluster data")
+		err = s.store.UpdateCluster(cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to save updated cluster metadata")
+			return model.ClusterStateRefreshMetadata
+		}
 		return model.ClusterStateUpgradeFailed
 	}
 
@@ -223,6 +229,7 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logger log.FieldLogger) string {
 	if cluster.ProvisionerMetadataKops != nil {
 		cluster.ProvisionerMetadataKops.ClearChangeRequest()
+		cluster.ProvisionerMetadataKops.ClearRotatorRequest()
 		cluster.ProvisionerMetadataKops.ClearWarnings()
 	}
 

@@ -37,6 +37,11 @@ func NewRDSDatabase(databaseType, installationID string, client *Client) *RDSDat
 	}
 }
 
+// RefreshResourceMetadata ensures various database resource's metadata are correct.
+func (d *RDSDatabase) RefreshResourceMetadata(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	return nil
+}
+
 // Provision completes all the steps necessary to provision a RDS database.
 func (d *RDSDatabase) Provision(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	d.client.AddSQLStore(store)
@@ -217,7 +222,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 	}
 
 	clusterInstallations, err := d.client.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		PerPage:        model.AllPerPage,
+		Paging:         model.AllPagesNotDeleted(),
 		InstallationID: installationID,
 	})
 	if err != nil {

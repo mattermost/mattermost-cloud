@@ -53,7 +53,7 @@ func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // handleGetGroups responds to GET /api/groups, returning the specified page of groups.
 func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
-	page, perPage, includeDeleted, err := parsePaging(r.URL)
+	paging, err := parsePaging(r.URL)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse paging parameters")
 		w.WriteHeader(http.StatusBadRequest)
@@ -61,9 +61,7 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter := &model.GroupFilter{
-		Page:           page,
-		PerPage:        perPage,
-		IncludeDeleted: includeDeleted,
+		Paging: paging,
 	}
 
 	groups, err := c.Store.GetGroups(filter)
@@ -178,10 +176,8 @@ func handleDeleteGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	installations, err := c.Store.GetInstallations(&model.InstallationFilter{
-		GroupID:        groupID,
-		Page:           0,
-		PerPage:        model.AllPerPage,
-		IncludeDeleted: false,
+		GroupID: groupID,
+		Paging:  model.AllPagesNotDeleted(),
 	}, false, false)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get installations in group")
@@ -233,8 +229,7 @@ func handleGetGroupStatus(c *Context, w http.ResponseWriter, r *http.Request) {
 // returning the rollout status of all groups.
 func handleGetGroupsStatus(c *Context, w http.ResponseWriter, r *http.Request) {
 	filter := &model.GroupFilter{
-		PerPage:        model.AllPerPage,
-		IncludeDeleted: false,
+		Paging: model.AllPagesNotDeleted(),
 	}
 
 	groups, err := c.Store.GetGroups(filter)

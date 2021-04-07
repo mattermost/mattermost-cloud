@@ -15,8 +15,7 @@ func init() {
 
 	databaseListCmd.Flags().String("vpc-id", "", "The VPC ID by which to filter databases.")
 	databaseListCmd.Flags().String("database-type", "", "The database type by which to filter databases.")
-	databaseListCmd.Flags().Int("page", 0, "The page of databases to fetch, starting at 0.")
-	databaseListCmd.Flags().Int("per-page", 100, "The number of databases to fetch per page.")
+	registerPagingFlags(databaseListCmd)
 
 	databaseCmd.AddCommand(databaseListCmd)
 }
@@ -37,13 +36,12 @@ var databaseListCmd = &cobra.Command{
 
 		vpcID, _ := command.Flags().GetString("vpc-id")
 		databaseType, _ := command.Flags().GetString("database-type")
-		page, _ := command.Flags().GetInt("page")
-		perPage, _ := command.Flags().GetInt("per-page")
+		paging := parsePagingFlags(command)
+
 		databases, err := client.GetMultitenantDatabases(&model.GetDatabasesRequest{
 			VpcID:        vpcID,
 			DatabaseType: databaseType,
-			Page:         page,
-			PerPage:      perPage,
+			Paging:       paging,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query databases")

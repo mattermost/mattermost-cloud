@@ -25,6 +25,7 @@ type Cluster struct {
 	APISecurityLock         bool
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
+	Networking              string
 }
 
 // Clone returns a deep copy the cluster.
@@ -71,10 +72,8 @@ func ClustersFromReader(reader io.Reader) ([]*Cluster, error) {
 
 // ClusterFilter describes the parameters used to constrain a set of clusters.
 type ClusterFilter struct {
-	Page           int
-	PerPage        int
-	IncludeDeleted bool
-	Annotations    *AnnotationsFilter
+	Paging
+	Annotations *AnnotationsFilter
 }
 
 // AnnotationsFilter describes filter based on Annotations.

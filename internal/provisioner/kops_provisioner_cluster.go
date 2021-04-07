@@ -16,17 +16,23 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	rotatorModel "github.com/mattermost/rotator/model"
+	"github.com/mattermost/rotator/rotator"
 )
 
 // DefaultKubernetesVersion is the default value for a kubernetes cluster
 // version value.
-const DefaultKubernetesVersion = "0.0.0"
+const (
+	DefaultKubernetesVersion = "0.0.0"
+	igFilename               = "ig-nodes.yaml"
+)
 
 // PrepareCluster ensures a cluster object is ready for provisioning.
 func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) bool {
@@ -68,18 +74,18 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrapf(err, "failed to get the CIDR for the VPC Name %s", cncVPCName)
 	}
 	allowSSHCIDRS := []string{cncVPCCIDR}
-	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.vpnCIDRList...)
+	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.params.VpnCIDRList...)
 
 	logger.WithField("name", kopsMetadata.Name).Info("Creating cluster")
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kops, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
 	defer kops.Close()
 
 	var clusterResources aws.ClusterResources
-	if provisioner.useExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, provisioner.owner, logger)
+	if provisioner.params.UseExistingAWSResources {
+		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
@@ -105,7 +111,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to create kops cluster")
 	}
 
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
@@ -334,6 +340,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}, {
 			Path:            "manifests/metric-server/metric-server.yaml",
 			DeployNamespace: "kube-system",
+		}, {
+			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
+			DeployNamespace: "kube-system",
 		},
 	}
 	err = k8sClient.CreateFromFiles(files)
@@ -460,7 +469,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		}
 	}
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kops, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
@@ -508,7 +517,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		return err
 	}
 
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
@@ -533,6 +542,16 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	err = terraformClient.Apply()
 	if err != nil {
 		return err
+	}
+
+	if cluster.ProvisionerMetadataKops.RotatorRequest.Config != nil {
+		if *cluster.ProvisionerMetadataKops.RotatorRequest.Config.UseRotator {
+			logger.Info("Using node rotator for node upgrade")
+			err = provisioner.RotateClusterNodes(cluster)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	err = kops.RollingUpdateCluster(kopsMetadata.Name)
@@ -564,6 +583,47 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	return nil
 }
 
+// RotateClusterNodes rotates k8s cluster nodes using the Mattermost node rotator
+func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kops client from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	k8sClient, err := k8s.NewFromFile(kopsClient.GetKubeConfigPath(), logger)
+	if err != nil {
+		return err
+	}
+	clientset, err := kubernetes.NewForConfig(k8sClient.GetConfig())
+
+	clusterRotator := rotatorModel.Cluster{
+		ClusterID:            cluster.ID,
+		MaxScaling:           *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxScaling,
+		RotateMasters:        true,
+		RotateWorkers:        true,
+		MaxDrainRetries:      *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxDrainRetries,
+		EvictGracePeriod:     *cluster.ProvisionerMetadataKops.RotatorRequest.Config.EvictGracePeriod,
+		WaitBetweenRotations: *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenRotations,
+		WaitBetweenDrains:    *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenDrains,
+		ClientSet:            clientset,
+	}
+
+	rotatorMetadata := cluster.ProvisionerMetadataKops.RotatorRequest.Status
+	if rotatorMetadata == nil {
+		rotatorMetadata = &rotator.RotatorMetadata{}
+	}
+	rotatorMetadata, err = rotator.InitRotateCluster(&clusterRotator, rotatorMetadata, logger)
+	if err != nil {
+		cluster.ProvisionerMetadataKops.RotatorRequest.Status = rotatorMetadata
+		return err
+	}
+
+	return nil
+}
+
 // ResizeCluster resizes a cluster.
 func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
@@ -575,7 +635,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "KopsMetadata ChangeRequest failed validation")
 	}
 
-	kops, err := kops.New(provisioner.s3StateStore, logger)
+	kops, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create kops wrapper")
 	}
@@ -586,7 +646,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.s3StateStore, logger)
+	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
 	}
@@ -604,29 +664,32 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 
 	logger.Info("Resizing cluster")
 
-	igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, "nodes")
-	if err != nil {
-		return err
-	}
+	for igName, changeMetadata := range kopsMetadata.GetWorkerNodesResizeChanges() {
+		logger.Infof("Resizing instance group %s to %d nodes", igName, changeMetadata.NodeMinCount)
 
-	igManifest, err = grossKopsReplaceSize(
-		igManifest,
-		kopsMetadata.ChangeRequest.NodeInstanceType,
-		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMinCount),
-		fmt.Sprintf("%d", kopsMetadata.ChangeRequest.NodeMaxCount),
-	)
-	if err != nil {
-		return err
-	}
+		igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, igName)
+		if err != nil {
+			return err
+		}
 
-	igFilename := "ig-nodes.yaml"
-	err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
-	if err != nil {
-		return err
-	}
-	_, err = kops.Replace(igFilename)
-	if err != nil {
-		return err
+		igManifest, err = grossKopsReplaceSize(
+			igManifest,
+			kopsMetadata.ChangeRequest.NodeInstanceType,
+			fmt.Sprintf("%d", changeMetadata.NodeMinCount),
+			fmt.Sprintf("%d", changeMetadata.NodeMaxCount),
+		)
+		if err != nil {
+			return errors.Wrap(err, "failed to update instance group yaml file")
+		}
+
+		err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
+		if err != nil {
+			return errors.Wrap(err, "failed to write instance group yaml file")
+		}
+		_, err = kops.Replace(igFilename)
+		if err != nil {
+			return errors.Wrap(err, "failed to replace instance group resources")
+		}
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
@@ -720,7 +783,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 	}
 
 	if !skipDeleteTerraform {
-		terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.s3StateStore, logger)
+		terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to create terraform wrapper")
 		}

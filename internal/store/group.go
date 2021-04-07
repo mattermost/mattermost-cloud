@@ -284,15 +284,7 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 	builder := groupSelect.
 		OrderBy("CreateAt ASC")
 
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
-
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	var rawGroups rawGroups
 	err := sqlStore.selectBuilder(sqlStore.db, &rawGroups, builder)

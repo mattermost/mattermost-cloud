@@ -93,11 +93,7 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	builder := clusterInstallationSelect.
 		OrderBy("CreateAt ASC")
 
-	if filter.PerPage != model.AllPerPage {
-		builder = builder.
-			Limit(uint64(filter.PerPage)).
-			Offset(uint64(filter.Page * filter.PerPage))
-	}
+	builder = applyPagingFilter(builder, filter.Paging)
 
 	if len(filter.IDs) > 0 {
 		builder = builder.Where(sq.Eq{"ID": filter.IDs})
@@ -107,9 +103,6 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	}
 	if filter.InstallationID != "" {
 		builder = builder.Where("InstallationID = ?", filter.InstallationID)
-	}
-	if !filter.IncludeDeleted {
-		builder = builder.Where("DeleteAt = 0")
 	}
 
 	var clusterInstallations []*model.ClusterInstallation

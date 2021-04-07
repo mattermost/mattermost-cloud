@@ -136,36 +136,44 @@ func TestGroups(t *testing.T) {
 		{
 			"page 0, perPage 0",
 			&model.GroupFilter{
-				Page:           0,
-				PerPage:        0,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        0,
+					IncludeDeleted: false,
+				},
 			},
 			nil,
 		},
 		{
 			"page 0, perPage 1",
 			&model.GroupFilter{
-				Page:           0,
-				PerPage:        1,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        1,
+					IncludeDeleted: false,
+				},
 			},
 			[]*model.Group{group1},
 		},
 		{
 			"page 0, perPage 10",
 			&model.GroupFilter{
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: false,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        10,
+					IncludeDeleted: false,
+				},
 			},
 			[]*model.Group{group1, group2, group3},
 		},
 		{
 			"page 0, perPage 10, include deleted",
 			&model.GroupFilter{
-				Page:           0,
-				PerPage:        10,
-				IncludeDeleted: true,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        10,
+					IncludeDeleted: true,
+				},
 			},
 			[]*model.Group{group1, group2, group3, group4},
 		},
