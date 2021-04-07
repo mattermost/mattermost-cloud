@@ -227,7 +227,11 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 				installationSecret.MasterPassword,
 				rdsCluster,
 			)
-		databaseConnectionCheck = databaseConnectionString
+		databaseConnectionCheck =
+			MattermostPostgresConnStringCheck(
+				installationSecret.MasterUsername,
+				installationSecret.MasterPassword,
+			)
 	}
 	secretStringData := map[string]string{
 		"DB_CONNECTION_STRING":              databaseConnectionString,
@@ -934,7 +938,7 @@ func (d *RDSMultitenantDatabase) ensureUserHasCreatePermissionsOnDatabase(ctx co
 func (d *RDSMultitenantDatabase) dropDatabaseIfExists(ctx context.Context, databaseName string) error {
 	// Query placeholders don't seem to work with argument database.
 	// See https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r422533477
-	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s CASCADE", databaseName)
+	query := fmt.Sprintf("DROP DATABASE IF EXISTS %s", databaseName)
 
 	_, err := d.db.QueryContext(ctx, query)
 	if err != nil {
@@ -983,7 +987,7 @@ func (d *RDSMultitenantDatabase) ensureSchemaIsCreated(ctx context.Context, sche
 			return errors.Wrap(err, "failed to run create schema mySQL command")
 		}
 	} else {
-		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", schema)
+		query := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS AUTHORIZATION %s", secret.MasterUsername)
 		_, err := databaseConn.QueryContext(ctx, query)
 		if err != nil {
 			return errors.Wrap(err, "failed to run create schema PostgreSQL command")
@@ -1012,7 +1016,7 @@ func (d *RDSMultitenantDatabase) dropSchemaIfExists(ctx context.Context, usernam
 		if err != nil {
 			return errors.Wrapf(err, "failed to GRANT installation user %s to master user PostgreSQL command", username)
 		}
-		query = fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", schema)
+		query = fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", username)
 		_, err = d.db.QueryContext(ctx, query)
 		if err != nil {
 			return errors.Wrap(err, "failed to run DROP schema PostgreSQL command")
@@ -1033,11 +1037,11 @@ func (d *RDSMultitenantDatabase) dropUserIfExists(ctx context.Context, username 
 			return errors.Wrap(err, "failed to run DROP schema mySQL command")
 		}
 	} else {
-		//REASSIGN OWNED BY user_3un6hbn943fa5jtmbp4tfjbd9y TO mmcloud;
-		query := fmt.Sprintf("REVOKE CREATE ON DATABASE %s FROM %s", databaseName, username)
+		//DROP OWNED BY user_3un6hbn943fa5jtmbp4tfjbd9y;
+		query := fmt.Sprintf("DROP OWNED BY %s", username)
 		_, err := d.db.QueryContext(ctx, query)
 		if err != nil {
-			return errors.Wrapf(err, "failed to REVOKE CREATE permissions from %s ", username)
+			return errors.Wrapf(err, "failed to DROP OWNED BY %s ", username)
 		}
 		query = fmt.Sprintf("DROP USER IF EXISTS %s", username)
 		_, err = d.db.QueryContext(ctx, query)

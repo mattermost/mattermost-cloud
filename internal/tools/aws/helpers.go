@@ -136,18 +136,24 @@ func RDSMySQLConnString(schema, endpoint, username, password string) string {
 // MattermostPostgresConnStrings formats the connection strings used by Mattermost
 // servers to access a PostgreSQL database.
 func MattermostPostgresConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
-	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/mattermost_prod?search_path=%s&connect_timeout=10",
-		username, password, *dbCluster.Endpoint, schema)
-	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/mattermost_prod?search_path=%s&connect_timeout=10",
-		username, password, *dbCluster.ReaderEndpoint, schema)
+	dbConnection := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer.svc.cluster.local:5432/mattermost_prod?connect_timeout=10&sslmode=disable&binary_parameters=yes",
+		username, password)
+	readReplicas := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer.svc.cluster.local:5432/mattermost_prod?connect_timeout=10&sslmode=disable&binary_parameters=yes",
+		username, password)
 
 	return dbConnection, readReplicas
+}
+
+func MattermostPostgresConnStringCheck(username, password string) string {
+	dbConnectionCheck := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer.svc.cluster.local:5432/mattermost_prod",
+		username, password)
+	return dbConnectionCheck
 }
 
 // RDSPostgresConnString formats the connection string used by the provisioner
 // for accessing a Postgres RDS cluster.
 func RDSPostgresConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:5432/mattermost_prod?search_path=%s&connect_timeout=10",
+	return fmt.Sprintf("postgres://%s:%s@%s:5432/mattermost_prod?connect_timeout=10",
 		username, password, endpoint, schema)
 }
 
