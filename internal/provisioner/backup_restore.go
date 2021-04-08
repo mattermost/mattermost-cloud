@@ -357,7 +357,7 @@ func extractStartTime(job *batchv1.Job, logger log.FieldLogger) int64 {
 		return asMillis(*job.Status.StartTime)
 	}
 
-	logger.Warn("failed to get job start time, using creation timestamp")
+	logger.Warn("Failed to get job start time, using creation timestamp")
 	return asMillis(job.CreationTimestamp)
 }
 
@@ -366,7 +366,7 @@ func extractCompletionTime(job *batchv1.Job, logger log.FieldLogger) int64 {
 		return asMillis(*job.Status.CompletionTime)
 	}
 
-	logger.Warn("failed to get job completion time, using current time")
+	logger.Warn("Failed to get job completion time, using current time")
 	return asMillis(metav1.Now())
 }
 
