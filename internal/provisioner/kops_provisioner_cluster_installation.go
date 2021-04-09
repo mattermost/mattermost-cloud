@@ -623,6 +623,10 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 
 	// General overrides.
 	mattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
+	groupID := installation.GroupID
+	if groupID != nil {
+		mattermostEnv["MM_CLOUD_GROUP_ID"] = model.EnvVar{Value: *groupID}
+	}
 	mattermostEnv["MM_SERVICESETTINGS_ENABLELOCALMODE"] = model.EnvVar{Value: "true"}
 
 	// Filestore overrides.
