@@ -7,6 +7,7 @@ package supervisor
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,19 @@ type ImportSupervisor struct {
 	store       installationStore
 	provisioner *provisioner.KopsProvisioner
 	ID          string
+}
+
+type mmctl struct {
+	cluster             *model.Cluster
+	clusterInstallation *model.ClusterInstallation
+	installation        *model.Installation
+
+	*ImportSupervisor
+}
+
+type team struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func NewImportSupervisor(awsClient *toolsAWS.Client, awat *awat.Client, store installationStore, provisioner *provisioner.KopsProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
@@ -64,7 +78,62 @@ func (is *ImportSupervisor) Shutdown() {
 	is.logger.Debug("Shutting down import supervisor")
 }
 
-func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
+func (m *mmctl) Do(args ...string) ([]byte, error) {
+	args = append([]string{"mmctl", "--format", "json", "--local"}, args...)
+	return m.provisioner.ExecClusterInstallationCLI(m.cluster, m.clusterInstallation, args...)
+}
+
+func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
+	output, err := mmctl.Do("team", "search", imprt.Team)
+	if err != nil {
+		return err
+	}
+	teamSearch := []*team{}
+	_ = json.Unmarshal(output, &teamSearch)
+
+	found := false
+	for _, team := range teamSearch {
+		if team.Name == imprt.Team {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		is.logger.Debugf("failed to find team with name \"%s\"; creating..", imprt.Team)
+		// XXX TODO enforce team name format on inputs
+		output, err = mmctl.Do("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
+		if err != nil {
+			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", imprt.Team, string(output))
+		}
+	}
+
+	output, err = mmctl.Do("config", "get", "TeamSettings.MaxUsersPerTeam")
+	if err != nil {
+		return err
+	}
+
+	// despite requesting JSON mmctl always just returns a bare number
+	// for these config commands
+	currentMaxUsers, err := strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert \"%s\" to a number", output)
+	}
+
+	// ensure that there will be enough new user slots for this import
+	maxUsers := currentMaxUsers + imprt.Users
+	_, err = mmctl.Do("config", "set", "TeamSettings.MaxUsersPerTeam", strconv.Itoa(maxUsers))
+	if err != nil {
+		return errors.Wrapf(err, "failed to add %d users to MaxUsersPerTeam", imprt.Users)
+	}
+
+	return nil
+}
+
+func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
+	// TODO break this method into helper methods
+
+	// get installation metadata
 	installation, err := is.store.GetInstallation(imprt.InstallationID, false, false)
 	if err != nil {
 		return err
@@ -73,6 +142,7 @@ func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return errors.Errorf("Installation %s not found for Import %s", imprt.InstallationID, imprt.ID)
 	}
 
+	// calculate necessary paths and copy the archive to the Installation's S3 bucket
 	source := strings.SplitN(imprt.Resource, "/", 2)
 	if len(source) != 2 {
 		return errors.Errorf("failed to parse bucket/key from Import %s Resource %s", imprt.ID, imprt.Resource)
@@ -90,6 +160,7 @@ func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return err
 	}
 
+	// find the CI and Cluster the Installation is on for executing commands
 	clusterInstallations, err := is.store.GetClusterInstallations(
 		&model.ClusterInstallationFilter{
 			Paging:         model.AllPagesNotDeleted(),
@@ -109,9 +180,15 @@ func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return err
 	}
 
-	output, err := is.provisioner.ExecClusterInstallationCLI(cluster, ci,
-		"mmctl", "import", "process", "--local", srcKey, "--format", "json",
-	)
+	// ensure that the Installation will be able to accept the import
+	mmctl := &mmctl{cluster: cluster, clusterInstallation: ci, ImportSupervisor: is}
+	err = is.ensureTeamSettings(mmctl, imprt)
+	if err != nil {
+		return err
+	}
+
+	// todo refactor the below into a function that takes mmctl as an argument
+	output, err := mmctl.Do("import", "process", srcKey)
 	if err != nil {
 		return err
 	}
@@ -126,8 +203,8 @@ func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return errors.New("response was empty")
 	}
 
-	is.logger.Infof("Started Import job %+v", jobResponses[0])
 	jobID := jobResponses[0].ID
+	is.logger.Infof("Started Import job %s", jobID)
 
 	complete := false
 	for !complete {
@@ -141,7 +218,7 @@ func (is ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 			continue
 		}
 		if len(checkResponses) != 1 {
-			return errors.Errorf("XXX %+v", checkResponses)
+			return errors.Errorf("unexpected number of responses from jobs API endpoint (%d)", len(checkResponses))
 		}
 		resp := checkResponses[0]
 		if resp.Status != "pending" && resp.Status != "in_progress" {
