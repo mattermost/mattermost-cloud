@@ -7,6 +7,7 @@ package supervisor
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,11 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	TEAM_NAME_MAX_LENGTH = 64
+	TEAM_NAME_MIN_LENGTH = 2
 )
 
 type ImportSupervisor struct {
@@ -233,10 +239,80 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	}
 
 	is.logger.Infof("Completed with output %s", output)
-	return err
+
+	return nil
 }
 
 type jobResponse struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
+}
+
+var reservedTeamNames = []string{
+	"admin",
+	"api",
+	"channel",
+	"claim",
+	"error",
+	"files",
+	"help",
+	"landing",
+	"login",
+	"mfa",
+	"oauth",
+	"plug",
+	"plugins",
+	"post",
+	"signup",
+}
+
+var validTeamNameCharacter = regexp.MustCompile(`^[a-z0-9-]$`)
+
+// lifted from mattermost-server
+func cleanTeamName(s string) string {
+	s = strings.ToLower(strings.Replace(s, " ", "-", -1))
+
+	for _, value := range reservedTeamNames {
+		if strings.Index(s, value) == 0 {
+			s = strings.Replace(s, value, "", -1)
+		}
+	}
+
+	s = strings.TrimSpace(s)
+
+	for _, c := range s {
+		char := fmt.Sprintf("%c", c)
+		if !validTeamNameCharacter.MatchString(char) {
+			s = strings.Replace(s, char, "", -1)
+		}
+	}
+
+	s = strings.Trim(s, "-")
+
+	if !isValidTeamName(s) {
+		s = model.NewID()
+	}
+
+	return s
+}
+
+// Also lifted from mattermost-server but with the addition of a check
+// for max length
+func isValidTeamName(s string) bool {
+	if !isValidAlphaNum(s) {
+		return false
+	}
+
+	if len(s) < TEAM_NAME_MIN_LENGTH ||
+		len(s) > TEAM_NAME_MAX_LENGTH {
+		return false
+	}
+
+	return true
+}
+
+func isValidAlphaNum(s string) bool {
+	validAlphaNum := regexp.MustCompile(`^[a-z0-9]+([a-z\-0-9]+|(__)?)[a-z0-9]+$`)
+
+	return validAlphaNum.MatchString(s)
 }
