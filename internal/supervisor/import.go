@@ -42,6 +42,11 @@ type mmctl struct {
 	*ImportSupervisor
 }
 
+func (m *mmctl) Do(args ...string) ([]byte, error) {
+	args = append([]string{"mmctl", "--format", "json", "--local"}, args...)
+	return m.provisioner.ExecClusterInstallationCLI(m.cluster, m.clusterInstallation, args...)
+}
+
 type team struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
@@ -84,61 +89,7 @@ func (is *ImportSupervisor) Shutdown() {
 	is.logger.Debug("Shutting down import supervisor")
 }
 
-func (m *mmctl) Do(args ...string) ([]byte, error) {
-	args = append([]string{"mmctl", "--format", "json", "--local"}, args...)
-	return m.provisioner.ExecClusterInstallationCLI(m.cluster, m.clusterInstallation, args...)
-}
-
-func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
-	output, err := mmctl.Do("team", "search", imprt.Team)
-	if err != nil {
-		return err
-	}
-	teamSearch := []*team{}
-	_ = json.Unmarshal(output, &teamSearch)
-
-	found := false
-	for _, team := range teamSearch {
-		if team.Name == imprt.Team {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		is.logger.Debugf("failed to find team with name \"%s\"; creating..", imprt.Team)
-		// XXX TODO enforce team name format on inputs
-		output, err = mmctl.Do("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
-		if err != nil {
-			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", imprt.Team, string(output))
-		}
-	}
-
-	output, err = mmctl.Do("config", "get", "TeamSettings.MaxUsersPerTeam")
-	if err != nil {
-		return err
-	}
-
-	// despite requesting JSON mmctl always just returns a bare number
-	// for these config commands
-	currentMaxUsers, err := strconv.Atoi(strings.TrimSpace(string(output)))
-	if err != nil {
-		return errors.Wrapf(err, "failed to convert \"%s\" to a number", output)
-	}
-
-	// ensure that there will be enough new user slots for this import
-	maxUsers := currentMaxUsers + imprt.Users
-	_, err = mmctl.Do("config", "set", "TeamSettings.MaxUsersPerTeam", strconv.Itoa(maxUsers))
-	if err != nil {
-		return errors.Wrapf(err, "failed to add %d users to MaxUsersPerTeam", imprt.Users)
-	}
-
-	return nil
-}
-
 func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
-	// TODO break this method into helper methods
-
 	// get installation metadata
 	installation, err := is.store.GetInstallation(imprt.InstallationID, false, false)
 	if err != nil {
@@ -146,24 +97,6 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	}
 	if installation == nil {
 		return errors.Errorf("Installation %s not found for Import %s", imprt.InstallationID, imprt.ID)
-	}
-
-	// calculate necessary paths and copy the archive to the Installation's S3 bucket
-	source := strings.SplitN(imprt.Resource, "/", 2)
-	if len(source) != 2 {
-		return errors.Errorf("failed to parse bucket/key from Import %s Resource %s", imprt.ID, imprt.Resource)
-	}
-	srcBucket := source[0]
-	srcKey := source[1]
-	destKey := fmt.Sprintf("%s/import/%s", installation.ID, srcKey)
-
-	// XXX TODO handle single tenant bucket names
-	destBucket, err := toolsAWS.GetMultitenantBucketNameForInstallation(installation.ID, is.store, is.awsClient)
-
-	is.logger.Debugf("copying %s/%s to %s/%s", srcBucket, srcKey, destBucket, destKey)
-	err = is.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey)
-	if err != nil {
-		return err
 	}
 
 	// find the CI and Cluster the Installation is on for executing commands
@@ -193,7 +126,104 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return err
 	}
 
-	// todo refactor the below into a function that takes mmctl as an argument
+	srcKey, err := is.copyImportToWorkspaceFilestore(imprt, installation)
+	if err != nil {
+		return errors.Wrapf(err, "failed to copy workspace import archive to Installation %s filestore", installation.ID)
+	}
+
+	return is.startImportProcessAndWait(mmctl, srcKey)
+}
+
+func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
+	output, err := mmctl.Do("team", "search", imprt.Team)
+	if err != nil {
+		return err
+	}
+	teamSearch := []*team{}
+	_ = json.Unmarshal(output, &teamSearch)
+
+	found := false
+	for _, team := range teamSearch {
+		if team.Name == imprt.Team {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		is.logger.Debugf("failed to find team with name \"%s\"; creating..", imprt.Team)
+		teamName := cleanTeamName(imprt.Team)
+		output, err = mmctl.Do("team", "create", "--name", teamName, "--display_name", teamName)
+		if err != nil {
+			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", teamName, string(output))
+		}
+	}
+
+	output, err = mmctl.Do("config", "get", "TeamSettings.MaxUsersPerTeam")
+	if err != nil {
+		return err
+	}
+
+	// despite requesting JSON mmctl always just returns a bare number
+	// for these config commands
+	currentMaxUsers, err := strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert \"%s\" to a number", output)
+	}
+
+	// ensure that there will be enough new user slots for this import
+	maxUsers := currentMaxUsers + imprt.Users
+	_, err = mmctl.Do("config", "set", "TeamSettings.MaxUsersPerTeam", strconv.Itoa(maxUsers))
+	if err != nil {
+		return errors.Wrapf(err, "failed to add %d users to MaxUsersPerTeam", imprt.Users)
+	}
+
+	return nil
+}
+
+func (is *ImportSupervisor) getBucketForInstallation(installation *model.Installation) (string, error) {
+	switch installation.Filestore {
+	// TODO handle single tenant bucket names
+	case model.InstallationFilestoreMultiTenantAwsS3:
+		fallthrough
+	case model.InstallationFilestoreBifrost:
+		return toolsAWS.GetMultitenantBucketNameForInstallation(installation.ID, is.store, is.awsClient)
+	case model.InstallationFilestoreAwsS3:
+		fallthrough
+	case model.InstallationFilestoreMinioOperator:
+		return "", errors.Errorf("support for workspace imports to workspaces with the filestore type %s not yet supported", installation.Filestore)
+	default:
+		return "", errors.Errorf("encountered unknown filestore type %s", installation.Filestore)
+	}
+}
+
+// copyImportToWorkspaceFilestorecopies the archive from the AWAT's bucket to the Installation's
+// bucket. Returns the key of the archive in the source bucket or an
+// error
+func (is *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStatus, installation *model.Installation) (string, error) {
+	// calculate necessary paths and copy the archive to the Installation's S3 bucket
+	source := strings.SplitN(imprt.Resource, "/", 2)
+	if len(source) != 2 {
+		return "", errors.Errorf("failed to parse bucket/key from Import %s Resource %s", imprt.ID, imprt.Resource)
+	}
+	srcBucket := source[0]
+	srcKey := source[1]
+	destKey := fmt.Sprintf("%s/import/%s", installation.ID, srcKey)
+
+	destBucket, err := is.getBucketForInstallation(installation)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to determine bucket name for Installation %s", installation.ID)
+	}
+	is.logger.Debugf("copying %s/%s to %s/%s", srcBucket, srcKey, destBucket, destKey)
+	err = is.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to copy archive to Installation %s", installation.ID)
+	}
+
+	return srcKey, nil
+}
+
+func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, srcKey string) error {
 	output, err := mmctl.Do("import", "process", srcKey)
 	if err != nil {
 		return err
@@ -202,7 +232,7 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	jobResponses := []*jobResponse{}
 	err = json.Unmarshal([]byte(output), &jobResponses)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal Job response from Mattermost")
 	}
 
 	if len(jobResponses) < 1 {
@@ -215,8 +245,7 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	complete := false
 	for !complete {
 		checkResponses := []*jobResponse{}
-		output, err = is.provisioner.ExecClusterInstallationCLI(cluster, ci,
-			"mmctl", "import", "job", "--local", "show", jobID, "--format", "json")
+		output, err = mmctl.Do("import", "job", "show", jobID)
 
 		err = json.Unmarshal([]byte(output), &checkResponses)
 		if err != nil {
