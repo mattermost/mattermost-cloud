@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Pgbouncer struct {
+type pgbouncer struct {
 	awsClient      aws.AWS
 	environment    string
 	provisioner    *KopsProvisioner
@@ -27,7 +27,7 @@ type Pgbouncer struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*Pgbouncer, error) {
+func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*pgbouncer, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Pgbouncer handle with nil logger")
 	}
