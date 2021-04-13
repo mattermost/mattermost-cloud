@@ -142,8 +142,7 @@ func EnsureBackupCompatible(installation *Installation) error {
 func (b *InstallationBackup) ValidTransitionState(newState InstallationBackupState) bool {
 	validStates, found := validInstallationBackupTransitions[newState]
 	if !found {
-		// If not found assume all states are valid
-		return true
+		return false
 	}
 
 	return stateIn(b.State, validStates)

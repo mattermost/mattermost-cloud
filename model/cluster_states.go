@@ -83,80 +83,47 @@ var AllClusterRequestStates = []string{
 // ValidTransitionState returns whether a cluster can be transitioned into the
 // new state or not based on its current state.
 func (c *Cluster) ValidTransitionState(newState string) bool {
-	switch newState {
-	case ClusterStateCreationRequested:
-		return validTransitionToClusterStateCreationRequested(c.State)
-	case ClusterStateProvisioningRequested:
-		return validTransitionToClusterStateProvisioningRequested(c.State)
-	case ClusterStateUpgradeRequested:
-		return validTransitionToClusterStateUpgradeRequested(c.State)
-	case ClusterStateResizeRequested:
-		return validTransitionToClusterStateResizeRequested(c.State)
-	case ClusterStateDeletionRequested:
-		return validTransitionToClusterStateDeletionRequested(c.State)
+	validStates, found := validClusterTransitions[newState]
+	if !found {
+		return false
 	}
 
-	return false
+	return contains(validStates, c.State)
 }
 
-func validTransitionToClusterStateCreationRequested(currentState string) bool {
-	switch currentState {
-	case ClusterStateCreationRequested,
-		ClusterStateCreationFailed:
-		return true
+var (
+	validClusterTransitions = map[string][]string{
+		ClusterStateCreationRequested: {
+			ClusterStateCreationRequested,
+			ClusterStateCreationFailed,
+		},
+		ClusterStateProvisioningRequested: {
+			ClusterStateStable,
+			ClusterStateProvisioningFailed,
+			ClusterStateProvisioningRequested,
+		},
+		ClusterStateUpgradeRequested: {
+			ClusterStateStable,
+			ClusterStateUpgradeRequested,
+			ClusterStateUpgradeFailed,
+		},
+		ClusterStateResizeRequested: {
+			ClusterStateStable,
+			ClusterStateResizeRequested,
+			ClusterStateResizeFailed,
+		},
+		ClusterStateDeletionRequested: {
+			ClusterStateStable,
+			ClusterStateCreationRequested,
+			ClusterStateCreationFailed,
+			ClusterStateProvisioningFailed,
+			ClusterStateUpgradeRequested,
+			ClusterStateUpgradeFailed,
+			ClusterStateDeletionRequested,
+			ClusterStateDeletionFailed,
+		},
 	}
-
-	return false
-}
-
-func validTransitionToClusterStateProvisioningRequested(currentState string) bool {
-	switch currentState {
-	case ClusterStateStable,
-		ClusterStateProvisioningFailed,
-		ClusterStateProvisioningRequested:
-		return true
-	}
-
-	return false
-}
-
-func validTransitionToClusterStateUpgradeRequested(currentState string) bool {
-	switch currentState {
-	case ClusterStateStable,
-		ClusterStateUpgradeRequested,
-		ClusterStateUpgradeFailed:
-		return true
-	}
-
-	return false
-}
-
-func validTransitionToClusterStateResizeRequested(currentState string) bool {
-	switch currentState {
-	case ClusterStateStable,
-		ClusterStateResizeRequested,
-		ClusterStateResizeFailed:
-		return true
-	}
-
-	return false
-}
-
-func validTransitionToClusterStateDeletionRequested(currentState string) bool {
-	switch currentState {
-	case ClusterStateStable,
-		ClusterStateCreationRequested,
-		ClusterStateCreationFailed,
-		ClusterStateProvisioningFailed,
-		ClusterStateUpgradeRequested,
-		ClusterStateUpgradeFailed,
-		ClusterStateDeletionRequested,
-		ClusterStateDeletionFailed:
-		return true
-	}
-
-	return false
-}
+)
 
 // ClusterStateReport is a report of all cluster requests states.
 type ClusterStateReport []StateReportEntry

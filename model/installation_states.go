@@ -124,87 +124,54 @@ var AllInstallationRequestStates = []string{
 // ValidTransitionState returns whether an installation can be transitioned into
 // the new state or not based on its current state.
 func (i *Installation) ValidTransitionState(newState string) bool {
-	switch newState {
-	case InstallationStateCreationRequested:
-		return validTransitionToInstallationStateCreationRequested(i.State)
-	case InstallationStateHibernationRequested:
-		return validTransitionToInstallationStateHibernationRequested(i.State)
-	case InstallationStateWakeUpRequested:
-		return validTransitionToInstallationStateWakeUpRequested(i.State)
-	case InstallationStateUpdateRequested:
-		return validTransitionToInstallationStateUpdateRequested(i.State)
-	case InstallationStateDeletionRequested:
-		return validTransitionToInstallationStateDeletionRequested(i.State)
+	validStates, found := validInstallationTransitions[newState]
+	if !found {
+		return false
 	}
 
-	return false
+	return contains(validStates, i.State)
 }
 
-func validTransitionToInstallationStateCreationRequested(currentState string) bool {
-	switch currentState {
-	case InstallationStateCreationRequested,
-		InstallationStateCreationFailed:
-		return true
+var (
+	validInstallationTransitions = map[string][]string{
+		InstallationStateCreationRequested: {
+			InstallationStateCreationRequested,
+			InstallationStateCreationFailed,
+		},
+		InstallationStateHibernationRequested: {
+			InstallationStateStable,
+		},
+		InstallationStateWakeUpRequested: {
+			InstallationStateHibernating,
+		},
+		InstallationStateUpdateRequested: {
+			InstallationStateStable,
+			InstallationStateUpdateRequested,
+			InstallationStateUpdateInProgress,
+			InstallationStateUpdateFailed,
+		},
+		InstallationStateDeletionRequested: {
+			InstallationStateStable,
+			InstallationStateCreationRequested,
+			InstallationStateCreationPreProvisioning,
+			InstallationStateCreationInProgress,
+			InstallationStateCreationDNS,
+			InstallationStateCreationNoCompatibleClusters,
+			InstallationStateCreationFinalTasks,
+			InstallationStateCreationFailed,
+			InstallationStateUpdateRequested,
+			InstallationStateUpdateInProgress,
+			InstallationStateUpdateFailed,
+			InstallationStateHibernationRequested,
+			InstallationStateHibernationInProgress,
+			InstallationStateHibernating,
+			InstallationStateDeletionRequested,
+			InstallationStateDeletionInProgress,
+			InstallationStateDeletionFinalCleanup,
+			InstallationStateDeletionFailed,
+		},
 	}
-
-	return false
-}
-
-func validTransitionToInstallationStateHibernationRequested(currentState string) bool {
-	switch currentState {
-	case InstallationStateStable:
-		return true
-	}
-
-	return false
-}
-
-func validTransitionToInstallationStateWakeUpRequested(currentState string) bool {
-	switch currentState {
-	case InstallationStateHibernating:
-		return true
-	}
-
-	return false
-}
-
-func validTransitionToInstallationStateUpdateRequested(currentState string) bool {
-	switch currentState {
-	case InstallationStateStable,
-		InstallationStateUpdateRequested,
-		InstallationStateUpdateInProgress,
-		InstallationStateUpdateFailed:
-		return true
-	}
-
-	return false
-}
-
-func validTransitionToInstallationStateDeletionRequested(currentState string) bool {
-	switch currentState {
-	case InstallationStateStable,
-		InstallationStateCreationRequested,
-		InstallationStateCreationPreProvisioning,
-		InstallationStateCreationInProgress,
-		InstallationStateCreationDNS,
-		InstallationStateCreationNoCompatibleClusters,
-		InstallationStateCreationFinalTasks,
-		InstallationStateCreationFailed,
-		InstallationStateUpdateRequested,
-		InstallationStateUpdateInProgress,
-		InstallationStateUpdateFailed,
-		InstallationStateHibernationRequested,
-		InstallationStateHibernationInProgress,
-		InstallationStateHibernating,
-		InstallationStateDeletionRequested,
-		InstallationStateDeletionInProgress,
-		InstallationStateDeletionFinalCleanup,
-		InstallationStateDeletionFailed:
-		return true
-	}
-
-	return false
-}
+)
 
 // InstallationStateReport is a report of all installation requests states.
 type InstallationStateReport []StateReportEntry
