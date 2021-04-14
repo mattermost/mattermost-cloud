@@ -7,7 +7,6 @@ package supervisor
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,11 +17,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	TEAM_NAME_MAX_LENGTH = 64
-	TEAM_NAME_MIN_LENGTH = 2
 )
 
 type ImportSupervisor struct {
@@ -50,6 +44,19 @@ func (m *mmctl) Do(args ...string) ([]byte, error) {
 type team struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type jobResponse struct {
+	ID       string `json:"id"`
+	Status   string `json:"status"`
+	Progress int    `json: progress`
+
+	jobResponseData
+}
+
+type jobResponseData struct {
+	Error      string `json:"error"`
+	LineNumber string `json:"line_number"`
 }
 
 func NewImportSupervisor(awsClient *toolsAWS.Client, awat *awat.Client, store installationStore, provisioner *provisioner.KopsProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
@@ -131,37 +138,45 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return errors.Wrapf(err, "failed to copy workspace import archive to Installation %s filestore", installation.ID)
 	}
 
-	return is.startImportProcessAndWait(mmctl, srcKey)
+	return is.startImportProcess(mmctl, srcKey)
 }
 
-func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
-	output, err := mmctl.Do("team", "search", imprt.Team)
+func (is *ImportSupervisor) teamAlreadyExists(mmctl *mmctl, teamName string) (bool, error) {
+	output, err := mmctl.Do("team", "search", teamName)
 	if err != nil {
-		return err
+		return false, errors.Wrapf(err, "failed to search for team %s", teamName)
 	}
 	teamSearch := []*team{}
 	_ = json.Unmarshal(output, &teamSearch)
 
-	found := false
 	for _, team := range teamSearch {
-		if team.Name == imprt.Team {
-			found = true
-			break
+		if team.Name == teamName {
+			return true, nil
 		}
 	}
+	return false, nil
+}
 
-	if !found {
-		is.logger.Debugf("failed to find team with name \"%s\"; creating..", imprt.Team)
-		teamName := cleanTeamName(imprt.Team)
-		output, err = mmctl.Do("team", "create", "--name", teamName, "--display_name", teamName)
-		if err != nil {
-			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", teamName, string(output))
-		}
-	}
-
-	output, err = mmctl.Do("config", "get", "TeamSettings.MaxUsersPerTeam")
+func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
+	// ensure that the team exists
+	found, err := is.teamAlreadyExists(mmctl, imprt.Team)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to determine if Team %s already exists in workspace", imprt.Team)
+	}
+
+	// if the team doesn't exist, create it
+	if !found {
+		output, err := mmctl.Do("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
+		if err != nil {
+			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", imprt.Team, string(output))
+		}
+	}
+
+	// ensure that there will be enough new user slots for this import
+
+	output, err := mmctl.Do("config", "get", "TeamSettings.MaxUsersPerTeam")
+	if err != nil {
+		return errors.Wrapf(err, "failed to get max user limit")
 	}
 
 	// despite requesting JSON mmctl always just returns a bare number
@@ -171,7 +186,6 @@ func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportS
 		return errors.Wrapf(err, "failed to convert \"%s\" to a number", output)
 	}
 
-	// ensure that there will be enough new user slots for this import
 	maxUsers := currentMaxUsers + imprt.Users
 	_, err = mmctl.Do("config", "set", "TeamSettings.MaxUsersPerTeam", strconv.Itoa(maxUsers))
 	if err != nil {
@@ -223,10 +237,10 @@ func (is *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportSta
 	return srcKey, nil
 }
 
-func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, srcKey string) error {
+func (is *ImportSupervisor) startImportProcess(mmctl *mmctl, srcKey string) error {
 	output, err := mmctl.Do("import", "process", srcKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to start import process in Mattermost itself")
 	}
 
 	jobResponses := []*jobResponse{}
@@ -241,107 +255,45 @@ func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, srcKey strin
 
 	jobID := jobResponses[0].ID
 	is.logger.Infof("Started Import job %s", jobID)
-
-	complete := false
-	for !complete {
-		checkResponses := []*jobResponse{}
-		output, err = mmctl.Do("import", "job", "show", jobID)
-
-		err = json.Unmarshal([]byte(output), &checkResponses)
-		if err != nil {
-			is.logger.WithError(err).Warn("failed to check job")
-			continue
-		}
-		if len(checkResponses) != 1 {
-			return errors.Errorf("unexpected number of responses from jobs API endpoint (%d)", len(checkResponses))
-		}
-		resp := checkResponses[0]
-		if resp.Status != "pending" && resp.Status != "in_progress" {
-			complete = true
-		}
-		if resp.Status == "error" {
-			err = errors.New("import job failed")
-		}
-
-		is.logger.Debugf("Waiting for job to complete; response was %+v", resp)
-		time.Sleep(5 * time.Second)
-	}
-
-	is.logger.Infof("Completed with output %s", output)
+	go is.waitForImportToComplete(mmctl, jobID)
 
 	return nil
 }
 
-type jobResponse struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
-}
+func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, jobID string) {
+	complete := false
+	var (
+		resp         *jobResponse
+		output       []byte
+		jobResponses []*jobResponse
+	)
 
-var reservedTeamNames = []string{
-	"admin",
-	"api",
-	"channel",
-	"claim",
-	"error",
-	"files",
-	"help",
-	"landing",
-	"login",
-	"mfa",
-	"oauth",
-	"plug",
-	"plugins",
-	"post",
-	"signup",
-}
+	for !complete {
+		var err error
+		output, err = mmctl.Do("import", "job", "show", jobID)
 
-var validTeamNameCharacter = regexp.MustCompile(`^[a-z0-9-]$`)
-
-// lifted from mattermost-server
-func cleanTeamName(s string) string {
-	s = strings.ToLower(strings.Replace(s, " ", "-", -1))
-
-	for _, value := range reservedTeamNames {
-		if strings.Index(s, value) == 0 {
-			s = strings.Replace(s, value, "", -1)
+		err = json.Unmarshal([]byte(output), &jobResponses)
+		if err != nil {
+			is.logger.WithError(err).Warn("failed to check job")
+			continue
 		}
-	}
-
-	s = strings.TrimSpace(s)
-
-	for _, c := range s {
-		char := fmt.Sprintf("%c", c)
-		if !validTeamNameCharacter.MatchString(char) {
-			s = strings.Replace(s, char, "", -1)
+		if len(jobResponses) != 1 {
+			is.logger.Errorf("unexpected number of responses from jobs API endpoint (%d)", len(jobResponses))
+			return
 		}
+		resp = jobResponses[0]
+		if resp.Status != "pending" && resp.Status != "in_progress" {
+			complete = true
+		}
+		if resp.Status == "error" {
+			is.logger.Errorf("import job failed with error %s on line %s", resp.Error, resp.LineNumber)
+			return
+		}
+
+		is.logger.Debugf("Waiting for job %s to complete. Status: %s Progress: %d", resp.ID, resp.Status, resp.Progress)
+		time.Sleep(5 * time.Second)
 	}
 
-	s = strings.Trim(s, "-")
-
-	if !isValidTeamName(s) {
-		s = model.NewID()
-	}
-
-	return s
-}
-
-// Also lifted from mattermost-server but with the addition of a check
-// for max length
-func isValidTeamName(s string) bool {
-	if !isValidAlphaNum(s) {
-		return false
-	}
-
-	if len(s) < TEAM_NAME_MIN_LENGTH ||
-		len(s) > TEAM_NAME_MAX_LENGTH {
-		return false
-	}
-
-	return true
-}
-
-func isValidAlphaNum(s string) bool {
-	validAlphaNum := regexp.MustCompile(`^[a-z0-9]+([a-z\-0-9]+|(__)?)[a-z0-9]+$`)
-
-	return validAlphaNum.MatchString(s)
+	is.logger.Infof("Import Job %s successfully completed", resp.ID)
+	is.logger.Debugf("Completed with output %s", output)
 }
