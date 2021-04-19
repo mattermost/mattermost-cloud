@@ -118,7 +118,6 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
-	InstallationStateDBRestorationInProgress,
 }
 
 // AllInstallationRequestStates is a list of all states that an installation can
