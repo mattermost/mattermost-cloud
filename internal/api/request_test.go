@@ -94,7 +94,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
 				"thanos":              {Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"},
 				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"},
-				"pgbouncer":           {Chart: "0.3.0", ValuesPath: "helm-charts/pgbouncer_values.yaml"},
+				"pgbouncer":           {Chart: "1.1.0", ValuesPath: "helm-charts/pgbouncer_values.yaml"},
 			},
 		}, clusterRequest)
 	})
