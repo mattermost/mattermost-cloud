@@ -53,6 +53,14 @@ const (
 	InstallationStateDeletionFailed = "deletion-failed"
 	// InstallationStateDeleted is an installation that has been deleted
 	InstallationStateDeleted = "deleted"
+	// InstallationStateDBRestorationInProgress is an installation that is being restored from backup.
+	InstallationStateDBRestorationInProgress = "db-restoration-in-progress"
+	// InstallationStateDBMigrationInProgress is an installation that is being migrated to different database.
+	InstallationStateDBMigrationInProgress = "db-migration-in-progress"
+	// InstallationStateDBRestorationFailed is an installation for which database restoration failed.
+	InstallationStateDBRestorationFailed = "db-restoration-failed"
+	// InstallationStateDBMigrationFailed is an installation for which database migration failed.
+	InstallationStateDBMigrationFailed = "db-migration-failed"
 )
 
 const (
@@ -84,6 +92,10 @@ var AllInstallationStates = []string{
 	InstallationStateDeletionFinalCleanup,
 	InstallationStateDeletionFailed,
 	InstallationStateDeleted,
+	InstallationStateDBRestorationInProgress,
+	InstallationStateDBMigrationInProgress,
+	InstallationStateDBRestorationFailed,
+	InstallationStateDBMigrationFailed,
 }
 
 // AllInstallationStatesPendingWork is a list of all installation states that
@@ -106,6 +118,7 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
+	InstallationStateDBRestorationInProgress,
 }
 
 // AllInstallationRequestStates is a list of all states that an installation can
@@ -169,6 +182,12 @@ var (
 			InstallationStateDeletionInProgress,
 			InstallationStateDeletionFinalCleanup,
 			InstallationStateDeletionFailed,
+		},
+		InstallationStateDBRestorationInProgress: {
+			InstallationStateHibernating,
+		},
+		InstallationStateDBMigrationInProgress: {
+			InstallationStateHibernating,
 		},
 	}
 )

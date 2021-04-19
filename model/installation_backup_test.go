@@ -70,7 +70,50 @@ func TestNewInstallationBackupsFromReader(t *testing.T) {
 	})
 }
 
-func TestEnsureBackupCompatible(t *testing.T) {
+func TestEnsureBackupRestoreCompatible(t *testing.T) {
+
+	for _, testCase := range []struct {
+		description   string
+		installation  *Installation
+		errorContains string
+	}{
+		{
+			description: "valid installation",
+			installation: &Installation{
+				Database:  InstallationDatabaseMultiTenantRDSPostgres,
+				Filestore: InstallationFilestoreBifrost,
+			},
+		},
+		{
+			description: "invalid db",
+			installation: &Installation{
+				Database:  InstallationDatabaseMultiTenantRDSMySQL,
+				Filestore: InstallationFilestoreBifrost,
+			},
+			errorContains: "invalid installation database",
+		},
+		{
+			description: "invalid file store",
+			installation: &Installation{
+				Database:  InstallationDatabaseMultiTenantRDSPostgres,
+				Filestore: InstallationFilestoreMinioOperator,
+			},
+			errorContains: "invalid installation file store",
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			err := EnsureBackupRestoreCompatible(testCase.installation)
+			if testCase.errorContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), testCase.errorContains)
+			}
+		})
+	}
+}
+
+func TestEnsureInstallationReadyForBackup(t *testing.T) {
 
 	for _, testCase := range []struct {
 		description   string
@@ -103,18 +146,9 @@ func TestEnsureBackupCompatible(t *testing.T) {
 			},
 			errorContains: "invalid installation database",
 		},
-		{
-			description: "invalid file store",
-			installation: &Installation{
-				State:     InstallationStateHibernating,
-				Database:  InstallationDatabaseMultiTenantRDSPostgres,
-				Filestore: InstallationFilestoreMinioOperator,
-			},
-			errorContains: "invalid installation file store",
-		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
-			err := EnsureBackupCompatible(testCase.installation)
+			err := EnsureInstallationReadyForBackup(testCase.installation)
 			if testCase.errorContains == "" {
 				assert.NoError(t, err)
 			} else {
