@@ -5,8 +5,6 @@
 package provisioner
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -104,16 +102,10 @@ func (n *pgbouncer) Migrate() error {
 }
 
 func (n *pgbouncer) NewHelmDeployment() *helmDeployment {
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = aws.DefaultAWSRegion
-	}
-	pgbouncerClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
 	return &helmDeployment{
 		chartDeploymentName: "pgbouncer",
 		chartName:           "chartmuseum/pgbouncer",
 		namespace:           "pgbouncer",
-		setArgument:         fmt.Sprintf("config.auth_service.cluster_name=%[1]s,config.pgbouncer.storage.region=%[2]s,config.pgbouncer.storage.table_name=%[1]s,config.pgbouncer.storage.audit_events_uri=dynamodb://%[1]s-events,config.pgbouncer.storage.audit_sessions_uri=s3://%[1]s/records?region=%[2]s", pgbouncerClusterName, awsRegion),
 		kopsProvisioner:     n.provisioner,
 		kops:                n.kops,
 		logger:              n.logger,

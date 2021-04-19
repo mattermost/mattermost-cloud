@@ -186,6 +186,17 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
+	files := []k8s.ManifestFile{
+		{
+			Path:            "manifests/pgbouncer-manifests/pgbouncer-secret.yaml",
+			DeployNamespace: "pgbouncer",
+		},
+	}
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return err
+	}
+
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return err

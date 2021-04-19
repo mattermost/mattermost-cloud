@@ -112,6 +112,8 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 
 func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}) (metav1.Object, error) {
 	switch o := obj.(type) {
+	case *apiv1.Namespace:
+		return kc.CreateOrUpdateNamespace(deployNamespace)
 	case *apiv1.ServiceAccount:
 		return kc.createOrUpdateServiceAccount(deployNamespace, obj.(*apiv1.ServiceAccount))
 	case *appsv1.Deployment:
