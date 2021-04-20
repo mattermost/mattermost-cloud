@@ -186,17 +186,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
-	files := []k8s.ManifestFile{
-		{
-			Path:            "manifests/pgbouncer-manifests/pgbouncer-secret.yaml",
-			DeployNamespace: "pgbouncer",
-		},
-	}
-	err = k8sClient.CreateFromFiles(files)
-	if err != nil {
-		return err
-	}
-
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return err
@@ -356,6 +345,43 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			DeployNamespace: "kube-system",
 		},
 	}
+
+	_, err = k8sClient.Clientset.CoreV1().Namespaces().Get(ctx, "pgbouncer", metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("namespace resource does not exist, will create it...")
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/pgbouncer-manifests/pgbouncer-namespace.yaml",
+			DeployNamespace: "pgbouncer",
+		},
+		)
+	} else if err != nil {
+		return errors.Wrap(err, "failed to get Namespace pgbouncer")
+	}
+
+	_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Configmap resource for pgbouncer-configmap does not exist, will create it...")
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/pgbouncer-manifests/pgbouncer-configmap.yaml",
+			DeployNamespace: "pgbouncer",
+		},
+		)
+	} else if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+
+	_, err = k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Get(ctx, "pgbouncer-userlist-secret", metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Secret resource for pgbouncer-userlist-secret does not exist, will create it...")
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/pgbouncer-manifests/pgbouncer-secret.yaml",
+			DeployNamespace: "pgbouncer",
+		},
+		)
+	} else if err != nil {
+		return errors.Wrap(err, "failed to get secret for pgbouncer-userlist-secret")
+	}
+
 	err = k8sClient.CreateFromFiles(files)
 	if err != nil {
 		return err
