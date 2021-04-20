@@ -123,7 +123,7 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	defer func() {
 		unlocked, err := is.store.UnlockInstallation(installation.ID, is.ID, false)
 		if err != nil {
-			is.logger.WithError(err).Error("failed to unlock Installation %s", installation.ID)
+			is.logger.WithError(err).Errorf("failed to unlock Installation %s", installation.ID)
 		} else if !unlocked {
 			is.logger.Errorf("failed without error to unlock Installation %s", installation.ID)
 		}
