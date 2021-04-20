@@ -49,7 +49,7 @@ type team struct {
 type jobResponse struct {
 	ID       string `json:"id"`
 	Status   string `json:"status"`
-	Progress int    `json: progress`
+	Progress int    `json:"progress"`
 
 	jobResponseData
 }
