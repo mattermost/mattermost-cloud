@@ -26,6 +26,7 @@ type Cluster struct {
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
 	Networking              string
+	VPC                     string
 }
 
 // Clone returns a deep copy the cluster.

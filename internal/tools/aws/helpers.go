@@ -170,17 +170,19 @@ func getMultitenantBucketNameForInstallation(installationID string, store model.
 	return bucketName, nil
 }
 
-func getMultitenantBucketNameForCluster(clusterID string, client *Client) (string, error) {
-	vpc, err := getVPCForCluster(clusterID, client)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to find cluster VPC")
-	}
+func getMultitenantBucketNameForCluster(clusterID string, VpcId string, client *Client) (string, error) {
 
-	bucketName, err := getMultitenantBucketNameForVPC(*vpc.VpcId, client)
+	if VpcId == "" {
+		vpc, err := getVPCForCluster(clusterID, client)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to find cluster VPC")
+		}
+		VpcId = *vpc.VpcId
+	}
+	bucketName, err := getMultitenantBucketNameForVPC(VpcId, client)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get multitenant bucket name for VPC")
 	}
-
 	return bucketName, nil
 }
 

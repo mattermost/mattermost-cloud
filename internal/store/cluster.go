@@ -73,6 +73,14 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
+	if r.Cluster.ProvisionerMetadataKops.Networking != "" {
+
+		r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking
+	}
+	if r.Cluster.ProvisionerMetadataKops.VPC != "" {
+
+		r.Cluster.VPC = r.Cluster.ProvisionerMetadataKops.VPC
+	}
 
 	return r.Cluster, nil
 }
@@ -192,7 +200,6 @@ func (sqlStore *SQLStore) createCluster(execer execer, cluster *model.Cluster) e
 	if err != nil {
 		return errors.Wrap(err, "unable to build raw cluster metadata")
 	}
-
 	_, err = sqlStore.execBuilder(execer, sq.
 		Insert("Cluster").
 		SetMap(map[string]interface{}{
@@ -224,7 +231,6 @@ func (sqlStore *SQLStore) UpdateCluster(cluster *model.Cluster) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to build raw cluster metadata")
 	}
-
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Cluster").
 		SetMap(map[string]interface{}{
