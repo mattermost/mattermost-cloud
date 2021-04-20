@@ -45,6 +45,10 @@ const (
 	InstallationStateUpdateFailed = "update-failed"
 	// InstallationStateDeletionRequested is an installation to be deleted.
 	InstallationStateDeletionRequested = "deletion-requested"
+	// InstallationStateImportInProgress is an installation into which a
+	// Workspace archive is being imported from another service or
+	// on-premise
+	InstallationStateImportInProgress = "import-in-progress"
 	// InstallationStateDeletionInProgress is an installation being deleted.
 	InstallationStateDeletionInProgress = "deletion-in-progress"
 	// InstallationStateDeletionFinalCleanup is the final step of installation deletion.
@@ -79,6 +83,7 @@ var AllInstallationStates = []string{
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateUpdateFailed,
+	InstallationStateImportInProgress,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
@@ -135,6 +140,17 @@ func (i *Installation) ValidTransitionState(newState string) bool {
 		return validTransitionToInstallationStateUpdateRequested(i.State)
 	case InstallationStateDeletionRequested:
 		return validTransitionToInstallationStateDeletionRequested(i.State)
+	case InstallationStateImportInProgress:
+		return validTransitionToInstallationStateImportInProgress(i.State)
+	}
+
+	return false
+}
+
+func validTransitionToInstallationStateImportInProgress(currentState string) bool {
+	switch currentState {
+	case InstallationStateStable:
+		return true
 	}
 
 	return false
@@ -196,6 +212,7 @@ func validTransitionToInstallationStateDeletionRequested(currentState string) bo
 		InstallationStateHibernationRequested,
 		InstallationStateHibernationInProgress,
 		InstallationStateHibernating,
+		InstallationStateImportInProgress,
 		InstallationStateDeletionRequested,
 		InstallationStateDeletionInProgress,
 		InstallationStateDeletionFinalCleanup,

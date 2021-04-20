@@ -14,6 +14,7 @@ import (
 	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -84,11 +85,18 @@ func (is *ImportSupervisor) Do() error {
 		// nothing to do
 		return nil
 	}
+	defer func() {
+		err = is.awatClient.ReleaseLockOnImport(work.ID)
+		if err != nil {
+			is.logger.WithError(err).Warnf("failed to release lock on Import %s", work.ID)
+		}
+	}()
 
 	err = is.importTranslation(work)
 	if err != nil {
-		is.logger.WithError(err).Error("failed to import")
+		is.logger.WithError(err).Errorf("failed to perform work on Import %s", work.ID)
 	}
+
 	return err
 }
 
@@ -100,11 +108,64 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	// get installation metadata
 	installation, err := is.store.GetInstallation(imprt.InstallationID, false, false)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to look up Installation %s", imprt.InstallationID)
 	}
 	if installation == nil {
 		return errors.Errorf("Installation %s not found for Import %s", imprt.InstallationID, imprt.ID)
 	}
+	locked, err := is.store.LockInstallation(installation.ID, is.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to lock installation")
+	}
+	if !locked {
+		return errors.Errorf("failed to get lock on Installation %s (no error)", installation.ID)
+	}
+	defer func() {
+		unlocked, err := is.store.UnlockInstallation(installation.ID, is.ID, false)
+		if err != nil {
+			is.logger.WithError(err).Error("failed to unlock Installation %s", installation.ID)
+		} else if !unlocked {
+			is.logger.Errorf("failed without error to unlock Installation %s", installation.ID)
+		}
+	}()
+
+	if installation.State != model.InstallationStateStable {
+		return errors.Errorf("Skipping import on Installation %s with state %s. State must be stable to begin work.", installation.ID, installation.State)
+	}
+	installation.State = model.InstallationStateImportInProgress
+	err = is.store.UpdateInstallation(installation)
+	if err != nil {
+		return errors.Wrapf(err, "failed to mark Installation %s as %s", installation.ID, model.InstallationStateImportInProgress)
+	}
+	err = webhook.SendToAllWebhooks(is.store, &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  model.InstallationStateImportInProgress,
+		OldState:  model.InstallationStateStable,
+		ExtraData: map[string]string{"TranslationID": imprt.TranslationID, "ImportID": imprt.ID},
+	}, is.logger.WithField("webhookEvent", model.InstallationStateImportInProgress))
+	if err != nil {
+		is.logger.WithError(err).Errorf("failed to send webhooks")
+	}
+
+	defer func() {
+		installation.State = model.InstallationStateStable
+		err = is.store.UpdateInstallation(installation)
+		if err != nil {
+			is.logger.WithError(err).Errorf("failed to mark Installation %s as state stable", installation.ID)
+			return
+		}
+		err = webhook.SendToAllWebhooks(is.store, &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  model.InstallationStateStable,
+			OldState:  model.InstallationStateImportInProgress,
+			ExtraData: map[string]string{"TranslationID": imprt.TranslationID, "ImportID": imprt.ID},
+		}, is.logger.WithField("webhookEvent", model.InstallationStateImportInProgress))
+		if err != nil {
+			is.logger.WithError(err).Errorf("failed to send webhooks")
+		}
+	}()
 
 	// find the CI and Cluster the Installation is on for executing commands
 	clusterInstallations, err := is.store.GetClusterInstallations(
@@ -138,7 +199,7 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		return errors.Wrapf(err, "failed to copy workspace import archive to Installation %s filestore", installation.ID)
 	}
 
-	return is.startImportProcess(mmctl, srcKey)
+	return is.startImportProcessAndWait(mmctl, srcKey, imprt.ID)
 }
 
 func (is *ImportSupervisor) teamAlreadyExists(mmctl *mmctl, teamName string) (bool, error) {
@@ -237,8 +298,8 @@ func (is *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportSta
 	return srcKey, nil
 }
 
-func (is *ImportSupervisor) startImportProcess(mmctl *mmctl, srcKey string) error {
-	output, err := mmctl.Do("import", "process", srcKey)
+func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, importArchiveFilename string, awatImportID string) error {
+	output, err := mmctl.Do("import", "process", importArchiveFilename)
 	if err != nil {
 		return errors.Wrap(err, "failed to start import process in Mattermost itself")
 	}
@@ -255,39 +316,60 @@ func (is *ImportSupervisor) startImportProcess(mmctl *mmctl, srcKey string) erro
 
 	jobID := jobResponses[0].ID
 	is.logger.Infof("Started Import job %s", jobID)
-	go is.waitForImportToComplete(mmctl, jobID)
-
-	return nil
+	return is.waitForImportToComplete(mmctl, jobID, awatImportID)
 }
 
-func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, jobID string) {
+func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID string, awatImportID string) error {
 	complete := false
 	var (
 		resp         *jobResponse
 		output       []byte
 		jobResponses []*jobResponse
 	)
+	var err error = nil
+	defer func(is *ImportSupervisor) {
+		errorString := ""
+		// N.B. that err is not passed into this func, so this deferred
+		// func will use whatever value err has at the end of execution of
+		// the outer method
+
+		// this is important because as we reuse the err variable, in this
+		// case we must be careful to ensure that it is reset to `nil`
+		// after any non-fatal error in the outer method is handled
+		if err != nil {
+			errorString = err.Error()
+		}
+		err = is.awatClient.CompleteImport(
+			&awat.ImportCompletedWorkRequest{
+				ID:         awatImportID,
+				CompleteAt: time.Now().UnixNano() / int64(time.Millisecond),
+				Error:      errorString,
+			})
+		if err != nil {
+			is.logger.WithError(err).Errorf("failed to notify AWAT that Import %s is complete", mattermostJobID)
+		}
+	}(is)
 
 	for !complete {
-		var err error
-		output, err = mmctl.Do("import", "job", "show", jobID)
+		err = nil
+		output, err = mmctl.Do("import", "job", "show", mattermostJobID)
 
 		err = json.Unmarshal([]byte(output), &jobResponses)
 		if err != nil {
 			is.logger.WithError(err).Warn("failed to check job")
+			err = nil
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		if len(jobResponses) != 1 {
-			is.logger.Errorf("unexpected number of responses from jobs API endpoint (%d)", len(jobResponses))
-			return
+			return errors.Errorf("unexpected number of responses from jobs API endpoint (%d)", len(jobResponses))
 		}
 		resp = jobResponses[0]
 		if resp.Status != "pending" && resp.Status != "in_progress" {
 			complete = true
 		}
 		if resp.Status == "error" {
-			is.logger.Errorf("import job failed with error %s on line %s", resp.Error, resp.LineNumber)
-			return
+			return errors.Errorf("import job failed with error %s on line %s", resp.Error, resp.LineNumber)
 		}
 
 		is.logger.Debugf("Waiting for job %s to complete. Status: %s Progress: %d", resp.ID, resp.Status, resp.Progress)
@@ -296,4 +378,5 @@ func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, jobID string) 
 
 	is.logger.Infof("Import Job %s successfully completed", resp.ID)
 	is.logger.Debugf("Completed with output %s", output)
+	return nil
 }
