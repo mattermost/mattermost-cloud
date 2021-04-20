@@ -43,6 +43,10 @@ const (
 	InstallationStateUpdateInProgress = "update-in-progress"
 	// InstallationStateUpdateFailed is an installation that failed to update.
 	InstallationStateUpdateFailed = "update-failed"
+	// InstallationStateImportInProgress is an installation into which a
+	// Workspace archive is being imported from another service or
+	// on-premise
+	InstallationStateImportInProgress = "import-in-progress"
 	// InstallationStateDeletionRequested is an installation to be deleted.
 	InstallationStateDeletionRequested = "deletion-requested"
 	// InstallationStateDeletionInProgress is an installation being deleted.
@@ -79,6 +83,7 @@ var AllInstallationStates = []string{
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
 	InstallationStateUpdateFailed,
+	InstallationStateImportInProgress,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
@@ -162,6 +167,7 @@ var (
 			InstallationStateUpdateRequested,
 			InstallationStateUpdateInProgress,
 			InstallationStateUpdateFailed,
+			InstallationStateImportInProgress,
 			InstallationStateHibernationRequested,
 			InstallationStateHibernationInProgress,
 			InstallationStateHibernating,
