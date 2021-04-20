@@ -28,6 +28,7 @@ type KopsMetadata struct {
 	ChangeRequest        *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
 	RotatorRequest       *RotatorMetadata            `json:"RotatorRequest,omitempty"`
 	Warnings             []string                    `json:"Warnings,omitempty"`
+	Networking           string                      `json:"Networking,omitempty"`
 }
 
 // KopsInstanceGroupsMetadata is a map of instance group names to their metadata.
@@ -49,6 +50,7 @@ type KopsMetadataRequestedState struct {
 	NodeInstanceType   string `json:"NodeInstanceType,omitempty"`
 	NodeMinCount       int64  `json:"NodeMinCount,omitempty"`
 	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
+	Networking         string `json:"Networking,omitempty"`
 }
 
 // RotatorMetadata is the metadata for the Rotator tool
