@@ -354,7 +354,7 @@ func (mr *MockAWSMockRecorder) S3EnsureObjectDeleted(bucketName, path interface{
 }
 
 // GenerateBifrostUtilitySecret mocks base method
-func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, vpc string, logger logrus.FieldLogger) (*v1.Secret, error) {
+func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID, vpc string, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateBifrostUtilitySecret", clusterID, vpc, logger)
 	ret0, _ := ret[0].(*v1.Secret)
@@ -363,9 +363,9 @@ func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, vpc string, log
 }
 
 // GenerateBifrostUtilitySecret indicates an expected call of GenerateBifrostUtilitySecret
-func (mr *MockAWSMockRecorder) GenerateBifrostUtilitySecret(clusterID, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) GenerateBifrostUtilitySecret(clusterID, vpc, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateBifrostUtilitySecret", reflect.TypeOf((*MockAWS)(nil).GenerateBifrostUtilitySecret), clusterID, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateBifrostUtilitySecret", reflect.TypeOf((*MockAWS)(nil).GenerateBifrostUtilitySecret), clusterID, vpc, logger)
 }
 
 // GetCIDRByVPCTag mocks base method
@@ -383,7 +383,7 @@ func (mr *MockAWSMockRecorder) GetCIDRByVPCTag(vpcTagName, logger interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCIDRByVPCTag", reflect.TypeOf((*MockAWS)(nil).GetCIDRByVPCTag), vpcTagName, logger)
 }
 
-// GetVpcResourcesByVpcID mock GetVpcResourcesByVpcID method
+// GetVpcResourcesByVpcID mocks base method
 func (m *MockAWS) GetVpcResourcesByVpcID(vpcID string, logger logrus.FieldLogger) (aws.ClusterResources, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVpcResourcesByVpcID", vpcID, logger)
@@ -392,10 +392,22 @@ func (m *MockAWS) GetVpcResourcesByVpcID(vpcID string, logger logrus.FieldLogger
 	return ret0, ret1
 }
 
-// TagResourcesByCluster mock TagResourcesByCluster method
-func (m *MockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger logrus.FieldLogger) error {
+// GetVpcResourcesByVpcID indicates an expected call of GetVpcResourcesByVpcID
+func (mr *MockAWSMockRecorder) GetVpcResourcesByVpcID(vpcID, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVpcResourcesByVpcID", reflect.TypeOf((*MockAWS)(nil).GetVpcResourcesByVpcID), vpcID, logger)
+}
+
+// TagResourcesByCluster mocks base method
+func (m *MockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID, owner string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TagResourcesByCluster", clusterResources, logger)
+	ret := m.ctrl.Call(m, "TagResourcesByCluster", clusterResources, clusterID, owner, logger)
 	ret0, _ := ret[0].(error)
 	return ret0
+}
+
+// TagResourcesByCluster indicates an expected call of TagResourcesByCluster
+func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, clusterID, owner, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, clusterID, owner, logger)
 }
