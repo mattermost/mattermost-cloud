@@ -131,8 +131,6 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
-		Networking:         createClusterRequest.Networking,
-		VPC:                createClusterRequest.VPC,
 	}
 
 	err = cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)

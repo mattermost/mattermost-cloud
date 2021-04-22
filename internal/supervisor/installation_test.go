@@ -359,14 +359,19 @@ func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string, logger lo
 	return nil, nil
 }
 
-func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
+func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, vpc string, logger log.FieldLogger) (*corev1.Secret, error) {
 	return nil, nil
 }
 
 func (a *mockAWS) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error) {
 	return "", nil
 }
-
+func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (aws.ClusterResources, error) {
+	return aws.ClusterResources{}, nil
+}
+func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
+	return nil
+}
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
 
