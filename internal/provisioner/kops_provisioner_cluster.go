@@ -348,19 +348,19 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 
 	_, err = k8sClient.Clientset.CoreV1().Namespaces().Get(ctx, "pgbouncer", metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
-		logger.Info("namespace resource does not exist, will create it...")
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/pgbouncer-manifests/pgbouncer-namespace.yaml",
-			DeployNamespace: "pgbouncer",
-		},
-		)
+		logger.Info("namespace resource does not exist, creating it...")
+		_, err = k8sClient.CreateOrUpdateNamespace("pgbouncer")
+		if err != nil {
+			return errors.Wrap(err, "failed to create pgbouncer namespace")
+		}
+
 	} else if err != nil {
 		return errors.Wrap(err, "failed to get Namespace pgbouncer")
 	}
 
 	_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
-		logger.Info("Configmap resource for pgbouncer-configmap does not exist, will create it...")
+		logger.Info("Configmap resource for pgbouncer-configmap does not exist, will be created...")
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/pgbouncer-manifests/pgbouncer-configmap.yaml",
 			DeployNamespace: "pgbouncer",
@@ -372,7 +372,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 
 	_, err = k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Get(ctx, "pgbouncer-userlist-secret", metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
-		logger.Info("Secret resource for pgbouncer-userlist-secret does not exist, will create it...")
+		logger.Info("Secret resource for pgbouncer-userlist-secret does not exist, will be created...")
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/pgbouncer-manifests/pgbouncer-secret.yaml",
 			DeployNamespace: "pgbouncer",

@@ -1,9 +1,0 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: pgbouncer
-  labels:
-    app.kubernetes.io/name: pgbouncer
-    app.kubernetes.io/instance: pgbouncer
-    app.kubernetes.io/managed-by: provisioner
