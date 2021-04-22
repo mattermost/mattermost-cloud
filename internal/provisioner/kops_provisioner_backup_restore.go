@@ -88,3 +88,82 @@ func (provisioner *KopsProvisioner) CleanupBackupJob(backup *model.InstallationB
 
 	return provisioner.backupOperator.CleanupBackupJob(jobsClient, backup, logger)
 }
+
+// TriggerRestore triggers restoration job for specific installation on the cluster.
+func (provisioner *KopsProvisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      cluster.ID,
+		"installation": installation.ID,
+		"backup":       backup.ID,
+	})
+	logger.Info("Triggering restoration for installation")
+
+	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client")
+	}
+	defer invalidateCache(err)
+
+	filestoreCfg, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).
+		GenerateFilestoreSpecAndSecret(provisioner.store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get files store configuration for installation")
+	}
+	// Backup-restore is not supported for local MinIO storage, therefore this should not happen
+	if filestoreCfg == nil || filestoreSecret == nil {
+		return errors.New("filestore secret and config cannot be empty for database restoration")
+	}
+	dbSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSecret(provisioner.store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get database configuration")
+	}
+	// Backup-restore is not supported for local MySQL, therefore this should not happen
+	if dbSecret == nil {
+		return errors.New("database secret cannot be empty for database restoration")
+	}
+
+	jobsClient := k8sClient.Clientset.BatchV1().Jobs(installation.ID)
+
+	return provisioner.backupOperator.TriggerRestore(jobsClient, backup, installation, filestoreCfg, dbSecret.Name, logger)
+}
+
+// CheckRestoreStatus checks status of running backup job,
+// returns job completion time, when the job finished or -1 if it is still running.
+func (provisioner *KopsProvisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      cluster.ID,
+		"installation": backup.InstallationID,
+		"backup":       backup.ID,
+	})
+	logger.Info("Checking restoration status for installation")
+
+	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return -1, errors.Wrap(err, "failed to create k8s client")
+	}
+	defer invalidateCache(err)
+
+	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
+
+	return provisioner.backupOperator.CheckRestoreStatus(jobsClient, backup, logger)
+}
+
+// CleanupRestoreJob deletes restore job from the cluster if it exists.
+func (provisioner *KopsProvisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      cluster.ID,
+		"installation": backup.InstallationID,
+		"backup":       backup.ID,
+	})
+	logger.Info("Cleaning up restoration job for installation")
+
+	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client")
+	}
+	defer invalidateCache(err)
+
+	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
+
+	return provisioner.backupOperator.CleanupRestoreJob(jobsClient, backup, logger)
+}
