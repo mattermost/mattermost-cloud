@@ -200,7 +200,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 	}
 	defer installationLock.Unlock()
 
-	err = model.EnsureBackupCompatible(installation)
+	err = model.EnsureInstallationReadyForBackup(installation)
 	if err != nil {
 		logger.WithError(err).Errorf("Installation is not backup compatible %s", installation.ID)
 		return backup.State

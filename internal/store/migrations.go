@@ -1217,4 +1217,27 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.25.0"), semver.MustParse("0.26.0"), func(e execer) error {
+		// Add InstallationDBRestorationOperation table.
+		_, err := e.Exec(`
+			CREATE TABLE InstallationDBRestorationOperation (
+				ID TEXT PRIMARY KEY,
+				InstallationID TEXT NOT NULL,
+				BackupID TEXT NOT NULL,
+				RequestAt BIGINT NOT NULL,
+				State TEXT NOT NULL,
+				TargetInstallationState TEXT NOT NULL,
+				ClusterInstallationID TEXT NOT NULL,
+				CompleteAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
