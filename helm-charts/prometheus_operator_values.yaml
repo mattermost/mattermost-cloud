@@ -2056,7 +2056,18 @@ prometheus:
         interval: 30s
         path: /metrics
         scheme: http
-
+  - name: pgbouncer
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: pgbouncer
+    namespaceSelector:
+      matchNames:
+        - pgbouncer
+    endpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics
+        scheme: http
   additionalPodMonitors: []
   ## Name of the PodMonitor to create
   ##
