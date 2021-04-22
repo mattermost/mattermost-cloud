@@ -225,7 +225,7 @@ func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (string, e
 	return string(data), nil
 }
 
-// GetCurrentCni, it get the current CNI value for the cluster
+// GetCurrentCni it get the current CNI value for the cluster
 func GetCurrentCni(network string) string {
 	for _, CNI := range model.GetSupportedCniList() {
 		if strings.Contains(network, CNI) {

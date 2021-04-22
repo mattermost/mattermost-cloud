@@ -413,7 +413,7 @@ func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (C
 	return a.getClusterResourcesForVPC(vpcID, *vpcCidr.Vpcs[0].CidrBlock, logger)
 }
 
-// TagPublicSubnets for secondary cluster.
+// TagResourcesByCluster for secondary cluster.
 func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
 
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
