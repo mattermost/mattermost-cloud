@@ -20,6 +20,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// ImportSupervisor is a supervisor which performs Workspace Imports
+// from ready Imports produced by the AWAT. It periodically queries
+// the AWAT for Imports waiting to be performed and then performs
+// imports serially
 type ImportSupervisor struct {
 	awsClient   *toolsAWS.Client
 	awatClient  *awat.Client
@@ -43,7 +47,7 @@ func (m *mmctl) Do(args ...string) ([]byte, error) {
 }
 
 type team struct {
-	Id   string `json:"id"`
+	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -60,6 +64,7 @@ type jobResponseData struct {
 	LineNumber string `json:"line_number"`
 }
 
+// NewImportSupervisor creates a new Import Supervisor
 func NewImportSupervisor(awsClient *toolsAWS.Client, awat *awat.Client, store installationStore, provisioner *provisioner.KopsProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:   awsClient,
@@ -73,6 +78,8 @@ func NewImportSupervisor(awsClient *toolsAWS.Client, awat *awat.Client, store in
 	}
 }
 
+// Do checks to see if there is an Import that is ready to be
+// imported, and if so, does that. Otherwise, it does nothing.
 func (is *ImportSupervisor) Do() error {
 	work, err := is.awatClient.GetTranslationReadyToImport(
 		&awat.ImportWorkRequest{
@@ -100,6 +107,11 @@ func (is *ImportSupervisor) Do() error {
 	return err
 }
 
+// Shutdown is called when the ImportSupervisor is stopped.
+// TODO change Shutdown from a no-op to allowing it to unlock ongoing
+// Imports so that they are detected as interrupted by the AWAT and
+// can be re-served to another Provisioner instance as a cleaner retry
+// pattern
 func (is *ImportSupervisor) Shutdown() {
 	is.logger.Debug("Shutting down import supervisor")
 }
