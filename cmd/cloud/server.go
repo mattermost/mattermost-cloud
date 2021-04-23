@@ -62,6 +62,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("backup-supervisor", false, "Whether this server will run a backup supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-restoration-supervisor", false, "Whether this server will run an installation restoration supervisor or not.")
 
 	// Scheduling and installation options
 	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
@@ -151,7 +152,9 @@ var serverCmd = &cobra.Command{
 		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
 		backupSupervisor, _ := command.Flags().GetBool("backup-supervisor")
-		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor && !backupSupervisor {
+		installationRestorationSupervisor, _ := command.Flags().GetBool("installation-restoration-supervisor")
+		supervisorsEnabled := []bool{clusterSupervisor, installationSupervisor, clusterInstallationSupervisor, groupSupervisor, backupSupervisor, installationRestorationSupervisor}
+		if !isAny(supervisorsEnabled) {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -185,6 +188,7 @@ var serverCmd = &cobra.Command{
 			"installation-supervisor":                installationSupervisor,
 			"cluster-installation-supervisor":        clusterInstallationSupervisor,
 			"backup-supervisor":                      backupSupervisor,
+			"installation-restoration-supervisor":    installationRestorationSupervisor,
 			"store-version":                          currentVersion,
 			"state-store":                            s3StateStore,
 			"working-directory":                      wd,
@@ -269,6 +273,9 @@ var serverCmd = &cobra.Command{
 		}
 		if backupSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
+		}
+		if installationRestorationSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, kopsProvisioner, instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -452,4 +459,13 @@ func getHumanReadableID() string {
 
 func flagIsUnset(cmd *cobra.Command, flagName string) bool {
 	return !cmd.Flags().Changed(flagName)
+}
+
+func isAny(conditions []bool) bool {
+	for _, b := range conditions {
+		if b {
+			return true
+		}
+	}
+	return false
 }

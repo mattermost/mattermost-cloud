@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type backupLockStore interface {
+type installationBackupLockStore interface {
 	LockInstallationBackups(backupsID []string, lockerID string) (bool, error)
 	UnlockInstallationBackups(backupsID []string, lockerID string, force bool) (bool, error)
 }
@@ -16,11 +16,11 @@ type backupLockStore interface {
 type backupLock struct {
 	backupsID []string
 	lockerID  string
-	store     backupLockStore
+	store     installationBackupLockStore
 	logger    log.FieldLogger
 }
 
-func newBackupLock(backupID, lockerID string, store backupLockStore, logger log.FieldLogger) *backupLock {
+func newBackupLock(backupID, lockerID string, store installationBackupLockStore, logger log.FieldLogger) *backupLock {
 	return &backupLock{
 		backupsID: []string{backupID},
 		lockerID:  lockerID,
@@ -29,7 +29,7 @@ func newBackupLock(backupID, lockerID string, store backupLockStore, logger log.
 	}
 }
 
-func newBackupsLock(backupsID []string, lockerID string, store backupLockStore, logger log.FieldLogger) *backupLock {
+func newBackupsLock(backupsID []string, lockerID string, store installationBackupLockStore, logger log.FieldLogger) *backupLock {
 	return &backupLock{
 		backupsID: backupsID,
 		lockerID:  lockerID,
