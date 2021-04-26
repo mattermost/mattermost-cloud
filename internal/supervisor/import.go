@@ -25,12 +25,22 @@ import (
 // the AWAT for Imports waiting to be performed and then performs
 // imports serially
 type ImportSupervisor struct {
-	awsClient   *toolsAWS.Client
-	awatClient  *awat.Client
+	awsClient   toolsAWS.AWS
+	awatClient  awat.Client
 	logger      logrus.FieldLogger
 	store       installationStore
-	provisioner *provisioner.KopsProvisioner
+	provisioner importProvisioner
 	ID          string
+}
+
+type importProvisioner interface {
+	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+}
+
+// Mmctl provides an interface for running mmctl commands
+// mostly useful for testing
+type Mmctl interface {
+	Run(args ...string) ([]byte, error)
 }
 
 type mmctl struct {
@@ -41,7 +51,7 @@ type mmctl struct {
 	*ImportSupervisor
 }
 
-func (m *mmctl) Do(args ...string) ([]byte, error) {
+func (m *mmctl) Run(args ...string) ([]byte, error) {
 	args = append([]string{"mmctl", "--format", "json", "--local"}, args...)
 	return m.provisioner.ExecClusterInstallationCLI(m.cluster, m.clusterInstallation, args...)
 }
@@ -65,7 +75,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient *toolsAWS.Client, awat *awat.Client, store installationStore, provisioner *provisioner.KopsProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat awat.Client, store installationStore, provisioner *provisioner.KopsProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:   awsClient,
 		awatClient:  awat,
@@ -205,7 +215,7 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 }
 
 func (is *ImportSupervisor) teamAlreadyExists(mmctl *mmctl, teamName string) (bool, error) {
-	output, err := mmctl.Do("team", "search", teamName)
+	output, err := mmctl.Run("team", "search", teamName)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to search for team %s", teamName)
 	}
@@ -229,7 +239,7 @@ func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportS
 
 	// if the team doesn't exist, create it
 	if !found {
-		output, err := mmctl.Do("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
+		output, err := mmctl.Run("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
 		if err != nil {
 			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", imprt.Team, string(output))
 		}
@@ -237,7 +247,7 @@ func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportS
 
 	// ensure that there will be enough new user slots for this import
 
-	output, err := mmctl.Do("config", "get", "TeamSettings.MaxUsersPerTeam")
+	output, err := mmctl.Run("config", "get", "TeamSettings.MaxUsersPerTeam")
 	if err != nil {
 		return errors.Wrapf(err, "failed to get max user limit")
 	}
@@ -250,7 +260,7 @@ func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportS
 	}
 
 	maxUsers := currentMaxUsers + imprt.Users
-	_, err = mmctl.Do("config", "set", "TeamSettings.MaxUsersPerTeam", strconv.Itoa(maxUsers))
+	_, err = mmctl.Run("config", "set", "TeamSettings.MaxUsersPerTeam", strconv.Itoa(maxUsers))
 	if err != nil {
 		return errors.Wrapf(err, "failed to add %d users to MaxUsersPerTeam", imprt.Users)
 	}
@@ -262,7 +272,7 @@ func (is *ImportSupervisor) getBucketForInstallation(installation *model.Install
 	switch installation.Filestore {
 	// TODO handle single tenant bucket names
 	case model.InstallationFilestoreMultiTenantAwsS3, model.InstallationFilestoreBifrost:
-		return toolsAWS.GetMultitenantBucketNameForInstallation(installation.ID, is.store, is.awsClient)
+		return is.awsClient.GetMultitenantBucketNameForInstallation(installation.ID, is.store)
 	case model.InstallationFilestoreAwsS3, model.InstallationFilestoreMinioOperator:
 		return "", errors.Errorf("support for workspace imports to workspaces with the filestore type %s not yet supported", installation.Filestore)
 	default:
@@ -297,7 +307,7 @@ func (is *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportSta
 }
 
 func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, importArchiveFilename string, awatImportID string) error {
-	output, err := mmctl.Do("import", "process", importArchiveFilename)
+	output, err := mmctl.Run("import", "process", importArchiveFilename)
 	if err != nil {
 		return errors.Wrap(err, "failed to start import process in Mattermost itself")
 	}
@@ -350,7 +360,7 @@ func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobI
 
 	for !complete {
 		err = nil
-		output, err = mmctl.Do("import", "job", "show", mattermostJobID)
+		output, err = mmctl.Run("import", "job", "show", mattermostJobID)
 		if err != nil {
 			is.logger.WithError(err).Warn("failed to check job")
 			err = nil

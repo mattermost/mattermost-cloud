@@ -367,6 +367,14 @@ func (a *mockAWS) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (st
 	return "", nil
 }
 
+func (a *mockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error {
+	return nil
+}
+
+func (a *mockAWS) GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error) {
+	return "", nil
+}
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
 

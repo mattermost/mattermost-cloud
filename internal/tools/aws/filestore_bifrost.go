@@ -50,7 +50,7 @@ func (f *BifrostFilestore) Teardown(keepData bool, store model.InstallationDatab
 	})
 	logger.Info("Tearing down bifrost filestore")
 
-	bucketName, err := GetMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	bucketName, err := f.awsClient.GetMultitenantBucketNameForInstallation(f.installationID, store)
 	if err != nil {
 		// Perform a manual check to see if no cluster installations were ever
 		// created for this installation.
@@ -96,7 +96,7 @@ func (f *BifrostFilestore) GenerateFilestoreSpecAndSecret(store model.Installati
 	})
 	logger.Debug("Generating Bifrost filestore information")
 
-	bucketName, err := GetMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	bucketName, err := f.awsClient.GetMultitenantBucketNameForInstallation(f.installationID, store)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to find multitenant bucket")
 	}
@@ -145,7 +145,7 @@ func (f *BifrostFilestore) s3FilestoreProvision(store model.InstallationDatabase
 
 	// Bifrost filestores don't require any setup. The only check that we will
 	// make is that the multitenant bucket exsists for the shared filestore.
-	_, err := GetMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	_, err := f.awsClient.GetMultitenantBucketNameForInstallation(f.installationID, store)
 	if err != nil {
 		return errors.Wrap(err, "failed to find multitenant bucket")
 	}

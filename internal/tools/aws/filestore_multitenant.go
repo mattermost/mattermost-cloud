@@ -50,7 +50,7 @@ func (f *S3MultitenantFilestore) Teardown(keepData bool, store model.Installatio
 	})
 	logger.Info("Tearing down AWS S3 filestore")
 
-	bucketName, err := GetMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	bucketName, err := f.awsClient.GetMultitenantBucketNameForInstallation(f.installationID, store)
 	if err != nil {
 		// Perform a manual check to see if no cluster installations were ever
 		// created for this installation.
@@ -106,7 +106,7 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 	})
 	logger.Debug("Generating S3 multitenant filestore information")
 
-	bucketName, err := GetMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	bucketName, err := f.awsClient.GetMultitenantBucketNameForInstallation(f.installationID, store)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to find multitenant bucket")
 	}
@@ -156,7 +156,7 @@ func (f *S3MultitenantFilestore) s3FilestoreProvision(store model.InstallationDa
 	})
 	logger.Info("Provisioning AWS multitenant S3 filestore")
 
-	bucketName, err := GetMultitenantBucketNameForInstallation(f.installationID, store, f.awsClient)
+	bucketName, err := f.awsClient.GetMultitenantBucketNameForInstallation(f.installationID, store)
 	if err != nil {
 		return errors.Wrap(err, "failed to find multitenant bucket")
 	}
