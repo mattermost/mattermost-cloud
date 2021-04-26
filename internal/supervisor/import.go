@@ -125,21 +125,11 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	if installation == nil {
 		return errors.Errorf("Installation %s not found for Import %s", imprt.InstallationID, imprt.ID)
 	}
-	locked, err := is.store.LockInstallation(installation.ID, is.ID)
-	if err != nil {
-		return errors.Wrap(err, "failed to lock installation")
+	lock := newInstallationLock(installation.ID, is.ID, is.store, is.logger)
+	if !lock.TryLock() {
+		return errors.Wrapf(err, "failed to get lock on Installation %s", installation.ID)
 	}
-	if !locked {
-		return errors.Errorf("failed to get lock on Installation %s (no error)", installation.ID)
-	}
-	defer func() {
-		unlocked, err := is.store.UnlockInstallation(installation.ID, is.ID, false)
-		if err != nil {
-			is.logger.WithError(err).Errorf("failed to unlock Installation %s", installation.ID)
-		} else if !unlocked {
-			is.logger.Errorf("failed without error to unlock Installation %s", installation.ID)
-		}
-	}()
+	defer lock.Unlock()
 
 	if installation.State != model.InstallationStateStable {
 		return errors.Errorf("Skipping import on Installation %s with state %s. State must be stable to begin work.", installation.ID, installation.State)
