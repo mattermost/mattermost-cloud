@@ -351,10 +351,16 @@ func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobI
 	for !complete {
 		err = nil
 		output, err = mmctl.Do("import", "job", "show", mattermostJobID)
+		if err != nil {
+			is.logger.WithError(err).Warn("failed to check job")
+			err = nil
+			time.Sleep(5 * time.Second)
+			continue
+		}
 
 		err = json.Unmarshal([]byte(output), &jobResponses)
 		if err != nil {
-			is.logger.WithError(err).Warn("failed to check job")
+			is.logger.WithError(err).Warn("failed to check job; bad JSON")
 			err = nil
 			time.Sleep(5 * time.Second)
 			continue
