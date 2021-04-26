@@ -271,13 +271,9 @@ func (is *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportS
 func (is *ImportSupervisor) getBucketForInstallation(installation *model.Installation) (string, error) {
 	switch installation.Filestore {
 	// TODO handle single tenant bucket names
-	case model.InstallationFilestoreMultiTenantAwsS3:
-		fallthrough
-	case model.InstallationFilestoreBifrost:
+	case model.InstallationFilestoreMultiTenantAwsS3, model.InstallationFilestoreBifrost:
 		return toolsAWS.GetMultitenantBucketNameForInstallation(installation.ID, is.store, is.awsClient)
-	case model.InstallationFilestoreAwsS3:
-		fallthrough
-	case model.InstallationFilestoreMinioOperator:
+	case model.InstallationFilestoreAwsS3, model.InstallationFilestoreMinioOperator:
 		return "", errors.Errorf("support for workspace imports to workspaces with the filestore type %s not yet supported", installation.Filestore)
 	default:
 		return "", errors.Errorf("encountered unknown filestore type %s", installation.Filestore)
