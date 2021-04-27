@@ -38,12 +38,14 @@ func init() {
 	clusterCreateCmd.Flags().String("nginx-version", model.NginxDefaultVersion.Version(), "The version of Nginx Internal to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("nginx-internal-version", model.NginxInternalDefaultVersion.Version(), "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", model.TeleportDefaultVersion.Version(), "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("pgbouncer-version", model.PgbouncerDefaultVersion.Version(), "The version of Pgbouncer to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", model.PrometheusOperatorDefaultVersion.Values(), "The branch name of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", model.ThanosDefaultVersion.Values(), "The branch name of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", model.FluentbitDefaultVersion.Values(), "The branch name of the desired chart value file's version for Fluent-Bit")
 	clusterCreateCmd.Flags().String("nginx-values", model.NginxDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX")
 	clusterCreateCmd.Flags().String("nginx-internal-values", model.NginxInternalDefaultVersion.Values(), "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
+	clusterCreateCmd.Flags().String("pgbouncer-values", model.PgbouncerDefaultVersion.Values(), "The branch name of the desired chart value file's version for Pgbouncer")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
@@ -55,6 +57,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("nginx-version", "", "The version of the NGINX Helm chart")
 	clusterProvisionCmd.Flags().String("nginx-internal-version", "", "The version of the internal NGINX Helm chart")
 	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
+	clusterProvisionCmd.Flags().String("pgbouncer-version", "", "The version of the Pgbouncer Helm chart")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
@@ -62,6 +65,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("nginx-values", "", "The branch name of the desired chart value file's version for NGINX")
 	clusterProvisionCmd.Flags().String("nginx-internal-values", "", "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterProvisionCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
+	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The branch name of the desired chart value file's version for Pgbouncer")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
@@ -556,6 +560,7 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	nginxVersion, _ := command.Flags().GetString("nginx-version")
 	nginxInternalVersion, _ := command.Flags().GetString("nginx-internal-version")
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
+	pgbouncerVersion, _ := command.Flags().GetString("pgbouncer-version")
 
 	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
 	thanosValues, _ := command.Flags().GetString("thanos-values")
@@ -563,6 +568,7 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	nginxValues, _ := command.Flags().GetString("nginx-values")
 	nginxInternalValues, _ := command.Flags().GetString("nginx-internal-values")
 	teleportValues, _ := command.Flags().GetString("teleport-values")
+	pgbouncerValues, _ := command.Flags().GetString("pgbouncer-values")
 
 	utilityVersions := make(map[string]*model.HelmUtilityVersion)
 
@@ -588,6 +594,10 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 
 	if teleportVersion != "" && teleportValues != "" {
 		utilityVersions[model.TeleportCanonicalName] = &model.HelmUtilityVersion{Chart: teleportVersion, ValuesPath: teleportValues}
+	}
+
+	if pgbouncerVersion != "" && pgbouncerValues != "" {
+		utilityVersions[model.PgbouncerCanonicalName] = &model.HelmUtilityVersion{Chart: pgbouncerVersion, ValuesPath: pgbouncerValues}
 	}
 
 	return utilityVersions

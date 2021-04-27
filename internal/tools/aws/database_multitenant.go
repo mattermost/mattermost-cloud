@@ -928,7 +928,6 @@ func (d *RDSMultitenantDatabase) ensureDatabaseUserHasFullPermissions(ctx contex
 			return errors.Wrap(err, "failed to run privilege grant SQL command")
 		}
 	}
-
 	return nil
 }
 
