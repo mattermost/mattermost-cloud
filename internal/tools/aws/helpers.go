@@ -250,6 +250,19 @@ func getVPCForCluster(clusterID string, client *Client) (*ec2.Vpc, error) {
 			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
 		},
 	})
+	// checking if cluster is secondary
+	if len(vpcs) == 0 {
+		vpcs, err = client.GetVpcsWithFilters([]*ec2.Filter{
+			{
+				Name:   aws.String(VpcAvailableTagKey),
+				Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			},
+			{
+				Name:   aws.String(VpcSecondaryClusterIDTagKey),
+				Values: []*string{aws.String(clusterID)},
+			},
+		})
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to lookup VPC for cluster %s", clusterID)
 	}
