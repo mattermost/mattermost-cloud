@@ -107,8 +107,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		clusterResources.WorkerSecurityGroupIDs,
 		allowSSHCIDRS,
 	)
-	// Only release VPC resources, if create cluster request was for the primary cluster.
-	if err != nil && kopsMetadata.ChangeRequest.VPC == "" {
+	// release VPC resources
+	if err != nil {
 		releaseErr := awsClient.ReleaseVpc(cluster.ID, logger)
 		if releaseErr != nil {
 			logger.WithError(releaseErr).Error("Unable to release VPC")
@@ -116,8 +116,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 		return errors.Wrap(err, "unable to create kops cluster")
 	}
-	// Tag Public subnets & respective VPC for the secondary cluster.
-	if err == nil && kopsMetadata.ChangeRequest.VPC != "" {
+	// Tag Public subnets & respective VPC for the secondary cluster if there is no error.
+	if kopsMetadata.ChangeRequest.VPC != "" {
 		err = awsClient.TagResourcesByCluster(clusterResources, cluster.ID, provisioner.params.Owner, logger)
 		if err != nil {
 			return err

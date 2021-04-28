@@ -74,12 +74,7 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 		return nil, err
 	}
 	if r.Cluster.ProvisionerMetadataKops != nil && r.Cluster.ProvisionerMetadataKops.Networking != "" {
-
 		r.Cluster.Networking = r.Cluster.ProvisionerMetadataKops.Networking
-	}
-	if r.Cluster.ProvisionerMetadataKops != nil && r.Cluster.ProvisionerMetadataKops.VPC != "" {
-
-		r.Cluster.VPC = r.Cluster.ProvisionerMetadataKops.VPC
 	}
 
 	return r.Cluster, nil
