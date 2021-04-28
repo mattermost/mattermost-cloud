@@ -36,12 +36,6 @@ type importProvisioner interface {
 	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 }
 
-// Mmctl provides an interface for running mmctl commands
-// mostly useful for testing
-type Mmctl interface {
-	Run(args ...string) ([]byte, error)
-}
-
 type mmctl struct {
 	cluster             *model.Cluster
 	clusterInstallation *model.ClusterInstallation
@@ -134,15 +128,20 @@ func (is *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	if installation == nil {
 		return errors.Errorf("Installation %s not found for Import %s", imprt.InstallationID, imprt.ID)
 	}
+
+	// grab Installation lock
 	lock := newInstallationLock(installation.ID, is.ID, is.store, is.logger)
 	if !lock.TryLock() {
 		return errors.Wrapf(err, "failed to get lock on Installation %s", installation.ID)
 	}
 	defer lock.Unlock()
 
+	// check Installation state is valid
 	if installation.State != model.InstallationStateStable {
 		return errors.Errorf("Skipping import on Installation %s with state %s. State must be stable to begin work.", installation.ID, installation.State)
 	}
+
+	// mark this Installation as import-in-progress
 	installation.State = model.InstallationStateImportInProgress
 	err = is.store.UpdateInstallation(installation)
 	if err != nil {
