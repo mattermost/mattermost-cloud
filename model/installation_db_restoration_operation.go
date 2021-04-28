@@ -28,7 +28,7 @@ type InstallationDBRestorationOperation struct {
 	LockAcquiredAt          int64
 }
 
-// InstallationDBRestorationState represents the state of backup.
+// InstallationDBRestorationState represents the state of db restoration operation.
 type InstallationDBRestorationState string
 
 const (

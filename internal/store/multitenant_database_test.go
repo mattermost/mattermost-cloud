@@ -72,6 +72,8 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.database1.Installations = model.MultitenantDatabaseInstallations{s.installationID0, s.installationID1}
 	s.database2.Installations = model.MultitenantDatabaseInstallations{s.installationID2, s.installationID3, s.installationID4}
 
+	s.database1.MigratedInstallations = model.MultitenantDatabaseInstallations{s.installationID4}
+
 	err := s.sqlStore.CreateMultitenantDatabase(s.database1)
 	s.Assert().NoError(err)
 
@@ -201,6 +203,17 @@ func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabase() {
 	})
 	s.Assert().NoError(err)
 	s.Assert().Equal(0, len(databases))
+}
+
+func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForMigratedInstallationID() {
+	database, err := s.sqlStore.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		Paging:                 model.AllPagesNotDeleted(),
+		MigratedInstallationID: s.installationID4,
+		MaxInstallationsLimit:  model.NoInstallationsLimit,
+	})
+	s.Assert().NoError(err)
+	s.Assert().Len(database, 1)
+	s.Assert().Equal(s.database1.ID, database[0].ID)
 }
 
 func (s *TestMultitenantDatabaseSuite) TestUpdate() {

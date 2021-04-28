@@ -1240,4 +1240,77 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.26.0"), semver.MustParse("0.27.0"), func(e execer) error {
+		// 1. Add InstallationDBMigrationOperation table.
+		// 2. Add column MigratedInstallationsRaw to MultitenantDatabase table.
+		_, err := e.Exec(`
+			CREATE TABLE InstallationDBMigrationOperation (
+				ID TEXT PRIMARY KEY,
+				InstallationID TEXT NOT NULL,
+				RequestAt BIGINT NOT NULL,
+				State TEXT NOT NULL,
+				SourceDatabase TEXT NOT NULL,
+				DestinationDatabase TEXT NOT NULL,
+				SourceMultiTenantRaw BYTEA NULL,
+				DestinationMultiTenantRaw BYTEA NULL,
+				BackupID TEXT NOT NULL,
+				InstallationDBRestorationOperationID TEXT NOT NULL,
+				CompleteAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`ALTER TABLE MultitenantDatabase RENAME TO MultitenantDatabaseTemp;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE MultitenantDatabase (
+				ID TEXT PRIMARY KEY,
+				VpcID TEXT NOT NULL,
+				DatabaseType TEXT NOT NULL,
+				InstallationsRaw BYTEA NOT NULL,
+				MigratedInstallationsRaw BYTEA NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,             
+				LockAcquiredBy CHAR(26) NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+		INSERT INTO MultitenantDatabase
+		SELECT
+			ID,
+			VpcID,
+			DatabaseType,
+			InstallationsRaw,
+			'[]',
+			CreateAt,
+			DeleteAt,
+			LockAcquiredBy,
+			LockAcquiredAt
+		FROM
+		MultitenantDatabaseTemp;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE MultitenantDatabaseTemp;`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
