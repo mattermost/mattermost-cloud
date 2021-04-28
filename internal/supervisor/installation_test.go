@@ -108,7 +108,17 @@ func (s *mockInstallationStore) GetClusterInstallation(clusterInstallationID str
 }
 
 func (s *mockInstallationStore) GetClusterInstallations(*model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
-	return nil, nil
+	return []*model.ClusterInstallation{{
+		ID:              model.NewID(),
+		ClusterID:       model.NewID(),
+		InstallationID:  s.Installation.ID,
+		Namespace:       s.Installation.ID,
+		State:           "stable",
+		CreateAt:        s.Installation.CreateAt,
+		DeleteAt:        s.Installation.DeleteAt,
+		APISecurityLock: false,
+	},
+	}, nil
 }
 
 func (s *mockInstallationStore) LockClusterInstallations(clusterInstallationID []string, lockerID string) (bool, error) {

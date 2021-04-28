@@ -12,7 +12,7 @@ require (
 	github.com/gosuri/uilive v0.0.4
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
-	github.com/mattermost/awat v0.0.0-20210426215134-592d455af6bf
+	github.com/mattermost/awat v0.0.0-20210428223656-1267d82207a0
 	github.com/mattermost/mattermost-operator v1.13.0
 	github.com/mattermost/rotator v0.1.2
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
