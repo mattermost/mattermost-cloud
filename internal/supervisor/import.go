@@ -322,7 +322,24 @@ func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, importArchiv
 
 	jobID := jobResponses[0].ID
 	is.logger.Infof("Started Import job %s", jobID)
-	return is.waitForImportToComplete(mmctl, jobID, awatImportID)
+	err = is.waitForImportToComplete(mmctl, jobID, awatImportID)
+	errorString := ""
+	if err != nil {
+		errorString = err.Error()
+	}
+
+	cerr := is.awatClient.CompleteImport(
+		&awat.ImportCompletedWorkRequest{
+			ID:         awatImportID,
+			CompleteAt: time.Now().UnixNano() / int64(time.Millisecond),
+			Error:      errorString,
+		})
+	if cerr != nil {
+		// don't fail the whole process if the AWAT can't be notified properly
+		is.logger.WithError(cerr).Errorf("failed to notify AWAT that Import %s is complete", jobID)
+	}
+
+	return err
 }
 
 func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID string, awatImportID string) error {
@@ -333,28 +350,6 @@ func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobI
 		jobResponses []*jobResponse
 	)
 	var err error = nil
-	defer func(is *ImportSupervisor) {
-		errorString := ""
-		// N.B. that err is not passed into this func, so this deferred
-		// func will use whatever value err has at the end of execution of
-		// the outer method
-
-		// this is important because as we reuse the err variable, in this
-		// case we must be careful to ensure that it is reset to `nil`
-		// after any non-fatal error in the outer method is handled
-		if err != nil {
-			errorString = err.Error()
-		}
-		err = is.awatClient.CompleteImport(
-			&awat.ImportCompletedWorkRequest{
-				ID:         awatImportID,
-				CompleteAt: time.Now().UnixNano() / int64(time.Millisecond),
-				Error:      errorString,
-			})
-		if err != nil {
-			is.logger.WithError(err).Errorf("failed to notify AWAT that Import %s is complete", mattermostJobID)
-		}
-	}(is)
 
 	for !complete {
 		err = nil
