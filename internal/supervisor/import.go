@@ -107,6 +107,21 @@ func (is *ImportSupervisor) Do() error {
 		is.logger.WithError(err).Errorf("failed to perform work on Import %s", work.ID)
 	}
 
+	errorString := ""
+	if err != nil {
+		errorString = err.Error()
+	}
+
+	cerr := is.awatClient.CompleteImport(
+		&awat.ImportCompletedWorkRequest{
+			ID:         work.ID,
+			CompleteAt: time.Now().UnixNano() / int64(time.Millisecond),
+			Error:      errorString,
+		})
+	if cerr != nil {
+		is.logger.WithError(cerr).Errorf("failed to notify AWAT that Import %s is complete", work.ID)
+	}
+
 	return err
 }
 
@@ -322,24 +337,7 @@ func (is *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, importArchiv
 
 	jobID := jobResponses[0].ID
 	is.logger.Infof("Started Import job %s", jobID)
-	err = is.waitForImportToComplete(mmctl, jobID, awatImportID)
-	errorString := ""
-	if err != nil {
-		errorString = err.Error()
-	}
-
-	cerr := is.awatClient.CompleteImport(
-		&awat.ImportCompletedWorkRequest{
-			ID:         awatImportID,
-			CompleteAt: time.Now().UnixNano() / int64(time.Millisecond),
-			Error:      errorString,
-		})
-	if cerr != nil {
-		// don't fail the whole process if the AWAT can't be notified properly
-		is.logger.WithError(cerr).Errorf("failed to notify AWAT that Import %s is complete", jobID)
-	}
-
-	return err
+	return is.waitForImportToComplete(mmctl, jobID, awatImportID)
 }
 
 func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID string, awatImportID string) error {

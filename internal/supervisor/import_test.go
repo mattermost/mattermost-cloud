@@ -16,6 +16,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +35,7 @@ func TestImportSupervisor(t *testing.T) {
 		resource string = fmt.Sprintf("%s/%s", sourceBucket, inputArchive)
 	)
 
-	t.Run("one installation pending work", func(t *testing.T) {
+	t.Run("successfully import a translation", func(t *testing.T) {
 		awatClient := awatMocks.NewMockClient(gmctrl)
 		store := new(mockInstallationStore)
 		aws := mocks.NewMockAWS(gmctrl)
@@ -162,6 +163,82 @@ func TestImportSupervisor(t *testing.T) {
 
 		err := importSupervisor.Do()
 		assert.NoError(t, err, "error after no work found")
+	})
+
+	t.Run("handling an error from the AWAT", func(t *testing.T) {
+		awatClient := awatMocks.NewMockClient(gmctrl)
+		store := new(mockInstallationStore)
+		aws := mocks.NewMockAWS(gmctrl)
+		importSupervisor := supervisor.NewImportSupervisor(
+			aws,
+			awatClient,
+			store,
+			&mockImportProvisioner{Fail: false},
+			logger)
+
+		awatClient.EXPECT().
+			GetTranslationReadyToImport(gomock.Any()).
+			Return(
+				nil, errors.New("some error from AWAT"))
+
+		err := importSupervisor.Do()
+		assert.Error(t, err, "expected failure due to error from AWAT")
+	})
+
+	t.Run("copying the file to the Installation S3 bucket fails", func(t *testing.T) {
+		awatClient := awatMocks.NewMockClient(gmctrl)
+		store := new(mockInstallationStore)
+		aws := mocks.NewMockAWS(gmctrl)
+		importSupervisor := supervisor.NewImportSupervisor(
+			aws,
+			awatClient,
+			store,
+			&mockImportProvisioner{Fail: false},
+			logger)
+
+		awatClient.EXPECT().
+			GetTranslationReadyToImport(gomock.Any()).
+			Return(
+				&awatModel.ImportStatus{
+					Import: awatModel.Import{
+						ID:            importID,
+						CreateAt:      time.Now().UnixNano() / 1000,
+						TranslationID: translationID,
+						Resource:      resource,
+					},
+					InstallationID: installationID,
+					Users:          30,
+					Team:           "newteam",
+					State:          "import-requested",
+				}, nil)
+
+		store.Installation = &model.Installation{
+			ID:        installationID,
+			Filestore: "bifrost",
+			State:     "stable",
+		}
+
+		awatClient.EXPECT().
+			ReleaseLockOnImport(importID)
+
+		awatClient.EXPECT().
+			CompleteImport(
+				&awatModel.ImportCompletedWorkRequest{
+					ID:    "some-import-id",
+					Error: "failed to copy workspace import archive to Installation some-installation-id filestore: failed to copy archive to Installation some-installation-id: some AWS error",
+				})
+
+		aws.EXPECT().
+			GetMultitenantBucketNameForInstallation(installationID, store).
+			Return(destBucket, nil)
+
+		aws.EXPECT().
+			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
+				gomock.Any()).
+			Return(errors.New("some AWS error"))
+
+		err := importSupervisor.Do()
+		assert.Error(t, err, "error not handled properly")
 	})
 }
 
