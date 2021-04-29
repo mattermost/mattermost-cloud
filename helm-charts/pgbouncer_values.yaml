@@ -1,0 +1,94 @@
+replicaCount: 2
+
+imagePullSecrets:
+  []
+  # - name: "image-pull-secret"
+
+## pgbouncer container image
+##
+image:
+  repository: wallarm/pgbouncer
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
+
+## pgbouncer service configuration
+##
+service:
+  type: ClusterIP
+  port: 5432
+
+## Resource requests and limits
+## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+##
+resources: {}
+
+## Node labels for pod assignment
+## ref: https://kubernetes.io/docs/user-guide/node-selection/
+#
+nodeSelector: {}
+
+## Tolerations for pod assignment
+## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+
+## Affinity for pod assignment
+## ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+##
+affinity: {}
+
+## pgbouncer configuration
+##
+creation:
+  config: false
+  userlist: false
+
+config:
+  adminUser: admin
+  adminPassword: adminpassword
+  authUser:
+  authPassword:
+  databases:
+    {}
+    # <DB_NAME>:
+    #  host: <DB_HOST>
+    #  port: <DB_PORT>
+  pgbouncer: {}
+  #    auth_type: md5
+  #    pool_mode: transaction
+  #    max_client_conn: 1024
+  #    default_pool_size: 20
+  userlist: {}
+  ## pgbouncer config reload container image and configuration
+  ##
+  # pgbouncerConfigReload:
+  name: control
+  reloadTimeout: 10
+  logJson: 1
+  image:
+    repository: wallarm/pgbouncer-config-reload
+    tag: 1.0.0
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 20m
+      memory: 24Mi
+    requests:
+      cpu: 10m
+      memory: 12Mi
+## pgbouncer exporter container image and configuration
+##
+pgbouncerExporter:
+  name: exporter
+  port: 9127
+  image:
+    repository: spreaker/prometheus-pgbouncer-exporter
+    tag: 2.0.1
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 20m
+      memory: 42Mi
+    requests:
+      cpu: 10m
+      memory: 21Mi

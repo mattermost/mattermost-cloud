@@ -51,7 +51,7 @@ func handleRequestInstallationBackup(c *Context, w http.ResponseWriter, r *http.
 	}
 	defer unlockOnce()
 
-	if err := model.EnsureBackupCompatible(installationDTO.Installation); err != nil {
+	if err := model.EnsureInstallationReadyForBackup(installationDTO.Installation); err != nil {
 		c.Logger.WithError(err).Error("installation cannot be backed up")
 		w.WriteHeader(http.StatusBadRequest)
 		return

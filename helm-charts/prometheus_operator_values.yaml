@@ -2008,6 +2008,19 @@ prometheus:
         interval: 30s
         path: /metrics
         scheme: http
+  - name: fluentbit
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: fluent-bit
+        app.kubernetes.io/name: fluent-bit
+    namespaceSelector:
+      matchNames:
+      - fluent-bit
+    endpoints:
+      - port: http
+        interval: 30s
+        path: /api/v1/metrics/prometheus
+        scheme: http
   - name: nginx
     selector:
       matchLabels:
@@ -2056,7 +2069,18 @@ prometheus:
         interval: 30s
         path: /metrics
         scheme: http
-
+  - name: pgbouncer
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: pgbouncer
+    namespaceSelector:
+      matchNames:
+        - pgbouncer
+    endpoints:
+      - port: metrics
+        interval: 30s
+        path: /metrics
+        scheme: http
   additionalPodMonitors: []
   ## Name of the PodMonitor to create
   ##

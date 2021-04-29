@@ -17,7 +17,7 @@ spec:
       - name: bifrost
         command:
         - /bifrost
-        image: mattermost/bifrost:v1.0.1
+        image: mattermost/bifrost:v1.0.2
         imagePullPolicy: IfNotPresent
         env:
         - name: BIFROST_SERVICESETTINGS_HOST

@@ -26,12 +26,13 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Zones:              []string{"us-east-1a"},
 			Networking:         "amazon-vpc-routed-eni",
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":           {Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
+				"fluentbit":           {Chart: "0.15.8", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
 				"nginx-internal":      {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"},
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
 				"thanos":              {Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"},
 				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"},
+				"pgbouncer":           {Chart: "1.1.0", ValuesPath: "helm-charts/pgbouncer_values.yaml"},
 			},
 		}
 	}
@@ -87,12 +88,13 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Zones:              []string{"zone1", "zone2"},
 			Networking:         "amazon-vpc-routed-eni",
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":           {Chart: "0.10.0", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
+				"fluentbit":           {Chart: "0.15.8", ValuesPath: "helm-charts/fluent-bit_values.yaml"},
 				"nginx":               {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"},
 				"nginx-internal":      {Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"},
 				"prometheus-operator": {Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"},
 				"thanos":              {Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"},
 				"teleport":            {Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"},
+				"pgbouncer":           {Chart: "1.1.0", ValuesPath: "helm-charts/pgbouncer_values.yaml"},
 			},
 		}, clusterRequest)
 	})

@@ -80,6 +80,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[TeleportCanonicalName]; !ok {
 		request.DesiredUtilityVersions[TeleportCanonicalName] = TeleportDefaultVersion
 	}
+	if _, ok := request.DesiredUtilityVersions[PgbouncerCanonicalName]; !ok {
+		request.DesiredUtilityVersions[PgbouncerCanonicalName] = PgbouncerDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.

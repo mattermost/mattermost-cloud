@@ -108,10 +108,17 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
 
+	pgbouncer, err := newPgbouncerHandle(
+		cluster, cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName),
+		provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
+	}
+
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

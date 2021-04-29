@@ -345,6 +345,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			DeployNamespace: "kube-system",
 		},
 	}
+
 	err = k8sClient.CreateFromFiles(files)
 	if err != nil {
 		return err

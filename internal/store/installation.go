@@ -378,6 +378,10 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 
 // UpdateInstallation updates the given installation in the database.
 func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) error {
+	return sqlStore.updateInstallation(sqlStore.db, installation)
+}
+
+func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Installation) error {
 	if installation.ConfigMergedWithGroup() {
 		return errors.New("unable to save installations that have merged group config")
 	}
@@ -386,7 +390,7 @@ func (sqlStore *SQLStore) UpdateInstallation(installation *model.Installation) e
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
-	_, err = sqlStore.execBuilder(sqlStore.db, sq.
+	_, err = sqlStore.execBuilder(db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
 			"OwnerID":          installation.OwnerID,
