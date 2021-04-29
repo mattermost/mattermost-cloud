@@ -34,7 +34,7 @@ func TestImportSupervisor(t *testing.T) {
 		resource string = fmt.Sprintf("%s/%s", sourceBucket, inputArchive)
 	)
 
-	testImport := func(failImport bool) error {
+	t.Run("one installation pending work", func(t *testing.T) {
 		awatClient := awatMocks.NewMockClient(gmctrl)
 		store := new(mockInstallationStore)
 		aws := mocks.NewMockAWS(gmctrl)
@@ -42,7 +42,7 @@ func TestImportSupervisor(t *testing.T) {
 			aws,
 			awatClient,
 			store,
-			&mockImportProvisioner{Fail: failImport},
+			&mockImportProvisioner{Fail: false},
 			logger)
 
 		awatClient.EXPECT().
@@ -85,16 +85,62 @@ func TestImportSupervisor(t *testing.T) {
 			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
 				gomock.Any())
 
-		return importSupervisor.Do()
-	}
-
-	t.Run("one installation pending work", func(t *testing.T) {
-		err := testImport(false)
+		err := importSupervisor.Do()
 		assert.NoError(t, err, "error supervising")
 	})
 
 	t.Run("something goes wrong on import", func(t *testing.T) {
-		err := testImport(true)
+		awatClient := awatMocks.NewMockClient(gmctrl)
+		store := new(mockInstallationStore)
+		aws := mocks.NewMockAWS(gmctrl)
+		importSupervisor := supervisor.NewImportSupervisor(
+			aws,
+			awatClient,
+			store,
+			&mockImportProvisioner{Fail: true},
+			logger)
+
+		awatClient.EXPECT().
+			GetTranslationReadyToImport(gomock.Any()).
+			Return(
+				&awatModel.ImportStatus{
+					Import: awatModel.Import{
+						ID:            importID,
+						CreateAt:      time.Now().UnixNano() / 1000,
+						TranslationID: translationID,
+						Resource:      resource,
+					},
+					InstallationID: installationID,
+					Users:          30,
+					Team:           "newteam",
+					State:          "import-requested",
+				}, nil)
+
+		store.Installation = &model.Installation{
+			ID:        installationID,
+			Filestore: "bifrost",
+			State:     "stable",
+		}
+
+		awatClient.EXPECT().
+			ReleaseLockOnImport(importID)
+
+		awatClient.EXPECT().
+			CompleteImport(
+				&awatModel.ImportCompletedWorkRequest{
+					ID:    "some-import-id",
+					Error: "import job failed with error  on line ",
+				})
+
+		aws.EXPECT().
+			GetMultitenantBucketNameForInstallation(installationID, store).
+			Return(destBucket, nil)
+
+		aws.EXPECT().
+			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
+				gomock.Any())
+
+		err := importSupervisor.Do()
 		assert.Error(t, err, "no error supervising")
 	})
 }
@@ -120,7 +166,10 @@ func (m *mockImportProvisioner) ExecClusterInstallationCLI(cluster *model.Cluste
 								"last_activity_at": 1619598771485,
 								"status": "error",
 								"progress": 0,
-								"data": {}
+								"data": {
+										"error": "error reason",
+										"line_number": 70
+								}
 						}
 				]
 		`), nil
@@ -135,8 +184,7 @@ func (m *mockImportProvisioner) ExecClusterInstallationCLI(cluster *model.Cluste
 								"start_at": 1619598771479,
 								"last_activity_at": 1619598771485,
 								"status": "success",
-								"progress": 0,
-								"data": {}
+								"progress": 0
 						}
 				]
 		`), nil
