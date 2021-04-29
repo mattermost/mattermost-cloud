@@ -59,12 +59,13 @@ type jobResponse struct {
 	Status   string `json:"status"`
 	Progress int    `json:"progress"`
 
-	jobResponseData
+	jobResponseData `json:"data"`
 }
 
 type jobResponseData struct {
 	Error      string `json:"error"`
-	LineNumber string `json:"line_number"`
+	LineNumber int    `json:"line_number"`
+	ImportFile string `json:"import_file"`
 }
 
 // NewImportSupervisor creates a new Import Supervisor
@@ -374,7 +375,14 @@ func (is *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobI
 			complete = true
 		}
 		if resp.Status == "error" {
-			return errors.Errorf("import job failed with error %s on line %s", resp.Error, resp.LineNumber)
+			errorString := fmt.Sprintf("import job failed with error %s", resp.Error)
+			if resp.LineNumber != 0 {
+				errorString = fmt.Sprintf("%s on line %d", errorString, resp.LineNumber)
+			}
+			if resp.ImportFile != "" {
+				errorString = fmt.Sprintf("%s in JSONL file from %s", errorString, resp.ImportFile)
+			}
+			return errors.New(errorString)
 		}
 
 		is.logger.Debugf("Waiting for job %s to complete. Status: %s Progress: %d", resp.ID, resp.Status, resp.Progress)

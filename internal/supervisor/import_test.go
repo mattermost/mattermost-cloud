@@ -130,7 +130,7 @@ func TestImportSupervisor(t *testing.T) {
 			CompleteImport(
 				&awatModel.ImportCompletedWorkRequest{
 					ID:    "some-import-id",
-					Error: "import job failed with error  on line ",
+					Error: "import job failed with error FUBAR on line 70 in JSONL file from some-import-file.zip",
 				})
 
 		aws.EXPECT().
@@ -264,8 +264,9 @@ func (m *mockImportProvisioner) ExecClusterInstallationCLI(cluster *model.Cluste
 								"status": "error",
 								"progress": 0,
 								"data": {
-										"error": "error reason",
-										"line_number": 70
+										"error": "FUBAR",
+										"line_number": 70,
+										"import_file": "some-import-file.zip"
 								}
 						}
 				]
