@@ -317,7 +317,6 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	if len(vpcs) != 0 {
 		//untag keys for secondary cluster
 		isSecondaryCluster = true
-
 	}
 	if !isSecondaryCluster {
 		vpcFilters := []*ec2.Filter{

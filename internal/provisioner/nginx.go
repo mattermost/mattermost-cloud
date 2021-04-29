@@ -127,7 +127,6 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrive the VPC information")
 	}
-	
 	return &helmDeployment{
 		chartDeploymentName: "nginx",
 		chartName:           "ingress-nginx/ingress-nginx",
