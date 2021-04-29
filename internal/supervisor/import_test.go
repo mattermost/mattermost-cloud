@@ -143,6 +143,26 @@ func TestImportSupervisor(t *testing.T) {
 		err := importSupervisor.Do()
 		assert.Error(t, err, "no error supervising")
 	})
+
+	t.Run("no installations pending work", func(t *testing.T) {
+		awatClient := awatMocks.NewMockClient(gmctrl)
+		store := new(mockInstallationStore)
+		aws := mocks.NewMockAWS(gmctrl)
+		importSupervisor := supervisor.NewImportSupervisor(
+			aws,
+			awatClient,
+			store,
+			&mockImportProvisioner{Fail: false},
+			logger)
+
+		awatClient.EXPECT().
+			GetTranslationReadyToImport(gomock.Any()).
+			Return(
+				nil, nil)
+
+		err := importSupervisor.Do()
+		assert.NoError(t, err, "error after no work found")
+	})
 }
 
 type mockImportProvisioner struct {
