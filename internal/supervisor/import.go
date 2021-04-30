@@ -19,13 +19,30 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// AWATClient is the programmatic interface to the AWAT API.
+type AWATClient interface {
+	CreateTranslation(translationRequest *awat.TranslationRequest) (*awat.TranslationStatus, error)
+	GetTranslationStatus(translationID string) (*awat.TranslationStatus, error)
+	GetTranslationStatusesByInstallation(installationID string) ([]*awat.TranslationStatus, error)
+	GetAllTranslations() ([]*awat.TranslationStatus, error)
+
+	GetTranslationReadyToImport(request *awat.ImportWorkRequest) (*awat.ImportStatus, error)
+	GetImportStatusesByInstallation(installationID string) ([]*awat.ImportStatus, error)
+	GetImportStatusesByTranslation(translationID string) ([]*awat.ImportStatus, error)
+	ListImports() ([]*awat.ImportStatus, error)
+	GetImportStatus(importID string) (*awat.ImportStatus, error)
+
+	CompleteImport(completed *awat.ImportCompletedWorkRequest) error
+	ReleaseLockOnImport(importID string) error
+}
+
 // ImportSupervisor is a supervisor which performs Workspace Imports
 // from ready Imports produced by the AWAT. It periodically queries
 // the AWAT for Imports waiting to be performed and then performs
 // imports serially
 type ImportSupervisor struct {
 	awsClient   toolsAWS.AWS
-	awatClient  awat.Client
+	awatClient  AWATClient
 	logger      logrus.FieldLogger
 	store       installationStore
 	provisioner importProvisioner
@@ -69,7 +86,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat awat.Client, store installationStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store installationStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:   awsClient,
 		awatClient:  awat,

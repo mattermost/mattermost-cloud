@@ -502,6 +502,8 @@ github.com/mattermost/awat v0.0.0-20210426215134-592d455af6bf h1:sq0EyH7Fc8PVbnA
 github.com/mattermost/awat v0.0.0-20210426215134-592d455af6bf/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
 github.com/mattermost/awat v0.0.0-20210428223656-1267d82207a0 h1:pe2jh8cLLUBhQiyVwxA9ZMWQ4uvSKeU54uw9OtzqY+E=
 github.com/mattermost/awat v0.0.0-20210428223656-1267d82207a0/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
+github.com/mattermost/awat v0.0.0-20210430184220-463fd5614511 h1:e2PZfje2OCuDWnTRiS7XuecSKr3reX67v+EwslZLpZA=
+github.com/mattermost/awat v0.0.0-20210430184220-463fd5614511/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
 github.com/mattermost/blubr v0.0.0-20200113232543-f0ce67760aeb/go.mod h1:Tk99160Gy8m4rJPKIgYZrYneLepPCx5KPB3rp9+iK00=
 github.com/mattermost/go-i18n v1.11.0/go.mod h1:RyS7FDNQlzF1PsjbJWHRI35exqaKGSO9qD4iv8QjE34=
 github.com/mattermost/gorp v2.0.1-0.20190301154413-3b31e9a39d05+incompatible/go.mod h1:0kX1qa3DOpaPJyOdMLeo7TcBN0QmUszj9a/VygOhDe0=

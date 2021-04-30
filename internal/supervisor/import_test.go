@@ -11,8 +11,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	awatModel "github.com/mattermost/awat/model"
-	awatMocks "github.com/mattermost/awat/testlib/mocks"
-	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
+	awatMocks "github.com/mattermost/mattermost-cloud/internal/mocks/awat"
+	awsMocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -36,9 +36,9 @@ func TestImportSupervisor(t *testing.T) {
 	)
 
 	t.Run("successfully import a translation", func(t *testing.T) {
-		awatClient := awatMocks.NewMockClient(gmctrl)
+		awatClient := awatMocks.NewMockAWATClient(gmctrl)
 		store := new(mockInstallationStore)
-		aws := mocks.NewMockAWS(gmctrl)
+		aws := awsMocks.NewMockAWS(gmctrl)
 		importSupervisor := supervisor.NewImportSupervisor(
 			aws,
 			awatClient,
@@ -91,9 +91,9 @@ func TestImportSupervisor(t *testing.T) {
 	})
 
 	t.Run("something goes wrong on import", func(t *testing.T) {
-		awatClient := awatMocks.NewMockClient(gmctrl)
+		awatClient := awatMocks.NewMockAWATClient(gmctrl)
 		store := new(mockInstallationStore)
-		aws := mocks.NewMockAWS(gmctrl)
+		aws := awsMocks.NewMockAWS(gmctrl)
 		importSupervisor := supervisor.NewImportSupervisor(
 			aws,
 			awatClient,
@@ -146,9 +146,9 @@ func TestImportSupervisor(t *testing.T) {
 	})
 
 	t.Run("no installations pending work", func(t *testing.T) {
-		awatClient := awatMocks.NewMockClient(gmctrl)
+		awatClient := awatMocks.NewMockAWATClient(gmctrl)
 		store := new(mockInstallationStore)
-		aws := mocks.NewMockAWS(gmctrl)
+		aws := awsMocks.NewMockAWS(gmctrl)
 		importSupervisor := supervisor.NewImportSupervisor(
 			aws,
 			awatClient,
@@ -166,9 +166,9 @@ func TestImportSupervisor(t *testing.T) {
 	})
 
 	t.Run("handling an error from the AWAT", func(t *testing.T) {
-		awatClient := awatMocks.NewMockClient(gmctrl)
+		awatClient := awatMocks.NewMockAWATClient(gmctrl)
 		store := new(mockInstallationStore)
-		aws := mocks.NewMockAWS(gmctrl)
+		aws := awsMocks.NewMockAWS(gmctrl)
 		importSupervisor := supervisor.NewImportSupervisor(
 			aws,
 			awatClient,
@@ -186,9 +186,9 @@ func TestImportSupervisor(t *testing.T) {
 	})
 
 	t.Run("copying the file to the Installation S3 bucket fails", func(t *testing.T) {
-		awatClient := awatMocks.NewMockClient(gmctrl)
+		awatClient := awatMocks.NewMockAWATClient(gmctrl)
 		store := new(mockInstallationStore)
-		aws := mocks.NewMockAWS(gmctrl)
+		aws := awsMocks.NewMockAWS(gmctrl)
 		importSupervisor := supervisor.NewImportSupervisor(
 			aws,
 			awatClient,
