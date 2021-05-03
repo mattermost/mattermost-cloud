@@ -125,6 +125,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				NodeMinCount:       createClusterRequest.NodeMinCount,
 				NodeMaxCount:       createClusterRequest.NodeMaxCount,
 				Networking:         createClusterRequest.Networking,
+				VPC:                createClusterRequest.VPC,
 			},
 		},
 		AllowInstallations: createClusterRequest.AllowInstallations,

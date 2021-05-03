@@ -299,22 +299,42 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 }
 
 func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
-	vpcFilters := []*ec2.Filter{
+	var isSecondaryCluster bool = false
+	secondaryVpcFilters := []*ec2.Filter{
 		{
 			Name:   aws.String(VpcAvailableTagKey),
 			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
 		},
 		{
-			Name:   aws.String(VpcClusterIDTagKey),
+			Name:   aws.String(VpcSecondaryClusterIDTagKey),
 			Values: []*string{aws.String(clusterID)},
 		},
 	}
-
-	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
+	vpcs, err := a.GetVpcsWithFilters(secondaryVpcFilters)
 	if err != nil {
 		return err
 	}
+	if len(vpcs) != 0 {
+		//untag keys for secondary cluster
+		isSecondaryCluster = true
+	}
+	if !isSecondaryCluster {
+		vpcFilters := []*ec2.Filter{
+			{
+				Name:   aws.String(VpcAvailableTagKey),
+				Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			},
+			{
+				Name:   aws.String(VpcClusterIDTagKey),
+				Values: []*string{aws.String(clusterID)},
+			},
+		}
 
+		vpcs, err = a.GetVpcsWithFilters(vpcFilters)
+		if err != nil {
+			return err
+		}
+	}
 	numVPCs := len(vpcs)
 	if numVPCs == 0 {
 		logger.Warnf("No VPCs are currently claimed by cluster %s, assuming already released", clusterID)
@@ -350,7 +370,14 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 			return errors.Wrap(err, "failed to untag subnet")
 		}
 	}
-
+	if isSecondaryCluster {
+		err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
+		if err != nil {
+			return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
+		}
+		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", clusterID, *vpcs[0].VpcId)
+		return nil
+	}
 	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcClusterIDTagKey), VpcClusterIDTagValueNone, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
@@ -368,5 +395,36 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 
 	logger.Debugf("Released VPC %s", *vpcs[0].VpcId)
 
+	return nil
+}
+
+// GetVpcResourcesByVpcID retrieve the VPC information for a particulary cluster.
+func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error) {
+	input := &ec2.DescribeVpcsInput{
+		VpcIds: []*string{
+			aws.String(vpcID),
+		},
+	}
+	vpcCidr, err := a.Service().ec2.DescribeVpcs(input)
+	if err != nil {
+		return ClusterResources{}, errors.Wrapf(err, "failed to fetch the VPC information using VPC ID %s", vpcID)
+	}
+	return a.getClusterResourcesForVPC(vpcID, *vpcCidr.Vpcs[0].CidrBlock, logger)
+}
+
+// TagResourcesByCluster for secondary cluster.
+func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
+
+	for _, subnet := range clusterResources.PublicSubnetsIDs {
+		err := a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to tag subnet")
+		}
+	}
+
+	err := a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcSecondaryClusterIDTagKey), clusterID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
+	}
 	return nil
 }

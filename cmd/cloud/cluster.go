@@ -47,6 +47,7 @@ func init() {
 	clusterCreateCmd.Flags().String("teleport-values", model.TeleportDefaultVersion.Values(), "The branch name of the desired chart value file's version for Teleport")
 	clusterCreateCmd.Flags().String("pgbouncer-values", model.PgbouncerDefaultVersion.Values(), "The branch name of the desired chart value file's version for Pgbouncer")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
+	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
@@ -145,6 +146,7 @@ var clusterCreateCmd = &cobra.Command{
 		allowInstallations, _ := command.Flags().GetBool("allow-installations")
 		annotations, _ := command.Flags().GetStringArray("annotation")
 		networking, _ := command.Flags().GetString("networking")
+		vpc, _ := command.Flags().GetString("vpc")
 
 		request := &model.CreateClusterRequest{
 			Provider:               provider,
@@ -155,6 +157,7 @@ var clusterCreateCmd = &cobra.Command{
 			DesiredUtilityVersions: processUtilityFlags(command),
 			Annotations:            annotations,
 			Networking:             networking,
+			VPC:                    vpc,
 		}
 
 		size, _ := command.Flags().GetString("size")
@@ -467,7 +470,7 @@ var clusterListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "NETWORKING"})
+			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "NETWORKING", "VPC"})
 
 			for _, cluster := range clusters {
 				table.Append([]string{
@@ -477,6 +480,7 @@ var clusterListCmd = &cobra.Command{
 					fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
 					fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
 					cluster.ProvisionerMetadataKops.Networking,
+					cluster.ProvisionerMetadataKops.VPC,
 				})
 			}
 			table.Render()

@@ -28,6 +28,7 @@ type CreateClusterRequest struct {
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Annotations            []string                       `json:"annotations,omitempty"`
 	Networking             string                         `json:"networking,omitempty"`
+	VPC                    string                         `json:"vpc,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.

@@ -47,7 +47,9 @@ func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataR
 	if kopsRequest.Networking != "" {
 		args = append(args, arg("networking", kopsRequest.Networking))
 	}
-
+	if kopsRequest.VPC != "" {
+		args = append(args, arg("vpc", kopsRequest.VPC))
+	}
 	if len(privateSubnetIds) != 0 {
 		args = append(args,
 			commaArg("subnets", privateSubnetIds),
@@ -215,15 +217,16 @@ func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (string, e
 	if err != nil {
 		return "", errors.Wrap(err, "failed to unmarshal JSON output from kops get cluster")
 	}
+
 	data, err := json.Marshal(clusterdata["spec"].(map[string]interface{})[subData])
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to marshal cluster specification value for %s", subData)
 	}
-	return getCurrentCni(string(data)), nil
+	return string(data), nil
 }
 
-// getCurrentCni, it get the current CNI value for the cluster
-func getCurrentCni(network string) string {
+// GetCurrentCni it get the current CNI value for the cluster
+func GetCurrentCni(network string) string {
 	for _, CNI := range model.GetSupportedCniList() {
 		if strings.Contains(network, CNI) {
 			return CNI
