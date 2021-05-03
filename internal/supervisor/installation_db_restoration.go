@@ -113,7 +113,7 @@ func (s *InstallationDBRestorationSupervisor) Supervise(restoration *model.Insta
 	originalState := restoration.State
 	restoration, err := s.store.GetInstallationDBRestorationOperation(restoration.ID)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to get refreshed restoration")
+		logger.WithError(err).Error("Failed to get refreshed restoration")
 		return
 	}
 	if restoration.State != originalState {
@@ -186,14 +186,14 @@ func (s *InstallationDBRestorationSupervisor) transitionRestoration(restoration 
 func (s *InstallationDBRestorationSupervisor) triggerRestoration(restoration *model.InstallationDBRestorationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBRestorationState {
 	installation, lock, err := getAndLockInstallation(s.store, restoration.InstallationID, instanceID, logger)
 	if err != nil {
-		logger.WithError(err).Error("failed to get and lock installation")
+		logger.WithError(err).Error("Failed to get and lock installation")
 		return restoration.State
 	}
 	defer lock.Unlock()
 
 	backup, err := s.store.GetInstallationBackup(restoration.BackupID)
 	if err != nil {
-		logger.WithError(err).Error("failed to get backup")
+		logger.WithError(err).Error("Failed to get backup")
 		return restoration.State
 	}
 
@@ -207,7 +207,7 @@ func (s *InstallationDBRestorationSupervisor) triggerRestoration(restoration *mo
 		restoration.ClusterInstallationID = restoreCI.ID
 		err = s.store.UpdateInstallationDBRestorationOperation(restoration)
 		if err != nil {
-			logger.WithError(err).Errorf("Failed to assign cluster installation to restoration")
+			logger.WithError(err).Error("Failed to assign cluster installation to restoration")
 			return restoration.State
 		}
 	}
@@ -230,7 +230,7 @@ func (s *InstallationDBRestorationSupervisor) triggerRestoration(restoration *mo
 func (s *InstallationDBRestorationSupervisor) checkRestorationStatus(restoration *model.InstallationDBRestorationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBRestorationState {
 	backup, err := s.store.GetInstallationBackup(restoration.BackupID)
 	if err != nil {
-		logger.WithError(err).Error("failed to get backup")
+		logger.WithError(err).Error("Failed to get backup")
 		return restoration.State
 	}
 
@@ -243,7 +243,7 @@ func (s *InstallationDBRestorationSupervisor) checkRestorationStatus(restoration
 	completeAt, err := s.restoreOperator.CheckRestoreStatus(backup, cluster)
 	if err != nil {
 		if err == provisioner.ErrJobBackoffLimitReached {
-			logger.WithError(err).Errorf("installation db restoration failed")
+			logger.WithError(err).Error("Installation db restoration failed")
 			return model.InstallationDBRestorationStateFailing
 		}
 		logger.WithError(err).Error("Failed to check restoration status")
@@ -267,7 +267,7 @@ func (s *InstallationDBRestorationSupervisor) checkRestorationStatus(restoration
 func (s *InstallationDBRestorationSupervisor) finalizeRestoration(restoration *model.InstallationDBRestorationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBRestorationState {
 	installation, lock, err := getAndLockInstallation(s.store, restoration.InstallationID, instanceID, logger)
 	if err != nil {
-		logger.WithError(err).Error("failed to get and lock installation")
+		logger.WithError(err).Error("Failed to get and lock installation")
 		return restoration.State
 	}
 	defer lock.Unlock()
@@ -276,7 +276,7 @@ func (s *InstallationDBRestorationSupervisor) finalizeRestoration(restoration *m
 	installation.State = restoration.TargetInstallationState
 	err = s.store.UpdateInstallation(installation)
 	if err != nil {
-		logger.WithError(err).Error("failed to set installation to target state after restore")
+		logger.WithError(err).Error("Failed to set installation to target state after restore")
 		return restoration.State
 	}
 
@@ -300,7 +300,7 @@ func (s *InstallationDBRestorationSupervisor) finalizeRestoration(restoration *m
 func (s *InstallationDBRestorationSupervisor) failRestoration(restoration *model.InstallationDBRestorationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBRestorationState {
 	installation, lock, err := getAndLockInstallation(s.store, restoration.InstallationID, instanceID, logger)
 	if err != nil {
-		logger.WithError(err).Error("failed to get and lock installation")
+		logger.WithError(err).Error("Failed to get and lock installation")
 		return restoration.State
 	}
 	defer lock.Unlock()
@@ -309,7 +309,7 @@ func (s *InstallationDBRestorationSupervisor) failRestoration(restoration *model
 	installation.State = model.InstallationStateDBRestorationFailed
 	err = s.store.UpdateInstallation(installation)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to set installation to failed DB restoration state")
+		logger.WithError(err).Error("Failed to set installation to failed DB restoration state")
 		return restoration.State
 	}
 
