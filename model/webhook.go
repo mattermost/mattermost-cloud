@@ -19,6 +19,10 @@ const (
 	TypeClusterInstallation = "cluster_installaton"
 	// TypeInstallationBackup is the string value that represents an installation backup.
 	TypeInstallationBackup = "installation_backup"
+	// TypeInstallationDBRestoration is the string value that represents an installation db restoration operation.
+	TypeInstallationDBRestoration = "installation_db_restoration_operation"
+	// TypeInstallationDBMigration is the string value that represents an installation db migration operation.
+	TypeInstallationDBMigration = "installation_db_migration_operation"
 )
 
 // Webhook is
