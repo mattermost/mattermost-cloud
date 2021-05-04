@@ -71,13 +71,6 @@ func TestImportSupervisor(t *testing.T) {
 		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
 
-		awatClient.EXPECT().
-			CompleteImport(
-				&awatModel.ImportCompletedWorkRequest{
-					ID:    "some-import-id",
-					Error: "",
-				})
-
 		aws.EXPECT().
 			GetMultitenantBucketNameForInstallation(installationID, store).
 			Return(destBucket, nil)
@@ -125,13 +118,6 @@ func TestImportSupervisor(t *testing.T) {
 
 		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
-
-		awatClient.EXPECT().
-			CompleteImport(
-				&awatModel.ImportCompletedWorkRequest{
-					ID:    "some-import-id",
-					Error: "import job failed with error FUBAR on line 70 in JSONL file from some-import-file.zip",
-				})
 
 		aws.EXPECT().
 			GetMultitenantBucketNameForInstallation(installationID, store).
@@ -220,13 +206,6 @@ func TestImportSupervisor(t *testing.T) {
 
 		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
-
-		awatClient.EXPECT().
-			CompleteImport(
-				&awatModel.ImportCompletedWorkRequest{
-					ID:    "some-import-id",
-					Error: "failed to copy workspace import archive to Installation some-installation-id filestore: failed to copy archive to Installation some-installation-id: some AWS error",
-				})
 
 		aws.EXPECT().
 			GetMultitenantBucketNameForInstallation(installationID, store).
