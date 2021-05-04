@@ -156,7 +156,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 
 	// check Installation state is valid
 	if installation.State != model.InstallationStateStable {
-		return errors.Errorf("Skipping import on Installation %s with state %s. State must be stable to begin work.", installation.ID, installation.State)
+		return errors.Errorf("skipping import on Installation %s with state %s. State must be stable to begin work.", installation.ID, installation.State)
 	}
 
 	// mark this Installation as import-in-progress
