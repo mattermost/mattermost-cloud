@@ -156,7 +156,11 @@ func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string)
 	return fmt.Sprintf("Used for accessing installation ID: %s database managed by RDS cluster ID: %s", installationID, rdsClusterID)
 }
 
-func getMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (string, error) {
+// GetMultitenantBucketNameForInstallation is a convenience function
+// for determining the name of the S3 bucket used by an Installation
+// which is configured to use the multitenant-s3-filestore or bifrost
+// filestore types
+func (client *Client) GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error) {
 	vpc, err := getVPCForInstallation(installationID, store, client)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to find cluster installation VPC")

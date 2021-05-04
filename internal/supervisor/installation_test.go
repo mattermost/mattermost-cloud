@@ -108,7 +108,17 @@ func (s *mockInstallationStore) GetClusterInstallation(clusterInstallationID str
 }
 
 func (s *mockInstallationStore) GetClusterInstallations(*model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
-	return nil, nil
+	return []*model.ClusterInstallation{{
+		ID:              model.NewID(),
+		ClusterID:       model.NewID(),
+		InstallationID:  s.Installation.ID,
+		Namespace:       s.Installation.ID,
+		State:           "stable",
+		CreateAt:        s.Installation.CreateAt,
+		DeleteAt:        s.Installation.DeleteAt,
+		APISecurityLock: false,
+	},
+	}, nil
 }
 
 func (s *mockInstallationStore) LockClusterInstallations(clusterInstallationID []string, lockerID string) (bool, error) {
@@ -366,12 +376,20 @@ func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, vpc string, log
 func (a *mockAWS) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error) {
 	return "", nil
 }
+func (a *mockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error {
+	return nil
+}
+
+func (a *mockAWS) GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error) {
+	return "", nil
+}
 func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }
 func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
 	return nil
 }
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
 

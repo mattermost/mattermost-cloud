@@ -11,6 +11,7 @@ import (
 	acm "github.com/aws/aws-sdk-go/service/acm"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	model "github.com/mattermost/mattermost-cloud/model"
 	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	reflect "reflect"
@@ -351,6 +352,35 @@ func (m *MockAWS) S3EnsureObjectDeleted(bucketName, path string) error {
 func (mr *MockAWSMockRecorder) S3EnsureObjectDeleted(bucketName, path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3EnsureObjectDeleted", reflect.TypeOf((*MockAWS)(nil).S3EnsureObjectDeleted), bucketName, path)
+}
+
+// S3LargeCopy mocks base method
+func (m *MockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "S3LargeCopy", srcBucketName, srcKey, destBucketName, destKey)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// S3LargeCopy indicates an expected call of S3LargeCopy
+func (mr *MockAWSMockRecorder) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "S3LargeCopy", reflect.TypeOf((*MockAWS)(nil).S3LargeCopy), srcBucketName, srcKey, destBucketName, destKey)
+}
+
+// GetMultitenantBucketNameForInstallation mocks base method
+func (m *MockAWS) GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMultitenantBucketNameForInstallation", installationID, store)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMultitenantBucketNameForInstallation indicates an expected call of GetMultitenantBucketNameForInstallation
+func (mr *MockAWSMockRecorder) GetMultitenantBucketNameForInstallation(installationID, store interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantBucketNameForInstallation", reflect.TypeOf((*MockAWS)(nil).GetMultitenantBucketNameForInstallation), installationID, store)
 }
 
 // GenerateBifrostUtilitySecret mocks base method
