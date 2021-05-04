@@ -180,7 +180,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		installation.State = model.InstallationStateStable
 		err = s.store.UpdateInstallation(installation)
 		if err != nil {
-			s.logger.WithError(err).Errorf("failed to mark Installation %s as state stable", installation.ID)
+			s.logger.WithError(err).Errorf("Failed to mark Installation %s as state stable", installation.ID)
 			return
 		}
 		err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
