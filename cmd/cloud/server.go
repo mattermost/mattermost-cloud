@@ -65,6 +65,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("backup-supervisor", false, "Whether this server will run a backup supervisor or not.")
 	serverCmd.PersistentFlags().Bool("import-supervisor", false, "Whether this server will run a workspace import supervisor or not.")
 	serverCmd.PersistentFlags().String("awat", "http://localhost:8077", "The location of the Automatic Workspace Archive Translator if the import supervisor is being used")
+	serverCmd.PersistentFlags().Bool("installation-restoration-supervisor", false, "Whether this server will run an installation restoration supervisor or not.")
 
 	// Scheduling and installation options
 	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
@@ -155,7 +156,9 @@ var serverCmd = &cobra.Command{
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
 		backupSupervisor, _ := command.Flags().GetBool("backup-supervisor")
 		importSupervisor, _ := command.Flags().GetBool("import-supervisor")
-		if !clusterSupervisor && !installationSupervisor && !clusterInstallationSupervisor && !groupSupervisor && !backupSupervisor && !importSupervisor {
+		installationRestorationSupervisor, _ := command.Flags().GetBool("installation-restoration-supervisor")
+		supervisorsEnabled := []bool{clusterSupervisor, installationSupervisor, clusterInstallationSupervisor, groupSupervisor, backupSupervisor, installationRestorationSupervisor, importSupervisor}
+		if !isAny(supervisorsEnabled) {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -190,6 +193,7 @@ var serverCmd = &cobra.Command{
 			"cluster-installation-supervisor":        clusterInstallationSupervisor,
 			"backup-supervisor":                      backupSupervisor,
 			"import-supervisor":                      importSupervisor,
+			"installation-restoration-supervisor":    installationRestorationSupervisor,
 			"store-version":                          currentVersion,
 			"state-store":                            s3StateStore,
 			"working-directory":                      wd,
@@ -281,6 +285,9 @@ var serverCmd = &cobra.Command{
 				return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 			}
 			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, kopsProvisioner, logger))
+		}
+		if installationRestorationSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, kopsProvisioner, instanceID, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -464,4 +471,13 @@ func getHumanReadableID() string {
 
 func flagIsUnset(cmd *cobra.Command, flagName string) bool {
 	return !cmd.Flags().Changed(flagName)
+}
+
+func isAny(conditions []bool) bool {
+	for _, b := range conditions {
+		if b {
+			return true
+		}
+	}
+	return false
 }

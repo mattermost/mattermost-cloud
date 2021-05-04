@@ -118,11 +118,15 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.Wrap(err, "failed to retrive the AWS ACM")
 	}
 
-	clusterResources, err := n.awsClient.GetVpcResources(n.cluster.ID, n.logger)
+	var clusterResources aws.ClusterResources
+	if n.cluster.ProvisionerMetadataKops.ChangeRequest.VPC != "" {
+		clusterResources, err = n.awsClient.GetVpcResourcesByVpcID(n.cluster.ProvisionerMetadataKops.ChangeRequest.VPC, n.logger)
+	} else {
+		clusterResources, err = n.awsClient.GetVpcResources(n.cluster.ID, n.logger)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrive the VPC information")
 	}
-
 	return &helmDeployment{
 		chartDeploymentName: "nginx",
 		chartName:           "ingress-nginx/ingress-nginx",

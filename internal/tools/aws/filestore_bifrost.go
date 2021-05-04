@@ -155,8 +155,8 @@ func (f *BifrostFilestore) s3FilestoreProvision(store model.InstallationDatabase
 
 // GenerateBifrostUtilitySecret creates the secret needed by the bifrost service
 // to access the shared S3 bucket for a given cluster.
-func (a *Client) GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
-	bucketName, err := getMultitenantBucketNameForCluster(clusterID, a)
+func (a *Client) GenerateBifrostUtilitySecret(clusterID string, vpc string, logger log.FieldLogger) (*corev1.Secret, error) {
+	bucketName, err := getMultitenantBucketNameForCluster(clusterID, vpc, a)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get multitenant bucket name")
 	}

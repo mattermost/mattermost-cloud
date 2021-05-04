@@ -129,13 +129,17 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	if err != nil {
 		return err
 	}
-
+	vpc, err := c.GetClusterSpecInfoFromJSON(metadata.Name, "networkID")
+	if err != nil {
+		return err
+	}
 	metadata.AMI = AMI
 	metadata.MasterInstanceType = masterMachineType
 	metadata.MasterCount = masterIGCount
 	metadata.NodeMinCount = nodeMinCount
 	metadata.NodeMaxCount = nodeMaxCount
-	metadata.Networking = networking
+	metadata.Networking = GetCurrentCni(networking)
+	metadata.VPC = strings.Trim(vpc, "\"")
 
 	return nil
 }

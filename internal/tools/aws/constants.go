@@ -310,4 +310,8 @@ const (
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultAWSTerraformProvisionedValueTrue = "true"
+
+	// VpcSecondaryClusterIDTagKey is the tag key used to store the secondary cluster ID of the
+	// cluster running in that VPC.
+	VpcSecondaryClusterIDTagKey = "tag:CloudSecondaryClusterID"
 )

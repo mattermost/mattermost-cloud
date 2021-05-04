@@ -7,8 +7,6 @@ package supervisor
 import (
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
@@ -24,18 +22,14 @@ type installationBackupStore interface {
 	UpdateInstallationBackupSchedulingData(backupMeta *model.InstallationBackup) error
 	UpdateInstallationBackupStartTime(backupMeta *model.InstallationBackup) error
 	DeleteInstallationBackup(id string) error
-
-	LockInstallationBackups(backupIDs []string, lockerID string) (bool, error)
-	UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error)
+	installationBackupLockStore
 
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
-	LockInstallation(installationID, lockerID string) (bool, error)
-	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
+	installationLockStore
 
 	GetClusterInstallations(*model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error)
 	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
-	LockClusterInstallations(clusterInstallationID []string, lockerID string) (bool, error)
-	UnlockClusterInstallations(clusterInstallationID []string, lockerID string, force bool) (bool, error)
+	clusterInstallationLockStore
 
 	GetCluster(id string) (*model.Cluster, error)
 
@@ -206,25 +200,9 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 		return backup.State
 	}
 
-	clusterInstallationFilter := &model.ClusterInstallationFilter{
-		InstallationID: installation.ID,
-		Paging:         model.AllPagesNotDeleted(),
-	}
-	clusterInstallations, err := s.store.GetClusterInstallations(clusterInstallationFilter)
+	backupCI, ciLock, err := claimClusterInstallation(s.store, installation, instanceID, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get cluster installations")
-		return backup.State
-	}
-
-	if len(clusterInstallations) == 0 {
-		logger.WithError(err).Error("Expected at least one cluster installation to run backup but found none")
-		return backup.State
-	}
-
-	backupCI := clusterInstallations[0]
-	ciLock := newClusterInstallationLock(backupCI.ID, instanceID, s.store, logger)
-	if !ciLock.TryLock() {
-		logger.Errorf("Failed to lock cluster installation %s", backupCI.ID)
+		logger.WithError(err).Error("Failed to claim Cluster Installation for backup")
 		return backup.State
 	}
 	defer ciLock.Unlock()
@@ -254,7 +232,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 }
 
 func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
-	cluster, err := s.getClusterForBackup(backup)
+	cluster, err := getClusterForClusterInstallation(s.store, backup.ClusterInstallationID)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster")
 		return backup.State
@@ -287,7 +265,7 @@ func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, insta
 }
 
 func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, instanceID string, logger log.FieldLogger) model.InstallationBackupState {
-	cluster, err := s.getClusterForBackup(backup)
+	cluster, err := getClusterForClusterInstallation(s.store, backup.ClusterInstallationID)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster for backup")
 		return backup.State
@@ -317,18 +295,4 @@ func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, instan
 	}
 
 	return model.InstallationBackupStateDeleted
-}
-
-func (s *BackupSupervisor) getClusterForBackup(backup *model.InstallationBackup) (*model.Cluster, error) {
-	backupCI, err := s.store.GetClusterInstallation(backup.ClusterInstallationID)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get cluster installations")
-	}
-
-	cluster, err := s.store.GetCluster(backupCI.ClusterID)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get cluster")
-	}
-
-	return cluster, nil
 }
