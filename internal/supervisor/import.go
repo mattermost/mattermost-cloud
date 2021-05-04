@@ -81,7 +81,7 @@ type jobResponse struct {
 
 type jobResponseData struct {
 	Error      string `json:"error"`
-	LineNumber int    `json:"line_number"`
+	LineNumber string `json:"line_number"`
 	ImportFile string `json:"import_file"`
 }
 
@@ -374,8 +374,8 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID
 		}
 		if resp.Status == "error" {
 			errorString := fmt.Sprintf("import job failed with error %s", resp.Error)
-			if resp.LineNumber != 0 {
-				errorString = fmt.Sprintf("%s on line %d", errorString, resp.LineNumber)
+			if resp.LineNumber != "" {
+				errorString = fmt.Sprintf("%s on line %s", errorString, resp.LineNumber)
 			}
 			if resp.ImportFile != "" {
 				errorString = fmt.Sprintf("%s in JSONL file from %s", errorString, resp.ImportFile)
