@@ -87,7 +87,7 @@ func (r *rawDBMigrationOperations) toDBMigrationOperations() ([]*model.Installat
 }
 
 // TODO: we should probably create some intermediary layer to not keep this logic in store.
-// For now tho transactions are not accessible outside the store, therefore it is implemented this way.
+// For now though transactions are not accessible outside the store, therefore it is implemented this way.
 
 // TriggerInstallationDBMigration creates new InstallationDBMigrationOperation in Requested state
 // and changes installation state to InstallationStateDBMigrationInProgress.
