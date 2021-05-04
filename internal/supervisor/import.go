@@ -125,21 +125,6 @@ func (s *ImportSupervisor) Do() error {
 		s.logger.WithError(err).Errorf("failed to perform work on Import %s", work.ID)
 	}
 
-	errorString := ""
-	if err != nil {
-		errorString = err.Error()
-	}
-
-	cerr := s.awatClient.CompleteImport(
-		&awat.ImportCompletedWorkRequest{
-			ID:         work.ID,
-			CompleteAt: time.Now().UnixNano() / int64(time.Millisecond),
-			Error:      errorString,
-		})
-	if cerr != nil {
-		s.logger.WithError(cerr).Errorf("failed to notify AWAT that Import %s is complete", work.ID)
-	}
-
 	return err
 }
 
