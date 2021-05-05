@@ -244,7 +244,7 @@ func (m *mockImportProvisioner) ExecClusterInstallationCLI(cluster *model.Cluste
 								"progress": 0,
 								"data": {
 										"error": "FUBAR",
-										"line_number": 70,
+										"line_number": "70",
 										"import_file": "some-import-file.zip"
 								}
 						}
