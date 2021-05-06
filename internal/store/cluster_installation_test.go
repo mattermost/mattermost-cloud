@@ -564,3 +564,77 @@ func TestDeleteClusterInstallations(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, clusterInstallation1, actualClusterInstallation1)
 }
+
+func TestMigrateSingleClusterInstallation(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	primaryClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_8",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	clusterInstallations := []*model.ClusterInstallation{clusterInstallation1}
+	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
+	require.NoError(t, err)
+
+	migratedClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: targetClusterID})
+	require.NoError(t, err)
+	require.Equal(t, clusterInstallation1.InstallationID, migratedClusterInstallations[0].InstallationID)
+}
+
+func TestMigrateMultipleClusterInstallations(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	primaryClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_8",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+	installationID2 := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID2,
+		Namespace:      "namespace_9",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: primaryClusterID})
+	require.NoError(t, err)
+
+	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
+	require.NoError(t, err)
+
+	migratedClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: targetClusterID})
+	require.NoError(t, err)
+
+	for ind, mci := range migratedClusterInstallations {
+
+		require.Equal(t, clusterInstallations[ind].InstallationID, mci.InstallationID)
+	}
+}

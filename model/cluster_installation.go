@@ -31,6 +31,14 @@ type ClusterInstallationFilter struct {
 	ClusterID      string
 }
 
+// MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.
+type MigrateClusterInstallationRequest struct {
+	Paging
+	InstallationID string
+	ClusterID      string
+	TargetCluster  string
+}
+
 // Clone returns a deep copy the cluster installation.
 func (c *ClusterInstallation) Clone() *ClusterInstallation {
 	var clone ClusterInstallation
