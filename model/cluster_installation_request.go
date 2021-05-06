@@ -70,3 +70,14 @@ func NewClusterInstallationExecSubcommandFromReader(reader io.Reader) (ClusterIn
 
 	return clusterInstallationExecSubcommand, nil
 }
+
+// NewMigrateClusterInstallationRequestFromReader will create a MigrateClusterInstallationRequest from an io.Reader.
+func NewMigrateClusterInstallationRequestFromReader(reader io.Reader) (MigrateClusterInstallationRequest, error) {
+	var migrateClusterInstallationRequest MigrateClusterInstallationRequest
+	err := json.NewDecoder(reader).Decode(&migrateClusterInstallationRequest)
+	if err != nil && err != io.EOF {
+		return MigrateClusterInstallationRequest{}, errors.Wrap(err, "failed to decode cluster installation migration request")
+	}
+
+	return migrateClusterInstallationRequest, nil
+}

@@ -44,11 +44,19 @@ func init() {
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("cluster-installation")
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("command")
 
+	clusterInstallationsMigrationCmd.Flags().String("primary-cluster", "", "The primary cluster for the migration process to migrate cluster installations from.")
+	clusterInstallationsMigrationCmd.MarkFlagRequired("primary-cluster")
+	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration process to migrate cluster installation to.")
+	clusterInstallationsMigrationCmd.MarkFlagRequired("target-cluster")
+	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL .")
+	registerPagingFlags(clusterInstallationsMigrationCmd)
+
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationMMCTL)
 	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
+	clusterInstallationCmd.AddCommand(clusterInstallationsMigrationCmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigSetCmd)
@@ -241,6 +249,27 @@ var clusterInstallationMattermostCLICmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to run mattermost CLI command")
 		}
+
+		return nil
+	},
+}
+
+// Command to migrate installation
+var clusterInstallationsMigrationCmd = &cobra.Command{
+	Use:   "migration",
+	Short: "migrate all installation to the target cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		cluster, _ := command.Flags().GetString("primary-cluster")
+		target_cluster, _ := command.Flags().GetString("target-cluster")
+		installation, _ := command.Flags().GetString("installation")
+		paging := parsePagingFlags(command)
+
+		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, Paging: paging})
 
 		return nil
 	},

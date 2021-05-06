@@ -181,3 +181,18 @@ func (sqlStore *SQLStore) setClusterInstallationAPILock(id string, lock bool) er
 
 	return nil
 }
+
+// MigrateClusterInstallation updates the given cluster installation in the database.
+func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error {
+
+	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallation.ClusterID = targetCluster
+		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
+		err := sqlStore.CreateClusterInstallation(clusterInstallation)
+
+		if err != nil {
+			return errors.Wrap(err, "failed to update cluster installation")
+		}
+	}
+	return nil
+}
