@@ -386,7 +386,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.ClusterID,
 		InstallationID: mcir.InstallationID,
-		Paging:         mcir.Paging,
+		Paging:         model.AllPagesNotDeleted(),
 	}
 	clusterInstallations, err := c.Store.GetClusterInstallations(filter)
 	if err != nil {
