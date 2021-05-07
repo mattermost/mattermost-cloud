@@ -49,7 +49,6 @@ func init() {
 	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration process to migrate cluster installation to.")
 	clusterInstallationsMigrationCmd.MarkFlagRequired("target-cluster")
 	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL .")
-	registerPagingFlags(clusterInstallationsMigrationCmd)
 
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
@@ -267,9 +266,8 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		cluster, _ := command.Flags().GetString("primary-cluster")
 		target_cluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
-		paging := parsePagingFlags(command)
 
-		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, Paging: paging})
+		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation})
 
 		return nil
 	},

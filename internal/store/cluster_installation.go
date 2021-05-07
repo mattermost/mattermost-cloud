@@ -202,14 +202,51 @@ func (sqlStore *SQLStore) setClusterInstallationAPILock(id string, lock bool) er
 // MigrateClusterInstallation updates the given cluster installation in the database.
 func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error {
 
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
 	for _, clusterInstallation := range clusterInstallations {
 		clusterInstallation.ClusterID = targetCluster
 		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
-		err := sqlStore.CreateClusterInstallation(clusterInstallation)
+		err := sqlStore.CreateClusterInstallationAsSingleTransaction(tx, clusterInstallation)
 
 		if err != nil {
-			return errors.Wrap(err, "failed to update cluster installation")
+			return errors.Wrap(err, "failed to create cluster installation")
 		}
 	}
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
+	}
+	return nil
+}
+
+// CreateClusterInstallationAsSingleTransaction records the cluster installation(s) as a single transaction to the database, assigning it a unique ID.
+func (sqlStore *SQLStore) CreateClusterInstallationAsSingleTransaction(db execer, clusterInstallation *model.ClusterInstallation) error {
+	clusterInstallation.ID = model.NewID()
+	clusterInstallation.CreateAt = GetMillis()
+
+	_, err := sqlStore.execBuilder(db, sq.
+		Insert("ClusterInstallation").
+		SetMap(map[string]interface{}{
+			"ID":              clusterInstallation.ID,
+			"ClusterID":       clusterInstallation.ClusterID,
+			"InstallationID":  clusterInstallation.InstallationID,
+			"Namespace":       clusterInstallation.Namespace,
+			"State":           clusterInstallation.State,
+			"CreateAt":        clusterInstallation.CreateAt,
+			"DeleteAt":        0,
+			"APISecurityLock": clusterInstallation.APISecurityLock,
+			"LockAcquiredBy":  nil,
+			"LockAcquiredAt":  0,
+		}),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to create cluster installation")
+	}
+
 	return nil
 }
