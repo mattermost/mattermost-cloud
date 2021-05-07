@@ -168,6 +168,8 @@ config:
         Refresh_Interval 5
         Mem_Buf_Limit    24MB
         Skip_Long_Lines  On
+        DB               /var/log/flb_kube.db
+        DB.Sync          Normal
     [INPUT]
         Name            systemd
         Tag             host.*
@@ -177,6 +179,8 @@ config:
         Max_Entries     1000
         Read_From_Tail  true
         Strip_Underscores  false
+        DB               /var/log/flb_systemd.db
+        DB.Sync          Normal
     [INPUT]
         Name              tail
         Path              /var/log/kube-apiserver-audit.log
@@ -210,7 +214,7 @@ config:
         Host  elasticsearch.example.com
         Port  80
         Logstash_Format On
-        Retry_Limit False
+        Retry_Limit 5
         Type  _doc
         Time_Key @timestamp
         Replace_Dots On
