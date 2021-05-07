@@ -369,7 +369,7 @@ func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string, logger lo
 	return nil, nil
 }
 
-func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, vpc string, logger log.FieldLogger) (*corev1.Secret, error) {
+func (a *mockAWS) GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
 	return nil, nil
 }
 

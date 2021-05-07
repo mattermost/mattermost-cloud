@@ -384,18 +384,18 @@ func (mr *MockAWSMockRecorder) GetMultitenantBucketNameForInstallation(installat
 }
 
 // GenerateBifrostUtilitySecret mocks base method
-func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID, vpc string, logger logrus.FieldLogger) (*v1.Secret, error) {
+func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateBifrostUtilitySecret", clusterID, vpc, logger)
+	ret := m.ctrl.Call(m, "GenerateBifrostUtilitySecret", clusterID, logger)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GenerateBifrostUtilitySecret indicates an expected call of GenerateBifrostUtilitySecret
-func (mr *MockAWSMockRecorder) GenerateBifrostUtilitySecret(clusterID, vpc, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) GenerateBifrostUtilitySecret(clusterID, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateBifrostUtilitySecret", reflect.TypeOf((*MockAWS)(nil).GenerateBifrostUtilitySecret), clusterID, vpc, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateBifrostUtilitySecret", reflect.TypeOf((*MockAWS)(nil).GenerateBifrostUtilitySecret), clusterID, logger)
 }
 
 // GetCIDRByVPCTag mocks base method

@@ -222,7 +222,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
-	bifrostSecret, err := awsClient.GenerateBifrostUtilitySecret(cluster.ID, cluster.ProvisionerMetadataKops.ChangeRequest.VPC, logger)
+	bifrostSecret, err := awsClient.GenerateBifrostUtilitySecret(cluster.ID, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate bifrost secret")
 	}
