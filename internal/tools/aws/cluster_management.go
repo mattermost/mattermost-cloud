@@ -204,33 +204,14 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 	return ClusterResources{}, fmt.Errorf("%d VPCs were returned as currently available; none of them were configured correctly", len(vpcs))
 }
 
-// GetVpcResources retrieve the VPC information for a particulary cluster.
+// GetVpcResources retrieves the VPC information for a particulary cluster.
 func (a *Client) GetVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error) {
-	// First, check if a VPC has been claimed by this cluster. If only one has
-	// already been claimed, then return that with no error.
-	clusterAlreadyClaimedFilter := []*ec2.Filter{
-		{
-			Name: aws.String(VpcAvailableTagKey),
-			Values: []*string{
-				aws.String(VpcAvailableTagValueFalse),
-			},
-		},
-		{
-			Name: aws.String(VpcClusterIDTagKey),
-			Values: []*string{
-				aws.String(clusterID),
-			},
-		},
-	}
-	clusterAlreadyClaimedVpcs, err := a.GetVpcsWithFilters(clusterAlreadyClaimedFilter)
+	vpc, err := getVPCForCluster(clusterID, a)
 	if err != nil {
-		return ClusterResources{}, err
-	}
-	if len(clusterAlreadyClaimedVpcs) != 1 {
-		return ClusterResources{}, errors.Errorf("expected exactly one VPC in the list, got %d for cluster %s; aborting process", len(clusterAlreadyClaimedVpcs), clusterID)
+		return ClusterResources{}, errors.Wrap(err, "failed to find cluster VPC")
 	}
 
-	return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, *clusterAlreadyClaimedVpcs[0].CidrBlock, logger)
+	return a.getClusterResourcesForVPC(*vpc.VpcId, *vpc.CidrBlock, logger)
 }
 
 // ReleaseVpc changes the tags on a VPC to mark it as "available" again.

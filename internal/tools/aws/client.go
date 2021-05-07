@@ -74,7 +74,7 @@ type AWS interface {
 	S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error
 	GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error)
 
-	GenerateBifrostUtilitySecret(clusterID string, vpc string, logger log.FieldLogger) (*corev1.Secret, error)
+	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 
 	GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error)
