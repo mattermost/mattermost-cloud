@@ -75,6 +75,7 @@ type Store interface {
 	DeleteInstallationAnnotation(installationID string, annotationName string) error
 
 	IsInstallationBackupRunning(installationID string) (bool, error)
+	IsInstallationBackupBeingUsed(backupID string) (bool, error)
 	CreateInstallationBackup(backupMeta *model.InstallationBackup) error
 	UpdateInstallationBackupState(backupMeta *model.InstallationBackup) error
 	GetInstallationBackup(id string) (*model.InstallationBackup, error)
