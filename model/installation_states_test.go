@@ -12,42 +12,42 @@ import (
 func TestInstallation_ValidTransitionState(t *testing.T) {
 
 	// Couple of tests to verify mechanism is working - we can add more for specific cases
-	for _, testCase := range []struct{
-	    oldState string
-	    newState string
-	    isValid bool
+	for _, testCase := range []struct {
+		oldState string
+		newState string
+		isValid  bool
 	}{
-	    {
+		{
 			oldState: InstallationStateCreationRequested,
 			newState: InstallationStateCreationRequested,
-			isValid: true,
-	    },
-	    {
+			isValid:  true,
+		},
+		{
 			oldState: InstallationStateCreationFailed,
 			newState: InstallationStateCreationRequested,
-			isValid: true,
-	    },
-	    {
+			isValid:  true,
+		},
+		{
 			oldState: InstallationStateStable,
 			newState: InstallationStateHibernationRequested,
-			isValid: true,
-	    },
-	    {
+			isValid:  true,
+		},
+		{
 			oldState: InstallationStateUpdateInProgress,
 			newState: InstallationStateHibernationRequested,
-			isValid: false,
-	    },
-	    {
+			isValid:  false,
+		},
+		{
 			oldState: InstallationStateHibernating,
 			newState: InstallationStateUpdateRequested,
-			isValid: false,
-	    },
+			isValid:  false,
+		},
 	} {
-	    t.Run(testCase.oldState + " to " +testCase.newState , func(t *testing.T) {
+		t.Run(testCase.oldState+" to "+testCase.newState, func(t *testing.T) {
 			installation := Installation{State: testCase.oldState}
 
 			isValid := installation.ValidTransitionState(testCase.newState)
 			assert.Equal(t, testCase.isValid, isValid)
-	    })
+		})
 	}
 }
