@@ -5,9 +5,10 @@
 package store
 
 import (
+	"time"
+
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
-	"time"
 )
 
 // GetMillis is a convenience method to get milliseconds since epoch.

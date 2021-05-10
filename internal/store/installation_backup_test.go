@@ -22,7 +22,7 @@ func TestIsInstallationBackupRunning(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupStableInstallation(t, sqlStore)
 
 	running, err := sqlStore.IsInstallationBackupRunning(installation.ID)
 	require.NoError(t, err)
@@ -41,12 +41,85 @@ func TestIsInstallationBackupRunning(t *testing.T) {
 	require.True(t, running)
 }
 
+func TestIsInstallationBackupBeingUsed(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation := setupStableInstallation(t, sqlStore)
+
+	// Create restoration and migration operations not associated with backup.
+	notConnectedRestoration := &model.InstallationDBRestorationOperation{
+		InstallationID: installation.ID,
+		State:          model.InstallationStateDBRestorationInProgress,
+	}
+	err := sqlStore.CreateInstallationDBRestorationOperation(notConnectedRestoration)
+	require.NoError(t, err)
+	notConnectedMigration := &model.InstallationDBMigrationOperation{
+		InstallationID: installation.ID,
+		State:          model.InstallationStateDBRestorationInProgress,
+	}
+	err = sqlStore.CreateInstallationDBMigrationOperation(notConnectedMigration)
+	require.NoError(t, err)
+
+	backup := &model.InstallationBackup{
+		InstallationID: installation.ID,
+		State:          model.InstallationBackupStateBackupRequested,
+	}
+	err = sqlStore.CreateInstallationBackup(backup)
+	require.NoError(t, err)
+
+	isUsed, err := sqlStore.IsInstallationBackupBeingUsed(backup.ID)
+	require.NoError(t, err)
+	require.False(t, isUsed)
+
+	// Restoration in progress.
+	restorationOp := &model.InstallationDBRestorationOperation{
+		InstallationID: installation.ID,
+		BackupID:       backup.ID,
+		State:          model.InstallationDBRestorationStateRequested,
+	}
+	err = sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
+	require.NoError(t, err)
+
+	isUsed, err = sqlStore.IsInstallationBackupBeingUsed(backup.ID)
+	require.NoError(t, err)
+	require.True(t, isUsed)
+
+	restorationOp.State = model.InstallationDBRestorationStateSucceeded
+	err = sqlStore.UpdateInstallationDBRestorationOperation(restorationOp)
+	require.NoError(t, err)
+
+	isUsed, err = sqlStore.IsInstallationBackupBeingUsed(backup.ID)
+	require.NoError(t, err)
+	require.False(t, isUsed)
+
+	// Migration in progress.
+	migrationOp := &model.InstallationDBMigrationOperation{
+		InstallationID: installation.ID,
+		BackupID:       backup.ID,
+		State:          model.InstallationDBMigrationStateRefreshSecrets,
+	}
+	err = sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
+	require.NoError(t, err)
+	isUsed, err = sqlStore.IsInstallationBackupBeingUsed(backup.ID)
+	require.NoError(t, err)
+	require.True(t, isUsed)
+
+	migrationOp.State = model.InstallationDBMigrationStateFailed
+	err = sqlStore.UpdateInstallationDBMigrationOperation(migrationOp)
+	require.NoError(t, err)
+	isUsed, err = sqlStore.IsInstallationBackupBeingUsed(backup.ID)
+	require.NoError(t, err)
+	require.False(t, isUsed)
+}
+
 func TestCreateInstallationBackup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupStableInstallation(t, sqlStore)
 
 	backup := &model.InstallationBackup{
 		InstallationID: installation.ID,
@@ -63,8 +136,8 @@ func TestGetInstallationBackup(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation1 := setupBasicInstallation(t, sqlStore)
-	installation2 := setupBasicInstallation(t, sqlStore)
+	installation1 := setupStableInstallation(t, sqlStore)
+	installation2 := setupStableInstallation(t, sqlStore)
 
 	backup1 := &model.InstallationBackup{
 		InstallationID: installation1.ID,
@@ -96,8 +169,8 @@ func TestGetInstallationBackupsMetadata(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation1 := setupBasicInstallation(t, sqlStore)
-	installation2 := setupBasicInstallation(t, sqlStore)
+	installation1 := setupStableInstallation(t, sqlStore)
+	installation2 := setupStableInstallation(t, sqlStore)
 	clusterInstallation := &model.ClusterInstallation{
 		InstallationID: installation1.ID,
 	}
@@ -174,7 +247,7 @@ func TestGetUnlockedInstallationBackupPendingWork(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupStableInstallation(t, sqlStore)
 
 	backup1 := &model.InstallationBackup{
 		InstallationID: installation.ID,
@@ -213,7 +286,7 @@ func TestUpdateInstallationBackup(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupStableInstallation(t, sqlStore)
 
 	backup := &model.InstallationBackup{
 		InstallationID: installation.ID,
@@ -273,10 +346,17 @@ func TestUpdateInstallationBackup(t *testing.T) {
 	})
 }
 
-func setupBasicInstallation(t *testing.T, sqlStore *SQLStore) *model.Installation {
-	model.NewID()
+func setupStableInstallation(t *testing.T, sqlStore *SQLStore) *model.Installation {
+	return setupInstallation(t, sqlStore, model.InstallationStateStable)
+}
+
+func setupHibernatingInstallation(t *testing.T, sqlStore *SQLStore) *model.Installation {
+	return setupInstallation(t, sqlStore, model.InstallationStateHibernating)
+}
+
+func setupInstallation(t *testing.T, sqlStore *SQLStore, state string) *model.Installation {
 	installation := &model.Installation{
-		State: model.InstallationStateStable,
+		State: state,
 		DNS:   fmt.Sprintf("dns-%s", uuid.NewRandom().String()[:6]),
 	}
 

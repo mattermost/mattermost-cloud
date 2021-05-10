@@ -5,13 +5,11 @@
 package store
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,17 +19,12 @@ func TestTriggerInstallationRestoration(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := &model.Installation{
-		State: model.InstallationStateHibernating,
-		DNS:   fmt.Sprintf("dns-%s", uuid.NewRandom().String()[:6]),
-	}
-	err := sqlStore.CreateInstallation(installation, nil)
-	require.NoError(t, err)
+	installation := setupHibernatingInstallation(t, sqlStore)
 
 	backup := &model.InstallationBackup{
 		InstallationID: installation.ID,
 	}
-	err = sqlStore.CreateInstallationBackup(backup)
+	err := sqlStore.CreateInstallationBackup(backup)
 	require.NoError(t, err)
 
 	restorationOp, err := sqlStore.TriggerInstallationRestoration(installation, backup)
@@ -42,6 +35,10 @@ func TestTriggerInstallationRestoration(t *testing.T) {
 	fetchOp, err := sqlStore.GetInstallationDBRestorationOperation(restorationOp.ID)
 	require.NoError(t, err)
 	assert.Equal(t, restorationOp, fetchOp)
+
+	installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, model.InstallationStateDBRestorationInProgress, installation.State)
 }
 
 func TestInstallationDBRestoration(t *testing.T) {
@@ -49,7 +46,7 @@ func TestInstallationDBRestoration(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupHibernatingInstallation(t, sqlStore)
 
 	dbRestoration := &model.InstallationDBRestorationOperation{
 		InstallationID:        installation.ID,
@@ -79,8 +76,8 @@ func TestGetInstallationDBRestorations(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation1 := setupBasicInstallation(t, sqlStore)
-	installation2 := setupBasicInstallation(t, sqlStore)
+	installation1 := setupHibernatingInstallation(t, sqlStore)
+	installation2 := setupHibernatingInstallation(t, sqlStore)
 	clusterInstallation := &model.ClusterInstallation{
 		InstallationID: installation1.ID,
 	}
@@ -149,7 +146,7 @@ func TestGetUnlockedInstallationDBRestorationsPendingWork(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupHibernatingInstallation(t, sqlStore)
 
 	dbRestoration1 := &model.InstallationDBRestorationOperation{
 		InstallationID: installation.ID,
@@ -188,7 +185,7 @@ func TestUpdateInstallationDBRestoration(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	installation := setupBasicInstallation(t, sqlStore)
+	installation := setupHibernatingInstallation(t, sqlStore)
 
 	dbRestoration := &model.InstallationDBRestorationOperation{
 		InstallationID: installation.ID,

@@ -12,14 +12,15 @@ import (
 // MultitenantDatabase represents database infrastructure that contains multiple
 // installation databases.
 type MultitenantDatabase struct {
-	ID             string
-	VpcID          string
-	DatabaseType   string
-	Installations  MultitenantDatabaseInstallations
-	CreateAt       int64
-	DeleteAt       int64
-	LockAcquiredBy *string
-	LockAcquiredAt int64
+	ID                    string
+	VpcID                 string
+	DatabaseType          string
+	Installations         MultitenantDatabaseInstallations
+	MigratedInstallations MultitenantDatabaseInstallations
+	CreateAt              int64
+	DeleteAt              int64
+	LockAcquiredBy        *string
+	LockAcquiredAt        int64
 }
 
 // MultitenantDatabaseInstallations is the list of installation IDs that belong
@@ -60,11 +61,12 @@ func (i *MultitenantDatabaseInstallations) Remove(installationID string) {
 // installation's limit.
 type MultitenantDatabaseFilter struct {
 	Paging
-	LockerID              string
-	InstallationID        string
-	VpcID                 string
-	DatabaseType          string
-	MaxInstallationsLimit int
+	LockerID               string
+	InstallationID         string
+	MigratedInstallationID string
+	VpcID                  string
+	DatabaseType           string
+	MaxInstallationsLimit  int
 }
 
 // MultitenantDatabasesFromReader decodes a json-encoded list of multitenant databases from the given io.Reader.
