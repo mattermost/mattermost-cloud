@@ -25,9 +25,10 @@ import (
 
 const (
 	// Run job with only one attempt to avoid possibility of waking up workspace before retry.
-	backupRestoreBackoffLimit int32 = 0
-	backupAction                    = "backup"
-	restoreAction                   = "restore"
+	backupBackoffLimit  int32 = 0
+	restoreBackoffLimit int32 = 1
+	backupAction              = "backup"
+	restoreAction             = "restore"
 )
 
 // ErrJobBackoffLimitReached indicates that job failed all possible attempts and there is no reason for retrying.
@@ -85,7 +86,7 @@ func (o BackupOperator) TriggerBackup(
 	envVars = append(envVars, prepareEnvs(dataResidence, storageEndpoint, fileStoreCfg.Secret, dbSecret)...)
 
 	backupJobName := makeJobName(backupAction, backup.ID)
-	job := o.createBackupRestoreJob(backupJobName, installation.ID, backupAction, envVars)
+	job := o.createBackupRestoreJob(backupJobName, installation.ID, backupAction, envVars, backupBackoffLimit)
 
 	err := o.startJob(jobsClient, job, logger)
 	if err != nil {
@@ -130,7 +131,7 @@ func (o BackupOperator) TriggerRestore(
 	envVars = append(envVars, prepareEnvs(*backup.DataResidence, storageEndpoint, fileStoreCfg.Secret, dbSecret)...)
 
 	restoreJobName := makeJobName(restoreAction, backup.ID)
-	job := o.createBackupRestoreJob(restoreJobName, installation.ID, restoreAction, envVars)
+	job := o.createBackupRestoreJob(restoreJobName, installation.ID, restoreAction, envVars, restoreBackoffLimit)
 
 	err := o.startJob(jobsClient, job, logger)
 	if err != nil {
@@ -237,9 +238,7 @@ func (o BackupOperator) cleanupJob(jobsClient v1.JobInterface, jobName string, l
 	return nil
 }
 
-func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, envs []corev1.EnvVar) *batchv1.Job {
-	backoff := backupRestoreBackoffLimit
-
+func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, envs []corev1.EnvVar, backoffLimit int32) *batchv1.Job {
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -264,7 +263,7 @@ func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, e
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
-			BackoffLimit:            &backoff,
+			BackoffLimit:            &backoffLimit,
 			TTLSecondsAfterFinished: o.jobTTLSecondsAfterFinish,
 		},
 	}

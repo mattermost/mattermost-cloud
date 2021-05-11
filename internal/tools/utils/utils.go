@@ -113,19 +113,24 @@ func (r *ResourceUtil) GetFilestore(installation *model.Installation) model.File
 	return model.NewMinioOperatorFilestore()
 }
 
-// GetDatabase returns the Database interface that matches the installation.
-func (r *ResourceUtil) GetDatabase(installation *model.Installation) model.Database {
-	switch installation.Database {
+// GetDatabaseForInstallation returns the Database interface that matches the installation.
+func (r *ResourceUtil) GetDatabaseForInstallation(installation *model.Installation) model.Database {
+	return r.GetDatabase(installation.ID, installation.Database)
+}
+
+// GetDatabase returns the Database interface that matches the installationID and DB type.
+func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database {
+	switch dbType {
 	case model.InstallationDatabaseMysqlOperator:
 		return model.NewMysqlOperatorDatabase()
 	case model.InstallationDatabaseSingleTenantRDSMySQL:
-		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installation.ID, r.awsClient)
+		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installationID, r.awsClient)
 	case model.InstallationDatabaseSingleTenantRDSPostgres:
-		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installation.ID, r.awsClient)
+		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installationID, r.awsClient)
 	case model.InstallationDatabaseMultiTenantRDSMySQL:
-		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypeMySQL, r.instanceID, installation.ID, r.awsClient)
+		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypeMySQL, r.instanceID, installationID, r.awsClient)
 	case model.InstallationDatabaseMultiTenantRDSPostgres:
-		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypePostgres, r.instanceID, installation.ID, r.awsClient)
+		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypePostgres, r.instanceID, installationID, r.awsClient)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match

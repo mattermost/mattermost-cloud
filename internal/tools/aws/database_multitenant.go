@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/common"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/rds"
@@ -320,6 +322,241 @@ func (d *RDSMultitenantDatabase) Teardown(store model.InstallationDatabaseStoreI
 	}
 
 	logger.Info("Multitenant RDS database teardown complete")
+
+	return nil
+}
+
+// TeardownMigrated removes database from which Installation was migrated out.
+func (d *RDSMultitenantDatabase) TeardownMigrated(store model.InstallationDatabaseStoreInterface, migrationOp *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
+	logger.Info("Tearing down migrated multitenant database")
+
+	db, err := store.GetMultitenantDatabase(migrationOp.SourceMultiTenant.DatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get multitenant database")
+	}
+	if db == nil {
+		logger.Info("Source database does not exist, skipping removal")
+		return nil
+	}
+
+	unlockFn, err := d.lockMultitenantDatabase(migrationOp.SourceMultiTenant.DatabaseID, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to lock multitenant database")
+	}
+	defer unlockFn()
+
+	db, err = store.GetMultitenantDatabase(migrationOp.SourceMultiTenant.DatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get multitenant database")
+	}
+
+	err = d.removeMigratedInstallationFromMultitenantDatabase(db, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove migrated installation database")
+	}
+
+	return nil
+}
+
+// MigrateOut marks Installation as migrated from the database but does not remove the actual data.
+func (d *RDSMultitenantDatabase) MigrateOut(store model.InstallationDatabaseStoreInterface, dbMigration *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
+	installationDatabaseName := MattermostRDSDatabaseName(d.installationID)
+
+	logger = logger.WithFields(log.Fields{
+		"multitenant-rds-database": installationDatabaseName,
+		"database-type":            d.databaseType,
+	})
+
+	unlock, err := d.lockMultitenantDatabase(dbMigration.SourceMultiTenant.DatabaseID, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to lock multitenant database")
+	}
+	defer unlock()
+
+	database, err := store.GetMultitenantDatabase(dbMigration.SourceMultiTenant.DatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to query for the multitenant database")
+	}
+
+	database.Installations.Remove(d.installationID)
+
+	if !common.Contains(database.MigratedInstallations, d.installationID) {
+		database.MigratedInstallations.Add(d.installationID)
+	}
+
+	err = store.UpdateMultitenantDatabase(database)
+	if err != nil {
+		return errors.Wrap(err, "failed to update multitenant db")
+	}
+
+	rdsCluster, err := d.describeRDSCluster(database.ID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
+	}
+	err = d.updateCounterTagWithCurrentWeight(database, rdsCluster, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update counter tag with current weight")
+	}
+
+	logger.Infof("Installation %s migrated out of multitenant database %s", d.installationID, database.ID)
+
+	return nil
+}
+
+// MigrateTo creates new logical database in the database cluster for already existing Installation.
+func (d *RDSMultitenantDatabase) MigrateTo(store model.InstallationDatabaseStoreInterface, dbMigration *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
+	installationDatabaseName := MattermostRDSDatabaseName(d.installationID)
+
+	logger = logger.WithFields(log.Fields{
+		"multitenant-rds-database": installationDatabaseName,
+		"database-type":            d.databaseType,
+	})
+
+	unlock, err := d.lockMultitenantDatabase(dbMigration.DestinationMultiTenant.DatabaseID, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to lock multitenant database")
+	}
+	defer unlock()
+	database, err := store.GetMultitenantDatabase(dbMigration.DestinationMultiTenant.DatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to query for the multitenant database")
+	}
+
+	err = d.migrateInstallationToDB(store, database)
+	if err != nil {
+		return errors.Wrap(err, "failed to migrate installation to multitenant db")
+	}
+
+	vpc, err := getVPCForInstallation(d.installationID, store, d.client)
+	if err != nil {
+		return errors.Wrap(err, "failed to find cluster installation VPC")
+	}
+
+	rdsCluster, err := d.describeRDSCluster(database.ID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
+	}
+	if *rdsCluster.Status != DefaultRDSStatusAvailable {
+		return errors.Errorf("multitenant RDS cluster ID %s is not available (status: %s)", database.ID, *rdsCluster.Status)
+	}
+
+	rdsID := *rdsCluster.DBClusterIdentifier
+	logger = logger.WithField("rds-cluster-id", rdsID)
+
+	err = d.runProvisionSQLCommands(installationDatabaseName, *vpc.VpcId, rdsCluster, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to run provisioning sql commands")
+	}
+
+	err = d.updateCounterTagWithCurrentWeight(database, rdsCluster, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update counter tag with current weight")
+	}
+
+	logger.Infof("Installation %s migrated to multitenant database %s", d.installationID, database.ID)
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) migrateInstallationToDB(store model.InstallationDatabaseStoreInterface, database *model.MultitenantDatabase) error {
+	// To make migration idempotent we check if installation is already in db.
+	if common.Contains(database.Installations, d.installationID) {
+		return nil
+	}
+
+	err := common.ValidateDBMigrationDestination(store, database, d.installationID, float64(d.MaxSupportedDatabases()))
+	if err != nil {
+		return errors.Wrap(err, "database validation failed")
+	}
+
+	database.Installations.Add(d.installationID)
+	err = store.UpdateMultitenantDatabase(database)
+	if err != nil {
+		return errors.Wrap(err, "failed to add installation to multitenant db")
+	}
+
+	return nil
+}
+
+// TODO: for now rollback will be supported only for multi-tenant postgres to multi-tenant postgres migration
+// To support more DB types we will have to split this method to two.
+
+// RollbackMigration rollbacks Installation to the source database.
+func (d *RDSMultitenantDatabase) RollbackMigration(store model.InstallationDatabaseStoreInterface, dbMigration *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
+	installationDatabaseName := MattermostRDSDatabaseName(d.installationID)
+
+	logger = logger.WithFields(log.Fields{
+		"multitenant-rds-database": installationDatabaseName,
+		"database-type":            d.databaseType,
+	})
+
+	if dbMigration.SourceDatabase != model.InstallationDatabaseMultiTenantRDSPostgres ||
+		dbMigration.DestinationDatabase != model.InstallationDatabaseMultiTenantRDSPostgres {
+		return errors.New("db migration rollback is supported only for multitenant postgres database")
+	}
+
+	unlockDest, err := d.lockMultitenantDatabase(dbMigration.DestinationMultiTenant.DatabaseID, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to lock multitenant database")
+	}
+	defer unlockDest()
+	destinationDatabase, err := store.GetMultitenantDatabase(dbMigration.DestinationMultiTenant.DatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to query for the multitenant database")
+	}
+
+	unlockSource, err := d.lockMultitenantDatabase(dbMigration.SourceMultiTenant.DatabaseID, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to lock multitenant database")
+	}
+	defer unlockSource()
+	sourceDatabase, err := store.GetMultitenantDatabase(dbMigration.SourceMultiTenant.DatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to query for the multitenant database")
+	}
+
+	sourceDatabase.MigratedInstallations.Remove(d.installationID)
+	destinationDatabase.Installations.Remove(d.installationID)
+
+	if !common.Contains(sourceDatabase.Installations, d.installationID) {
+		sourceDatabase.Installations.Add(d.installationID)
+	}
+
+	err = store.UpdateMultitenantDatabase(sourceDatabase)
+	if err != nil {
+		return errors.Wrap(err, "failed to update source multitenant database")
+	}
+	err = store.UpdateMultitenantDatabase(destinationDatabase)
+	if err != nil {
+		return errors.Wrap(err, "failed to update destination multitenant database")
+	}
+
+	rdsCluster, err := d.describeRDSCluster(destinationDatabase.ID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", destinationDatabase.ID)
+	}
+	if *rdsCluster.Status != DefaultRDSStatusAvailable {
+		return errors.Errorf("multitenant RDS cluster ID %s is not available (status: %s)", destinationDatabase.ID, *rdsCluster.Status)
+	}
+
+	rdsID := *rdsCluster.DBClusterIdentifier
+	logger = logger.WithField("rds-cluster-id", rdsID)
+
+	err = d.dropDatabase(rdsID, *rdsCluster.Endpoint, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to drop destination database")
+	}
+
+	err = d.updateCounterTagWithCurrentWeight(destinationDatabase, rdsCluster, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update counter tag with current weight")
+	}
+	err = d.updateCounterTagWithCurrentWeight(sourceDatabase, rdsCluster, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update counter tag with current weight")
+	}
+
+	logger.Infof("Installation %s migrated to multitenant database %s", d.installationID, destinationDatabase.ID)
 
 	return nil
 }
@@ -663,10 +900,14 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	// TODO: split this up.
-	err = d.dropDatabaseAndDeleteSecret(database.ID, *rdsCluster.Endpoint, store, logger)
+	err = d.dropDatabase(database.ID, *rdsCluster.Endpoint, store, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to drop database or delete secret")
+		return errors.Wrap(err, "failed to drop multitenant database")
+	}
+
+	err = d.deleteSecret()
+	if err != nil {
+		return errors.Wrap(err, "failed to delete multitenant database secret")
 	}
 
 	database.Installations.Remove(d.installationID)
@@ -683,7 +924,31 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) dropDatabaseAndDeleteSecret(rdsClusterID, rdsClusterendpoint string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+// removeMigratedInstallationFromMultitenantDatabase performs the work necessary to
+// remove a single migrated installation database from a multitenant RDS cluster.
+func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDatabase(database *model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	rdsCluster, err := d.describeRDSCluster(database.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe multitenant database")
+	}
+
+	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
+
+	err = d.dropDatabase(database.ID, *rdsCluster.Endpoint, store, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to drop migrated database")
+	}
+
+	database.MigratedInstallations.Remove(d.installationID)
+	err = store.UpdateMultitenantDatabase(database)
+	if err != nil {
+		return errors.Wrapf(err, "failed to remove migrated installation ID %s from multitenant datastore", d.installationID)
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) dropDatabase(rdsClusterID, rdsClusterendpoint string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
 	databaseName := MattermostRDSDatabaseName(d.installationID)
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -707,15 +972,18 @@ func (d *RDSMultitenantDatabase) dropDatabaseAndDeleteSecret(rdsClusterID, rdsCl
 		return errors.Wrapf(err, "failed to drop multitenant RDS database name %s", databaseName)
 	}
 
+	return nil
+}
+
+func (d *RDSMultitenantDatabase) deleteSecret() error {
 	multitenantDatabaseSecretName := RDSMultitenantSecretName(d.installationID)
 
-	_, err = d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
+	_, err := d.client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(multitenantDatabaseSecretName),
 	})
 	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
 		return errors.Wrapf(err, "failed to delete multitenant database secret name %s", multitenantDatabaseSecretName)
 	}
-
 	return nil
 }
 

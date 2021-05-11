@@ -34,6 +34,8 @@ type mockInstallationStore struct {
 
 	UnlockChan              chan interface{}
 	UpdateInstallationCalls int
+
+	mockMultitenantDBStore
 }
 
 var cloudMetrics = metrics.New()
@@ -152,42 +154,6 @@ func (s *mockInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*mod
 	return nil, nil
 }
 
-func (s *mockInstallationStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
-	return nil, nil
-}
-
-func (s *mockInstallationStore) GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error) {
-	return nil, nil
-}
-
-func (s *mockInstallationStore) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
-	return 0, nil
-}
-
-func (s *mockInstallationStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
-	return nil
-}
-
-func (s *mockInstallationStore) LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error) {
-	return true, nil
-}
-
-func (s *mockInstallationStore) UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error) {
-	return true, nil
-}
-
-func (s *mockInstallationStore) UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
-	return nil
-}
-
-func (s *mockInstallationStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
-	return nil, nil
-}
-
-func (s *mockInstallationStore) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
-	return nil, nil
-}
-
 func (s *mockInstallationStore) GetAnnotationsForInstallation(installationID string) ([]*model.Annotation, error) {
 	return nil, nil
 }
@@ -206,6 +172,52 @@ func (s *mockInstallationStore) LockInstallationBackups(backupIDs []string, lock
 
 func (s *mockInstallationStore) UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error) {
 	return true, nil
+}
+
+type mockMultitenantDBStore struct{}
+
+func (m *mockMultitenantDBStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
+func (m *mockMultitenantDBStore) GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
+func (m *mockMultitenantDBStore) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
+	return 0, nil
+}
+
+func (m *mockMultitenantDBStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
+	return nil
+}
+
+func (m *mockMultitenantDBStore) LockMultitenantDatabase(multitenantdatabaseID, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (m *mockMultitenantDBStore) UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
+func (m *mockMultitenantDBStore) UpdateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
+	return nil
+}
+
+func (m *mockMultitenantDBStore) GetMultitenantDatabaseForInstallationID(installationID string) (*model.MultitenantDatabase, error) {
+	return nil, nil
+}
+
+func (m mockMultitenantDBStore) LockMultitenantDatabases(ids []string, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (m mockMultitenantDBStore) UnlockMultitenantDatabases(ids []string, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
+func (m mockMultitenantDBStore) GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error) {
+	return nil, nil
 }
 
 type mockInstallationProvisioner struct {
@@ -261,6 +273,10 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 
 func (p *mockInstallationProvisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
 	return "example.elb.us-east-1.amazonaws.com", nil
+}
+
+func (p *mockInstallationProvisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	return nil
 }
 
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants

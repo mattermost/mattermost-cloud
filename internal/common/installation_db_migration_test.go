@@ -24,7 +24,7 @@ func TestValidateDBMigrationDestination(t *testing.T) {
 	}
 	err := sqlStore.CreateInstallation(installation, nil)
 	require.NoError(t, err)
-	
+
 	database := &model.MultitenantDatabase{
 		ID:                    "database1",
 		DatabaseType:          model.InstallationDatabaseMultiTenantRDSPostgres,

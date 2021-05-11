@@ -34,7 +34,7 @@ func (provisioner *KopsProvisioner) TriggerBackup(backup *model.InstallationBack
 	if filestoreCfg == nil || filestoreSecret == nil {
 		return nil, errors.New("filestore secret and config cannot be empty for backup")
 	}
-	dbSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSecret(provisioner.store, logger)
+	dbSecret, err := provisioner.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(provisioner.store, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get database configuration")
 	}
@@ -113,7 +113,7 @@ func (provisioner *KopsProvisioner) TriggerRestore(installation *model.Installat
 	if filestoreCfg == nil || filestoreSecret == nil {
 		return errors.New("filestore secret and config cannot be empty for database restoration")
 	}
-	dbSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSecret(provisioner.store, logger)
+	dbSecret, err := provisioner.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(provisioner.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get database configuration")
 	}
