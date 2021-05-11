@@ -244,8 +244,8 @@ func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, e
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    map[string]string{
-				"app": "backup-restore",
+			Labels: map[string]string{
+				"app":    "backup-restore",
 				"action": action,
 			},
 		},
@@ -253,7 +253,7 @@ func (o BackupOperator) createBackupRestoreJob(name, namespace, action string, e
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": "backup-restore",
+						"app":    "backup-restore",
 						"action": action,
 					},
 				},

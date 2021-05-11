@@ -12,38 +12,38 @@ import (
 func TestCluster_ValidTransitionState(t *testing.T) {
 
 	// Couple of tests to verify mechanism is working - we can add more for specific cases
-	for _, testCase := range []struct{
+	for _, testCase := range []struct {
 		oldState string
 		newState string
-		isValid bool
+		isValid  bool
 	}{
 		{
 			oldState: ClusterStateCreationRequested,
 			newState: ClusterStateCreationRequested,
-			isValid: true,
+			isValid:  true,
 		},
 		{
 			oldState: ClusterStateCreationFailed,
 			newState: ClusterStateCreationRequested,
-			isValid: true,
+			isValid:  true,
 		},
 		{
 			oldState: ClusterStateStable,
 			newState: ClusterStateResizeRequested,
-			isValid: true,
+			isValid:  true,
 		},
 		{
 			oldState: ClusterStateResizeRequested,
 			newState: ClusterStateUpgradeRequested,
-			isValid: false,
+			isValid:  false,
 		},
 		{
 			oldState: ClusterStateProvisioningRequested,
 			newState: ClusterStateResizeRequested,
-			isValid: false,
+			isValid:  false,
 		},
 	} {
-		t.Run(testCase.oldState + " to " +testCase.newState , func(t *testing.T) {
+		t.Run(testCase.oldState+" to "+testCase.newState, func(t *testing.T) {
 			cluster := Cluster{State: testCase.oldState}
 
 			isValid := cluster.ValidTransitionState(testCase.newState)

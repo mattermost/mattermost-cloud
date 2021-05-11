@@ -282,6 +282,23 @@ func TestDeleteInstallationBackup(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 403")
 	})
 
+	t.Run("while restoration is using backup", func(t *testing.T) {
+		restorationOp := &model.InstallationDBRestorationOperation{
+			BackupID: backup.ID,
+			State:    model.InstallationDBRestorationStateInProgress,
+		}
+		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
+		require.NoError(t, err)
+		defer func() {
+			restorationOp.State = model.InstallationDBRestorationStateFailed
+			err = sqlStore.UpdateInstallationDBRestorationOperation(restorationOp)
+			assert.NoError(t, err)
+		}()
+
+		err = client.DeleteInstallationBackup(backup.ID)
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
 	err = client.DeleteInstallationBackup(backup.ID)
 	require.NoError(t, err)
 
