@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package components
+package common
 
 import (
 	"net/http"
@@ -20,7 +20,8 @@ type installationRestorationStore interface {
 
 // TriggerInstallationDBRestoration validates, triggers and reports installation database restoration.
 func TriggerInstallationDBRestoration(store installationRestorationStore, installation *model.Installation, backup *model.InstallationBackup, env string, logger log.FieldLogger) (*model.InstallationDBRestorationOperation, error) {
-	if err := model.EnsureInstallationReadyForDBRestoration(installation, backup); err != nil {
+	err := model.EnsureInstallationReadyForDBRestoration(installation, backup)
+	if err != nil {
 		return nil, ErrWrap(http.StatusBadRequest, err, "installation cannot be restored")
 	}
 

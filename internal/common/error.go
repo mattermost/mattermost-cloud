@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package components
+package common
 
 import (
 	"net/http"

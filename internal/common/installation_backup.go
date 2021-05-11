@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package components
+package common
 
 import (
 	"net/http"
@@ -22,7 +22,8 @@ type installationBackupStore interface {
 
 // TriggerInstallationBackup verifies that backup can be started for an Installation and triggers it.
 func TriggerInstallationBackup(store installationBackupStore, installation *model.Installation, env string, logger log.FieldLogger) (*model.InstallationBackup, error) {
-	if err := model.EnsureInstallationReadyForBackup(installation); err != nil {
+	err := model.EnsureInstallationReadyForBackup(installation)
+	if err != nil {
 		return nil, ErrWrap(http.StatusBadRequest, err, "installation cannot be backed up")
 	}
 

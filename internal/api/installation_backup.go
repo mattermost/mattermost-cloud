@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/components"
+	"github.com/mattermost/mattermost-cloud/internal/common"
 
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 
@@ -54,15 +54,15 @@ func handleRequestInstallationBackup(c *Context, w http.ResponseWriter, r *http.
 	defer unlockOnce()
 
 	if installationDTO.State != model.InstallationStateHibernating {
-		c.Logger.Error("Cannot request backup for not hibernating installation")
+		c.Logger.Error("Cannot request backup for non-hibernating installation")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	backup, err := components.TriggerInstallationBackup(c.Store, installationDTO.Installation, c.Environment, c.Logger)
+	backup, err := common.TriggerInstallationBackup(c.Store, installationDTO.Installation, c.Environment, c.Logger)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to trigger installation backup")
-		w.WriteHeader(components.ErrToStatus(err))
+		w.WriteHeader(common.ErrToStatus(err))
 		return
 	}
 
@@ -170,12 +170,12 @@ func handleDeleteInstallationBackup(c *Context, w http.ResponseWriter, r *http.R
 
 	isUsed, err := c.Store.IsInstallationBackupBeingUsed(backup.ID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("Failed to check if backup is being used")
+		c.Logger.WithError(err).Error("Failed to check if backup is being used")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if isUsed {
-		c.Logger.Warn("Backup is being used by migration or restoration and cannot ne deleted")
+		c.Logger.Warn("Backup is being used by migration or restoration and cannot be deleted")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

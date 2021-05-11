@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package components
+package common
 
 // Contains returns true if collections contains at least one matching element.
 func Contains(collection []string, toFind string) bool {
