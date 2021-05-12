@@ -149,6 +149,23 @@ func (sqlStore *SQLStore) DeleteClusterInstallation(id string) error {
 	return nil
 }
 
+// RecoverClusterInstallation recovers a given cluster installation from the deleted state.
+func (sqlStore *SQLStore) RecoverClusterInstallation(clusterInstallation *model.ClusterInstallation) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("ClusterInstallation").
+		Set("State", clusterInstallation.State).
+		Set("DeleteAt", 0).
+		Where("ID = ?", clusterInstallation.ID).
+		Where("State = ?", model.ClusterInstallationStateDeleted).
+		Where("DeleteAt != 0"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation recovery values")
+	}
+
+	return nil
+}
+
 // LockClusterInstallations marks the cluster installation as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockClusterInstallations(clusterInstallationIDs []string, lockerID string) (bool, error) {
 	return sqlStore.lockRows("ClusterInstallation", clusterInstallationIDs, lockerID)
