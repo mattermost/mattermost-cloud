@@ -476,7 +476,7 @@ var installationRecoveryCmd = &cobra.Command{
 			Paging: model.AllPagesNotDeleted(),
 		}, false, false)
 		if err != nil {
-			return errors.Wrap(err, "failed to get cluster installations filtered by DNS")
+			return errors.Wrap(err, "failed to get installations filtered by DNS")
 		}
 		if len(installations) != 0 {
 			return errors.Errorf("the requested installation's DNS is now in use by %d installations", len(installations))
@@ -539,7 +539,22 @@ var installationRecoveryCmd = &cobra.Command{
 		if !locked {
 			return errors.New("failed to acquire lock on multitenant database")
 		}
-		defer sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
+		defer func() {
+			unlocked, err := sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
+			if err != nil {
+				logger.WithError(err).Error("Failed to unlock multitenant database")
+				return
+			}
+			if unlocked != true {
+				logger.Error("Failed to release lock for multitenant database")
+			}
+		}()
+
+		// Refresh the database object in case updates were made.
+		db, err = sqlStore.GetMultitenantDatabase(databaseID)
+		if err != nil {
+			return errors.Wrap(err, "failed to get database")
+		}
 
 		// Handle follow-up attempts from a partial recovery.
 		// NOTE: this ignores DB weighting.
