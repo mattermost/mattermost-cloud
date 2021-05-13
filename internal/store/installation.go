@@ -502,6 +502,23 @@ func (sqlStore *SQLStore) DeleteInstallation(id string) error {
 	return nil
 }
 
+// RecoverInstallation recovers a given installation from the deleted state.
+func (sqlStore *SQLStore) RecoverInstallation(installation *model.Installation) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		Set("State", installation.State).
+		Set("DeleteAt", 0).
+		Where("ID = ?", installation.ID).
+		Where("State = ?", model.InstallationStateDeleted).
+		Where("DeleteAt != 0"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation recovery values")
+	}
+
+	return nil
+}
+
 // LockInstallation marks the installation as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockInstallation(installationID, lockerID string) (bool, error) {
 	return sqlStore.lockRows("Installation", []string{installationID}, lockerID)

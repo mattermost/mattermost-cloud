@@ -215,6 +215,27 @@ func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log
 	return nil
 }
 
+// SecretsManagerRestoreSecret restores a deleted secret.
+func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.FieldLogger) error {
+	_, err := a.Service().secretsManager.RestoreSecret(&secretsmanager.RestoreSecretInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
+				logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming fully deleted")
+
+				return nil
+			}
+		}
+		return err
+	}
+
+	logger.WithField("secret-name", secretName).Debug("Secret Manager secret recovered")
+
+	return nil
+}
+
 func unmarshalSecretPayload(payload string) (*RDSSecret, error) {
 	var secret RDSSecret
 	err := json.Unmarshal([]byte(payload), &secret)

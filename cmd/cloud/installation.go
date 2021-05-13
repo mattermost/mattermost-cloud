@@ -7,9 +7,12 @@ package main
 import (
 	"os"
 
+	sdkAWS "github.com/aws/aws-sdk-go/aws"
+	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -72,6 +75,12 @@ func init() {
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
 	installationDeleteCmd.MarkFlagRequired("installation")
 
+	installationRecoveryCmd.Flags().String("installation", "", "The id of the installation to be recovered.")
+	installationRecoveryCmd.Flags().String("installation-database", "", "The original multitenant database id of the installation to be recovered.")
+	installationRecoveryCmd.Flags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
+	installationRecoveryCmd.MarkFlagRequired("installation")
+	installationRecoveryCmd.MarkFlagRequired("installation-database")
+
 	installationCmd.AddCommand(installationCreateCmd)
 	installationCmd.AddCommand(installationUpdateCmd)
 	installationCmd.AddCommand(installationDeleteCmd)
@@ -82,6 +91,7 @@ func init() {
 	installationCmd.AddCommand(installationShowStateReport)
 	installationCmd.AddCommand(installationAnnotationCmd)
 	installationCmd.AddCommand(installationsGetStatuses)
+	installationCmd.AddCommand(installationRecoveryCmd)
 	installationCmd.AddCommand(backupCmd)
 }
 
@@ -419,6 +429,164 @@ var installationShowStateReport = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		return nil
+	},
+}
+
+// WARNING: EXPERIMENTAL
+// This command runs as a client with direct store integration.
+var installationRecoveryCmd = &cobra.Command{
+	Use:   "recover",
+	Short: "recover the basic resources of a deleted installation by recreating it.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		installationID, _ := command.Flags().GetString("installation")
+		databaseID, _ := command.Flags().GetString("installation-database")
+
+		logger := logger.WithFields(logrus.Fields{
+			"instance":              instanceID,
+			"installation":          installationID,
+			"installation-database": databaseID,
+		})
+
+		logger.Info("Starting installation recovery from deleted state")
+
+		sqlStore, err := sqlStore(command)
+		if err != nil {
+			return errors.Wrap(err, "failed to create datastore")
+		}
+
+		installation, err := sqlStore.GetInstallation(installationID, true, false)
+		if err != nil {
+			return errors.Wrap(err, "failed to get installation")
+		}
+		if installation == nil {
+			return errors.New("installation does not exist")
+		}
+		if installation.State != model.InstallationStateDeleted {
+			return errors.New("installation recovery can only be performed on deleted installations")
+		}
+
+		// DNS could have been claimed by a new installation, so we need to check
+		// that as well.
+		installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
+			DNS:    installation.DNS,
+			Paging: model.AllPagesNotDeleted(),
+		}, false, false)
+		if err != nil {
+			return errors.Wrap(err, "failed to get installations filtered by DNS")
+		}
+		if len(installations) != 0 {
+			return errors.Errorf("the requested installation's DNS is now in use by %d installations", len(installations))
+		}
+
+		// Be extra cautious until we can test other configs.
+		if installation.Database != model.InstallationDatabaseMultiTenantRDSPostgres {
+			return errors.Errorf("installation database type %s is not supported", installation.Database)
+		}
+		if installation.Filestore != model.InstallationFilestoreBifrost && installation.Filestore != model.InstallationFilestoreMultiTenantAwsS3 {
+			return errors.Errorf("installation filestore type %s is not supported", installation.Filestore)
+		}
+
+		clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{
+			InstallationID: installation.ID,
+			Paging:         model.AllPagesWithDeleted(),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to get cluster installations")
+		}
+		if len(clusterInstallations) != 1 {
+			return errors.Errorf("expected to find 1 cluster installation, but found %d", len(clusterInstallations))
+		}
+		clusterInstallation := clusterInstallations[0]
+
+		db, err := sqlStore.GetMultitenantDatabase(databaseID)
+		if err != nil {
+			return errors.Wrap(err, "failed to find database")
+		}
+		if db == nil {
+			return errors.New("failed to find multitenant database")
+		}
+
+		logger.Info("Restoring AWS resources")
+
+		awsRegion := os.Getenv("AWS_REGION")
+		if awsRegion == "" {
+			awsRegion = toolsAWS.DefaultAWSRegion
+		}
+		awsConfig := &sdkAWS.Config{
+			Region:     sdkAWS.String(awsRegion),
+			MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
+		}
+		awsClient, err := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to build AWS client")
+		}
+
+		err = awsClient.SecretsManagerRestoreSecret(toolsAWS.RDSMultitenantSecretName(installation.ID), logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to recover AWS database secret")
+		}
+
+		logger.Info("Updating multitenant database")
+
+		locked, err := sqlStore.LockMultitenantDatabase(db.ID, instanceID)
+		if err != nil {
+			return errors.Wrap(err, "failed to lock multitenant database")
+		}
+		if !locked {
+			return errors.New("failed to acquire lock on multitenant database")
+		}
+		defer func() {
+			unlocked, err := sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
+			if err != nil {
+				logger.WithError(err).Error("Failed to unlock multitenant database")
+				return
+			}
+			if unlocked != true {
+				logger.Error("Failed to release lock for multitenant database")
+			}
+		}()
+
+		// Refresh the database object in case updates were made.
+		db, err = sqlStore.GetMultitenantDatabase(databaseID)
+		if err != nil {
+			return errors.Wrap(err, "failed to get database")
+		}
+
+		// Handle follow-up attempts from a partial recovery.
+		// NOTE: this ignores DB weighting.
+		if !db.Installations.Contains(installationID) {
+			db.Installations.Add(installationID)
+			err = sqlStore.UpdateMultitenantDatabase(db)
+			if err != nil {
+				return errors.Wrap(err, "failed to add installation ID to multitenant database")
+			}
+		}
+
+		logger.Infof("Setting cluster installation %s to creation-requested", clusterInstallation.ID)
+
+		// We shouldn't need to lock this as it is a single update and nothing
+		// should have a lock since it is deleted.
+		if clusterInstallation.State == model.ClusterInstallationStateDeleted {
+			clusterInstallation.State = model.ClusterInstallationStateCreationRequested
+			err = sqlStore.RecoverClusterInstallation(clusterInstallation)
+			if err != nil {
+				return errors.Wrap(err, "failed to set cluster installation to creation-requested state")
+			}
+		}
+
+		logger.Info("Setting installation to creation-requested")
+
+		installation.State = model.InstallationStateCreationRequested
+		err = sqlStore.RecoverInstallation(installation)
+		if err != nil {
+			return errors.Wrap(err, "failed to set installation to creation-requested state")
+		}
+
+		logger.Info("Installation recovery request completed")
 
 		return nil
 	},
