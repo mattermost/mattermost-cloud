@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ type ClusterInstallationProvisioner interface {
 	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
+	DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
 }
@@ -113,7 +115,7 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 	}
 
 	if installation.License != "" {
-		licenseSecretName, err := provisioner.prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
+		licenseSecretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
@@ -243,18 +245,17 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 	cr.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
 
 	cr.Spec.MattermostLicenseSecret = ""
-	secretName := fmt.Sprintf("%s-license", name)
 	if installation.License != "" {
-		secretName, err = provisioner.prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
+		secretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
 
 		cr.Spec.MattermostLicenseSecret = secretName
 	} else {
-		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
+		err = cleanupOldLicenseSecrets("", clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to cleanup old license secrets")
 		}
 	}
 
@@ -401,7 +402,7 @@ func (provisioner *kopsCIAlpha) DeleteClusterInstallation(cluster *model.Cluster
 	}
 
 	if installation.License != "" {
-		err = provisioner.deleteLicenseSecret(clusterInstallation, k8sClient, logger)
+		err = cleanupOldLicenseSecrets("", clusterInstallation, k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete license secret")
 		}
@@ -542,6 +543,39 @@ func (provisioner *kopsCIAlpha) getClusterInstallationResource(cluster *model.Cl
 	return cr, nil
 }
 
+// DeleteOldClusterInstallationLicenseSecrets removes k8s secrets found matching
+// the license naming scheme that are not the current license used by the
+// installation.
+func (provisioner *KopsProvisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kops config from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	var currentSecretName string
+	if installation.License != "" {
+		currentSecretName = generateCILicenseName(installation, clusterInstallation)
+	}
+
+	err = cleanupOldLicenseSecrets(currentSecretName, clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to cleanup old license secrets")
+	}
+
+	return nil
+}
+
 func (provisioner *KopsProvisioner) prepareClusterInstallationEnv(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
 	_, err := k8sClient.CreateOrUpdateNamespace(clusterInstallation.Namespace)
 	if err != nil {
@@ -562,8 +596,8 @@ func (provisioner *KopsProvisioner) prepareClusterInstallationEnv(clusterInstall
 	return installationName, nil
 }
 
-func (provisioner *KopsProvisioner) prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
-	licenseSecretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
+func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
+	licenseSecretName := generateCILicenseName(installation, clusterInstallation)
 	licenseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      licenseSecretName,
@@ -580,15 +614,37 @@ func (provisioner *KopsProvisioner) prepareCILicenseSecret(installation *model.I
 	return licenseSecretName, nil
 }
 
-func (provisioner *KopsProvisioner) deleteLicenseSecret(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	secretName := fmt.Sprintf("%s-license", makeClusterInstallationName(clusterInstallation))
-	err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(context.Background(), secretName, metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Warnf("Secret %s/%s not found, assuming already deleted", clusterInstallation.Namespace, secretName)
-		return nil
+func generateCILicenseName(installation *model.Installation, clusterInstallation *model.ClusterInstallation) string {
+	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License)))
+	if len(sum) > 7 {
+		sum = sum[0:6]
 	}
+
+	return fmt.Sprintf("%s-%s-license", makeClusterInstallationName(clusterInstallation), sum)
+}
+
+// cleanupOldLicenseSecrets removes an secrets matching the license naming
+// convention except the current license secret name. Pass in a blank name value
+// to cleanup all license secrets.
+func cleanupOldLicenseSecrets(currentSecretName string, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secretName)
+		return errors.Wrap(err, "failed to list secrets")
+	}
+	for _, secret := range secrets.Items {
+		if !strings.HasPrefix(secret.Name, makeClusterInstallationName(clusterInstallation)) || !strings.HasSuffix(secret.Name, "-license") {
+			continue
+		}
+		if secret.Name == currentSecretName {
+			continue
+		}
+
+		logger.Infof("Deleting old license secret %s", secret.Name)
+
+		err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secret.Name)
+		}
 	}
 
 	return nil
