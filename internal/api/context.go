@@ -92,7 +92,12 @@ type Store interface {
 	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
 =======
 	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
+<<<<<<< HEAD
 >>>>>>> 95415b1 (MM-35023 code change for migrating MM apps between k8s clusters)
+=======
+	UpdateClusterInstallationsStaleStatus(clusterID string, isStale bool) error
+	MigrateDNS(clusterInstallations []*model.ClusterInstallation) error
+>>>>>>> 1494c6f (MM-35023 cluster installation  migration with their DNS switch over)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.

@@ -18,7 +18,7 @@ func init() {
 	clusterInstallationSelect = sq.
 		Select(
 			"ID", "ClusterID", "InstallationID", "Namespace", "State", "CreateAt",
-			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
+			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "IsStale",
 		).
 		From("ClusterInstallation")
 }
@@ -75,6 +75,7 @@ func (sqlStore *SQLStore) CreateClusterInstallation(clusterInstallation *model.C
 			"APISecurityLock": clusterInstallation.APISecurityLock,
 			"LockAcquiredBy":  nil,
 			"LockAcquiredAt":  0,
+			"IsStale":         clusterInstallation.IsStale,
 		}),
 	)
 	if err != nil {
@@ -104,7 +105,9 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	if filter.InstallationID != "" {
 		builder = builder.Where("InstallationID = ?", filter.InstallationID)
 	}
-
+	if filter.IsStale != nil {
+		builder = builder.Where("IsStale = ?", *filter.IsStale)
+	}
 	var clusterInstallations []*model.ClusterInstallation
 	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
 	if err != nil {
@@ -125,6 +128,22 @@ func (sqlStore *SQLStore) UpdateClusterInstallation(clusterInstallation *model.C
 			"State":          clusterInstallation.State,
 		}).
 		Where("ID = ?", clusterInstallation.ID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
+	}
+
+	return nil
+}
+
+// UpdateClusterInstallationsStaleStatus updates the stale status of all cluster installations for a given cluster.
+func (sqlStore *SQLStore) UpdateClusterInstallationsStaleStatus(clusterID string, isStale bool) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("ClusterInstallation").
+		SetMap(map[string]interface{}{
+			"IsStale": isStale,
+		}).
+		Where("ClusterID = ?", clusterID),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation")
@@ -211,6 +230,7 @@ func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*mo
 	for _, clusterInstallation := range clusterInstallations {
 		clusterInstallation.ClusterID = targetCluster
 		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
+		clusterInstallation.IsStale = false
 		err := sqlStore.CreateClusterInstallationAsSingleTransaction(tx, clusterInstallation)
 
 		if err != nil {
@@ -242,11 +262,28 @@ func (sqlStore *SQLStore) CreateClusterInstallationAsSingleTransaction(db execer
 			"APISecurityLock": clusterInstallation.APISecurityLock,
 			"LockAcquiredBy":  nil,
 			"LockAcquiredAt":  0,
+			"IsStale":         clusterInstallation.IsStale,
 		}),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation")
 	}
 
+	return nil
+}
+
+// MigrateDNS Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+func (sqlStore *SQLStore) MigrateDNS(clusterInstallations []*model.ClusterInstallation) error {
+	for _, ci := range clusterInstallations {
+		installation, err := sqlStore.GetInstallation(ci.InstallationID, false, false)
+		if err != nil {
+			return errors.Wrapf(err, "failed to retrieve installation for ID : %s", ci.InstallationID)
+		}
+		installation.State = model.InstallationStateCreationDNS
+		err = sqlStore.UpdateInstallation(installation)
+		if err != nil {
+			return errors.Wrapf(err, "failed to update DNS state of installation ID: %s", ci.InstallationID)
+		}
+	}
 	return nil
 }

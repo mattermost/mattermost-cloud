@@ -624,7 +624,98 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, Paging: model.AllPagesNotDeleted()})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+		require.NoError(t, err)
+	})
+}
+
+func TestMigrateDNS(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	t.Run("invalid payload", func(t *testing.T) {
+		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate/dns", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("empty payload", func(t *testing.T) {
+		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate/dns", ts.URL), "application/json", bytes.NewReader([]byte("")))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	client := model.NewClient(ts.URL)
+	t.Run("missing primary cluster", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "", TargetCluster: "4567"})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("missing secondary cluster", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: ""})
+		require.EqualError(t, err, "failed with status code 400")
+	})
+
+	t.Run("No cluster instalaation found to migrate", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: "67899"})
+		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	// Valid migration test
+	primaryClusterID := model.NewID()
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner1",
+		Version:  "version",
+		Image:    "custom-image",
+		DNS:      "dns1.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+	installation2, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner2",
+		Version:  "version",
+		Image:    "custom-image",
+		DNS:      "dns2.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installation1.ID,
+		Namespace:      "namespace_10",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installation2.ID,
+		Namespace:      "namespace_11",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	t.Run("valid migration test", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, DNSSwitch: false})
+		require.NoError(t, err)
+
+		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
 		require.NoError(t, err)
 	})
 }
