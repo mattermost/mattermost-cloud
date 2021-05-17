@@ -21,6 +21,7 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationsRouter := apiRouter.PathPrefix("/cluster_installations").Subrouter()
 	clusterInstallationsRouter.Handle("", addContext(handleGetClusterInstallations)).Methods("GET")
 	clusterInstallationsRouter.Handle("/migrate", addContext(handleMigrateClusterInstallations)).Methods("POST")
+	clusterInstallationsRouter.Handle("/migrate/dns", addContext(handleMigrateDNS)).Methods("POST")
 
 	clusterInstallationRouter := apiRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
 	clusterInstallationRouter.Handle("", addContext(handleGetClusterInstallation)).Methods("GET")
@@ -404,6 +405,72 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	err = c.Store.MigrateClusterInstallations(clusterInstallations, mcir.TargetCluster)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to migrate cluster installation(s)")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Mark old cluster installation as stale
+	err = c.Store.UpdateClusterInstallationsStaleStatus(mcir.ClusterID, true)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to disable old cluster installation(s)")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+	if mcir.DNSSwitch {
+		err = c.Store.MigrateDNS(clusterInstallations)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to migrate DNS records")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleMigrateDns responds to Post /api/cluster_installation/migrate/dns.
+func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
+	mcir, err := model.NewMigrateClusterInstallationRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode cluster migration request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	c.Logger = c.Logger.WithField("cluster_installation", mcir)
+
+	if len(mcir.ClusterID) == 0 {
+		c.Logger.WithError(err).Error("Missing mandatory primary cluster in a migration request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(mcir.TargetCluster) == 0 {
+		c.Logger.WithError(err).Error("Missing mandatory secondary cluster in a migration request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      mcir.ClusterID,
+		InstallationID: mcir.InstallationID,
+		Paging:         model.AllPagesNotDeleted(),
+	}
+	clusterInstallations, err := c.Store.GetClusterInstallations(filter)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster installations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if clusterInstallations == nil {
+		c.Logger.WithError(err).Error("No matching cluster installations found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	err = c.Store.MigrateDNS(clusterInstallations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to migrate DNS records")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

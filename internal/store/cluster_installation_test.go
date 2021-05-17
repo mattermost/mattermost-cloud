@@ -10,6 +10,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -637,4 +638,99 @@ func TestMigrateMultipleClusterInstallations(t *testing.T) {
 
 		require.Equal(t, clusterInstallations[ind].InstallationID, mci.InstallationID)
 	}
+}
+
+func TestMigrateDNS(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	ownerID1 := model.NewID()
+	groupID2 := model.NewID()
+	group1 := &model.Group{
+		Version: "group1-version",
+		Image:   "custom/image",
+		MattermostEnv: model.EnvVarMap{
+			"Key1": model.EnvVar{Value: "Value1"},
+		},
+	}
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+	groupID1 := group1.ID
+
+	time.Sleep(1 * time.Millisecond)
+
+	annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
+
+	installation1 := &model.Installation{
+		OwnerID:   ownerID1,
+		Version:   "version",
+		DNS:       "dns.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID1,
+		CRVersion: model.V1betaCRVersion,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateInstallation(installation1, annotations)
+	require.NoError(t, err)
+	time.Sleep(1 * time.Millisecond)
+
+	installation2 := &model.Installation{
+		OwnerID:   ownerID1,
+		Version:   "version2",
+		Image:     "custom-image",
+		DNS:       "dns2.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID2,
+		CRVersion: model.DefaultCRVersion,
+		State:     model.InstallationStateStable,
+	}
+
+	err = sqlStore.CreateInstallation(installation2, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	primaryClusterID := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installation1.ID,
+		Namespace:      "namespace_10",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installation2.ID,
+		Namespace:      "namespace_11",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: primaryClusterID})
+	require.NoError(t, err)
+
+	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
+	require.NoError(t, err)
+
+	migratedClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: targetClusterID})
+	require.NoError(t, err)
+
+	err = sqlStore.MigrateDNS(migratedClusterInstallations)
+	require.NoError(t, err)
 }

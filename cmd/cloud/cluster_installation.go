@@ -44,17 +44,26 @@ func init() {
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("cluster-installation")
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("command")
 
-	clusterInstallationsMigrationCmd.Flags().String("primary-cluster", "", "The primary cluster for the migration process to migrate cluster installations from.")
+	clusterInstallationsMigrationCmd.Flags().String("primary-cluster", "", "The primary cluster for the migration to migrate cluster installations from.")
 	clusterInstallationsMigrationCmd.MarkFlagRequired("primary-cluster")
-	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration process to migrate cluster installation to.")
+	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to migrate cluster installation to.")
 	clusterInstallationsMigrationCmd.MarkFlagRequired("target-cluster")
 	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL .")
+	clusterInstallationsMigrationCmd.Flags().Bool("dns", true, "The DNS flag to perform DNS switch as a part of overall migration process, default is ON .")
+
+	dnsMigrationCmd.Flags().String("primary-cluster", "", "The primary cluster for the migration to switch CNAME(s) from.")
+	dnsMigrationCmd.MarkFlagRequired("primary-cluster")
+	dnsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to switch CNAME to.")
+	dnsMigrationCmd.MarkFlagRequired("target-cluster")
+	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL .")
 
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationMMCTL)
 	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
+
+	clusterInstallationsMigrationCmd.AddCommand(dnsMigrationCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationsMigrationCmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
@@ -253,10 +262,31 @@ var clusterInstallationMattermostCLICmd = &cobra.Command{
 	},
 }
 
-// Command to migrate installation
+// Command to migrate cluster installation(s)
 var clusterInstallationsMigrationCmd = &cobra.Command{
 	Use:   "migration",
-	Short: "migrate all installation to the target cluster.",
+	Short: "Migrate installation(s) to the target cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		cluster, _ := command.Flags().GetString("primary-cluster")
+		target_cluster, _ := command.Flags().GetString("target-cluster")
+		installation, _ := command.Flags().GetString("installation")
+		dnsSwith, _ := command.Flags().GetBool("dns")
+
+		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, DNSSwitch: dnsSwith})
+
+		return nil
+	},
+}
+
+// Command to migrate DNS record(s)
+var dnsMigrationCmd = &cobra.Command{
+	Use:   "dns migration",
+	Short: "Switch over the DNS CNAME record(s) to the target cluster's Load Balancer.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 
@@ -267,7 +297,7 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		target_cluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 
-		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation})
+		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation})
 
 		return nil
 	},

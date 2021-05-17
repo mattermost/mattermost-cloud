@@ -640,8 +640,10 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 }
 
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	activeStatementValue := false
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
+		IsStale:        &activeStatementValue,
 		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
