@@ -614,13 +614,13 @@ func prepareCILicenseSecret(installation *model.Installation, clusterInstallatio
 	return licenseSecretName, nil
 }
 
+// generateCILicenseName generates a unique license secret name by using a short
+// sha256 hash.
 func generateCILicenseName(installation *model.Installation, clusterInstallation *model.ClusterInstallation) string {
-	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License)))
-	if len(sum) > 7 {
-		sum = sum[0:6]
-	}
-
-	return fmt.Sprintf("%s-%s-license", makeClusterInstallationName(clusterInstallation), sum)
+	return fmt.Sprintf("%s-%s-license",
+		makeClusterInstallationName(clusterInstallation),
+		fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License))),
+	)
 }
 
 // cleanupOldLicenseSecrets removes an secrets matching the license naming
