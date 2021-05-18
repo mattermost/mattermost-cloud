@@ -69,7 +69,7 @@ func (provisioner *kopsCIBeta) CreateClusterInstallation(cluster *model.Cluster,
 	}
 
 	if installation.License != "" {
-		licenseSecretName, err := provisioner.prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
+		licenseSecretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
@@ -201,16 +201,16 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 	mattermost.Spec.LicenseSecret = ""
 	secretName := fmt.Sprintf("%s-license", installationName)
 	if installation.License != "" {
-		secretName, err = provisioner.prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
+		secretName, err = prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
 
 		mattermost.Spec.LicenseSecret = secretName
 	} else {
-		err = k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Secret %s/%s not found. Maybe the license was not set for this installation or was already deleted", clusterInstallation.Namespace, secretName)
+		err = cleanupOldLicenseSecrets("", clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to cleanup old license secrets")
 		}
 	}
 
@@ -377,7 +377,7 @@ func (provisioner *kopsCIBeta) DeleteClusterInstallation(cluster *model.Cluster,
 	}
 
 	if installation.License != "" {
-		err = provisioner.deleteLicenseSecret(clusterInstallation, k8sClient, logger)
+		err = cleanupOldLicenseSecrets("", clusterInstallation, k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete license secret")
 		}
