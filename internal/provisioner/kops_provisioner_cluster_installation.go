@@ -619,7 +619,7 @@ func prepareCILicenseSecret(installation *model.Installation, clusterInstallatio
 func generateCILicenseName(installation *model.Installation, clusterInstallation *model.ClusterInstallation) string {
 	return fmt.Sprintf("%s-%s-license",
 		makeClusterInstallationName(clusterInstallation),
-		fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License))),
+		fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License)))[0:6],
 	)
 }
 
