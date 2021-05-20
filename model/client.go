@@ -551,6 +551,65 @@ func (c *Client) DeleteInstallation(installationID string) error {
 	}
 }
 
+// RestoreInstallationDatabase requests installation db restoration from the configured provisioning server.
+func (c *Client) RestoreInstallationDatabase(installationID, backupID string) (*InstallationDBRestorationOperation, error) {
+	resp, err := c.doPost(c.buildURL("/api/installations/operations/database/restorations"),
+		InstallationDBRestorationRequest{BackupID: backupID, InstallationID: installationID},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return NewInstallationDBRestorationOperationFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallationDBRestorationOperations  fetches the list of installation db restoration operations from the configured provisioning server.
+func (c *Client) GetInstallationDBRestorationOperations(request *GetInstallationDBRestorationOperationsRequest) ([]*InstallationDBRestorationOperation, error) {
+	u, err := url.Parse(c.buildURL("/api/installations/operations/database/restorations"))
+	if err != nil {
+		return nil, err
+	}
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewInstallationDBRestorationOperationsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetInstallationDBRestoration fetches the specified installation db restoration operation from the configured provisioning server.
+func (c *Client) GetInstallationDBRestoration(id string) (*InstallationDBRestorationOperation, error) {
+	resp, err := c.doGet(c.buildURL("/api/installations/operations/database/restoration/%s", id))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewInstallationDBRestorationOperationFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // AddInstallationAnnotations adds annotations to the given installation.
 func (c *Client) AddInstallationAnnotations(installationID string, annotationsRequest *AddAnnotationsRequest) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installation/%s/annotations", installationID), annotationsRequest)

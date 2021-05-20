@@ -37,6 +37,7 @@ type Store interface {
 	GetInstallationsCount(includeDeleted bool) (int64, error)
 	GetInstallationsStatus() (*model.InstallationsStatus, error)
 	UpdateInstallation(installation *model.Installation) error
+	UpdateInstallationState(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 	LockInstallationAPI(installationID string) error
@@ -84,6 +85,10 @@ type Store interface {
 	UnlockInstallationBackup(backupMetadataID, lockerID string, force bool) (bool, error)
 	LockInstallationBackupAPI(backupID string) error
 	UnlockInstallationBackupAPI(backupID string) error
+
+	TriggerInstallationRestoration(installation *model.Installation, backup *model.InstallationBackup) (*model.InstallationDBRestorationOperation, error)
+	GetInstallationDBRestorationOperation(id string) (*model.InstallationDBRestorationOperation, error)
+	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
@@ -93,6 +98,11 @@ type Provisioner interface {
 	GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error)
 }
 
+// DBProvider describes the interface required to get database for specific installation and specified type.
+type DBProvider interface {
+	GetDatabase(installationID, dbType string) model.Database
+}
+
 // Context provides the API with all necessary data and interfaces for responding to requests.
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
@@ -100,6 +110,7 @@ type Context struct {
 	Store       Store
 	Supervisor  Supervisor
 	Provisioner Provisioner
+	DBProvider  DBProvider
 	RequestID   string
 	Environment string
 	Logger      logrus.FieldLogger
@@ -111,6 +122,7 @@ func (c *Context) Clone() *Context {
 		Store:       c.Store,
 		Supervisor:  c.Supervisor,
 		Provisioner: c.Provisioner,
+		DBProvider:  c.DBProvider,
 		Logger:      c.Logger,
 	}
 }
