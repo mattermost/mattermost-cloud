@@ -86,6 +86,8 @@ type Store interface {
 	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
 	UpdateClusterInstallationsStaleStatus(clusterID string, isStale bool) error
 	MigrateDNS(clusterInstallations []*model.ClusterInstallation) error
+	DeleteClusterInstallation(id string) error
+	DeleteStaleClusterInstallationByClusterID(clusterID string) error
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.

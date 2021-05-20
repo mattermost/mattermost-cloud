@@ -168,6 +168,23 @@ func (sqlStore *SQLStore) DeleteClusterInstallation(id string) error {
 	return nil
 }
 
+// DeleteStaleClusterInstallationByClusterID marks the stale cluster installation as deleted for a given cluster, but does not remove
+// the record from the database.
+func (sqlStore *SQLStore) DeleteStaleClusterInstallationByClusterID(clusterID string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("ClusterInstallation").
+		Set("DeleteAt", GetMillis()).
+		Where("ClusterID = ?", clusterID).
+		Where("IsStale = ?", true).
+		Where("DeleteAt = 0"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to mark cluster installation as deleted")
+	}
+
+	return nil
+}
+
 // LockClusterInstallations marks the cluster installation as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockClusterInstallations(clusterInstallationIDs []string, lockerID string) (bool, error) {
 	return sqlStore.lockRows("ClusterInstallation", clusterInstallationIDs, lockerID)

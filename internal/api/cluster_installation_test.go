@@ -719,3 +719,127 @@ func TestMigrateDNS(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+	client := model.NewClient(ts.URL)
+	// Valid migration test
+	primaryClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_10",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+	installationID2 := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID2,
+		Namespace:      "namespace_11",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	t.Run("valid migration which marks the installation stale in primary cluster", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+		require.NoError(t, err)
+	})
+
+	isStaleClusterInstallations := true
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      primaryClusterID,
+		InstallationID: "",
+		Paging:         model.AllPagesNotDeleted(),
+		IsStale:        &isStaleClusterInstallations,
+	}
+	ci, err := sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.NotEmpty(t, ci)
+
+	t.Run("delete stale cluster installation in a given cluster", func(t *testing.T) {
+		err := client.DeleteStaleClusterInstallationsByCluster(primaryClusterID)
+		require.NoError(t, err)
+	})
+
+	ci, err = sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.Empty(t, ci)
+
+}
+
+func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+	client := model.NewClient(ts.URL)
+
+	// Valid migration test for single installation
+	primaryClusterID := model.NewID()
+	targetClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_12",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	t.Run("valid migration which marks the installation stale in primary cluster", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+		require.NoError(t, err)
+	})
+
+	isStaleClusterInstallations := true
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      primaryClusterID,
+		InstallationID: clusterInstallation1.InstallationID,
+		Paging:         model.AllPagesNotDeleted(),
+		IsStale:        &isStaleClusterInstallations,
+	}
+	ci, err := sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.Empty(t, ci)
+
+	t.Run("delete stale cluster installation by ID", func(t *testing.T) {
+		err := client.DeleteStaleClusterInstallationByID(clusterInstallation1.ID)
+		require.NoError(t, err)
+	})
+
+	ci, err = sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.Empty(t, ci)
+
+}
