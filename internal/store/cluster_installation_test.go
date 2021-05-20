@@ -734,3 +734,89 @@ func TestMigrateDNS(t *testing.T) {
 	err = sqlStore.MigrateDNS(migratedClusterInstallations)
 	require.NoError(t, err)
 }
+
+func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	primaryClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_12",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	installationID2 := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID2,
+		Namespace:      "namespace_13",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	err = sqlStore.UpdateClusterInstallationsStaleStatus(primaryClusterID, true)
+	require.NoError(t, err)
+
+	isStaleClusterInstallations := true
+	staleClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: primaryClusterID, IsStale: &isStaleClusterInstallations})
+	require.NoError(t, err)
+	require.NotEmpty(t, staleClusterInstallations)
+
+	err = sqlStore.DeleteStaleClusterInstallationByClusterID(primaryClusterID)
+	require.NoError(t, err)
+
+	isStaleClusterInstallations = true
+	staleClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: primaryClusterID, IsStale: &isStaleClusterInstallations})
+	require.NoError(t, err)
+	require.Empty(t, staleClusterInstallations)
+}
+
+func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	primaryClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      primaryClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_14",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.UpdateClusterInstallationsStaleStatus(primaryClusterID, true)
+	require.NoError(t, err)
+
+	isStaleClusterInstallations := true
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      primaryClusterID,
+		InstallationID: clusterInstallation1.InstallationID,
+		Paging:         model.AllPagesNotDeleted(),
+		IsStale:        &isStaleClusterInstallations,
+	}
+	staleClusterInstallations, err := sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.NotEmpty(t, staleClusterInstallations)
+
+	err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+	require.NoError(t, err)
+
+	staleClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: primaryClusterID, IsStale: &isStaleClusterInstallations})
+	require.NoError(t, err)
+	require.Empty(t, staleClusterInstallations)
+}

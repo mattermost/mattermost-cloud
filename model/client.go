@@ -1218,3 +1218,37 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// DeleteStaleClusterInstallations requests the deletion of stale cluster installation(s) from the configured provisioning server.
+func (c *Client) DeleteStaleClusterInstallationsByCluster(clusterID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_stale/%s", clusterID))
+	if err != nil {
+		return nil
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteStaleClusterInstallationByID requests the deletion of specific staled cluster installation from the configured provisioning server.
+func (c *Client) DeleteStaleClusterInstallationByID(clusterInstallationID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_stale/cluster_installation/%s", clusterInstallationID))
+	if err != nil {
+		return nil
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

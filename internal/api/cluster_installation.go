@@ -22,6 +22,8 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationsRouter.Handle("", addContext(handleGetClusterInstallations)).Methods("GET")
 	clusterInstallationsRouter.Handle("/migrate", addContext(handleMigrateClusterInstallations)).Methods("POST")
 	clusterInstallationsRouter.Handle("/migrate/dns", addContext(handleMigrateDNS)).Methods("POST")
+	clusterInstallationsRouter.Handle("/migrate/delete_stale/{clusterID}", addContext(handleDeleteStaleClusterInstallationsByCluster)).Methods("DELETE")
+	clusterInstallationsRouter.Handle("/migrate/delete_stale/cluster_installation/{ClusterInstallationID}", addContext(handleDeleteStaleClusterInstallationByID)).Methods("DELETE")
 
 	clusterInstallationRouter := apiRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
 	clusterInstallationRouter.Handle("", addContext(handleGetClusterInstallation)).Methods("GET")
@@ -370,7 +372,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	c.Logger = c.Logger.WithField("cluster_installation", mcir)
+	c.Logger = c.Logger.WithField("Migration request for cluster_installation", mcir)
 
 	if len(mcir.ClusterID) == 0 {
 		c.Logger.WithError(err).Error("Missing mandatory primary cluster in a migration request")
@@ -402,6 +404,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	}
 
 	// Migrate the cluster installations to the target cluster
+	c.Logger.Infof("Migrating installation(s) to the clusterID: %s", mcir.TargetCluster)
 	err = c.Store.MigrateClusterInstallations(clusterInstallations, mcir.TargetCluster)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to migrate cluster installation(s)")
@@ -416,6 +419,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	c.Logger.Infof("Cluster installations have been marked as stale for cluster: %s", mcir.ClusterID)
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
 	if mcir.DNSSwitch {
@@ -425,7 +429,9 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		c.Logger.Infof("DNS Switch over has been completed for cluster %s: ", mcir.ClusterID)
 	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -468,11 +474,58 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	c.Logger.Infof("total DNS records to migrate: %s", len(clusterInstallations))
 	err = c.Store.MigrateDNS(clusterInstallations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to migrate DNS records")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleDeleteStaleClusterInstallations responds to Delete /api/cluster_installation/migrate/delete_stale/clusterID.
+func handleDeleteStaleClusterInstallationsByCluster(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterID := vars["clusterID"]
+	c.Logger = c.Logger.WithField("clusterID", clusterID)
+	if len(clusterID) == 0 {
+		c.Logger.Error("Missing mandatory primary cluster in a migration request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Deleting multiple stale cluster installations
+	c.Logger.Infof("Deleting stale cluster installations for cluster ID %s", clusterID)
+	err := c.Store.DeleteStaleClusterInstallationByClusterID(clusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to delete stale cluster installations for cluster ID", clusterID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleDeleteStaleClusterInstallationByID responds to Post /api/cluster_installation/migrate/delete_stale/ID.
+func handleDeleteStaleClusterInstallationByID(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterInstallationID := vars["ClusterInstallationID"]
+	c.Logger = c.Logger.WithField("ClusterInstallationID", clusterInstallationID)
+	if len(clusterInstallationID) == 0 {
+		c.Logger.Error("Missing mandatory cluster installation id in a migration request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Delete single stale cluster installation
+	err := c.Store.DeleteClusterInstallation(clusterInstallationID)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to delete stale cluster installation %s", clusterInstallationID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }

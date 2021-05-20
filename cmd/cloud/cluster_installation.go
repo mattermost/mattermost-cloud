@@ -57,6 +57,10 @@ func init() {
 	dnsMigrationCmd.MarkFlagRequired("target-cluster")
 	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL .")
 
+	deleteStaleClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installation from.")
+	deleteStaleClusterInstallationCmd.MarkFlagRequired("clusterr")
+	deleteStaleClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
+
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
@@ -64,6 +68,7 @@ func init() {
 	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
 
 	clusterInstallationsMigrationCmd.AddCommand(dnsMigrationCmd)
+	clusterInstallationsMigrationCmd.AddCommand(deleteStaleClusterInstallationCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationsMigrationCmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
@@ -299,6 +304,31 @@ var dnsMigrationCmd = &cobra.Command{
 
 		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation})
 
+		return nil
+	},
+}
+
+// Command to migrate DNS record(s)
+var deleteStaleClusterInstallationCmd = &cobra.Command{
+	Use:   "delete stale cluster installation(s)",
+	Short: "Delete stale cluster installation(s) after migration.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		cluster, _ := command.Flags().GetString("cluster")
+		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
+		if len(clusterInstallationID) != 0 {
+			client.DeleteStaleClusterInstallationByID(clusterInstallationID)
+			return nil
+		}
+
+		if len(cluster) != 0 {
+			client.DeleteStaleClusterInstallationsByCluster(cluster)
+			return nil
+		}
 		return nil
 	},
 }

@@ -85,19 +85,17 @@ type Store interface {
 	UnlockInstallationBackup(backupMetadataID, lockerID string, force bool) (bool, error)
 	LockInstallationBackupAPI(backupID string) error
 	UnlockInstallationBackupAPI(backupID string) error
-<<<<<<< HEAD
 
 	TriggerInstallationRestoration(installation *model.Installation, backup *model.InstallationBackup) (*model.InstallationDBRestorationOperation, error)
 	GetInstallationDBRestorationOperation(id string) (*model.InstallationDBRestorationOperation, error)
 	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
-=======
+
 	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
-<<<<<<< HEAD
->>>>>>> 95415b1 (MM-35023 code change for migrating MM apps between k8s clusters)
-=======
-	UpdateClusterInstallationsStaleStatus(clusterID string, isStale bool) error
-	MigrateDNS(clusterInstallations []*model.ClusterInstallation) error
->>>>>>> 1494c6f (MM-35023 cluster installation  migration with their DNS switch over)
+	SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string) error
+	DeleteClusterInstallation(id string) error
+	DeleteInActiveClusterInstallationByClusterID(clusterID string) error
+	LockInstallations(installationIDs []string, lockerID string) (bool, error)
+	UnlockInstallations(installationIDs []string, lockerID string, force bool) (bool, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
