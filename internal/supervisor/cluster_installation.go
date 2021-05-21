@@ -187,7 +187,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 	case model.ClusterInstallationStateDeletionRequested:
 		return s.deleteClusterInstallation(clusterInstallation, logger, installation, cluster)
 	case model.ClusterInstallationStateReconciling:
-		return s.checkReconcilingClusterInstallation(clusterInstallation, logger, installation, cluster)
+		return s.checkReconcilingClusterInstallation(clusterInstallation, installation, cluster, logger)
 	default:
 		logger.Warnf("Found cluster installation pending work in unexpected state %s", clusterInstallation.State)
 		return clusterInstallation.State
@@ -244,7 +244,7 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 	return model.ClusterInstallationStateDeleted
 }
 
-func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
+func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, cluster *model.Cluster, logger log.FieldLogger) string {
 	isReady, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
 		IsResourceReady(cluster, clusterInstallation)
 	if err != nil {
@@ -254,6 +254,13 @@ func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clus
 
 	if !isReady {
 		logger.Info("Cluster installation is still reconciling")
+		return model.ClusterInstallationStateReconciling
+	}
+
+	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		DeleteOldClusterInstallationLicenseSecrets(cluster, installation, clusterInstallation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to ensure old license secrets were deleted")
 		return model.ClusterInstallationStateReconciling
 	}
 

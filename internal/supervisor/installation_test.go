@@ -249,6 +249,10 @@ func (p *mockInstallationProvisioner) HibernateClusterInstallation(cluster *mode
 	return nil
 }
 
+func (p *mockInstallationProvisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	return nil
+}
+
 func (p *mockInstallationProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }

@@ -5,10 +5,13 @@
 package provisioner
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -58,4 +61,22 @@ func TestGetCachedKopsClient(t *testing.T) {
 		provisioner.invalidateCachedKopsClientOnError(cacheError, "test", logger)
 		require.Nil(t, provisioner.kopsCache["test"])
 	})
+}
+
+func TestGenerateCILicenseName(t *testing.T) {
+	license := model.NewID()
+	installation := &model.Installation{
+		ID:      model.NewID(),
+		License: license,
+	}
+	clusterInstallation := &model.ClusterInstallation{
+		ID:             model.NewID(),
+		InstallationID: installation.ID,
+		Namespace:      installation.ID,
+	}
+
+	licenseName := generateCILicenseName(installation, clusterInstallation)
+	assert.Contains(t, licenseName, makeClusterInstallationName(clusterInstallation))
+	assert.Contains(t, licenseName, fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License)))[0:6])
+	assert.Contains(t, licenseName, "-license")
 }
