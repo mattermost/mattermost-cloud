@@ -285,16 +285,12 @@ func (sqlStore *SQLStore) CreateClusterInstallationAsSingleTransaction(db execer
 }
 
 // MigrateDNS Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
-func (sqlStore *SQLStore) MigrateDNS(clusterInstallations []*model.ClusterInstallation) error {
-	for _, ci := range clusterInstallations {
-		installation, err := sqlStore.GetInstallation(ci.InstallationID, false, false)
-		if err != nil {
-			return errors.Wrapf(err, "failed to retrieve installation for ID : %s", ci.InstallationID)
-		}
+func (sqlStore *SQLStore) MigrateInstallationsDNS(installations []*model.Installation) error {
+	for _, installation := range installations {
 		installation.State = model.InstallationStateCreationDNS
-		err = sqlStore.UpdateInstallation(installation)
+		err := sqlStore.UpdateInstallation(installation)
 		if err != nil {
-			return errors.Wrapf(err, "failed to update DNS state of installation ID: %s", ci.InstallationID)
+			return errors.Wrapf(err, "failed to update DNS state of installation ID: %s", installation.ID)
 		}
 	}
 	return nil

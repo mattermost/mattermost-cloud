@@ -422,8 +422,51 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	c.Logger.Infof("Cluster installations have been marked as stale for cluster: %s", mcir.ClusterID)
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+	//fetch non stale cluster installation to avoid duplicate update
+	isStaleClusterInstallations := false
+	filter = &model.ClusterInstallationFilter{
+		ClusterID:      mcir.ClusterID,
+		InstallationID: mcir.InstallationID,
+		Paging:         model.AllPagesNotDeleted(),
+		IsStale:        &isStaleClusterInstallations,
+	}
+	clusterInstallations, err = c.Store.GetClusterInstallations(filter)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query active cluster installations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if clusterInstallations == nil {
+		c.Logger.WithError(err).Error("No matching active cluster installations found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	if mcir.DNSSwitch {
-		err = c.Store.MigrateDNS(clusterInstallations)
+		var installations []*model.Installation
+		if mcir.LockInstallation {
+			c.Logger.Infof("Locking %s installation(s) ", len(clusterInstallations))
+			for _, ci := range clusterInstallations {
+				installationDTO, status, unlockOnce := lockInstallation(c, ci.InstallationID)
+				if status != 0 {
+					w.WriteHeader(status)
+					return
+				}
+				defer unlockOnce()
+				installations = append(installations, installationDTO.Installation)
+			}
+		} else {
+			for _, ci := range clusterInstallations {
+				installation, err := c.Store.GetInstallation(ci.InstallationID, false, false)
+				if err != nil {
+					c.Logger.WithError(err).Error("failed to retrieve installation")
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				installations = append(installations, installation)
+			}
+		}
+		err = c.Store.MigrateInstallationsDNS(installations)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to migrate DNS records")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -458,10 +501,12 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+	isStaleClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.ClusterID,
 		InstallationID: mcir.InstallationID,
 		Paging:         model.AllPagesNotDeleted(),
+		IsStale:        &isStaleClusterInstallations,
 	}
 	clusterInstallations, err := c.Store.GetClusterInstallations(filter)
 	if err != nil {
@@ -470,18 +515,42 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if clusterInstallations == nil {
-		c.Logger.WithError(err).Error("No matching cluster installations found")
+		c.Logger.WithError(err).Error("No matching active cluster installations found")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
 	c.Logger.Infof("total DNS records to migrate: %s", len(clusterInstallations))
-	err = c.Store.MigrateDNS(clusterInstallations)
+	var installations []*model.Installation
+	if mcir.LockInstallation {
+		c.Logger.Infof("Locking %s installation(s) ", len(clusterInstallations))
+		for _, ci := range clusterInstallations {
+			installationDTO, status, unlockOnce := lockInstallation(c, ci.InstallationID)
+			if status != 0 {
+				w.WriteHeader(status)
+				return
+			}
+			defer unlockOnce()
+			installations = append(installations, installationDTO.Installation)
+		}
+	} else {
+		for _, ci := range clusterInstallations {
+			installation, err := c.Store.GetInstallation(ci.InstallationID, false, false)
+			if err != nil {
+				c.Logger.WithError(err).Error("failed to retrieve installation")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			installations = append(installations, installation)
+		}
+	}
+	err = c.Store.MigrateInstallationsDNS(installations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to migrate DNS records")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	c.Logger.Infof("DNS Switch over has been completed for cluster %s: ", mcir.ClusterID)
 	w.WriteHeader(http.StatusOK)
 }
 
