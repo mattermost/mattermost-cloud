@@ -85,7 +85,7 @@ type Store interface {
 	UnlockInstallationBackupAPI(backupID string) error
 	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
 	UpdateClusterInstallationsStaleStatus(clusterID string, isStale bool) error
-	MigrateDNS(clusterInstallations []*model.ClusterInstallation) error
+	MigrateInstallationsDNS(installations []*model.Installation) error
 	DeleteClusterInstallation(id string) error
 	DeleteStaleClusterInstallationByClusterID(clusterID string) error
 }

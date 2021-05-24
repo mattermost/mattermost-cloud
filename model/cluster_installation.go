@@ -35,10 +35,11 @@ type ClusterInstallationFilter struct {
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.
 type MigrateClusterInstallationRequest struct {
-	InstallationID string
-	ClusterID      string
-	TargetCluster  string
-	DNSSwitch      bool
+	InstallationID   string
+	ClusterID        string
+	TargetCluster    string
+	DNSSwitch        bool
+	LockInstallation bool
 }
 
 // Clone returns a deep copy the cluster installation.
