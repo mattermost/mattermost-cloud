@@ -48,6 +48,8 @@ func init() {
 	clusterCreateCmd.Flags().String("pgbouncer-values", model.PgbouncerDefaultVersion.Values(), "The branch name of the desired chart value file's version for Pgbouncer")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
+	clusterCreateCmd.Flags().String("mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
+	clusterCreateCmd.Flags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
@@ -67,6 +69,8 @@ func init() {
 	clusterProvisionCmd.Flags().String("nginx-internal-values", "", "The branch name of the desired chart value file's version for NGINX Internal")
 	clusterProvisionCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The branch name of the desired chart value file's version for Pgbouncer")
+	clusterProvisionCmd.Flags().String("mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
+	clusterProvisionCmd.Flags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
@@ -184,6 +188,14 @@ var clusterCreateCmd = &cobra.Command{
 			request.NodeMinCount = nodeCount
 			request.NodeMaxCount = nodeCount
 		}
+		spotNotificationsWebhook, _ := command.Flags().GetString("mattermost-webhook")
+		if len(spotNotificationsWebhook) != 0 {
+			request.MattermostWebhook = spotNotificationsWebhook
+		}
+		spotNotificationsChannel, _ := command.Flags().GetString("mattermost-channel")
+		if len(spotNotificationsChannel) != 0 {
+			request.MattermostChannel = spotNotificationsChannel
+		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
 		if dryRun {
@@ -211,7 +223,7 @@ var clusterCreateCmd = &cobra.Command{
 
 var clusterProvisionCmd = &cobra.Command{
 	Use:   "provision",
-	Short: "Provision/Reprovision a cluster's k8s resources.",
+	Short: "Provision/Re-provision a cluster's k8s resources.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 
@@ -224,6 +236,14 @@ var clusterProvisionCmd = &cobra.Command{
 			request = &model.ProvisionClusterRequest{
 				DesiredUtilityVersions: desiredUtilityVersions,
 			}
+		}
+		spotNotificationsWebhook, _ := command.Flags().GetString("mattermost-webhook")
+		if len(spotNotificationsWebhook) != 0 {
+			request.MattermostWebhook = spotNotificationsWebhook
+		}
+		spotNotificationsChannel, _ := command.Flags().GetString("mattermost-channel")
+		if len(spotNotificationsChannel) != 0 {
+			request.MattermostChannel = spotNotificationsChannel
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

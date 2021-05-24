@@ -29,6 +29,8 @@ type CreateClusterRequest struct {
 	Annotations            []string                       `json:"annotations,omitempty"`
 	Networking             string                         `json:"networking,omitempty"`
 	VPC                    string                         `json:"vpc,omitempty"`
+	MattermostWebhook      string                         `json:"mattermost-webhook,omitempty"`
+	MattermostChannel      string                         `json:"mattermost-channel,omitempty"`
 }
 
 // SetDefaults sets the default values for a cluster create request.
@@ -59,6 +61,12 @@ func (request *CreateClusterRequest) SetDefaults() {
 	}
 	if len(request.Networking) == 0 {
 		request.Networking = "amazon-vpc-routed-eni"
+	}
+	if len(request.MattermostChannel) == 0 {
+		request.MattermostChannel = ""
+	}
+	if len(request.MattermostWebhook) == 0 {
+		request.MattermostWebhook = ""
 	}
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
@@ -321,6 +329,8 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
+	MattermostWebhook      string                         `json:"mattermost-webhook,omitempty"`
+	MattermostChannel      string                         `json:"mattermost-channel,omitempty"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.

@@ -30,6 +30,8 @@ type KopsMetadata struct {
 	Warnings             []string                    `json:"Warnings,omitempty"`
 	Networking           string                      `json:"Networking,omitempty"`
 	VPC                  string                      `json:"VPC,omitempty"`
+	MattermostWebhook    string                      `json:"MattermostWebhook,omitempty"`
+	MattermostChannel    string                      `json:"MattermostChannel,omitempty"`
 }
 
 // KopsInstanceGroupsMetadata is a map of instance group names to their metadata.
@@ -92,7 +94,7 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 }
 
 // GetWorkerNodesResizeChanges calculates instance group resizing based on the
-// curent ChangeRequest.
+// current ChangeRequest.
 func (km *KopsMetadata) GetWorkerNodesResizeChanges() KopsInstanceGroupsMetadata {
 	difference := km.ChangeRequest.NodeMinCount - km.NodeMinCount
 

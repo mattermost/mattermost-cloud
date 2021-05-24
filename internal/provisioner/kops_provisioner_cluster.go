@@ -208,12 +208,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 // ProvisionCluster installs all the baseline kubernetes resources needed for
 // managing installations. This can be called on an already-provisioned cluster
-// to reprovision with the newest version of the resources.
+// to re-provision with the newest version of the resources.
 func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	logger.Info("Provisioning cluster")
-
 	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kops client from cache")
@@ -417,9 +416,38 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}
 	}
 
-	supportAppsWithDaemonSets := map[string]string{"calico-node": "kube-system"}
+	supportAppsWithDaemonSets := map[string]string{
+		"calico-node": "kube-system",
+		"k8s-spot-termination-handler": "kube-system",
+	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
-
+		if daemonSet == "k8s-spot-termination-handler" {
+			payload := []k8s.PatchStringValue{{
+				Op:    "replace",
+				Path:  "/spec/template/spec/containers/0/env/2/value",
+				Value: cluster.ID,
+			}}
+			if len(cluster.ProvisionerMetadataKops.MattermostWebhook) > 0 {
+				payload = append(payload,
+					k8s.PatchStringValue{
+						Op:    "replace",
+						Path:  "/spec/template/spec/containers/0/env/3/value",
+						Value: cluster.ProvisionerMetadataKops.MattermostWebhook,
+					})
+			}
+			if len(cluster.ProvisionerMetadataKops.MattermostChannel) > 0 {
+				payload = append(payload,
+					k8s.PatchStringValue{
+						Op:    "replace",
+						Path:  "/spec/template/spec/containers/0/env/5/value",
+						Value: cluster.ProvisionerMetadataKops.MattermostChannel,
+					})
+			}
+			err := k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
+			if err != nil {
+				return err
+			}
+		}
 		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
 		if err != nil {
 			return err

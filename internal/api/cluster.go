@@ -127,7 +127,10 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				Networking:         createClusterRequest.Networking,
 				VPC:                createClusterRequest.VPC,
 			},
+			MattermostWebhook:  createClusterRequest.MattermostWebhook,
+			MattermostChannel:  createClusterRequest.MattermostChannel,
 		},
+
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
@@ -253,12 +256,13 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 
 	provisionClusterRequest, err := model.NewProvisionClusterRequestFromReader(r.Body)
+	clusterDTO.Cluster.ProvisionerMetadataKops.MattermostChannel = provisionClusterRequest.MattermostChannel
+	clusterDTO.Cluster.ProvisionerMetadataKops.MattermostWebhook = provisionClusterRequest.MattermostWebhook
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to deserialize cluster provision request body")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	err = clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
@@ -283,7 +287,6 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 		clusterDTO.State = newState
-
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")

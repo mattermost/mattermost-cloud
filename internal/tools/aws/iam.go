@@ -265,7 +265,7 @@ func (a *Client) GetAccountAliases() (*iam.ListAccountAliasesOutput, error) {
 	return accountAliases, nil
 }
 
-// AttachPolicyToRole attaches a precreated IAM policy to an IAM role.
+// AttachPolicyToRole attaches a pre-created IAM policy to an IAM role.
 func (a *Client) AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error {
 	accountID, err := a.GetAccountID()
 	if err != nil {
