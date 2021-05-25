@@ -25,6 +25,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 
 	installationsRouter := apiRouter.PathPrefix("/installations").Subrouter()
 	initInstallationBackup(installationsRouter, context)
+	initInstallationRestoration(installationsRouter, context)
 
 	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
 	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")
@@ -244,43 +245,20 @@ func handleRetryCreateInstallation(c *Context, w http.ResponseWriter, r *http.Re
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	newState := model.InstallationStateCreationRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	newState := model.InstallationStateCreationRequested
-
-	if !installationDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to retry installation creation while in state %s", installationDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
+	err := updateInstallationState(c, installationDTO, newState)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
-	}
-
-	if installationDTO.State != newState {
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeInstallation,
-			ID:        installationDTO.ID,
-			NewState:  newState,
-			OldState:  installationDTO.State,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-		}
-		installationDTO.State = newState
-
-		err := c.Store.UpdateInstallation(installationDTO.Installation)
-		if err != nil {
-			c.Logger.WithError(err).Errorf("failed to retry installation creation")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
-		}
 	}
 
 	// Notify even if we didn't make changes, to expedite even the no-op operations above.
@@ -306,27 +284,16 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	newState := model.InstallationStateUpdateRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installationDTO.APISecurityLock {
-		logSecurityLockConflict("installation", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
 	oldState := installationDTO.State
-	newState := model.InstallationStateUpdateRequested
-
-	if !installationDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to update installation while in state %s", installationDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	if patchInstallationRequest.Apply(installationDTO.Installation) {
 		installationDTO.State = newState
@@ -426,27 +393,16 @@ func handleLeaveGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	newState := model.InstallationStateUpdateRequested
+
+	// TODO: does it make sense to enforce normal update-requested valid states?
+	// Should there be more or less valid states? Review this when necessary.
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
-
-	if installationDTO.APISecurityLock {
-		logSecurityLockConflict("installation", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	// TODO: does it make sense to enforce normal update-requested valid states?
-	// Should there be more or less valid states? Review this when necessary.
-	newState := model.InstallationStateUpdateRequested
-	if !installationDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to leave group while installation is in state %s", installationDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	if installationDTO.GroupID != nil {
 		installationDTO.State = newState
@@ -491,48 +447,20 @@ func handleHibernateInstallation(c *Context, w http.ResponseWriter, r *http.Requ
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	newState := model.InstallationStateHibernationRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installationDTO.APISecurityLock {
-		logSecurityLockConflict("installation", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	oldState := installationDTO.State
-	newState := model.InstallationStateHibernationRequested
-
-	if !installationDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to hibernate installation while in state %s", installationDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	installationDTO.State = newState
-
-	err := c.Store.UpdateInstallation(installationDTO.Installation)
+	err := updateInstallationState(c, installationDTO, newState)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to update installation")
+		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
-	}
-
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installationDTO.ID,
-		NewState:  newState,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-	}
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	unlockOnce()
@@ -550,48 +478,20 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	newState := model.InstallationStateWakeUpRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if installationDTO.APISecurityLock {
-		logSecurityLockConflict("installation", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	oldState := installationDTO.State
-	newState := model.InstallationStateWakeUpRequested
-
-	if !installationDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to wake up installation while in state %s", installationDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	installationDTO.State = newState
-
-	err := c.Store.UpdateInstallation(installationDTO.Installation)
+	err := updateInstallationState(c, installationDTO, newState)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to update installation")
+		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
-	}
-
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installationDTO.ID,
-		NewState:  newState,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-	}
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	unlockOnce()
@@ -609,26 +509,14 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	newState := model.InstallationStateDeletionRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
-
-	if installationDTO.APISecurityLock {
-		logSecurityLockConflict("installation", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	newState := model.InstallationStateDeletionRequested
-
-	if !installationDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to delete installation while in state %s", installationDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	runningBackups, err := c.Store.GetInstallationBackups(&model.InstallationBackupFilter{
 		InstallationID: installationID,
@@ -646,28 +534,11 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if installationDTO.State != newState {
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeInstallation,
-			ID:        installationDTO.ID,
-			NewState:  newState,
-			OldState:  installationDTO.State,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-		}
-		installationDTO.State = newState
-
-		err := c.Store.UpdateInstallation(installationDTO.Installation)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to mark installation for deletion")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
-		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
-		}
+	err = updateInstallationState(c, installationDTO, newState)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	unlockOnce()
@@ -754,4 +625,56 @@ func handleDeleteInstallationAnnotation(c *Context, w http.ResponseWriter, r *ht
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// updateInstallationState updates installation state in database and sends appropriate webhook.
+func updateInstallationState(c *Context, installationDTO *model.InstallationDTO, newState string) error {
+	if installationDTO.State == newState {
+		return nil
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installationDTO.ID,
+		NewState:  newState,
+		OldState:  installationDTO.State,
+		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
+	}
+	installationDTO.State = newState
+
+	err := c.Store.UpdateInstallationState(installationDTO.Installation)
+	if err != nil {
+		return err
+	}
+
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+	}
+
+	return nil
+}
+
+// getInstallationForTransition locks the installation and validates if it can be transitioned to desired state.
+func getInstallationForTransition(c *Context, installationID, newState string) (*model.InstallationDTO, int, func()) {
+	installationDTO, status, unlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		c.Logger.Errorf("Failed to lock installation, status: %d", status)
+		return nil, status, unlockOnce
+	}
+
+	if installationDTO.APISecurityLock {
+		unlockOnce()
+		logSecurityLockConflict("installation", c.Logger)
+		return nil, http.StatusForbidden, unlockOnce
+	}
+
+	if !installationDTO.ValidTransitionState(newState) {
+		unlockOnce()
+		c.Logger.Warnf("unable to transition installation to %q while in state %q", newState, installationDTO.State)
+		return nil, http.StatusBadRequest, unlockOnce
+	}
+
+	return installationDTO, 0, unlockOnce
 }

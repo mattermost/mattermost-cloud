@@ -37,6 +37,7 @@ type Store interface {
 	GetInstallationsCount(includeDeleted bool) (int64, error)
 	GetInstallationsStatus() (*model.InstallationsStatus, error)
 	UpdateInstallation(installation *model.Installation) error
+	UpdateInstallationState(installation *model.Installation) error
 	LockInstallation(installationID, lockerID string) (bool, error)
 	UnlockInstallation(installationID, lockerID string, force bool) (bool, error)
 	LockInstallationAPI(installationID string) error
@@ -84,6 +85,10 @@ type Store interface {
 	UnlockInstallationBackup(backupMetadataID, lockerID string, force bool) (bool, error)
 	LockInstallationBackupAPI(backupID string) error
 	UnlockInstallationBackupAPI(backupID string) error
+
+	TriggerInstallationRestoration(installation *model.Installation, backup *model.InstallationBackup) (*model.InstallationDBRestorationOperation, error)
+	GetInstallationDBRestorationOperation(id string) (*model.InstallationDBRestorationOperation, error)
+	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
