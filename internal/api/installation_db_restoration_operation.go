@@ -60,7 +60,7 @@ func handleTriggerInstallationDBRestoration(c *Context, w http.ResponseWriter, r
 	}
 	if backup == nil {
 		c.Logger.Error("Backup not found")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
