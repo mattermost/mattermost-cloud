@@ -234,6 +234,76 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 	return nil
 }
 
+// RefreshSecrets deletes old secrets for database and file store and replaces them with new ones.
+func (provisioner *kopsCIBeta) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+	logger.Info("Refreshing secrets for cluster installation")
+
+	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client")
+	}
+	defer invalidateCache(err)
+
+	installationName := makeClusterInstallationName(clusterInstallation)
+
+	ctx := context.TODO()
+	mmClient := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace)
+
+	mattermost, err := mmClient.Get(ctx, installationName, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get mattermost installation %s", clusterInstallation.ID)
+	}
+
+	err = provisioner.deleteMMSecrets(clusterInstallation.Namespace, mattermost, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete old secrets")
+	}
+
+	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure database and filestore")
+	}
+
+	_, err = mmClient.Update(ctx, mattermost, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to update mattermost CR %s", mattermost.Name)
+	}
+
+	logger.Info("Refreshed database and file store secrets")
+
+	return nil
+}
+
+func (provisioner *kopsCIBeta) deleteMMSecrets(ns string, mattermost *mmv1beta1.Mattermost, kubeClient *k8s.KubeClient, logger log.FieldLogger) error {
+	secretsClient := kubeClient.Clientset.CoreV1().Secrets(ns)
+
+	if mattermost.Spec.Database.External != nil {
+		err := secretsClient.Delete(context.Background(), mattermost.Spec.Database.External.Secret, metav1.DeleteOptions{})
+		if err != nil {
+			if !k8sErrors.IsNotFound(err) {
+				return errors.Wrap(err, "failed to delete old database secret")
+			}
+			logger.Debug("Database secret does not exist, assuming already deleted")
+		}
+	}
+
+	if mattermost.Spec.FileStore.External != nil {
+		err := secretsClient.Delete(context.Background(), mattermost.Spec.FileStore.External.Secret, metav1.DeleteOptions{})
+		if err != nil {
+			if !k8sErrors.IsNotFound(err) {
+				return errors.Wrap(err, "failed to delete old file store secret")
+			}
+			logger.Debug("File store secret does not exist, assuming already deleted")
+		}
+	}
+
+	return nil
+}
+
 func (provisioner *kopsCIBeta) ensureFilestoreAndDatabase(
 	mattermost *mmv1beta1.Mattermost,
 	installation *model.Installation,
@@ -241,7 +311,7 @@ func (provisioner *kopsCIBeta) ensureFilestoreAndDatabase(
 	k8sClient *k8s.KubeClient,
 	logger log.FieldLogger) error {
 
-	databaseSecret, err := provisioner.resourceUtil.GetDatabase(installation).GenerateDatabaseSecret(provisioner.store, logger)
+	databaseSecret, err := provisioner.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(provisioner.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate database configuration")
 	}

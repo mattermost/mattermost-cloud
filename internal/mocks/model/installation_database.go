@@ -109,6 +109,62 @@ func (mr *MockDatabaseMockRecorder) RefreshResourceMetadata(store, logger interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshResourceMetadata", reflect.TypeOf((*MockDatabase)(nil).RefreshResourceMetadata), store, logger)
 }
 
+// MigrateOut mocks base method
+func (m *MockDatabase) MigrateOut(store model.InstallationDatabaseStoreInterface, dbMigration *model.InstallationDBMigrationOperation, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MigrateOut", store, dbMigration, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MigrateOut indicates an expected call of MigrateOut
+func (mr *MockDatabaseMockRecorder) MigrateOut(store, dbMigration, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateOut", reflect.TypeOf((*MockDatabase)(nil).MigrateOut), store, dbMigration, logger)
+}
+
+// MigrateTo mocks base method
+func (m *MockDatabase) MigrateTo(store model.InstallationDatabaseStoreInterface, dbMigration *model.InstallationDBMigrationOperation, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MigrateTo", store, dbMigration, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MigrateTo indicates an expected call of MigrateTo
+func (mr *MockDatabaseMockRecorder) MigrateTo(store, dbMigration, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateTo", reflect.TypeOf((*MockDatabase)(nil).MigrateTo), store, dbMigration, logger)
+}
+
+// TeardownMigrated mocks base method
+func (m *MockDatabase) TeardownMigrated(store model.InstallationDatabaseStoreInterface, migrationOp *model.InstallationDBMigrationOperation, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TeardownMigrated", store, migrationOp, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// TeardownMigrated indicates an expected call of TeardownMigrated
+func (mr *MockDatabaseMockRecorder) TeardownMigrated(store, migrationOp, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TeardownMigrated", reflect.TypeOf((*MockDatabase)(nil).TeardownMigrated), store, migrationOp, logger)
+}
+
+// RollbackMigration mocks base method
+func (m *MockDatabase) RollbackMigration(store model.InstallationDatabaseStoreInterface, dbMigration *model.InstallationDBMigrationOperation, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RollbackMigration", store, dbMigration, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RollbackMigration indicates an expected call of RollbackMigration
+func (mr *MockDatabaseMockRecorder) RollbackMigration(store, dbMigration, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RollbackMigration", reflect.TypeOf((*MockDatabase)(nil).RollbackMigration), store, dbMigration, logger)
+}
+
 // MockInstallationDatabaseStoreInterface is a mock of InstallationDatabaseStoreInterface interface
 type MockInstallationDatabaseStoreInterface struct {
 	ctrl     *gomock.Controller
@@ -263,6 +319,36 @@ func (m *MockInstallationDatabaseStoreInterface) UnlockMultitenantDatabase(multi
 func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) UnlockMultitenantDatabase(multitenantdatabaseID, lockerID, force interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockMultitenantDatabase", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).UnlockMultitenantDatabase), multitenantdatabaseID, lockerID, force)
+}
+
+// LockMultitenantDatabases mocks base method
+func (m *MockInstallationDatabaseStoreInterface) LockMultitenantDatabases(ids []string, lockerID string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockMultitenantDatabases", ids, lockerID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LockMultitenantDatabases indicates an expected call of LockMultitenantDatabases
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) LockMultitenantDatabases(ids, lockerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockMultitenantDatabases", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).LockMultitenantDatabases), ids, lockerID)
+}
+
+// UnlockMultitenantDatabases mocks base method
+func (m *MockInstallationDatabaseStoreInterface) UnlockMultitenantDatabases(ids []string, lockerID string, force bool) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnlockMultitenantDatabases", ids, lockerID, force)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnlockMultitenantDatabases indicates an expected call of UnlockMultitenantDatabases
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) UnlockMultitenantDatabases(ids, lockerID, force interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockMultitenantDatabases", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).UnlockMultitenantDatabases), ids, lockerID, force)
 }
 
 // GetSingleTenantDatabaseConfigForInstallation mocks base method
