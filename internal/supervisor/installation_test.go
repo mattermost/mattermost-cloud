@@ -166,15 +166,15 @@ func (s *mockInstallationStore) UpdateInstallationBackupState(backup *model.Inst
 	return nil
 }
 
-func (m *mockInstallationStore) LockInstallationBackups(backupIDs []string, lockerID string) (bool, error) {
+func (s *mockInstallationStore) LockInstallationBackups(backupIDs []string, lockerID string) (bool, error) {
 	return true, nil
 }
 
-func (m *mockInstallationStore) UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error) {
+func (s *mockInstallationStore) UnlockInstallationBackups(backupIDs []string, lockerID string, force bool) (bool, error) {
 	return true, nil
 }
 
-func (m *mockInstallationStore) GetInstallationDBMigrationOperations(filter *model.InstallationDBMigrationFilter) ([]*model.InstallationDBMigrationOperation, error) {
+func (s *mockInstallationStore) GetInstallationDBMigrationOperations(filter *model.InstallationDBMigrationFilter) ([]*model.InstallationDBMigrationOperation, error) {
 	return nil, nil
 }
 
@@ -182,7 +182,7 @@ func (s *mockInstallationStore) UpdateInstallationDBMigrationOperationState(oper
 	return nil
 }
 
-func (m *mockInstallationStore) LockInstallationDBMigrationOperations(backupIDs []string, lockerID string) (bool, error) {
+func (s *mockInstallationStore) LockInstallationDBMigrationOperations(backupIDs []string, lockerID string) (bool, error) {
 	return true, nil
 }
 
