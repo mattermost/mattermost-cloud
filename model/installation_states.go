@@ -61,6 +61,8 @@ const (
 	InstallationStateDBRestorationInProgress = "db-restoration-in-progress"
 	// InstallationStateDBMigrationInProgress is an installation that is being migrated to different database.
 	InstallationStateDBMigrationInProgress = "db-migration-in-progress"
+	// InstallationStateDBMigrationRollbackInProgress is an installation that is being migrated back to original database.
+	InstallationStateDBMigrationRollbackInProgress = "db-migration-rollback-in-progress"
 	// InstallationStateDBRestorationFailed is an installation for which database restoration failed.
 	InstallationStateDBRestorationFailed = "db-restoration-failed"
 	// InstallationStateDBMigrationFailed is an installation for which database migration failed.
@@ -99,6 +101,7 @@ var AllInstallationStates = []string{
 	InstallationStateDeleted,
 	InstallationStateDBRestorationInProgress,
 	InstallationStateDBMigrationInProgress,
+	InstallationStateDBMigrationRollbackInProgress,
 	InstallationStateDBRestorationFailed,
 	InstallationStateDBMigrationFailed,
 }

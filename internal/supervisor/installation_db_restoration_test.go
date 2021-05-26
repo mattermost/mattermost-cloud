@@ -46,6 +46,10 @@ func (m *mockRestorationStore) UpdateInstallationDBRestorationOperation(dbRestor
 	return nil
 }
 
+func (m *mockRestorationStore) DeleteInstallationDBRestorationOperation(id string) error {
+	return nil
+}
+
 func (m *mockRestorationStore) LockInstallationDBRestorationOperations(id []string, lockerID string) (bool, error) {
 	return true, nil
 }
@@ -316,6 +320,34 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
 		require.NoError(t, err)
 		assert.Equal(t, model.InstallationStateDBRestorationFailed, installation.State)
+	})
+
+	t.Run("cleanup restoration", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		mockRestoreOp := &mockRestoreProvisioner{}
+
+		installation, clusterInstallation, backup := setupRestoreRequiredResources(t, sqlStore)
+
+		restorationOp := &model.InstallationDBRestorationOperation{
+			InstallationID:        installation.ID,
+			BackupID:              backup.ID,
+			State:                 model.InstallationDBRestorationStateDeletionRequested,
+			ClusterInstallationID: clusterInstallation.ID,
+		}
+		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
+		require.NoError(t, err)
+
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(sqlStore, &mockAWS{}, mockRestoreOp, "instanceID", logger)
+		restorationSupervisor.Supervise(restorationOp)
+
+		// Assert
+		restorationOp, err = sqlStore.GetInstallationDBRestorationOperation(restorationOp.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationDBRestorationStateDeleted, restorationOp.State)
+		assert.True(t, restorationOp.DeleteAt > 0)
 	})
 }
 

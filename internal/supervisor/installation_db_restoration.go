@@ -20,6 +20,7 @@ type installationDBRestorationStore interface {
 	GetInstallationDBRestorationOperation(id string) (*model.InstallationDBRestorationOperation, error)
 	UpdateInstallationDBRestorationOperationState(dbRestoration *model.InstallationDBRestorationOperation) error
 	UpdateInstallationDBRestorationOperation(dbRestoration *model.InstallationDBRestorationOperation) error
+	DeleteInstallationDBRestorationOperation(id string) error
 	installationDBRestorationLockStore
 
 	GetInstallationBackup(id string) (*model.InstallationBackup, error)
@@ -177,6 +178,9 @@ func (s *InstallationDBRestorationSupervisor) transitionRestoration(restoration 
 	case model.InstallationDBRestorationStateFailing:
 		return s.failRestoration(restoration, instanceID, logger)
 
+	case model.InstallationDBRestorationStateDeletionRequested:
+		return s.cleanupRestoration(restoration, instanceID, logger)
+
 	default:
 		logger.Warnf("Found restoration pending work in unexpected state %s", restoration.State)
 		return restoration.State
@@ -328,4 +332,33 @@ func (s *InstallationDBRestorationSupervisor) failRestoration(restoration *model
 	}
 
 	return model.InstallationDBRestorationStateFailed
+}
+
+func (s *InstallationDBRestorationSupervisor) cleanupRestoration(restoration *model.InstallationDBRestorationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBRestorationState {
+	backup, err := s.store.GetInstallationBackup(restoration.BackupID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get backup")
+		return restoration.State
+	}
+	if backup != nil {
+		cluster, err := getClusterForClusterInstallation(s.store, restoration.ClusterInstallationID)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster for restoration")
+			return restoration.State
+		}
+
+		err = s.restoreOperator.CleanupRestoreJob(backup, cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to cleanup backup from cluster")
+			return restoration.State
+		}
+	}
+
+	err = s.store.DeleteInstallationDBRestorationOperation(restoration.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to mark restoration as deleted")
+		return restoration.State
+	}
+
+	return model.InstallationDBRestorationStateDeleted
 }
