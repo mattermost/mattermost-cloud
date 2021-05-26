@@ -5,7 +5,6 @@
 package provisioner
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -90,58 +89,14 @@ func (f *fluentbit) Name() string {
 }
 
 func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
-	privateDomainName, err := f.awsClient.GetPrivateZoneDomainName(logger)
-	if err != nil {
-		logger.WithError(err).Error("unable to lookup private zone name")
-	}
-
-	var auditLogsConf string
-
-	tag, err := f.awsClient.GetTagByKeyAndZoneID(aws.DefaultAuditLogsCoreSecurityTagKey, f.awsClient.GetPrivateHostedZoneID(), logger)
-	if err != nil {
-		logger.WithError(err).Errorf("unable to find %s", aws.DefaultAuditLogsCoreSecurityTagKey)
-	}
-	if tag == nil {
-		logger.Infof("%s is missing, skipping setup...", aws.DefaultAuditLogsCoreSecurityTagKey)
-		tag = &aws.Tag{}
-	}
-
-	hostPort := strings.Split(tag.Value, ":")
-	if len(hostPort) == 2 {
-		auditLogsConf = fmt.Sprintf(`[OUTPUT]
-    Name  forward
-    Match  *
-    Host  %s
-    Port  %s
-    tls  On
-    tls.verify  Off`, hostPort[0], hostPort[1])
-	} else {
-		logger.Info("AuditLogsCoreSecurity tag is missing from R53 hosted zone, " +
-			"fluent-bit will be configured without forwarding to audit logs to Security")
-	}
-
-	elasticSearchDNS := fmt.Sprintf("elasticsearch.%s", privateDomainName)
 	return &helmDeployment{
 		chartDeploymentName: "fluent-bit",
 		chartName:           "fluent/fluent-bit",
 		namespace:           "fluent-bit",
-		setArgument: fmt.Sprintf(`config.outputs=[OUTPUT]
-    Name  es
-    Match *
-    Host  %s
-    Port  80
-    Logstash_Format On
-    Retry_Limit False
-    Type  _doc
-    Time_Key @timestamp
-    Replace_Dots On
-    Logstash_Prefix logstash
-%s
-`, elasticSearchDNS, auditLogsConf),
-		kopsProvisioner: f.provisioner,
-		kops:            f.kops,
-		logger:          f.logger,
-		desiredVersion:  f.desiredVersion,
+		kopsProvisioner:     f.provisioner,
+		kops:                f.kops,
+		logger:              f.logger,
+		desiredVersion:      f.desiredVersion,
 	}
 }
 
