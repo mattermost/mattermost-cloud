@@ -271,6 +271,7 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		require.NotNil(t, backup)
 		assert.Equal(t, model.InstallationBackupStateBackupRequested, backup.State)
 		assert.Equal(t, installation.ID, backup.InstallationID)
+		assert.Equal(t, model.InstallationDatabaseMultiTenantRDSPostgres, backup.DatabaseBackupType)
 	})
 
 	t.Run("wait for installation backup", func(t *testing.T) {

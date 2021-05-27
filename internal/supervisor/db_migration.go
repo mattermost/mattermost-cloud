@@ -495,4 +495,3 @@ func (s *DBMigrationSupervisor) refreshSecrets(installation *model.Installation)
 	}
 	return nil
 }
-

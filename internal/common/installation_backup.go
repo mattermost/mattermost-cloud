@@ -36,8 +36,9 @@ func TriggerInstallationBackup(store installationBackupStore, installation *mode
 	}
 
 	backup := &model.InstallationBackup{
-		InstallationID: installation.ID,
-		State:          model.InstallationBackupStateBackupRequested,
+		InstallationID:     installation.ID,
+		DatabaseBackupType: installation.Database,
+		State:              model.InstallationBackupStateBackupRequested,
 	}
 
 	err = store.CreateInstallationBackup(backup)

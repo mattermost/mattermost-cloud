@@ -20,6 +20,7 @@ type InstallationBackup struct {
 	InstallationID string
 	// ClusterInstallationID is set when backup is scheduled.
 	ClusterInstallationID string
+	DatabaseBackupType    string
 	DataResidence         *S3DataResidence
 	State                 InstallationBackupState
 	RequestAt             int64

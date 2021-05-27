@@ -1313,4 +1313,15 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.27.0"), semver.MustParse("0.28.0"), func(e execer) error {
+		// Add column DatabaseBackupType to InstallationBackup table
+
+		_, err := e.Exec(`ALTER TABLE InstallationBackup
+				ADD COLUMN DatabaseBackupType TEXT NOT NULL DEFAULT 'aws-multitenant-rds-postgres';`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
