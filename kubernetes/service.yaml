@@ -3,6 +3,9 @@ kind: Service
 metadata:
   name: mattermost-cloud-service
   namespace: mattermost-cloud
+  labels:
+    app.kubernetes.io/name: mattermost-cloud
+    app.kubernetes.io/component: provisioner
 spec:
   type: ClusterIP
   ports:
