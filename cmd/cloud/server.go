@@ -283,6 +283,8 @@ var serverCmd = &cobra.Command{
 		defer kopsProvisioner.Teardown()
 
 		cloudMetrics := metrics.New()
+		// set version for build info
+		cloudMetrics.BuildInfoGauge.WithLabelValues(currentVersion.String()).Set(1)
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
