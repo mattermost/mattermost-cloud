@@ -1324,4 +1324,47 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.28.0"), semver.MustParse("0.29.0"), func(e execer) error {
+		_, err := e.Exec(`
+				ALTER TABLE MultitenantDatabase
+				ADD COLUMN State TEXT NOT NULL DEFAULT 'stable';
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				ALTER TABLE MultitenantDatabase
+				ADD COLUMN SharedLogicalDatabaseMappingsRaw BYTEA NULL;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				ALTER TABLE MultitenantDatabase
+				ADD COLUMN MaxInstallationsPerLogicalDatabase BIGINT NOT NULL DEFAULT '0';
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				ALTER TABLE MultitenantDatabase
+				ADD COLUMN WriterEndpoint TEXT NULL;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+				ALTER TABLE MultitenantDatabase
+				ADD COLUMN ReaderEndpoint TEXT NULL;
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

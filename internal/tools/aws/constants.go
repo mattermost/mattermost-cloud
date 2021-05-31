@@ -203,6 +203,10 @@ const (
 	// schemas allowed in a Posgres multitenant RDS database cluster.
 	DefaultRDSMultitenantDatabasePostgresCountLimit = 300
 
+	// DefaultRDSMultitenantDatabasePostgresProxySchemaLimit is the maximum number of
+	// schemas created in each logical database of a proxied DB cluster.
+	DefaultRDSMultitenantDatabasePostgresProxySchemaLimit = 10
+
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
 	// For example: "rds-cluster-multitenant-00000000000000000-a0000000"
@@ -215,10 +219,16 @@ const (
 	DefaultMattermostInstallationIDTagKey = "tag:InstallationId"
 
 	// DefaultMattermostDatabaseUsername is the default username used for
-	// connectting to a Mattermost database.
+	// connecting to a Mattermost database.
 	// Warning:
 	// changing this value may break the connection to existing installations.
 	DefaultMattermostDatabaseUsername = "mmcloud"
+
+	// DefaultPGBouncerAuthUsername is the default username used for authorizing
+	// pgbouncer connections to a shared database.
+	// Warning:
+	// changing this value may break the connection to existing databases.
+	DefaultPGBouncerAuthUsername = "pgbouncer"
 
 	// DefaultResourceTypeClusterRDS is the default resource type used by
 	// AWS to identify an RDS cluster.
@@ -269,6 +279,13 @@ const (
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantDatabaseTypeTagValue = "multitenant-rds"
+
+	// DefaultRDSMultitenantDatabaseDBProxyTypeTagValue key used to identify a
+	// multitenant database cluster with pooled connections of type
+	// multitenant-rds-dbproxy.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultRDSMultitenantDatabaseDBProxyTypeTagValue = "multitenant-rds-dbproxy"
 
 	// RDSMultitenantPurposeTagKey is the key used to identify the purpose
 	// of an RDS cluster.

@@ -27,11 +27,17 @@ const (
 	// InstallationDatabaseMultiTenantRDSPostgres is a PostgreSQL multitenant
 	// database hosted via Amazon RDS.
 	InstallationDatabaseMultiTenantRDSPostgres = "aws-multitenant-rds-postgres"
+	// InstallationDatabaseMultiTenantRDSPostgresPGBouncer is a PostgreSQL
+	// multitenant database hosted via Amazon RDS that has pooled connections.
+	InstallationDatabaseMultiTenantRDSPostgresPGBouncer = "aws-multitenant-rds-postgres-pgbouncer"
 
 	// DatabaseEngineTypeMySQL is a MySQL database.
 	DatabaseEngineTypeMySQL = "mysql"
 	// DatabaseEngineTypePostgres is a PostgreSQL database.
 	DatabaseEngineTypePostgres = "postgres"
+	// DatabaseEngineTypePostgresProxy is a PostgreSQL database that is
+	// configured for proxied connections.
+	DatabaseEngineTypePostgresProxy = "postgres-proxy"
 )
 
 // Database is the interface for managing Mattermost databases.
@@ -64,6 +70,12 @@ type InstallationDatabaseStoreInterface interface {
 	LockMultitenantDatabases(ids []string, lockerID string) (bool, error)
 	UnlockMultitenantDatabases(ids []string, lockerID string, force bool) (bool, error)
 	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*SingleTenantDatabaseConfig, error)
+}
+
+// ClusterUtilityDatabaseStoreInterface is the interface necessary for SQLStore
+// functionality to update cluster utilities as needed.
+type ClusterUtilityDatabaseStoreInterface interface {
+	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.
@@ -143,6 +155,7 @@ func IsSupportedDatabase(database string) bool {
 	case InstallationDatabaseSingleTenantRDSPostgres:
 	case InstallationDatabaseMultiTenantRDSMySQL:
 	case InstallationDatabaseMultiTenantRDSPostgres:
+	case InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
 	case InstallationDatabaseMysqlOperator:
 	default:
 		return false

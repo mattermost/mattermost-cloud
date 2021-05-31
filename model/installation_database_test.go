@@ -44,6 +44,9 @@ func TestIsSupportedDatabase(t *testing.T) {
 		{model.InstallationDatabaseMysqlOperator, true},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, true},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, true},
+		{model.InstallationDatabaseMultiTenantRDSMySQL, true},
+		{model.InstallationDatabaseMultiTenantRDSPostgres, true},
+		{model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, true},
 	}
 
 	for _, tc := range testCases {

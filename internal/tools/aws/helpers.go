@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -104,6 +103,24 @@ func RDSMultitenantSecretName(id string) string {
 	return fmt.Sprintf("rds-multitenant-%s", id)
 }
 
+// RDSMultitenantPGBouncerSecretName formats the name of a secret used in a
+// multitenant PGBouncer RDS database.
+func RDSMultitenantPGBouncerSecretName(id string) string {
+	return fmt.Sprintf("rds-multitenant-pgbouncer-%s", id)
+}
+
+// PGBouncerAuthUserSecretName formats the name of a secret used for the
+// pgbouncer auth user.
+func PGBouncerAuthUserSecretName(vpcID string) string {
+	return fmt.Sprintf("rds-multitenant-pgbouncer-authuser-%s", vpcID)
+}
+
+// MattermostPGBouncerDatabaseUsername formats the name of a Mattermost user for
+// use in a PGBouncer database.
+func MattermostPGBouncerDatabaseUsername(installationID string) string {
+	return fmt.Sprintf("id_%s", installationID)
+}
+
 // MattermostMultitenantS3Name formats the name of a Mattermost S3 multitenant
 // filestore bucket name.
 func MattermostMultitenantS3Name(environmentName, vpcID string) string {
@@ -115,45 +132,16 @@ func MattermostRDSDatabaseName(installationID string) string {
 	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
 }
 
-// MattermostMySQLConnStrings formats the connection string used for accessing a
-// Mattermost database.
-func MattermostMySQLConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
-	dbConnection := fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4%%2Cutf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
-		username, password, *dbCluster.Endpoint, schema)
-	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4%%2Cutf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
-		username, password, *dbCluster.ReaderEndpoint, schema)
-
-	return dbConnection, readReplicas
-}
-
-// RDSMySQLConnString formats the connection string used by the provisioner for
-// accessing a MySQL RDS cluster.
-func RDSMySQLConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?interpolateParams=true&charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
-		username, password, endpoint, schema)
-}
-
-// MattermostPostgresConnStrings formats the connection strings used by Mattermost
-// servers to access a PostgreSQL database.
-func MattermostPostgresConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
-	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
-		username, password, *dbCluster.Endpoint, schema)
-	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
-		username, password, *dbCluster.ReaderEndpoint, schema)
-
-	return dbConnection, readReplicas
-}
-
-// RDSPostgresConnString formats the connection string used by the provisioner
-// for accessing a Postgres RDS cluster.
-func RDSPostgresConnString(schema, endpoint, username, password string) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
-		username, password, endpoint, schema)
-}
-
-// RDSMultitenantClusterSecretDescription formats the text used for the describing a multitenant database's secret key.
+// RDSMultitenantClusterSecretDescription formats the text used for describing a
+// multitenant database's secret key.
 func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string) string {
 	return fmt.Sprintf("Used for accessing installation ID: %s database managed by RDS cluster ID: %s", installationID, rdsClusterID)
+}
+
+// RDSMultitenantPGBouncerClusterSecretDescription formats the text used for
+// describing a PGBouncer auth user secret key.
+func RDSMultitenantPGBouncerClusterSecretDescription(vpcID string) string {
+	return fmt.Sprintf("The PGBouncer auth user credentials for VPC ID: %s", vpcID)
 }
 
 // GetMultitenantBucketNameForInstallation is a convenience function

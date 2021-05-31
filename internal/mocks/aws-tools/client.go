@@ -441,3 +441,18 @@ func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, clusterID
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, clusterID, owner, logger)
 }
+
+// SecretsManagerGetPGBouncerAuthUserPassword mocks base method
+func (m *MockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SecretsManagerGetPGBouncerAuthUserPassword", vpcID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SecretsManagerGetPGBouncerAuthUserPassword indicates an expected call of SecretsManagerGetPGBouncerAuthUserPassword
+func (mr *MockAWSMockRecorder) SecretsManagerGetPGBouncerAuthUserPassword(vpcID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerGetPGBouncerAuthUserPassword", reflect.TypeOf((*MockAWS)(nil).SecretsManagerGetPGBouncerAuthUserPassword), vpcID)
+}

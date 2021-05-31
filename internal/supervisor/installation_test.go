@@ -314,6 +314,10 @@ func (p *mockInstallationProvisioner) RefreshSecrets(cluster *model.Cluster, ins
 	return nil
 }
 
+func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+	return nil
+}
+
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
 // can be tested.
 type mockAWS struct{}
@@ -439,6 +443,10 @@ func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (
 }
 func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
 	return nil
+}
+
+func (a *mockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
+	return "password", nil
 }
 
 func TestInstallationSupervisorDo(t *testing.T) {

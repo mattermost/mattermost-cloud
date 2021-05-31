@@ -14,7 +14,7 @@ import (
 const (
 	defaultListenerPort      = "8085"
 	defaultLocalServerAPI    = "http://localhost:8075"
-	defaultMattermostVersion = "5.28.1"
+	defaultMattermostVersion = "5.36.1"
 )
 
 var rootCmd = &cobra.Command{

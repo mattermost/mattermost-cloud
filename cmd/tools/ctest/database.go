@@ -38,6 +38,7 @@ func runDatabaseTests(command *cobra.Command, c chan *model.WebhookPayload) []st
 	license, _ := command.Flags().GetString("license")
 
 	databaseTypes := []string{
+		model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer,
 		model.InstallationDatabaseMultiTenantRDSPostgres,
 		model.InstallationDatabaseMultiTenantRDSMySQL,
 		model.InstallationDatabaseSingleTenantRDSPostgres,
