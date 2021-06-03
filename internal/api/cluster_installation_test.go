@@ -581,12 +581,12 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	})
 
 	client := model.NewClient(ts.URL)
-	t.Run("missing primary cluster", func(t *testing.T) {
+	t.Run("missing source cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "", TargetCluster: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
-	t.Run("missing secondary cluster", func(t *testing.T) {
+	t.Run("missing target cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
@@ -616,10 +616,10 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
-	primaryClusterID := model.NewID()
+	sourceClusterID := model.NewID()
 	targetClusterID := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -628,7 +628,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	clusterInstallation2 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -641,7 +641,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		mcir := &model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
+		mcir := &model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
 		err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
@@ -674,12 +674,12 @@ func TestMigrateDNS(t *testing.T) {
 	})
 
 	client := model.NewClient(ts.URL)
-	t.Run("missing primary cluster", func(t *testing.T) {
+	t.Run("missing source cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "", TargetCluster: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
-	t.Run("missing secondary cluster", func(t *testing.T) {
+	t.Run("missing target cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
@@ -690,7 +690,7 @@ func TestMigrateDNS(t *testing.T) {
 	})
 
 	// Valid migration test
-	primaryClusterID := model.NewID()
+	sourceClusterID := model.NewID()
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner1",
 		Version:  "version",
@@ -713,7 +713,7 @@ func TestMigrateDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -722,7 +722,7 @@ func TestMigrateDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	clusterInstallation2 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -731,10 +731,10 @@ func TestMigrateDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, DNSSwitch: true, LockInstallation: true})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
 
-		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID})
 		require.NoError(t, err)
 	})
 }
@@ -752,10 +752,10 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 	client := model.NewClient(ts.URL)
-	primaryClusterID := model.NewID()
+	sourceClusterID := model.NewID()
 	installationID1 := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installationID1,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -766,7 +766,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	targetClusterID := model.NewID()
 	installationID2 := model.NewID()
 	clusterInstallation2 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installationID2,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -778,14 +778,14 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
-	t.Run("valid migration which marks the installation inActive in primary cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+	t.Run("valid migration which marks the installation inActive in source cluster", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID})
 		require.NoError(t, err)
 	})
 
 	isActiveClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: "",
 		Paging:         model.AllPagesNotDeleted(),
 		IsActive:       &isActiveClusterInstallations,
@@ -795,7 +795,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation in a given cluster", func(t *testing.T) {
-		err := client.DeleteStaleClusterInstallationsByCluster(primaryClusterID)
+		err := client.DeleteStaleClusterInstallationsByCluster(sourceClusterID)
 		require.NoError(t, err)
 	})
 
@@ -820,11 +820,11 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	// Valid migration test for single installation
-	primaryClusterID := model.NewID()
+	sourceClusterID := model.NewID()
 	targetClusterID := model.NewID()
 	installationID1 := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: installationID1,
 		Namespace:      "namespace_12",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -835,14 +835,14 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
 
-	t.Run("valid migration which marks the installation stale in primary cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+	t.Run("valid migration which marks the installation stale in source cluster", func(t *testing.T) {
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID})
 		require.NoError(t, err)
 	})
 
 	isActiveClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
-		ClusterID:      primaryClusterID,
+		ClusterID:      sourceClusterID,
 		InstallationID: clusterInstallation1.InstallationID,
 		Paging:         model.AllPagesNotDeleted(),
 		IsActive:       &isActiveClusterInstallations,
