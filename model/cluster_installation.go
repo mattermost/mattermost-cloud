@@ -21,7 +21,7 @@ type ClusterInstallation struct {
 	APISecurityLock bool
 	LockAcquiredBy  *string
 	LockAcquiredAt  int64
-	IsStale         bool
+	IsActive        bool
 }
 
 // ClusterInstallationFilter describes the parameters used to constrain a set of cluster installations.
@@ -30,7 +30,7 @@ type ClusterInstallationFilter struct {
 	IDs            []string
 	InstallationID string
 	ClusterID      string
-	IsStale        *bool
+	IsActive       *bool
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.

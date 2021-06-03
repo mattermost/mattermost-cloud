@@ -18,7 +18,7 @@ func init() {
 	clusterInstallationSelect = sq.
 		Select(
 			"ID", "ClusterID", "InstallationID", "Namespace", "State", "CreateAt",
-			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "IsStale",
+			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "IsActive",
 		).
 		From("ClusterInstallation")
 }
@@ -75,7 +75,7 @@ func (sqlStore *SQLStore) CreateClusterInstallation(clusterInstallation *model.C
 			"APISecurityLock": clusterInstallation.APISecurityLock,
 			"LockAcquiredBy":  nil,
 			"LockAcquiredAt":  0,
-			"IsStale":         clusterInstallation.IsStale,
+			"IsActive":        clusterInstallation.IsActive,
 		}),
 	)
 	if err != nil {
@@ -105,8 +105,8 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	if filter.InstallationID != "" {
 		builder = builder.Where("InstallationID = ?", filter.InstallationID)
 	}
-	if filter.IsStale != nil {
-		builder = builder.Where("IsStale = ?", *filter.IsStale)
+	if filter.IsActive != nil {
+		builder = builder.Where("IsActive = ?", *filter.IsActive)
 	}
 	var clusterInstallations []*model.ClusterInstallation
 	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
@@ -136,14 +136,16 @@ func (sqlStore *SQLStore) UpdateClusterInstallation(clusterInstallation *model.C
 	return nil
 }
 
-// UpdateClusterInstallationsStaleStatus updates the stale status of all cluster installations for a given cluster.
-func (sqlStore *SQLStore) UpdateClusterInstallationsStaleStatus(clusterID string, isStale bool) error {
+// UpdateClusterInstallationsActiveStatus updates the stale status of all cluster installations for a given cluster.
+func (sqlStore *SQLStore) UpdateClusterInstallationsActiveStatus(clusterInstallationIDs []string, isActive bool) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("ClusterInstallation").
 		SetMap(map[string]interface{}{
-			"IsStale": isStale,
+			"IsActive": isActive,
 		}).
-		Where("ClusterID = ?", clusterID),
+		Where(sq.Eq{
+			"ID": clusterInstallationIDs,
+		}),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation")
@@ -175,7 +177,7 @@ func (sqlStore *SQLStore) DeleteStaleClusterInstallationByClusterID(clusterID st
 		Update("ClusterInstallation").
 		Set("DeleteAt", GetMillis()).
 		Where("ClusterID = ?", clusterID).
-		Where("IsStale = ?", true).
+		Where("IsActive = ?", false).
 		Where("DeleteAt = 0"),
 	)
 	if err != nil {
@@ -230,7 +232,7 @@ func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*mo
 	for _, clusterInstallation := range clusterInstallations {
 		clusterInstallation.ClusterID = targetCluster
 		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
-		clusterInstallation.IsStale = false
+		clusterInstallation.IsActive = false
 		err := sqlStore.CreateClusterInstallationAsSingleTransaction(tx, clusterInstallation)
 
 		if err != nil {
@@ -262,7 +264,7 @@ func (sqlStore *SQLStore) CreateClusterInstallationAsSingleTransaction(db execer
 			"APISecurityLock": clusterInstallation.APISecurityLock,
 			"LockAcquiredBy":  nil,
 			"LockAcquiredAt":  0,
-			"IsStale":         clusterInstallation.IsStale,
+			"IsActive":        clusterInstallation.IsActive,
 		}),
 	)
 	if err != nil {
@@ -273,13 +275,10 @@ func (sqlStore *SQLStore) CreateClusterInstallationAsSingleTransaction(db execer
 }
 
 // MigrateDNS Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
-func (sqlStore *SQLStore) MigrateInstallationsDNS(installations []*model.Installation) error {
-	for _, installation := range installations {
-		installation.State = model.InstallationStateCreationDNS
-		err := sqlStore.UpdateInstallation(installation)
-		if err != nil {
-			return errors.Wrapf(err, "failed to update DNS state of installation ID: %s", installation.ID)
-		}
+func (sqlStore *SQLStore) MigrateInstallationsDNS(installationIDs []string) error {
+	err := sqlStore.UpdateInstallationsState(installationIDs, model.InstallationStateCreationDNS)
+	if err != nil {
+		return errors.Wrap(err, "failed to update DNS state of installation(s)")
 	}
 	return nil
 }

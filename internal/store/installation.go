@@ -538,3 +538,31 @@ func (sqlStore *SQLStore) setInstallationAPILock(installationID string, lock boo
 
 	return nil
 }
+
+// LockInstallations marks the installation(s) as locked for exclusive use by the caller.
+func (sqlStore *SQLStore) LockInstallations(installationIDs []string, lockerID string) (bool, error) {
+	return sqlStore.lockRows("Installation", installationIDs, lockerID)
+}
+
+// UnlockInstallations releases a lock previously acquired against a caller for a set of installations.
+func (sqlStore *SQLStore) UnlockInstallations(installationIDs []string, lockerID string, force bool) (bool, error) {
+	return sqlStore.unlockRows("Installation", installationIDs, lockerID, force)
+}
+
+// UpdateInstallationsState updates the set of installations to a new state.
+func (sqlStore *SQLStore) UpdateInstallationsState(installationIDs []string, state string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("Installation").
+		SetMap(map[string]interface{}{
+			"State": state,
+		}).
+		Where(sq.Eq{
+			"ID": installationIDs,
+		}),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation state")
+	}
+
+	return nil
+}
