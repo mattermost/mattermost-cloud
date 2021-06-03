@@ -1329,14 +1329,8 @@ var migrations = []migration{
 		if err != nil {
 			return err
 		}
-		// Add IsStale status column for ClusterInstallation.
-		if e.DriverName() == driverPostgres {
-			_, err := e.Exec(`UPDATE ClusterInstallation SET IsStale = 'false';`)
-			if err != nil {
-				return err
-			}
-		} else if e.DriverName() == driverSqlite {
-			_, err := e.Exec(`UPDATE ClusterInstallation SET IsStale = '0';`)
+		if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`UPDATE ClusterInstallation SET IsActive = '1';`)
 			if err != nil {
 				return err
 			}

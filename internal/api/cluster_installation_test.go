@@ -591,40 +591,59 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
-	t.Run("No cluster instalaation found to migrate", func(t *testing.T) {
+	t.Run("no cluster installation found to migrate", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
 	// Valid migration test
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner1",
+		Version:  "version",
+		Image:    "custom-image",
+		DNS:      "dns1.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation2, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner2",
+		Version:  "version",
+		Image:    "custom-image",
+		DNS:      "dns2.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
 	primaryClusterID := model.NewID()
-	installationID1 := model.NewID()
+	targetClusterID := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
 		ClusterID:      primaryClusterID,
-		InstallationID: installationID1,
+		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
 	}
 
 	time.Sleep(1 * time.Millisecond)
 
-	targetClusterID := model.NewID()
-	installationID2 := model.NewID()
 	clusterInstallation2 := &model.ClusterInstallation{
 		ClusterID:      primaryClusterID,
-		InstallationID: installationID2,
+		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
 
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
+		mcir := &model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
+		t.Log(mcir)
+		err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
 	})
 }
@@ -665,7 +684,7 @@ func TestMigrateDNS(t *testing.T) {
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
-	t.Run("No cluster instalaation found to migrate", func(t *testing.T) {
+	t.Run("No cluster installation found to migrate", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
@@ -712,7 +731,7 @@ func TestMigrateDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, DNSSwitch: false})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
 
 		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
@@ -733,7 +752,6 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 	client := model.NewClient(ts.URL)
-	// Valid migration test
 	primaryClusterID := model.NewID()
 	installationID1 := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
@@ -760,23 +778,23 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
-	t.Run("valid migration which marks the installation stale in primary cluster", func(t *testing.T) {
+	t.Run("valid migration which marks the installation inActive in primary cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: primaryClusterID, TargetCluster: targetClusterID})
 		require.NoError(t, err)
 	})
 
-	isStaleClusterInstallations := true
+	isActiveClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      primaryClusterID,
 		InstallationID: "",
 		Paging:         model.AllPagesNotDeleted(),
-		IsStale:        &isStaleClusterInstallations,
+		IsActive:       &isActiveClusterInstallations,
 	}
 	ci, err := sqlStore.GetClusterInstallations(filter)
 	require.NoError(t, err)
 	require.NotEmpty(t, ci)
 
-	t.Run("delete stale cluster installation in a given cluster", func(t *testing.T) {
+	t.Run("delete inActive cluster installation in a given cluster", func(t *testing.T) {
 		err := client.DeleteStaleClusterInstallationsByCluster(primaryClusterID)
 		require.NoError(t, err)
 	})
@@ -822,18 +840,18 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	isStaleClusterInstallations := true
+	isActiveClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      primaryClusterID,
 		InstallationID: clusterInstallation1.InstallationID,
 		Paging:         model.AllPagesNotDeleted(),
-		IsStale:        &isStaleClusterInstallations,
+		IsActive:       &isActiveClusterInstallations,
 	}
 	ci, err := sqlStore.GetClusterInstallations(filter)
 	require.NoError(t, err)
-	require.Empty(t, ci)
+	require.NotEmpty(t, ci)
 
-	t.Run("delete stale cluster installation by ID", func(t *testing.T) {
+	t.Run("delete inActive cluster installation by ID", func(t *testing.T) {
 		err := client.DeleteStaleClusterInstallationByID(clusterInstallation1.ID)
 		require.NoError(t, err)
 	})
