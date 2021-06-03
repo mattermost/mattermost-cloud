@@ -44,19 +44,19 @@ func init() {
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("cluster-installation")
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("command")
 
-	clusterInstallationsMigrationCmd.Flags().String("primary-cluster", "", "The primary cluster for the migration to migrate cluster installations from.")
-	clusterInstallationsMigrationCmd.MarkFlagRequired("primary-cluster")
+	clusterInstallationsMigrationCmd.Flags().String("source-cluster", "", "The source cluster for the migration to migrate cluster installations from.")
+	clusterInstallationsMigrationCmd.MarkFlagRequired("source-cluster")
 	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to migrate cluster installation to.")
 	clusterInstallationsMigrationCmd.MarkFlagRequired("target-cluster")
-	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL.")
+	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
 	clusterInstallationsMigrationCmd.Flags().Bool("dns", true, "The DNS flag to perform DNS switch as a part of overall migration process, default is ON.")
 	clusterInstallationsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process, default is ON.")
 
-	dnsMigrationCmd.Flags().String("primary-cluster", "", "The primary cluster for the migration to switch CNAME(s) from.")
-	dnsMigrationCmd.MarkFlagRequired("primary-cluster")
+	dnsMigrationCmd.Flags().String("source-cluster", "", "The source cluster for the migration to switch CNAME(s) from.")
+	dnsMigrationCmd.MarkFlagRequired("source-cluster")
 	dnsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to switch CNAME to.")
 	dnsMigrationCmd.MarkFlagRequired("target-cluster")
-	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from primary cluster, default is ALL.")
+	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
 	dnsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process, default is ON.")
 
 	deleteStaleClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installation from.")
@@ -279,7 +279,7 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		cluster, _ := command.Flags().GetString("primary-cluster")
+		cluster, _ := command.Flags().GetString("source-cluster")
 		target_cluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 		dnsSwith, _ := command.Flags().GetBool("dns")
@@ -301,7 +301,7 @@ var dnsMigrationCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		cluster, _ := command.Flags().GetString("primary-cluster")
+		cluster, _ := command.Flags().GetString("source-cluster")
 		target_cluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
