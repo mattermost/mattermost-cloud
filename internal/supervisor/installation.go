@@ -1182,7 +1182,7 @@ func (s *InstallationSupervisor) deleteBackups(installation *model.Installation,
 			continue
 		}
 
-		logger.Debugf("Deleting installation backup %q in state %q", backup.ID, backup.State)
+		logger.Debugf("Deleting installation backup %s in state %s", backup.ID, backup.State)
 		backup.State = model.InstallationBackupStateDeletionRequested
 		err = s.store.UpdateInstallationBackupState(backup)
 		if err != nil {
@@ -1261,7 +1261,7 @@ func (s *InstallationSupervisor) deleteRestorationOperations(installation *model
 			continue
 		}
 
-		logger.Debugf("Deleting installation db restoration operation %q in state %q", operation.ID, operation.State)
+		logger.Debugf("Deleting installation db restoration operation %s in state %s", operation.ID, operation.State)
 		operation.State = model.InstallationDBRestorationStateDeletionRequested
 		err = s.store.UpdateInstallationDBRestorationOperationState(operation)
 		if err != nil {
@@ -1330,7 +1330,7 @@ func (s *InstallationSupervisor) deleteMigrationOperations(installation *model.I
 			continue
 		}
 
-		logger.Debugf("Deleting installation db migration operation %q in state %q", operation.ID, operation.State)
+		logger.Debugf("Deleting installation db migration operation %s in state %s", operation.ID, operation.State)
 		operation.State = model.InstallationDBMigrationStateDeletionRequested
 		err = s.store.UpdateInstallationDBMigrationOperationState(operation)
 		if err != nil {

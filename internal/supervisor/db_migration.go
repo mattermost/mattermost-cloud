@@ -500,7 +500,7 @@ func (s *DBMigrationSupervisor) rollbackMigration(dbMigration *model.Installatio
 	installation.Database = dbMigration.SourceDatabase
 	err = s.store.UpdateInstallation(installation)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to switch database for installation")
+		logger.WithError(err).Error("Failed to switch database for installation")
 		return dbMigration.State
 	}
 
@@ -514,7 +514,7 @@ func (s *DBMigrationSupervisor) rollbackMigration(dbMigration *model.Installatio
 	installation.State = model.InstallationStateHibernating
 	err = s.store.UpdateInstallation(installation)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to set installation back to hibernating state")
+		logger.WithError(err).Error("Failed to set installation back to hibernating state")
 		return dbMigration.State
 	}
 
@@ -559,13 +559,13 @@ func (s *DBMigrationSupervisor) refreshSecrets(installation *model.Installation)
 func (s *DBMigrationSupervisor) cleanupMigration(dbMigration *model.InstallationDBMigrationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBMigrationOperationState {
 	err := s.cleanupMigratedDBs(dbMigration, logger)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to cleanup source database")
+		logger.WithError(err).Error("Failed to cleanup source database")
 		return dbMigration.State
 	}
 
 	err = s.store.DeleteInstallationDBMigrationOperation(dbMigration.ID)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to mark migration operation as deleted")
+		logger.WithError(err).Error("Failed to mark migration operation as deleted")
 		return dbMigration.State
 	}
 

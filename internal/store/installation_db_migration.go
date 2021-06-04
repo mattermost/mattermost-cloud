@@ -304,7 +304,7 @@ func (sqlStore *SQLStore) DeleteInstallationDBMigrationOperation(id string) erro
 		Where("ID = ?", id).
 		Where("DeleteAt = ?", 0))
 	if err != nil {
-		return errors.Wrapf(err, "failed to to mark migration as deleted")
+		return errors.Wrap(err, "failed to to mark migration as deleted")
 	}
 
 	return nil
