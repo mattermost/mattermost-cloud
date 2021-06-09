@@ -16,8 +16,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// initInstallationMigration registers installation migration operation endpoints on the given router.
-func initInstallationMigration(apiRouter *mux.Router, context *Context) {
+// initInstallationDBMigration registers installation migration operation endpoints on the given router.
+func initInstallationDBMigration(apiRouter *mux.Router, context *Context) {
 	addContext := func(handler contextHandlerFunc) *contextHandler {
 		return newContextHandler(context, handler)
 	}
