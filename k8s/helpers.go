@@ -103,6 +103,7 @@ func (kc *KubeClient) PatchPodsDaemonSet(namespace, daemonSetName string, payloa
 	payloadBytes, _ := json.Marshal(payload)
 	_, err := daemonSet.Patch(ctx, daemonSetName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
 	if err != nil {
+		errors.Wrapf(err, "failed to patch daemonSet %s", daemonSetName)
 		return err
 	}
 	return nil

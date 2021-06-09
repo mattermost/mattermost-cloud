@@ -77,6 +77,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("require-annotated-installations", false, "Require new installations to have at least one annotation.")
 	serverCmd.PersistentFlags().String("gitlab-oauth", "", "If Helm charts are stored in a Gitlab instance that requires authentication, provide the token here and it will be automatically set in the environment.")
 	serverCmd.PersistentFlags().Bool("force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
+	serverCmd.PersistentFlags().String("mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
+	serverCmd.PersistentFlags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 }
 
 var serverCmd = &cobra.Command{
@@ -119,6 +121,16 @@ var serverCmd = &cobra.Command{
 		vpnListCIDR, _ := command.Flags().GetStringSlice("vpn-list-cidr")
 		if len(vpnListCIDR) == 0 {
 			return errors.New("vpn-list-cidr must have at least one value")
+		}
+
+		mattermostWebHook, _ := command.Flags().GetString("mattermost-webhook")
+		if mattermostWebHook != "" {
+			os.Setenv(model.MattermostWebhook, mattermostWebHook)
+		}
+
+		mattermostChannel, _ := command.Flags().GetString("mattermost-channel")
+		if mattermostChannel != "" {
+			os.Setenv(model.MattermostChannel, mattermostChannel)
 		}
 
 		logger := logger.WithField("instance", instanceID)

@@ -8,7 +8,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -422,28 +424,40 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
 		if daemonSet == "k8s-spot-termination-handler" {
-			payload := []k8s.PatchStringValue{{
-				Op:    "replace",
-				Path:  "/spec/template/spec/containers/0/env/2/value",
-				Value: cluster.ID,
-			}}
-			if len(cluster.ProvisionerMetadataKops.MattermostWebhook) > 0 {
-				payload = append(payload,
-					k8s.PatchStringValue{
-						Op:    "replace",
-						Path:  "/spec/template/spec/containers/0/env/3/value",
-						Value: cluster.ProvisionerMetadataKops.MattermostWebhook,
-					})
+			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
+			if err != nil {
+				errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
+				return err
 			}
-			if len(cluster.ProvisionerMetadataKops.MattermostChannel) > 0 {
-				payload = append(payload,
-					k8s.PatchStringValue{
+
+			var payload []k8s.PatchStringValue
+			for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
+				if envVar.Name == "CLUSTER" {
+					payload = []k8s.PatchStringValue{{
 						Op:    "replace",
-						Path:  "/spec/template/spec/containers/0/env/5/value",
-						Value: cluster.ProvisionerMetadataKops.MattermostChannel,
-					})
+						Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+						Value: cluster.ID,
+					}}
+				}
+				if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
+					payload = append(payload,
+						k8s.PatchStringValue{
+							Op:    "replace",
+							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+							Value: os.Getenv(model.MattermostChannel),
+						})
+				}
+				if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
+					payload = append(payload,
+						k8s.PatchStringValue{
+							Op:    "replace",
+							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+							Value: os.Getenv(model.MattermostWebhook),
+						})
+				}
 			}
-			err := k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
+
+			err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
 			if err != nil {
 				return err
 			}
@@ -452,7 +466,8 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		if err != nil {
 			return err
 		}
-		if len(pods.Items) == 0 {
+		// Pods for k8s-spot-termination-handler do not ment to be schedule in every cluster so doesn't need to fail provision in this case/
+		if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
 			return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
 		}
 

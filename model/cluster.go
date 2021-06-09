@@ -10,6 +10,14 @@ import (
 	"regexp"
 )
 
+const (
+	// MattermostWebhook is the name of the Environment Variable which
+	// may contain a Mattermost webhook to send notifications to a Mattermost installation
+	MattermostWebhook = "mattermost-webhook"
+	// MattermostChannel is the name of the Environment Variable which
+	// may contain a Mattermost channel in which notifications are going to be sent
+	MattermostChannel = "mattermost-channel"
+)
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
 	ID                      string
