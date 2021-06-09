@@ -63,6 +63,16 @@ const (
 	InstallationDBMigrationStateSucceeded InstallationDBMigrationOperationState = "installation-db-migration-succeeded"
 	// InstallationDBMigrationStateFailed is DB migration operation that failed.
 	InstallationDBMigrationStateFailed InstallationDBMigrationOperationState = "installation-db-migration-failed"
+	// InstallationDBMigrationStateCommitted is DB migration that has been committed and can no longer be rolled back.
+	InstallationDBMigrationStateCommitted InstallationDBMigrationOperationState = "installation-db-migration-committed"
+	// InstallationDBMigrationStateRollbackRequested is DB migration scheduled for rollback.
+	InstallationDBMigrationStateRollbackRequested InstallationDBMigrationOperationState = "installation-db-migration-rollback-requested"
+	// InstallationDBMigrationStateRollbackFinished is DB migration that was successfully rolled back.
+	InstallationDBMigrationStateRollbackFinished InstallationDBMigrationOperationState = "installation-db-migration-rollback-finished"
+	// InstallationDBMigrationStateDeletionRequested is DB migration scheduled for deletion.
+	InstallationDBMigrationStateDeletionRequested InstallationDBMigrationOperationState = "installation-db-migration-deletion-requested"
+	// InstallationDBMigrationStateDeleted is DB migration that has been deleted.
+	InstallationDBMigrationStateDeleted InstallationDBMigrationOperationState = "installation-db-migration-deleted"
 )
 
 // AllInstallationDBMigrationOperationsStatesPendingWork is a list of all db migration operations states
@@ -77,6 +87,8 @@ var AllInstallationDBMigrationOperationsStatesPendingWork = []InstallationDBMigr
 	InstallationDBMigrationStateUpdatingInstallationConfig,
 	InstallationDBMigrationStateFinalizing,
 	InstallationDBMigrationStateFailing,
+	InstallationDBMigrationStateRollbackRequested,
+	InstallationDBMigrationStateDeletionRequested,
 }
 
 // InstallationDBMigrationFilter describes the parameters used to constrain a set of installation db migration operations.
@@ -109,4 +121,32 @@ func NewDBMigrationOperationsFromReader(reader io.Reader) ([]*InstallationDBMigr
 	}
 
 	return dBMigrationOperations, nil
+}
+
+// ValidTransitionState returns whether an installation backup can be transitioned into
+// the new state or not based on its current state.
+func (b InstallationDBMigrationOperation) ValidTransitionState(newState InstallationDBMigrationOperationState) bool {
+	validStates, found := validInstallationDBMigrationOperationTransitions[newState]
+	if !found {
+		return false
+	}
+
+	return dbMigrationOperationStateIn(b.State, validStates)
+}
+
+var (
+	validInstallationDBMigrationOperationTransitions = map[InstallationDBMigrationOperationState][]InstallationDBMigrationOperationState{
+		InstallationDBMigrationStateRollbackRequested: {
+			InstallationDBMigrationStateSucceeded,
+		},
+	}
+)
+
+func dbMigrationOperationStateIn(state InstallationDBMigrationOperationState, states []InstallationDBMigrationOperationState) bool {
+	for _, s := range states {
+		if s == state {
+			return true
+		}
+	}
+	return false
 }

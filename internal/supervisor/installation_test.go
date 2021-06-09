@@ -174,6 +174,37 @@ func (s *mockInstallationStore) UnlockInstallationBackups(backupIDs []string, lo
 	return true, nil
 }
 
+func (s *mockInstallationStore) GetInstallationDBMigrationOperations(filter *model.InstallationDBMigrationFilter) ([]*model.InstallationDBMigrationOperation, error) {
+	return nil, nil
+}
+
+func (s *mockInstallationStore) UpdateInstallationDBMigrationOperationState(operation *model.InstallationDBMigrationOperation) error {
+	return nil
+}
+
+func (s *mockInstallationStore) LockInstallationDBMigrationOperations(backupIDs []string, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UnlockInstallationDBMigrationOperations(backupIDs []string, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error) {
+	return nil, nil
+}
+func (s *mockInstallationStore) UpdateInstallationDBRestorationOperationState(operation *model.InstallationDBRestorationOperation) error {
+	return nil
+}
+
+func (s *mockInstallationStore) LockInstallationDBRestorationOperations(backupIDs []string, lockerID string) (bool, error) {
+	return true, nil
+}
+
+func (s *mockInstallationStore) UnlockInstallationDBRestorationOperations(backupIDs []string, lockerID string, force bool) (bool, error) {
+	return true, nil
+}
+
 type mockMultitenantDBStore struct{}
 
 func (m *mockMultitenantDBStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
@@ -1862,6 +1893,64 @@ func TestInstallationSupervisor(t *testing.T) {
 		fetchedBackup, err := sqlStore.GetInstallationBackup(backup.ID)
 		require.NoError(t, err)
 		assert.Equal(t, model.InstallationBackupStateDeletionRequested, fetchedBackup.State)
+	})
+
+	t.Run("deletion requested, delete migrations and restorations", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		supervisor := supervisor.NewInstallationSupervisor(sqlStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, false)
+
+		cluster := standardStableTestCluster()
+		err := sqlStore.CreateCluster(cluster, nil)
+		require.NoError(t, err)
+
+		owner := model.NewID()
+		groupID := model.NewID()
+		installation := &model.Installation{
+			OwnerID:  owner,
+			Version:  "version",
+			DNS:      "dns.example.com",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			GroupID:  &groupID,
+			State:    model.InstallationStateDeletionRequested,
+		}
+		err = sqlStore.CreateInstallation(installation, nil)
+		require.NoError(t, err)
+
+		clusterInstallation := &model.ClusterInstallation{
+			ClusterID:      cluster.ID,
+			InstallationID: installation.ID,
+			Namespace:      "namespace",
+			State:          model.ClusterInstallationStateDeleted,
+		}
+		err = sqlStore.CreateClusterInstallation(clusterInstallation)
+		require.NoError(t, err)
+
+		restorationOP := &model.InstallationDBRestorationOperation{
+			InstallationID:        installation.ID,
+			ClusterInstallationID: clusterInstallation.ID,
+			State:                 model.InstallationDBRestorationStateSucceeded,
+		}
+		err = sqlStore.CreateInstallationDBRestorationOperation(restorationOP)
+		require.NoError(t, err)
+
+		migrationOP := &model.InstallationDBMigrationOperation{
+			InstallationID: installation.ID,
+			State:          model.InstallationDBMigrationStateSucceeded,
+		}
+		err = sqlStore.CreateInstallationDBMigrationOperation(migrationOP)
+		require.NoError(t, err)
+
+		supervisor.Supervise(installation)
+		expectInstallationState(t, sqlStore, installation, model.InstallationStateDeletionFinalCleanup)
+		expectClusterInstallations(t, sqlStore, installation, 1, model.ClusterInstallationStateDeleted)
+		fetchedRestoration, err := sqlStore.GetInstallationDBRestorationOperation(restorationOP.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationDBRestorationStateDeletionRequested, fetchedRestoration.State)
+		fetchedMigration, err := sqlStore.GetInstallationDBMigrationOperation(migrationOP.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationDBMigrationStateDeletionRequested, fetchedMigration.State)
 	})
 
 	t.Run("creation requested, cluster installations deleted", func(t *testing.T) {
