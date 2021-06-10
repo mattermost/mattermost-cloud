@@ -567,8 +567,8 @@ func (sqlStore *SQLStore) UnlockInstallations(installationIDs []string, lockerID
 }
 
 // UpdateInstallationsState updates the set of installations to a new state.
-func (sqlStore *SQLStore) UpdateInstallationsState(installationIDs []string, state string) error {
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+func (sqlStore *SQLStore) UpdateInstallationsState(db execer, installationIDs []string, state string) error {
+	_, err := sqlStore.execBuilder(db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
 			"State": state,

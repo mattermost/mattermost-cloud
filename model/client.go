@@ -1219,9 +1219,9 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 	}
 }
 
-// DeleteStaleClusterInstallations requests the deletion of stale cluster installation(s) from the configured provisioning server.
-func (c *Client) DeleteStaleClusterInstallationsByCluster(clusterID string) error {
-	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_stale/%s", clusterID))
+// DeleteInActiveClusterInstallationsByCluster requests the deletion of inactive cluster installation(s) from the configured provisioning server.
+func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/%s", clusterID))
 	if err != nil {
 		return nil
 	}
@@ -1236,9 +1236,9 @@ func (c *Client) DeleteStaleClusterInstallationsByCluster(clusterID string) erro
 	}
 }
 
-// DeleteStaleClusterInstallationByID requests the deletion of specific staled cluster installation from the configured provisioning server.
-func (c *Client) DeleteStaleClusterInstallationByID(clusterInstallationID string) error {
-	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_stale/cluster_installation/%s", clusterInstallationID))
+// DeleteInActiveClusterInstallationByID requests the deletion of specific inactive cluster installation from the configured provisioning server.
+func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/cluster_installation/%s", clusterInstallationID))
 	if err != nil {
 		return nil
 	}

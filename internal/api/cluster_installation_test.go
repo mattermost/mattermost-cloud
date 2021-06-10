@@ -739,7 +739,7 @@ func TestMigrateDNS(t *testing.T) {
 	})
 }
 
-func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
+func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
 
@@ -763,7 +763,6 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
-	targetClusterID := model.NewID()
 	installationID2 := model.NewID()
 	clusterInstallation2 := &model.ClusterInstallation{
 		ClusterID:      sourceClusterID,
@@ -778,11 +777,6 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
-	t.Run("valid migration which marks the installation inActive in source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID})
-		require.NoError(t, err)
-	})
-
 	isActiveClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      sourceClusterID,
@@ -795,7 +789,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation in a given cluster", func(t *testing.T) {
-		err := client.DeleteStaleClusterInstallationsByCluster(sourceClusterID)
+		err := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
 		require.NoError(t, err)
 	})
 
@@ -805,7 +799,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 
 }
 
-func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
+func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
 
@@ -821,24 +815,19 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 
 	// Valid migration test for single installation
 	sourceClusterID := model.NewID()
-	targetClusterID := model.NewID()
 	installationID1 := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
 		ClusterID:      sourceClusterID,
 		InstallationID: installationID1,
 		Namespace:      "namespace_12",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
 	}
 
 	time.Sleep(1 * time.Millisecond)
 
 	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
-
-	t.Run("valid migration which marks the installation stale in source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID})
-		require.NoError(t, err)
-	})
 
 	isActiveClusterInstallations := false
 	filter := &model.ClusterInstallationFilter{
@@ -852,7 +841,7 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation by ID", func(t *testing.T) {
-		err := client.DeleteStaleClusterInstallationByID(clusterInstallation1.ID)
+		err := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
 		require.NoError(t, err)
 	})
 
