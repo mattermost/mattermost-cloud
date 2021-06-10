@@ -49,8 +49,6 @@ func init() {
 	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to migrate cluster installation to.")
 	clusterInstallationsMigrationCmd.MarkFlagRequired("target-cluster")
 	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
-	clusterInstallationsMigrationCmd.Flags().Bool("dns", true, "The DNS flag to perform DNS switch as a part of overall migration process, default is ON.")
-	clusterInstallationsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process, default is ON.")
 
 	dnsMigrationCmd.Flags().String("source-cluster", "", "The source cluster for the migration to switch CNAME(s) from.")
 	dnsMigrationCmd.MarkFlagRequired("source-cluster")
@@ -59,9 +57,9 @@ func init() {
 	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
 	dnsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process, default is ON.")
 
-	deleteStaleClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installation from.")
-	deleteStaleClusterInstallationCmd.MarkFlagRequired("clusterr")
-	deleteStaleClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
+	deleteInActiveClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installation from.")
+	deleteInActiveClusterInstallationCmd.MarkFlagRequired("clusterr")
+	deleteInActiveClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
 
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
@@ -70,7 +68,7 @@ func init() {
 	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
 
 	clusterInstallationsMigrationCmd.AddCommand(dnsMigrationCmd)
-	clusterInstallationsMigrationCmd.AddCommand(deleteStaleClusterInstallationCmd)
+	clusterInstallationsMigrationCmd.AddCommand(deleteInActiveClusterInstallationCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationsMigrationCmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
@@ -282,10 +280,8 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		cluster, _ := command.Flags().GetString("source-cluster")
 		target_cluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
-		dnsSwith, _ := command.Flags().GetBool("dns")
-		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, DNSSwitch: dnsSwith, LockInstallation: lockInstallation})
+		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, DNSSwitch: false, LockInstallation: false})
 
 		return nil
 	},
@@ -313,7 +309,7 @@ var dnsMigrationCmd = &cobra.Command{
 }
 
 // Command to migrate DNS record(s)
-var deleteStaleClusterInstallationCmd = &cobra.Command{
+var deleteInActiveClusterInstallationCmd = &cobra.Command{
 	Use:   "delete stale cluster installation(s)",
 	Short: "Delete stale cluster installation(s) after migration.",
 	RunE: func(command *cobra.Command, args []string) error {
@@ -325,12 +321,12 @@ var deleteStaleClusterInstallationCmd = &cobra.Command{
 		cluster, _ := command.Flags().GetString("cluster")
 		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
 		if len(clusterInstallationID) != 0 {
-			client.DeleteStaleClusterInstallationByID(clusterInstallationID)
+			client.DeleteInActiveClusterInstallationByID(clusterInstallationID)
 			return nil
 		}
 
 		if len(cluster) != 0 {
-			client.DeleteStaleClusterInstallationsByCluster(cluster)
+			client.DeleteInActiveClusterInstallationsByCluster(cluster)
 			return nil
 		}
 		return nil

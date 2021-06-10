@@ -640,7 +640,7 @@ func TestMigrateMultipleClusterInstallations(t *testing.T) {
 	}
 }
 
-func TestMigrateDNS(t *testing.T) {
+func TestSwitchDNS(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
@@ -725,17 +725,23 @@ func TestMigrateDNS(t *testing.T) {
 	clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID})
 	require.NoError(t, err)
 
+	oldCIsIDs := getClusterInstallationIDs(clusterInstallations)
 	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
 	require.NoError(t, err)
 
 	var installations []string
 	installations = append(installations, installation1.ID)
 	installations = append(installations, installation2.ID)
-	err = sqlStore.MigrateInstallationsDNS(installations)
+	newCIsIDs := getClusterInstallationIDs(clusterInstallations)
+	var installationIDs []string
+	for _, ci := range clusterInstallations {
+		installationIDs = append(installationIDs, ci.InstallationID)
+	}
+	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs)
 	require.NoError(t, err)
 }
 
-func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
+func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
 
@@ -746,6 +752,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 		InstallationID: installationID1,
 		Namespace:      "namespace_12",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
 	}
 
 	time.Sleep(1 * time.Millisecond)
@@ -756,6 +763,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 		InstallationID: installationID2,
 		Namespace:      "namespace_13",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
 	}
 
 	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
@@ -764,18 +772,12 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
-	var clusterInstallationIDs []string
-	clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation1.ID)
-	clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation2.ID)
-	err = sqlStore.UpdateClusterInstallationsActiveStatus(clusterInstallationIDs, false)
-	require.NoError(t, err)
-
 	isActiveClusterInstallations := false
 	inActiveClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
 	require.NoError(t, err)
 	require.NotEmpty(t, inActiveClusterInstallations)
 
-	err = sqlStore.DeleteStaleClusterInstallationByClusterID(sourceClusterID)
+	err = sqlStore.DeleteInActiveClusterInstallationByClusterID(sourceClusterID)
 	require.NoError(t, err)
 
 	isActiveClusterInstallations = false
@@ -784,7 +786,7 @@ func TestDeleteStaleClusterInstallationsByCluster(t *testing.T) {
 	require.Empty(t, inActiveClusterInstallations)
 }
 
-func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
+func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
 
@@ -795,16 +797,12 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 		InstallationID: installationID1,
 		Namespace:      "namespace_14",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
 	}
 
 	time.Sleep(1 * time.Millisecond)
 
 	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
-	require.NoError(t, err)
-
-	var clusterInstallationIDs []string
-	clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation1.ID)
-	err = sqlStore.UpdateClusterInstallationsActiveStatus(clusterInstallationIDs, false)
 	require.NoError(t, err)
 
 	isActiveClusterInstallations := false
@@ -824,4 +822,12 @@ func TestDeleteStaleClusterInstallationsByID(t *testing.T) {
 	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
 	require.NoError(t, err)
 	require.Empty(t, inActiveClusterInstallations)
+}
+
+func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {
+	clusterInstallationIDs := make([]string, 0, len(clusterInstallations))
+	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+	}
+	return clusterInstallationIDs
 }
