@@ -70,6 +70,13 @@ func init() {
 	installationHibernateCmd.MarkFlagRequired("installation")
 
 	installationWakeupCmd.Flags().String("installation", "", "The id of the installation to wake up from hibernation.")
+	installationWakeupCmd.Flags().String("owner", "", "The new owner value of this installation.")
+	installationWakeupCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
+	installationWakeupCmd.Flags().String("version", "stable", "The Mattermost version to target.")
+	installationWakeupCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
+	installationWakeupCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
+	installationWakeupCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationWakeupCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
 	installationWakeupCmd.MarkFlagRequired("installation")
 
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
@@ -276,8 +283,24 @@ var installationWakeupCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
+		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
 
-		installation, err := client.WakeupInstallation(installationID)
+		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
+		if err != nil {
+			return err
+		}
+
+		request := &model.PatchInstallationRequest{
+			OwnerID:       getStringFlagPointer(command, "owner"),
+			Version:       getStringFlagPointer(command, "version"),
+			Image:         getStringFlagPointer(command, "image"),
+			Size:          getStringFlagPointer(command, "size"),
+			License:       getStringFlagPointer(command, "license"),
+			MattermostEnv: envVarMap,
+		}
+
+		installation, err := client.WakeupInstallation(installationID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to wake up installation")
 		}
