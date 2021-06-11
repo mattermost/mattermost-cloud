@@ -478,6 +478,13 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
+	patchInstallationRequest, err := model.NewPatchInstallationRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	newState := model.InstallationStateWakeUpRequested
 
 	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
@@ -487,11 +494,28 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	defer unlockOnce()
 
-	err := updateInstallationState(c, installationDTO, newState)
+	oldState := installationDTO.State
+
+	patchInstallationRequest.Apply(installationDTO.Installation)
+	installationDTO.State = newState
+	err = c.Store.UpdateInstallation(installationDTO.Installation)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
+		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installationDTO.ID,
+		NewState:  newState,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
+	}
+	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		c.Logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
 	unlockOnce()

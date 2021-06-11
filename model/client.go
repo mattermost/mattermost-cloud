@@ -498,8 +498,8 @@ func (c *Client) HibernateInstallation(installationID string) (*InstallationDTO,
 }
 
 // WakeupInstallation wakes an installation from hibernation.
-func (c *Client) WakeupInstallation(installationID string) (*InstallationDTO, error) {
-	resp, err := c.doPost(c.buildURL("/api/installation/%s/wakeup", installationID), nil)
+func (c *Client) WakeupInstallation(installationID string, request *PatchInstallationRequest) (*InstallationDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/wakeup", installationID), request)
 	if err != nil {
 		return nil, err
 	}
