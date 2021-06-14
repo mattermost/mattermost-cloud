@@ -26,6 +26,7 @@ type installationDBMigrationStore interface {
 	GetInstallationDBMigrationOperation(id string) (*model.InstallationDBMigrationOperation, error)
 	UpdateInstallationDBMigrationOperationState(dbMigration *model.InstallationDBMigrationOperation) error
 	UpdateInstallationDBMigrationOperation(dbMigration *model.InstallationDBMigrationOperation) error
+	DeleteInstallationDBMigrationOperation(id string) error
 	installationDBMigrationOperationLockStore
 
 	TriggerInstallationRestoration(installation *model.Installation, backup *model.InstallationBackup) (*model.InstallationDBRestorationOperation, error)
@@ -203,6 +204,10 @@ func (s *DBMigrationSupervisor) transitionMigration(dbMigration *model.Installat
 		return s.finalizeMigration(dbMigration, instanceID, logger)
 	case model.InstallationDBMigrationStateFailing:
 		return s.failMigration(dbMigration, instanceID, logger)
+	case model.InstallationDBMigrationStateRollbackRequested:
+		return s.rollbackMigration(dbMigration, instanceID, logger)
+	case model.InstallationDBMigrationStateDeletionRequested:
+		return s.cleanupMigration(dbMigration, instanceID, logger)
 	default:
 		logger.Warnf("Found migration pending work in unexpected state %s", dbMigration.State)
 		return dbMigration.State
@@ -475,6 +480,61 @@ func (s *DBMigrationSupervisor) failMigration(dbMigration *model.InstallationDBM
 	return model.InstallationDBMigrationStateFailed
 }
 
+func (s *DBMigrationSupervisor) rollbackMigration(dbMigration *model.InstallationDBMigrationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBMigrationOperationState {
+	installation, lock, err := getAndLockInstallation(s.store, dbMigration.InstallationID, instanceID, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get and lock installation")
+		return dbMigration.State
+	}
+	defer lock.Unlock()
+
+	// TODO: this approach is slightly simplified and will need to be split to 2 methods
+	// when we want to support different database types.
+	destinationDB := s.dbProvider.GetDatabase(installation.ID, dbMigration.DestinationDatabase)
+	err = destinationDB.RollbackMigration(s.store, dbMigration, logger)
+	if err != nil {
+		logger.WithError(err).Errorf("Failed to migrate installation to database")
+		return dbMigration.State
+	}
+
+	installation.Database = dbMigration.SourceDatabase
+	err = s.store.UpdateInstallation(installation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to switch database for installation")
+		return dbMigration.State
+	}
+
+	err = s.refreshSecrets(installation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to refresh secrets on cluster installations during rollback")
+		return dbMigration.State
+	}
+
+	oldState := installation.State
+	installation.State = model.InstallationStateHibernating
+	err = s.store.UpdateInstallation(installation)
+	if err != nil {
+		logger.WithError(err).Error("Failed to set installation back to hibernating state")
+		return dbMigration.State
+	}
+
+	webhookPayload := &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  installation.State,
+		OldState:  oldState,
+		Timestamp: time.Now().UnixNano(),
+		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.environment},
+	}
+
+	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	if err != nil {
+		logger.WithError(err).Error("Unable to process and send webhooks")
+	}
+
+	return model.InstallationDBMigrationStateRollbackFinished
+}
+
 func (s *DBMigrationSupervisor) refreshSecrets(installation *model.Installation) error {
 	cis, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{InstallationID: installation.ID, Paging: model.AllPagesNotDeleted()})
 	if err != nil {
@@ -493,5 +553,32 @@ func (s *DBMigrationSupervisor) refreshSecrets(installation *model.Installation)
 			return errors.Wrap(err, "failed to refresh credentials of cluster installation")
 		}
 	}
+	return nil
+}
+
+func (s *DBMigrationSupervisor) cleanupMigration(dbMigration *model.InstallationDBMigrationOperation, instanceID string, logger log.FieldLogger) model.InstallationDBMigrationOperationState {
+	err := s.cleanupMigratedDBs(dbMigration, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to cleanup source database")
+		return dbMigration.State
+	}
+
+	err = s.store.DeleteInstallationDBMigrationOperation(dbMigration.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to mark migration operation as deleted")
+		return dbMigration.State
+	}
+
+	return model.InstallationDBMigrationStateDeleted
+}
+
+func (s *DBMigrationSupervisor) cleanupMigratedDBs(dbMigration *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
+	sourceDB := s.dbProvider.GetDatabase(dbMigration.InstallationID, dbMigration.SourceDatabase)
+
+	err := sourceDB.TeardownMigrated(s.store, dbMigration, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to tear down migrated database")
+	}
+
 	return nil
 }

@@ -121,6 +121,35 @@ func (sqlStore *SQLStore) TriggerInstallationDBMigration(dbMigrationOp *model.In
 	return dbMigrationOp, nil
 }
 
+// TriggerInstallationDBMigrationRollback triggers rollback of DB migration in single transaction.
+func (sqlStore *SQLStore) TriggerInstallationDBMigrationRollback(dbMigrationOp *model.InstallationDBMigrationOperation, installation *model.Installation) error {
+	dbMigrationOp.State = model.InstallationDBMigrationStateRollbackRequested
+	installation.State = model.InstallationStateDBMigrationRollbackInProgress
+
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	err = sqlStore.updateInstallationDBMigration(tx, dbMigrationOp)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation db migration")
+	}
+
+	err = sqlStore.updateInstallation(tx, installation)
+	if err != nil {
+		return errors.Wrap(err, "failed to update installation")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
+	}
+
+	return nil
+}
+
 // CreateInstallationDBMigrationOperation records installation db migration to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateInstallationDBMigrationOperation(dbMigration *model.InstallationDBMigrationOperation) error {
 	return sqlStore.createInstallationDBMigration(sqlStore.db, dbMigration)
@@ -261,6 +290,21 @@ func (sqlStore *SQLStore) updateInstallationDBMigrationFields(db execer, id stri
 		Where("ID = ?", id))
 	if err != nil {
 		return errors.Wrapf(err, "failed to update installation db migration fields: %s", getMapKeys(fields))
+	}
+
+	return nil
+}
+
+// DeleteInstallationDBMigrationOperation marks the given migration operation as deleted,
+// but does not remove the record from the database.
+func (sqlStore *SQLStore) DeleteInstallationDBMigrationOperation(id string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update(installationDBMigrationTable).
+		Set("DeleteAt", GetMillis()).
+		Where("ID = ?", id).
+		Where("DeleteAt = ?", 0))
+	if err != nil {
+		return errors.Wrap(err, "failed to to mark migration as deleted")
 	}
 
 	return nil

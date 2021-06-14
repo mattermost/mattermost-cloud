@@ -605,6 +605,59 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, model.InstallationStateDBMigrationFailed, installation.State)
 	})
+
+	t.Run("rollback migration", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		installation, _ := setupMigrationRequiredResources(t, sqlStore)
+
+		migrationOp := &model.InstallationDBMigrationOperation{
+			InstallationID: installation.ID,
+			State:          model.InstallationDBMigrationStateRollbackRequested,
+		}
+
+		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
+		require.NoError(t, err)
+
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", &mockMigrationProvisioner{}, logger)
+		dbMigrationSupervisor.Supervise(migrationOp)
+
+		// Assert
+		migrationOp, err = sqlStore.GetInstallationDBMigrationOperation(migrationOp.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationDBMigrationStateRollbackFinished, migrationOp.State)
+
+		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationStateHibernating, installation.State)
+	})
+
+	t.Run("cleanup migration", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		installation, _ := setupMigrationRequiredResources(t, sqlStore)
+
+		migrationOp := &model.InstallationDBMigrationOperation{
+			InstallationID: installation.ID,
+			State:          model.InstallationDBMigrationStateDeletionRequested,
+		}
+
+		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
+		require.NoError(t, err)
+
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", &mockMigrationProvisioner{}, logger)
+		dbMigrationSupervisor.Supervise(migrationOp)
+
+		// Assert
+		migrationOp, err = sqlStore.GetInstallationDBMigrationOperation(migrationOp.ID)
+		require.NoError(t, err)
+		assert.Equal(t, model.InstallationDBMigrationStateDeleted, migrationOp.State)
+		assert.True(t, migrationOp.DeleteAt > 0)
+	})
 }
 
 func setupMigrationRequiredResources(t *testing.T, sqlStore *store.SQLStore) (*model.Installation, *model.ClusterInstallation) {

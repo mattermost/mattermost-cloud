@@ -224,3 +224,25 @@ func TestUpdateInstallationDBRestoration(t *testing.T) {
 		assert.Equal(t, int64(100), fetched.CompleteAt)
 	})
 }
+
+func TestDeleteInstallationDBRestoration(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	dbRestoration := &model.InstallationDBRestorationOperation{
+		InstallationID: "installation",
+		State:          model.InstallationDBRestorationStateRequested,
+	}
+
+	err := sqlStore.CreateInstallationDBRestorationOperation(dbRestoration)
+	require.NoError(t, err)
+	assert.NotEmpty(t, dbRestoration.ID)
+
+	err = sqlStore.DeleteInstallationDBRestorationOperation(dbRestoration.ID)
+	require.NoError(t, err)
+
+	operation, err := sqlStore.GetInstallationDBRestorationOperation(dbRestoration.ID)
+	require.NoError(t, err)
+	assert.True(t, operation.DeleteAt > 0)
+}

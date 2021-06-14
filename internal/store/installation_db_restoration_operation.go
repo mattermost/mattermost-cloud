@@ -196,6 +196,21 @@ func (sqlStore *SQLStore) updateInstallationDBRestorationFields(db execer, id st
 	return nil
 }
 
+// DeleteInstallationDBRestorationOperation marks the given restoration operation as deleted,
+// but does not remove the record from the database.
+func (sqlStore *SQLStore) DeleteInstallationDBRestorationOperation(id string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update(installationDBRestorationTable).
+		Set("DeleteAt", GetMillis()).
+		Where("ID = ?", id).
+		Where("DeleteAt = ?", 0))
+	if err != nil {
+		return errors.Wrapf(err, "failed to to mark restoration as deleted")
+	}
+
+	return nil
+}
+
 // LockInstallationDBRestorationOperation marks the InstallationDBRestoration as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockInstallationDBRestorationOperation(id, lockerID string) (bool, error) {
 	return sqlStore.lockRows(installationDBRestorationTable, []string{id}, lockerID)

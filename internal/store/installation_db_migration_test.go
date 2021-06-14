@@ -40,6 +40,34 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 	assert.Equal(t, model.InstallationStateDBMigrationInProgress, installation.State)
 }
 
+func TestTriggerInstallationDBMigrationRollback(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation := setupHibernatingInstallation(t, sqlStore)
+
+	dbMigrationOp := &model.InstallationDBMigrationOperation{
+		SourceDatabase:      "source",
+		DestinationDatabase: "destination",
+		InstallationID:      installation.ID,
+	}
+	err := sqlStore.CreateInstallationDBMigrationOperation(dbMigrationOp)
+	require.NoError(t, err)
+
+	err = sqlStore.TriggerInstallationDBMigrationRollback(dbMigrationOp, installation)
+	require.NoError(t, err)
+	assert.Equal(t, model.InstallationDBMigrationStateRollbackRequested, dbMigrationOp.State)
+
+	fetchOp, err := sqlStore.GetInstallationDBMigrationOperation(dbMigrationOp.ID)
+	require.NoError(t, err)
+	assert.Equal(t, dbMigrationOp, fetchOp)
+
+	installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, model.InstallationStateDBMigrationRollbackInProgress, installation.State)
+}
+
 func TestInstallationDBMigrationOperation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
@@ -216,4 +244,26 @@ func TestUpdateInstallationDBMigration(t *testing.T) {
 		assert.Equal(t, "test", fetched.InstallationDBRestorationOperationID)
 		assert.Equal(t, int64(100), fetched.CompleteAt)
 	})
+}
+
+func TestDeleteInstallationDBMigration(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	dbMigration := &model.InstallationDBMigrationOperation{
+		InstallationID: "installation",
+		State:          model.InstallationDBMigrationStateSucceeded,
+	}
+
+	err := sqlStore.CreateInstallationDBMigrationOperation(dbMigration)
+	require.NoError(t, err)
+	assert.NotEmpty(t, dbMigration.ID)
+
+	err = sqlStore.DeleteInstallationDBMigrationOperation(dbMigration.ID)
+	require.NoError(t, err)
+
+	operation, err := sqlStore.GetInstallationDBMigrationOperation(dbMigration.ID)
+	require.NoError(t, err)
+	assert.True(t, operation.DeleteAt > 0)
 }

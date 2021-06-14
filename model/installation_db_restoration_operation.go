@@ -46,6 +46,10 @@ const (
 	InstallationDBRestorationStateFailed InstallationDBRestorationState = "installation-db-restoration-failed"
 	// InstallationDBRestorationStateInvalid is an installation db restoration that is invalid.
 	InstallationDBRestorationStateInvalid InstallationDBRestorationState = "installation-db-restoration-invalid"
+	// InstallationDBRestorationStateDeletionRequested is an installation db restoration scheduled for deletion.
+	InstallationDBRestorationStateDeletionRequested InstallationDBRestorationState = "installation-db-restoration-deletion-requested"
+	// InstallationDBRestorationStateDeleted is an installation db restoration that is deleted.
+	InstallationDBRestorationStateDeleted InstallationDBRestorationState = "installation-db-restoration-deleted"
 )
 
 // AllInstallationDBRestorationStatesPendingWork is a list of all installation restoration operation
@@ -55,6 +59,7 @@ var AllInstallationDBRestorationStatesPendingWork = []InstallationDBRestorationS
 	InstallationDBRestorationStateInProgress,
 	InstallationDBRestorationStateFinalizing,
 	InstallationDBRestorationStateFailing,
+	InstallationDBRestorationStateDeletionRequested,
 }
 
 // InstallationDBRestorationFilter describes the parameters used to constrain a set of installation-db-restoration.

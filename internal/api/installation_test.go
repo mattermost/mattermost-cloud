@@ -1072,6 +1072,123 @@ func TestJoinGroup(t *testing.T) {
 	})
 }
 
+func TestWakeUpInstallation(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:     "owner",
+		Version:     "version",
+		DNS:         "dns.example.com",
+		Affinity:    model.InstallationAffinityIsolated,
+		Annotations: []string{"my-annotation"},
+	})
+	require.NoError(t, err)
+
+	t.Run("unknown installation", func(t *testing.T) {
+		installationReponse, err := client.WakeupInstallation(model.NewID(), nil)
+		require.EqualError(t, err, "failed with status code 404")
+		require.Nil(t, installationReponse)
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1.Installation)
+		require.NoError(t, err)
+
+		lockerID := model.NewID()
+
+		locked, err := sqlStore.LockInstallation(installation1.ID, lockerID)
+		require.NoError(t, err)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err := sqlStore.UnlockInstallation(installation1.ID, lockerID, false)
+			require.NoError(t, err)
+			require.True(t, unlocked)
+		}()
+
+		patch := &model.PatchInstallationRequest{
+			Version: sToP(model.NewID()),
+			License: sToP(model.NewID()),
+		}
+		installationReponse, err := client.WakeupInstallation(installation1.ID, patch)
+		require.EqualError(t, err, "failed with status code 409")
+		require.Nil(t, installationReponse)
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+
+		patch := &model.PatchInstallationRequest{
+			Version: sToP(model.NewID()),
+			License: sToP(model.NewID()),
+		}
+		installationResponse, err := client.WakeupInstallation(installation1.ID, patch)
+		require.EqualError(t, err, "failed with status code 403")
+		require.Nil(t, installationResponse)
+
+		err = sqlStore.UnlockInstallationAPI(installation1.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("while stable", func(t *testing.T) {
+		installation1.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation1.Installation)
+		require.NoError(t, err)
+
+		patch := &model.PatchInstallationRequest{
+			Version: sToP(model.NewID()),
+			License: sToP(model.NewID()),
+		}
+		installationResponse, err := client.WakeupInstallation(installation1.ID, patch)
+		require.EqualError(t, err, "failed with status code 400")
+		require.Nil(t, installationResponse)
+	})
+
+	t.Run("while hibernating, with no update values", func(t *testing.T) {
+		installation1.State = model.InstallationStateHibernating
+		err = sqlStore.UpdateInstallation(installation1.Installation)
+		require.NoError(t, err)
+
+		installationResponse, err := client.WakeupInstallation(installation1.ID, nil)
+		require.NoError(t, err)
+		require.NotNil(t, installationResponse)
+		assert.Equal(t, model.InstallationStateWakeUpRequested, installationResponse.State)
+	})
+
+	t.Run("while hibernating, with updated values", func(t *testing.T) {
+		installation1.State = model.InstallationStateHibernating
+		err = sqlStore.UpdateInstallation(installation1.Installation)
+		require.NoError(t, err)
+
+		patch := &model.PatchInstallationRequest{
+			Image:   sToP(model.NewID()),
+			Version: sToP(model.NewID()),
+			License: sToP(model.NewID()),
+		}
+		installationResponse, err := client.WakeupInstallation(installation1.ID, patch)
+		require.NoError(t, err)
+		require.NotNil(t, installationResponse)
+		assert.Equal(t, model.InstallationStateWakeUpRequested, installationResponse.State)
+		assert.Equal(t, *patch.Image, installationResponse.Image)
+		assert.Equal(t, *patch.Version, installationResponse.Version)
+		assert.Equal(t, *patch.License, installationResponse.License)
+	})
+}
+
 func TestLeaveGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)

@@ -58,6 +58,14 @@ type installationStore interface {
 	UpdateInstallationBackupState(backup *model.InstallationBackup) error
 	installationBackupLockStore
 
+	GetInstallationDBMigrationOperations(filter *model.InstallationDBMigrationFilter) ([]*model.InstallationDBMigrationOperation, error)
+	UpdateInstallationDBMigrationOperationState(operation *model.InstallationDBMigrationOperation) error
+	installationDBMigrationOperationLockStore
+
+	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
+	UpdateInstallationDBRestorationOperationState(operation *model.InstallationDBRestorationOperation) error
+	installationDBRestorationLockStore
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 
 	model.InstallationDatabaseStoreInterface
@@ -1082,6 +1090,21 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		}
 	}
 
+	migrationDeletionFinished, err := s.deleteMigrationOperations(installation, instanceID, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete db migration operations")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+	restorationDeletionFinished, err := s.deleteRestorationOperations(installation, instanceID, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete db restoration operations")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+	if !migrationDeletionFinished || !restorationDeletionFinished {
+		logger.Info("Installation db restoration and migration deletion in progress")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+
 	err = s.resourceUtil.GetDatabaseForInstallation(installation).Teardown(s.store, s.keepDatabaseData, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete database")
@@ -1159,7 +1182,7 @@ func (s *InstallationSupervisor) deleteBackups(installation *model.Installation,
 			continue
 		}
 
-		logger.Debugf("Deleting installation backup %q in state %q", backup.ID, backup.State)
+		logger.Debugf("Deleting installation backup %s in state %s", backup.ID, backup.State)
 		backup.State = model.InstallationBackupStateDeletionRequested
 		err = s.store.UpdateInstallationBackupState(backup)
 		if err != nil {
@@ -1182,6 +1205,144 @@ func (s *InstallationSupervisor) deleteBackups(installation *model.Installation,
 
 	if deletingBackups > 0 {
 		logger.Infof("Installation backups deletion in progress, deleting backups %d", deletingBackups)
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (s *InstallationSupervisor) deleteRestorationOperations(installation *model.Installation, instanceID string, logger log.FieldLogger) (bool, error) {
+	logger.Info("Deleting installation db restoration operations")
+
+	restorationOperations, err := s.store.GetInstallationDBRestorationOperations(&model.InstallationDBRestorationFilter{
+		InstallationID: installation.ID,
+		Paging:         model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to list db restoration operations")
+	}
+
+	if len(restorationOperations) == 0 {
+		logger.Info("No existing db restoration operations found for installation")
+		return true, nil
+	}
+
+	operationIDs := getInstallationDBRestorationOperationIDs(restorationOperations)
+	installationBackupsLocks := newInstallationDBRestorationLocks(operationIDs, instanceID, s.store, logger)
+
+	if !installationBackupsLocks.TryLock() {
+		return false, errors.Errorf("Failed to lock %d installation db restorations", len(restorationOperations))
+	}
+	defer installationBackupsLocks.Unlock()
+
+	// Fetch the same elements again, now that we have the locks.
+	restorationOperations, err = s.store.GetInstallationDBRestorationOperations(&model.InstallationDBRestorationFilter{
+		IDs:    operationIDs,
+		Paging: model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch %d installation db restoration operations by ids", len(restorationOperations))
+	}
+
+	if len(restorationOperations) != len(operationIDs) {
+		logger.Warnf("Found only %d installation db restoration operations after locking, expected %d", len(restorationOperations), len(operationIDs))
+	}
+
+	deleted := 0
+	deleting := 0
+
+	for _, operation := range restorationOperations {
+		switch operation.State {
+		case model.InstallationDBRestorationStateDeleted:
+			deleted++
+			continue
+		case model.InstallationDBRestorationStateDeletionRequested:
+			deleting++
+			continue
+		}
+
+		logger.Debugf("Deleting installation db restoration operation %s in state %s", operation.ID, operation.State)
+		operation.State = model.InstallationDBRestorationStateDeletionRequested
+		err = s.store.UpdateInstallationDBRestorationOperationState(operation)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to mark istallation db restoration %s for deletion", operation.ID)
+		}
+		deleting++
+	}
+
+	logger.Debugf("Found %d installation db restorations, %d deleting, %d deleted", len(restorationOperations), deleting, deleted)
+
+	if deleting > 0 {
+		logger.Infof("Installation db restorations deletion in progress, deleting operations %d", deleting)
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (s *InstallationSupervisor) deleteMigrationOperations(installation *model.Installation, instanceID string, logger log.FieldLogger) (bool, error) {
+	logger.Info("Deleting installation db migration operations")
+
+	migrationOperations, err := s.store.GetInstallationDBMigrationOperations(&model.InstallationDBMigrationFilter{
+		InstallationID: installation.ID,
+		Paging:         model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to list db migration operations")
+	}
+
+	if len(migrationOperations) == 0 {
+		logger.Info("No existing db migration operations found for installation")
+		return true, nil
+	}
+
+	operationIDs := getInstallationDBMigrationOperationIDs(migrationOperations)
+	installationBackupsLocks := newInstallationDBMigrationOperationLocks(operationIDs, instanceID, s.store, logger)
+
+	if !installationBackupsLocks.TryLock() {
+		return false, errors.Errorf("Failed to lock %d installation db migrations", len(migrationOperations))
+	}
+	defer installationBackupsLocks.Unlock()
+
+	// Fetch the same elements again, now that we have the locks.
+	migrationOperations, err = s.store.GetInstallationDBMigrationOperations(&model.InstallationDBMigrationFilter{
+		IDs:    operationIDs,
+		Paging: model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to fetch %d installation db migration operations by ids", len(migrationOperations))
+	}
+
+	if len(migrationOperations) != len(operationIDs) {
+		logger.Warnf("Found only %d installation db migration operations after locking, expected %d", len(migrationOperations), len(operationIDs))
+	}
+
+	deleted := 0
+	deleting := 0
+
+	for _, operation := range migrationOperations {
+		switch operation.State {
+		case model.InstallationDBMigrationStateDeleted:
+			deleted++
+			continue
+		case model.InstallationDBMigrationStateDeletionRequested:
+			deleting++
+			continue
+		}
+
+		logger.Debugf("Deleting installation db migration operation %s in state %s", operation.ID, operation.State)
+		operation.State = model.InstallationDBMigrationStateDeletionRequested
+		err = s.store.UpdateInstallationDBMigrationOperationState(operation)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to mark istallation db migration %s for deletion", operation.ID)
+		}
+		deleting++
+	}
+
+	logger.Debugf("Found %d installation db migrations, %d deleting, %d deleted", len(migrationOperations), deleting, deleted)
+
+	if deleting > 0 {
+		logger.Infof("Installation db migrations deletion in progress, deleting operations %d", deleting)
 		return false, nil
 	}
 
@@ -1251,6 +1412,22 @@ func getInstallationBackupsIDs(backups []*model.InstallationBackup) []string {
 		backupIDs = append(backupIDs, backup.ID)
 	}
 	return backupIDs
+}
+
+func getInstallationDBRestorationOperationIDs(operations []*model.InstallationDBRestorationOperation) []string {
+	ids := make([]string, 0, len(operations))
+	for _, op := range operations {
+		ids = append(ids, op.ID)
+	}
+	return ids
+}
+
+func getInstallationDBMigrationOperationIDs(operations []*model.InstallationDBMigrationOperation) []string {
+	ids := make([]string, 0, len(operations))
+	for _, op := range operations {
+		ids = append(ids, op.ID)
+	}
+	return ids
 }
 
 func getAnnotationsIDs(annotations []*model.Annotation) []string {
