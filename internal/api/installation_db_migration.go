@@ -73,7 +73,7 @@ func handleTriggerInstallationDatabaseMigration(c *Context, w http.ResponseWrite
 
 	currentDB, err := c.Store.GetMultitenantDatabaseForInstallationID(installationDTO.ID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to get current multi-tenant database for installation")
+		c.Logger.WithError(err).Error("Failed to get current multi-tenant database for installation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -306,9 +306,6 @@ func validateDBMigration(c *Context, installation *model.Installation, migration
 	}
 	if destinationDB == nil {
 		return errors.Errorf("destination database with id %q not found", migrationRequest.DestinationMultiTenant.DatabaseID)
-	}
-	if destinationDB.DatabaseType != model.DatabaseEngineTypePostgres {
-		return errors.Errorf("destination database is not Postgres")
 	}
 
 	if currentDB.ID == destinationDB.ID {
