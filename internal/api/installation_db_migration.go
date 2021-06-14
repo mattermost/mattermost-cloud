@@ -213,7 +213,7 @@ func handleCommitInstallationDatabaseMigration(c *Context, w http.ResponseWriter
 	defer unlockOnce()
 
 	if dbMigrationOperation.State != model.InstallationDBMigrationStateSucceeded {
-		c.Logger.Warn("Cannot commit not succeeded DB migration")
+		c.Logger.Warn("Cannot commit DB migration that hasn't succeeded")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -293,7 +293,7 @@ func handleRollbackInstallationDatabaseMigration(c *Context, w http.ResponseWrit
 func validateDBMigration(c *Context, installation *model.Installation, migrationRequest *model.InstallationDBMigrationRequest, currentDB *model.MultitenantDatabase) error {
 	if migrationRequest.DestinationDatabase != model.InstallationDatabaseMultiTenantRDSPostgres ||
 		installation.Database != model.InstallationDatabaseMultiTenantRDSPostgres {
-		return errors.Errorf("db migration is supported when both source and destination are %q database", model.InstallationDatabaseMultiTenantRDSPostgres)
+		return errors.Errorf("db migration is supported only when both source and destination are %q database types", model.InstallationDatabaseMultiTenantRDSPostgres)
 	}
 
 	if migrationRequest.DestinationMultiTenant == nil {
