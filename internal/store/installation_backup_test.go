@@ -122,8 +122,9 @@ func TestCreateInstallationBackup(t *testing.T) {
 	installation := setupStableInstallation(t, sqlStore)
 
 	backup := &model.InstallationBackup{
-		InstallationID: installation.ID,
-		State:          model.InstallationBackupStateBackupRequested,
+		InstallationID:       installation.ID,
+		State:                model.InstallationBackupStateBackupRequested,
+		BackedUpDatabaseType: model.InstallationDatabaseMultiTenantRDSPostgres,
 	}
 
 	err := sqlStore.CreateInstallationBackup(backup)

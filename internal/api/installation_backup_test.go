@@ -39,7 +39,7 @@ func TestRequestInstallationBackup(t *testing.T) {
 			Version:   "version",
 			DNS:       "dns1.example.com",
 			Affinity:  model.InstallationAffinityMultiTenant,
-			Database:  model.InstallationDatabaseMultiTenantRDSPostgres,
+			Database:  model.InstallationDatabaseSingleTenantRDSPostgres,
 			Filestore: model.InstallationFilestoreBifrost,
 		})
 	require.NoError(t, err)
@@ -57,6 +57,7 @@ func TestRequestInstallationBackup(t *testing.T) {
 	backup, err := client.CreateInstallationBackup(installation1.ID)
 	require.NoError(t, err)
 	assert.NotEmpty(t, backup.ID)
+	assert.Equal(t, installation1.Database, backup.BackedUpDatabaseType)
 
 	t.Run("fail to request multiple backups for same installation1", func(t *testing.T) {
 		_, err = client.CreateInstallationBackup(installation1.ID)
