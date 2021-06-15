@@ -1252,3 +1252,20 @@ func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID str
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// MigrateDNS requests the migration of cluster installation(s) from the configured provisioning server.
+func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/switch_cluster_roles"), request)
+	if err != nil {
+		return nil
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}

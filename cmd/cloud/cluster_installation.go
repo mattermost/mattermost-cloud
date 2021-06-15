@@ -61,6 +61,12 @@ func init() {
 	deleteInActiveClusterInstallationCmd.MarkFlagRequired("clusterr")
 	deleteInActiveClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
 
+	postMigrationSwitchClusterRolesCmd.Flags().String("switch-role", "", "Post migration step to switch the roles for primary & secondary clusters.")
+	postMigrationSwitchClusterRolesCmd.Flags().String("source-cluster", "", "The source cluster to be mark as secondary cluster.")
+	postMigrationSwitchClusterRolesCmd.MarkFlagRequired("source-cluster")
+	postMigrationSwitchClusterRolesCmd.Flags().String("target-cluster", "", "The target cluster to be mark as primary cluster.")
+	postMigrationSwitchClusterRolesCmd.MarkFlagRequired("target-cluster")
+
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
@@ -69,6 +75,7 @@ func init() {
 
 	clusterInstallationsMigrationCmd.AddCommand(dnsMigrationCmd)
 	clusterInstallationsMigrationCmd.AddCommand(deleteInActiveClusterInstallationCmd)
+	clusterInstallationsMigrationCmd.AddCommand(postMigrationSwitchClusterRolesCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationsMigrationCmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
@@ -329,6 +336,27 @@ var deleteInActiveClusterInstallationCmd = &cobra.Command{
 			client.DeleteInActiveClusterInstallationsByCluster(cluster)
 			return nil
 		}
+		return nil
+	},
+}
+
+// Command to switch cluster roles, mainly mark secondary cluster as primary after migration
+var postMigrationSwitchClusterRolesCmd = &cobra.Command{
+	Use:   "switch-cluster role",
+	Short: "Mark the target/secondary cluster as primary cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		cluster, _ := command.Flags().GetString("source-cluster")
+		target_cluster, _ := command.Flags().GetString("target-cluster")
+		installation, _ := command.Flags().GetString("installation")
+		lockInstallation, _ := command.Flags().GetBool("lock-installation")
+
+		client.SwitchClusterRoles(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, LockInstallation: lockInstallation})
+
 		return nil
 	},
 }

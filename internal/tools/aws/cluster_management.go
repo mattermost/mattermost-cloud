@@ -409,3 +409,24 @@ func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, cluste
 	}
 	return nil
 }
+
+// SwithClusterTags after migration.
+func (a *Client) SwithClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
+
+	clusterResources, err := a.GetVpcResources(clusterID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to get vpc resources for %s", clusterID)
+	}
+
+	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), targetClusterID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+	}
+
+	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcSecondaryClusterIDTagKey), clusterID, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
+	}
+
+	return nil
+}
