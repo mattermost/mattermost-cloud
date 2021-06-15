@@ -309,6 +309,7 @@ var serverCmd = &cobra.Command{
 			Provisioner: kopsProvisioner,
 			Environment: awsClient.GetCloudEnvironmentName(),
 			Logger:      logger,
+			AwsClient:   awsClient,
 		})
 
 		listen, _ := command.Flags().GetString("listen")

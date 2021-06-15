@@ -441,3 +441,17 @@ func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, clusterID
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, clusterID, owner, logger)
 }
+
+// SwithClusterTags mocks base method
+func (m *MockAWS) SwithClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SwithClusterTags", clusterID, targetClusterID, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SwithClusterTags indicates an expected call of SwithClusterTags
+func (mr *MockAWSMockRecorder) SwithClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwithClusterTags", reflect.TypeOf((*MockAWS)(nil).SwithClusterTags), clusterID, targetClusterID, logger)
+}

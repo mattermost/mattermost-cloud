@@ -7,7 +7,7 @@ package api
 import (
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Supervisor describes the interface to notify the background jobs of an actionable change.
@@ -98,6 +98,10 @@ type Provisioner interface {
 	GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error)
 }
 
+type AwsClient interface {
+	SwithClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
+}
+
 // Context provides the API with all necessary data and interfaces for responding to requests.
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
@@ -107,7 +111,8 @@ type Context struct {
 	Provisioner Provisioner
 	RequestID   string
 	Environment string
-	Logger      logrus.FieldLogger
+	Logger      log.FieldLogger
+	AwsClient   AwsClient
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
@@ -117,5 +122,6 @@ func (c *Context) Clone() *Context {
 		Supervisor:  c.Supervisor,
 		Provisioner: c.Provisioner,
 		Logger:      c.Logger,
+		AwsClient:   c.AwsClient,
 	}
 }

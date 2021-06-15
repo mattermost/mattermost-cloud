@@ -24,6 +24,7 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationsRouter.Handle("/migrate/dns", addContext(handleMigrateDNS)).Methods("POST")
 	clusterInstallationsRouter.Handle("/migrate/delete_inactive/{clusterID}", addContext(handleDeleteInActiveClusterInstallationsByCluster)).Methods("DELETE")
 	clusterInstallationsRouter.Handle("/migrate/delete_inactive/cluster_installation/{ClusterInstallationID}", addContext(handleDeleteInActiveClusterInstallationByID)).Methods("DELETE")
+	clusterInstallationsRouter.Handle("/migrate/switch_cluster_roles", addContext(handleSwitchClusterRoles)).Methods("POST")
 
 	clusterInstallationRouter := apiRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
 	clusterInstallationRouter.Handle("", addContext(handleGetClusterInstallation)).Methods("GET")
@@ -374,18 +375,6 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	}
 	c.Logger = c.Logger.WithField("migration request for cluster installation", mcir)
 
-	if len(mcir.ClusterID) == 0 {
-		c.Logger.WithError(err).Error("missing mandatory primary cluster in a migration request")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if len(mcir.TargetCluster) == 0 {
-		c.Logger.WithError(err).Error("missing mandatory secondary cluster in a migration request")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.ClusterID,
 		InstallationID: mcir.InstallationID,
@@ -404,39 +393,27 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Set the allows installation to false, so primary cluster won't accept new installation(s) during migration
+	// verify that the allows installation is false for the source cluster before migration starts
 	cluster, err := c.Store.GetCluster(mcir.ClusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get cluster")
 		w.WriteHeader(http.StatusInternalServerError)
-	}
-	cluster.AllowInstallations = false
-	err = c.Store.UpdateCluster(cluster)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to update cluster to disable installation scheduling")
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-
-	// Migrate the cluster installations to the target cluster
-	c.Logger.Infof("migrating installation(s) to clusterID: %s", mcir.TargetCluster)
-	err = c.Store.MigrateClusterInstallations(clusterInstallations, mcir.TargetCluster)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to migrate cluster installation(s)")
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// Set the allows installation to true, so primary cluster wont accept new installation(s) during migration
-	cluster, err = c.Store.GetCluster(mcir.ClusterID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to get cluster")
+	// Migrate the cluster installations to the target cluster
+	if !cluster.AllowInstallations {
+		c.Logger.Infof("migrating installation(s) to clusterID: %s", mcir.TargetCluster)
+		err = c.Store.MigrateClusterInstallations(clusterInstallations, mcir.TargetCluster)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to migrate cluster installation(s)")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		c.Logger.WithError(err).Error("allow installation must be set to false for the source cluster.")
 		w.WriteHeader(http.StatusInternalServerError)
-	}
-	cluster.AllowInstallations = true
-	err = c.Store.UpdateCluster(cluster)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to update cluster to enable installation scheduling")
-		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -451,18 +428,6 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.Logger = c.Logger.WithField("cluster_installation", mcir)
-
-	if len(mcir.ClusterID) == 0 {
-		c.Logger.WithError(err).Error("missing mandatory primary cluster in a migration request")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if len(mcir.TargetCluster) == 0 {
-		c.Logger.WithError(err).Error("missing mandatory secondary cluster in a migration request")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
 	filter := &model.ClusterInstallationFilter{
@@ -498,47 +463,34 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set the allows installation to false, so primary cluster wont accept new installation(s) during migration
+	// verify that the allows installation is false for the source cluster before migration starts
 	cluster, err := c.Store.GetCluster(mcir.ClusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to get cluster")
 		w.WriteHeader(http.StatusInternalServerError)
-	}
-	cluster.AllowInstallations = false
-	err = c.Store.UpdateCluster(cluster)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to update cluster to disable installation scheduling")
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-
-	// DNS Switch
-	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
-	newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
-	c.Logger.Infof("total DNS records to migrate: %s", len(clusterInstallations))
-	var installationIDs []string
-	for _, ci := range clusterInstallations {
-		installationIDs = append(installationIDs, ci.InstallationID)
-	}
-	status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs)
-	if status != 0 {
-		c.Logger.Error("failed to migrate DNS records")
-		w.WriteHeader(status)
 		return
 	}
 
-	// Set the allows installation to true, so primary cluster wont accept new installation(s) during migration
-	cluster, err = c.Store.GetCluster(mcir.ClusterID)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to get cluster")
+	// DNS Switch
+	if !cluster.AllowInstallations {
+		clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
+		newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
+		c.Logger.Infof("total DNS records to migrate: %s", len(clusterInstallations))
+		var installationIDs []string
+		for _, ci := range clusterInstallations {
+			installationIDs = append(installationIDs, ci.InstallationID)
+		}
+		status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs)
+		if status != 0 {
+			c.Logger.Error("failed to migrate DNS records")
+			w.WriteHeader(status)
+			return
+		}
+	} else {
+		c.Logger.WithError(err).Error("allow installation must be set to false for the source cluster.")
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	cluster.AllowInstallations = true
-	err = c.Store.UpdateCluster(cluster)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to update cluster to enable installation scheduling")
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -548,13 +500,13 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 	clusterID := vars["clusterID"]
 	c.Logger = c.Logger.WithField("clusterID", clusterID)
 	if len(clusterID) == 0 {
-		c.Logger.Error("Missing mandatory primary cluster in a migration request")
+		c.Logger.Error("missing mandatory source cluster in a migration request")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Deleting multiple inactive cluster installations
-	c.Logger.Infof("Deleting inactive cluster installations for cluster ID %s", clusterID)
+	c.Logger.Infof("deleting inactive cluster installations for cluster ID %s", clusterID)
 	err := c.Store.DeleteInActiveClusterInstallationByClusterID(clusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to delete inactive cluster installations for cluster ID", clusterID)
@@ -600,15 +552,8 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 			c.Logger.Error("failed to acquire lock for installation")
 			return http.StatusInternalServerError
 		}
-	}
-	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs)
-	if err != nil {
-		c.Logger.WithError(err).Error("failed to migrate DNS records")
-		return http.StatusInternalServerError
-	}
-	defer func() int {
-		fmt.Println("defer unlocked called")
-		if mcir.LockInstallation {
+		defer func() int {
+			fmt.Println("defer unlocked called")
 			unlocked, err := c.Store.UnlockInstallations(installationIDs, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock installation")
@@ -617,10 +562,15 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 				c.Logger.Warn("failed to release lock for installation")
 				return http.StatusInternalServerError
 			}
-		}
-		fmt.Println("defer unlocked finished")
-		return 0
-	}()
+			fmt.Println("defer unlocked finished")
+			return 0
+		}()
+	}
+	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to migrate DNS records")
+		return http.StatusInternalServerError
+	}
 
 	c.Logger.Infof("DNS Switch over has been processed for cluster %s: ", mcir.ClusterID)
 	return 0
@@ -631,5 +581,25 @@ func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation
 	for _, clusterInstallation := range clusterInstallations {
 		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
 	}
+
 	return clusterInstallationIDs
+}
+
+// handleSwitchClusterRoles responds to Post /api/cluster_installations/migrate/switch_cluster_roles.
+func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request) {
+	mcir, err := model.NewMigrateClusterInstallationRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode cluster migration request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	c.Logger = c.Logger.WithField("cluster_installation", mcir)
+
+	err = c.AwsClient.SwithClusterTags(mcir.ClusterID, mcir.TargetCluster, c.Logger)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to switch cluster tags")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
