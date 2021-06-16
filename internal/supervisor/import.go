@@ -247,6 +247,9 @@ func (s *ImportSupervisor) teamAlreadyExists(mmctl *mmctl, teamName string) (boo
 }
 
 func (s *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
+	if imprt.Type == awat.MattermostWorkspaceBackupType {
+		return nil
+	}
 	// ensure that the team exists
 	found, err := s.teamAlreadyExists(mmctl, imprt.Team)
 	if err != nil {
