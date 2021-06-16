@@ -1325,7 +1325,7 @@ var migrations = []migration{
 	}},
 	{semver.MustParse("0.28.0"), semver.MustParse("0.29.0"), func(e execer) error {
 		// Add IsStale status column for ClusterInstallation.
-		_, err := e.Exec(`ALTER TABLE ClusterInstallation ADD COLUMN IsStale BOOLEAN NOT NULL DEFAULT 'false';`)
+		_, err := e.Exec(`ALTER TABLE ClusterInstallation ADD COLUMN IsActive BOOLEAN NOT NULL DEFAULT 'true';`)
 		if err != nil {
 			return err
 		}
