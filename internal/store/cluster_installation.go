@@ -237,6 +237,7 @@ func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*mo
 	if err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
+
 	return nil
 }
 
@@ -268,6 +269,7 @@ func (sqlStore *SQLStore) createClusterInstallation(db execer, clusterInstallati
 	return nil
 }
 
+// SwitchDNS , performs the dns switch from source cluster to target cluster
 func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
@@ -294,5 +296,6 @@ func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []stri
 	if err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
+
 	return nil
 }

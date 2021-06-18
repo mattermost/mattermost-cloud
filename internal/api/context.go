@@ -7,7 +7,7 @@ package api
 import (
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Supervisor describes the interface to notify the background jobs of an actionable change.
@@ -106,7 +106,7 @@ type Provisioner interface {
 }
 
 type AwsClient interface {
-	SwithClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
+	SwithClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
 }
 
 // Context provides the API with all necessary data and interfaces for responding to requests.
@@ -118,7 +118,7 @@ type Context struct {
 	Provisioner Provisioner
 	RequestID   string
 	Environment string
-	Logger      log.FieldLogger
+	Logger      logrus.FieldLogger
 	AwsClient   AwsClient
 }
 

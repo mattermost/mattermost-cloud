@@ -443,6 +443,7 @@ func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, c
 func (a *mockAWS) SwithClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
 	return nil
 }
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
 

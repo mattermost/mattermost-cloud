@@ -514,7 +514,7 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 		return
 	}
 
-	c.Logger.WithError(err).Error("successfully deleted inactive cluster installations for cluster ID", clusterID)
+	c.Logger.Infof("successfully deleted inactive cluster installations for cluster ID %s", clusterID)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -536,7 +536,7 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	c.Logger.Infof("successfully deleted inactive cluster installations ID 5s", clusterInstallationID)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -553,7 +553,6 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 			return http.StatusInternalServerError
 		}
 		defer func() int {
-			fmt.Println("defer unlocked called")
 			unlocked, err := c.Store.UnlockInstallations(installationIDs, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock installation")
@@ -562,7 +561,6 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 				c.Logger.Warn("failed to release lock for installation")
 				return http.StatusInternalServerError
 			}
-			fmt.Println("defer unlocked finished")
 			return 0
 		}()
 	}
