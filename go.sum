@@ -530,6 +530,8 @@ github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7
 github.com/marstr/guid v0.0.0-20170427235115-8bdf7d1a087c/go.mod h1:74gB1z2wpxxInTG6yaqA7KrtM0NZ+RbrcqDvYHefzho=
 github.com/mattermost/awat v0.0.0-20210430184220-463fd5614511 h1:e2PZfje2OCuDWnTRiS7XuecSKr3reX67v+EwslZLpZA=
 github.com/mattermost/awat v0.0.0-20210430184220-463fd5614511/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
+github.com/mattermost/awat v0.0.0-20210616202500-f0bdd4f43f90 h1:Ktf4qHK/padM1ebC6lA3SWnspvTgV9ZQRZ4ZsXxGk5U=
+github.com/mattermost/awat v0.0.0-20210616202500-f0bdd4f43f90/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
 github.com/mattermost/blubr v0.0.0-20200113232543-f0ce67760aeb/go.mod h1:Tk99160Gy8m4rJPKIgYZrYneLepPCx5KPB3rp9+iK00=
 github.com/mattermost/blubr v0.0.0-20210505124256-5b36c16ffa07/go.mod h1:RW6eWGoIeenY/GKtuDcF+ggCNk/FZWR0gYgDxuLzQOM=
 github.com/mattermost/go-i18n v1.11.0/go.mod h1:RyS7FDNQlzF1PsjbJWHRI35exqaKGSO9qD4iv8QjE34=
