@@ -285,10 +285,10 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		cluster, _ := command.Flags().GetString("source-cluster")
-		target_cluster, _ := command.Flags().GetString("target-cluster")
+		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 
-		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, DNSSwitch: false, LockInstallation: false})
+		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: targetcluster, InstallationID: installation, DNSSwitch: false, LockInstallation: false})
 
 		return nil
 	},
@@ -305,11 +305,11 @@ var dnsMigrationCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		cluster, _ := command.Flags().GetString("source-cluster")
-		target_cluster, _ := command.Flags().GetString("target-cluster")
+		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, LockInstallation: lockInstallation})
+		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
 
 		return nil
 	},
@@ -351,11 +351,11 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		cluster, _ := command.Flags().GetString("source-cluster")
-		target_cluster, _ := command.Flags().GetString("target-cluster")
+		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		client.SwitchClusterRoles(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: target_cluster, InstallationID: installation, LockInstallation: lockInstallation})
+		client.SwitchClusterRoles(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
 
 		return nil
 	},

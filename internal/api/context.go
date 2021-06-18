@@ -105,6 +105,7 @@ type Provisioner interface {
 	GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error)
 }
 
+// AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
 	SwithClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
 }

@@ -1253,7 +1253,7 @@ func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID str
 	}
 }
 
-// MigrateDNS requests the migration of cluster installation(s) from the configured provisioning server.
+// SwitchClusterRoles requests the migration of cluster installation(s) from the configured provisioning server.
 func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) error {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/switch_cluster_roles"), request)
 	if err != nil {
