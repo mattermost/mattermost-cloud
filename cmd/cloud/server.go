@@ -65,7 +65,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("backup-supervisor", false, "Whether this server will run a backup supervisor or not.")
 	serverCmd.PersistentFlags().Bool("import-supervisor", false, "Whether this server will run a workspace import supervisor or not.")
 	serverCmd.PersistentFlags().String("awat", "http://localhost:8077", "The location of the Automatic Workspace Archive Translator if the import supervisor is being used.")
-	serverCmd.PersistentFlags().Bool("installation-restoration-supervisor", false, "Whether this server will run an installation restoration supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-db-restoration-supervisor", false, "Whether this server will run an installation db restoration supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-db-migration-supervisor", false, "Whether this server will run an installation db migration supervisor or not.")
 
 	// Scheduling and installation options
 	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
@@ -156,8 +157,18 @@ var serverCmd = &cobra.Command{
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
 		backupSupervisor, _ := command.Flags().GetBool("backup-supervisor")
 		importSupervisor, _ := command.Flags().GetBool("import-supervisor")
-		installationRestorationSupervisor, _ := command.Flags().GetBool("installation-restoration-supervisor")
-		supervisorsEnabled := []bool{clusterSupervisor, installationSupervisor, clusterInstallationSupervisor, groupSupervisor, backupSupervisor, installationRestorationSupervisor, importSupervisor}
+		installationDBRestorationSupervisor, _ := command.Flags().GetBool("installation-db-restoration-supervisor")
+		installationDBMigrationSupervisor, _ := command.Flags().GetBool("installation-db-migration-supervisor")
+		supervisorsEnabled := []bool{
+			clusterSupervisor,
+			installationSupervisor,
+			clusterInstallationSupervisor,
+			groupSupervisor,
+			backupSupervisor,
+			importSupervisor,
+			installationDBRestorationSupervisor,
+			installationDBMigrationSupervisor,
+		}
 		if !isAny(supervisorsEnabled) {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
@@ -193,7 +204,8 @@ var serverCmd = &cobra.Command{
 			"cluster-installation-supervisor":        clusterInstallationSupervisor,
 			"backup-supervisor":                      backupSupervisor,
 			"import-supervisor":                      importSupervisor,
-			"installation-restoration-supervisor":    installationRestorationSupervisor,
+			"installation-db-restoration-supervisor": installationDBRestorationSupervisor,
+			"installation-db-migration-supervisor":   installationDBMigrationSupervisor,
 			"store-version":                          currentVersion,
 			"state-store":                            s3StateStore,
 			"working-directory":                      wd,
@@ -286,8 +298,11 @@ var serverCmd = &cobra.Command{
 			}
 			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, kopsProvisioner, logger))
 		}
-		if installationRestorationSupervisor {
+		if installationDBRestorationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, kopsProvisioner, instanceID, logger))
+		}
+		if installationDBMigrationSupervisor {
+			multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, kopsProvisioner, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -307,6 +322,7 @@ var serverCmd = &cobra.Command{
 			Store:       sqlStore,
 			Supervisor:  supervisor,
 			Provisioner: kopsProvisioner,
+			DBProvider:  resourceUtil,
 			Environment: awsClient.GetCloudEnvironmentName(),
 			Logger:      logger,
 		})
