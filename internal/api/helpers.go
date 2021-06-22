@@ -5,9 +5,10 @@
 package api
 
 import (
-	"github.com/mattermost/mattermost-cloud/model"
 	"net/url"
 	"strconv"
+
+	"github.com/mattermost/mattermost-cloud/model"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

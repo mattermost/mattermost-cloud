@@ -150,3 +150,38 @@ func lockInstallationBackup(c *Context, backupID string) (*model.InstallationBac
 		})
 	}
 }
+
+// lockInstallationDBMigrationOperation synchronizes access to the given db migration operation across
+// potentially multiple provisioning servers.
+func lockInstallationDBMigrationOperation(c *Context, operationID string) (*model.InstallationDBMigrationOperation, int, func()) {
+	dbMigrationOperation, err := c.Store.GetInstallationDBMigrationOperation(operationID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query db migration operation")
+		return nil, http.StatusInternalServerError, nil
+	}
+	if dbMigrationOperation == nil {
+		return nil, http.StatusNotFound, nil
+	}
+
+	locked, err := c.Store.LockInstallationDBMigrationOperation(operationID, c.RequestID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to lock db migration operation")
+		return nil, http.StatusInternalServerError, nil
+	} else if !locked {
+		c.Logger.Error("failed to acquire lock for db migration operation")
+		return nil, http.StatusConflict, nil
+	}
+
+	unlockOnce := sync.Once{}
+
+	return dbMigrationOperation, 0, func() {
+		unlockOnce.Do(func() {
+			unlocked, err := c.Store.UnlockInstallationDBMigrationOperation(dbMigrationOperation.ID, c.RequestID, false)
+			if err != nil {
+				c.Logger.WithError(err).Errorf("failed to unlock db migration operation")
+			} else if unlocked != true {
+				c.Logger.Warn("failed to release lock for db migration operation")
+			}
+		})
+	}
+}
