@@ -17,6 +17,8 @@ type Supervisor interface {
 
 // Store describes the interface required to persist changes made via API requests.
 type Store interface {
+	model.InstallationDatabaseStoreInterface
+
 	CreateCluster(cluster *model.Cluster, annotations []*model.Annotation) error
 	GetCluster(clusterID string) (*model.Cluster, error)
 	GetClusterDTO(clusterID string) (*model.ClusterDTO, error)
@@ -64,8 +66,6 @@ type Store interface {
 	GetWebhook(webhookID string) (*model.Webhook, error)
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 	DeleteWebhook(webhookID string) error
-
-	model.InstallationDatabaseStoreInterface
 
 	GetOrCreateAnnotations(annotations []*model.Annotation) ([]*model.Annotation, error)
 
