@@ -27,7 +27,7 @@ func init() {
 	installationDBMigrationsListCmd.Flags().Bool("table", false, "Whether to display output in a table or not.")
 
 	installationDBMigrationGetCmd.Flags().String("db-migration", "", "The id of the installation db migration operation.")
-	installationDBMigrationCommitCmd.MarkFlagRequired("db-migration")
+	installationDBMigrationGetCmd.MarkFlagRequired("db-migration")
 
 	installationDBMigrationCommitCmd.Flags().String("db-migration", "", "The id of the installation db migration operation.")
 	installationDBMigrationCommitCmd.MarkFlagRequired("db-migration")

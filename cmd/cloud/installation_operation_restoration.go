@@ -26,8 +26,12 @@ func init() {
 	registerPagingFlags(installationRestorationsListCmd)
 	installationRestorationsListCmd.Flags().Bool("table", false, "Whether to display output in a table or not.")
 
+	installationRestorationGetCmd.Flags().String("restoration", "", "The id of restoration operation.")
+	installationRestorationGetCmd.MarkFlagRequired("restoration")
+
 	installationRestorationOperationCmd.AddCommand(installationRestorationRequestCmd)
 	installationRestorationOperationCmd.AddCommand(installationRestorationsListCmd)
+	installationRestorationOperationCmd.AddCommand(installationRestorationGetCmd)
 }
 
 var installationRestorationOperationCmd = &cobra.Command{
@@ -110,6 +114,31 @@ var installationRestorationsListCmd = &cobra.Command{
 		}
 
 		err = printJSON(dbRestorationOperations)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var installationRestorationGetCmd = &cobra.Command{
+	Use:   "get",
+	Short: "Fetches given installation database restoration operation.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		restorationID, _ := command.Flags().GetString("restoration")
+
+		restorationOperation, err := client.GetInstallationDBRestoration(restorationID)
+		if err != nil {
+			return errors.Wrap(err, "failed to get installation database restoration")
+		}
+
+		err = printJSON(restorationOperation)
 		if err != nil {
 			return err
 		}
