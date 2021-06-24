@@ -58,7 +58,7 @@ func init() {
 	dnsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process, default is ON.")
 
 	deleteInActiveClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installation from.")
-	deleteInActiveClusterInstallationCmd.MarkFlagRequired("clusterr")
+	deleteInActiveClusterInstallationCmd.MarkFlagRequired("cluster")
 	deleteInActiveClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
 
 	postMigrationSwitchClusterRolesCmd.Flags().String("switch-role", "", "Post migration step to switch the roles for primary & secondary clusters.")
@@ -284,11 +284,11 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		cluster, _ := command.Flags().GetString("source-cluster")
+		sourceCluster, _ := command.Flags().GetString("source-cluster")
 		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 
-		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: targetcluster, InstallationID: installation, DNSSwitch: false, LockInstallation: false})
+		client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster, TargetClusterID: targetcluster, InstallationID: installation, DNSSwitch: false, LockInstallation: false})
 
 		return nil
 	},
@@ -304,12 +304,12 @@ var dnsMigrationCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		cluster, _ := command.Flags().GetString("source-cluster")
+		sourceCluster, _ := command.Flags().GetString("source-cluster")
 		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
+		client.MigrateDNS(&model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster, TargetClusterID: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
 
 		return nil
 	},
@@ -350,12 +350,12 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
-		cluster, _ := command.Flags().GetString("source-cluster")
+		sourceCluster, _ := command.Flags().GetString("source-cluster")
 		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		client.SwitchClusterRoles(&model.MigrateClusterInstallationRequest{ClusterID: cluster, TargetCluster: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
+		client.SwitchClusterRoles(&model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster, TargetClusterID: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
 
 		return nil
 	},

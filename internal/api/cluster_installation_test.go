@@ -582,17 +582,17 @@ func TestMigrateClusterInstallations(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "", TargetCluster: "4567"})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: ""})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("no cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: "67899"})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -647,7 +647,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		mcir := &model.MigrateClusterInstallationRequest{ClusterID: sourceCluster.ID, TargetCluster: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
+		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
 		err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
@@ -681,17 +681,17 @@ func TestMigrateDNS(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "", TargetCluster: "4567"})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: ""})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("No cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: "12345", TargetCluster: "67899"})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -751,10 +751,10 @@ func TestMigrateDNS(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", ClusterID: sourceCluster.ID, TargetCluster: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", ClusterID: sourceCluster.ID, TargetCluster: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
 
 		// varifying the outcomes

@@ -88,11 +88,11 @@ func NewMigrateClusterInstallationRequestFromReader(reader io.Reader) (MigrateCl
 
 // Validate validate the migration request for cluster installations
 func (request *MigrateClusterInstallationRequest) Validate() error {
-	if len(request.ClusterID) == 0 {
+	if len(request.SourceClusterID) == 0 {
 		return errors.New("missing mandatory source cluster in a migration request")
 	}
 
-	if len(request.TargetCluster) == 0 {
+	if len(request.TargetClusterID) == 0 {
 		return errors.New("missing mandatory target cluster in a migration request")
 	}
 

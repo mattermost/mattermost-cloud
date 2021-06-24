@@ -375,12 +375,12 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 	c.Logger = c.Logger.WithFields(log.Fields{
-		"source-cluster-id": mcir.ClusterID,
-		"target-cluster-id": mcir.TargetCluster,
+		"source-cluster-id": mcir.SourceClusterID,
+		"target-cluster-id": mcir.TargetClusterID,
 	})
 
 	filter := &model.ClusterInstallationFilter{
-		ClusterID:      mcir.ClusterID,
+		ClusterID:      mcir.SourceClusterID,
 		InstallationID: mcir.InstallationID,
 		Paging:         model.AllPagesNotDeleted(),
 	}
@@ -398,7 +398,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	}
 
 	// verify that the allows installation is false for the source cluster before migration starts
-	cluster, err := c.Store.GetCluster(mcir.ClusterID)
+	cluster, err := c.Store.GetCluster(mcir.SourceClusterID)
 	if cluster == nil || err != nil {
 		c.Logger.WithError(err).Error("failed to get cluster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -412,8 +412,8 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 
-	c.Logger.Infof("migrating installation(s) to clusterID: %s", mcir.TargetCluster)
-	err = c.Store.MigrateClusterInstallations(clusterInstallations, mcir.TargetCluster)
+	c.Logger.Infof("migrating installation(s) to clusterID: %s", mcir.TargetClusterID)
+	err = c.Store.MigrateClusterInstallations(clusterInstallations, mcir.TargetClusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to migrate cluster installation(s)")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -432,13 +432,13 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.Logger = c.Logger.WithFields(log.Fields{
-		"source-cluster-id": mcir.ClusterID,
-		"target-cluster-id": mcir.TargetCluster,
+		"source-cluster-id": mcir.SourceClusterID,
+		"target-cluster-id": mcir.TargetClusterID,
 	})
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
 	filter := &model.ClusterInstallationFilter{
-		ClusterID:      mcir.ClusterID,
+		ClusterID:      mcir.SourceClusterID,
 		InstallationID: mcir.InstallationID,
 		Paging:         model.AllPagesNotDeleted(),
 	}
@@ -455,7 +455,7 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	filter = &model.ClusterInstallationFilter{
-		ClusterID:      mcir.TargetCluster,
+		ClusterID:      mcir.TargetClusterID,
 		InstallationID: mcir.InstallationID,
 		Paging:         model.AllPagesNotDeleted(),
 	}
@@ -472,7 +472,7 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// verify that the allows installation is false for the source cluster before migration starts
-	cluster, err := c.Store.GetCluster(mcir.ClusterID)
+	cluster, err := c.Store.GetCluster(mcir.SourceClusterID)
 	if cluster == nil || err != nil {
 		c.Logger.WithError(err).Error("failed to get cluster")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -585,7 +585,7 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 		return http.StatusInternalServerError
 	}
 
-	c.Logger.Infof("DNS Switch over has been processed for cluster %s: ", mcir.ClusterID)
+	c.Logger.Infof("DNS Switch over has been processed for cluster %s: ", mcir.SourceClusterID)
 	return 0
 }
 
@@ -608,7 +608,7 @@ func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	c.Logger = c.Logger.WithField("cluster_installation", mcir)
 
-	err = c.AwsClient.SwithClusterTags(mcir.ClusterID, mcir.TargetCluster, c.Logger)
+	err = c.AwsClient.SwithClusterTags(mcir.SourceClusterID, mcir.TargetClusterID, c.Logger)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to switch cluster tags")
 		w.WriteHeader(http.StatusInternalServerError)
