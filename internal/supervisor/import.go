@@ -247,17 +247,19 @@ func (s *ImportSupervisor) teamAlreadyExists(mmctl *mmctl, teamName string) (boo
 }
 
 func (s *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportStatus) error {
-	// ensure that the team exists
-	found, err := s.teamAlreadyExists(mmctl, imprt.Team)
-	if err != nil {
-		return errors.Wrapf(err, "failed to determine if Team %s already exists in workspace", imprt.Team)
-	}
-
-	// if the team doesn't exist, create it
-	if !found {
-		output, err := mmctl.Run("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
+	if imprt.Type != awat.MattermostWorkspaceBackupType {
+		// ensure that the team exists
+		found, err := s.teamAlreadyExists(mmctl, imprt.Team)
 		if err != nil {
-			return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", imprt.Team, string(output))
+			return errors.Wrapf(err, "failed to determine if Team %s already exists in workspace", imprt.Team)
+		}
+
+		// if the team doesn't exist, create it
+		if !found {
+			output, err := mmctl.Run("team", "create", "--name", imprt.Team, "--display_name", imprt.Team)
+			if err != nil {
+				return errors.Wrapf(err, "failed to find or create team %s; full output was:%s\n", imprt.Team, string(output))
+			}
 		}
 	}
 

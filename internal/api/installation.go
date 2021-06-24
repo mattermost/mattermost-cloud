@@ -26,6 +26,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationsRouter := apiRouter.PathPrefix("/installations").Subrouter()
 	initInstallationBackup(installationsRouter, context)
 	initInstallationRestoration(installationsRouter, context)
+	initInstallationDBMigration(installationsRouter, context)
 
 	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
 	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")

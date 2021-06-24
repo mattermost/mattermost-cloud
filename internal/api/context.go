@@ -17,6 +17,8 @@ type Supervisor interface {
 
 // Store describes the interface required to persist changes made via API requests.
 type Store interface {
+	model.InstallationDatabaseStoreInterface
+
 	CreateCluster(cluster *model.Cluster, annotations []*model.Annotation) error
 	GetCluster(clusterID string) (*model.Cluster, error)
 	GetClusterDTO(clusterID string) (*model.ClusterDTO, error)
@@ -65,8 +67,6 @@ type Store interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 	DeleteWebhook(webhookID string) error
 
-	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
-
 	GetOrCreateAnnotations(annotations []*model.Annotation) ([]*model.Annotation, error)
 
 	CreateClusterAnnotations(clusterID string, annotations []*model.Annotation) ([]*model.Annotation, error)
@@ -97,6 +97,13 @@ type Store interface {
 	LockInstallations(installationIDs []string, lockerID string) (bool, error)
 	UnlockInstallations(installationIDs []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
+	TriggerInstallationDBMigration(dbMigrationOp *model.InstallationDBMigrationOperation, installation *model.Installation) (*model.InstallationDBMigrationOperation, error)
+	TriggerInstallationDBMigrationRollback(dbMigrationOp *model.InstallationDBMigrationOperation, installation *model.Installation) error
+	GetInstallationDBMigrationOperations(filter *model.InstallationDBMigrationFilter) ([]*model.InstallationDBMigrationOperation, error)
+	GetInstallationDBMigrationOperation(id string) (*model.InstallationDBMigrationOperation, error)
+	UpdateInstallationDBMigrationOperationState(dbMigration *model.InstallationDBMigrationOperation) error
+	LockInstallationDBMigrationOperation(id, lockerID string) (bool, error)
+	UnlockInstallationDBMigrationOperation(id, lockerID string, force bool) (bool, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
@@ -109,6 +116,9 @@ type Provisioner interface {
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
 	SwithClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
+// DBProvider describes the interface required to get database for specific installation and specified type.
+type DBProvider interface {
+	GetDatabase(installationID, dbType string) model.Database
 }
 
 // Context provides the API with all necessary data and interfaces for responding to requests.
@@ -118,6 +128,7 @@ type Context struct {
 	Store       Store
 	Supervisor  Supervisor
 	Provisioner Provisioner
+	DBProvider  DBProvider
 	RequestID   string
 	Environment string
 	Logger      logrus.FieldLogger
@@ -130,6 +141,7 @@ func (c *Context) Clone() *Context {
 		Store:       c.Store,
 		Supervisor:  c.Supervisor,
 		Provisioner: c.Provisioner,
+		DBProvider:  c.DBProvider,
 		Logger:      c.Logger,
 		AwsClient:   c.AwsClient,
 	}
