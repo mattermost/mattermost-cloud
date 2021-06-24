@@ -783,7 +783,9 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	isActiveClusterInstallations = false
 	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
 	require.NoError(t, err)
-	require.Empty(t, inActiveClusterInstallations)
+	for _, ci := range inActiveClusterInstallations {
+		require.Equal(t, ci.State, model.ClusterInstallationStateDeletionRequested)
+	}
 }
 
 func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
@@ -816,12 +818,9 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, inActiveClusterInstallations)
 
-	err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+	inActiveClusterInstallations[0].State = model.ClusterInstallationStateDeletionRequested
+	err = sqlStore.UpdateClusterInstallation(inActiveClusterInstallations[0])
 	require.NoError(t, err)
-
-	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
-	require.NoError(t, err)
-	require.Empty(t, inActiveClusterInstallations)
 }
 
 func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {

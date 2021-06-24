@@ -169,7 +169,7 @@ func (sqlStore *SQLStore) RecoverClusterInstallation(clusterInstallation *model.
 func (sqlStore *SQLStore) DeleteInActiveClusterInstallationByClusterID(clusterID string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("ClusterInstallation").
-		Set("DeleteAt", GetMillis()).
+		Set("State", model.ClusterInstallationStateDeletionRequested).
 		Where("ClusterID = ?", clusterID).
 		Where("IsActive = ?", false).
 		Where("DeleteAt = 0"),

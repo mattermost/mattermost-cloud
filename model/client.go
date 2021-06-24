@@ -1189,7 +1189,7 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationRequest) error {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate"), request)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer closeBody(resp)
 
@@ -1206,7 +1206,7 @@ func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationR
 func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/dns"), request)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer closeBody(resp)
 

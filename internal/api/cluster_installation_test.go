@@ -616,10 +616,16 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		Affinity: model.InstallationAffinityIsolated,
 	})
 	require.NoError(t, err)
-	sourceClusterID := model.NewID()
+	sourceCluster, err := client.CreateCluster(&model.CreateClusterRequest{
+		Provider:    model.ProviderAWS,
+		Zones:       []string{"zone"},
+		Annotations: []string{"my-annotation"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, sourceCluster.ID)
 	targetClusterID := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      sourceClusterID,
+		ClusterID:      sourceCluster.ID,
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -628,7 +634,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	clusterInstallation2 := &model.ClusterInstallation{
-		ClusterID:      sourceClusterID,
+		ClusterID:      sourceCluster.ID,
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -641,7 +647,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		mcir := &model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
+		mcir := &model.MigrateClusterInstallationRequest{ClusterID: sourceCluster.ID, TargetCluster: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
 		err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
@@ -690,7 +696,14 @@ func TestMigrateDNS(t *testing.T) {
 	})
 
 	// Valid migration test
-	sourceClusterID := model.NewID()
+	sourceCluster, err := client.CreateCluster(&model.CreateClusterRequest{
+		Provider:    model.ProviderAWS,
+		Zones:       []string{"zone"},
+		Annotations: []string{"my-annotation"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, sourceCluster.ID)
+
 	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner1",
 		Version:  "version",
@@ -702,7 +715,6 @@ func TestMigrateDNS(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
-	targetClusterID := model.NewID()
 	installation2, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner2",
 		Version:  "version",
@@ -713,7 +725,7 @@ func TestMigrateDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	clusterInstallation1 := &model.ClusterInstallation{
-		ClusterID:      sourceClusterID,
+		ClusterID:      sourceCluster.ID,
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -722,7 +734,7 @@ func TestMigrateDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	clusterInstallation2 := &model.ClusterInstallation{
-		ClusterID:      sourceClusterID,
+		ClusterID:      sourceCluster.ID,
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
@@ -730,13 +742,45 @@ func TestMigrateDNS(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
+	targetCluster, err := client.CreateCluster(&model.CreateClusterRequest{
+		Provider:    model.ProviderAWS,
+		Zones:       []string{"zone"},
+		Annotations: []string{"my-annotation"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, targetCluster)
+
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID, DNSSwitch: true, LockInstallation: true})
+		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", ClusterID: sourceCluster.ID, TargetCluster: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		client.MigrateDNS(&model.MigrateClusterInstallationRequest{ClusterID: sourceClusterID, TargetCluster: targetClusterID})
+		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", ClusterID: sourceCluster.ID, TargetCluster: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
+
+		// varifying the outcomes
+		var isActiveClusterInstallations = false
+		filter := &model.ClusterInstallationFilter{
+			ClusterID:      sourceCluster.ID,
+			InstallationID: "",
+			Paging:         model.AllPagesNotDeleted(),
+			IsActive:       &isActiveClusterInstallations,
+		}
+		cis, err := sqlStore.GetClusterInstallations(filter)
+		require.NoError(t, err)
+		require.NotEmpty(t, cis)
+
+		isActiveClusterInstallations = true
+		filter = &model.ClusterInstallationFilter{
+			ClusterID:      targetCluster.ID,
+			InstallationID: "",
+			Paging:         model.AllPagesNotDeleted(),
+			IsActive:       &isActiveClusterInstallations,
+		}
+		cis, err = sqlStore.GetClusterInstallations(filter)
+		require.NoError(t, err)
+		require.NotEmpty(t, cis)
 	})
+
 }
 
 func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
@@ -759,6 +803,7 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 		InstallationID: installationID1,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
 	}
 
 	time.Sleep(1 * time.Millisecond)
@@ -769,6 +814,7 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 		InstallationID: installationID2,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
 	}
 
 	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
@@ -793,9 +839,11 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	ci, err = sqlStore.GetClusterInstallations(filter)
+	cis, err := sqlStore.GetClusterInstallations(filter)
 	require.NoError(t, err)
-	require.Empty(t, ci)
+	for _, ci := range cis {
+		require.Equal(t, ci.State, model.ClusterInstallationStateDeletionRequested)
+	}
 
 }
 
@@ -847,6 +895,6 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 
 	ci, err = sqlStore.GetClusterInstallations(filter)
 	require.NoError(t, err)
-	require.Empty(t, ci)
+	require.Equal(t, ci[0].State, model.ClusterInstallationStateDeletionRequested)
 
 }

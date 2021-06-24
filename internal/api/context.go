@@ -96,6 +96,7 @@ type Store interface {
 	DeleteInActiveClusterInstallationByClusterID(clusterID string) error
 	LockInstallations(installationIDs []string, lockerID string) (bool, error)
 	UnlockInstallations(installationIDs []string, lockerID string, force bool) (bool, error)
+	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
