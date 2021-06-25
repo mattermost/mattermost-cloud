@@ -567,16 +567,13 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 			c.Logger.Error("failed to acquire lock for installation")
 			return http.StatusInternalServerError
 		}
-		defer func() int {
+		defer func() {
 			unlocked, err := c.Store.UnlockInstallations(installationIDs, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock installation")
-				return http.StatusInternalServerError
 			} else if !unlocked {
 				c.Logger.Warn("failed to release lock for installation")
-				return http.StatusInternalServerError
 			}
-			return 0
 		}()
 	}
 	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs)
