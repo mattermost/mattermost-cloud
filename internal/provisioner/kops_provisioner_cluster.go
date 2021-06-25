@@ -236,10 +236,17 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	mysqlOperatorNamespace := "mysql-operator"
 	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
+
 	namespaces := []string{
-		mysqlOperatorNamespace,
-		minioOperatorNamespace,
 		mattermostOperatorNamespace,
+	}
+
+	if provisioner.params.DeployMysqlOperator {
+		namespaces = append(namespaces, mysqlOperatorNamespace)
+	}
+
+	if provisioner.params.DeployMinioOperator {
+		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
 	// Remove all previously-installed operator namespaces and resources.
@@ -317,12 +324,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
 		{
-			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
-			DeployNamespace: minioOperatorNamespace,
-		}, {
 			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
 		}, {
@@ -358,6 +359,20 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		},
 	}
 
+	if provisioner.params.DeployMysqlOperator {
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
+			DeployNamespace: mysqlOperatorNamespace,
+		})
+	}
+
+	if provisioner.params.DeployMinioOperator {
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
+			DeployNamespace: minioOperatorNamespace,
+		})
+	}
+
 	err = k8sClient.CreateFromFiles(files)
 	if err != nil {
 		return err
@@ -367,12 +382,16 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	// due container download / init / container creation / volume allocation
 	wait = 240
 	appsWithDeployment := map[string]string{
-		"minio-operator":                     minioOperatorNamespace,
 		"mattermost-operator":                mattermostOperatorNamespace,
 		"bifrost":                            bifrostNamespace,
 		"calico-typha-horizontal-autoscaler": "kube-system",
 		"calico-typha":                       "kube-system",
 	}
+
+	if provisioner.params.DeployMinioOperator {
+		appsWithDeployment["minio-operator"] = minioOperatorNamespace
+	}
+
 	for deployment, namespace := range appsWithDeployment {
 		pods, err := k8sClient.GetPodsFromDeployment(namespace, deployment)
 		if err != nil {
@@ -394,7 +413,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}
 	}
 
-	operatorsWithStatefulSet := []string{"mysql-operator"}
+	var operatorsWithStatefulSet []string
+	if provisioner.params.DeployMysqlOperator {
+		operatorsWithStatefulSet = append(operatorsWithStatefulSet, "mysql-operator")
+	}
+
 	for _, operator := range operatorsWithStatefulSet {
 		pods, err := k8sClient.GetPodsFromStatefulset(operator, operator)
 		if err != nil {

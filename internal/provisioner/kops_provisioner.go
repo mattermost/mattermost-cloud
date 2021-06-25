@@ -21,6 +21,8 @@ type ProvisioningParams struct {
 	VpnCIDRList             []string
 	Owner                   string
 	UseExistingAWSResources bool
+	DeployMysqlOperator     bool
+	DeployMinioOperator     bool
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.

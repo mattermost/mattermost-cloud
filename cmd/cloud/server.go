@@ -55,6 +55,8 @@ func init() {
 	serverCmd.PersistentFlags().Bool("dev", false, "Set sane defaults for development")
 	serverCmd.PersistentFlags().String("backup-restore-tool-image", "mattermost/backup-restore-tool:latest", "Image of Backup Restore Tool to use.")
 	serverCmd.PersistentFlags().Int32("backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
+	serverCmd.PersistentFlags().Bool("deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
+	serverCmd.PersistentFlags().Bool("deploy-minio-operator", true, "Whether to deploy the minio operator.")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -170,6 +172,10 @@ var serverCmd = &cobra.Command{
 		backupRestoreToolImage, _ := command.Flags().GetString("backup-restore-tool-image")
 		backupJobTTL, _ := command.Flags().GetInt32("backup-job-ttl-seconds")
 
+		deployMySQLOperator, _ := command.Flags().GetBool("deploy-mysql-operator")
+		deployMinioOperator, _ := command.Flags().GetBool("deploy-minio-operator")
+		model.SetDeployOperators(deployMySQLOperator, deployMinioOperator)
+
 		wd, err := os.Getwd()
 		if err != nil {
 			wd = "error getting working directory"
@@ -208,6 +214,8 @@ var serverCmd = &cobra.Command{
 			"backup-job-ttl-seconds":                 backupJobTTL,
 			"debug":                                  debugMode,
 			"dev-mode":                               devMode,
+			"deploy-mysql-operator":                  deployMySQLOperator,
+			"deploy-minio-operator":                  deployMinioOperator,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -248,6 +256,8 @@ var serverCmd = &cobra.Command{
 			VpnCIDRList:             vpnListCIDR,
 			Owner:                   owner,
 			UseExistingAWSResources: useExistingResources,
+			DeployMysqlOperator:     deployMySQLOperator,
+			DeployMinioOperator:     deployMinioOperator,
 		}
 
 		// Setup the provisioner for actually effecting changes to clusters.
