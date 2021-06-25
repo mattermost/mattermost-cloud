@@ -522,7 +522,7 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 		return
 	}
 
-	c.Logger.Infof("successfully deleted inactive cluster installations for cluster ID %s", clusterID)
+	c.Logger.Infof("successfully deleted inactive cluster installations for cluster ID: %s", clusterID)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -551,7 +551,7 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	c.Logger.Infof("successfully deleted inactive cluster installations ID 5s", clusterInstallationID)
+	c.Logger.Infof("successfully deleted inactive cluster installations ID %s", clusterInstallationID)
 	w.WriteHeader(http.StatusOK)
 }
 
