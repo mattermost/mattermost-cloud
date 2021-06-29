@@ -5,6 +5,7 @@
 package supervisor
 
 import (
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
@@ -345,6 +346,9 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 	if err != nil {
 		logger.WithError(err).Warn("Failed to query clusters")
 		return model.InstallationStateCreationRequested
+	}
+	if len(clusters) == 0 {
+		logger.Warnf("No clusters found matching the filter, installation annotations are: [%s]", strings.Join(getAnnotationsNames(annotations), ", "))
 	}
 
 	if s.scheduling.balanceInstallations {
@@ -1436,6 +1440,14 @@ func getAnnotationsIDs(annotations []*model.Annotation) []string {
 		ids = append(ids, ann.ID)
 	}
 	return ids
+}
+
+func getAnnotationsNames(annotations []*model.Annotation) []string {
+	names := make([]string, 0, len(annotations))
+	for _, ann := range annotations {
+		names = append(names, ann.Name)
+	}
+	return names
 }
 
 func elapsedTimeInSeconds(createAtMillis int64) float64 {
