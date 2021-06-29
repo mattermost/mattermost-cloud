@@ -24,6 +24,18 @@ func SetRequireAnnotatedInstallations(val bool) {
 	requireAnnotatedInstallations = val
 }
 
+// deployMySQLOperator if set, MySQL operator will be deployed
+var deployMySQLOperator bool
+
+// deployMinioOperator if set, Minio operator will be deployed
+var deployMinioOperator bool
+
+// SetDeployOperators is called with a value based on a CLI flag.
+func SetDeployOperators(mysql, minio bool) {
+	deployMySQLOperator = mysql
+	deployMinioOperator = minio
+}
+
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
 	OwnerID         string
@@ -111,6 +123,13 @@ func (request *CreateInstallationRequest) Validate() error {
 		if err != nil {
 			return errors.Wrap(err, "single tenant database config is invalid")
 		}
+	}
+
+	if !deployMinioOperator && request.Filestore == "minio-operator" {
+		return errors.Errorf("minio filestore cannot be used when minio operator is not deployed")
+	}
+	if !deployMySQLOperator && request.Database == "mysql-operator" {
+		return errors.Errorf("mysql operator database cannot be used when mysql operator is not deployed")
 	}
 	return checkSpaces(request)
 }

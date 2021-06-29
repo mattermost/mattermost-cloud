@@ -388,6 +388,8 @@ func TestDeleteGroup(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
 
+	model.SetDeployOperators(true, true)
+
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
