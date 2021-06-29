@@ -618,18 +618,18 @@ func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request
 func getSourceAndTargetCluster(c *Context, request model.MigrateClusterInstallationRequest) (*model.Cluster, *model.Cluster, error) {
 	sourceCluster, err := c.Store.GetCluster(request.SourceClusterID)
 	if err != nil {
-		return nil, nil, common.ErrWrap(http.StatusInternalServerError, err, "Failed to get source cluster")
+		return nil, nil, common.ErrWrap(http.StatusInternalServerError, err, "failed to get source cluster")
 	}
 	if sourceCluster == nil {
-		return nil, nil, common.NewErr(http.StatusNotFound, errors.New("Source cluster not found"))
+		return nil, nil, common.NewErr(http.StatusNotFound, errors.New("source cluster not found"))
 	}
 
 	targetCluster, err := c.Store.GetCluster(request.TargetClusterID)
 	if err != nil {
-		return nil, nil, common.ErrWrap(http.StatusInternalServerError, err, "Failed to get target cluster")
+		return nil, nil, common.ErrWrap(http.StatusInternalServerError, err, "failed to get target cluster")
 	}
 	if targetCluster == nil {
-		return nil, nil, common.NewErr(http.StatusNotFound, errors.New("Target cluster not found"))
+		return nil, nil, common.NewErr(http.StatusNotFound, errors.New("target cluster not found"))
 	}
 	return sourceCluster, targetCluster, nil
 }
