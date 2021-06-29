@@ -18,6 +18,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -623,7 +624,14 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, sourceCluster.ID)
-	targetClusterID := model.NewID()
+
+	targetCluster, err := client.CreateCluster(&model.CreateClusterRequest{
+		Provider:    model.ProviderAWS,
+		Zones:       []string{"zone"},
+		Annotations: []string{"my-annotation"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, targetCluster.ID)
 	clusterInstallation1 := &model.ClusterInstallation{
 		ClusterID:      sourceCluster.ID,
 		InstallationID: installation1.ID,
@@ -647,10 +655,17 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetClusterID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
+		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
 		err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
+		newClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{ClusterID: targetCluster.ID, Paging: model.AllPagesNotDeleted()})
+		require.NoError(t, err)
+		assert.Len(t, newClusterInstallations, 2)
+		for _, ci := range newClusterInstallations {
+			assert.False(t, ci.IsActive)
+			assert.Equal(t, model.ClusterInstallationStateCreationRequested, ci.State)
+		}
 	})
 }
 

@@ -1289,7 +1289,7 @@ func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationR
 		return nil
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return errors.Errorf("Failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1306,7 +1306,7 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 		return nil
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return errors.Errorf("Failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1314,7 +1314,7 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) error {
 	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/%s", clusterID))
 	if err != nil {
-		return nil
+		return err
 	}
 	defer closeBody(resp)
 
@@ -1323,7 +1323,7 @@ func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) e
 		return nil
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return errors.Errorf("Failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1331,7 +1331,7 @@ func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) e
 func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID string) error {
 	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/cluster_installation/%s", clusterInstallationID))
 	if err != nil {
-		return nil
+		return err
 	}
 	defer closeBody(resp)
 
@@ -1340,7 +1340,7 @@ func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID str
 		return nil
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return errors.Errorf("Failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1348,7 +1348,7 @@ func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID str
 func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) error {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/switch_cluster_roles"), request)
 	if err != nil {
-		return nil
+		return err
 	}
 	defer closeBody(resp)
 
@@ -1357,6 +1357,6 @@ func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) 
 		return nil
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return errors.Errorf("Failed with status code %d", resp.StatusCode)
 	}
 }
