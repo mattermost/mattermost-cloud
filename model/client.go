@@ -1289,7 +1289,7 @@ func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationR
 		return nil
 
 	default:
-		return errors.Errorf("Failed with status code %d", resp.StatusCode)
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1306,7 +1306,7 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 		return nil
 
 	default:
-		return errors.Errorf("Failed with status code %d", resp.StatusCode)
+		return errors.Errorf("filed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1323,7 +1323,7 @@ func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) e
 		return nil
 
 	default:
-		return errors.Errorf("Failed with status code %d", resp.StatusCode)
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1340,7 +1340,7 @@ func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID str
 		return nil
 
 	default:
-		return errors.Errorf("Failed with status code %d", resp.StatusCode)
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
@@ -1357,6 +1357,6 @@ func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) 
 		return nil
 
 	default:
-		return errors.Errorf("Failed with status code %d", resp.StatusCode)
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
