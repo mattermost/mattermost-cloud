@@ -584,17 +584,17 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
-		require.EqualError(t, err, "failed with status code 400")
+		require.EqualError(t, err, "Failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
-		require.EqualError(t, err, "failed with status code 400")
+		require.EqualError(t, err, "Failed with status code 400")
 	})
 
 	t.Run("no cluster installation found to migrate", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
-		require.EqualError(t, err, "failed with status code 404")
+		require.EqualError(t, err, "Failed with status code 404")
 	})
 
 	// Valid migration test
@@ -697,17 +697,17 @@ func TestMigrateDNS(t *testing.T) {
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
-		require.EqualError(t, err, "failed with status code 400")
+		require.EqualError(t, err, "Failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
-		require.EqualError(t, err, "failed with status code 400")
+		require.EqualError(t, err, "Failed with status code 400")
 	})
 
 	t.Run("No cluster installation found to migrate", func(t *testing.T) {
 		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
-		require.EqualError(t, err, "failed with status code 404")
+		require.EqualError(t, err, "Failed with status code 404")
 	})
 
 	// Valid migration test
@@ -794,6 +794,7 @@ func TestMigrateDNS(t *testing.T) {
 		cis, err = sqlStore.GetClusterInstallations(filter)
 		require.NoError(t, err)
 		require.NotEmpty(t, cis)
+		assert.Len(t, cis, 2)
 	})
 
 }

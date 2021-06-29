@@ -11,6 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -633,9 +634,9 @@ func TestMigrateMultipleClusterInstallations(t *testing.T) {
 
 	migratedClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: targetClusterID})
 	require.NoError(t, err)
-
+	assert.Len(t, migratedClusterInstallations, 2)
 	for ind, mci := range migratedClusterInstallations {
-
+		assert.False(t, mci.IsActive)
 		require.Equal(t, clusterInstallations[ind].InstallationID, mci.InstallationID)
 	}
 }
@@ -729,9 +730,6 @@ func TestSwitchDNS(t *testing.T) {
 	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
 	require.NoError(t, err)
 
-	var installations []string
-	installations = append(installations, installation1.ID)
-	installations = append(installations, installation2.ID)
 	newCIsIDs := getClusterInstallationIDs(clusterInstallations)
 	var installationIDs []string
 	for _, ci := range clusterInstallations {
@@ -739,6 +737,17 @@ func TestSwitchDNS(t *testing.T) {
 	}
 	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs)
 	require.NoError(t, err)
+	var isActiveClusterInstallations = true
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      targetClusterID,
+		InstallationID: "",
+		Paging:         model.AllPagesNotDeleted(),
+		IsActive:       &isActiveClusterInstallations,
+	}
+	cis, err := sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.NotEmpty(t, cis)
+	assert.Len(t, cis, 2)
 }
 
 func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
@@ -821,6 +830,10 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	inActiveClusterInstallations[0].State = model.ClusterInstallationStateDeletionRequested
 	err = sqlStore.UpdateClusterInstallation(inActiveClusterInstallations[0])
 	require.NoError(t, err)
+
+	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.Equal(t, inActiveClusterInstallations[0].State, model.ClusterInstallationStateDeletionRequested)
 }
 
 func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {

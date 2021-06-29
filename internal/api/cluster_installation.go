@@ -519,7 +519,7 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 	c.Logger.Infof("Deleting inactive cluster installations for cluster ID %s", clusterID)
 	err := c.Store.DeleteInActiveClusterInstallationByClusterID(clusterID)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to delete inactive cluster installations for cluster ID", clusterID)
+		c.Logger.WithError(err).Error("Failed to delete inactive cluster installations for cluster ID", clusterID)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -593,7 +593,6 @@ func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation
 	for _, clusterInstallation := range clusterInstallations {
 		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
 	}
-
 	return clusterInstallationIDs
 }
 
