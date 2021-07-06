@@ -205,7 +205,7 @@ func (d *RDSMultitenantDatabase) Snapshot(store model.InstallationDatabaseStoreI
 }
 
 // GenerateDatabaseSecret creates the k8s database spec and secret for
-// accessing a multitenant database inside a RDS multitenant cluster.
+// accessing a single database inside a RDS multitenant cluster.
 func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error) {
 	err := d.IsValid()
 	if err != nil {

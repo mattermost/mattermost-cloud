@@ -1351,7 +1351,7 @@ var migrations = []migration{
 
 		_, err = e.Exec(`
 				ALTER TABLE MultitenantDatabase
-				ADD COLUMN WriterEndpoint TEXT NULL;
+				ADD COLUMN WriterEndpoint TEXT NOT NULL DEFAULT '';
 		`)
 		if err != nil {
 			return err
@@ -1359,7 +1359,7 @@ var migrations = []migration{
 
 		_, err = e.Exec(`
 				ALTER TABLE MultitenantDatabase
-				ADD COLUMN ReaderEndpoint TEXT NULL;
+				ADD COLUMN ReaderEndpoint TEXT NOT NULL DEFAULT '';
 		`)
 		if err != nil {
 			return err

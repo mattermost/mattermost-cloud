@@ -73,11 +73,7 @@ func (d *RDSMultitenantPGBouncerDatabase) DatabaseTypeTagValue() string {
 // MaxSupportedDatabases returns the maximum number of databases supported on
 // one RDS cluster for this database type.
 func (d *RDSMultitenantPGBouncerDatabase) MaxSupportedDatabases() int {
-	if d.databaseType == model.DatabaseEngineTypeMySQL {
-		return DefaultRDSMultitenantDatabaseMySQLCountLimit
-	}
-
-	return DefaultRDSMultitenantDatabasePostgresCountLimit
+	return DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit
 }
 
 // Provision claims a multitenant RDS cluster and creates a database schema for
@@ -139,7 +135,7 @@ func (d *RDSMultitenantPGBouncerDatabase) Provision(store model.InstallationData
 		}
 	}
 
-	err = d.ensureLogicalDatabaseExists(databaseName, *vpc.VpcId, rdsCluster, logger)
+	err = d.ensureLogicalDatabaseExists(databaseName, rdsCluster, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure the logical database is created")
 	}
@@ -443,7 +439,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated
 	return secret, nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -703,8 +699,8 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreat
 }
 
 // GenerateDatabaseSecret creates the k8s database spec and secret for
-// accessing a multitenant database inside a RDS multitenant cluster with
-// a PGBouncer proxy.
+// accessing a single schema inside a RDS multitenant cluster with a PGBouncer
+// proxy.
 func (d *RDSMultitenantPGBouncerDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*corev1.Secret, error) {
 	err := d.IsValid()
 	if err != nil {

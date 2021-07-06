@@ -203,6 +203,11 @@ const (
 	// schemas allowed in a Posgres multitenant RDS database cluster.
 	DefaultRDSMultitenantDatabasePostgresCountLimit = 300
 
+	// DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit is the maximum
+	// number of schemas allowed in a Posgres multitenant RDS database cluster
+	// with a PGBouncer proxy.
+	DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit = 1000
+
 	// DefaultRDSMultitenantDatabasePostgresProxySchemaLimit is the maximum number of
 	// schemas created in each logical database of a proxied DB cluster.
 	DefaultRDSMultitenantDatabasePostgresProxySchemaLimit = 10
