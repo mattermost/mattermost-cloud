@@ -442,16 +442,16 @@ func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, clusterID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, clusterID, owner, logger)
 }
 
-// SwithClusterTags mocks base method
-func (m *MockAWS) SwithClusterTags(clusterID, targetClusterID string, logger logrus.FieldLogger) error {
+// SwitchClusterTags mocks base method
+func (m *MockAWS) SwitchClusterTags(clusterID, targetClusterID string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SwithClusterTags", clusterID, targetClusterID, logger)
+	ret := m.ctrl.Call(m, "SwitchClusterTags", clusterID, targetClusterID, logger)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// SwithClusterTags indicates an expected call of SwithClusterTags
-func (mr *MockAWSMockRecorder) SwithClusterTags(clusterID, targetClusterID, logger interface{}) *gomock.Call {
+// SwitchClusterTags indicates an expected call of SwSwitchClusterTagsithClusterTags
+func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwithClusterTags", reflect.TypeOf((*MockAWS)(nil).SwithClusterTags), clusterID, targetClusterID, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchClusterTags", reflect.TypeOf((*MockAWS)(nil).SwitchClusterTags), clusterID, targetClusterID, logger)
 }

@@ -606,7 +606,7 @@ func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request
 	}
 	c.Logger = c.Logger.WithField("cluster_installation", mcir)
 
-	err = c.AwsClient.SwithClusterTags(mcir.SourceClusterID, mcir.TargetClusterID, c.Logger)
+	err = c.AwsClient.SwitchClusterTags(mcir.SourceClusterID, mcir.TargetClusterID, c.Logger)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to switch cluster tags")
 		w.WriteHeader(http.StatusInternalServerError)

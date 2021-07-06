@@ -440,7 +440,7 @@ func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (
 func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
 	return nil
 }
-func (a *mockAWS) SwithClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
+func (a *mockAWS) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
 	return nil
 }
 

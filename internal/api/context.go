@@ -115,7 +115,7 @@ type Provisioner interface {
 
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
-	SwithClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
+	SwitchClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
 }
 
 // DBProvider describes the interface required to get database for specific installation and specified type.
