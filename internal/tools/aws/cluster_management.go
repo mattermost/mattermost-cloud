@@ -410,7 +410,7 @@ func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, cluste
 	return nil
 }
 
-// SwithClusterTags after migration.
+// SwitchClusterTags after migration.
 func (a *Client) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
 
 	clusterResources, err := a.GetVpcResources(clusterID, logger)

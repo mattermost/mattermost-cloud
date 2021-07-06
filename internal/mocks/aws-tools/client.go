@@ -450,7 +450,7 @@ func (m *MockAWS) SwitchClusterTags(clusterID, targetClusterID string, logger lo
 	return ret0
 }
 
-// SwitchClusterTags indicates an expected call of SwSwitchClusterTagsithClusterTags
+// SwitchClusterTags indicates an expected call of SwitchClusterTags
 func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchClusterTags", reflect.TypeOf((*MockAWS)(nil).SwitchClusterTags), clusterID, targetClusterID, logger)
