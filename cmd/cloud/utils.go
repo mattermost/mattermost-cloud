@@ -5,8 +5,9 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
