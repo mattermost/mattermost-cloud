@@ -1337,7 +1337,7 @@ var migrations = []migration{
 		}
 		return nil
 	}},
-	{semver.MustParse("0.28.0"), semver.MustParse("0.29.0"), func(e execer) error {
+	{semver.MustParse("0.29.0"), semver.MustParse("0.30.0"), func(e execer) error {
 		_, err := e.Exec(`
 				ALTER TABLE MultitenantDatabase
 				ADD COLUMN State TEXT NOT NULL DEFAULT 'stable';
