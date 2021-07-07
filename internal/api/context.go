@@ -90,6 +90,13 @@ type Store interface {
 	GetInstallationDBRestorationOperation(id string) (*model.InstallationDBRestorationOperation, error)
 	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
 
+	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
+	SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string) error
+	DeleteClusterInstallation(id string) error
+	DeleteInActiveClusterInstallationByClusterID(clusterID string) error
+	LockInstallations(installationIDs []string, lockerID string) (bool, error)
+	UnlockInstallations(installationIDs []string, lockerID string, force bool) (bool, error)
+	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
 	TriggerInstallationDBMigration(dbMigrationOp *model.InstallationDBMigrationOperation, installation *model.Installation) (*model.InstallationDBMigrationOperation, error)
 	TriggerInstallationDBMigrationRollback(dbMigrationOp *model.InstallationDBMigrationOperation, installation *model.Installation) error
 	GetInstallationDBMigrationOperations(filter *model.InstallationDBMigrationFilter) ([]*model.InstallationDBMigrationOperation, error)
@@ -104,6 +111,11 @@ type Provisioner interface {
 	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error)
+}
+
+// AwsClient describes the interface required to communicate with the AWS
+type AwsClient interface {
+	SwitchClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
 }
 
 // DBProvider describes the interface required to get database for specific installation and specified type.
@@ -122,6 +134,7 @@ type Context struct {
 	RequestID   string
 	Environment string
 	Logger      logrus.FieldLogger
+	AwsClient   AwsClient
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
@@ -132,5 +145,6 @@ func (c *Context) Clone() *Context {
 		Provisioner: c.Provisioner,
 		DBProvider:  c.DBProvider,
 		Logger:      c.Logger,
+		AwsClient:   c.AwsClient,
 	}
 }

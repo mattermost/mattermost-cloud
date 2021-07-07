@@ -44,11 +44,39 @@ func init() {
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("cluster-installation")
 	clusterInstallationMattermostCLICmd.MarkFlagRequired("command")
 
+	clusterInstallationsMigrationCmd.Flags().String("source-cluster", "", "The source cluster for the migration to migrate cluster installations from.")
+	clusterInstallationsMigrationCmd.MarkFlagRequired("source-cluster")
+	clusterInstallationsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to migrate cluster installation to.")
+	clusterInstallationsMigrationCmd.MarkFlagRequired("target-cluster")
+	clusterInstallationsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
+
+	dnsMigrationCmd.Flags().String("source-cluster", "", "The source cluster for the migration to switch CNAME(s) from.")
+	dnsMigrationCmd.MarkFlagRequired("source-cluster")
+	dnsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to switch CNAME to.")
+	dnsMigrationCmd.MarkFlagRequired("target-cluster")
+	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
+	dnsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process.")
+
+	deleteInActiveClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installations from.")
+	deleteInActiveClusterInstallationCmd.MarkFlagRequired("cluster")
+	deleteInActiveClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
+
+	postMigrationSwitchClusterRolesCmd.Flags().String("switch-role", "", "Post migration step to switch the roles for primary & secondary clusters.")
+	postMigrationSwitchClusterRolesCmd.Flags().String("source-cluster", "", "The source cluster to be mark as secondary cluster.")
+	postMigrationSwitchClusterRolesCmd.MarkFlagRequired("source-cluster")
+	postMigrationSwitchClusterRolesCmd.Flags().String("target-cluster", "", "The target cluster to be mark as primary cluster.")
+	postMigrationSwitchClusterRolesCmd.MarkFlagRequired("target-cluster")
+
 	clusterInstallationCmd.AddCommand(clusterInstallationGetCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationListCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationConfigCmd)
 	clusterInstallationCmd.AddCommand(clusterInstallationMMCTL)
 	clusterInstallationCmd.AddCommand(clusterInstallationMattermostCLICmd)
+
+	clusterInstallationsMigrationCmd.AddCommand(dnsMigrationCmd)
+	clusterInstallationsMigrationCmd.AddCommand(deleteInActiveClusterInstallationCmd)
+	clusterInstallationsMigrationCmd.AddCommand(postMigrationSwitchClusterRolesCmd)
+	clusterInstallationCmd.AddCommand(clusterInstallationsMigrationCmd)
 
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigGetCmd)
 	clusterInstallationConfigCmd.AddCommand(clusterInstallationConfigSetCmd)
@@ -242,6 +270,121 @@ var clusterInstallationMattermostCLICmd = &cobra.Command{
 			return errors.Wrap(err, "failed to run mattermost CLI command")
 		}
 
+		return nil
+	},
+}
+
+// Command to migrate cluster installation(s)
+var clusterInstallationsMigrationCmd = &cobra.Command{
+	Use:   "migration",
+	Short: "Migrate installation(s) to the target cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		sourceCluster, _ := command.Flags().GetString("source-cluster")
+		targetcluster, _ := command.Flags().GetString("target-cluster")
+		installation, _ := command.Flags().GetString("installation")
+
+		err := client.MigrateClusterInstallation(
+			&model.MigrateClusterInstallationRequest{
+				SourceClusterID:  sourceCluster,
+				TargetClusterID:  targetcluster,
+				InstallationID:   installation,
+				DNSSwitch:        false,
+				LockInstallation: false})
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
+// Command to migrate DNS record(s)
+var dnsMigrationCmd = &cobra.Command{
+	Use:   "dns migration",
+	Short: "Switch over the DNS CNAME record(s) to the target cluster's Load Balancer.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		sourceCluster, _ := command.Flags().GetString("source-cluster")
+		targetcluster, _ := command.Flags().GetString("target-cluster")
+		installation, _ := command.Flags().GetString("installation")
+		lockInstallation, _ := command.Flags().GetBool("lock-installation")
+
+		err := client.MigrateDNS(
+			&model.MigrateClusterInstallationRequest{
+				SourceClusterID:  sourceCluster,
+				TargetClusterID:  targetcluster,
+				InstallationID:   installation,
+				LockInstallation: lockInstallation})
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
+// Command to migrate DNS record(s)
+var deleteInActiveClusterInstallationCmd = &cobra.Command{
+	Use:   "delete stale cluster installation(s)",
+	Short: "Delete stale cluster installation(s) after migration.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		cluster, _ := command.Flags().GetString("cluster")
+		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
+		if len(clusterInstallationID) != 0 {
+			err := client.DeleteInActiveClusterInstallationByID(clusterInstallationID)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		if len(cluster) != 0 {
+			err := client.DeleteInActiveClusterInstallationsByCluster(cluster)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		return nil
+	},
+}
+
+// Command to switch cluster roles, mainly mark secondary cluster as primary after migration
+var postMigrationSwitchClusterRolesCmd = &cobra.Command{
+	Use:   "switch-cluster role",
+	Short: "Mark the target/secondary cluster as primary cluster.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		sourceCluster, _ := command.Flags().GetString("source-cluster")
+		targetcluster, _ := command.Flags().GetString("target-cluster")
+		installation, _ := command.Flags().GetString("installation")
+		lockInstallation, _ := command.Flags().GetBool("lock-installation")
+
+		err := client.SwitchClusterRoles(
+			&model.MigrateClusterInstallationRequest{
+				SourceClusterID:  sourceCluster,
+				TargetClusterID:  targetcluster,
+				InstallationID:   installation,
+				LockInstallation: lockInstallation})
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 }

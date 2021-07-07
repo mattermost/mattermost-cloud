@@ -81,6 +81,7 @@ type AWS interface {
 	TagResourcesByCluster(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error
 
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
+	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
