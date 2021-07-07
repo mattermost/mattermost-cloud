@@ -36,18 +36,30 @@ func (d *MultitenantDatabase) AddInstallationToLogicalDatabaseMapping(installati
 		d.SharedLogicalDatabaseMappings = make(SharedLogicalDatabases)
 	}
 
+	// Ensure we always are adding installations to the logical databases that
+	// are most full for maximum efficiency.
+	var selectedLogicalDatabase string
 	for logicalDatabase, installations := range d.SharedLogicalDatabaseMappings {
-		if len(installations) >= int(d.MaxInstallationsPerLogicalDatabase) {
+		if len(installations) > int(d.MaxInstallationsPerLogicalDatabase) {
 			continue
 		}
+		if len(selectedLogicalDatabase) == 0 {
+			selectedLogicalDatabase = logicalDatabase
+			continue
+		}
+		if len(installations) > len(d.SharedLogicalDatabaseMappings[selectedLogicalDatabase]) {
+			selectedLogicalDatabase = logicalDatabase
+		}
+	}
 
-		d.SharedLogicalDatabaseMappings[logicalDatabase] = append(installations, installationID)
+	if len(selectedLogicalDatabase) == 0 {
+		// None of the existing logical databases had room so create a new one with
+		// a unique ID.
+		d.SharedLogicalDatabaseMappings[fmt.Sprintf("cloud_%s", NewID())] = []string{installationID}
 		return
 	}
 
-	// None of the existing logical databases had room so create a new one with
-	// a unique ID.
-	d.SharedLogicalDatabaseMappings[fmt.Sprintf("cloud_%s", NewID())] = []string{installationID}
+	d.SharedLogicalDatabaseMappings[selectedLogicalDatabase] = append(d.SharedLogicalDatabaseMappings[selectedLogicalDatabase], installationID)
 }
 
 // GetReaderEndpoint returns the best available reader endpoint for a multitenant
