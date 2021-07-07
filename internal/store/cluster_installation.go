@@ -269,7 +269,7 @@ func (sqlStore *SQLStore) createClusterInstallation(db execer, clusterInstallati
 	return nil
 }
 
-// SwitchDNS , performs the dns switch from source cluster to target cluster
+// SwitchDNS performs the dns switch from source cluster to target cluster
 func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {

@@ -55,9 +55,9 @@ func init() {
 	dnsMigrationCmd.Flags().String("target-cluster", "", "The target cluster for the migration to switch CNAME to.")
 	dnsMigrationCmd.MarkFlagRequired("target-cluster")
 	dnsMigrationCmd.Flags().String("installation", "", "The specific installation ID to migrate from source cluster, default is ALL.")
-	dnsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process, default is ON.")
+	dnsMigrationCmd.Flags().Bool("lock-installation", true, "The installation's lock flag during DNS migration process.")
 
-	deleteInActiveClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installation from.")
+	deleteInActiveClusterInstallationCmd.Flags().String("cluster", "", "The cluster ID to delete stale cluster installations from.")
 	deleteInActiveClusterInstallationCmd.MarkFlagRequired("cluster")
 	deleteInActiveClusterInstallationCmd.Flags().String("cluster-installation", "", "The id of the cluster installation.")
 
@@ -288,7 +288,13 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster, TargetClusterID: targetcluster, InstallationID: installation, DNSSwitch: false, LockInstallation: false})
+		err := client.MigrateClusterInstallation(
+			&model.MigrateClusterInstallationRequest{
+				SourceClusterID:  sourceCluster,
+				TargetClusterID:  targetcluster,
+				InstallationID:   installation,
+				DNSSwitch:        false,
+				LockInstallation: false})
 		if err != nil {
 			return err
 		}
@@ -311,7 +317,12 @@ var dnsMigrationCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster, TargetClusterID: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
+		err := client.MigrateDNS(
+			&model.MigrateClusterInstallationRequest{
+				SourceClusterID:  sourceCluster,
+				TargetClusterID:  targetcluster,
+				InstallationID:   installation,
+				LockInstallation: lockInstallation})
 		if err != nil {
 			return err
 		}
@@ -365,7 +376,12 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		err := client.SwitchClusterRoles(&model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster, TargetClusterID: targetcluster, InstallationID: installation, LockInstallation: lockInstallation})
+		err := client.SwitchClusterRoles(
+			&model.MigrateClusterInstallationRequest{
+				SourceClusterID:  sourceCluster,
+				TargetClusterID:  targetcluster,
+				InstallationID:   installation,
+				LockInstallation: lockInstallation})
 		if err != nil {
 			return err
 		}
