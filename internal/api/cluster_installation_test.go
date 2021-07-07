@@ -569,6 +569,8 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
+	model.SetDeployOperators(true, true)
+
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
 		require.NoError(t, err)
@@ -681,6 +683,8 @@ func TestMigrateDNS(t *testing.T) {
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
+
+	model.SetDeployOperators(true, true)
 
 	t.Run("invalid payload", func(t *testing.T) {
 		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate/dns", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
