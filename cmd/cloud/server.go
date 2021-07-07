@@ -335,6 +335,7 @@ var serverCmd = &cobra.Command{
 			DBProvider:  resourceUtil,
 			Environment: awsClient.GetCloudEnvironmentName(),
 			Logger:      logger,
+			AwsClient:   awsClient,
 		})
 
 		listen, _ := command.Flags().GetString("listen")

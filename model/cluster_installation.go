@@ -21,6 +21,7 @@ type ClusterInstallation struct {
 	APISecurityLock bool
 	LockAcquiredBy  *string
 	LockAcquiredAt  int64
+	IsActive        bool
 }
 
 // ClusterInstallationFilter describes the parameters used to constrain a set of cluster installations.
@@ -29,6 +30,16 @@ type ClusterInstallationFilter struct {
 	IDs            []string
 	InstallationID string
 	ClusterID      string
+	IsActive       *bool
+}
+
+// MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.
+type MigrateClusterInstallationRequest struct {
+	InstallationID   string
+	SourceClusterID  string
+	TargetClusterID  string
+	DNSSwitch        bool
+	LockInstallation bool
 }
 
 // Clone returns a deep copy the cluster installation.

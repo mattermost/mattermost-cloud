@@ -10,6 +10,8 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -563,4 +565,281 @@ func TestDeleteClusterInstallations(t *testing.T) {
 	actualClusterInstallation1, err = sqlStore.GetClusterInstallation(clusterInstallation1.ID)
 	require.NoError(t, err)
 	require.Equal(t, clusterInstallation1, actualClusterInstallation1)
+}
+
+func TestMigrateSingleClusterInstallation(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	sourceClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_8",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	clusterInstallations := []*model.ClusterInstallation{clusterInstallation1}
+	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
+	require.NoError(t, err)
+
+	migratedClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: targetClusterID})
+	require.NoError(t, err)
+	require.Equal(t, clusterInstallation1.InstallationID, migratedClusterInstallations[0].InstallationID)
+}
+
+func TestMigrateMultipleClusterInstallations(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	sourceClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_8",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+	installationID2 := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installationID2,
+		Namespace:      "namespace_9",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID})
+	require.NoError(t, err)
+
+	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
+	require.NoError(t, err)
+
+	migratedClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: targetClusterID})
+	require.NoError(t, err)
+	assert.Len(t, migratedClusterInstallations, 2)
+	for ind, mci := range migratedClusterInstallations {
+		assert.False(t, mci.IsActive)
+		require.Equal(t, clusterInstallations[ind].InstallationID, mci.InstallationID)
+	}
+}
+
+func TestSwitchDNS(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	ownerID1 := model.NewID()
+	groupID2 := model.NewID()
+	group1 := &model.Group{
+		Version: "group1-version",
+		Image:   "custom/image",
+		MattermostEnv: model.EnvVarMap{
+			"Key1": model.EnvVar{Value: "Value1"},
+		},
+	}
+	err := sqlStore.CreateGroup(group1)
+	require.NoError(t, err)
+	groupID1 := group1.ID
+
+	time.Sleep(1 * time.Millisecond)
+
+	annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
+
+	installation1 := &model.Installation{
+		OwnerID:   ownerID1,
+		Version:   "version",
+		DNS:       "dns.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID1,
+		CRVersion: model.V1betaCRVersion,
+		State:     model.InstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateInstallation(installation1, annotations)
+	require.NoError(t, err)
+	time.Sleep(1 * time.Millisecond)
+
+	installation2 := &model.Installation{
+		OwnerID:   ownerID1,
+		Version:   "version2",
+		Image:     "custom-image",
+		DNS:       "dns2.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID2,
+		CRVersion: model.DefaultCRVersion,
+		State:     model.InstallationStateStable,
+	}
+
+	err = sqlStore.CreateInstallation(installation2, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	sourceClusterID := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installation1.ID,
+		Namespace:      "namespace_10",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	targetClusterID := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installation2.ID,
+		Namespace:      "namespace_11",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID})
+	require.NoError(t, err)
+
+	oldCIsIDs := getClusterInstallationIDs(clusterInstallations)
+	err = sqlStore.MigrateClusterInstallations(clusterInstallations, targetClusterID)
+	require.NoError(t, err)
+
+	newCIsIDs := getClusterInstallationIDs(clusterInstallations)
+	var installationIDs []string
+	for _, ci := range clusterInstallations {
+		installationIDs = append(installationIDs, ci.InstallationID)
+	}
+	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs)
+	require.NoError(t, err)
+	var isActiveClusterInstallations = true
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      targetClusterID,
+		InstallationID: "",
+		Paging:         model.AllPagesNotDeleted(),
+		IsActive:       &isActiveClusterInstallations,
+	}
+	cis, err := sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.NotEmpty(t, cis)
+	assert.Len(t, cis, 2)
+}
+
+func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	sourceClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_12",
+		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	installationID2 := model.NewID()
+	clusterInstallation2 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installationID2,
+		Namespace:      "namespace_13",
+		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
+	}
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	isActiveClusterInstallations := false
+	inActiveClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
+	require.NoError(t, err)
+	require.NotEmpty(t, inActiveClusterInstallations)
+
+	err = sqlStore.DeleteInActiveClusterInstallationByClusterID(sourceClusterID)
+	require.NoError(t, err)
+
+	isActiveClusterInstallations = false
+	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
+	require.NoError(t, err)
+	for _, ci := range inActiveClusterInstallations {
+		require.Equal(t, ci.State, model.ClusterInstallationStateDeletionRequested)
+	}
+}
+
+func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+
+	sourceClusterID := model.NewID()
+	installationID1 := model.NewID()
+	clusterInstallation1 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installationID1,
+		Namespace:      "namespace_14",
+		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       false,
+	}
+
+	time.Sleep(1 * time.Millisecond)
+
+	err := sqlStore.CreateClusterInstallation(clusterInstallation1)
+	require.NoError(t, err)
+
+	isActiveClusterInstallations := false
+	filter := &model.ClusterInstallationFilter{
+		ClusterID:      sourceClusterID,
+		InstallationID: clusterInstallation1.InstallationID,
+		Paging:         model.AllPagesNotDeleted(),
+		IsActive:       &isActiveClusterInstallations,
+	}
+	inActiveClusterInstallations, err := sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.NotEmpty(t, inActiveClusterInstallations)
+
+	inActiveClusterInstallations[0].State = model.ClusterInstallationStateDeletionRequested
+	err = sqlStore.UpdateClusterInstallation(inActiveClusterInstallations[0])
+	require.NoError(t, err)
+
+	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(filter)
+	require.NoError(t, err)
+	require.Equal(t, inActiveClusterInstallations[0].State, model.ClusterInstallationStateDeletionRequested)
+}
+
+func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {
+	clusterInstallationIDs := make([]string, 0, len(clusterInstallations))
+	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+	}
+	return clusterInstallationIDs
 }

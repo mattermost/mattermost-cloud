@@ -440,6 +440,9 @@ func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (
 func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
 	return nil
 }
+func (a *mockAWS) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
+	return nil
+}
 
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)

@@ -70,3 +70,31 @@ func NewClusterInstallationExecSubcommandFromReader(reader io.Reader) (ClusterIn
 
 	return clusterInstallationExecSubcommand, nil
 }
+
+// NewMigrateClusterInstallationRequestFromReader will create a MigrateClusterInstallationRequest from an io.Reader.
+func NewMigrateClusterInstallationRequestFromReader(reader io.Reader) (MigrateClusterInstallationRequest, error) {
+	var migrateClusterInstallationRequest MigrateClusterInstallationRequest
+	err := json.NewDecoder(reader).Decode(&migrateClusterInstallationRequest)
+	if err != nil && err != io.EOF {
+		return MigrateClusterInstallationRequest{}, errors.Wrap(err, "failed to decode cluster installation migration request")
+	}
+
+	err = migrateClusterInstallationRequest.Validate()
+	if err != nil {
+		return MigrateClusterInstallationRequest{}, errors.Wrap(err, "migrate cluster installation request failed validation")
+	}
+	return migrateClusterInstallationRequest, nil
+}
+
+// Validate validate the migration request for cluster installations
+func (request *MigrateClusterInstallationRequest) Validate() error {
+	if len(request.SourceClusterID) == 0 {
+		return errors.New("missing mandatory source cluster in a migration request")
+	}
+
+	if len(request.TargetClusterID) == 0 {
+		return errors.New("missing mandatory target cluster in a migration request")
+	}
+
+	return nil
+}

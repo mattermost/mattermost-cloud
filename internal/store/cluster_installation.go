@@ -18,7 +18,7 @@ func init() {
 	clusterInstallationSelect = sq.
 		Select(
 			"ID", "ClusterID", "InstallationID", "Namespace", "State", "CreateAt",
-			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt",
+			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "IsActive",
 		).
 		From("ClusterInstallation")
 }
@@ -59,29 +59,7 @@ func (sqlStore *SQLStore) GetUnlockedClusterInstallationsPendingWork() ([]*model
 
 // CreateClusterInstallation records the given cluster installation to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateClusterInstallation(clusterInstallation *model.ClusterInstallation) error {
-	clusterInstallation.ID = model.NewID()
-	clusterInstallation.CreateAt = GetMillis()
-
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
-		Insert("ClusterInstallation").
-		SetMap(map[string]interface{}{
-			"ID":              clusterInstallation.ID,
-			"ClusterID":       clusterInstallation.ClusterID,
-			"InstallationID":  clusterInstallation.InstallationID,
-			"Namespace":       clusterInstallation.Namespace,
-			"State":           clusterInstallation.State,
-			"CreateAt":        clusterInstallation.CreateAt,
-			"DeleteAt":        0,
-			"APISecurityLock": clusterInstallation.APISecurityLock,
-			"LockAcquiredBy":  nil,
-			"LockAcquiredAt":  0,
-		}),
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to create cluster installation")
-	}
-
-	return nil
+	return sqlStore.createClusterInstallation(sqlStore.db, clusterInstallation)
 }
 
 // GetClusterInstallations fetches the given page of created clusters. The first page is 0.
@@ -104,7 +82,9 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	if filter.InstallationID != "" {
 		builder = builder.Where("InstallationID = ?", filter.InstallationID)
 	}
-
+	if filter.IsActive != nil {
+		builder = builder.Where("IsActive = ?", *filter.IsActive)
+	}
 	var clusterInstallations []*model.ClusterInstallation
 	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
 	if err != nil {
@@ -125,6 +105,24 @@ func (sqlStore *SQLStore) UpdateClusterInstallation(clusterInstallation *model.C
 			"State":          clusterInstallation.State,
 		}).
 		Where("ID = ?", clusterInstallation.ID),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
+	}
+
+	return nil
+}
+
+// UpdateClusterInstallationsActiveStatus updates the stale status of all cluster installations for a given cluster.
+func (sqlStore *SQLStore) UpdateClusterInstallationsActiveStatus(db execer, clusterInstallationIDs []string, isActive bool) error {
+	_, err := sqlStore.execBuilder(db, sq.
+		Update("ClusterInstallation").
+		SetMap(map[string]interface{}{
+			"IsActive": isActive,
+		}).
+		Where(sq.Eq{
+			"ID": clusterInstallationIDs,
+		}),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation")
@@ -166,6 +164,23 @@ func (sqlStore *SQLStore) RecoverClusterInstallation(clusterInstallation *model.
 	return nil
 }
 
+// DeleteInActiveClusterInstallationByClusterID marks the inactive cluster installation as deleted for a given cluster, but does not remove
+// the record from the database.
+func (sqlStore *SQLStore) DeleteInActiveClusterInstallationByClusterID(clusterID string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("ClusterInstallation").
+		Set("State", model.ClusterInstallationStateDeletionRequested).
+		Where("ClusterID = ?", clusterID).
+		Where("IsActive = ?", false).
+		Where("DeleteAt = 0"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to mark inactive cluster installation as deleted")
+	}
+
+	return nil
+}
+
 // LockClusterInstallations marks the cluster installation as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockClusterInstallations(clusterInstallationIDs []string, lockerID string) (bool, error) {
 	return sqlStore.lockRows("ClusterInstallation", clusterInstallationIDs, lockerID)
@@ -194,6 +209,92 @@ func (sqlStore *SQLStore) setClusterInstallationAPILock(id string, lock bool) er
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to store cluster installation API lock")
+	}
+
+	return nil
+}
+
+// MigrateClusterInstallations updates the given cluster installation in the database.
+func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error {
+
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallation.ClusterID = targetCluster
+		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
+		clusterInstallation.IsActive = false
+		err := sqlStore.createClusterInstallation(tx, clusterInstallation)
+
+		if err != nil {
+			return errors.Wrap(err, "failed to create cluster installation")
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
+	}
+
+	return nil
+}
+
+// createClusterInstallation records the cluster installation(s) as a single transaction to the database, assigning it a unique ID.
+func (sqlStore *SQLStore) createClusterInstallation(db execer, clusterInstallation *model.ClusterInstallation) error {
+	clusterInstallation.ID = model.NewID()
+	clusterInstallation.CreateAt = GetMillis()
+
+	_, err := sqlStore.execBuilder(db, sq.
+		Insert("ClusterInstallation").
+		SetMap(map[string]interface{}{
+			"ID":              clusterInstallation.ID,
+			"ClusterID":       clusterInstallation.ClusterID,
+			"InstallationID":  clusterInstallation.InstallationID,
+			"Namespace":       clusterInstallation.Namespace,
+			"State":           clusterInstallation.State,
+			"CreateAt":        clusterInstallation.CreateAt,
+			"DeleteAt":        0,
+			"APISecurityLock": clusterInstallation.APISecurityLock,
+			"LockAcquiredBy":  nil,
+			"LockAcquiredAt":  0,
+			"IsActive":        clusterInstallation.IsActive,
+		}),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to create cluster installation")
+	}
+
+	return nil
+}
+
+// SwitchDNS performs the dns switch from source cluster to target cluster
+func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string) error {
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	err = sqlStore.UpdateClusterInstallationsActiveStatus(tx, oldCIsIDs, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
+	}
+
+	err = sqlStore.UpdateClusterInstallationsActiveStatus(tx, newCIsIDs, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
+	}
+
+	err = sqlStore.UpdateInstallationsState(tx, installationIDs, model.InstallationStateCreationDNS)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
 	}
 
 	return nil

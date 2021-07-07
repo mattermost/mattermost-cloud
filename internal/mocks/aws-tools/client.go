@@ -441,3 +441,17 @@ func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, clusterID
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, clusterID, owner, logger)
 }
+
+// SwitchClusterTags mocks base method
+func (m *MockAWS) SwitchClusterTags(clusterID, targetClusterID string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SwitchClusterTags", clusterID, targetClusterID, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SwitchClusterTags indicates an expected call of SwitchClusterTags
+func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchClusterTags", reflect.TypeOf((*MockAWS)(nil).SwitchClusterTags), clusterID, targetClusterID, logger)
+}

@@ -79,6 +79,7 @@ type AWS interface {
 
 	GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error)
 	TagResourcesByCluster(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error
+	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
