@@ -160,3 +160,16 @@ func MultitenantDatabasesFromReader(reader io.Reader) ([]*MultitenantDatabase, e
 
 	return databases, nil
 }
+
+// MultitenantDatabaseFromReader decodes a json-encoded multitenant database from the given io.Reader.
+func MultitenantDatabaseFromReader(reader io.Reader) (*MultitenantDatabase, error) {
+	database := &MultitenantDatabase{}
+	decoder := json.NewDecoder(reader)
+
+	err := decoder.Decode(&database)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return database, nil
+}

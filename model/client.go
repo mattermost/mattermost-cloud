@@ -1131,6 +1131,23 @@ func (c *Client) GetMultitenantDatabases(request *GetDatabasesRequest) ([]*Multi
 	}
 }
 
+// UpdateMultitenantDatabase updates a multitenant database.
+func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchDatabaseRequest) (*MultitenantDatabase, error) {
+	resp, err := c.doPut(c.buildURL("/api/database/%s", databaseID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return MultitenantDatabaseFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // CreateWebhook requests the creation of a webhook from the configured provisioning server.
 func (c *Client) CreateWebhook(request *CreateWebhookRequest) (*Webhook, error) {
 	resp, err := c.doPost(c.buildURL("/api/webhooks"), request)
