@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -686,7 +685,6 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 }
 
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	prometheusTimer := s.initialUpdateTasks(logger)
 	// Before starting, we check the installation and group sequence numbers and
 	// sync them if they are not already. This is used to check if the group
 	// configuration has changed during the upgrade process or not.
@@ -801,10 +799,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 
 	logger.Info("Finished updating clusters installations")
 
-	state := s.waitForUpdateStable(installation, instanceID, logger)
-	prometheusTimer.ObserveDuration()
-
-	return state
+	return s.waitForUpdateStable(installation, instanceID, logger)
 }
 
 func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -832,7 +827,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 
 	logger.Info("Finished updating installation")
 
-	return model.InstallationStateStable
+	return s.finalUpdateTasks(installation, logger)
 }
 
 // Unused stub function
@@ -1366,14 +1361,9 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 	return model.InstallationStateStable
 }
 
-func (s *InstallationSupervisor) initialUpdateTasks(logger log.FieldLogger) *prometheus.Timer {
-	logger.Info("Started initial update tasks")
-	return prometheus.NewTimer(s.metrics.InstallationUpdateDurationHist)
-}
-
-func (s *InstallationSupervisor) finalUpdateTasks(timer *prometheus.Timer, logger log.FieldLogger) string {
+func (s *InstallationSupervisor) finalUpdateTasks(installation *model.Installation, logger log.FieldLogger) string {
 	logger.Info("Finished final update tasks")
-	timer.ObserveDuration()
+	s.metrics.InstallationCreationDurationHist.Observe(elapsedTimeInSeconds(installation.UpdateAt))
 	return model.InstallationStateStable
 }
 

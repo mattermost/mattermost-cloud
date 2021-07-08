@@ -42,6 +42,7 @@ type Installation struct {
 	State                      string
 	CRVersion                  string
 	CreateAt                   int64
+	UpdateAt                   int64
 	DeleteAt                   int64
 	APISecurityLock            bool
 	LockAcquiredBy             *string

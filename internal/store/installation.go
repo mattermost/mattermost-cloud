@@ -348,6 +348,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"License":          installation.License,
 		"MattermostEnvRaw": []byte(envJSON),
 		"CreateAt":         installation.CreateAt,
+		"UpdateAt":         0,
 		"DeleteAt":         0,
 		"APISecurityLock":  installation.APISecurityLock,
 		"LockAcquiredBy":   nil,
@@ -385,6 +386,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 	if installation.ConfigMergedWithGroup() {
 		return errors.New("unable to save installations that have merged group config")
 	}
+	installation.UpdateAt = GetMillis()
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
@@ -405,6 +407,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"Affinity":         installation.Affinity,
 			"License":          installation.License,
 			"MattermostEnvRaw": []byte(envJSON),
+			"UpdateAt":         installation.UpdateAt,
 			"State":            installation.State,
 			"CRVersion":        installation.CRVersion,
 		}).

@@ -1337,4 +1337,12 @@ var migrations = []migration{
 		}
 		return nil
 	}},
+	{semver.MustParse("0.29.0"), semver.MustParse("0.30.0"), func(e execer) error {
+		// Add UpdateAt column for Installation.
+		_, err := e.Exec(`ALTER TABLE Installation ADD COLUMN UpdateAt BIGINT NOT NULL DEFAULT 0;`)
+		if err != nil {
+			return err
+		}
+		return nil
+	}},
 }
