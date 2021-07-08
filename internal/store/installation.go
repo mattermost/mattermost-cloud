@@ -21,7 +21,7 @@ func init() {
 		Select(
 			"Installation.ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
-			"MattermostEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
+			"MattermostEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "UpdateAt", "DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
 		From("Installation")
