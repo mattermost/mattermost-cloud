@@ -13,17 +13,30 @@ import (
 // the Provisioning server
 type CloudMetrics struct {
 	InstallationCreationDurationHist prometheus.Histogram
+	InstallationUpdateDurationHist   prometheus.Histogram
+	BuildInfoGauge                   *prometheus.GaugeVec
 }
 
 // New creates a new Prometheus-based Metrics object to be used
 // throughout the Provisioner in order to record various performance
 // metrics
 func New() *CloudMetrics {
+	buildInfoGaugeOpts := prometheus.GaugeOpts{
+		Name: "provisioner_build_info",
+		Help: "Build information of Provisioner",
+	}
 	return &CloudMetrics{
+		BuildInfoGauge: promauto.NewGaugeVec(buildInfoGaugeOpts, []string{"Version"}),
 		InstallationCreationDurationHist: promauto.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "mm_cloud_create_installation_duration_seconds",
 				Help:    "The duration of Installation creation tasks",
+				Buckets: prometheus.LinearBuckets(0, 30, 20),
+			}),
+		InstallationUpdateDurationHist: promauto.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "mm_cloud_update_installation_duration_seconds",
+				Help:    "The duration of Installation update tasks",
 				Buckets: prometheus.LinearBuckets(0, 30, 20),
 			}),
 	}

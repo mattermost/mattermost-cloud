@@ -827,7 +827,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 
 	logger.Info("Finished updating installation")
 
-	return model.InstallationStateStable
+	return s.finalUpdateTasks(installation, logger)
 }
 
 // Unused stub function
@@ -1358,6 +1358,12 @@ func (s *InstallationSupervisor) deleteMigrationOperations(installation *model.I
 func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
 	logger.Info("Finished final creation tasks")
 	s.metrics.InstallationCreationDurationHist.Observe(elapsedTimeInSeconds(installation.CreateAt))
+	return model.InstallationStateStable
+}
+
+func (s *InstallationSupervisor) finalUpdateTasks(installation *model.Installation, logger log.FieldLogger) string {
+	logger.Info("Finished final update tasks")
+	s.metrics.InstallationCreationDurationHist.Observe(elapsedTimeInSeconds(installation.UpdateAt))
 	return model.InstallationStateStable
 }
 
