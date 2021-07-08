@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -141,6 +142,8 @@ func (p *pgbouncer) DeployManifests() error {
 		return errors.Wrapf(err, "failed to create the pgbouncer namespace")
 	}
 
+	// Both of these files should only be created on the first provision and
+	// should never be overwritten with cluster provisioning afterwards.
 	file := k8s.ManifestFile{}
 	_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
@@ -171,9 +174,82 @@ func (p *pgbouncer) DeployManifests() error {
 	} else if err != nil {
 		return errors.Wrap(err, "failed to get secret for pgbouncer-userlist-secret")
 	}
+
 	return nil
 }
 
 func (p *pgbouncer) Name() string {
 	return model.PgbouncerCanonicalName
+}
+
+const baseIni = `
+[pgbouncer]
+listen_addr = *
+listen_port = 5432
+auth_file = /etc/userlist/userlist.txt
+auth_query = SELECT usename, passwd FROM pgbouncer.get_auth($1)
+admin_users = admin
+ignore_startup_parameters = extra_float_digits
+pool_mode = transaction
+min_pool_size = 20
+default_pool_size = 20
+reserve_pool_size = 5
+max_client_conn = 10000
+max_db_connections = 20
+
+[databases]
+`
+
+func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface) (string, error) {
+	ini := baseIni
+
+	databases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
+		MaxInstallationsLimit: model.NoInstallationsLimit,
+		Paging:                model.AllPagesNotDeleted(),
+		VpcID:                 vpcID,
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get proxy databases")
+	}
+	for _, database := range databases {
+		for logicalDatabase := range database.SharedLogicalDatabaseMappings {
+			// Add writer entry.
+			ini = fmt.Sprintf("%s%s = dbname=%s host=%s port=5432 auth_user=%s\n",
+				ini,
+				logicalDatabase,
+				logicalDatabase,
+				database.WriterEndpoint,
+				aws.DefaultPGBouncerAuthUsername,
+			)
+
+			// Add reader entry.
+			ini = fmt.Sprintf("%s%s-ro = dbname=%s host=%s port=5432 auth_user=%s\n",
+				ini,
+				logicalDatabase,
+				logicalDatabase,
+				database.ReaderEndpoint,
+				aws.DefaultPGBouncerAuthUsername,
+			)
+		}
+	}
+
+	return ini, nil
+}
+
+func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {
+	password, err := awsClient.SecretsManagerGetPGBouncerAuthUserPassword(vpcID)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get pgbouncer auth user password")
+	}
+
+	// WARNING: The admin account credentials must match what is deployed with
+	// the helm chart values.
+	userlist := fmt.Sprintf(
+		"\"admin\" \"adminpassword\"\n\"%s\" \"%s\"\n",
+		aws.DefaultPGBouncerAuthUsername,
+		password,
+	)
+
+	return userlist, nil
 }

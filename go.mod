@@ -1,6 +1,6 @@
 module github.com/mattermost/mattermost-cloud
 
-go 1.15
+go 1.16
 
 require (
 	github.com/Masterminds/squirrel v1.4.0

@@ -365,3 +365,41 @@ func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetSingleTenantDat
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSingleTenantDatabaseConfigForInstallation", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetSingleTenantDatabaseConfigForInstallation), installationID)
 }
+
+// MockClusterUtilityDatabaseStoreInterface is a mock of ClusterUtilityDatabaseStoreInterface interface
+type MockClusterUtilityDatabaseStoreInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockClusterUtilityDatabaseStoreInterfaceMockRecorder
+}
+
+// MockClusterUtilityDatabaseStoreInterfaceMockRecorder is the mock recorder for MockClusterUtilityDatabaseStoreInterface
+type MockClusterUtilityDatabaseStoreInterfaceMockRecorder struct {
+	mock *MockClusterUtilityDatabaseStoreInterface
+}
+
+// NewMockClusterUtilityDatabaseStoreInterface creates a new mock instance
+func NewMockClusterUtilityDatabaseStoreInterface(ctrl *gomock.Controller) *MockClusterUtilityDatabaseStoreInterface {
+	mock := &MockClusterUtilityDatabaseStoreInterface{ctrl: ctrl}
+	mock.recorder = &MockClusterUtilityDatabaseStoreInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockClusterUtilityDatabaseStoreInterface) EXPECT() *MockClusterUtilityDatabaseStoreInterfaceMockRecorder {
+	return m.recorder
+}
+
+// GetMultitenantDatabases mocks base method
+func (m *MockClusterUtilityDatabaseStoreInterface) GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMultitenantDatabases", filter)
+	ret0, _ := ret[0].([]*model.MultitenantDatabase)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMultitenantDatabases indicates an expected call of GetMultitenantDatabases
+func (mr *MockClusterUtilityDatabaseStoreInterfaceMockRecorder) GetMultitenantDatabases(filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantDatabases", reflect.TypeOf((*MockClusterUtilityDatabaseStoreInterface)(nil).GetMultitenantDatabases), filter)
+}

@@ -31,6 +31,8 @@ type clusterInstallationStore interface {
 
 	GetInstallationBackups(filter *model.InstallationBackupFilter) ([]*model.InstallationBackup, error)
 
+	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -196,6 +198,13 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 
 func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
 	err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		PrepareClusterUtilities(cluster, installation, s.store, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to provision cluster installation")
+		return model.ClusterInstallationStateCreationRequested
+	}
+
+	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
 		CreateClusterInstallation(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")

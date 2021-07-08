@@ -55,6 +55,45 @@ func (s *RDSSecret) Validate() error {
 	return nil
 }
 
+// SecretsManagerRestoreSecret restores a deleted secret.
+func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.FieldLogger) error {
+	_, err := a.Service().secretsManager.RestoreSecret(&secretsmanager.RestoreSecretInput{
+		SecretId: aws.String(secretName),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
+				logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming fully deleted")
+
+				return nil
+			}
+		}
+		return err
+	}
+
+	logger.WithField("secret-name", secretName).Debug("Secret Manager secret recovered")
+
+	return nil
+}
+
+// SecretsManagerGetPGBouncerAuthUserPassword returns the pgbouncer auth user password.
+func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
+	authUserSecretName := PGBouncerAuthUserSecretName(vpcID)
+
+	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(PGBouncerAuthUserSecretName(vpcID)),
+	})
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
+	}
+	secret, err := unmarshalSecretPayload(*result.SecretString)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to unmarshal secret payload")
+	}
+
+	return secret.MasterPassword, nil
+}
+
 func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iam.AccessKey, logger log.FieldLogger) error {
 	accessKeyPayload := &IAMAccessKey{
 		ID:     *ak.AccessKeyId,
@@ -211,27 +250,6 @@ func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log
 	}
 
 	logger.WithField("secret-name", secretName).Debug("Secret Manager secret deleted")
-
-	return nil
-}
-
-// SecretsManagerRestoreSecret restores a deleted secret.
-func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.FieldLogger) error {
-	_, err := a.Service().secretsManager.RestoreSecret(&secretsmanager.RestoreSecretInput{
-		SecretId: aws.String(secretName),
-	})
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
-				logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming fully deleted")
-
-				return nil
-			}
-		}
-		return err
-	}
-
-	logger.WithField("secret-name", secretName).Debug("Secret Manager secret recovered")
 
 	return nil
 }

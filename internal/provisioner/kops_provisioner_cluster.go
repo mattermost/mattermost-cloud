@@ -782,11 +782,11 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	logger.Info("Deleting cluster")
 
-	kopsClient, err := provisioner.getCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
+	kopsClient, err := provisioner.getCachedKopsClient(kopsMetadata.Name, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kops client from cache")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+	defer provisioner.invalidateCachedKopsClientOnError(err, kopsMetadata.Name, logger)
 
 	ugh, err := newUtilityGroupHandle(kopsClient, provisioner, cluster, awsClient, logger)
 	if err != nil {
@@ -854,7 +854,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "failed to release cluster VPC")
 	}
 
-	provisioner.invalidateCachedKopsClient(cluster.ProvisionerMetadataKops.Name, logger)
+	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
 
 	logger.Info("Successfully deleted cluster")
 
