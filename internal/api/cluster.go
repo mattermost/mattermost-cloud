@@ -128,6 +128,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				VPC:                createClusterRequest.VPC,
 			},
 		},
+
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
@@ -258,7 +259,6 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	err = clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
@@ -283,7 +283,6 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 		clusterDTO.State = newState
-
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")

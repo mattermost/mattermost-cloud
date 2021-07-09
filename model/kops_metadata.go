@@ -92,7 +92,7 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 }
 
 // GetWorkerNodesResizeChanges calculates instance group resizing based on the
-// curent ChangeRequest.
+// current ChangeRequest.
 func (km *KopsMetadata) GetWorkerNodesResizeChanges() KopsInstanceGroupsMetadata {
 	difference := km.ChangeRequest.NodeMinCount - km.NodeMinCount
 

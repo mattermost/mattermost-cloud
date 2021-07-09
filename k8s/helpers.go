@@ -7,7 +7,9 @@ package k8s
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
+	"k8s.io/apimachinery/pkg/types"
 	"net/url"
 	"time"
 
@@ -20,6 +22,13 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	utilexec "k8s.io/client-go/util/exec"
 )
+
+// PatchStringValue is a helper struct for patch operations
+type PatchStringValue struct {
+	Op    string `json:"op"`
+	Path  string `json:"path"`
+	Value string `json:"value"`
+}
 
 // WaitForPodRunning will poll a given kubernetes pod at a regular interval for
 // it to enter the 'Running' state. If the pod fails to become ready before
@@ -85,6 +94,19 @@ func (kc *KubeClient) GetPodsFromDaemonSet(namespace, daemonSetName string) (*co
 	listOptions := metav1.ListOptions{LabelSelector: set.AsSelector().String()}
 
 	return kc.Clientset.CoreV1().Pods(namespace).List(ctx, listOptions)
+}
+
+// PatchPodsDaemonSet patches the pods that belong to a given daemonset with a given payload.
+func (kc *KubeClient) PatchPodsDaemonSet(namespace, daemonSetName string, payload []PatchStringValue) error {
+	ctx := context.TODO()
+	daemonSet := kc.Clientset.AppsV1().DaemonSets(namespace)
+	payloadBytes, _ := json.Marshal(payload)
+	_, err := daemonSet.Patch(ctx, daemonSetName, types.JSONPatchType, payloadBytes, metav1.PatchOptions{})
+	if err != nil {
+		errors.Wrapf(err, "failed to patch daemonSet %s", daemonSetName)
+		return err
+	}
+	return nil
 }
 
 // RemoteCommand executes a kubernetes command against a remote cluster.

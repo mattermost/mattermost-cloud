@@ -211,7 +211,7 @@ var clusterCreateCmd = &cobra.Command{
 
 var clusterProvisionCmd = &cobra.Command{
 	Use:   "provision",
-	Short: "Provision/Reprovision a cluster's k8s resources.",
+	Short: "Provision/Re-provision a cluster's k8s resources.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
 
