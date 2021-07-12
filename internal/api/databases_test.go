@@ -205,7 +205,7 @@ func TestUpdateDatabase(t *testing.T) {
 
 		resp, err := http.DefaultClient.Do(httpRequest)
 		require.NoError(t, err)
-		require.Equal(t, http.StatusAccepted, resp.StatusCode)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
 	t.Run("unknown database", func(t *testing.T) {
