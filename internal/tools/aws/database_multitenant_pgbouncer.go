@@ -738,27 +738,22 @@ func (d *RDSMultitenantPGBouncerDatabase) GenerateDatabaseSecret(store model.Ins
 		return nil, errors.Wrap(err, "failed to unmarshal secret payload")
 	}
 
-	databaseConnectionString, databaseReadReplicasString :=
+	databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck :=
 		MattermostPostgresPGBouncerConnStrings(
 			installationSecret.MasterUsername,
 			installationSecret.MasterPassword,
 			installationDatabaseName,
 		)
-	databaseConnectionCheck := databaseConnectionString
-
-	secretStringData := map[string]string{
-		"DB_CONNECTION_STRING":              databaseConnectionString,
-		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
-	}
-	if len(databaseConnectionCheck) != 0 {
-		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
-	}
 
 	databaseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: installationSecretName,
 		},
-		StringData: secretStringData,
+		StringData: map[string]string{
+			"DB_CONNECTION_STRING":              databaseConnectionString,
+			"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
+			"DB_CONNECTION_CHECK_URL":           databaseConnectionCheck,
+		},
 	}
 
 	logger.Debug("AWS RDS multitenant PGBouncer database configuration generated for cluster installation")
