@@ -36,7 +36,6 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
 	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations)).Methods("POST")
 	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation)).Methods("DELETE")
-
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 

@@ -194,19 +194,20 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("MultitenantDatabase").
 		SetMap(map[string]interface{}{
-			"ID":                               multitenantDatabase.ID,
-			"VpcID":                            multitenantDatabase.VpcID,
-			"DatabaseType":                     multitenantDatabase.DatabaseType,
-			"State":                            multitenantDatabase.State,
-			"InstallationsRaw":                 installationsJSON,
-			"MigratedInstallationsRaw":         migratedInstallationsJSON,
-			"SharedLogicalDatabaseMappingsRaw": logicalDatabaseJSON,
-			"WriterEndpoint":                   multitenantDatabase.WriterEndpoint,
-			"ReaderEndpoint":                   multitenantDatabase.ReaderEndpoint,
-			"LockAcquiredBy":                   nil,
-			"LockAcquiredAt":                   0,
-			"CreateAt":                         multitenantDatabase.CreateAt,
-			"DeleteAt":                         0,
+			"ID":                                 multitenantDatabase.ID,
+			"VpcID":                              multitenantDatabase.VpcID,
+			"DatabaseType":                       multitenantDatabase.DatabaseType,
+			"State":                              multitenantDatabase.State,
+			"InstallationsRaw":                   installationsJSON,
+			"MigratedInstallationsRaw":           migratedInstallationsJSON,
+			"SharedLogicalDatabaseMappingsRaw":   logicalDatabaseJSON,
+			"MaxInstallationsPerLogicalDatabase": multitenantDatabase.MaxInstallationsPerLogicalDatabase,
+			"WriterEndpoint":                     multitenantDatabase.WriterEndpoint,
+			"ReaderEndpoint":                     multitenantDatabase.ReaderEndpoint,
+			"LockAcquiredBy":                     nil,
+			"LockAcquiredAt":                     0,
+			"CreateAt":                           multitenantDatabase.CreateAt,
+			"DeleteAt":                           0,
 		}),
 	)
 	if err != nil {
