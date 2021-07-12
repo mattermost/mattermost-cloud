@@ -1140,7 +1140,7 @@ func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchData
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
-	case http.StatusAccepted:
+	case http.StatusOK:
 		return MultitenantDatabaseFromReader(resp.Body)
 
 	default:

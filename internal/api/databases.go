@@ -64,19 +64,19 @@ func handleUpdateDatabase(c *Context, w http.ResponseWriter, r *http.Request) {
 	databaseID := vars["database"]
 	c.Logger = c.Logger.WithField("database", databaseID)
 
-	database, status, unlockOnce := lockDatabase(c, databaseID)
-	if status != 0 {
-		w.WriteHeader(status)
-		return
-	}
-	defer unlockOnce()
-
 	patchDatabaseRequest, err := model.NewPatchDatabaseRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to decode request")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	database, status, unlockOnce := lockDatabase(c, databaseID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
 
 	if patchDatabaseRequest.Apply(database) {
 		err = c.Store.UpdateMultitenantDatabase(database)
@@ -90,6 +90,6 @@ func handleUpdateDatabase(c *Context, w http.ResponseWriter, r *http.Request) {
 	unlockOnce()
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, database)
 }
