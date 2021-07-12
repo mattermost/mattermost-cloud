@@ -298,7 +298,7 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 // CreateGroup records the given group to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 	group.ID = model.NewID()
-	group.CreateAt = GetMillis()
+	group.CreateAt = model.GetMillis()
 	envVarMap, err := group.MattermostEnv.ToJSON()
 	if err != nil {
 		return err
@@ -383,7 +383,7 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bo
 func (sqlStore *SQLStore) DeleteGroup(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(`"Group"`).
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = 0"),
 	)

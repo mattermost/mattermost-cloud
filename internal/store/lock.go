@@ -6,6 +6,7 @@ package store
 
 import (
 	sq "github.com/Masterminds/squirrel"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +16,7 @@ func (sqlStore *SQLStore) lockRows(table string, ids []string, lockerID string) 
 		Update(table).
 		SetMap(map[string]interface{}{
 			"LockAcquiredBy": lockerID,
-			"LockAcquiredAt": GetMillis(),
+			"LockAcquiredAt": model.GetMillis(),
 		}).
 		Where(sq.Eq{
 			"ID":             ids,

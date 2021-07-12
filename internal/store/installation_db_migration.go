@@ -158,7 +158,7 @@ func (sqlStore *SQLStore) CreateInstallationDBMigrationOperation(dbMigration *mo
 // createInstallationDBMigration records installation db migration to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) createInstallationDBMigration(db execer, dbMigration *model.InstallationDBMigrationOperation) error {
 	dbMigration.ID = model.NewID()
-	dbMigration.RequestAt = GetMillis()
+	dbMigration.RequestAt = model.GetMillis()
 
 	insertMap := map[string]interface{}{
 		"ID":                                   dbMigration.ID,
@@ -300,7 +300,7 @@ func (sqlStore *SQLStore) updateInstallationDBMigrationFields(db execer, id stri
 func (sqlStore *SQLStore) DeleteInstallationDBMigrationOperation(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(installationDBMigrationTable).
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = ?", 0))
 	if err != nil {

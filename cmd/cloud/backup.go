@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -100,7 +99,7 @@ var backupListCmd = &cobra.Command{
 					backup.InstallationID,
 					string(backup.State),
 					backup.ClusterInstallationID,
-					utils.TimeFromMillis(backup.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
+					model.TimeFromMillis(backup.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
 				})
 			}
 			table.Render()

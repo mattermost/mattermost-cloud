@@ -57,7 +57,7 @@ func (sqlStore *SQLStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Web
 // CreateWebhook records the given webhook to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateWebhook(webhook *model.Webhook) error {
 	webhook.ID = model.NewID()
-	webhook.CreateAt = GetMillis()
+	webhook.CreateAt = model.GetMillis()
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("Webhooks").
@@ -81,7 +81,7 @@ func (sqlStore *SQLStore) CreateWebhook(webhook *model.Webhook) error {
 func (sqlStore *SQLStore) DeleteWebhook(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Webhooks").
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = 0"),
 	)

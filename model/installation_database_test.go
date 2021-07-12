@@ -64,15 +64,38 @@ func TestIsSingleTenantDatabase(t *testing.T) {
 		{"", false},
 		{"unknown", false},
 		{model.InstallationDatabaseMysqlOperator, false},
-		{model.InstallationDatabaseMultiTenantRDSPostgres, false},
-		{model.InstallationDatabaseMultiTenantRDSMySQL, false},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, true},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, true},
+		{model.InstallationDatabaseMultiTenantRDSPostgres, false},
+		{model.InstallationDatabaseMultiTenantRDSMySQL, false},
+		{model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, false},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.database, func(t *testing.T) {
 			assert.Equal(t, tc.isSingleTenant, model.IsSingleTenantRDS(tc.database))
+		})
+	}
+}
+
+func TestIsMultiTenantDatabase(t *testing.T) {
+	var testCases = []struct {
+		database       string
+		isSingleTenant bool
+	}{
+		{"", false},
+		{"unknown", false},
+		{model.InstallationDatabaseMysqlOperator, false},
+		{model.InstallationDatabaseSingleTenantRDSMySQL, false},
+		{model.InstallationDatabaseSingleTenantRDSPostgres, false},
+		{model.InstallationDatabaseMultiTenantRDSPostgres, true},
+		{model.InstallationDatabaseMultiTenantRDSMySQL, true},
+		{model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.database, func(t *testing.T) {
+			assert.Equal(t, tc.isSingleTenant, model.IsMultiTenantRDS(tc.database))
 		})
 	}
 }

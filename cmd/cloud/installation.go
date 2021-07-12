@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
@@ -88,6 +89,9 @@ func init() {
 	installationRecoveryCmd.MarkFlagRequired("installation")
 	installationRecoveryCmd.MarkFlagRequired("installation-database")
 
+	installationDeploymentReportCmd.Flags().String("installation", "", "The id of the installation to report on.")
+	installationDeploymentReportCmd.MarkFlagRequired("installation")
+
 	installationCmd.AddCommand(installationCreateCmd)
 	installationCmd.AddCommand(installationUpdateCmd)
 	installationCmd.AddCommand(installationDeleteCmd)
@@ -101,6 +105,7 @@ func init() {
 	installationCmd.AddCommand(installationRecoveryCmd)
 	installationCmd.AddCommand(backupCmd)
 	installationCmd.AddCommand(installationOperationCmd)
+	installationCmd.AddCommand(installationDeploymentReportCmd)
 }
 
 var installationCmd = &cobra.Command{
@@ -611,6 +616,104 @@ var installationRecoveryCmd = &cobra.Command{
 		}
 
 		logger.Info("Installation recovery request completed")
+
+		return nil
+	},
+}
+
+var installationDeploymentReportCmd = &cobra.Command{
+	Use:   "report",
+	Short: "Get a report of deployment details for a given installation",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationID, _ := command.Flags().GetString("installation")
+
+		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{
+			IncludeGroupConfig:          true,
+			IncludeGroupConfigOverrides: true,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to query installation")
+		}
+		if installation == nil {
+			return nil
+		}
+
+		output := fmt.Sprintf("Installation: %s\n", installation.ID)
+		output += fmt.Sprintf(" ├ Created: %s\n", installation.CreationDateString())
+		output += fmt.Sprintf(" ├ State: %s\n", installation.State)
+		if installation.State == model.InstallationStateDeleted {
+			output += fmt.Sprintf(" │ └ Deleted: %s\n", installation.DeletionDateString())
+		}
+		output += fmt.Sprintf(" ├ DNS: %s\n", installation.DNS)
+		output += fmt.Sprintf(" ├ Size: %s\n", installation.Size)
+		output += fmt.Sprintf(" ├ Affinity: %s\n", installation.Affinity)
+		output += fmt.Sprintf(" ├ Environment Variables: %d\n", len(installation.MattermostEnv))
+		output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
+		if model.IsMultiTenantRDS(installation.Database) {
+			databases, err := client.GetMultitenantDatabases(&model.GetDatabasesRequest{
+				DatabaseType: model.DatabaseEngineTypePostgresProxy,
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        model.AllPerPage,
+					IncludeDeleted: true,
+				},
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to query installation database")
+			}
+			for _, database := range databases {
+				if database.Installations.Contains(installation.ID) {
+					output += fmt.Sprintf(" │ ├ Database: %s\n", database.ID)
+					output += fmt.Sprintf(" │ ├ State: %s\n", database.State)
+					output += fmt.Sprintf(" │ ├ VPC: %s\n", database.VpcID)
+					output += fmt.Sprintf(" │ └ Installations: %d\n", len(database.Installations))
+				}
+			}
+		}
+		output += fmt.Sprintf(" ├ Filestore Type: %s\n", installation.Filestore)
+
+		if installation.GroupID != nil && len(*installation.GroupID) != 0 {
+			group, err := client.GetGroup(*installation.GroupID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query installation group")
+			}
+			output += fmt.Sprintf(" ├ Group: %s\n", group.ID)
+			output += fmt.Sprintf(" │ ├ Name: %s\n", group.Name)
+			output += fmt.Sprintf(" │ └ Description: %s\n", group.Description)
+		}
+
+		clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
+			InstallationID: installation.ID,
+			Paging: model.Paging{
+				Page:           0,
+				PerPage:        model.AllPerPage,
+				IncludeDeleted: true,
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to query cluster installations")
+		}
+		for _, clusterInstallation := range clusterInstallations {
+			output += fmt.Sprintf(" └ Cluster Installation: %s\n", clusterInstallation.ID)
+
+			cluster, err := client.GetCluster(clusterInstallation.ClusterID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query cluster")
+			}
+			output += fmt.Sprintf("   ├ State: %s\n", clusterInstallation.State)
+			output += fmt.Sprintf("   └ Cluster: %s\n", cluster.ID)
+			output += fmt.Sprintf("     ├ State: %s\n", cluster.State)
+			output += fmt.Sprintf("     ├ VPC: %s\n", cluster.ProvisionerMetadataKops.VPC)
+			output += fmt.Sprintf("     ├ Nodes: Masters %d, Workers %d\n", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.NodeMaxCount)
+			output += fmt.Sprintf("     └ Version: %s\n", cluster.ProvisionerMetadataKops.Version)
+		}
+
+		fmt.Println(output)
 
 		return nil
 	},

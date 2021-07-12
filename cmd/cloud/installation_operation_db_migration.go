@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -126,7 +125,7 @@ var installationDBMigrationsListCmd = &cobra.Command{
 					migration.ID,
 					migration.InstallationID,
 					string(migration.State),
-					utils.TimeFromMillis(migration.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
+					model.TimeFromMillis(migration.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
 				})
 			}
 			table.Render()
