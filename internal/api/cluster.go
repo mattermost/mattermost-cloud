@@ -36,7 +36,6 @@ func initCluster(apiRouter *mux.Router, context *Context) {
 	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
 	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations)).Methods("POST")
 	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation)).Methods("DELETE")
-
 	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
 }
 
@@ -128,6 +127,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				VPC:                createClusterRequest.VPC,
 			},
 		},
+
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
@@ -266,7 +266,6 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 			ExtraData: map[string]string{"Environment": c.Environment},
 		}
 		clusterDTO.State = newState
-
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")

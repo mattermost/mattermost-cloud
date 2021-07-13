@@ -15,6 +15,7 @@ import (
 	"github.com/pborman/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
@@ -43,6 +44,7 @@ type ClusterInstallationProvisioner interface {
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
 	RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error
 }
 
 // ClusterInstallationProvisioner function returns an implementation of ClusterInstallationProvisioner interface
@@ -714,6 +716,76 @@ func (provisioner *KopsProvisioner) DeleteOldClusterInstallationLicenseSecrets(c
 	err = cleanupOldLicenseSecrets(currentSecretName, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to cleanup old license secrets")
+	}
+
+	return nil
+}
+
+// PrepareClusterUtilities performs any updates to cluster utilities that may
+// be needed for clusterinstallations to function correctly.
+func (provisioner *KopsProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+	logger.Info("Preparing cluster utilities")
+
+	// TODO: move this logic to a database interface method.
+	if installation.Database != model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer {
+		return nil
+	}
+
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kops config from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	// TODO: Yeah, so this is definitely a bit of a race condition. We would
+	// need to lock a bunch of stuff to do this completely properly, but that
+	// isn't really feasible right now.
+	ini, err := generatePGBouncerIni(cluster.ProvisionerMetadataKops.VPC, store)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
+	defer cancel()
+
+	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+	if configMap.Data["pgbouncer.ini"] != ini {
+		logger.Debug("Updating pgbouncer.ini with new database configuration")
+
+		configMap.Data["pgbouncer.ini"] = ini
+		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
+		}
+	}
+
+	userlistSecret, err := k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Get(ctx, "pgbouncer-userlist-secret", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+
+	if !strings.Contains(string(userlistSecret.Data["userlist.txt"]), aws.DefaultPGBouncerAuthUsername) {
+		logger.Debug("Updating pgbouncer userlist.txt with auth_user credentials")
+
+		userlist, err := generatePGBouncerUserlist(cluster.ProvisionerMetadataKops.VPC, awsClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to generate pgbouncer userlist")
+		}
+
+		userlistSecret.Data["userlist.txt"] = []byte(userlist)
+		_, err = k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Update(ctx, userlistSecret, metav1.UpdateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to update secret pgbouncer-userlist-secret")
+		}
 	}
 
 	return nil

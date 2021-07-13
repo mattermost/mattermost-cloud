@@ -66,7 +66,7 @@ spec:
       serviceAccountName: k8s-spot-termination-handler
       containers:
         - name: k8s-spot-termination-handler
-          image: kubeaws/kube-spot-termination-notice-handler:1.13.7-1
+          image: stafot/kube-spot-termination-notice-handler:1.21.0_628d3aef
           imagePullPolicy: IfNotPresent
           env:
             - name: NODE_NAME
@@ -76,6 +76,16 @@ spec:
             # Parameters to drain command can be adjusted
             - name: DRAIN_PARAMETERS
               value: '--grace-period=120 --force --ignore-daemonsets --delete-local-data'
+            - name: CLUSTER
+              value: ""
+            - name: MATTERMOST_WEBHOOK
+              value: ""
+            - name: MATTERMOST_USERNAME
+              value: "spot-monitor-bot"
+            - name: MATTERMOST_CHANNEL
+              value: ""
+            - name: DETACH_ASG
+              value: "true"
             - name: POD_NAME
               valueFrom:
                 fieldRef:

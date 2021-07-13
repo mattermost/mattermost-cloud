@@ -1131,6 +1131,23 @@ func (c *Client) GetMultitenantDatabases(request *GetDatabasesRequest) ([]*Multi
 	}
 }
 
+// UpdateMultitenantDatabase updates a multitenant database.
+func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchDatabaseRequest) (*MultitenantDatabase, error) {
+	resp, err := c.doPut(c.buildURL("/api/database/%s", databaseID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return MultitenantDatabaseFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // CreateWebhook requests the creation of a webhook from the configured provisioning server.
 func (c *Client) CreateWebhook(request *CreateWebhookRequest) (*Webhook, error) {
 	resp, err := c.doPost(c.buildURL("/api/webhooks"), request)
@@ -1274,4 +1291,89 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 
+}
+
+// MigrateClusterInstallation requests the migration of cluster installation(s) from the configured provisioning server.
+func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate"), request)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// MigrateDNS requests the migration of cluster installation(s) from the configured provisioning server.
+func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/dns"), request)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("filed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteInActiveClusterInstallationsByCluster requests the deletion of inactive cluster installation(s) from the configured provisioning server.
+func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/%s", clusterID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteInActiveClusterInstallationByID requests the deletion of specific inactive cluster installation from the configured provisioning server.
+func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/cluster_installation/%s", clusterInstallationID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// SwitchClusterRoles requests the migration of cluster installation(s) from the configured provisioning server.
+func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/switch_cluster_roles"), request)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }

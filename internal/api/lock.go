@@ -185,3 +185,38 @@ func lockInstallationDBMigrationOperation(c *Context, operationID string) (*mode
 		})
 	}
 }
+
+// lockDatabase synchronizes access to the given multitenant database across
+// potentially multiple provisioning servers.
+func lockDatabase(c *Context, databaseID string) (*model.MultitenantDatabase, int, func()) {
+	database, err := c.Store.GetMultitenantDatabase(databaseID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query database")
+		return nil, http.StatusInternalServerError, nil
+	}
+	if database == nil {
+		return nil, http.StatusNotFound, nil
+	}
+
+	locked, err := c.Store.LockMultitenantDatabase(databaseID, c.RequestID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to lock database")
+		return nil, http.StatusInternalServerError, nil
+	} else if !locked {
+		c.Logger.Error("failed to acquire lock for database")
+		return nil, http.StatusConflict, nil
+	}
+
+	unlockOnce := sync.Once{}
+
+	return database, 0, func() {
+		unlockOnce.Do(func() {
+			unlocked, err := c.Store.UnlockMultitenantDatabase(database.ID, c.RequestID, false)
+			if err != nil {
+				c.Logger.WithError(err).Errorf("failed to unlock database")
+			} else if unlocked != true {
+				c.Logger.Warn("failed to release lock for database")
+			}
+		})
+	}
+}

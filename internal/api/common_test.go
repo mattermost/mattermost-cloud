@@ -44,3 +44,7 @@ func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool) (*k8s.Cluste
 func sToP(s string) *string {
 	return &s
 }
+
+func iToP(i int64) *int64 {
+	return &i
+}

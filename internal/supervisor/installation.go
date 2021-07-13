@@ -519,12 +519,12 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	}
 
 	// The cluster can support the cluster installation.
-
 	clusterInstallation := &model.ClusterInstallation{
 		ClusterID:      cluster.ID,
 		InstallationID: installation.ID,
 		Namespace:      installation.ID,
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
 	}
 
 	err = s.store.CreateClusterInstallation(clusterInstallation)
@@ -641,8 +641,10 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 }
 
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	isActive := true
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
+		IsActive:       &isActive,
 		Paging:         model.AllPagesNotDeleted(),
 	})
 	if err != nil {
