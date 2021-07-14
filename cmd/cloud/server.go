@@ -83,6 +83,7 @@ func init() {
 	serverCmd.PersistentFlags().String("mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
 	serverCmd.PersistentFlags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 	serverCmd.PersistentFlags().String("utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
+	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 }
 
 var serverCmd = &cobra.Command{
@@ -143,6 +144,12 @@ var serverCmd = &cobra.Command{
 		}
 		model.SetUtilityDefaults(utilitiesGitURL)
 
+			
+		kubecostToken, _ := command.Flags().GetString("kubecost-token")
+		if kubecostToken != "" {
+			os.Setenv(model.KubecostToken, kubecostToken)
+		}
+		
 		logger := logger.WithField("instance", instanceID)
 
 		sqlStore, err := sqlStore(command)
