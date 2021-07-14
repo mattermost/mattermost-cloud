@@ -40,6 +40,7 @@ func init() {
 	clusterCreateCmd.Flags().String("teleport-version", "", "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("pgbouncer-version", "", "The version of Pgbouncer to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("stackrox-version", "", "The version of Stackrox to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", "", "The branch name of the desired chart value file's version for Fluent-Bit")
@@ -48,6 +49,7 @@ func init() {
 	clusterCreateCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
 	clusterCreateCmd.Flags().String("pgbouncer-values", "", "The branch name of the desired chart value file's version for Pgbouncer")
 	clusterCreateCmd.Flags().String("stackrox-values", "", "The branch name of the desired chart value file's version for Stackrox")
+	clusterCreateCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 
@@ -62,6 +64,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
 	clusterProvisionCmd.Flags().String("pgbouncer-version", "", "The version of the Pgbouncer Helm chart")
 	clusterProvisionCmd.Flags().String("stackrox-version", "", "The version of the Stackrox Helm chart")
+	clusterProvisionCmd.Flags().String("kubecost-version", "", "The version of the Kubecost Helm chart")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
@@ -71,7 +74,8 @@ func init() {
 	clusterProvisionCmd.Flags().String("teleport-values", "", "The full Git URL of the desired chart values for Teleport")
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
 	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
-
+	clusterProvisionCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
+	
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -570,7 +574,8 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	teleportVersion, _ := command.Flags().GetString("teleport-version")
 	pgbouncerVersion, _ := command.Flags().GetString("pgbouncer-version")
 	stackroxVersion, _ := command.Flags().GetString("stackrox-version")
-
+	kubecostVersion, _ := command.Flags().GetString("kubecost-version")
+	
 	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
 	thanosValues, _ := command.Flags().GetString("thanos-values")
 	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")
@@ -579,6 +584,7 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	teleportValues, _ := command.Flags().GetString("teleport-values")
 	pgbouncerValues, _ := command.Flags().GetString("pgbouncer-values")
 	stackroxValues, _ := command.Flags().GetString("stackrox-values")
+	kubecostValues, _ := command.Flags().GetString("kubecost-values")
 
 	utilityVersions := make(map[string]*model.HelmUtilityVersion)
 
@@ -612,6 +618,9 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 
 	if stackroxVersion != "" && stackroxValues != "" {
 		utilityVersions[model.StackroxCanonicalName] = &model.HelmUtilityVersion{Chart: stackroxVersion, ValuesPath: stackroxValues}
+	}
+	if kubecostVersion != "" && kubecostValues != "" {
+		utilityVersions[model.KubecostCanonicalName] = &model.HelmUtilityVersion{Chart: kubecostVersion, ValuesPath: kubecostValues}
 	}
 
 	return utilityVersions
