@@ -204,8 +204,10 @@ func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error
 // the provided installation resides in. Installations with multiple cluster
 // installations are currently not supported.
 func getVPCForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (*ec2.Vpc, error) {
+	var isActive = true
 	clusterInstallations, err := store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		Paging:         model.AllPagesWithDeleted(),
+		IsActive:       &isActive,
 		InstallationID: installationID,
 	})
 	if err != nil {
