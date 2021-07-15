@@ -37,6 +37,8 @@ func init() {
 
 	rootCmd.AddCommand(databaseCmd)
 	rootCmd.AddCommand(filestoreCmd)
+	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(deleteCmd)
 }
 
 func main() {
