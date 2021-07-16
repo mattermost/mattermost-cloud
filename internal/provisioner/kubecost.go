@@ -126,7 +126,7 @@ func (k *kubecost) NewHelmDeployment() *helmDeployment {
 		namespace:           "kubecost",
 		kopsProvisioner:     k.provisioner,
 		kops:                k.kops,
-		setArgument: 		 kubecostToken,
+		setArgument:         kubecostToken,
 		logger:              k.logger,
 		desiredVersion:      k.desiredVersion,
 	}
