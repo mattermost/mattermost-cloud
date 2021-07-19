@@ -82,6 +82,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("force-cr-upgrade", false, "If specified installation CRVersions will be updated to the latest version when supervised.")
 	serverCmd.PersistentFlags().String("mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
 	serverCmd.PersistentFlags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
+	serverCmd.PersistentFlags().String("utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 }
 
 var serverCmd = &cobra.Command{
@@ -134,6 +135,13 @@ var serverCmd = &cobra.Command{
 		mattermostChannel, _ := command.Flags().GetString("mattermost-channel")
 		if mattermostChannel != "" {
 			os.Setenv(model.MattermostChannel, mattermostChannel)
+		}
+
+		utilitiesGitURL, _ := command.Flags().GetString("utilities-git-url")
+		if utilitiesGitURL != "" {
+			model.SetUtilityDefaults(utilitiesGitURL)
+		} else {
+			return errors.New("utilities-git-url must be set")
 		}
 
 		logger := logger.WithField("instance", instanceID)

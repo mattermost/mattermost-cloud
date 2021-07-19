@@ -65,6 +65,7 @@ var helmRepos = map[string]string{
 	"prometheus-community": "https://prometheus-community.github.io/helm-charts",
 	"bitnami":              "https://charts.bitnami.com/bitnami",
 	"fluent":               "https://fluent.github.io/helm-charts",
+	"stackrox":             "https://charts.stackrox.io",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -115,10 +116,17 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
+	stackrox, err := newStackroxHandle(
+		cluster, cluster.DesiredUtilityVersion(model.StackroxCanonicalName),
+		provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Stackrox")
+	}
+
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, stackrox},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

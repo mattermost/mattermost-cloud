@@ -84,6 +84,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[PgbouncerCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PgbouncerCanonicalName] = PgbouncerDefaultVersion
 	}
+	if _, ok := request.DesiredUtilityVersions[StackroxCanonicalName]; !ok {
+		request.DesiredUtilityVersions[StackroxCanonicalName] = StackroxDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.

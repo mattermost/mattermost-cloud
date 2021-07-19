@@ -54,6 +54,11 @@ region = us-east-1
   ```
 4. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
 
+5. Generate a Gitlab Token for access to the utities Helm values repo. Then export:
+```
+export GITLAB_OAUTH_TOKEN=YOURTOKEN
+```
+
 Also:
 - Make sure you have a key in your ~/.ssh/
     such as:
@@ -89,7 +94,7 @@ $ cloud schema migrate
 Run the server with:
 
 ```bash
-cloud server --state-store=<your-s3-bucket>
+cloud server --state-store=<your-s3-bucket> --utilities-git-url=<https://gitlab.example.com>
 ```
 tip: if you want to debug, enable `--dev` flag
 
