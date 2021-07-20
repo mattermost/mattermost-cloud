@@ -138,11 +138,10 @@ var serverCmd = &cobra.Command{
 		}
 
 		utilitiesGitURL, _ := command.Flags().GetString("utilities-git-url")
-		if utilitiesGitURL != "" {
-			model.SetUtilityDefaults(utilitiesGitURL)
-		} else {
+		if utilitiesGitURL == "" {
 			return errors.New("utilities-git-url must be set")
 		}
+		model.SetUtilityDefaults(utilitiesGitURL)
 
 		logger := logger.WithField("instance", instanceID)
 
