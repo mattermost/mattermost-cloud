@@ -184,20 +184,14 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	newState := model.ClusterStateCreationRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
-
-	newState := model.ClusterStateCreationRequested
-
-	if !clusterDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to retry cluster creation while in state %s", clusterDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	if clusterDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
@@ -239,36 +233,26 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
-	if status != 0 {
-		w.WriteHeader(status)
-		return
-	}
-	defer unlockOnce()
-
-	if clusterDTO.APISecurityLock {
-		logSecurityLockConflict("cluster", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
 	provisionClusterRequest, err := model.NewProvisionClusterRequestFromReader(r.Body)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to deserialize cluster provision request body")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	newState := model.ClusterStateProvisioningRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
 	err = clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	newState := model.ClusterStateProvisioningRequested
-
-	if !clusterDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to provision cluster while in state %s", clusterDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -362,27 +346,16 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	newState := model.ClusterStateUpgradeRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if clusterDTO.APISecurityLock {
-		logSecurityLockConflict("cluster", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
 	oldState := clusterDTO.State
-	newState := model.ClusterStateUpgradeRequested
-
-	if !clusterDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to upgrade cluster while in state %s", clusterDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	if upgradeClusterRequest.Apply(clusterDTO.ProvisionerMetadataKops) {
 		clusterDTO.State = newState
@@ -432,18 +405,14 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	newState := model.ClusterStateResizeRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
-
-	if clusterDTO.APISecurityLock {
-		logSecurityLockConflict("cluster", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
 
 	// One more check that can't be done without both the request and the cluster.
 	if resizeClusterRequest.NodeMinCount == nil &&
@@ -455,13 +424,6 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	oldState := clusterDTO.State
-	newState := model.ClusterStateResizeRequested
-
-	if !clusterDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to resize cluster while in state %s", clusterDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	if resizeClusterRequest.Apply(clusterDTO.ProvisionerMetadataKops) {
 		clusterDTO.State = newState
@@ -504,26 +466,14 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	clusterID := vars["cluster"]
 	c.Logger = c.Logger.WithField("cluster", clusterID)
 
-	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	newState := model.ClusterInstallationStateDeletionRequested
+
+	clusterDTO, status, unlockOnce := getClusterForTransition(c, clusterID, newState)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
-
-	if clusterDTO.APISecurityLock {
-		logSecurityLockConflict("cluster", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
-	newState := model.ClusterInstallationStateDeletionRequested
-
-	if !clusterDTO.ValidTransitionState(newState) {
-		c.Logger.Warnf("unable to delete cluster while in state %s", clusterDTO.State)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 
 	clusterInstallations, err := c.Store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		ClusterID: clusterDTO.ID,
@@ -679,4 +629,26 @@ func annotationsFromRequest(req *http.Request) ([]*model.Annotation, error) {
 	}
 
 	return annotations, nil
+}
+
+// getClusterForTransition locks the cluster and validates if it can be transitioned to desired state.
+func getClusterForTransition(c *Context, clusterID, newState string) (*model.ClusterDTO, int, func()) {
+	clusterDTO, status, unlockOnce := lockCluster(c, clusterID)
+	if status != 0 {
+		return nil, status, unlockOnce
+	}
+
+	if clusterDTO.APISecurityLock {
+		unlockOnce()
+		logSecurityLockConflict("cluster", c.Logger)
+		return nil, http.StatusForbidden, unlockOnce
+	}
+
+	if !clusterDTO.ValidTransitionState(newState) {
+		unlockOnce()
+		c.Logger.Warnf("unable to transition cluster to %q while in state %q", newState, clusterDTO.State)
+		return nil, http.StatusBadRequest, unlockOnce
+	}
+
+	return clusterDTO, 0, unlockOnce
 }
