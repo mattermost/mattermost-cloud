@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/mattermost/mattermost-cloud/model"
+
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // WaitForInstallationAvailability pings installation until it responds successfully.
