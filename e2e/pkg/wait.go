@@ -8,8 +8,9 @@ package pkg
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 )

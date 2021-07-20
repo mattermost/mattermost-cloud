@@ -22,7 +22,7 @@ func WaitForInstallationAvailability(dns string, log logrus.FieldLogger) error {
 	err := WaitForFunc(NewWaitConfig(20*time.Minute, 20*time.Second, 2, log), func() (bool, error) {
 		resp, err := http.Get(pingURL(dns))
 		if err != nil {
-			log.WithError(err).Error("Error while pining request")
+			log.WithError(err).Errorf("Error while making ping request to Installation %s", dns)
 			return false, nil
 		}
 		return resp.StatusCode == http.StatusOK, nil

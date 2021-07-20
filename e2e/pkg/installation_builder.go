@@ -13,7 +13,7 @@ type InstallationBuilder struct {
 	request *model.CreateInstallationRequest
 }
 
-// NewInstallationBuilderWithDefaults sets up new InstallationBuilder with resonable defaults.
+// NewInstallationBuilderWithDefaults sets up new InstallationBuilder with reasonable defaults.
 func NewInstallationBuilderWithDefaults() *InstallationBuilder {
 	return &InstallationBuilder{request: &model.CreateInstallationRequest{
 		OwnerID:   "e2e-test",
