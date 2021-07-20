@@ -63,14 +63,14 @@ func init() {
 	clusterProvisionCmd.Flags().String("pgbouncer-version", "", "The version of the Pgbouncer Helm chart")
 	clusterProvisionCmd.Flags().String("stackrox-version", "", "The version of the Stackrox Helm chart")
 
-	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
-	clusterProvisionCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
-	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The branch name of the desired chart value file's version for Fluent-Bit")
-	clusterProvisionCmd.Flags().String("nginx-values", "", "The branch name of the desired chart value file's version for NGINX")
-	clusterProvisionCmd.Flags().String("nginx-internal-values", "", "The branch name of the desired chart value file's version for NGINX Internal")
-	clusterProvisionCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
-	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The branch name of the desired chart value file's version for Pgbouncer")
-	clusterProvisionCmd.Flags().String("stackrox-values", "", "The branch name of the desired chart value file's version for Stackrox")
+	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
+	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
+	clusterProvisionCmd.Flags().String("fluentbit-values", "", "The full Git URL of the desired chart values for Fluentbit")
+	clusterProvisionCmd.Flags().String("nginx-values", "", "The full Git URL of the desired chart values for Nginx")
+	clusterProvisionCmd.Flags().String("nginx-internal-values", "", "The full Git URL of the desired chart values for Nginx Internal")
+	clusterProvisionCmd.Flags().String("teleport-values", "", "The full Git URL of the desired chart values for Teleport")
+	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
+	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
