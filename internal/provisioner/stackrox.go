@@ -16,7 +16,6 @@ import (
 )
 
 type stackrox struct {
-	awsClient      aws.AWS
 	environment    string
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
@@ -40,7 +39,6 @@ func newStackroxHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 	}
 
 	return &stackrox{
-		awsClient:      awsClient,
 		environment:    awsClient.GetCloudEnvironmentName(),
 		provisioner:    provisioner,
 		kops:           kops,
