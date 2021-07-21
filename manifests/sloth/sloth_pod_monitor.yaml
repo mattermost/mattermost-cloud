@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: sloth
+  namespace: prometheus
+  labels:
+    app: sloth
+    prometheus: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: sloth
+  podMetricsEndpoints:
+    - port: metrics

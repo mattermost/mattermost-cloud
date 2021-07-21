@@ -1,0 +1,67 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sloth
+rules:
+  - apiGroups: ["sloth.slok.dev"]
+    resources: ["*"]
+    verbs: ["*"]
+
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["prometheusrules"]
+    verbs: ["create", "list", "get", "update", "watch"]
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sloth
+  namespace: prometheus
+  labels:
+    app: sloth
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sloth
+  labels:
+    app: sloth
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sloth
+subjects:
+  - kind: ServiceAccount
+    name: sloth
+    namespace: prometheus
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sloth
+  namespace: prometheus
+  labels:
+    app: sloth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sloth
+  template:
+    metadata:
+      labels:
+        app: sloth
+    spec:
+      serviceAccountName: sloth
+      containers:
+        - name: sloth
+          image: slok/sloth:v0.6.0
+          args:
+            - kubernetes-controller
+          ports:
+            - containerPort: 8081
+              name: metrics
+              protocol: TCP

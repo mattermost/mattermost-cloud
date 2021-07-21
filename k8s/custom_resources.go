@@ -7,6 +7,7 @@ package k8s
 import (
 	"context"
 	"encoding/json"
+	monitoringV1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/pkg/errors"
 
@@ -76,4 +77,18 @@ func (kc *KubeClient) createOrUpdateClusterInstallation(namespace string, ci *mm
 	}
 
 	return kc.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(namespace).Update(ctx, ci, metav1.UpdateOptions{})
+}
+
+func (kc *KubeClient) createOrUpdatePodMonitor(namespace string, pm *monitoringV1.PodMonitor) (metav1.Object, error) {
+	ctx := context.TODO()
+	_, err := kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Get(ctx, pm.GetName(), metav1.GetOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err != nil && k8sErrors.IsNotFound(err) {
+		return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Create(ctx, pm, metav1.CreateOptions{})
+	}
+
+	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Update(ctx, pm, metav1.UpdateOptions{})
 }
