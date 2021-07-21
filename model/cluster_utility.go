@@ -27,6 +27,8 @@ const (
 	TeleportCanonicalName = "teleport"
 	// PgbouncerCanonicalName is the canonical string representation of pgbouncer
 	PgbouncerCanonicalName = "pgbouncer"
+	// StackroxCanonicalName is the canonical string representation of stackrox
+	StackroxCanonicalName = "stackrox-secured-cluster-services"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -35,20 +37,50 @@ const (
 
 var (
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
-	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: "helm-charts/prometheus_operator_values.yaml"}
+	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: ""}
 	// ThanosDefaultVersion defines the default version for the Helm chart
-	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: "helm-charts/thanos_values.yaml"}
+	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: ""}
 	// NginxDefaultVersion defines the default version for the Helm chart
-	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_values.yaml"}
+	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: ""}
 	// NginxInternalDefaultVersion defines the default version for the Helm chart
-	NginxInternalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: "helm-charts/nginx_internal_values.yaml"}
+	NginxInternalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: ""}
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "0.15.8", ValuesPath: "helm-charts/fluent-bit_values.yaml"}
+	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "0.15.8", ValuesPath: ""}
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: "helm-charts/teleport_values.yaml"}
+	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: ""}
 	// PgbouncerDefaultVersion defines the default version for the Helm chart
-	PgbouncerDefaultVersion = &HelmUtilityVersion{Chart: "1.1.0", ValuesPath: "helm-charts/pgbouncer_values.yaml"}
+	PgbouncerDefaultVersion = &HelmUtilityVersion{Chart: "1.1.0", ValuesPath: ""}
+	// StackroxDefaultVersion defines the default version for the Helm chart
+	StackroxDefaultVersion = &HelmUtilityVersion{Chart: "62.0.0", ValuesPath: ""}
 )
+
+// SetUtilityDefaults is used to set Utility default version and values.
+func SetUtilityDefaults(url string) {
+	if PrometheusOperatorDefaultVersion.ValuesPath == "" {
+		PrometheusOperatorDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fprometheus_operator_values.yaml?ref=master", url)
+	}
+	if ThanosDefaultVersion.ValuesPath == "" {
+		ThanosDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fthanos_values.yaml?ref=master", url)
+	}
+	if NginxDefaultVersion.ValuesPath == "" {
+		NginxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_values.yaml?ref=master", url)
+	}
+	if NginxInternalDefaultVersion.ValuesPath == "" {
+		NginxInternalDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_internal_values.yaml?ref=master", url)
+	}
+	if FluentbitDefaultVersion.ValuesPath == "" {
+		FluentbitDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Ffluent-bit_values.yaml?ref=master", url)
+	}
+	if TeleportDefaultVersion.ValuesPath == "" {
+		TeleportDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fteleport_values.yaml?ref=master", url)
+	}
+	if PgbouncerDefaultVersion.ValuesPath == "" {
+		PgbouncerDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fpgbouncer_values.yaml?ref=master", url)
+	}
+	if StackroxDefaultVersion.ValuesPath == "" {
+		StackroxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fstackrox_values.yaml?ref=master", url)
+	}
+}
 
 // UnmarshalJSON is a custom JSON unmarshaler that can handle both the
 // old Version string type and the new type. It is entirely
@@ -64,6 +96,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		Fluentbit          *HelmUtilityVersion
 		Teleport           *HelmUtilityVersion
 		Pgbouncer          *HelmUtilityVersion
+		Stackrox           *HelmUtilityVersion
 	}
 	type oldUtilityGroupVersions struct {
 		PrometheusOperator string
@@ -73,6 +106,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		Fluentbit          string
 		Teleport           string
 		Pgbouncer          string
+		Stackrox           string
 	}
 
 	var utilGrpVers *utilityGroupVersions = &utilityGroupVersions{}
@@ -91,6 +125,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		h.Fluentbit = &HelmUtilityVersion{Chart: oldUtilGrpVers.Fluentbit}
 		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
 		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
+		h.Stackrox = &HelmUtilityVersion{Chart: oldUtilGrpVers.Stackrox}
 		return nil
 	}
 
@@ -101,6 +136,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 	h.Fluentbit = utilGrpVers.Fluentbit
 	h.Teleport = utilGrpVers.Teleport
 	h.Pgbouncer = utilGrpVers.Pgbouncer
+	h.Stackrox = utilGrpVers.Stackrox
 	return nil
 }
 
@@ -114,6 +150,7 @@ type UtilityGroupVersions struct {
 	Fluentbit          *HelmUtilityVersion
 	Teleport           *HelmUtilityVersion
 	Pgbouncer          *HelmUtilityVersion
+	Stackrox           *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -128,6 +165,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		FluentbitCanonicalName:          h.Fluentbit,
 		TeleportCanonicalName:           h.Teleport,
 		PgbouncerCanonicalName:          h.Pgbouncer,
+		StackroxCanonicalName:           h.Stackrox,
 	}
 }
 
@@ -248,6 +286,8 @@ func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtili
 		return versions.Teleport
 	case PgbouncerCanonicalName:
 		return versions.Pgbouncer
+	case StackroxCanonicalName:
+		return versions.Stackrox
 	}
 
 	return nil
@@ -273,6 +313,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Teleport = desiredVersion
 	case PgbouncerCanonicalName:
 		versions.Pgbouncer = desiredVersion
+	case StackroxCanonicalName:
+		versions.Stackrox = desiredVersion
 	}
 }
 

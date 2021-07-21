@@ -54,6 +54,12 @@ region = us-east-1
   ```
 4. Clone this repository into your GOPATH (or anywhere if you have Go Modules enabled)
 
+5. Generate a Gitlab Token for access to the utities Helm values repo.  Then export:
+```
+export GITLAB_OAUTH_TOKEN=YOURTOKEN
+```
+This is the option when a remote git repo is used for utility values. In case you want to use local values for local testing you can export an empty token value and add the values in the relevant file in `helm-charts` directory and pass it in the cluster creation step.
+
 Also:
 - Make sure you have a key in your ~/.ssh/
     such as:
@@ -89,7 +95,7 @@ $ cloud schema migrate
 Run the server with:
 
 ```bash
-cloud server --state-store=<your-s3-bucket>
+cloud server --state-store=<your-s3-bucket> --utilities-git-url=<https://gitlab.example.com>
 ```
 tip: if you want to debug, enable `--dev` flag
 

@@ -65,24 +65,43 @@ func (request *CreateClusterRequest) SetDefaults() {
 	}
 	if _, ok := request.DesiredUtilityVersions[PrometheusOperatorCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PrometheusOperatorCanonicalName] = PrometheusOperatorDefaultVersion
+	} else if request.DesiredUtilityVersions[PrometheusOperatorCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[PrometheusOperatorCanonicalName].ValuesPath = PrometheusOperatorDefaultVersion.ValuesPath
 	}
 	if _, ok := request.DesiredUtilityVersions[ThanosCanonicalName]; !ok {
 		request.DesiredUtilityVersions[ThanosCanonicalName] = ThanosDefaultVersion
+	} else if request.DesiredUtilityVersions[ThanosCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[ThanosCanonicalName].ValuesPath = ThanosDefaultVersion.ValuesPath
 	}
 	if _, ok := request.DesiredUtilityVersions[NginxCanonicalName]; !ok {
 		request.DesiredUtilityVersions[NginxCanonicalName] = NginxDefaultVersion
+	} else if request.DesiredUtilityVersions[NginxCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[NginxCanonicalName].ValuesPath = NginxDefaultVersion.ValuesPath
 	}
 	if _, ok := request.DesiredUtilityVersions[NginxInternalCanonicalName]; !ok {
 		request.DesiredUtilityVersions[NginxInternalCanonicalName] = NginxInternalDefaultVersion
+	} else if request.DesiredUtilityVersions[NginxInternalCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[NginxInternalCanonicalName].ValuesPath = NginxInternalDefaultVersion.ValuesPath
 	}
 	if _, ok := request.DesiredUtilityVersions[FluentbitCanonicalName]; !ok {
 		request.DesiredUtilityVersions[FluentbitCanonicalName] = FluentbitDefaultVersion
+	} else if request.DesiredUtilityVersions[FluentbitCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[FluentbitCanonicalName].ValuesPath = FluentbitDefaultVersion.ValuesPath
 	}
 	if _, ok := request.DesiredUtilityVersions[TeleportCanonicalName]; !ok {
 		request.DesiredUtilityVersions[TeleportCanonicalName] = TeleportDefaultVersion
+	} else if request.DesiredUtilityVersions[TeleportCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[TeleportCanonicalName].ValuesPath = TeleportDefaultVersion.ValuesPath
 	}
 	if _, ok := request.DesiredUtilityVersions[PgbouncerCanonicalName]; !ok {
 		request.DesiredUtilityVersions[PgbouncerCanonicalName] = PgbouncerDefaultVersion
+	} else if request.DesiredUtilityVersions[PgbouncerCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[PgbouncerCanonicalName].ValuesPath = PgbouncerDefaultVersion.ValuesPath
+	}
+	if _, ok := request.DesiredUtilityVersions[StackroxCanonicalName]; !ok {
+		request.DesiredUtilityVersions[StackroxCanonicalName] = StackroxDefaultVersion
+	} else if request.DesiredUtilityVersions[StackroxCanonicalName].Values() == "" {
+		request.DesiredUtilityVersions[StackroxCanonicalName].ValuesPath = StackroxDefaultVersion.ValuesPath
 	}
 }
 
