@@ -135,8 +135,8 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
 		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
 		h.Stackrox = &HelmUtilityVersion{Chart: oldUtilGrpVers.Stackrox}
-		h.Kubecost = &HelmUtilityVersion{Chart: oldUtilGrpVers.Kubecost}		
-                 return nil
+		h.Kubecost = &HelmUtilityVersion{Chart: oldUtilGrpVers.Kubecost}
+		return nil
 	}
 
 	h.PrometheusOperator = utilGrpVers.PrometheusOperator
