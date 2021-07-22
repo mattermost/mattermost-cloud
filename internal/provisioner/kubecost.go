@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -17,17 +16,14 @@ import (
 )
 
 type kubecost struct {
-	awsClient      aws.AWS
-	environment    string
 	provisioner    *KopsProvisioner
 	kops           *kops.Cmd
-	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newKubecostHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*kubecost, error) {
+func newKubecostHandle(desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*kubecost, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Kubecost handle with nil logger")
 	}
@@ -41,11 +37,8 @@ func newKubecostHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 	}
 
 	return &kubecost{
-		awsClient:      awsClient,
-		environment:    awsClient.GetCloudEnvironmentName(),
 		provisioner:    provisioner,
 		kops:           kops,
-		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.KubecostCanonicalName),
 		desiredVersion: desiredVersion,
 	}, nil

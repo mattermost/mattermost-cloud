@@ -66,7 +66,7 @@ var helmRepos = map[string]string{
 	"bitnami":              "https://charts.bitnami.com/bitnami",
 	"fluent":               "https://fluent.github.io/helm-charts",
 	"stackrox":             "https://charts.stackrox.io",
-	"kubecost":				"https://kubecost.github.io/cost-analyzer/",
+	"kubecost":             "https://kubecost.github.io/cost-analyzer/",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -124,8 +124,8 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Stackrox")
 	}
 	kubecost, err := newKubecostHandle(
-		cluster, cluster.DesiredUtilityVersion(model.KubecostCanonicalName),
-		provisioner, awsClient, kops, logger)
+		cluster.DesiredUtilityVersion(model.KubecostCanonicalName),
+		provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Kubecost")
 	}
