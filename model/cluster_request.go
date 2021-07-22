@@ -103,6 +103,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	} else if request.DesiredUtilityVersions[StackroxCanonicalName].Values() == "" {
 		request.DesiredUtilityVersions[StackroxCanonicalName].ValuesPath = StackroxDefaultVersion.ValuesPath
 	}
+	if _, ok := request.DesiredUtilityVersions[KubecostCanonicalName]; !ok {
+		request.DesiredUtilityVersions[KubecostCanonicalName] = KubecostDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.
