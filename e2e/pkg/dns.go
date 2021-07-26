@@ -17,8 +17,7 @@ const (
 
 // GetDNS returns e2e test dns with random suffix.
 func GetDNS(env string) string {
-	installationDNS := fmt.Sprintf(installationDNSFormat, randStringBytes(4), env)
-	return installationDNS
+	return fmt.Sprintf(installationDNSFormat, randStringBytes(4), env)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
