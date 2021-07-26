@@ -143,6 +143,15 @@ verify-mocks:  $(MOCKGEN) mocks
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
 
+.PHONY: e2e
+e2e:
+	@echo Warning!
+	@echo This may require adjusting some environment variables like DESTINATION_DB.
+	@echo For full configuration check TestConfig struct in ./e2e/tests/dbmigration/suite.go
+	@echo
+	@echo Starting e2e test.
+	go test ./e2e/tests/dbmigration -tags=e2e -v -timeout 30m
+
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
