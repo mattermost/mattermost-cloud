@@ -91,7 +91,7 @@ type Store interface {
 	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
 
 	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
-	SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string) error
+	SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string, installationState string) error
 	DeleteClusterInstallation(id string) error
 	DeleteInActiveClusterInstallationByClusterID(clusterID string) error
 	LockInstallations(installationIDs []string, lockerID string) (bool, error)

@@ -488,19 +488,45 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// DNS Switch
-	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
-	newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
-	c.Logger.Infof("Total DNS records to migrate: %s", len(clusterInstallations))
-	var installationIDs []string
+	var stableInstallationIDs []string
+	var hibernatedInstallationIDs []string
 	for _, ci := range clusterInstallations {
-		installationIDs = append(installationIDs, ci.InstallationID)
+		installation, err := c.Store.GetInstallation(ci.InstallationID, false, false)
+		if err != nil {
+			c.Logger.WithError(err).Errorf("Failed to get refreshed installation")
+			return
+		}
+		if installation.State == model.InstallationStateHibernating {
+			hibernatedInstallationIDs = append(hibernatedInstallationIDs, ci.InstallationID)
+		} else {
+			stableInstallationIDs = append(stableInstallationIDs, ci.InstallationID)
+		}
 	}
-	status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs)
-	if status != 0 {
-		c.Logger.Error("Failed to migrate DNS records")
-		w.WriteHeader(status)
-		return
+
+	c.Logger.Infof("Total DNS records to migrate: %s", (len(stableInstallationIDs) + len(hibernatedInstallationIDs)))
+	if len(stableInstallationIDs) > 0 {
+		clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations, stableInstallationIDs)
+		newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations, stableInstallationIDs)
+		status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, stableInstallationIDs, model.InstallationStateCreationDNS)
+		if status != 0 {
+			c.Logger.Error("Failed to migrate DNS records")
+			w.WriteHeader(status)
+			return
+		}
 	}
+
+	if len(hibernatedInstallationIDs) > 0 {
+		c.Logger.Info("hibernated DNS records")
+		clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations, hibernatedInstallationIDs)
+		newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations, hibernatedInstallationIDs)
+		status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, hibernatedInstallationIDs, model.InstallationStateMigratingHibernated)
+		if status != 0 {
+			c.Logger.Error("Failed to migrate hibernated DNS records")
+			w.WriteHeader(status)
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -557,7 +583,7 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 	w.WriteHeader(http.StatusOK)
 }
 
-func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldClusterInstallationIDs []string, newClusterInstallationIDs []string, installationIDs []string) int {
+func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldClusterInstallationIDs []string, newClusterInstallationIDs []string, installationIDs []string, installationState string) int {
 
 	if mcir.LockInstallation {
 		c.Logger.Infof("Locking %d installation(s) ", len(installationIDs))
@@ -578,7 +604,8 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 			}
 		}()
 	}
-	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs)
+
+	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs, installationState)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to migrate DNS records")
 		return http.StatusInternalServerError
@@ -588,12 +615,22 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 	return 0
 }
 
-func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {
+func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation, installationIDs []string) []string {
 	clusterInstallationIDs := make([]string, 0, len(clusterInstallations))
 	for _, clusterInstallation := range clusterInstallations {
-		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+		if contains(installationIDs, clusterInstallation.InstallationID) {
+			clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
+		}
 	}
 	return clusterInstallationIDs
+}
+func contains(list []string, value string) bool {
+	for _, currentVal := range list {
+		if currentVal == value {
+			return true
+		}
+	}
+	return false
 }
 
 // handleSwitchClusterRoles responds to Post /api/cluster_installations/migrate/switch_cluster_roles.

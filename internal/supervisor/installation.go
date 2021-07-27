@@ -290,6 +290,8 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateDeletionFinalCleanup:
 		return s.finalDeletionCleanup(installation, instanceID, logger)
 
+	case model.InstallationStateMigratingHibernated:
+		return s.migratingHibernateInstallation(installation, instanceID, logger)
 	default:
 		logger.Warnf("Found installation pending work in unexpected state %s", installation.State)
 		return installation.State
@@ -641,39 +643,14 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 }
 
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	isActive := true
-	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		InstallationID: installation.ID,
-		IsActive:       &isActive,
-		Paging:         model.AllPagesNotDeleted(),
-	})
+
+	endpoints, err := s.getPublicLBEndpoint(installation, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to find cluster installations")
+		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
 		return model.InstallationStateCreationDNS
 	}
 
-	var endpoints []string
-	for _, clusterInstallation := range clusterInstallations {
-		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
-		if err != nil {
-			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
-			return model.InstallationStateCreationDNS
-		}
-		if cluster == nil {
-			logger.Errorf("Failed to find cluster %s", clusterInstallation.ClusterID)
-			return failedClusterInstallationState(clusterInstallation.State)
-		}
-
-		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, "nginx")
-		if err != nil {
-			logger.WithError(err).Error("Couldn't get the load balancer endpoint (nginx) for Cluster Installation")
-			return model.InstallationStateCreationDNS
-		}
-
-		endpoints = append(endpoints, endpoint)
-	}
-
-	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, logger)
+	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, "", logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record")
 		return model.InstallationStateCreationDNS
@@ -683,7 +660,38 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 
 	return s.waitForCreationStable(installation, instanceID, logger)
 }
+func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Installation, logger log.FieldLogger) ([]string, error) {
+	isActive := true
+	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
+		InstallationID: installation.ID,
+		IsActive:       &isActive,
+		Paging:         model.AllPagesNotDeleted(),
+	})
 
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find cluster installations")
+	}
+
+	var endpoints []string
+	for _, clusterInstallation := range clusterInstallations {
+		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to query cluster %s", clusterInstallation.ClusterID)
+		}
+		if cluster == nil {
+			return nil, errors.Wrapf(err, "failed to find cluster %s", clusterInstallation.ClusterID)
+		}
+
+		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, "nginx")
+		if err != nil {
+			return nil, errors.Wrap(err, "Couldn't get the load balancer endpoint (nginx) for Cluster Installation")
+		}
+
+		endpoints = append(endpoints, endpoint)
+	}
+
+	return endpoints, nil
+}
 func (s *InstallationSupervisor) updateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	// Before starting, we check the installation and group sequence numbers and
 	// sync them if they are not already. This is used to check if the group
@@ -1454,4 +1462,24 @@ func getAnnotationsNames(annotations []*model.Annotation) []string {
 
 func elapsedTimeInSeconds(createAtMillis int64) float64 {
 	return float64(time.Now().Unix()*1000-createAtMillis) / 1000
+}
+
+// migratingHibernateInstallation deeal with dns update for hibernated installations during migration
+func (s *InstallationSupervisor) migratingHibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+
+	endpoints, err := s.getPublicLBEndpoint(installation, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
+		return model.InstallationStateMigratingHibernated
+	}
+
+	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record")
+		return model.InstallationStateMigratingHibernated
+	}
+
+	logger.Infof("Successfully configured DNS %s", installation.DNS)
+
+	return s.waitForHibernationStable(installation, instanceID, logger)
 }

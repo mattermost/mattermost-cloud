@@ -60,8 +60,8 @@ func (a *Client) GetPublicHostedZoneID() string {
 }
 
 // CreatePublicCNAME creates a record in Route53 for a public domain name.
-func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
-	return a.createCNAME(a.GetPublicHostedZoneID(), dnsName, dnsEndpoints, logger)
+func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
+	return a.createCNAME(a.GetPublicHostedZoneID(), dnsName, dnsEndpoints, dnsIdentifier, logger)
 }
 
 // UpdatePublicRecordIDForCNAME updates the record ID for the record corresponding
@@ -83,7 +83,7 @@ func (a *Client) GetPrivateHostedZoneID() string {
 
 // CreatePrivateCNAME creates a record in Route53 for a private domain name.
 func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
-	return a.createCNAME(a.GetPrivateHostedZoneID(), dnsName, dnsEndpoints, logger)
+	return a.createCNAME(a.GetPrivateHostedZoneID(), dnsName, dnsEndpoints, "", logger)
 }
 
 // IsProvisionedPrivateCNAME returns true if a record has been registered in the
@@ -152,7 +152,7 @@ func (a *Client) getZoneDNS(hostedZoneID string, logger log.FieldLogger) (string
 	return domainName, nil
 }
 
-func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for route53 creation request")
 	}
@@ -169,6 +169,11 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 		})
 	}
 
+	identifier := dnsName
+	if len(dnsIdentifier) != 0 {
+		identifier = dnsIdentifier
+	}
+
 	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
 		ChangeBatch: &route53.ChangeBatch{
 			Changes: []*route53.Change{
@@ -180,7 +185,7 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 						ResourceRecords: resourceRecords,
 						TTL:             aws.Int64(defaultTTL),
 						Weight:          aws.Int64(defaultWeight),
-						SetIdentifier:   aws.String(dnsName),
+						SetIdentifier:   aws.String(identifier),
 					},
 				},
 			},

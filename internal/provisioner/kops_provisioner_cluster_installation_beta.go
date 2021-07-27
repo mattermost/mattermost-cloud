@@ -68,6 +68,11 @@ func (provisioner *kopsCIBeta) CreateClusterInstallation(cluster *model.Cluster,
 		},
 	}
 
+	if installation.State == model.InstallationStateHibernating {
+		logger.Info("creating hibernated cluster installation")
+		hibernateInstallation(mattermost)
+	}
+
 	if installation.License != "" {
 		licenseSecretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
@@ -121,13 +126,7 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
-	// Hibernation is currently considered changing the Mattermost app deployment
-	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
-	// The current way to do this is to set a negative replica count in the
-	// k8s custom resource. Custom ingress annotations are also used.
-	// TODO: enhance hibernation to include database and/or filestore.
-	cr.Spec.Replicas = int32Ptr(0)
-	cr.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+	hibernateInstallation(cr)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -137,6 +136,17 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 	logger.Info("Updated cluster installation")
 
 	return nil
+}
+
+func hibernateInstallation(mattermost *mmv1beta1.Mattermost) {
+	// Hibernation is currently considered changing the Mattermost app deployment
+	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
+	// The current way to do this is to set a negative replica count in the
+	// k8s custom resource. Custom ingress annotations are also used.
+	// TODO: enhance hibernation to include database and/or filestore.
+	mattermost.Spec.Replicas = int32Ptr(0)
+	mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+	mattermost.Spec.Size = ""
 }
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
