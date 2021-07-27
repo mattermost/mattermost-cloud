@@ -87,6 +87,7 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:           &HelmUtilityVersion{Chart: "12345"},
 				Pgbouncer:          &HelmUtilityVersion{Chart: "123456"},
 				Stackrox:           &HelmUtilityVersion{Chart: "1234567"},
+				Kubecost:          &HelmUtilityVersion{Chart: "12345678"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -96,6 +97,7 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:           &HelmUtilityVersion{Chart: "teleport-0.3.0"},
 				Pgbouncer:          &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
 				Stackrox:           &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
+				Kubecost:           &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
 			},
 		},
 	}
@@ -121,6 +123,9 @@ func TestGetActualVersion(t *testing.T) {
 	version = c.ActualUtilityVersion(StackroxCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"}, version)
 
+	version = c.ActualUtilityVersion(KubecostCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"}, version)
+	
 	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, version, nilHuv)
 }
@@ -136,6 +141,8 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:           &HelmUtilityVersion{Chart: "12345"},
 				Pgbouncer:          &HelmUtilityVersion{Chart: "123456"},
 				Stackrox:           &HelmUtilityVersion{Chart: "1234567"},
+				Kubecost:           &HelmUtilityVersion{Chart: "12345678"},
+
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -145,6 +152,8 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:           &HelmUtilityVersion{Chart: "teleport-0.3.0"},
 				Pgbouncer:          &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
 				Stackrox:           &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
+				Kubecost:           &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
+
 			},
 		},
 	}
@@ -169,6 +178,9 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion(StackroxCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "1234567"}, version)
+
+	version = c.DesiredUtilityVersion(KubecostCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "12345678"}, version)
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, nilHuv, version)
