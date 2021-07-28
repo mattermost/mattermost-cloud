@@ -32,7 +32,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			Times(1),
 	)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, "", a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -75,7 +75,7 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEChangeRecordSetsError() {
 
 	a.Mocks.Log.Logger.EXPECT().WithFields(gomock.Any()).Times(0)
 
-	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.CreatePublicCNAME("mattermost.com", []string{"example.mattermost.com"}, "", a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal("unable to change recordsets", err.Error())
 }

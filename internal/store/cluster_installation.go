@@ -270,7 +270,7 @@ func (sqlStore *SQLStore) createClusterInstallation(db execer, clusterInstallati
 }
 
 // SwitchDNS performs the dns switch from source cluster to target cluster
-func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string, installationState string) error {
+func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string, hibernatingInstallationIDs []string) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -287,9 +287,18 @@ func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []stri
 		return errors.Wrap(err, "failed to update cluster installation")
 	}
 
-	err = sqlStore.UpdateInstallationsState(tx, installationIDs, installationState)
-	if err != nil {
-		return errors.Wrap(err, "failed to update cluster installation")
+	if len(installationIDs) > 0 {
+		err = sqlStore.UpdateInstallationsState(tx, installationIDs, model.InstallationStateCreationDNS)
+		if err != nil {
+			return errors.Wrap(err, "failed to update cluster installation")
+		}
+	}
+
+	if len(hibernatingInstallationIDs) > 0 {
+		err = sqlStore.UpdateInstallationsState(tx, hibernatingInstallationIDs, model.InstallationStateDNSMigrationHibernating)
+		if err != nil {
+			return errors.Wrap(err, "failed to update cluster installation")
+		}
 	}
 
 	err = tx.Commit()

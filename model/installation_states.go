@@ -67,8 +67,8 @@ const (
 	InstallationStateDBRestorationFailed = "db-restoration-failed"
 	// InstallationStateDBMigrationFailed is an installation for which database migration failed.
 	InstallationStateDBMigrationFailed = "db-migration-failed"
-	// InstallationStateMigratingHibernated is an hibernated installation that is being migrated to different cluster.
-	InstallationStateMigratingHibernated = "migrating-hibernated"
+	// InstallationStateDNSMigrationHibernating is an hibernated installation that is being migrated to different cluster.
+	InstallationStateDNSMigrationHibernating = "dns-migration-hibernated"
 )
 
 const (
@@ -106,7 +106,7 @@ var AllInstallationStates = []string{
 	InstallationStateDBMigrationRollbackInProgress,
 	InstallationStateDBRestorationFailed,
 	InstallationStateDBMigrationFailed,
-	InstallationStateMigratingHibernated,
+	InstallationStateDNSMigrationHibernating,
 }
 
 // AllInstallationStatesPendingWork is a list of all installation states that
@@ -129,7 +129,7 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
-	InstallationStateMigratingHibernated,
+	InstallationStateDNSMigrationHibernating,
 }
 
 // AllInstallationRequestStates is a list of all states that an installation can
@@ -143,7 +143,7 @@ var AllInstallationRequestStates = []string{
 	InstallationStateWakeUpRequested,
 	InstallationStateUpdateRequested,
 	InstallationStateDeletionRequested,
-	InstallationStateMigratingHibernated,
+	InstallationStateDNSMigrationHibernating,
 }
 
 // ValidTransitionState returns whether an installation can be transitioned into
@@ -202,7 +202,7 @@ var (
 		InstallationStateDBMigrationInProgress: {
 			InstallationStateHibernating,
 		},
-		InstallationStateMigratingHibernated: {
+		InstallationStateDNSMigrationHibernating: {
 			InstallationStateHibernating,
 		},
 	}

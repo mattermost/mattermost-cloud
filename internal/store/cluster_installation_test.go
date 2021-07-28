@@ -735,7 +735,7 @@ func TestSwitchDNS(t *testing.T) {
 	for _, ci := range clusterInstallations {
 		installationIDs = append(installationIDs, ci.InstallationID)
 	}
-	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs)
+	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs, nil)
 	require.NoError(t, err)
 	var isActiveClusterInstallations = true
 	filter := &model.ClusterInstallationFilter{

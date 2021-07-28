@@ -290,7 +290,7 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateDeletionFinalCleanup:
 		return s.finalDeletionCleanup(installation, instanceID, logger)
 
-	case model.InstallationStateMigratingHibernated:
+	case model.InstallationStateDNSMigrationHibernating:
 		return s.migratingHibernateInstallation(installation, instanceID, logger)
 	default:
 		logger.Warnf("Found installation pending work in unexpected state %s", installation.State)
@@ -1470,13 +1470,13 @@ func (s *InstallationSupervisor) migratingHibernateInstallation(installation *mo
 	endpoints, err := s.getPublicLBEndpoint(installation, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
-		return model.InstallationStateMigratingHibernated
+		return model.InstallationStateDNSMigrationHibernating
 	}
 
 	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record")
-		return model.InstallationStateMigratingHibernated
+		return model.InstallationStateDNSMigrationHibernating
 	}
 
 	logger.Infof("Successfully configured DNS %s", installation.DNS)

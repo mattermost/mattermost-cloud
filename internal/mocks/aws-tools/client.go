@@ -200,17 +200,17 @@ func (mr *MockAWSMockRecorder) CreatePrivateCNAME(dnsName, dnsEndpoints, logger 
 }
 
 // CreatePublicCNAME mocks base method
-func (m *MockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+func (m *MockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePublicCNAME", dnsName, dnsEndpoints, logger)
+	ret := m.ctrl.Call(m, "CreatePublicCNAME", dnsName, dnsEndpoints, dnsIdentifier, logger)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreatePublicCNAME indicates an expected call of CreatePublicCNAME
-func (mr *MockAWSMockRecorder) CreatePublicCNAME(dnsName, dnsEndpoints, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) CreatePublicCNAME(dnsName, dnsEndpoints, dnsIdentifier, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePublicCNAME", reflect.TypeOf((*MockAWS)(nil).CreatePublicCNAME), dnsName, dnsEndpoints, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePublicCNAME", reflect.TypeOf((*MockAWS)(nil).CreatePublicCNAME), dnsName, dnsEndpoints, dnsIdentifier, logger)
 }
 
 // UpdatePublicRecordIDForCNAME mocks base method
