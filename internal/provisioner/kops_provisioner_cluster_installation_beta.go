@@ -126,7 +126,7 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
-	hibernateInstallation(cr)
+	configureInstallationForHibernation(cr)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -138,7 +138,7 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 	return nil
 }
 
-func hibernateInstallation(mattermost *mmv1beta1.Mattermost) {
+func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
 	// Hibernation is currently considered changing the Mattermost app deployment
 	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
 	// The current way to do this is to set a negative replica count in the

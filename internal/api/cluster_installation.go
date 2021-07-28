@@ -488,8 +488,12 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// DNS Switch
+	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
+	newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
 	var installationIDs []string
 	var hibernatedInstallationIDs []string
+	c.Logger.Infof("Total DNS records to migrate: %s", (len(installationIDs) + len(hibernatedInstallationIDs)))
+
 	for _, ci := range clusterInstallations {
 		installation, err := c.Store.GetInstallation(ci.InstallationID, false, false)
 		if err != nil {
@@ -503,12 +507,9 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	c.Logger.Infof("Total DNS records to migrate: %s", (len(installationIDs) + len(hibernatedInstallationIDs)))
-	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
-	newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
 	status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs, hibernatedInstallationIDs)
 	if status != 0 {
-		c.Logger.Error("Failed to migrate hibernated DNS records")
+		c.Logger.Error("Failed to migrate DNS records")
 		w.WriteHeader(status)
 		return
 	}
@@ -600,6 +601,7 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 	c.Logger.Infof("DNS Switch over has been processed for cluster %s: ", mcir.SourceClusterID)
 	return 0
 }
+
 func getClusterInstallationIDs(clusterInstallations []*model.ClusterInstallation) []string {
 	clusterInstallationIDs := make([]string, 0, len(clusterInstallations))
 	for _, clusterInstallation := range clusterInstallations {
