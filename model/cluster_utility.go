@@ -29,6 +29,8 @@ const (
 	PgbouncerCanonicalName = "pgbouncer"
 	// StackroxCanonicalName is the canonical string representation of stackrox
 	StackroxCanonicalName = "stackrox-secured-cluster-services"
+	// KubecostCanonicalName is the canonical string representation of kubecost
+	KubecostCanonicalName = "kubecost"	
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -52,6 +54,8 @@ var (
 	PgbouncerDefaultVersion = &HelmUtilityVersion{Chart: "1.1.0", ValuesPath: ""}
 	// StackroxDefaultVersion defines the default version for the Helm chart
 	StackroxDefaultVersion = &HelmUtilityVersion{Chart: "62.0.0", ValuesPath: ""}
+	// KubecostDefaultVersion defines the default version for the Helm chart
+	KubecostDefaultVersion = &HelmUtilityVersion{Chart: "1.83.1", ValuesPath: ""}
 )
 
 // SetUtilityDefaults is used to set Utility default version and values.
@@ -80,6 +84,9 @@ func SetUtilityDefaults(url string) {
 	if StackroxDefaultVersion.ValuesPath == "" {
 		StackroxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fstackrox_values.yaml?ref=master", url)
 	}
+	if KubecostDefaultVersion.ValuesPath == "" {
+		KubecostDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
+	}
 }
 
 // UnmarshalJSON is a custom JSON unmarshaler that can handle both the
@@ -97,6 +104,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		Teleport           *HelmUtilityVersion
 		Pgbouncer          *HelmUtilityVersion
 		Stackrox           *HelmUtilityVersion
+		Kubecost           *HelmUtilityVersion
 	}
 	type oldUtilityGroupVersions struct {
 		PrometheusOperator string
@@ -107,6 +115,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		Teleport           string
 		Pgbouncer          string
 		Stackrox           string
+		Kubecost           string
 	}
 
 	var utilGrpVers *utilityGroupVersions = &utilityGroupVersions{}
@@ -126,6 +135,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
 		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
 		h.Stackrox = &HelmUtilityVersion{Chart: oldUtilGrpVers.Stackrox}
+		h.Kubecost = &HelmUtilityVersion{Chart: oldUtilGrpVers.Kubecost}
 		return nil
 	}
 
@@ -137,6 +147,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 	h.Teleport = utilGrpVers.Teleport
 	h.Pgbouncer = utilGrpVers.Pgbouncer
 	h.Stackrox = utilGrpVers.Stackrox
+	h.Kubecost = utilGrpVers.Kubecost
 	return nil
 }
 
@@ -151,6 +162,7 @@ type UtilityGroupVersions struct {
 	Teleport           *HelmUtilityVersion
 	Pgbouncer          *HelmUtilityVersion
 	Stackrox           *HelmUtilityVersion
+	Kubecost           *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -166,6 +178,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		TeleportCanonicalName:           h.Teleport,
 		PgbouncerCanonicalName:          h.Pgbouncer,
 		StackroxCanonicalName:           h.Stackrox,
+		KubecostCanonicalName:           h.Kubecost,
 	}
 }
 
@@ -288,6 +301,8 @@ func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtili
 		return versions.Pgbouncer
 	case StackroxCanonicalName:
 		return versions.Stackrox
+	case KubecostCanonicalName:
+		return versions.Kubecost
 	}
 
 	return nil
@@ -315,6 +330,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Pgbouncer = desiredVersion
 	case StackroxCanonicalName:
 		versions.Stackrox = desiredVersion
+	case KubecostCanonicalName:
+		versions.Kubecost = desiredVersion
 	}
 }
 

@@ -287,7 +287,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
-	// Need to remove two items from the calico because the fields after the creation are imutable so the
+	// Need to remove two items from the calico because the fields after the creation are immutable so the
 	// create/update does not work. We might want to refactor this in the future to avoid this
 	logger.Info("Cleaning up some calico resources to reapply")
 	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
@@ -304,7 +304,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
 	}
 
-	// Need to remove two items from the metrics-server because the fields after the creation are imutable so the
+	// Need to remove two items from the metrics-server because the fields after the creation are immutable so the
 	// create/update does not work. We might want to refactor this in the future to avoid this
 	logger.Info("Cleaning up some metrics-server resources to reapply")
 	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "metrics-server", metav1.DeleteOptions{})
@@ -446,11 +446,10 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		"k8s-spot-termination-handler": "kube-system",
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
-		if daemonSet == "k8s-spot-termination-handler" {
+		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0){
 			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
 			if err != nil {
-				errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
-				return err
+				return errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
 			}
 
 			var payload []k8s.PatchStringValue
@@ -505,7 +504,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			logger.Infof("Successfully deployed support apps pod %q", pod.GetName())
 		}
 	}
-
 	iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
 	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
