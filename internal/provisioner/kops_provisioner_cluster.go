@@ -297,6 +297,13 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete service calico-typha")
 	}
 
+	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-kube-controllers", metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("PodDisruptionBudget calico-kube-controllers not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-kube-controllers")
+	}
+
 	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("PodDisruptionBudget calico-typha not found; skipping...")

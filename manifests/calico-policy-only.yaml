@@ -195,8 +195,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -303,8 +303,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -364,8 +364,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -428,8 +428,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -991,8 +991,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -1762,8 +1762,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -1815,8 +1815,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -1923,8 +1923,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -2004,8 +2004,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -2060,8 +2060,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -2116,8 +2116,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -2215,8 +2215,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -2447,8 +2447,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -3199,8 +3199,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: [ ]
+  storedVersions: [ ]
 
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -3250,10 +3250,8 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
-
----
+  conditions: [ ]
+  storedVersions: [ ]
 ---
 # Source: calico/templates/calico-kube-controllers-rbac.yaml
 
@@ -3265,7 +3263,7 @@ metadata:
   name: calico-kube-controllers
 rules:
   # Nodes are watched to monitor for deletions.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - nodes
     verbs:
@@ -3273,18 +3271,18 @@ rules:
       - list
       - get
   # Pods are queried to check for existence.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - pods
     verbs:
       - get
   # IPAM resources are manipulated when nodes are deleted.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - ippools
     verbs:
       - list
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - blockaffinities
       - ipamblocks
@@ -3297,7 +3295,7 @@ rules:
       - delete
       - watch
   # kube-controllers manages hostendpoints.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - hostendpoints
     verbs:
@@ -3307,7 +3305,7 @@ rules:
       - update
       - delete
   # Needs access to update clusterinformations.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - clusterinformations
     verbs:
@@ -3315,7 +3313,7 @@ rules:
       - create
       - update
   # KubeControllersConfiguration is where it gets its config
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - kubecontrollersconfigurations
     verbs:
@@ -3341,8 +3339,6 @@ subjects:
     name: calico-kube-controllers
     namespace: kube-system
 ---
-
----
 # Source: calico/templates/calico-node-rbac.yaml
 # Include a clusterrole for the calico-node DaemonSet,
 # and bind it to the calico-node serviceaccount.
@@ -3352,14 +3348,14 @@ metadata:
   name: calico-node
 rules:
   # The CNI plugin needs to get pods, nodes, and namespaces.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - pods
       - nodes
       - namespaces
     verbs:
       - get
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - endpoints
       - services
@@ -3370,12 +3366,12 @@ rules:
       # Used to discover Typhas.
       - get
   # Pod CIDR auto-detection on kubeadm needs access to config maps.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - configmaps
     verbs:
       - get
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - nodes/status
     verbs:
@@ -3384,14 +3380,14 @@ rules:
       # Calico stores some configuration information in node annotations.
       - update
   # Watch for changes to Kubernetes NetworkPolicies.
-  - apiGroups: ["networking.k8s.io"]
+  - apiGroups: [ "networking.k8s.io" ]
     resources:
       - networkpolicies
     verbs:
       - watch
       - list
   # Used by Calico for policy information.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - pods
       - namespaces
@@ -3400,13 +3396,13 @@ rules:
       - list
       - watch
   # The CNI plugin patches pods/status.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - pods/status
     verbs:
       - patch
   # Calico monitors various CRDs for config.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - globalfelixconfigs
       - felixconfigurations
@@ -3427,7 +3423,7 @@ rules:
       - list
       - watch
   # Calico must create and update some CRDs on startup.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - ippools
       - felixconfigurations
@@ -3436,7 +3432,7 @@ rules:
       - create
       - update
   # Calico stores some configuration information on the node.
-  - apiGroups: [""]
+  - apiGroups: [ "" ]
     resources:
       - nodes
     verbs:
@@ -3445,7 +3441,7 @@ rules:
       - watch
   # These permissions are only required for upgrade from v2.6, and can
   # be removed after upgrade or on fresh installations.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - bgpconfigurations
       - bgppeers
@@ -3453,7 +3449,7 @@ rules:
       - create
       - update
   # These permissions are required for Calico CNI to perform IPAM allocations.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - blockaffinities
       - ipamblocks
@@ -3464,20 +3460,20 @@ rules:
       - create
       - update
       - delete
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - ipamconfigs
     verbs:
       - get
   # Block affinities must also be watchable by confd for route aggregation.
-  - apiGroups: ["crd.projectcalico.org"]
+  - apiGroups: [ "crd.projectcalico.org" ]
     resources:
       - blockaffinities
     verbs:
       - watch
   # The Calico IPAM migration needs to get daemonsets. These permissions can be
   # removed if not upgrading from an installation using host-local IPAM.
-  - apiGroups: ["apps"]
+  - apiGroups: [ "apps" ]
     resources:
       - daemonsets
     verbs:
@@ -3545,7 +3541,7 @@ spec:
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
           image: docker.io/calico/cni:v3.19.1
-          command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
+          command: [ "/opt/cni/bin/calico-ipam", "-upgrade" ]
           envFrom:
             - configMapRef:
                 # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
@@ -3574,7 +3570,7 @@ spec:
         # and CNI network config file on each node.
         - name: install-cni
           image: docker.io/calico/cni:v3.19.1
-          command: ["/opt/cni/bin/install"]
+          command: [ "/opt/cni/bin/install" ]
           envFrom:
             - configMapRef:
                 # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
@@ -3787,13 +3783,11 @@ spec:
             type: DirectoryOrCreate
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
 ---
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: calico-node
   namespace: kube-system
-
 ---
 # Source: calico/templates/calico-kube-controllers.yaml
 # See https://github.com/projectcalico/kube-controllers
@@ -3811,7 +3805,7 @@ spec:
     matchLabels:
       k8s-app: calico-kube-controllers
   strategy:
-    type: Recreate
+    type: RollingUpdate
   template:
     metadata:
       name: calico-kube-controllers
@@ -3854,17 +3848,13 @@ spec:
             periodSeconds: 10
 
 ---
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: calico-kube-controllers
   namespace: kube-system
-
 ---
-
 # This manifest creates a Pod Disruption Budget for Controller to allow K8s Cluster Autoscaler to evict
-
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
@@ -3877,7 +3867,6 @@ spec:
   selector:
     matchLabels:
       k8s-app: calico-kube-controllers
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -3961,7 +3950,6 @@ spec:
             periodSeconds: 10
 
 ---
-
 # This manifest creates a Pod Disruption Budget for Typha to allow K8s Cluster Autoscaler to evict
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -3994,9 +3982,9 @@ kind: ClusterRole
 metadata:
   name: typha-cpha
 rules:
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["watch", "list"]
+  - apiGroups: [ "" ]
+    resources: [ "nodes" ]
+    verbs: [ "watch", "list" ]
 ---
 kind: ConfigMap
 apiVersion: v1
@@ -4063,12 +4051,12 @@ metadata:
   name: typha-cpha
   namespace: kube-system
 rules:
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get"]
-  - apiGroups: ["extensions", "apps"]
-    resources: ["deployments/scale"]
-    verbs: ["get", "update"]
+  - apiGroups: [ "" ]
+    resources: [ "configmaps" ]
+    verbs: [ "get" ]
+  - apiGroups: [ "extensions", "apps" ]
+    resources: [ "deployments/scale" ]
+    verbs: [ "get", "update" ]
 ---
 apiVersion: v1
 kind: ServiceAccount
