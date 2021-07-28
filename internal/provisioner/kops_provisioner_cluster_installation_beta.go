@@ -70,7 +70,7 @@ func (provisioner *kopsCIBeta) CreateClusterInstallation(cluster *model.Cluster,
 
 	if installation.State == model.InstallationStateHibernating {
 		logger.Info("creating hibernated cluster installation")
-		hibernateInstallation(mattermost)
+		configureInstallationForHibernation(mattermost)
 	}
 
 	if installation.License != "" {
