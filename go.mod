@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/squirrel v1.4.0
-	github.com/aws/aws-sdk-go v1.36.7
+	github.com/aws/aws-sdk-go v1.38.60
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/mock v1.5.0

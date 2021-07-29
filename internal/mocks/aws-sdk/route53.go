@@ -38,6 +38,56 @@ func (m *MockRoute53API) EXPECT() *MockRoute53APIMockRecorder {
 	return m.recorder
 }
 
+// ActivateKeySigningKey mocks base method
+func (m *MockRoute53API) ActivateKeySigningKey(arg0 *route53.ActivateKeySigningKeyInput) (*route53.ActivateKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ActivateKeySigningKey", arg0)
+	ret0, _ := ret[0].(*route53.ActivateKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ActivateKeySigningKey indicates an expected call of ActivateKeySigningKey
+func (mr *MockRoute53APIMockRecorder) ActivateKeySigningKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateKeySigningKey", reflect.TypeOf((*MockRoute53API)(nil).ActivateKeySigningKey), arg0)
+}
+
+// ActivateKeySigningKeyRequest mocks base method
+func (m *MockRoute53API) ActivateKeySigningKeyRequest(arg0 *route53.ActivateKeySigningKeyInput) (*request.Request, *route53.ActivateKeySigningKeyOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ActivateKeySigningKeyRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.ActivateKeySigningKeyOutput)
+	return ret0, ret1
+}
+
+// ActivateKeySigningKeyRequest indicates an expected call of ActivateKeySigningKeyRequest
+func (mr *MockRoute53APIMockRecorder) ActivateKeySigningKeyRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateKeySigningKeyRequest", reflect.TypeOf((*MockRoute53API)(nil).ActivateKeySigningKeyRequest), arg0)
+}
+
+// ActivateKeySigningKeyWithContext mocks base method
+func (m *MockRoute53API) ActivateKeySigningKeyWithContext(arg0 context.Context, arg1 *route53.ActivateKeySigningKeyInput, arg2 ...request.Option) (*route53.ActivateKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ActivateKeySigningKeyWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.ActivateKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ActivateKeySigningKeyWithContext indicates an expected call of ActivateKeySigningKeyWithContext
+func (mr *MockRoute53APIMockRecorder) ActivateKeySigningKeyWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateKeySigningKeyWithContext", reflect.TypeOf((*MockRoute53API)(nil).ActivateKeySigningKeyWithContext), varargs...)
+}
+
 // AssociateVPCWithHostedZone mocks base method
 func (m *MockRoute53API) AssociateVPCWithHostedZone(arg0 *route53.AssociateVPCWithHostedZoneInput) (*route53.AssociateVPCWithHostedZoneOutput, error) {
 	m.ctrl.T.Helper()
@@ -286,6 +336,56 @@ func (mr *MockRoute53APIMockRecorder) CreateHostedZoneWithContext(arg0, arg1 int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateHostedZoneWithContext", reflect.TypeOf((*MockRoute53API)(nil).CreateHostedZoneWithContext), varargs...)
+}
+
+// CreateKeySigningKey mocks base method
+func (m *MockRoute53API) CreateKeySigningKey(arg0 *route53.CreateKeySigningKeyInput) (*route53.CreateKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateKeySigningKey", arg0)
+	ret0, _ := ret[0].(*route53.CreateKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateKeySigningKey indicates an expected call of CreateKeySigningKey
+func (mr *MockRoute53APIMockRecorder) CreateKeySigningKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKeySigningKey", reflect.TypeOf((*MockRoute53API)(nil).CreateKeySigningKey), arg0)
+}
+
+// CreateKeySigningKeyRequest mocks base method
+func (m *MockRoute53API) CreateKeySigningKeyRequest(arg0 *route53.CreateKeySigningKeyInput) (*request.Request, *route53.CreateKeySigningKeyOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateKeySigningKeyRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.CreateKeySigningKeyOutput)
+	return ret0, ret1
+}
+
+// CreateKeySigningKeyRequest indicates an expected call of CreateKeySigningKeyRequest
+func (mr *MockRoute53APIMockRecorder) CreateKeySigningKeyRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKeySigningKeyRequest", reflect.TypeOf((*MockRoute53API)(nil).CreateKeySigningKeyRequest), arg0)
+}
+
+// CreateKeySigningKeyWithContext mocks base method
+func (m *MockRoute53API) CreateKeySigningKeyWithContext(arg0 context.Context, arg1 *route53.CreateKeySigningKeyInput, arg2 ...request.Option) (*route53.CreateKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateKeySigningKeyWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.CreateKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateKeySigningKeyWithContext indicates an expected call of CreateKeySigningKeyWithContext
+func (mr *MockRoute53APIMockRecorder) CreateKeySigningKeyWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateKeySigningKeyWithContext", reflect.TypeOf((*MockRoute53API)(nil).CreateKeySigningKeyWithContext), varargs...)
 }
 
 // CreateQueryLoggingConfig mocks base method
@@ -588,6 +688,56 @@ func (mr *MockRoute53APIMockRecorder) CreateVPCAssociationAuthorizationWithConte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCAssociationAuthorizationWithContext", reflect.TypeOf((*MockRoute53API)(nil).CreateVPCAssociationAuthorizationWithContext), varargs...)
 }
 
+// DeactivateKeySigningKey mocks base method
+func (m *MockRoute53API) DeactivateKeySigningKey(arg0 *route53.DeactivateKeySigningKeyInput) (*route53.DeactivateKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeactivateKeySigningKey", arg0)
+	ret0, _ := ret[0].(*route53.DeactivateKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeactivateKeySigningKey indicates an expected call of DeactivateKeySigningKey
+func (mr *MockRoute53APIMockRecorder) DeactivateKeySigningKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeactivateKeySigningKey", reflect.TypeOf((*MockRoute53API)(nil).DeactivateKeySigningKey), arg0)
+}
+
+// DeactivateKeySigningKeyRequest mocks base method
+func (m *MockRoute53API) DeactivateKeySigningKeyRequest(arg0 *route53.DeactivateKeySigningKeyInput) (*request.Request, *route53.DeactivateKeySigningKeyOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeactivateKeySigningKeyRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.DeactivateKeySigningKeyOutput)
+	return ret0, ret1
+}
+
+// DeactivateKeySigningKeyRequest indicates an expected call of DeactivateKeySigningKeyRequest
+func (mr *MockRoute53APIMockRecorder) DeactivateKeySigningKeyRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeactivateKeySigningKeyRequest", reflect.TypeOf((*MockRoute53API)(nil).DeactivateKeySigningKeyRequest), arg0)
+}
+
+// DeactivateKeySigningKeyWithContext mocks base method
+func (m *MockRoute53API) DeactivateKeySigningKeyWithContext(arg0 context.Context, arg1 *route53.DeactivateKeySigningKeyInput, arg2 ...request.Option) (*route53.DeactivateKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeactivateKeySigningKeyWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.DeactivateKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeactivateKeySigningKeyWithContext indicates an expected call of DeactivateKeySigningKeyWithContext
+func (mr *MockRoute53APIMockRecorder) DeactivateKeySigningKeyWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeactivateKeySigningKeyWithContext", reflect.TypeOf((*MockRoute53API)(nil).DeactivateKeySigningKeyWithContext), varargs...)
+}
+
 // DeleteHealthCheck mocks base method
 func (m *MockRoute53API) DeleteHealthCheck(arg0 *route53.DeleteHealthCheckInput) (*route53.DeleteHealthCheckOutput, error) {
 	m.ctrl.T.Helper()
@@ -686,6 +836,56 @@ func (mr *MockRoute53APIMockRecorder) DeleteHostedZoneWithContext(arg0, arg1 int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteHostedZoneWithContext", reflect.TypeOf((*MockRoute53API)(nil).DeleteHostedZoneWithContext), varargs...)
+}
+
+// DeleteKeySigningKey mocks base method
+func (m *MockRoute53API) DeleteKeySigningKey(arg0 *route53.DeleteKeySigningKeyInput) (*route53.DeleteKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteKeySigningKey", arg0)
+	ret0, _ := ret[0].(*route53.DeleteKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteKeySigningKey indicates an expected call of DeleteKeySigningKey
+func (mr *MockRoute53APIMockRecorder) DeleteKeySigningKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKeySigningKey", reflect.TypeOf((*MockRoute53API)(nil).DeleteKeySigningKey), arg0)
+}
+
+// DeleteKeySigningKeyRequest mocks base method
+func (m *MockRoute53API) DeleteKeySigningKeyRequest(arg0 *route53.DeleteKeySigningKeyInput) (*request.Request, *route53.DeleteKeySigningKeyOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteKeySigningKeyRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.DeleteKeySigningKeyOutput)
+	return ret0, ret1
+}
+
+// DeleteKeySigningKeyRequest indicates an expected call of DeleteKeySigningKeyRequest
+func (mr *MockRoute53APIMockRecorder) DeleteKeySigningKeyRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKeySigningKeyRequest", reflect.TypeOf((*MockRoute53API)(nil).DeleteKeySigningKeyRequest), arg0)
+}
+
+// DeleteKeySigningKeyWithContext mocks base method
+func (m *MockRoute53API) DeleteKeySigningKeyWithContext(arg0 context.Context, arg1 *route53.DeleteKeySigningKeyInput, arg2 ...request.Option) (*route53.DeleteKeySigningKeyOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteKeySigningKeyWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.DeleteKeySigningKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteKeySigningKeyWithContext indicates an expected call of DeleteKeySigningKeyWithContext
+func (mr *MockRoute53APIMockRecorder) DeleteKeySigningKeyWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteKeySigningKeyWithContext", reflect.TypeOf((*MockRoute53API)(nil).DeleteKeySigningKeyWithContext), varargs...)
 }
 
 // DeleteQueryLoggingConfig mocks base method
@@ -938,6 +1138,56 @@ func (mr *MockRoute53APIMockRecorder) DeleteVPCAssociationAuthorizationWithConte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCAssociationAuthorizationWithContext", reflect.TypeOf((*MockRoute53API)(nil).DeleteVPCAssociationAuthorizationWithContext), varargs...)
 }
 
+// DisableHostedZoneDNSSEC mocks base method
+func (m *MockRoute53API) DisableHostedZoneDNSSEC(arg0 *route53.DisableHostedZoneDNSSECInput) (*route53.DisableHostedZoneDNSSECOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableHostedZoneDNSSEC", arg0)
+	ret0, _ := ret[0].(*route53.DisableHostedZoneDNSSECOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableHostedZoneDNSSEC indicates an expected call of DisableHostedZoneDNSSEC
+func (mr *MockRoute53APIMockRecorder) DisableHostedZoneDNSSEC(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableHostedZoneDNSSEC", reflect.TypeOf((*MockRoute53API)(nil).DisableHostedZoneDNSSEC), arg0)
+}
+
+// DisableHostedZoneDNSSECRequest mocks base method
+func (m *MockRoute53API) DisableHostedZoneDNSSECRequest(arg0 *route53.DisableHostedZoneDNSSECInput) (*request.Request, *route53.DisableHostedZoneDNSSECOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisableHostedZoneDNSSECRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.DisableHostedZoneDNSSECOutput)
+	return ret0, ret1
+}
+
+// DisableHostedZoneDNSSECRequest indicates an expected call of DisableHostedZoneDNSSECRequest
+func (mr *MockRoute53APIMockRecorder) DisableHostedZoneDNSSECRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableHostedZoneDNSSECRequest", reflect.TypeOf((*MockRoute53API)(nil).DisableHostedZoneDNSSECRequest), arg0)
+}
+
+// DisableHostedZoneDNSSECWithContext mocks base method
+func (m *MockRoute53API) DisableHostedZoneDNSSECWithContext(arg0 context.Context, arg1 *route53.DisableHostedZoneDNSSECInput, arg2 ...request.Option) (*route53.DisableHostedZoneDNSSECOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DisableHostedZoneDNSSECWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.DisableHostedZoneDNSSECOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisableHostedZoneDNSSECWithContext indicates an expected call of DisableHostedZoneDNSSECWithContext
+func (mr *MockRoute53APIMockRecorder) DisableHostedZoneDNSSECWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableHostedZoneDNSSECWithContext", reflect.TypeOf((*MockRoute53API)(nil).DisableHostedZoneDNSSECWithContext), varargs...)
+}
+
 // DisassociateVPCFromHostedZone mocks base method
 func (m *MockRoute53API) DisassociateVPCFromHostedZone(arg0 *route53.DisassociateVPCFromHostedZoneInput) (*route53.DisassociateVPCFromHostedZoneOutput, error) {
 	m.ctrl.T.Helper()
@@ -986,6 +1236,56 @@ func (mr *MockRoute53APIMockRecorder) DisassociateVPCFromHostedZoneWithContext(a
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisassociateVPCFromHostedZoneWithContext", reflect.TypeOf((*MockRoute53API)(nil).DisassociateVPCFromHostedZoneWithContext), varargs...)
+}
+
+// EnableHostedZoneDNSSEC mocks base method
+func (m *MockRoute53API) EnableHostedZoneDNSSEC(arg0 *route53.EnableHostedZoneDNSSECInput) (*route53.EnableHostedZoneDNSSECOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableHostedZoneDNSSEC", arg0)
+	ret0, _ := ret[0].(*route53.EnableHostedZoneDNSSECOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableHostedZoneDNSSEC indicates an expected call of EnableHostedZoneDNSSEC
+func (mr *MockRoute53APIMockRecorder) EnableHostedZoneDNSSEC(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableHostedZoneDNSSEC", reflect.TypeOf((*MockRoute53API)(nil).EnableHostedZoneDNSSEC), arg0)
+}
+
+// EnableHostedZoneDNSSECRequest mocks base method
+func (m *MockRoute53API) EnableHostedZoneDNSSECRequest(arg0 *route53.EnableHostedZoneDNSSECInput) (*request.Request, *route53.EnableHostedZoneDNSSECOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableHostedZoneDNSSECRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.EnableHostedZoneDNSSECOutput)
+	return ret0, ret1
+}
+
+// EnableHostedZoneDNSSECRequest indicates an expected call of EnableHostedZoneDNSSECRequest
+func (mr *MockRoute53APIMockRecorder) EnableHostedZoneDNSSECRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableHostedZoneDNSSECRequest", reflect.TypeOf((*MockRoute53API)(nil).EnableHostedZoneDNSSECRequest), arg0)
+}
+
+// EnableHostedZoneDNSSECWithContext mocks base method
+func (m *MockRoute53API) EnableHostedZoneDNSSECWithContext(arg0 context.Context, arg1 *route53.EnableHostedZoneDNSSECInput, arg2 ...request.Option) (*route53.EnableHostedZoneDNSSECOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "EnableHostedZoneDNSSECWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.EnableHostedZoneDNSSECOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableHostedZoneDNSSECWithContext indicates an expected call of EnableHostedZoneDNSSECWithContext
+func (mr *MockRoute53APIMockRecorder) EnableHostedZoneDNSSECWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableHostedZoneDNSSECWithContext", reflect.TypeOf((*MockRoute53API)(nil).EnableHostedZoneDNSSECWithContext), varargs...)
 }
 
 // GetAccountLimit mocks base method
@@ -1136,6 +1436,56 @@ func (mr *MockRoute53APIMockRecorder) GetCheckerIpRangesWithContext(arg0, arg1 i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCheckerIpRangesWithContext", reflect.TypeOf((*MockRoute53API)(nil).GetCheckerIpRangesWithContext), varargs...)
+}
+
+// GetDNSSEC mocks base method
+func (m *MockRoute53API) GetDNSSEC(arg0 *route53.GetDNSSECInput) (*route53.GetDNSSECOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDNSSEC", arg0)
+	ret0, _ := ret[0].(*route53.GetDNSSECOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDNSSEC indicates an expected call of GetDNSSEC
+func (mr *MockRoute53APIMockRecorder) GetDNSSEC(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDNSSEC", reflect.TypeOf((*MockRoute53API)(nil).GetDNSSEC), arg0)
+}
+
+// GetDNSSECRequest mocks base method
+func (m *MockRoute53API) GetDNSSECRequest(arg0 *route53.GetDNSSECInput) (*request.Request, *route53.GetDNSSECOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDNSSECRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*route53.GetDNSSECOutput)
+	return ret0, ret1
+}
+
+// GetDNSSECRequest indicates an expected call of GetDNSSECRequest
+func (mr *MockRoute53APIMockRecorder) GetDNSSECRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDNSSECRequest", reflect.TypeOf((*MockRoute53API)(nil).GetDNSSECRequest), arg0)
+}
+
+// GetDNSSECWithContext mocks base method
+func (m *MockRoute53API) GetDNSSECWithContext(arg0 context.Context, arg1 *route53.GetDNSSECInput, arg2 ...request.Option) (*route53.GetDNSSECOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDNSSECWithContext", varargs...)
+	ret0, _ := ret[0].(*route53.GetDNSSECOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDNSSECWithContext indicates an expected call of GetDNSSECWithContext
+func (mr *MockRoute53APIMockRecorder) GetDNSSECWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDNSSECWithContext", reflect.TypeOf((*MockRoute53API)(nil).GetDNSSECWithContext), varargs...)
 }
 
 // GetGeoLocation mocks base method
