@@ -291,7 +291,7 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 		return s.finalDeletionCleanup(installation, instanceID, logger)
 
 	case model.InstallationStateDNSMigrationHibernating:
-		return s.migratingHibernateInstallation(installation, instanceID, logger)
+		return s.dnsSwitchForHibernatingInstallation(installation, instanceID, logger)
 	default:
 		logger.Warnf("Found installation pending work in unexpected state %s", installation.State)
 		return installation.State
@@ -1464,8 +1464,8 @@ func elapsedTimeInSeconds(createAtMillis int64) float64 {
 	return float64(time.Now().Unix()*1000-createAtMillis) / 1000
 }
 
-// migratingHibernateInstallation deeal with dns update for hibernated installations during migration
-func (s *InstallationSupervisor) migratingHibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+// dnsSwitchForHibernatingInstallation deals with dns update for hibernating installations during migration
+func (s *InstallationSupervisor) dnsSwitchForHibernatingInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 
 	endpoints, err := s.getPublicLBEndpoint(installation, logger)
 	if err != nil {

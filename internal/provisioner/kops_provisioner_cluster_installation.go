@@ -193,7 +193,7 @@ func configInstallationForHibernation(mattermost *mmv1alpha1.ClusterInstallation
 	// The current way to do this is to set a negative replica count in the
 	// k8s custom resource. Custom ingress annotations are also used.
 	// TODO: enhance hibernation to include database and/or filestore.
-	mattermost.Spec.Replicas = 0
+	mattermost.Spec.Replicas = hibernationReplicaCount
 	mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
 	mattermost.Spec.Size = ""
 }

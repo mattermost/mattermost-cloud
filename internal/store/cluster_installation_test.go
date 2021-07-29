@@ -699,7 +699,27 @@ func TestSwitchDNS(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
+	installation3 := &model.Installation{
+		OwnerID:   ownerID1,
+		Version:   "version2",
+		Image:     "custom-image",
+		DNS:       "dns3.example.com",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID2,
+		CRVersion: model.DefaultCRVersion,
+		State:     model.InstallationStateHibernating,
+	}
+
+	err = sqlStore.CreateInstallation(installation3, nil)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
 	sourceClusterID := model.NewID()
+	targetClusterID := model.NewID()
 	clusterInstallation1 := &model.ClusterInstallation{
 		ClusterID:      sourceClusterID,
 		InstallationID: installation1.ID,
@@ -709,7 +729,6 @@ func TestSwitchDNS(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
-	targetClusterID := model.NewID()
 	clusterInstallation2 := &model.ClusterInstallation{
 		ClusterID:      sourceClusterID,
 		InstallationID: installation2.ID,
@@ -717,10 +736,20 @@ func TestSwitchDNS(t *testing.T) {
 		State:          model.ClusterInstallationStateCreationRequested,
 	}
 
+	clusterInstallation3 := &model.ClusterInstallation{
+		ClusterID:      sourceClusterID,
+		InstallationID: installation2.ID,
+		Namespace:      "namespace_12",
+		State:          model.ClusterInstallationStateCreationRequested,
+	}
+
 	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
 
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
+	require.NoError(t, err)
+
+	err = sqlStore.CreateClusterInstallation(clusterInstallation3)
 	require.NoError(t, err)
 
 	clusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID})
@@ -731,11 +760,20 @@ func TestSwitchDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	newCIsIDs := getClusterInstallationIDs(clusterInstallations)
+
 	var installationIDs []string
+	var hibernatedInstallationIDs []string
 	for _, ci := range clusterInstallations {
-		installationIDs = append(installationIDs, ci.InstallationID)
+		installation, err := sqlStore.GetInstallation(ci.InstallationID, false, false)
+		require.NoError(t, err)
+
+		if installation.State == model.InstallationStateHibernating {
+			hibernatedInstallationIDs = append(hibernatedInstallationIDs, ci.InstallationID)
+		} else {
+			installationIDs = append(installationIDs, ci.InstallationID)
+		}
 	}
-	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs, nil)
+	err = sqlStore.SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs, hibernatedInstallationIDs)
 	require.NoError(t, err)
 	var isActiveClusterInstallations = true
 	filter := &model.ClusterInstallationFilter{
@@ -747,7 +785,7 @@ func TestSwitchDNS(t *testing.T) {
 	cis, err := sqlStore.GetClusterInstallations(filter)
 	require.NoError(t, err)
 	require.NotEmpty(t, cis)
-	assert.Len(t, cis, 2)
+	assert.Len(t, cis, 3)
 }
 
 func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
