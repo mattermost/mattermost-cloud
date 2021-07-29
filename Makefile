@@ -18,6 +18,7 @@ KUBECTL_VERSION=v1.20.8
 ################################################################################
 
 GO ?= $(shell command -v go 2> /dev/null)
+PACKAGES=$(shell go list ./...| grep -v internal/mocks)
 MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
 MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
@@ -49,6 +50,10 @@ GOLINT_VER := master
 GOLINT_BIN := golint
 GOLINT_GEN := $(TOOLS_BIN_DIR)/$(GOLINT_BIN)
 
+GOIMPORTS_VER := master
+GOIMPORTS_BIN := goimports
+GOIMPORTS := $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)
+
 export GO111MODULE=on
 
 ## Checks the code style, tests, builds and bundles.
@@ -56,7 +61,7 @@ all: check-style dist
 
 ## Runs govet and gofmt against all packages.
 .PHONY: check-style
-check-style: govet lint
+check-style: govet lint goformat goimports
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
@@ -72,6 +77,42 @@ govet:
 	@echo Running govet
 	$(GO) vet ./...
 	@echo Govet success
+
+## Checks if files are formatted with go fmt.
+.PHONY: goformat
+goformat:
+	@echo Checking if code is formated
+	@for package in $(PACKAGES); do \
+		echo "Checking "$$package; \
+		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \
+		if [ "$$files" ]; then \
+			gofmt_output=$$(gofmt -d -s $$files 2>&1); \
+			if [ "$$gofmt_output" ]; then \
+				echo "$$gofmt_output"; \
+				echo "gofmt failure"; \
+				exit 1; \
+			fi; \
+		fi; \
+	done
+	@echo "gofmt success"; \
+
+## Checks if imports are formatted correctly.
+.PHONY: goimports
+goimports: $(GOIMPORTS)
+	@echo Checking if imports are sorted
+	@for package in $(PACKAGES); do \
+		echo "Checking "$$package; \
+		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \
+		if [ "$$files" ]; then \
+			goimports_output=$$(goimports -d $$files 2>&1); \
+			if [ "$$goimports_output" ]; then \
+				echo "$$goimports_output"; \
+				echo "goimports failure"; \
+				exit 1; \
+			fi; \
+		fi; \
+	done
+	@echo "goimports success"; \
 
 ## Builds and thats all :)
 .PHONY: dist
@@ -167,3 +208,6 @@ $(GOVERALLS_GEN): ## Build goveralls.
 
 $(GOLINT_GEN): ## Build golint.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/lint/golint $(GOLINT_BIN) $(GOLINT_VER)
+
+$(GOIMPORTS): ## Build goimports.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/tools/cmd/goimports $(GOIMPORTS_BIN) $(GOIMPORTS_VER)

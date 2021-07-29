@@ -5,9 +5,10 @@
 package provisioner
 
 import (
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"os"
 	"strings"
+
+	"github.com/mattermost/mattermost-cloud/k8s"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -108,9 +109,9 @@ func (k *kubecost) Migrate() error {
 }
 
 func (k *kubecost) NewHelmDeployment() *helmDeployment {
-	kubecostToken :=""
+	kubecostToken := ""
 	if len(os.Getenv(model.KubecostToken)) > 0 {
-		kubecostToken = "kubecostToken="+os.Getenv(model.KubecostToken)
+		kubecostToken = "kubecostToken=" + os.Getenv(model.KubecostToken)
 	}
 
 	return &helmDeployment{

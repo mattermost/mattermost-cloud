@@ -144,12 +144,11 @@ var serverCmd = &cobra.Command{
 		}
 		model.SetUtilityDefaults(utilitiesGitURL)
 
-			
 		kubecostToken, _ := command.Flags().GetString("kubecost-token")
 		if kubecostToken != "" {
 			os.Setenv(model.KubecostToken, kubecostToken)
 		}
-		
+
 		logger := logger.WithField("instance", instanceID)
 
 		sqlStore, err := sqlStore(command)

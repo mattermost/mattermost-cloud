@@ -449,11 +449,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 
 	supportAppsWithDaemonSets := map[string]string{
-		"calico-node": "kube-system",
+		"calico-node":                  "kube-system",
 		"k8s-spot-termination-handler": "kube-system",
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
-		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0){
+		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
 			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
