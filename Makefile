@@ -106,7 +106,7 @@ goimports: $(GOIMPORTS)
 		echo "Checking "$$package; \
 		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \
 		if [ "$$files" ]; then \
-			goimports_output=$$(goimports -d $$files 2>&1); \
+			goimports_output=$$($(GOIMPORTS) -d $$files 2>&1); \
 			if [ "$$goimports_output" ]; then \
 				echo "$$goimports_output"; \
 				echo "goimports failed"; \
