@@ -5,6 +5,8 @@
 package provisioner
 
 import (
+	"encoding/json"
+
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -95,6 +97,36 @@ func (provisioner *KopsProvisioner) getCachedKopsClient(name string, logger log.
 	logger.Debugf("Kops config cached at %s for %s", kopsClient.GetKubeConfigPath(), name)
 
 	return kopsClient, nil
+}
+
+type kopsClusterDefinition struct {
+	Metadata model.KopsMetadata
+}
+
+func (provisioner *KopsProvisioner) kopsClusterExists(name string, logger log.FieldLogger) (bool, error) {
+	kopsClient, err := kops.New(provisioner.params.S3StateStore, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to create kops client wrapper")
+	}
+
+	clustersJSON, err := kopsClient.GetClustersJSON()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to list clusters with kops")
+	}
+
+	var kopsClusters []kopsClusterDefinition
+	err = json.Unmarshal([]byte(clustersJSON), &kopsClusters)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to unmarshal kops clusters output")
+	}
+
+	for _, cluster := range kopsClusters {
+		if cluster.Metadata.Name == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (provisioner *KopsProvisioner) invalidateCachedKopsClient(name string, logger log.FieldLogger) error {

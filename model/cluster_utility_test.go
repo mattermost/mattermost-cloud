@@ -87,7 +87,7 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:           &HelmUtilityVersion{Chart: "12345"},
 				Pgbouncer:          &HelmUtilityVersion{Chart: "123456"},
 				Stackrox:           &HelmUtilityVersion{Chart: "1234567"},
-				Kubecost:          &HelmUtilityVersion{Chart: "12345678"},
+				Kubecost:           &HelmUtilityVersion{Chart: "12345678"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -125,7 +125,7 @@ func TestGetActualVersion(t *testing.T) {
 
 	version = c.ActualUtilityVersion(KubecostCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"}, version)
-	
+
 	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, version, nilHuv)
 }
@@ -142,7 +142,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Pgbouncer:          &HelmUtilityVersion{Chart: "123456"},
 				Stackrox:           &HelmUtilityVersion{Chart: "1234567"},
 				Kubecost:           &HelmUtilityVersion{Chart: "12345678"},
-
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -153,7 +152,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Pgbouncer:          &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
 				Stackrox:           &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
 				Kubecost:           &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
-
 			},
 		},
 	}

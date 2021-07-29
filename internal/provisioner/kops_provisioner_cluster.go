@@ -14,6 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,8 +26,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	rotatorModel "github.com/mattermost/rotator/model"
@@ -449,11 +452,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 
 	supportAppsWithDaemonSets := map[string]string{
-		"calico-node": "kube-system",
+		"calico-node":                  "kube-system",
 		"k8s-spot-termination-handler": "kube-system",
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
-		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0){
+		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
 			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
@@ -825,10 +828,36 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
-	// Use these vars to keep track of which resources need to be deleted.
-	var skipDeleteKops, skipDeleteTerraform bool
-
 	logger.Info("Deleting cluster")
+
+	exists, err := provisioner.kopsClusterExists(kopsMetadata.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if kops cluster exists")
+	}
+	if exists {
+		err = provisioner.cleanupKopsCluster(cluster, awsClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete kops cluster")
+		}
+	} else {
+		logger.Infof("Kops cluster %s does not exist, assuming already deleted", kopsMetadata.Name)
+	}
+
+	err = awsClient.ReleaseVpc(cluster.ID, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to release cluster VPC")
+	}
+
+	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
+
+	logger.Info("Successfully deleted cluster")
+
+	return nil
+}
+
+// cleanupKopsCluster cleans up Kops cluster. Make sure cluster exists before calling this method.
+func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, awsClient aws.AWS, logger logrus.FieldLogger) error {
+	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	kopsClient, err := provisioner.getCachedKopsClient(kopsMetadata.Name, logger)
 	if err != nil {
@@ -854,57 +883,41 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	_, err = kopsClient.GetCluster(kopsMetadata.Name)
 	if err != nil {
-		logger.WithError(err).Error("Failed kops get cluster check: proceeding assuming kops and terraform resources were never created")
-		skipDeleteKops = true
-		skipDeleteTerraform = true
+		return errors.Wrap(err, "failed to get kops cluster for deletion")
 	}
 
-	if !skipDeleteKops {
-		err = kopsClient.UpdateCluster(kopsMetadata.Name, kopsClient.GetOutputDirectory())
-		if err != nil {
-			return errors.Wrap(err, "failed to run kops update")
-		}
-	}
-
-	if !skipDeleteTerraform {
-		terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to create terraform wrapper")
-		}
-		defer terraformClient.Close()
-
-		err = terraformClient.Init(kopsMetadata.Name)
-		if err != nil {
-			return errors.Wrap(err, "failed to init terraform")
-		}
-
-		err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
-		if err != nil {
-			skipDeleteTerraform = true
-			logger.WithError(err).Error("Proceeding with cluster deletion despite failing terraform output match check")
-		}
-
-		err = terraformClient.Destroy()
-		if err != nil {
-			return errors.Wrap(err, "failed to run terraform destroy")
-		}
-	}
-
-	if !skipDeleteKops {
-		err = kopsClient.DeleteCluster(kopsMetadata.Name)
-		if err != nil {
-			return errors.Wrap(err, "failed to run kops delete")
-		}
-	}
-
-	err = awsClient.ReleaseVpc(cluster.ID, logger)
+	err = kopsClient.UpdateCluster(kopsMetadata.Name, kopsClient.GetOutputDirectory())
 	if err != nil {
-		return errors.Wrap(err, "failed to release cluster VPC")
+		return errors.Wrap(err, "failed to run kops update")
 	}
 
-	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
+	terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create terraform wrapper")
+	}
+	defer terraformClient.Close()
 
-	logger.Info("Successfully deleted cluster")
+	err = terraformClient.Init(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to init terraform")
+	}
+
+	err = verifyTerraformAndKopsMatch(kopsMetadata.Name, terraformClient, logger)
+	if err != nil {
+		logger.WithError(err).Error("Proceeding with cluster deletion despite failing terraform output match check")
+	}
+
+	err = terraformClient.Destroy()
+	if err != nil {
+		return errors.Wrap(err, "failed to run terraform destroy")
+	}
+
+	err = kopsClient.DeleteCluster(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to run kops delete")
+	}
+
+	logger.Infof("Kops cluster %s deleted", kopsMetadata.Name)
 
 	return nil
 }

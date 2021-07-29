@@ -30,7 +30,7 @@ const (
 	// StackroxCanonicalName is the canonical string representation of stackrox
 	StackroxCanonicalName = "stackrox-secured-cluster-services"
 	// KubecostCanonicalName is the canonical string representation of kubecost
-	KubecostCanonicalName = "kubecost"	
+	KubecostCanonicalName = "kubecost"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
