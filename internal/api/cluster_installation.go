@@ -490,8 +490,7 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	// DNS Switch
 	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
 	newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
-	var installationIDs []string
-	var hibernatedInstallationIDs []string
+	var installationIDs, hibernatedInstallationIDs []string
 
 	for _, ci := range clusterInstallations {
 		installation, err := c.Store.GetInstallation(ci.InstallationID, false, false)

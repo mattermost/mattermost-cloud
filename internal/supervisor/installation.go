@@ -660,6 +660,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 
 	return s.waitForCreationStable(installation, instanceID, logger)
 }
+
 func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Installation, logger log.FieldLogger) ([]string, error) {
 	isActive := true
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
