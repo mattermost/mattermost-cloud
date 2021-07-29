@@ -5,11 +5,12 @@
 package api_test
 
 import (
-	"github.com/golang/mock/gomock"
-	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/model"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/model"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/api"

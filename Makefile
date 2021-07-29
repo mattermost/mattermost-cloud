@@ -89,7 +89,9 @@ goformat:
 			gofmt_output=$$(gofmt -d -s $$files 2>&1); \
 			if [ "$$gofmt_output" ]; then \
 				echo "$$gofmt_output"; \
-				echo "gofmt failure"; \
+				echo "gofmt failed"; \
+				echo "To fix it, run:"; \
+				echo "go fmt [FAILED_PACKAGE]"; \
 				exit 1; \
 			fi; \
 		fi; \
@@ -107,7 +109,9 @@ goimports: $(GOIMPORTS)
 			goimports_output=$$(goimports -d $$files 2>&1); \
 			if [ "$$goimports_output" ]; then \
 				echo "$$goimports_output"; \
-				echo "goimports failure"; \
+				echo "goimports failed"; \
+				echo "To fix it, run:"; \
+				echo "goimports -w [FAILED_PACKAGE]"; \
 				exit 1; \
 			fi; \
 		fi; \
