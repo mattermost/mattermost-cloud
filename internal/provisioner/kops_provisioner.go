@@ -6,7 +6,6 @@ package provisioner
 
 import (
 	"encoding/json"
-
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -99,10 +98,6 @@ func (provisioner *KopsProvisioner) getCachedKopsClient(name string, logger log.
 	return kopsClient, nil
 }
 
-type kopsClusterDefinition struct {
-	Metadata model.KopsMetadata
-}
-
 func (provisioner *KopsProvisioner) kopsClusterExists(name string, logger log.FieldLogger) (bool, error) {
 	kopsClient, err := kops.New(provisioner.params.S3StateStore, logger)
 	if err != nil {
@@ -114,7 +109,9 @@ func (provisioner *KopsProvisioner) kopsClusterExists(name string, logger log.Fi
 		return false, errors.Wrap(err, "failed to list clusters with kops")
 	}
 
-	var kopsClusters []kopsClusterDefinition
+	var kopsClusters []struct{
+		Metadata model.KopsMetadata
+	}
 	err = json.Unmarshal([]byte(clustersJSON), &kopsClusters)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to unmarshal kops clusters output")
