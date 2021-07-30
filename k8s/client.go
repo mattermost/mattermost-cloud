@@ -9,7 +9,7 @@ import (
 
 	mmclientv1alpha1 "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	mmclientv1beta1 "github.com/mattermost/mattermost-operator/pkg/client/v1beta1/clientset/versioned"
-	monitoringclientV1  "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+	monitoringclientV1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	slothclientV1 "github.com/slok/sloth/pkg/kubernetes/gen/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -87,7 +87,7 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 			MattermostClientsetV1Alpha: mattermostV1AlphaClientset,
 			MattermostClientsetV1Beta:  mattermostV1BetaClientset,
 			MonitoringClientsetV1:      monitoringV1Clientset,
-			SlothClientsetV1:			slothV1Clientset,
+			SlothClientsetV1:           slothV1Clientset,
 			ApixClientset:              apixClientset,
 			KubeagClientSet:            kubeagClientset,
 			logger:                     logger,

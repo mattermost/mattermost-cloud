@@ -54,14 +54,14 @@ func (kc *KubeClient) CreateOrUpdateNamespace(namespaceName string) (*corev1.Nam
 }
 
 // GetNamespace returns a kubernetes namespace object if it exists.
-func (kc *KubeClient) GetNamespace(namespaceName string) *corev1.Namespace {
+func (kc *KubeClient) GetNamespace(namespaceName string) (*corev1.Namespace, error) {
 	ctx := context.TODO()
-		namespace, err := kc.Clientset.CoreV1().Namespaces().Get(ctx, namespaceName, metav1.GetOptions{})
-		if err != nil && k8sErrors.IsNotFound(err){
-			return nil
-		}
+	namespace, err := kc.Clientset.CoreV1().Namespaces().Get(ctx, namespaceName, metav1.GetOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return namespace, err
+	}
 
-	return namespace
+	return namespace, nil
 }
 
 // GetNamespaces returns a list of kubernetes namespace objects if they exist.

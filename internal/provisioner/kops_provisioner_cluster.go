@@ -541,7 +541,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
-	prom := k8sClient.GetNamespace("prometheus")
+	prom, _ := k8sClient.GetNamespace("prometheus")
 
 	if prom != nil {
 		err = provisioner.prepareSloth(cluster, k8sClient)
@@ -1046,7 +1046,7 @@ func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClie
 	files := []k8s.ManifestFile{
 		{
 			Path:            "manifests/sloth/crd_sloth.slok.dev_prometheusservicelevels.yaml",
-		DeployNamespace: "prometheus",
+			DeployNamespace: "prometheus",
 		},
 		{
 			Path:            "manifests/sloth/sloth.yaml",
@@ -1056,7 +1056,6 @@ func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClie
 			Path:            "manifests/sloth/sloth_pod_monitor.yaml",
 			DeployNamespace: "prometheus",
 		},
-
 	}
 
 	err := k8sClient.CreateFromFiles(files)
