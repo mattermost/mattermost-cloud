@@ -364,16 +364,14 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		},
 	}
 
-	if len(cluster.ProvisionerMetadataKops.Networking) > 0 && (cluster.ProvisionerMetadataKops.Networking == "amazonvpc" || cluster.ProvisionerMetadataKops.Networking == "weave") {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/calico-policy-only-aws-cni.yaml",
-			DeployNamespace: "kube-system",
-		})
-	}
-
 	if len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking == "calico" {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/calico-cni.yaml",
+			DeployNamespace: "kube-system",
+		})
+	} else {
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/calico-network-policy-only.yaml",
 			DeployNamespace: "kube-system",
 		})
 	}
