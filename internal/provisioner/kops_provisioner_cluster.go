@@ -358,16 +358,25 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}, {
 			Path:            "manifests/bifrost/bifrost.yaml",
 			DeployNamespace: bifrostNamespace,
-		}, {
-			Path:            "manifests/calico-policy-only.yaml",
-			DeployNamespace: "kube-system",
-		}, {
+		},  {
 			Path:            "manifests/metric-server/metric-server.yaml",
 			DeployNamespace: "kube-system",
 		}, {
 			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
 			DeployNamespace: "kube-system",
 		},
+	}
+
+	if len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking == "calico" {
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/calico-cni.yaml",
+			DeployNamespace: "kube-system",
+		})
+	} else {
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/calico-network-policy-only.yaml",
+			DeployNamespace: "kube-system",
+		})
 	}
 
 	if provisioner.params.DeployMysqlOperator {
