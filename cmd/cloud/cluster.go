@@ -75,7 +75,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
 	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
-	
+
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
 	clusterUpdateCmd.Flags().String("cluster", "", "The id of the cluster to be updated.")
@@ -575,7 +575,7 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	pgbouncerVersion, _ := command.Flags().GetString("pgbouncer-version")
 	stackroxVersion, _ := command.Flags().GetString("stackrox-version")
 	kubecostVersion, _ := command.Flags().GetString("kubecost-version")
-	
+
 	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
 	thanosValues, _ := command.Flags().GetString("thanos-values")
 	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")

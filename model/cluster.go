@@ -21,6 +21,7 @@ const (
 	// may contain a Kubecost token which kubecost helm chart needs
 	KubecostToken = "kubecost-token"
 )
+
 // Cluster represents a Kubernetes cluster.
 type Cluster struct {
 	ID                      string

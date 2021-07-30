@@ -198,6 +198,23 @@ func (c *Cmd) GetCluster(name string) (string, error) {
 	return trimmed, nil
 }
 
+// GetClustersJSON invokes kops get clusters, using the context of the created Cmd, and
+// returns the stdout.
+func (c *Cmd) GetClustersJSON() (string, error) {
+	stdout, _, err := c.run(
+		"get",
+		"clusters",
+		arg("state", "s3://", c.s3StateStore),
+		arg("output", "json"),
+	)
+	trimmed := strings.TrimSuffix(string(stdout), "\n")
+	if err != nil {
+		return trimmed, errors.Wrap(err, "failed to invoke kops get clusters")
+	}
+
+	return trimmed, nil
+}
+
 // GetClusterSpecInfoFromJSON invokes kops get cluster, using the context of the created Cmd, and
 // returns the stdout.
 func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (string, error) {
