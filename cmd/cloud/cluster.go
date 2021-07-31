@@ -152,7 +152,7 @@ var clusterCreateCmd = &cobra.Command{
 		if clusterID != "" {
 			err := client.RetryCreateCluster(clusterID)
 			if err != nil {
-				return errors.Errorf("failed to retry cluster creation")
+				return errors.Wrap(err, "failed to retry cluster creation")
 			}
 			return nil
 		}
