@@ -175,13 +175,7 @@ func (provisioner *kopsCIAlpha) HibernateClusterInstallation(cluster *model.Clus
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
-	// Hibernation is currently considered changing the Mattermost app deployment
-	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
-	// The current way to do this is to set a negative replica count in the
-	// k8s custom resource. Custom ingress annotations are also used.
-	// TODO: enhance hibernation to include database and/or filestore.
-	cr.Spec.Replicas = hibernationReplicaCount
-	cr.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+	configInstallationForHibernation(cr)
 
 	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -191,6 +185,17 @@ func (provisioner *kopsCIAlpha) HibernateClusterInstallation(cluster *model.Clus
 	logger.Info("Updated cluster installation")
 
 	return nil
+}
+
+func configInstallationForHibernation(mattermost *mmv1alpha1.ClusterInstallation) {
+	// Hibernation is currently considered changing the Mattermost app deployment
+	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
+	// The current way to do this is to set a negative replica count in the
+	// k8s custom resource. Custom ingress annotations are also used.
+	// TODO: enhance hibernation to include database and/or filestore.
+	mattermost.Spec.Replicas = hibernationReplicaCount
+	mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+	mattermost.Spec.Size = ""
 }
 
 // UpdateClusterInstallation updates the cluster installation spec to match the

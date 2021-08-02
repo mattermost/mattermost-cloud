@@ -380,7 +380,7 @@ func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logg
 	return nil
 }
 
-func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
+func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
 	return nil
 }
 

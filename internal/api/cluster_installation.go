@@ -490,17 +490,30 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	// DNS Switch
 	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
 	newClusterInstallationIDs := getClusterInstallationIDs(newClusterInstallations)
-	c.Logger.Infof("Total DNS records to migrate: %s", len(clusterInstallations))
-	var installationIDs []string
+	var installationIDs, hibernatedInstallationIDs []string
+
 	for _, ci := range clusterInstallations {
-		installationIDs = append(installationIDs, ci.InstallationID)
+		installation, err := c.Store.GetInstallation(ci.InstallationID, false, false)
+		if err != nil {
+			c.Logger.WithError(err).Errorf("Failed to get refreshed installation")
+			return
+		}
+		if installation.State == model.InstallationStateHibernating {
+			hibernatedInstallationIDs = append(hibernatedInstallationIDs, ci.InstallationID)
+		} else {
+			installationIDs = append(installationIDs, ci.InstallationID)
+		}
 	}
-	status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs)
+
+	totalInstallations := len(installationIDs) + len(hibernatedInstallationIDs)
+	c.Logger.Infof("Total DNS records to migrate: %s", totalInstallations)
+	status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs, hibernatedInstallationIDs)
 	if status != 0 {
 		c.Logger.Error("Failed to migrate DNS records")
 		w.WriteHeader(status)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -557,7 +570,7 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 	w.WriteHeader(http.StatusOK)
 }
 
-func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldClusterInstallationIDs []string, newClusterInstallationIDs []string, installationIDs []string) int {
+func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldClusterInstallationIDs []string, newClusterInstallationIDs []string, installationIDs []string, hibernatingInstallationIDs []string) int {
 
 	if mcir.LockInstallation {
 		c.Logger.Infof("Locking %d installation(s) ", len(installationIDs))
@@ -578,7 +591,8 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 			}
 		}()
 	}
-	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs)
+
+	err := c.Store.SwitchDNS(oldClusterInstallationIDs, newClusterInstallationIDs, installationIDs, hibernatingInstallationIDs)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to migrate DNS records")
 		return http.StatusInternalServerError

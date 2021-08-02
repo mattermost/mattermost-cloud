@@ -58,7 +58,7 @@ type AWS interface {
 	GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error)
 
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
-	CreatePublicCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
+	CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error
 	UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error
 	IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool
 	DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error
