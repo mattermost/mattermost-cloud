@@ -656,12 +656,7 @@ var installationDeploymentReportCmd = &cobra.Command{
 		output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
 		if model.IsMultiTenantRDS(installation.Database) {
 			databases, err := client.GetMultitenantDatabases(&model.GetDatabasesRequest{
-				DatabaseType: model.DatabaseEngineTypePostgresProxy,
-				Paging: model.Paging{
-					Page:           0,
-					PerPage:        model.AllPerPage,
-					IncludeDeleted: true,
-				},
+				Paging: model.AllPagesWithDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query installation database")
@@ -689,11 +684,7 @@ var installationDeploymentReportCmd = &cobra.Command{
 
 		clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
 			InstallationID: installation.ID,
-			Paging: model.Paging{
-				Page:           0,
-				PerPage:        model.AllPerPage,
-				IncludeDeleted: true,
-			},
+			Paging:         model.AllPagesWithDeleted(),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query cluster installations")
