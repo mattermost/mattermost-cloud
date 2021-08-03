@@ -18,7 +18,7 @@ KUBECTL_VERSION=v1.20.8
 ################################################################################
 
 GO ?= $(shell command -v go 2> /dev/null)
-PACKAGES=$(shell go list ./...| grep -v internal/mocks)
+PACKAGES=$(shell go list ./... | grep -v internal/mocks)
 MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
 MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
