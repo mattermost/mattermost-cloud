@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import (
@@ -160,6 +164,7 @@ func (w *TestWicker) CreateIncomingWebhook() *TestWicker {
 	return w
 }
 
+// WaitForInstallationStable waits for installation to become stable
 func (w *TestWicker) WaitForInstallationStable(ctx context.Context) *TestWicker {
 	w.logger.WithField("DNS", w.installation.DNS).Info("Waiting installation")
 	for {
@@ -193,6 +198,7 @@ func (w *TestWicker) WaitForInstallationStable(ctx context.Context) *TestWicker 
 	}
 }
 
+// SetupInstallation creates a user and login with this one
 func (w *TestWicker) SetupInstallation() *TestWicker {
 	u := &mmodel.User{
 		Username: "testwick",
@@ -214,6 +220,7 @@ func (w *TestWicker) SetupInstallation() *TestWicker {
 	return w
 }
 
+// IsUP cpings the installation till return statusCode=200 and status=OK
 func (w *TestWicker) IsUP(ctx context.Context) *TestWicker {
 	w.mmClient = mmodel.NewAPIv4Client(fmt.Sprintf("https://%s", w.installation.DNS))
 	for {
