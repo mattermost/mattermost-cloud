@@ -16,6 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// TestWicker data struct for test wicker scenarios
 type TestWicker struct {
 	provisionerClient *cmodel.Client
 	mmClient          *mmodel.Client4
@@ -27,6 +28,7 @@ type TestWicker struct {
 	Error             error
 }
 
+// NewTestWicker creates a testwicker
 func NewTestWicker(provisionerClient *cmodel.Client, logger *logrus.Logger) *TestWicker {
 	return &TestWicker{
 		logger:            logger,
