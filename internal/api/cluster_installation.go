@@ -507,13 +507,16 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	totalInstallations := len(installationIDs) + len(hibernatedInstallationIDs)
 	c.Logger.Infof("Total DNS records to migrate: %s", totalInstallations)
+	if totalInstallations == 0 {
+		c.Logger.Error("No installation(s) found for DNS  migration")
+		w.WriteHeader(http.StatusNotFound)
+	}
 	status := dnsMigration(c, mcir, clusterInstallationIDs, newClusterInstallationIDs, installationIDs, hibernatedInstallationIDs)
 	if status != 0 {
 		c.Logger.Error("Failed to migrate DNS records")
 		w.WriteHeader(status)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -571,10 +574,10 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 }
 
 func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldClusterInstallationIDs []string, newClusterInstallationIDs []string, installationIDs []string, hibernatingInstallationIDs []string) int {
-
 	if mcir.LockInstallation {
-		c.Logger.Infof("Locking %d installation(s) ", len(installationIDs))
-		locked, err := c.Store.LockInstallations(installationIDs, c.RequestID)
+		installationsToLock := append(installationIDs, hibernatingInstallationIDs...)
+		c.Logger.Infof("Locking %d installation(s) ", len(installationsToLock))
+		locked, err := c.Store.LockInstallations(installationsToLock, c.RequestID)
 		if err != nil {
 			c.Logger.WithError(err).Error("Failed to lock installation")
 			return http.StatusInternalServerError
@@ -583,7 +586,7 @@ func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldC
 			return http.StatusInternalServerError
 		}
 		defer func() {
-			unlocked, err := c.Store.UnlockInstallations(installationIDs, c.RequestID, false)
+			unlocked, err := c.Store.UnlockInstallations(installationsToLock, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("Failed to unlock installation")
 			} else if !unlocked {

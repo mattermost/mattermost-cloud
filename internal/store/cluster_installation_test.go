@@ -738,7 +738,7 @@ func TestSwitchDNS(t *testing.T) {
 
 	clusterInstallation3 := &model.ClusterInstallation{
 		ClusterID:      sourceClusterID,
-		InstallationID: installation2.ID,
+		InstallationID: installation3.ID,
 		Namespace:      "namespace_12",
 		State:          model.ClusterInstallationStateCreationRequested,
 	}
