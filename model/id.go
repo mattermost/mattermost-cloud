@@ -7,6 +7,7 @@ package model
 import (
 	"bytes"
 	"encoding/base32"
+	"unicode"
 
 	"github.com/pborman/uuid"
 )
@@ -22,5 +23,9 @@ func NewID() string {
 	encoder.Write(uuid.NewRandom())
 	encoder.Close()
 	b.Truncate(26) // removes the '==' padding
+	r := rune(b.String()[0])
+	if unicode.IsNumber(r) {
+		return NewID()
+	}
 	return b.String()
 }
