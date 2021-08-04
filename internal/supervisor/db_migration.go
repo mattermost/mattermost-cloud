@@ -11,8 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
-
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
@@ -436,7 +434,7 @@ func (s *DBMigrationSupervisor) finalizeMigration(dbMigration *model.Installatio
 		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
-	dbMigration.CompleteAt = utils.GetMillis()
+	dbMigration.CompleteAt = model.GetMillis()
 	err = s.store.UpdateInstallationDBMigrationOperation(dbMigration)
 	if err != nil {
 		logger.WithError(err).Errorf("Failed to set complete at for db migration")

@@ -136,7 +136,7 @@ func (sqlStore *SQLStore) UpdateClusterInstallationsActiveStatus(db execer, clus
 func (sqlStore *SQLStore) DeleteClusterInstallation(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("ClusterInstallation").
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = 0"),
 	)
@@ -244,7 +244,7 @@ func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*mo
 // createClusterInstallation records the cluster installation(s) as a single transaction to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) createClusterInstallation(db execer, clusterInstallation *model.ClusterInstallation) error {
 	clusterInstallation.ID = model.NewID()
-	clusterInstallation.CreateAt = GetMillis()
+	clusterInstallation.CreateAt = model.GetMillis()
 
 	_, err := sqlStore.execBuilder(db, sq.
 		Insert("ClusterInstallation").

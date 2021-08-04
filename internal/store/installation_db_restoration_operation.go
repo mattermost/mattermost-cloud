@@ -85,7 +85,7 @@ func (sqlStore *SQLStore) CreateInstallationDBRestorationOperation(dbRestoration
 
 func (sqlStore *SQLStore) createInstallationDBRestoration(db execer, dbRestoration *model.InstallationDBRestorationOperation) error {
 	dbRestoration.ID = model.NewID()
-	dbRestoration.RequestAt = GetMillis()
+	dbRestoration.RequestAt = model.GetMillis()
 
 	_, err := sqlStore.execBuilder(db, sq.
 		Insert(installationDBRestorationTable).
@@ -201,7 +201,7 @@ func (sqlStore *SQLStore) updateInstallationDBRestorationFields(db execer, id st
 func (sqlStore *SQLStore) DeleteInstallationDBRestorationOperation(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(installationDBRestorationTable).
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = ?", 0))
 	if err != nil {

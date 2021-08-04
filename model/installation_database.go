@@ -142,12 +142,6 @@ func (d *MysqlOperatorDatabase) RefreshResourceMetadata(store InstallationDataba
 	return nil
 }
 
-// InternalDatabase returns true if the installation's database is internal
-// to the kubernetes cluster it is running on.
-func (i *Installation) InternalDatabase() bool {
-	return i.Database == InstallationDatabaseMysqlOperator
-}
-
 // IsSupportedDatabase returns true if the given database string is supported.
 func IsSupportedDatabase(database string) bool {
 	switch database {
@@ -164,11 +158,30 @@ func IsSupportedDatabase(database string) bool {
 	return true
 }
 
-// IsSingleTenantRDS returns true if the given database is single tenant db.
+// InternalDatabase returns true if the installation's database is internal
+// to the kubernetes cluster it is running on.
+func (i *Installation) InternalDatabase() bool {
+	return i.Database == InstallationDatabaseMysqlOperator
+}
+
+// IsSingleTenantRDS returns true if the given database is single tenant RDS db.
 func IsSingleTenantRDS(database string) bool {
 	switch database {
 	case InstallationDatabaseSingleTenantRDSMySQL:
 	case InstallationDatabaseSingleTenantRDSPostgres:
+	default:
+		return false
+	}
+
+	return true
+}
+
+// IsMultiTenantRDS returns true if the given database is multitenant RDS db.
+func IsMultiTenantRDS(database string) bool {
+	switch database {
+	case InstallationDatabaseMultiTenantRDSMySQL:
+	case InstallationDatabaseMultiTenantRDSPostgres:
+	case InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
 	default:
 		return false
 	}

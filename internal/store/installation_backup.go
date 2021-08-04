@@ -146,7 +146,7 @@ func (sqlStore *SQLStore) getCount(builder sq.SelectBuilder) (int64, error) {
 // CreateInstallationBackup records installation backup to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) CreateInstallationBackup(backup *model.InstallationBackup) error {
 	backup.ID = model.NewID()
-	backup.RequestAt = GetMillis()
+	backup.RequestAt = model.GetMillis()
 
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(backupTable).
@@ -277,7 +277,7 @@ func (sqlStore *SQLStore) updateInstallationBackupState(db execer, backup *model
 func (sqlStore *SQLStore) DeleteInstallationBackup(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(backupTable).
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = ?", 0))
 	if err != nil {

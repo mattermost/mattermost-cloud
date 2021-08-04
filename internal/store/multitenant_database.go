@@ -176,7 +176,7 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 		return errors.New("multitenant database ID must not be empty")
 	}
 
-	multitenantDatabase.CreateAt = GetMillis()
+	multitenantDatabase.CreateAt = model.GetMillis()
 
 	installationsJSON, err := json.Marshal(multitenantDatabase.Installations)
 	if err != nil {
