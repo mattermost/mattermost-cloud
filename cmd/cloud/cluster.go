@@ -52,6 +52,7 @@ func init() {
 	clusterCreateCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
+	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
@@ -146,6 +147,15 @@ var clusterCreateCmd = &cobra.Command{
 
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
+
+		clusterID, _ := command.Flags().GetString("cluster")
+		if clusterID != "" {
+			err := client.RetryCreateCluster(clusterID)
+			if err != nil {
+				return errors.Wrap(err, "failed to retry cluster creation")
+			}
+			return nil
+		}
 
 		provider, _ := command.Flags().GetString("provider")
 		version, _ := command.Flags().GetString("version")
