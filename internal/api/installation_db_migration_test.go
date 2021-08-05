@@ -49,7 +49,7 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	currentDB := &model.MultitenantDatabase{
-		ID:            "database1",
+		RdsClusterID:  "cluster1",
 		VpcID:         "vpc1",
 		DatabaseType:  model.DatabaseEngineTypePostgres,
 		Installations: model.MultitenantDatabaseInstallations{installation1.ID},
@@ -58,7 +58,7 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	destinationDB := &model.MultitenantDatabase{
-		ID:           "database2",
+		RdsClusterID: "cluster2",
 		VpcID:        "vpc1",
 		DatabaseType: model.DatabaseEngineTypePostgres,
 	}
@@ -68,7 +68,7 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 	migrationRequest := &model.InstallationDBMigrationRequest{
 		InstallationID:         installation1.ID,
 		DestinationDatabase:    model.InstallationDatabaseMultiTenantRDSPostgres,
-		DestinationMultiTenant: &model.MultiTenantDBMigrationData{DatabaseID: "database2"},
+		DestinationMultiTenant: &model.MultiTenantDBMigrationData{DatabaseID: destinationDB.ID},
 	}
 
 	migrationOperation, err := client.MigrateInstallationDatabase(migrationRequest)

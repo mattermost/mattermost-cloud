@@ -6,6 +6,7 @@ package store
 
 import (
 	"github.com/blang/semver"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 type migration struct {
@@ -1377,6 +1378,107 @@ var migrations = []migration{
 		if err != nil {
 			return err
 		}
+
+		return nil
+	}},
+	{semver.MustParse("0.30.0"), semver.MustParse("0.31.0"), func(e execer) error {
+		_, err := e.Exec(`
+				ALTER TABLE MultitenantDatabase
+				ADD COLUMN NewID TEXT NOT NULL DEFAULT '';
+		`)
+		if err != nil {
+			return err
+		}
+
+		multitenantDatabaseRows, err := e.Query(`SELECT ID FROM MultitenantDatabase;`)
+		if err != nil {
+			return err
+		}
+		defer multitenantDatabaseRows.Close()
+
+		var id string
+		var ids []string
+		for multitenantDatabaseRows.Next() {
+			err := multitenantDatabaseRows.Scan(&id)
+			if err != nil {
+				return err
+			}
+			ids = append(ids, id)
+		}
+		err = multitenantDatabaseRows.Err()
+		if err != nil {
+			return err
+		}
+
+		for _, id := range ids {
+			_, err = e.Exec(`UPDATE MultitenantDatabase SET NewID = $1 WHERE ID = $2;`, model.NewID(), id)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = e.Exec(`ALTER TABLE MultitenantDatabase RENAME TO MultitenantDatabaseBackup;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE MultitenantDatabase (
+				ID TEXT PRIMARY KEY,
+				RdsClusterID TEXT NOT NULL,
+				VpcID TEXT NOT NULL,
+				DatabaseType TEXT NOT NULL,
+				State TEXT NOT NULL,
+				WriterEndpoint TEXT NOT NULL,
+				ReaderEndpoint TEXT NOT NULL,
+				InstallationsRaw BYTEA NOT NULL,
+				MigratedInstallationsRaw BYTEA NOT NULL,
+				SharedLogicalDatabaseMappingsRaw BYTEA NULL,
+				MaxInstallationsPerLogicalDatabase BIGINT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,             
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX MultitenantDatabase_RdsClusterID_DeleteAt ON MultitenantDatabase (RdsClusterID, DeleteAt);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+		INSERT INTO MultitenantDatabase
+		SELECT
+			NewID,
+			ID,
+			VpcID,
+			DatabaseType,
+			State,
+			WriterEndpoint,
+			ReaderEndpoint,
+			InstallationsRaw,
+			MigratedInstallationsRaw,
+			SharedLogicalDatabaseMappingsRaw,
+			MaxInstallationsPerLogicalDatabase,
+			CreateAt,
+			DeleteAt,
+			LockAcquiredBy,
+			LockAcquiredAt
+		FROM
+		MultitenantDatabaseBackup;
+		`)
+		if err != nil {
+			return err
+		}
+
+		// The MultitenantDatabaseBackup table will be left for now just in case
+		// and will be cleaned up in a future migration.
 
 		return nil
 	}},

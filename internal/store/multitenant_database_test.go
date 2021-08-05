@@ -60,13 +60,13 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.lockerID = s.installationID0
 
 	s.database1 = &model.MultitenantDatabase{
-		ID:    "database_id0",
-		VpcID: "vpc_id0",
+		RdsClusterID: "database_id0",
+		VpcID:        "vpc_id0",
 	}
 
 	s.database2 = &model.MultitenantDatabase{
-		ID:    "database_id1",
-		VpcID: "vpc_id1",
+		RdsClusterID: "database_id1",
+		VpcID:        "vpc_id1",
 	}
 
 	s.database1.Installations = model.MultitenantDatabaseInstallations{s.installationID0, s.installationID1}
@@ -89,20 +89,14 @@ func TestMultitenantDatabase(t *testing.T) {
 
 func (s *TestMultitenantDatabaseSuite) TestCreate() {
 	db := model.MultitenantDatabase{
-		ID:    "database_some_id",
-		VpcID: "database_vpc_id",
+		RdsClusterID: "database_some_id",
+		VpcID:        "database_vpc_id",
 	}
 	err := s.sqlStore.CreateMultitenantDatabase(&db)
 	s.Assert().NoError(err)
 	s.Assert().Greater(db.CreateAt, int64(0))
 
 	err = s.sqlStore.CreateMultitenantDatabase(&db)
-	s.Assert().Error(err)
-}
-
-func (s *TestMultitenantDatabaseSuite) TestCreateNilIDError() {
-	db := model.MultitenantDatabase{}
-	err := s.sqlStore.CreateMultitenantDatabase(&db)
 	s.Assert().Error(err)
 }
 
@@ -159,7 +153,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintFilterNotNil() {
 
 func (s *TestMultitenantDatabaseSuite) TestGetLimitConstraintAll() {
 	db := model.MultitenantDatabase{
-		ID: "database_id5",
+		RdsClusterID: "database_id5",
 	}
 	err := s.sqlStore.CreateMultitenantDatabase(&db)
 	s.Assert().NoError(err)
@@ -249,7 +243,7 @@ func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallation
 
 func (s *TestMultitenantDatabaseSuite) TestGetMultitenantDatabaseForInstallationIDErrorMany() {
 	db := model.MultitenantDatabase{
-		ID: "database_some_id",
+		RdsClusterID: "database_some_id",
 	}
 	db.Installations = model.MultitenantDatabaseInstallations{s.installationID0}
 	err := s.sqlStore.CreateMultitenantDatabase(&db)
@@ -308,7 +302,7 @@ func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
 	}
 
 	database1 := &model.MultitenantDatabase{
-		ID:            "database_id0",
+		RdsClusterID:  "database_id0",
 		VpcID:         "vpc_id0",
 		Installations: installationIDs,
 	}

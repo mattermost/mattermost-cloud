@@ -241,7 +241,6 @@ func TestDBMigrationSupervisor_Do(t *testing.T) {
 }
 
 func TestDBMigrationSupervisor_Supervise(t *testing.T) {
-
 	t.Run("trigger backup", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)

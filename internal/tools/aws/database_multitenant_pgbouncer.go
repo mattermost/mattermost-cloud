@@ -111,7 +111,7 @@ func (d *RDSMultitenantPGBouncerDatabase) Provision(store model.InstallationData
 		"logical-database":  databaseName,
 	})
 
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
 	}
@@ -296,7 +296,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTag
 		}
 
 		multitenantDatabase := model.MultitenantDatabase{
-			ID:                                 *rdsClusterID,
+			RdsClusterID:                       *rdsClusterID,
 			VpcID:                              vpcID,
 			DatabaseType:                       d.databaseType,
 			State:                              model.DatabaseStateProvisioningRequested,
@@ -655,7 +655,7 @@ func (d *RDSMultitenantPGBouncerDatabase) connectRDSCluster(database, endpoint, 
 	return closeFunc, nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
+func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, vpcID *string) (*RDSSecret, error) {
 	installationSecretName := RDSMultitenantPGBouncerSecretName(d.installationID)
 
 	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -680,7 +680,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreat
 			},
 			{
 				Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
-				Value: VpcID,
+				Value: vpcID,
 			},
 			{
 				Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
@@ -796,7 +796,7 @@ func (d *RDSMultitenantPGBouncerDatabase) Teardown(store model.InstallationDatab
 // removeInstallationFromPGBouncerDatabase performs the work necessary to
 // remove a single installation schema from a multitenant PGBouncer RDS cluster.
 func (d *RDSMultitenantPGBouncerDatabase) removeInstallationPGBouncerResources(database *model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe multitenant database")
 	}
