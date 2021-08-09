@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cmodel "github.com/mattermost/mattermost-cloud/model"
+	mmodel "github.com/mattermost/mattermost-server/v5/model"
 	"github.com/moby/moby/pkg/namesgenerator"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -60,7 +61,7 @@ func init() {
 	testerCmd.PersistentFlags().StringVar(&testerConfig.owner, "owner", "testwick", "The owner of the installation. Prefer to keep the default")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationSize, "installation-size", "100users", "The size of the installation")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationAffinity, "installation-affinity", cmodel.InstallationAffinityMultiTenant, "The installation affinity type eg. multitenant")
-	testerCmd.PersistentFlags().StringVar(&testerConfig.installationDBType, "installation-db-type", cmodel.InstallationDatabaseMultiTenantRDSPostgres, "The installation database type eg. aws-multitenant-rds-postgres")
+	testerCmd.PersistentFlags().StringVar(&testerConfig.installationDBType, "installation-db-type", cmodel.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, "The installation database type eg. aws-multitenant-rds-postgres")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationFilestore, "installation-filestore", cmodel.InstallationFilestoreBifrost, "The installation filestore type eg. bifrost")
 	testerCmd.MarkFlagRequired("provisioner") //nolint
 	testerCmd.MarkFlagRequired("hosted-zone") //nolint
@@ -95,33 +96,60 @@ var testerCmd = &cobra.Command{
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 				defer cancel()
 
-				testwicker := NewTestWicker(provisionerClient, logger)
-				w := testwicker.CreateInstallation(&cmodel.CreateInstallationRequest{
-					DNS:       dnsName,
-					OwnerID:   testerConfig.owner,
-					Size:      testerConfig.installationSize,
-					Affinity:  testerConfig.installationAffinity,
-					Database:  testerConfig.installationDBType,
-					Filestore: testerConfig.installationFilestore,
-				}).
-					WaitForInstallationStable(ctx).
-					IsUP(ctx).
-					SetupInstallation().
-					CreateTeam().
-					AddTeamMember()
+				mmClient := mmodel.NewAPIv4Client(fmt.Sprintf("https://%s", dnsName))
+				testwicker := NewTestWicker(provisionerClient, mmClient, logger)
+
+				workflow := NewWorkflow(logger)
+				workflow.AddStep(Step{
+					Name: "CreateInstallation",
+					Func: testwicker.CreateInstallation(&cmodel.CreateInstallationRequest{
+						DNS:       dnsName,
+						OwnerID:   testerConfig.owner,
+						Size:      testerConfig.installationSize,
+						Affinity:  testerConfig.installationAffinity,
+						Database:  testerConfig.installationDBType,
+						Filestore: testerConfig.installationFilestore,
+					}),
+				}, Step{
+					Name: "WaitForInstallationStable",
+					Func: testwicker.WaitForInstallationStable(),
+				}, Step{
+					Name: "IsInstallationUp",
+					Func: testwicker.IsUP(),
+				}, Step{
+					Name: "SetupInstallation",
+					Func: testwicker.SetupInstallation(),
+				}, Step{
+					Name: "CreateTeam",
+					Func: testwicker.CreateTeam(),
+				}, Step{
+					Name: "AddTeamMember",
+					Func: testwicker.AddTeamMember(),
+				})
 
 				for j := 0; j < testerConfig.channelSamples; j++ {
-					w = w.CreateChannel().CreateIncomingWebhook().PostMessage(testerConfig.messagesSamples)
+					workflow.AddStep(Step{
+						Name: "CreateChannel",
+						Func: testwicker.CreateChannel(),
+					}, Step{
+						Name: "CreateIncomingWebhook",
+						Func: testwicker.CreateIncomingWebhook(),
+					}, Step{
+						Name: "PostMessages",
+						Func: testwicker.PostMessage(testerConfig.messagesSamples),
+					})
 				}
-
-				if w.Error != nil {
-					w.DeleteInstallation()
-					logger.WithError(w.Error).Error()
+				workflow.AddStep(Step{
+					Name: "DeleteInstallation",
+					Func: testwicker.DeleteInstallation(),
+				})
+				if err := workflow.Run(testwicker, ctx); err != nil {
+					testwicker.DeleteInstallation()
 					cancel()
-					return w.Error
+					return err
 				}
 
-				return w.DeleteInstallation().Error
+				return nil
 			})
 		}
 		if err := g.Wait(); err != nil {
