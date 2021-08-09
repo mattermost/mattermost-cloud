@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// StepFunc the func to run for a step
 type StepFunc func(*TestWicker, context.Context) error
 
 // Step is a single step in a workflow.
@@ -25,7 +26,7 @@ type Workflow struct {
 	logger *logrus.Logger
 }
 
-// New factory method
+// NewWorkflow factory method
 func NewWorkflow(logger *logrus.Logger) *Workflow {
 	return &Workflow{
 		logger: logger,
@@ -38,8 +39,8 @@ func (w *Workflow) AddStep(step ...Step) *Workflow {
 	return w
 }
 
-// Execute will execute the set of commands of a recipe
-func (w *Workflow) Run(testWicker *TestWicker, ctx context.Context) error {
+// Run will execute the set of commands of a recipe
+func (w *Workflow) Run(ctx context.Context, testWicker *TestWicker) error {
 	for _, step := range w.Steps {
 		w.logger.WithField("Step", step.Name).Info("Running")
 		if err := step.Func(testWicker, ctx); err != nil {

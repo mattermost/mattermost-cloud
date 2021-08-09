@@ -143,7 +143,7 @@ var testerCmd = &cobra.Command{
 					Name: "DeleteInstallation",
 					Func: testwicker.DeleteInstallation(),
 				})
-				if err := workflow.Run(testwicker, ctx); err != nil {
+				if err := workflow.Run(ctx, testwicker); err != nil {
 					testwicker.DeleteInstallation()
 					cancel()
 					return err

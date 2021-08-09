@@ -17,11 +17,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// MattermostRequester the interface which describes mattermost API client
 type MattermostRequester interface {
 	GetPing() (string, *mmodel.Response)
 	Logout() (bool, *mmodel.Response)
 	CreateTeam(team *mmodel.Team) (*mmodel.Team, *mmodel.Response)
-	AddTeamMember(teamId, userId string) (*mmodel.TeamMember, *mmodel.Response)
+	AddTeamMember(teamID, userID string) (*mmodel.TeamMember, *mmodel.Response)
 	CreatePost(post *mmodel.Post) (*mmodel.Post, *mmodel.Response)
 	CreateUser(user *mmodel.User) (*mmodel.User, *mmodel.Response)
 	CreateChannel(channel *mmodel.Channel) (*mmodel.Channel, *mmodel.Response)
@@ -29,6 +30,7 @@ type MattermostRequester interface {
 	Login(username, password string) (*mmodel.User, *mmodel.Response)
 }
 
+// ProvisionerRequester the interface which describes Provisioner API client
 type ProvisionerRequester interface {
 	CreateInstallation(request *cmodel.CreateInstallationRequest) (*cmodel.InstallationDTO, error)
 	GetInstallation(id string, request *cmodel.GetInstallationRequest) (*cmodel.InstallationDTO, error)
