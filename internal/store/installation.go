@@ -325,7 +325,7 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, a
 
 func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Installation) error {
 	installation.ID = model.NewID()
-	installation.CreateAt = GetMillis()
+	installation.CreateAt = model.GetMillis()
 
 	envJSON, err := json.Marshal(installation.MattermostEnv)
 	if err != nil {
@@ -495,7 +495,7 @@ func (sqlStore *SQLStore) GetInstallationsTotalDatabaseWeight(installationIDs []
 func (sqlStore *SQLStore) DeleteInstallation(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("Installation").
-		Set("DeleteAt", GetMillis()).
+		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = 0"),
 	)

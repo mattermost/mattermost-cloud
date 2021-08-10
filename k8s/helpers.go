@@ -9,9 +9,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"k8s.io/apimachinery/pkg/types"
 	"net/url"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/pkg/errors"
 

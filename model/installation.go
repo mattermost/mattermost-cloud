@@ -92,6 +92,22 @@ func (i *Installation) ToDTO(annotations []*Annotation) *InstallationDTO {
 	}
 }
 
+// CreationDateString returns a standardized date string for an installation's
+// creation.
+func (i *Installation) CreationDateString() string {
+	return TimeFromMillis(i.CreateAt).Format("Jan 2 2006")
+}
+
+// DeletionDateString returns a standardized date string for an installation's
+// deletion or 'n/a' if not deleted.
+func (i *Installation) DeletionDateString() string {
+	if i.DeleteAt == 0 {
+		return "n/a"
+	}
+
+	return TimeFromMillis(i.DeleteAt).Format("Jan 2 2006")
+}
+
 // GetDatabaseWeight returns a value corresponding to the
 // TODO: maybe consider installation size in the future as well?
 func (i *Installation) GetDatabaseWeight() float64 {
