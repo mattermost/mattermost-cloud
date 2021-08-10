@@ -41,7 +41,7 @@ type ProvisionerRequester interface {
 type TestWicker struct {
 	provisionerClient ProvisionerRequester
 	mmClient          MattermostRequester
-	logger            *logrus.Logger
+	logger            logrus.FieldLogger
 	installation      *cmodel.InstallationDTO
 	userID            string
 	channelID         string
@@ -49,7 +49,7 @@ type TestWicker struct {
 }
 
 // NewTestWicker creates a testwicker
-func NewTestWicker(provisionerRequester ProvisionerRequester, requester MattermostRequester, logger *logrus.Logger) *TestWicker {
+func NewTestWicker(provisionerRequester ProvisionerRequester, requester MattermostRequester, logger logrus.FieldLogger) *TestWicker {
 	return &TestWicker{
 		logger:            logger,
 		mmClient:          requester,
@@ -135,8 +135,8 @@ func (w *TestWicker) CreateTeam() func(w *TestWicker, ctx context.Context) error
 func (w *TestWicker) AddTeamMember() func(w *TestWicker, ctx context.Context) error {
 	return func(w *TestWicker, ctx context.Context) error {
 		w.logger.WithField("DNS", w.installation.DNS).Info("Adding team member")
-		if w.teamID == "" {
-			return fmt.Errorf("failed to add a team member. You need to create a team first")
+		if w.teamID == "" || w.userID == "" {
+			return fmt.Errorf("failed to add a team member. You need to create a team and a user first")
 		}
 
 		_, response := w.mmClient.AddTeamMember(w.teamID, w.userID)
@@ -151,6 +151,9 @@ func (w *TestWicker) AddTeamMember() func(w *TestWicker, ctx context.Context) er
 func (w *TestWicker) CreateChannel() func(w *TestWicker, ctx context.Context) error {
 	return func(w *TestWicker, ctx context.Context) error {
 		w.logger.WithField("DNS", w.installation.DNS).Info("Creating channel")
+		if w.userID == "" {
+			return fmt.Errorf("failed to create a channel. You need to create a user first")
+		}
 		channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
 			CreatorId: w.userID,
 			TeamId:    w.teamID,
@@ -173,14 +176,14 @@ func (w *TestWicker) CreateIncomingWebhook() func(w *TestWicker, ctx context.Con
 			return fmt.Errorf("failed to post message. You need to create a user first")
 		}
 		if w.channelID == "" {
-			return fmt.Errorf("failed to post message. You need to create channels first")
+			return fmt.Errorf("failed to post message. You need to create a channel first")
 		}
 		_, response := w.mmClient.CreateIncomingWebhook(&mmodel.IncomingWebhook{
 			ChannelId: w.channelID,
 			UserId:    w.userID,
 		})
 		if response.StatusCode != 201 {
-			return fmt.Errorf("failed to create channel status = %d, message = %s", response.StatusCode, response.Error.Message)
+			return fmt.Errorf("failed to create incoming webhook status = %d, message = %s", response.StatusCode, response.Error.Message)
 		}
 		return nil
 	}
@@ -206,7 +209,7 @@ func (w *TestWicker) WaitForInstallationStable() func(w *TestWicker, ctx context
 			}
 			if i.State == cmodel.InstallationStateCreationFailed {
 				w.installation = i
-				return errors.Wrapf(err, "Installation creation failed with ID: %s", w.installation.ID)
+				return fmt.Errorf("failed installation creation with ID: %s", w.installation.ID)
 			}
 
 			select {
@@ -231,7 +234,10 @@ func (w *TestWicker) SetupInstallation() func(w *TestWicker, ctx context.Context
 		if response.StatusCode != 201 {
 			return fmt.Errorf("failed to create admin user status = %d, message = %s", response.StatusCode, response.Error.Message)
 		}
-		w.mmClient.Logout()
+		ok, response := w.mmClient.Logout()
+		if !ok || response.StatusCode != 200 {
+			return fmt.Errorf("failed logged out user: username = %s, status code = %d, message = %s", u.Username, response.StatusCode, response.Error.Message)
+		}
 		userLogged, response := w.mmClient.Login(u.Email, u.Password)
 		if response.StatusCode != 200 {
 			return fmt.Errorf("failed logging user: username = %s, status code = %d, message = %s", u.Username, response.StatusCode, response.Error.Message)
