@@ -358,7 +358,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}, {
 			Path:            "manifests/bifrost/bifrost.yaml",
 			DeployNamespace: bifrostNamespace,
-		},  {
+		}, {
 			Path:            "manifests/metric-server/metric-server.yaml",
 			DeployNamespace: "kube-system",
 		}, {
@@ -367,7 +367,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		},
 	}
 
-	if len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking == "calico" {
+	// Here we need to handle both case i.e creating a new cluster with possible networking value in the changerequest object & 2nd provisioning existing cluster
+	if (len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking == "calico") || (cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
+		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico") {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/calico-cni.yaml",
 			DeployNamespace: "kube-system",

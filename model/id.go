@@ -23,9 +23,18 @@ func NewID() string {
 	encoder.Write(uuid.NewRandom())
 	encoder.Close()
 	b.Truncate(26) // removes the '==' padding
+	return b.String()
+}
+
+func ClusterNewID() string {
+	var b bytes.Buffer
+	encoder := base32.NewEncoder(encoding, &b)
+	encoder.Write(uuid.NewRandom())
+	encoder.Close()
+	b.Truncate(26) // removes the '==' padding
 	r := rune(b.String()[0])
 	if unicode.IsNumber(r) {
-		return NewID()
+		return ClusterNewID()
 	}
 	return b.String()
 }
