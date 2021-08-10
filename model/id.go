@@ -26,6 +26,7 @@ func NewID() string {
 	return b.String()
 }
 
+// ClusterNewID is a globally unique identifier for cluster ID.  It is a [A-Z0-9] string 26
 func ClusterNewID() string {
 	var b bytes.Buffer
 	encoder := base32.NewEncoder(encoding, &b)
