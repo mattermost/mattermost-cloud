@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned/typed/mattermost/v1alpha1"
 	"github.com/mattermost/mattermost-operator/pkg/client/v1beta1/clientset/versioned/typed/mattermost/v1beta1"
 
@@ -65,6 +67,11 @@ func (provisioner *kopsCIBeta) CreateClusterInstallation(cluster *model.Cluster,
 			MattermostEnv:      mattermostEnv.ToEnvList(),
 			UseIngressTLS:      false,
 			IngressAnnotations: getIngressAnnotations(),
+			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
+			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+			Scheduling: mmv1beta1.Scheduling{
+				Affinity: generateAffinityConfig(installation, clusterInstallation),
+			},
 		},
 	}
 
@@ -183,6 +190,9 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 	logger.WithField("status", fmt.Sprintf("%+v", mattermost.Status)).Debug("Got mattermost installation")
 
 	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
+	mattermost.Spec.ResourceLabels = clusterInstallationBaseLabels(installation, clusterInstallation)
+
+	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
 	version := translateMattermostVersion(installation.Version)
 	if mattermost.Spec.Version == version {
@@ -494,6 +504,37 @@ func (provisioner *kopsCIBeta) IsResourceReady(cluster *model.Cluster, clusterIn
 	}
 
 	return true, nil
+}
+
+// generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
+// across different availability zones and nodes.
+func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation) *v1.Affinity {
+	return &v1.Affinity{
+		PodAntiAffinity: &v1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
+				{
+					Weight: 100,
+					PodAffinityTerm: v1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+						},
+						Namespaces:  []string{clusterInstallation.Namespace},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+				{
+					Weight: 100,
+					PodAffinityTerm: v1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+						},
+						Namespaces:  []string{clusterInstallation.Namespace},
+						TopologyKey: "topology.kubernetes.io/zone",
+					},
+				},
+			},
+		},
+	}
 }
 
 // getMattermostCustomResource gets the cluster installation resource from

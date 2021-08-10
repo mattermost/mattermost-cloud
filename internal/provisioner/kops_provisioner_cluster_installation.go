@@ -119,6 +119,9 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 			MattermostEnv:      mattermostEnv.ToEnvList(),
 			UseIngressTLS:      false,
 			IngressAnnotations: getIngressAnnotations(),
+			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
+			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+			Affinity:       generateAffinityConfig(installation, clusterInstallation),
 		},
 	}
 
@@ -232,6 +235,8 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
 
 	cr.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
+	cr.Spec.ResourceLabels = clusterInstallationBaseLabels(installation, clusterInstallation)
+	cr.Spec.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
 	version := translateMattermostVersion(installation.Version)
 	if cr.Spec.Version == version {
@@ -873,10 +878,7 @@ func cleanupOldLicenseSecrets(currentSecretName string, clusterInstallation *mod
 // generateClusterInstallationResourceLabels generates standard resource labels
 // for ClusterInstallation resources.
 func generateClusterInstallationResourceLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
-	labels := map[string]string{
-		"installation-id":         installation.ID,
-		"cluster-installation-id": clusterInstallation.ID,
-	}
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
 	if installation.GroupID != nil {
 		labels["group-id"] = *installation.GroupID
 	}
@@ -885,6 +887,13 @@ func generateClusterInstallationResourceLabels(installation *model.Installation,
 	}
 
 	return labels
+}
+
+func clusterInstallationBaseLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	return map[string]string{
+		"installation-id":         installation.ID,
+		"cluster-installation-id": clusterInstallation.ID,
+	}
 }
 
 // Set env overrides that are required from installations for function correctly
