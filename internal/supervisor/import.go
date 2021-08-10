@@ -156,6 +156,19 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 
 	// check Installation state is valid
 	if installation.State != model.InstallationStateStable {
+		if installation.State == model.InstallationStateDeleted {
+			err = s.awatClient.CompleteImport(
+				&awat.ImportCompletedWorkRequest{
+					ID:         imprt.ID,
+					CompleteAt: time.Now().UnixNano() / 1000,
+					Error:      "installation was deleted",
+				})
+			if err != nil {
+				s.logger.WithError(err).Warnf("failed to cancel Import %s for deleted Installation %s",
+					imprt.ID, installation.ID)
+			}
+			return errors.Errorf("import for Installation %s cannot continue as the Installation was deleted", installation.ID)
+		}
 		return errors.Errorf("skipping import on Installation %s with state %s. State must be stable to begin work.", installation.ID, installation.State)
 	}
 
