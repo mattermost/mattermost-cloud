@@ -431,8 +431,9 @@ func TestAddTeamMember(t *testing.T) {
 			description: "add api team member error",
 			setup: func(wicker *TestWicker) {
 				wicker.teamID = "1234"
+				wicker.userID = "1234"
 				mmRequester.EXPECT().
-					AddTeamMember(gomock.Any(), gomock.Any()).Return(nil, &mmodel.Response{
+					AddTeamMember(wicker.teamID, wicker.userID).Return(nil, &mmodel.Response{
 					StatusCode: 400,
 					Error:      &mmodel.AppError{Message: "any mattermost API error"},
 				})
@@ -445,9 +446,13 @@ func TestAddTeamMember(t *testing.T) {
 		{
 			description: "add team member success",
 			setup: func(wicker *TestWicker) {
-				wicker.userID = "1234"
+				wicker.teamID = "12345"
+				wicker.userID = "12345"
 				mmRequester.EXPECT().
-					AddTeamMember(wicker.teamID, wicker.userID).Return(&mmodel.TeamMember{}, &mmodel.Response{
+					AddTeamMember(wicker.teamID, wicker.userID).Return(&mmodel.TeamMember{
+					TeamId: wicker.teamID,
+					UserId: wicker.userID,
+				}, &mmodel.Response{
 					StatusCode: 201,
 				})
 			},

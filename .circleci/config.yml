@@ -58,6 +58,17 @@ jobs:
         make goverall
     - *save_cache
 
+  test-testwick:
+    working_directory: ./cmd/tools/testwick
+    executor:
+      name: default
+    steps:
+    - checkout
+    - *restore_cache
+    - run: |
+        make unittest
+    - *save_cache
+
   test-postgres:
     docker:
     - image: circleci/golang:1.16.2
