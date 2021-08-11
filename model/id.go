@@ -28,15 +28,9 @@ func NewID() string {
 	return b.String()
 }
 
-// ClusterNewID is a globally unique identifier for cluster ID.  It is a [A-Z0-9] string 26
+// ClusterNewID is a globally unique identifier for cluster ID which start with a letter.  It is a [a-z0-9] string 26
 func ClusterNewID() string {
-	var b bytes.Buffer
-	encoder := base32.NewEncoder(encoding, &b)
-	encoder.Write(uuid.NewRandom())
-	encoder.Close()
-	b.Truncate(26) // removes the '==' padding
-	strID := b.String()
-
+	strID := NewID()
 	if unicode.IsNumber(rune(strID[0])) {
 		//Generate a lower case random character between a to z
 		rand.Seed(time.Now().Unix())
