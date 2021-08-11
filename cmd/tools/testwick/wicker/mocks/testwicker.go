@@ -40,18 +40,18 @@ func (m *MockMattermostRequester) EXPECT() *MockMattermostRequesterMockRecorder 
 }
 
 // AddTeamMember mocks base method.
-func (m *MockMattermostRequester) AddTeamMember(teamID, userID string) (*model0.TeamMember, *model0.Response) {
+func (m *MockMattermostRequester) AddTeamMember(teamId, userId string) (*model0.TeamMember, *model0.Response) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddTeamMember", teamID, userID)
+	ret := m.ctrl.Call(m, "AddTeamMember", teamId, userId)
 	ret0, _ := ret[0].(*model0.TeamMember)
 	ret1, _ := ret[1].(*model0.Response)
 	return ret0, ret1
 }
 
 // AddTeamMember indicates an expected call of AddTeamMember.
-func (mr *MockMattermostRequesterMockRecorder) AddTeamMember(teamID, userID interface{}) *gomock.Call {
+func (mr *MockMattermostRequesterMockRecorder) AddTeamMember(teamId, userId interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTeamMember", reflect.TypeOf((*MockMattermostRequester)(nil).AddTeamMember), teamID, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTeamMember", reflect.TypeOf((*MockMattermostRequester)(nil).AddTeamMember), teamId, userId)
 }
 
 // CreateChannel mocks base method.

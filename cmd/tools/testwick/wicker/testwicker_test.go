@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package main
+package testwick
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/mattermost/mattermost-cloud/cmd/tools/testwick/mocks"
+	"github.com/mattermost/mattermost-cloud/cmd/tools/testwick/wicker/mocks"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
@@ -447,10 +447,7 @@ func TestAddTeamMember(t *testing.T) {
 			setup: func(wicker *TestWicker) {
 				wicker.userID = "1234"
 				mmRequester.EXPECT().
-					AddTeamMember(wicker.teamID, wicker.userID).Return(&mmodel.TeamMember{
-					TeamId: wicker.teamID,
-					UserId: wicker.userID,
-				}, &mmodel.Response{
+					AddTeamMember(wicker.teamID, wicker.userID).Return(&mmodel.TeamMember{}, &mmodel.Response{
 					StatusCode: 201,
 				})
 			},

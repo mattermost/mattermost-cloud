@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package main
+package testwick
 
 import (
 	"context"
@@ -22,7 +22,7 @@ type MattermostRequester interface {
 	GetPing() (string, *mmodel.Response)
 	Logout() (bool, *mmodel.Response)
 	CreateTeam(team *mmodel.Team) (*mmodel.Team, *mmodel.Response)
-	AddTeamMember(teamID, userID string) (*mmodel.TeamMember, *mmodel.Response)
+	AddTeamMember(teamId, userId string) (*mmodel.TeamMember, *mmodel.Response)
 	CreatePost(post *mmodel.Post) (*mmodel.Post, *mmodel.Response)
 	CreateUser(user *mmodel.User) (*mmodel.User, *mmodel.Response)
 	CreateChannel(channel *mmodel.Channel) (*mmodel.Channel, *mmodel.Response)

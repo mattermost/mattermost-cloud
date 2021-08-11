@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	testwick "github.com/mattermost/mattermost-cloud/cmd/tools/testwick/wicker"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
 	mmodel "github.com/mattermost/mattermost-server/v5/model"
 	"github.com/moby/moby/pkg/namesgenerator"
@@ -97,10 +98,10 @@ var testerCmd = &cobra.Command{
 				defer cancel()
 
 				mmClient := mmodel.NewAPIv4Client(fmt.Sprintf("https://%s", dnsName))
-				testwicker := NewTestWicker(provisionerClient, mmClient, logger)
+				testwicker := testwick.NewTestWicker(provisionerClient, mmClient, logger)
 
-				workflow := NewWorkflow(logger)
-				workflow.AddStep(Step{
+				workflow := testwick.NewWorkflow(logger)
+				workflow.AddStep(testwick.Step{
 					Name: "CreateInstallation",
 					Func: testwicker.CreateInstallation(&cmodel.CreateInstallationRequest{
 						DNS:       dnsName,
@@ -110,36 +111,36 @@ var testerCmd = &cobra.Command{
 						Database:  testerConfig.installationDBType,
 						Filestore: testerConfig.installationFilestore,
 					}),
-				}, Step{
+				}, testwick.Step{
 					Name: "WaitForInstallationStable",
 					Func: testwicker.WaitForInstallationStable(),
-				}, Step{
+				}, testwick.Step{
 					Name: "IsInstallationUp",
 					Func: testwicker.IsUP(),
-				}, Step{
+				}, testwick.Step{
 					Name: "SetupInstallation",
 					Func: testwicker.SetupInstallation(),
-				}, Step{
+				}, testwick.Step{
 					Name: "CreateTeam",
 					Func: testwicker.CreateTeam(),
-				}, Step{
+				}, testwick.Step{
 					Name: "AddTeamMember",
 					Func: testwicker.AddTeamMember(),
 				})
 
 				for j := 0; j < testerConfig.channelSamples; j++ {
-					workflow.AddStep(Step{
+					workflow.AddStep(testwick.Step{
 						Name: "CreateChannel",
 						Func: testwicker.CreateChannel(),
-					}, Step{
+					}, testwick.Step{
 						Name: "CreateIncomingWebhook",
 						Func: testwicker.CreateIncomingWebhook(),
-					}, Step{
+					}, testwick.Step{
 						Name: "PostMessages",
 						Func: testwicker.PostMessage(testerConfig.messagesSamples),
 					})
 				}
-				workflow.AddStep(Step{
+				workflow.AddStep(testwick.Step{
 					Name: "DeleteInstallation",
 					Func: testwicker.DeleteInstallation(),
 				})
