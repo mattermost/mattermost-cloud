@@ -59,13 +59,13 @@ jobs:
     - *save_cache
 
   test-testwick:
-    working_directory: ./cmd/tools/testwick
     executor:
       name: default
     steps:
     - checkout
     - *restore_cache
     - run: |
+        cd cmd/tools/testwick
         make unittest
     - *save_cache
 
@@ -154,6 +154,7 @@ workflows:
     - check-modules
     - test-sqlite
     - test-postgres
+    - test-testwick
     - check-mocks
     - push-docker-pr:
         context: matterbuild-docker

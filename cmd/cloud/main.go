@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -16,7 +15,6 @@ var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print("skata")
 		serverCmd.RunE(cmd, args)
 	},
 	// SilenceErrors allows us to explicitly log the error returned from rootCmd below.
