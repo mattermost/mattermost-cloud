@@ -30,3 +30,7 @@ lint: $(GOLANGCILINT_GEN)
 	@echo Running golangci lint
 	${GOLANGCILINT_BIN} run -E gofmt --timeout 5m
 	@echo lint success
+
+.PHONY: unittest
+unittest: # Runs the unit tests
+	go test ./... -v -covermode=count -coverprofile=coverage.out

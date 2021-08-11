@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package main
+package testwick
 
 import (
 	"context"
