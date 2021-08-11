@@ -7,6 +7,8 @@ package model
 import (
 	"bytes"
 	"encoding/base32"
+	"math/rand"
+	"time"
 	"unicode"
 
 	"github.com/pborman/uuid"
@@ -33,9 +35,13 @@ func ClusterNewID() string {
 	encoder.Write(uuid.NewRandom())
 	encoder.Close()
 	b.Truncate(26) // removes the '==' padding
-	r := rune(b.String()[0])
-	if unicode.IsNumber(r) {
-		return ClusterNewID()
+	strID := b.String()
+
+	if unicode.IsNumber(rune(strID[0])) {
+		//Generate a lower case random character between a to z
+		rand.Seed(time.Now().Unix())
+		randomChar := 'a' + rune(rand.Intn(26))
+		strID = string(randomChar) + strID[1:]
 	}
-	return b.String()
+	return strID
 }
