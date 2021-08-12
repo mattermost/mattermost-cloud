@@ -158,6 +158,14 @@ func (s *ImportSupervisor) completeImports() error {
 			// to already have so it isn't omitted by mistake
 			continue
 		}
+		err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
+			Type:      model.TypeInstallation,
+			ID:        installation.ID,
+			NewState:  model.InstallationStateStable,
+			OldState:  model.InstallationStateImportComplete,
+			ExtraData: map[string]string{"TranslationID": mostRecentImport.TranslationID, "ImportID": mostRecentImport.ID},
+		}, s.logger.WithField("webhookEvent", model.InstallationStateImportComplete))
+
 	}
 
 	return nil
