@@ -69,6 +69,10 @@ func TestImportSupervisor(t *testing.T) {
 		}
 
 		awatClient.EXPECT().
+			GetImportStatusesByInstallation(installationID).
+			Return([]*awatModel.ImportStatus{}, nil)
+
+		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
 
 		aws.EXPECT().
@@ -115,6 +119,10 @@ func TestImportSupervisor(t *testing.T) {
 			Filestore: "bifrost",
 			State:     "stable",
 		}
+
+		awatClient.EXPECT().
+			GetImportStatusesByInstallation(installationID).
+			Return([]*awatModel.ImportStatus{}, nil)
 
 		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
@@ -215,6 +223,10 @@ func TestImportSupervisor(t *testing.T) {
 			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
 				gomock.Any()).
 			Return(errors.New("some AWS error"))
+
+		awatClient.EXPECT().
+			GetImportStatusesByInstallation(installationID).
+			Return([]*awatModel.ImportStatus{}, nil)
 
 		err := importSupervisor.Do()
 		assert.Error(t, err, "error not handled properly")

@@ -44,9 +44,15 @@ type ImportSupervisor struct {
 	awsClient   toolsAWS.AWS
 	awatClient  AWATClient
 	logger      logrus.FieldLogger
-	store       installationStore
+	store       importStore
 	provisioner importProvisioner
 	ID          string
+}
+
+type importStore interface {
+	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
+
+	installationStore
 }
 
 type importProvisioner interface {
@@ -86,7 +92,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store installationStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:   awsClient,
 		awatClient:  awat,
@@ -99,9 +105,72 @@ func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store installa
 	}
 }
 
+// completeImports transitions Installations back to stable after
+// checking with the AWAT to make sure that it has detected the
+// completion of the import
+func (s *ImportSupervisor) completeImports() error {
+	installationList, err := s.store.GetInstallations(
+		&model.InstallationFilter{
+			Paging: model.AllPagesNotDeleted(),
+			State:  model.InstallationStateImportComplete,
+		}, false, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to list Installations")
+	}
+
+	for _, installation := range installationList {
+		if installation == nil {
+			continue
+		}
+		importStatusList, err := s.awatClient.GetImportStatusesByInstallation(installation.ID)
+		if err != nil {
+			s.logger.WithError(err).Warnf("failed to get Import status for Installation %s", installation.ID)
+			continue
+		}
+		if len(importStatusList) == 0 {
+			s.logger.Warnf("no imports found for Installation with state %s, %s", installation.State, installation.ID)
+			continue
+		}
+		// find the most recently completed Import; that's the only one we
+		// care about
+		var mostRecentImport *awat.ImportStatus
+		for _, is := range importStatusList {
+			if is.State != awat.ImportStateComplete {
+				// An import is still running against this Installation.
+				// Multiple parallel imports against an Installation are not supported.
+				break
+			}
+			if mostRecentImport == nil || is.CompleteAt > mostRecentImport.CompleteAt {
+				mostRecentImport = is
+			}
+		}
+		if mostRecentImport == nil {
+			// an Import might still be running
+			continue
+		}
+		// no Imports are running, the Installation may be moved to stable
+		installation.State = model.InstallationStateStable
+		err = s.store.UpdateInstallation(installation)
+		if err != nil {
+			s.logger.WithError(err).Error("failed to mark Installation stable")
+			// this continue is currently redundant but if anything is ever
+			// added to this function after this if stanza, it will be good
+			// to already have so it isn't omitted by mistake
+			continue
+		}
+	}
+
+	return nil
+}
+
 // Do checks to see if there is an Import that is ready to be
 // imported, and if so, does that. Otherwise, it does nothing.
 func (s *ImportSupervisor) Do() error {
+	err := s.completeImports()
+	if err != nil {
+		s.logger.WithError(err).Warn("failed to move Installations with completed imports back to state stable")
+	}
+
 	work, err := s.awatClient.GetTranslationReadyToImport(
 		&awat.ImportWorkRequest{
 			ProvisionerID: s.ID,
@@ -190,7 +259,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	}
 
 	defer func() {
-		installation.State = model.InstallationStateStable
+		installation.State = model.InstallationStateImportComplete
 		err = s.store.UpdateInstallation(installation)
 		if err != nil {
 			s.logger.WithError(err).Errorf("Failed to mark Installation %s as state stable", installation.ID)
@@ -199,7 +268,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
-			NewState:  model.InstallationStateStable,
+			NewState:  model.InstallationStateImportComplete,
 			OldState:  model.InstallationStateImportInProgress,
 			ExtraData: map[string]string{"TranslationID": imprt.TranslationID, "ImportID": imprt.ID},
 		}, s.logger.WithField("webhookEvent", model.InstallationStateImportInProgress))

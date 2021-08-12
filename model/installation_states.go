@@ -47,6 +47,10 @@ const (
 	// Workspace archive is being imported from another service or
 	// on-premise
 	InstallationStateImportInProgress = "import-in-progress"
+	// InstallationStateImportComplete is an installation whose import
+	// is complete but whose completion has not yet been noted by the
+	// AWAT. It is otherwise the same as a stable state.
+	InstallationStateImportComplete = "import-complete"
 	// InstallationStateDeletionRequested is an installation to be deleted.
 	InstallationStateDeletionRequested = "deletion-requested"
 	// InstallationStateDeletionInProgress is an installation being deleted.
@@ -96,6 +100,7 @@ var AllInstallationStates = []string{
 	InstallationStateUpdateInProgress,
 	InstallationStateUpdateFailed,
 	InstallationStateImportInProgress,
+	InstallationStateImportComplete,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
@@ -188,6 +193,7 @@ var (
 			InstallationStateUpdateInProgress,
 			InstallationStateUpdateFailed,
 			InstallationStateImportInProgress,
+			InstallationStateImportComplete,
 			InstallationStateHibernationRequested,
 			InstallationStateHibernationInProgress,
 			InstallationStateHibernating,
