@@ -188,7 +188,7 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster, annotations []*m
 
 // createCluster records the given cluster to the database, assigning it a unique ID.
 func (sqlStore *SQLStore) createCluster(execer execer, cluster *model.Cluster) error {
-	cluster.ID = model.NewID()
+	cluster.ID = model.ClusterNewID()
 	cluster.CreateAt = model.GetMillis()
 
 	rawMetadata, err := buildRawMetadata(cluster)

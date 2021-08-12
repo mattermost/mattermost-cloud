@@ -7,6 +7,9 @@ package model
 import (
 	"bytes"
 	"encoding/base32"
+	"math/rand"
+	"time"
+	"unicode"
 
 	"github.com/pborman/uuid"
 )
@@ -23,4 +26,16 @@ func NewID() string {
 	encoder.Close()
 	b.Truncate(26) // removes the '==' padding
 	return b.String()
+}
+
+// ClusterNewID is a globally unique identifier for cluster ID which start with a letter.  It is a [a-z0-9] string 26
+func ClusterNewID() string {
+	strID := NewID()
+	if unicode.IsNumber(rune(strID[0])) {
+		//Generate a lower case random character between a to z
+		rand.Seed(time.Now().Unix())
+		randomChar := 'a' + rune(rand.Intn(26))
+		strID = string(randomChar) + strID[1:]
+	}
+	return strID
 }
