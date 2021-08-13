@@ -148,6 +148,25 @@ func (s *ImportSupervisor) completeImports() error {
 			// an Import might still be running
 			continue
 		}
+
+		locked, err := s.store.LockInstallation(installation.ID, s.ID)
+		if err != nil {
+			return errors.Wrapf(err, "failed to lock Installation %s", installation.ID)
+		}
+		if !locked {
+			return errors.Errorf("failed to lock Installation %s", installation.ID)
+		}
+		defer func() {
+			unlocked, err := s.store.UnlockInstallation(installation.ID, s.ID, false)
+			if err != nil {
+				s.logger.WithError(err).Warnf("failed to unlock Installation %s to mark Import %s complete", installation.ID, mostRecentImport.ID)
+				return
+			}
+			if !unlocked {
+				s.logger.Warnf("failed to unlock Installation %s to mark Import %s complete", installation.ID, mostRecentImport.ID)
+			}
+		}()
+
 		// no Imports are running, the Installation may be moved to stable
 		installation.State = model.InstallationStateStable
 		err = s.store.UpdateInstallation(installation)
