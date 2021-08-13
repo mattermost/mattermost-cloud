@@ -65,6 +65,14 @@ func (s *mockInstallationStore) GetInstallation(installationID string, includeGr
 }
 
 func (s *mockInstallationStore) GetInstallations(installationFilter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error) {
+	if s.Installation == nil {
+		s.Installation = &model.Installation{
+			ID: model.NewID(),
+		}
+	}
+	if installationFilter.State == model.InstallationStateImportComplete {
+		s.Installation.State = model.InstallationStateStable
+	}
 	return []*model.Installation{s.Installation}, nil
 }
 

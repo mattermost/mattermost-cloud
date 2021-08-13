@@ -119,9 +119,6 @@ func (s *ImportSupervisor) completeImports() error {
 	}
 
 	for _, installation := range installationList {
-		if installation == nil {
-			continue
-		}
 		importStatusList, err := s.awatClient.GetImportStatusesByInstallation(installation.ID)
 		if err != nil {
 			s.logger.WithError(err).Warnf("failed to get Import status for Installation %s", installation.ID)
