@@ -78,7 +78,7 @@ func TestGetDatabases(t *testing.T) {
 
 	t.Run("results", func(t *testing.T) {
 		database1 := &model.MultitenantDatabase{
-			ID: model.NewID(),
+			RdsClusterID: model.NewID(),
 		}
 		err := sqlStore.CreateMultitenantDatabase(database1)
 		require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestGetDatabases(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 
 		database2 := &model.MultitenantDatabase{
-			ID: model.NewID(),
+			RdsClusterID: model.NewID(),
 		}
 		err = sqlStore.CreateMultitenantDatabase(database2)
 		require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestGetDatabases(t *testing.T) {
 		time.Sleep(1 * time.Millisecond)
 
 		database3 := &model.MultitenantDatabase{
-			ID: model.NewID(),
+			RdsClusterID: model.NewID(),
 		}
 		err = sqlStore.CreateMultitenantDatabase(database3)
 		require.NoError(t, err)

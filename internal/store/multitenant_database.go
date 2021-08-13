@@ -22,6 +22,7 @@ func init() {
 	multitenantDatabaseSelect = sq.
 		Select(
 			"ID",
+			"RdsClusterID",
 			"VpcID",
 			"DatabaseType",
 			"State",
@@ -172,10 +173,7 @@ func (sqlStore *SQLStore) GetMultitenantDatabaseForInstallationID(installationID
 
 // CreateMultitenantDatabase records the supplied multitenant database to the datastore.
 func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.MultitenantDatabase) error {
-	if multitenantDatabase.ID == "" {
-		return errors.New("multitenant database ID must not be empty")
-	}
-
+	multitenantDatabase.ID = model.NewID()
 	multitenantDatabase.CreateAt = model.GetMillis()
 
 	installationsJSON, err := json.Marshal(multitenantDatabase.Installations)
@@ -195,6 +193,7 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 		Insert("MultitenantDatabase").
 		SetMap(map[string]interface{}{
 			"ID":                                 multitenantDatabase.ID,
+			"RdsClusterID":                       multitenantDatabase.RdsClusterID,
 			"VpcID":                              multitenantDatabase.VpcID,
 			"DatabaseType":                       multitenantDatabase.DatabaseType,
 			"State":                              multitenantDatabase.State,

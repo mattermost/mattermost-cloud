@@ -14,6 +14,7 @@ import (
 // installation databases.
 type MultitenantDatabase struct {
 	ID                                 string
+	RdsClusterID                       string
 	VpcID                              string
 	DatabaseType                       string
 	State                              string
@@ -136,8 +137,8 @@ func (l *SharedLogicalDatabases) RemoveInstallation(installationID string) {
 	}
 }
 
-// MultitenantDatabaseFilter filters results based on a specific installation ID, Vpc ID and a number of
-// installation's limit.
+// MultitenantDatabaseFilter describes the parameters used to constrain a set of
+// MultitenantDatabases.
 type MultitenantDatabaseFilter struct {
 	Paging
 	LockerID               string

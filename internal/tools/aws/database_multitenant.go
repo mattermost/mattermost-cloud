@@ -113,7 +113,7 @@ func (d *RDSMultitenantDatabase) updateMultitenantDatabase(store model.Installat
 
 	logger = logger.WithField("assigned-database", database.ID)
 
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
 	}
@@ -173,7 +173,7 @@ func (d *RDSMultitenantDatabase) Provision(store model.InstallationDatabaseStore
 	defer unlockFn()
 	logger = logger.WithField("assigned-database", database.ID)
 
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
 	}
@@ -231,7 +231,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 	}
 	defer unlock()
 
-	rdsCluster, err := describeRDSCluster(multitenantDatabase.ID, d.client)
+	rdsCluster, err := describeRDSCluster(multitenantDatabase.RdsClusterID, d.client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe RDS cluster")
 	}
@@ -389,7 +389,7 @@ func (d *RDSMultitenantDatabase) MigrateOut(store model.InstallationDatabaseStor
 		return errors.Wrap(err, "failed to update multitenant db")
 	}
 
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
 	}
@@ -432,7 +432,7 @@ func (d *RDSMultitenantDatabase) MigrateTo(store model.InstallationDatabaseStore
 		return errors.Wrap(err, "failed to find cluster installation VPC")
 	}
 
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
 	}
@@ -531,7 +531,7 @@ func (d *RDSMultitenantDatabase) RollbackMigration(store model.InstallationDatab
 		return errors.Wrap(err, "failed to update destination multitenant database")
 	}
 
-	rdsCluster, err := describeRDSCluster(destinationDatabase.ID, d.client)
+	rdsCluster, err := describeRDSCluster(destinationDatabase.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", destinationDatabase.ID)
 	}
@@ -734,11 +734,19 @@ func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID s
 			continue
 		}
 
+		rdsCluster, err := describeRDSCluster(*rdsClusterID, d.client)
+		if err != nil {
+			logger.WithError(err).Errorf("Failed to describe the multitenant RDS cluster ID %s", *rdsClusterID)
+			continue
+		}
+
 		multitenantDatabase := model.MultitenantDatabase{
-			ID:           *rdsClusterID,
-			VpcID:        vpcID,
-			DatabaseType: d.databaseType,
-			State:        model.DatabaseStateStable,
+			RdsClusterID:   *rdsClusterID,
+			VpcID:          vpcID,
+			DatabaseType:   d.databaseType,
+			State:          model.DatabaseStateStable,
+			WriterEndpoint: *rdsCluster.Endpoint,
+			ReaderEndpoint: *rdsCluster.ReaderEndpoint,
 		}
 
 		err = store.CreateMultitenantDatabase(&multitenantDatabase)
@@ -894,14 +902,14 @@ func (d *RDSMultitenantDatabase) validateMultitenantDatabaseInstallations(multit
 // removeInstallationFromMultitenantDatabase performs the work necessary to
 // remove a single installation database from a multitenant RDS cluster.
 func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(database *model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe multitenant database")
 	}
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	err = d.dropDatabase(database.ID, *rdsCluster.Endpoint, logger)
+	err = d.dropDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop multitenant database")
 	}
@@ -928,14 +936,14 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 // removeMigratedInstallationFromMultitenantDatabase performs the work necessary to
 // remove a single migrated installation database from a multitenant RDS cluster.
 func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDatabase(database *model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	rdsCluster, err := describeRDSCluster(database.ID, d.client)
+	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe multitenant database")
 	}
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	err = d.dropDatabase(database.ID, *rdsCluster.Endpoint, logger)
+	err = d.dropDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop migrated database")
 	}

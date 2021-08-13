@@ -158,6 +158,7 @@ func (sqlStore *SQLStore) selectBuilder(q sqlx.Queryer, dest interface{}, b buil
 // It allows the use of *sqlx.Db and *sqlx.Tx.
 type execer interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
 	DriverName() string
 }
 

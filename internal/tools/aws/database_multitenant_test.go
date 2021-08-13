@@ -32,6 +32,8 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 
 	databaseType := database.DatabaseTypeTagValue()
 
+	var databaseID string
+
 	gomock.InOrder(
 		a.Mocks.Log.Logger.EXPECT().
 			WithFields(log.Fields{
@@ -166,30 +168,55 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			}, nil).
 			Times(1),
 
+		a.Mocks.API.RDS.EXPECT().
+			DescribeDBClusters(gomock.Any()).
+			Do(func(input *rds.DescribeDBClustersInput) {
+				a.Assert().Equal(input.Filters, []*rds.Filter{
+					{
+						Name:   aws.String("db-cluster-id"),
+						Values: []*string{&a.RDSClusterID},
+					},
+				})
+			}).
+			Return(&rds.DescribeDBClustersOutput{
+				DBClusters: []*rds.DBCluster{
+					{
+						DBClusterIdentifier: &a.RDSClusterID,
+						Endpoint:            aws.String("writer.rds.aws.com"),
+						ReaderEndpoint:      aws.String("reader.rds.aws.com"),
+						Status:              aws.String("available"),
+					},
+				},
+			}, nil).
+			Times(1),
+
 		// Create the multitenant database.
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
 			CreateMultitenantDatabase(gomock.Any()).
 			Do(func(input *model.MultitenantDatabase) {
-				a.Assert().Equal(input.ID, a.RDSClusterID)
+				a.Assert().Equal(input.RdsClusterID, a.RDSClusterID)
+				databaseID = model.NewID()
 			}).
 			Return(nil).
 			Times(1),
 
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
-			LockMultitenantDatabase(a.RDSClusterID, a.InstanceID).
+			LockMultitenantDatabase(databaseID, a.InstanceID).
 			Return(true, nil).
 			Times(1),
 
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
-			GetMultitenantDatabase(a.RDSClusterID).
+			GetMultitenantDatabase(databaseID).
 			Return(&model.MultitenantDatabase{
-				ID: a.RDSClusterID,
+				ID:           databaseID,
+				RdsClusterID: a.RDSClusterID,
 			}, nil).
 			Times(1),
 
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
 			UpdateMultitenantDatabase(&model.MultitenantDatabase{
-				ID: a.RDSClusterID,
+				ID:           databaseID,
+				RdsClusterID: a.RDSClusterID,
 				Installations: model.MultitenantDatabaseInstallations{
 					database.installationID,
 				}}).
@@ -227,7 +254,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		a.Mocks.Model.DatabaseInstallationStore.EXPECT().
-			UnlockMultitenantDatabase(a.RDSClusterID, a.InstanceID, true).
+			UnlockMultitenantDatabase(databaseID, a.InstanceID, true).
 			Return(true, nil).
 			Times(1),
 	)
