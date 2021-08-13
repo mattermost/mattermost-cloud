@@ -1436,7 +1436,7 @@ var migrations = []migration{
 				SharedLogicalDatabaseMappingsRaw BYTEA NULL,
 				MaxInstallationsPerLogicalDatabase BIGINT NOT NULL,
 				CreateAt BIGINT NOT NULL,
-				DeleteAt BIGINT NOT NULL,             
+				DeleteAt BIGINT NOT NULL,
 				LockAcquiredBy TEXT NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
