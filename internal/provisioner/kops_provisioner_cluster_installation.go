@@ -262,15 +262,18 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 	//    TODO: address these issue.
 	cr.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
 
-	cr.Spec.MattermostLicenseSecret = ""
 	if installation.License != "" {
 		secretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
 
+		if cr.Spec.MattermostLicenseSecret != secretName {
+			logger.Debugf("Cluster installation secret name updated from %s to %s", cr.Spec.MattermostLicenseSecret, secretName)
+		}
 		cr.Spec.MattermostLicenseSecret = secretName
 	} else {
+		cr.Spec.MattermostLicenseSecret = ""
 		err = cleanupOldLicenseSecrets("", clusterInstallation, k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to cleanup old license secrets")
