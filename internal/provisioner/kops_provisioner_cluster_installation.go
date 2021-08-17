@@ -269,7 +269,7 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 		}
 
 		if cr.Spec.MattermostLicenseSecret != secretName {
-			logger.Debugf("Cluster installation secret name updated from %s to %s", cr.Spec.MattermostLicenseSecret, secretName)
+			logger.Debugf("Cluster installation license secret name updated from %s to %s", cr.Spec.MattermostLicenseSecret, secretName)
 		}
 		cr.Spec.MattermostLicenseSecret = secretName
 	} else {
