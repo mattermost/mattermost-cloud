@@ -69,6 +69,10 @@ func TestImportSupervisor(t *testing.T) {
 		}
 
 		awatClient.EXPECT().
+			GetImportStatusesByInstallation(installationID).
+			Return([]*awatModel.ImportStatus{}, nil)
+
+		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
 
 		aws.EXPECT().
@@ -117,6 +121,10 @@ func TestImportSupervisor(t *testing.T) {
 		}
 
 		awatClient.EXPECT().
+			GetImportStatusesByInstallation(installationID).
+			Return([]*awatModel.ImportStatus{}, nil)
+
+		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
 
 		aws.EXPECT().
@@ -147,6 +155,10 @@ func TestImportSupervisor(t *testing.T) {
 			Return(
 				nil, nil)
 
+		awatClient.EXPECT().
+			GetImportStatusesByInstallation(gomock.Any()).
+			Return([]*awatModel.ImportStatus{}, nil)
+
 		err := importSupervisor.Do()
 		assert.NoError(t, err, "error after no work found")
 	})
@@ -166,6 +178,10 @@ func TestImportSupervisor(t *testing.T) {
 			GetTranslationReadyToImport(gomock.Any()).
 			Return(
 				nil, errors.New("some error from AWAT"))
+
+		awatClient.EXPECT().
+			GetImportStatusesByInstallation(gomock.Any()).
+			Return([]*awatModel.ImportStatus{}, nil)
 
 		err := importSupervisor.Do()
 		assert.Error(t, err, "expected failure due to error from AWAT")
@@ -215,6 +231,10 @@ func TestImportSupervisor(t *testing.T) {
 			S3LargeCopy(&sourceBucket, &inputArchive, &destBucket,
 				gomock.Any()).
 			Return(errors.New("some AWS error"))
+
+		awatClient.EXPECT().
+			GetImportStatusesByInstallation(installationID).
+			Return([]*awatModel.ImportStatus{}, nil)
 
 		err := importSupervisor.Do()
 		assert.Error(t, err, "error not handled properly")

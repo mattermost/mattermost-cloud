@@ -44,9 +44,15 @@ type ImportSupervisor struct {
 	awsClient   toolsAWS.AWS
 	awatClient  AWATClient
 	logger      logrus.FieldLogger
-	store       installationStore
+	store       importStore
 	provisioner importProvisioner
 	ID          string
+}
+
+type importStore interface {
+	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
+
+	installationStore
 }
 
 type importProvisioner interface {
@@ -86,7 +92,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store installationStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:   awsClient,
 		awatClient:  awat,
@@ -102,6 +108,11 @@ func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store installa
 // Do checks to see if there is an Import that is ready to be
 // imported, and if so, does that. Otherwise, it does nothing.
 func (s *ImportSupervisor) Do() error {
+	err := s.completeImports()
+	if err != nil {
+		s.logger.WithError(err).Warn("failed to move Installations with completed imports back to state stable")
+	}
+
 	work, err := s.awatClient.GetTranslationReadyToImport(
 		&awat.ImportWorkRequest{
 			ProvisionerID: s.ID,
@@ -190,7 +201,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	}
 
 	defer func() {
-		installation.State = model.InstallationStateStable
+		installation.State = model.InstallationStateImportComplete
 		err = s.store.UpdateInstallation(installation)
 		if err != nil {
 			s.logger.WithError(err).Errorf("Failed to mark Installation %s as state stable", installation.ID)
@@ -199,7 +210,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 		err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
 			Type:      model.TypeInstallation,
 			ID:        installation.ID,
-			NewState:  model.InstallationStateStable,
+			NewState:  model.InstallationStateImportComplete,
 			OldState:  model.InstallationStateImportInProgress,
 			ExtraData: map[string]string{"TranslationID": imprt.TranslationID, "ImportID": imprt.ID},
 		}, s.logger.WithField("webhookEvent", model.InstallationStateImportInProgress))
@@ -404,5 +415,98 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID
 
 	s.logger.Infof("Import Job %s successfully completed", resp.ID)
 	s.logger.Debugf("Completed with output %s", output)
+	return nil
+}
+
+// completeImports transitions Installations back to stable after
+// checking with the AWAT to make sure that it has detected the
+// completion of the import
+func (s *ImportSupervisor) completeImports() error {
+	installationList, err := s.store.GetInstallations(
+		&model.InstallationFilter{
+			Paging: model.AllPagesNotDeleted(),
+			State:  model.InstallationStateImportComplete,
+		}, false, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to list Installations")
+	}
+
+	for _, installation := range installationList {
+		err = s.checkInstallation(installation)
+		if err != nil {
+			s.logger.WithError(err).Warnf("failed to check to see if Installation %s has completed its import", installation.ID)
+			continue
+		}
+	}
+
+	return nil
+}
+
+func (s *ImportSupervisor) checkInstallation(installation *model.Installation) error {
+	importStatusList, err := s.awatClient.GetImportStatusesByInstallation(installation.ID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get Import status for Installation %s", installation.ID)
+	}
+	if len(importStatusList) == 0 {
+		return errors.Wrapf(err, "no imports found for Installation with state %s, %s", installation.State, installation.ID)
+	}
+	// find the most recently completed Import; that's the only one we
+	// care about
+	var mostRecentImport *awat.ImportStatus
+	for _, is := range importStatusList {
+		if is.State != awat.ImportStateComplete {
+			// An import is still running against this Installation.
+			// Multiple parallel imports against an Installation are not supported.
+			break
+		}
+		if mostRecentImport == nil || is.CompleteAt > mostRecentImport.CompleteAt {
+			mostRecentImport = is
+		}
+	}
+	if mostRecentImport == nil {
+		// an Import might still be running
+		return nil
+	}
+
+	locked, err := s.store.LockInstallation(installation.ID, s.ID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lock Installation %s", installation.ID)
+	}
+	if !locked {
+		return errors.Errorf("failed to lock Installation %s", installation.ID)
+	}
+	defer func() {
+		unlocked, err := s.store.UnlockInstallation(installation.ID, s.ID, false)
+		if err != nil {
+			s.logger.WithError(err).Warnf("failed to unlock Installation %s to mark Import %s complete", installation.ID, mostRecentImport.ID)
+			return
+		}
+		if !unlocked {
+			s.logger.Warnf("failed to unlock Installation %s to mark Import %s complete", installation.ID, mostRecentImport.ID)
+		}
+	}()
+
+	installation, err = s.store.GetInstallation(installation.ID, false, false)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get Installation %s after locking", installation.ID)
+	}
+
+	// no Imports are running, the Installation may be moved to stable
+	installation.State = model.InstallationStateStable
+	err = s.store.UpdateInstallation(installation)
+	if err != nil {
+		return errors.Wrap(err, "failed to mark Installation stable")
+	}
+	err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
+		Type:      model.TypeInstallation,
+		ID:        installation.ID,
+		NewState:  model.InstallationStateStable,
+		OldState:  model.InstallationStateImportComplete,
+		ExtraData: map[string]string{"TranslationID": mostRecentImport.TranslationID, "ImportID": mostRecentImport.ID},
+	}, s.logger.WithField("webhookEvent", model.InstallationStateImportComplete))
+	if err != nil {
+		return errors.Wrap(err, "failed to send webhook")
+	}
+
 	return nil
 }
