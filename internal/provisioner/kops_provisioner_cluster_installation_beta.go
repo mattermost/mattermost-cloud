@@ -497,10 +497,22 @@ func (provisioner *kopsCIBeta) IsResourceReady(cluster *model.Cluster, clusterIn
 		return false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
 
-	if cr.Status.State != mmv1beta1.Stable ||
-		unwrapInt32(cr.Spec.Replicas) != cr.Status.Replicas ||
-		cr.Spec.Version != cr.Status.Version {
+	if cr.Status.State != mmv1beta1.Stable {
 		return false, nil
+	}
+	if cr.Status.ObservedGeneration != 0 {
+		if cr.Generation != cr.Status.ObservedGeneration {
+			return false, nil
+		}
+	} else {
+		// The new ObservedGeneration check is not supported because the operator
+		// has not yet been updated. Log this and fall back to original check.
+		// TODO: remove once all clusters have been reprovisioned.
+		logger.Warn("ObservedGeneration status value missing during reconciliation check; update mattermost operator on this cluster")
+		if unwrapInt32(cr.Spec.Replicas) != cr.Status.Replicas ||
+			cr.Spec.Version != cr.Status.Version {
+			return false, nil
+		}
 	}
 
 	return true, nil

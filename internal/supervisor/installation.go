@@ -806,7 +806,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		}
 	}
 
-	logger.Info("Finished updating clusters installations")
+	logger.Info("Finished updating cluster installations")
 
 	return s.waitForUpdateStable(installation, instanceID, logger)
 }
@@ -953,7 +953,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 		}
 	}
 
-	logger.Info("Finished updating clusters installations")
+	logger.Info("Finished updating cluster installations")
 
 	return s.waitForHibernationStable(installation, instanceID, logger)
 }

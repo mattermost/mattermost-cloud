@@ -88,6 +88,7 @@ func (s *ClusterInstallationSupervisor) Do() error {
 func (s *ClusterInstallationSupervisor) Supervise(clusterInstallation *model.ClusterInstallation) {
 	logger := s.logger.WithFields(log.Fields{
 		"clusterInstallation": clusterInstallation.ID,
+		"installation":        clusterInstallation.InstallationID,
 	})
 
 	lock := newClusterInstallationLock(clusterInstallation.ID, s.instanceID, s.store, logger)
