@@ -81,6 +81,7 @@ func (request *CreateInstallationRequest) SetDefaults() {
 	if IsSingleTenantRDS(request.Database) {
 		request.SingleTenantDatabaseConfig.SetDefaults()
 	}
+	request.DNS = strings.ToLower(request.DNS)
 }
 
 // Validate validates the values of an installation create request.

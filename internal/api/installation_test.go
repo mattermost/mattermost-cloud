@@ -464,12 +464,12 @@ func TestCreateInstallation(t *testing.T) {
 		assert.True(t, containsAnnotation("my-annotation", installation.Annotations))
 	})
 
-	t.Run("valid with custom image", func(t *testing.T) {
+	t.Run("valid with custom image and capital letters in DNS", func(t *testing.T) {
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner1",
 			Version:  "version",
 			Image:    "custom-image",
-			DNS:      "dns1.example.com",
+			DNS:      "Dns1.EXAMPLE.com",
 			Affinity: model.InstallationAffinityIsolated,
 		})
 		require.NoError(t, err)

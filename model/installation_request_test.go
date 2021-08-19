@@ -202,6 +202,17 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 		assert.NoError(t, request.Validate())
 		model.SetRequireAnnotatedInstallations(false)
 	})
+
+	t.Run("convert DNS to lowercase", func(t *testing.T) {
+		request := &model.CreateInstallationRequest{
+			OwnerID: "owner1",
+			DNS:     "AWesoMeDomaiN4321.cOM",
+		}
+
+		request.SetDefaults()
+
+		assert.Equal(t, "awesomedomain4321.com", request.DNS)
+	})
 }
 
 func TestCreateInstallationRequestFromReader(t *testing.T) {
