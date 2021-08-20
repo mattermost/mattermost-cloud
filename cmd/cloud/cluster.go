@@ -488,17 +488,23 @@ var clusterListCmd = &cobra.Command{
 		if outputToTable {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "NETWORKING", "VPC"})
+			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID", "NETWORKING", "VPC", "STATUS"})
 
 			for _, cluster := range clusters {
+				status := "offline"
+				if cluster.AllowInstallations {
+					status = "online"
+				}
 				table.Append([]string{
 					cluster.ID,
 					cluster.State,
 					cluster.ProvisionerMetadataKops.Version,
 					fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
 					fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
+					cluster.ProvisionerMetadataKops.AMI,
 					cluster.ProvisionerMetadataKops.Networking,
 					cluster.ProvisionerMetadataKops.VPC,
+					status,
 				})
 			}
 			table.Render()
