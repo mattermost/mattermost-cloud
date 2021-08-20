@@ -7,8 +7,10 @@ package k8s
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/pkg/errors"
+	monitoringV1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -76,4 +78,20 @@ func (kc *KubeClient) createOrUpdateClusterInstallation(namespace string, ci *mm
 	}
 
 	return kc.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(namespace).Update(ctx, ci, metav1.UpdateOptions{})
+}
+
+func (kc *KubeClient) createOrUpdatePodMonitor(namespace string, pm *monitoringV1.PodMonitor) (metav1.Object, error) {
+	wait := 60
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	_, err := kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Get(ctx, pm.GetName(), metav1.GetOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err != nil && k8sErrors.IsNotFound(err) {
+		return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Create(ctx, pm, metav1.CreateOptions{})
+	}
+
+	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Update(ctx, pm, metav1.UpdateOptions{})
 }

@@ -9,6 +9,8 @@ import (
 
 	mmclientv1alpha1 "github.com/mattermost/mattermost-operator/pkg/client/clientset/versioned"
 	mmclientv1beta1 "github.com/mattermost/mattermost-operator/pkg/client/v1beta1/clientset/versioned"
+	monitoringclientV1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
+	slothclientV1 "github.com/slok/sloth/pkg/kubernetes/gen/clientset/versioned"
 	apixclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -23,6 +25,8 @@ type KubeClient struct {
 	ApixClientset              apixclient.Interface
 	MattermostClientsetV1Alpha mmclientv1alpha1.Interface
 	MattermostClientsetV1Beta  mmclientv1beta1.Interface
+	MonitoringClientsetV1      monitoringclientV1.Interface
+	SlothClientsetV1           slothclientV1.Interface
 	KubeagClientSet            kubeagclient.Interface
 	logger                     log.FieldLogger
 }
@@ -63,6 +67,15 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 		return nil, err
 	}
 
+	monitoringV1Clientset, err := monitoringclientV1.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	slothV1Clientset, err := slothclientV1.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 	kubeagClientset, err := kubeagclient.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -73,6 +86,8 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 			Clientset:                  clientset,
 			MattermostClientsetV1Alpha: mattermostV1AlphaClientset,
 			MattermostClientsetV1Beta:  mattermostV1BetaClientset,
+			MonitoringClientsetV1:      monitoringV1Clientset,
+			SlothClientsetV1:           slothV1Clientset,
 			ApixClientset:              apixClientset,
 			KubeagClientSet:            kubeagClientset,
 			logger:                     logger,

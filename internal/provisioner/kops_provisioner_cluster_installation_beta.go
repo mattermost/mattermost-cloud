@@ -95,6 +95,11 @@ func (provisioner *kopsCIBeta) CreateClusterInstallation(cluster *model.Cluster,
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
+	err = provisioner.createInstallationSLI(clusterInstallation, k8sClient)
+	if err != nil {
+		return errors.Wrap(err, "failed to create installation SLI")
+	}
+
 	ctx := context.TODO()
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Create(ctx, mattermost, metav1.CreateOptions{})
 	if err != nil {
@@ -139,7 +144,10 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
-
+	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation SLI")
+	}
 	logger.Info("Updated cluster installation")
 
 	return nil
@@ -247,6 +255,11 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
+	}
+
+	err = provisioner.createIfNotExistInstallationSLI(clusterInstallation, k8sClient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
 	}
 
 	logger.Info("Updated cluster installation")
@@ -478,6 +491,11 @@ func (provisioner *kopsCIBeta) DeleteClusterInstallation(cluster *model.Cluster,
 		logger.Warnf("Namespace %s not found, assuming already deleted", clusterInstallation.Namespace)
 	} else if err != nil {
 		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
+	}
+
+	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation SLI")
 	}
 
 	logger.Info("Successfully deleted cluster installation")

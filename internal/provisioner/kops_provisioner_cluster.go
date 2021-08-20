@@ -541,6 +541,15 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
+	prom, _ := k8sClient.GetNamespace("prometheus")
+
+	if prom != nil {
+		err = provisioner.prepareSloth(cluster, k8sClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to prepare Sloth")
+		}
+	}
+
 	logger.WithField("name", cluster.ProvisionerMetadataKops.Name).Info("Successfully provisioned cluster")
 
 	return nil
@@ -1026,6 +1035,51 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 	err = kopsClient.UpdateMetadata(cluster.ProvisionerMetadataKops)
 	if err != nil {
 		return errors.Wrap(err, "failed to update metadata from kops state")
+	}
+
+	return nil
+}
+
+// prepareSloth prepares sloth resources after prometheus utility is installed.
+func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClient *k8s.KubeClient) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+	files := []k8s.ManifestFile{
+		{
+			Path:            "manifests/sloth/crd_sloth.slok.dev_prometheusservicelevels.yaml",
+			DeployNamespace: "prometheus",
+		},
+		{
+			Path:            "manifests/sloth/sloth.yaml",
+			DeployNamespace: "prometheus",
+		},
+		{
+			Path:            "manifests/sloth/sloth_pod_monitor.yaml",
+			DeployNamespace: "prometheus",
+		},
+	}
+
+	err := k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create sloth resources.")
+	}
+	wait := 240
+	pods, err := k8sClient.GetPodsFromDeployment("prometheus", "sloth")
+	if err != nil {
+		return err
+	}
+	if len(pods.Items) == 0 {
+		return fmt.Errorf("no pods found from sloth deployment")
+	}
+
+	for _, pod := range pods.Items {
+		logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, "sloth", pod.GetName())
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+		defer cancel()
+		_, err := k8sClient.WaitForPodRunning(ctx, "prometheus", pod.GetName())
+		if err != nil {
+			return err
+		}
+		logger.Infof("Successfully deployed service pod %q", pod.GetName())
 	}
 
 	return nil

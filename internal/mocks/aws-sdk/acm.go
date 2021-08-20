@@ -238,6 +238,56 @@ func (mr *MockACMAPIMockRecorder) ExportCertificateWithContext(arg0, arg1 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportCertificateWithContext", reflect.TypeOf((*MockACMAPI)(nil).ExportCertificateWithContext), varargs...)
 }
 
+// GetAccountConfiguration mocks base method
+func (m *MockACMAPI) GetAccountConfiguration(arg0 *acm.GetAccountConfigurationInput) (*acm.GetAccountConfigurationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountConfiguration", arg0)
+	ret0, _ := ret[0].(*acm.GetAccountConfigurationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountConfiguration indicates an expected call of GetAccountConfiguration
+func (mr *MockACMAPIMockRecorder) GetAccountConfiguration(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountConfiguration", reflect.TypeOf((*MockACMAPI)(nil).GetAccountConfiguration), arg0)
+}
+
+// GetAccountConfigurationRequest mocks base method
+func (m *MockACMAPI) GetAccountConfigurationRequest(arg0 *acm.GetAccountConfigurationInput) (*request.Request, *acm.GetAccountConfigurationOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountConfigurationRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*acm.GetAccountConfigurationOutput)
+	return ret0, ret1
+}
+
+// GetAccountConfigurationRequest indicates an expected call of GetAccountConfigurationRequest
+func (mr *MockACMAPIMockRecorder) GetAccountConfigurationRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountConfigurationRequest", reflect.TypeOf((*MockACMAPI)(nil).GetAccountConfigurationRequest), arg0)
+}
+
+// GetAccountConfigurationWithContext mocks base method
+func (m *MockACMAPI) GetAccountConfigurationWithContext(arg0 context.Context, arg1 *acm.GetAccountConfigurationInput, arg2 ...request.Option) (*acm.GetAccountConfigurationOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetAccountConfigurationWithContext", varargs...)
+	ret0, _ := ret[0].(*acm.GetAccountConfigurationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountConfigurationWithContext indicates an expected call of GetAccountConfigurationWithContext
+func (mr *MockACMAPIMockRecorder) GetAccountConfigurationWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountConfigurationWithContext", reflect.TypeOf((*MockACMAPI)(nil).GetAccountConfigurationWithContext), varargs...)
+}
+
 // GetCertificate mocks base method
 func (m *MockACMAPI) GetCertificate(arg0 *acm.GetCertificateInput) (*acm.GetCertificateOutput, error) {
 	m.ctrl.T.Helper()
@@ -469,6 +519,56 @@ func (mr *MockACMAPIMockRecorder) ListTagsForCertificateWithContext(arg0, arg1 i
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTagsForCertificateWithContext", reflect.TypeOf((*MockACMAPI)(nil).ListTagsForCertificateWithContext), varargs...)
+}
+
+// PutAccountConfiguration mocks base method
+func (m *MockACMAPI) PutAccountConfiguration(arg0 *acm.PutAccountConfigurationInput) (*acm.PutAccountConfigurationOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutAccountConfiguration", arg0)
+	ret0, _ := ret[0].(*acm.PutAccountConfigurationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutAccountConfiguration indicates an expected call of PutAccountConfiguration
+func (mr *MockACMAPIMockRecorder) PutAccountConfiguration(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutAccountConfiguration", reflect.TypeOf((*MockACMAPI)(nil).PutAccountConfiguration), arg0)
+}
+
+// PutAccountConfigurationRequest mocks base method
+func (m *MockACMAPI) PutAccountConfigurationRequest(arg0 *acm.PutAccountConfigurationInput) (*request.Request, *acm.PutAccountConfigurationOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutAccountConfigurationRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*acm.PutAccountConfigurationOutput)
+	return ret0, ret1
+}
+
+// PutAccountConfigurationRequest indicates an expected call of PutAccountConfigurationRequest
+func (mr *MockACMAPIMockRecorder) PutAccountConfigurationRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutAccountConfigurationRequest", reflect.TypeOf((*MockACMAPI)(nil).PutAccountConfigurationRequest), arg0)
+}
+
+// PutAccountConfigurationWithContext mocks base method
+func (m *MockACMAPI) PutAccountConfigurationWithContext(arg0 context.Context, arg1 *acm.PutAccountConfigurationInput, arg2 ...request.Option) (*acm.PutAccountConfigurationOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PutAccountConfigurationWithContext", varargs...)
+	ret0, _ := ret[0].(*acm.PutAccountConfigurationOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutAccountConfigurationWithContext indicates an expected call of PutAccountConfigurationWithContext
+func (mr *MockACMAPIMockRecorder) PutAccountConfigurationWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutAccountConfigurationWithContext", reflect.TypeOf((*MockACMAPI)(nil).PutAccountConfigurationWithContext), varargs...)
 }
 
 // RemoveTagsFromCertificate mocks base method
