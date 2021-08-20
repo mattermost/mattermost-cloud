@@ -37,7 +37,7 @@ func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterI
 					Objective:   99.9,
 					Description: "Availability metric for mattermost API",
 					SLI: slothv1.SLI{Events: &slothv1.SLIEvents{
-						ErrorQuery: "sum(rate(mattermost_api_time_count{job='" + installationName + "',code=~'(5..|429)'}[{{.window}}]))",
+						ErrorQuery: "sum(rate(mattermost_api_time_count{job='" + installationName + "',status_code=~'(5..|429)'}[{{.window}}]))",
 						TotalQuery: "sum(rate(mattermost_api_time_count{job='" + installationName + "'}[{{.window}}]))",
 					}},
 					Alerting: slothv1.Alerting{
