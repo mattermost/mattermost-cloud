@@ -134,6 +134,23 @@ func (s *ImportSupervisor) Do() error {
 	err = s.importTranslation(work)
 	if err != nil {
 		s.logger.WithError(err).Errorf("failed to perform work on Import %s", work.ID)
+		workError := err.Error()
+		go func() {
+			for {
+				err := s.awatClient.CompleteImport(
+					&awat.ImportCompletedWorkRequest{
+						ID:         work.ID,
+						CompleteAt: awat.Timestamp(),
+						Error:      workError,
+					})
+				if err != nil {
+					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s", work.ID)
+					continue
+				}
+				time.Sleep(time.Second * 5)
+				return
+			}
+		}()
 	}
 
 	return err
