@@ -127,6 +127,9 @@ func TestImportSupervisor(t *testing.T) {
 		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
 
+		awatClient.EXPECT().
+			CompleteImport(gomock.Any())
+
 		aws.EXPECT().
 			GetMultitenantBucketNameForInstallation(installationID, store).
 			Return(destBucket, nil)
