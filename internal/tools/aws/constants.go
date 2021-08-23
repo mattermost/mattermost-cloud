@@ -146,6 +146,10 @@ const (
 	// existing installations.
 	cloudIDPrefix = "cloud-"
 
+	// defaultSecretManagerDeletionDays is the default number of days that
+	// secrets will be marked for deletion for when being removed.
+	defaultSecretManagerDeletionDays = 14
+
 	// iamSuffix is the suffix value used when referencing an AWS IAM secret.
 	// Warning:
 	// changing this value will break the connection to AWS resources for

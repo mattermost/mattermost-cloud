@@ -803,7 +803,7 @@ func (d *RDSMultitenantPGBouncerDatabase) removeInstallationPGBouncerResources(d
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	err = ensureSecretDeleted(RDSMultitenantSecretName(d.installationID), d.client)
+	err = d.client.secretsManagerEnsureSecretDeleted(RDSMultitenantPGBouncerSecretName(d.installationID), false, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete multitenant database secret")
 	}
