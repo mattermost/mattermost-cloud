@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -87,68 +85,6 @@ func SetUtilityDefaults(url string) {
 	if KubecostDefaultVersion.ValuesPath == "" {
 		KubecostDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
 	}
-}
-
-// UnmarshalJSON is a custom JSON unmarshaler that can handle both the
-// old Version string type and the new type. It is entirely
-// self-contained, including types, so that it can be easily removed
-// when no more clusters exist with the old version format.
-// TODO DELETE THIS
-func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
-	type utilityGroupVersions struct {
-		PrometheusOperator *HelmUtilityVersion
-		Thanos             *HelmUtilityVersion
-		Nginx              *HelmUtilityVersion
-		NginxInternal      *HelmUtilityVersion
-		Fluentbit          *HelmUtilityVersion
-		Teleport           *HelmUtilityVersion
-		Pgbouncer          *HelmUtilityVersion
-		Stackrox           *HelmUtilityVersion
-		Kubecost           *HelmUtilityVersion
-	}
-	type oldUtilityGroupVersions struct {
-		PrometheusOperator string
-		Thanos             string
-		Nginx              string
-		NginxInternal      string
-		Fluentbit          string
-		Teleport           string
-		Pgbouncer          string
-		Stackrox           string
-		Kubecost           string
-	}
-
-	var utilGrpVers *utilityGroupVersions = &utilityGroupVersions{}
-	var oldUtilGrpVers *oldUtilityGroupVersions = &oldUtilityGroupVersions{}
-	err := json.Unmarshal(bytes, utilGrpVers)
-	if err != nil {
-		secondErr := json.Unmarshal(bytes, oldUtilGrpVers)
-		if secondErr != nil {
-			return fmt.Errorf("%s and %s", errors.Wrap(err, "failed to unmarshal to new HelmUtilityVersion"), errors.Wrap(secondErr, "failed to unmarshal to old HelmUtilityVersion type"))
-		}
-
-		h.PrometheusOperator = &HelmUtilityVersion{Chart: oldUtilGrpVers.PrometheusOperator}
-		h.Thanos = &HelmUtilityVersion{Chart: oldUtilGrpVers.Thanos}
-		h.Nginx = &HelmUtilityVersion{Chart: oldUtilGrpVers.Nginx}
-		h.NginxInternal = &HelmUtilityVersion{Chart: oldUtilGrpVers.NginxInternal}
-		h.Fluentbit = &HelmUtilityVersion{Chart: oldUtilGrpVers.Fluentbit}
-		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
-		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
-		h.Stackrox = &HelmUtilityVersion{Chart: oldUtilGrpVers.Stackrox}
-		h.Kubecost = &HelmUtilityVersion{Chart: oldUtilGrpVers.Kubecost}
-		return nil
-	}
-
-	h.PrometheusOperator = utilGrpVers.PrometheusOperator
-	h.Thanos = utilGrpVers.Thanos
-	h.Nginx = utilGrpVers.Nginx
-	h.NginxInternal = utilGrpVers.NginxInternal
-	h.Fluentbit = utilGrpVers.Fluentbit
-	h.Teleport = utilGrpVers.Teleport
-	h.Pgbouncer = utilGrpVers.Pgbouncer
-	h.Stackrox = utilGrpVers.Stackrox
-	h.Kubecost = utilGrpVers.Kubecost
-	return nil
 }
 
 // UtilityGroupVersions holds the concrete metadata for any cluster
