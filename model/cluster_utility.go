@@ -35,55 +35,56 @@ const (
 	GitlabOAuthTokenKey = "GITLAB_OAUTH_TOKEN"
 )
 
-var (
+// DefaultUtilityVersions holds the default values for all of the HelmUtilityVersions
+var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtilityVersion{
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
-	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: ""}
+	PrometheusOperatorCanonicalName: {Chart: "9.4.4", ValuesPath: ""},
 	// ThanosDefaultVersion defines the default version for the Helm chart
-	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: ""}
+	ThanosCanonicalName: {Chart: "3.2.2", ValuesPath: ""},
 	// NginxDefaultVersion defines the default version for the Helm chart
-	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: ""}
+	NginxCanonicalName: {Chart: "2.15.0", ValuesPath: ""},
 	// NginxInternalDefaultVersion defines the default version for the Helm chart
-	NginxInternalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: ""}
+	NginxInternalCanonicalName: {Chart: "2.15.0", ValuesPath: ""},
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "0.15.8", ValuesPath: ""}
+	FluentbitCanonicalName: {Chart: "0.15.8", ValuesPath: ""},
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: ""}
+	TeleportCanonicalName: {Chart: "0.3.0", ValuesPath: ""},
 	// PgbouncerDefaultVersion defines the default version for the Helm chart
-	PgbouncerDefaultVersion = &HelmUtilityVersion{Chart: "1.1.0", ValuesPath: ""}
+	PgbouncerCanonicalName: {Chart: "1.1.0", ValuesPath: ""},
 	// StackroxDefaultVersion defines the default version for the Helm chart
-	StackroxDefaultVersion = &HelmUtilityVersion{Chart: "62.0.0", ValuesPath: ""}
+	StackroxCanonicalName: {Chart: "62.0.0", ValuesPath: ""},
 	// KubecostDefaultVersion defines the default version for the Helm chart
-	KubecostDefaultVersion = &HelmUtilityVersion{Chart: "1.83.1", ValuesPath: ""}
-)
+	KubecostCanonicalName: {Chart: "1.83.1", ValuesPath: ""},
+}
 
 // SetUtilityDefaults is used to set Utility default version and values.
 func SetUtilityDefaults(url string) {
-	if PrometheusOperatorDefaultVersion.ValuesPath == "" {
-		PrometheusOperatorDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fprometheus_operator_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[PrometheusOperatorCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[PrometheusOperatorCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fprometheus_operator_values.yaml?ref=master", url)
 	}
-	if ThanosDefaultVersion.ValuesPath == "" {
-		ThanosDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fthanos_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[ThanosCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[ThanosCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fthanos_values.yaml?ref=master", url)
 	}
-	if NginxDefaultVersion.ValuesPath == "" {
-		NginxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[NginxCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[NginxCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_values.yaml?ref=master", url)
 	}
-	if NginxInternalDefaultVersion.ValuesPath == "" {
-		NginxInternalDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_internal_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[NginxInternalCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[NginxInternalCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_internal_values.yaml?ref=master", url)
 	}
-	if FluentbitDefaultVersion.ValuesPath == "" {
-		FluentbitDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Ffluent-bit_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[FluentbitCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[FluentbitCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Ffluent-bit_values.yaml?ref=master", url)
 	}
-	if TeleportDefaultVersion.ValuesPath == "" {
-		TeleportDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fteleport_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[TeleportCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[TeleportCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fteleport_values.yaml?ref=master", url)
 	}
-	if PgbouncerDefaultVersion.ValuesPath == "" {
-		PgbouncerDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fpgbouncer_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[PgbouncerCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[PgbouncerCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fpgbouncer_values.yaml?ref=master", url)
 	}
-	if StackroxDefaultVersion.ValuesPath == "" {
-		StackroxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fstackrox_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[StackroxCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[StackroxCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fstackrox_values.yaml?ref=master", url)
 	}
-	if KubecostDefaultVersion.ValuesPath == "" {
-		KubecostDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
+	if DefaultUtilityVersions[KubecostCanonicalName].ValuesPath == "" {
+		DefaultUtilityVersions[KubecostCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
 	}
 }
 

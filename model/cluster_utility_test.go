@@ -21,10 +21,10 @@ func TestSetUtilityVersion(t *testing.T) {
 	}
 
 	setUtilityVersion(u, NginxCanonicalName, &HelmUtilityVersion{Chart: "0.9"})
-	assert.Equal(t, u.Nginx, &HelmUtilityVersion{Chart: "0.9"})
+	assert.Equal(t, &HelmUtilityVersion{Chart: "0.9"}, u.Nginx)
 
 	setUtilityVersion(u, "an_error", &HelmUtilityVersion{Chart: "9"})
-	assert.Equal(t, u.Nginx, &HelmUtilityVersion{Chart: "0.9"})
+	assert.Equal(t, &HelmUtilityVersion{Chart: "0.9"}, u.Nginx)
 }
 
 func TestGetUtilityVersion(t *testing.T) {
