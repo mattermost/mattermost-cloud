@@ -914,7 +914,7 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 		return errors.Wrap(err, "failed to drop multitenant database")
 	}
 
-	err = ensureSecretDeleted(RDSMultitenantSecretName(d.installationID), d.client)
+	err = d.client.secretsManagerEnsureSecretDeleted(RDSMultitenantSecretName(d.installationID), false, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete multitenant database secret")
 	}
@@ -979,17 +979,6 @@ func (d *RDSMultitenantDatabase) dropDatabase(rdsClusterID, rdsClusterendpoint s
 	err = d.dropDatabaseIfExists(ctx, databaseName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to drop multitenant RDS database name %s", databaseName)
-	}
-
-	return nil
-}
-
-func ensureSecretDeleted(secretName string, client *Client) error {
-	_, err := client.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
-		SecretId: aws.String(secretName),
-	})
-	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
-		return errors.Wrapf(err, "failed to delete secret %s", secretName)
 	}
 
 	return nil

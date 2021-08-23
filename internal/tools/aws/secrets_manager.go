@@ -227,29 +227,29 @@ func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger
 }
 
 func (a *Client) secretsManagerEnsureIAMAccessKeySecretDeleted(awsID string, logger log.FieldLogger) error {
-	return a.secretsManagerEnsureSecretDeleted(IAMSecretName(awsID), logger)
+	return a.secretsManagerEnsureSecretDeleted(IAMSecretName(awsID), false, logger)
 }
 
 func (a *Client) secretsManagerEnsureRDSSecretDeleted(awsID string, logger log.FieldLogger) error {
-	return a.secretsManagerEnsureSecretDeleted(RDSSecretName(awsID), logger)
+	return a.secretsManagerEnsureSecretDeleted(RDSSecretName(awsID), false, logger)
 }
 
-func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, logger log.FieldLogger) error {
-	_, err := a.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
-		SecretId: aws.String(secretName),
+func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, force bool, logger log.FieldLogger) error {
+	response, err := a.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
+		SecretId:                   aws.String(secretName),
+		RecoveryWindowInDays:       aws.Int64(defaultSecretManagerDeletionDays),
+		ForceDeleteWithoutRecovery: aws.Bool(force),
 	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
-				logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming already deleted")
-
-				return nil
-			}
+		if IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+			logger.WithField("secret-name", secretName).Warn("Secret Manager secret not found; assuming already deleted")
+			return nil
 		}
-		return err
+
+		return errors.Wrap(err, "failed to delete secret")
 	}
 
-	logger.WithField("secret-name", secretName).Debug("Secret Manager secret deleted")
+	logger.WithField("secret-name", secretName).Debugf("Secret Manager secret scheduled for deletion on %s", response.DeletionDate)
 
 	return nil
 }
