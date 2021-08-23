@@ -284,27 +284,9 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 // Gets the version for a utility from a utilityVersions struct using
 // the utility's name's string representation for lookup
 func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtilityVersion {
-	switch utility {
-	case PrometheusOperatorCanonicalName:
-		return versions.PrometheusOperator
-	case ThanosCanonicalName:
-		return versions.Thanos
-	case NginxCanonicalName:
-		return versions.Nginx
-	case NginxInternalCanonicalName:
-		return versions.NginxInternal
-	case FluentbitCanonicalName:
-		return versions.Fluentbit
-	case TeleportCanonicalName:
-		return versions.Teleport
-	case PgbouncerCanonicalName:
-		return versions.Pgbouncer
-	case StackroxCanonicalName:
-		return versions.Stackrox
-	case KubecostCanonicalName:
-		return versions.Kubecost
+	if r, ok := versions.AsMap()[utility]; ok {
+		return r
 	}
-
 	return nil
 }
 
