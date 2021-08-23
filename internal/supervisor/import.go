@@ -143,12 +143,11 @@ func (s *ImportSupervisor) Do() error {
 						CompleteAt: awat.Timestamp(),
 						Error:      workError,
 					})
-				if err != nil {
-					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s", work.ID)
-					continue
+				if err == nil {
+					return
 				}
+				s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s", work.ID)
 				time.Sleep(time.Second * 5)
-				return
 			}
 		}()
 	}
