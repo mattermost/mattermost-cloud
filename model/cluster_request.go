@@ -46,7 +46,7 @@ func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
 }
 
 func (request *CreateClusterRequest) setUtilitiesDefaults() {
-	for utilityName, _ := range DefaultUtilityVersions {
+	for utilityName := range DefaultUtilityVersions {
 		request.setUtilityDefaults(utilityName)
 	}
 }
