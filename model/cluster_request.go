@@ -46,17 +46,7 @@ func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
 }
 
 func (request *CreateClusterRequest) setUtilitiesDefaults() {
-	for _, utilityName := range []string{
-		PrometheusOperatorCanonicalName,
-		ThanosCanonicalName,
-		NginxCanonicalName,
-		NginxInternalCanonicalName,
-		FluentbitCanonicalName,
-		TeleportCanonicalName,
-		PgbouncerCanonicalName,
-		StackroxCanonicalName,
-		KubecostCanonicalName,
-	} {
+	for utilityName, _ := range DefaultUtilityVersions {
 		request.setUtilityDefaults(utilityName)
 	}
 }
