@@ -57,34 +57,42 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	KubecostCanonicalName: {Chart: "1.83.1", ValuesPath: ""},
 }
 
+var (
+	// TODO make these configurable if the gitlab repo must ever be
+	// moved, or if we ever need to specify a different branch or folder
+	// (environment) name to pull the values files from
+	gitlabProjectPath    string = "/api/v4/projects/%d/repository/files/%s" + `%%2F` + "%s?ref=%s"
+	defaultProjectNumber int    = 33
+	defaultEnvironment          = "dev"
+	defaultBranch               = "master"
+)
+
+func buildValuesPath(name string) string {
+	return fmt.Sprintf(gitlabProjectPath,
+		defaultProjectNumber,
+		defaultUtilityValuesFileNames[name],
+		defaultEnvironment,
+		defaultBranch)
+}
+
+var defaultUtilityValuesFileNames map[string]string = map[string]string{
+	PrometheusOperatorCanonicalName: "prometheus_operator_values.yaml",
+	ThanosCanonicalName:             "thanos_values.yaml",
+	NginxCanonicalName:              "nginx_values.yaml",
+	NginxInternalCanonicalName:      "nginx_internal_values.yaml",
+	FluentbitCanonicalName:          "fluent-bit_values.yaml",
+	TeleportCanonicalName:           "teleport_values.yaml",
+	PgbouncerCanonicalName:          "pgbouncer_values.yaml",
+	StackroxCanonicalName:           "stackrox_values.yaml",
+	KubecostCanonicalName:           "kubecost_values.yaml",
+}
+
 // SetUtilityDefaults is used to set Utility default version and values.
 func SetUtilityDefaults(url string) {
-	if DefaultUtilityVersions[PrometheusOperatorCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[PrometheusOperatorCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fprometheus_operator_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[ThanosCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[ThanosCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fthanos_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[NginxCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[NginxCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[NginxInternalCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[NginxInternalCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_internal_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[FluentbitCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[FluentbitCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Ffluent-bit_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[TeleportCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[TeleportCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fteleport_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[PgbouncerCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[PgbouncerCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fpgbouncer_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[StackroxCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[StackroxCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fstackrox_values.yaml?ref=master", url)
-	}
-	if DefaultUtilityVersions[KubecostCanonicalName].ValuesPath == "" {
-		DefaultUtilityVersions[KubecostCanonicalName].ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
+	for utility := range defaultUtilityValuesFileNames {
+		if DefaultUtilityVersions[utility].ValuesPath == "" {
+			DefaultUtilityVersions[utility].ValuesPath = fmt.Sprintf("%s%s", url, buildValuesPath(utility))
+		}
 	}
 }
 
