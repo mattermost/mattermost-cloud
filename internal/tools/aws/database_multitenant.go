@@ -945,8 +945,7 @@ func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDataba
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	username := MattermostMultitenantDatabaseUsername(d.installationID)
-	err = d.cleanupDatabase(database.RdsClusterID, *rdsCluster.Endpoint, username, logger)
+	err = d.cleanupDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop migrated database")
 	}
@@ -960,7 +959,7 @@ func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDataba
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoint, username string, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoint string, logger log.FieldLogger) error {
 	databaseName := MattermostRDSDatabaseName(d.installationID)
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -984,7 +983,7 @@ func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoin
 		return errors.Wrapf(err, "failed to drop multitenant RDS database name %s", databaseName)
 	}
 
-	err = dropUserIfExists(ctx, d.db, username)
+	err = dropUserIfExists(ctx, d.db, MattermostMultitenantDatabaseUsername(d.installationID))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete installation database user")
 	}
