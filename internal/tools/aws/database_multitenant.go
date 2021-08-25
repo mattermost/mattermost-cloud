@@ -542,8 +542,7 @@ func (d *RDSMultitenantDatabase) RollbackMigration(store model.InstallationDatab
 	rdsID := *rdsCluster.DBClusterIdentifier
 	logger = logger.WithField("rds-cluster-id", rdsID)
 
-	username := MattermostMultitenantDatabaseUsername(d.installationID)
-	err = d.cleanupDatabase(rdsID, *rdsCluster.Endpoint, username, logger)
+	err = d.cleanupDatabase(rdsID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop destination database")
 	}
@@ -910,8 +909,7 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	username := MattermostMultitenantDatabaseUsername(d.installationID)
-	err = d.cleanupDatabase(database.RdsClusterID, *rdsCluster.Endpoint, username, logger)
+	err = d.cleanupDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop multitenant database")
 	}
