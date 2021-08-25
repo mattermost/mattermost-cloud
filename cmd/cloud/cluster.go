@@ -172,7 +172,7 @@ var clusterCreateCmd = &cobra.Command{
 			KopsAMI:                kopsAMI,
 			Zones:                  strings.Split(zones, ","),
 			AllowInstallations:     allowInstallations,
-			DesiredUtilityVersions: processUtilityFlags(command),
+			DesiredUtilityVersions: processUtilityFlags(command, nil),
 			Annotations:            annotations,
 			Networking:             networking,
 			VPC:                    vpc,
@@ -237,8 +237,17 @@ var clusterProvisionCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 		clusterID, _ := command.Flags().GetString("cluster")
 
+		cluster, err := client.GetCluster(clusterID)
+		if err != nil {
+			return errors.Wrap(err, "failed to get cluster")
+		}
+
+		if cluster == nil {
+			return errors.Errorf("cluster %s not found", clusterID)
+		}
+
 		var request *model.ProvisionClusterRequest = nil
-		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
+		if desiredUtilityVersions := processUtilityFlags(command, cluster.Cluster); len(desiredUtilityVersions) > 0 {
 			request = &model.ProvisionClusterRequest{
 				DesiredUtilityVersions: desiredUtilityVersions,
 			}
@@ -254,7 +263,7 @@ var clusterProvisionCmd = &cobra.Command{
 			return nil
 		}
 
-		cluster, err := client.ProvisionCluster(clusterID, request)
+		cluster, err = client.ProvisionCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
 		}
@@ -581,63 +590,68 @@ var clusterShowStateReport = &cobra.Command{
 	},
 }
 
-func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
-	prometheusOperatorVersion, _ := command.Flags().GetString("prometheus-operator-version")
-	thanosVersion, _ := command.Flags().GetString("thanos-version")
-	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
-	nginxVersion, _ := command.Flags().GetString("nginx-version")
-	nginxInternalVersion, _ := command.Flags().GetString("nginx-internal-version")
-	teleportVersion, _ := command.Flags().GetString("teleport-version")
-	pgbouncerVersion, _ := command.Flags().GetString("pgbouncer-version")
-	stackroxVersion, _ := command.Flags().GetString("stackrox-version")
-	kubecostVersion, _ := command.Flags().GetString("kubecost-version")
+// MustGetString works like Cobra Commander's GetString but panicks on
+// error, similar to regexp.MustCompile vs regexp.Compile
+func MustGetString(key string, command *cobra.Command) string {
+	field, err := command.Flags().GetString(key)
+	if err != nil {
+		panic(err)
+	}
+	return field
+}
 
-	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
-	thanosValues, _ := command.Flags().GetString("thanos-values")
-	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")
-	nginxValues, _ := command.Flags().GetString("nginx-values")
-	nginxInternalValues, _ := command.Flags().GetString("nginx-internal-values")
-	teleportValues, _ := command.Flags().GetString("teleport-values")
-	pgbouncerValues, _ := command.Flags().GetString("pgbouncer-values")
-	stackroxValues, _ := command.Flags().GetString("stackrox-values")
-	kubecostValues, _ := command.Flags().GetString("kubecost-values")
-
-	utilityVersions := make(map[string]*model.HelmUtilityVersion)
-
-	if prometheusOperatorVersion != "" && prometheusOperatorValues != "" {
-		utilityVersions[model.PrometheusOperatorCanonicalName] = &model.HelmUtilityVersion{Chart: prometheusOperatorVersion, ValuesPath: prometheusOperatorValues}
+// processUtilityFlags handles processing the arguments passed for all
+// of the utilities, for cloud cluster create & cloud cluster
+// provision. Use `nil` for the second argument during `create` and in
+// any other scenario where you might reuse this function but a
+// cluster does not exist. If cluster is non-nil, its existing values
+// will be used for unspecified arguments instead of global default
+// values, to allow for updates following a patch pattern
+func processUtilityFlags(command *cobra.Command, cluster *model.Cluster) map[string]*model.HelmUtilityVersion {
+	var defaultUtilityVersions map[string]*model.HelmUtilityVersion
+	if cluster == nil {
+		defaultUtilityVersions = model.DefaultUtilityVersions
+	} else {
+		defaultUtilityVersions = cluster.UtilityMetadata.ActualVersions.AsMap()
 	}
 
-	if thanosVersion != "" && thanosValues != "" {
-		utilityVersions[model.ThanosCanonicalName] = &model.HelmUtilityVersion{Chart: thanosVersion, ValuesPath: thanosValues}
+	utilityVersions := map[string]*model.HelmUtilityVersion{
+		model.PrometheusOperatorCanonicalName: {
+			Chart:      MustGetString("prometheus-operator-version", command),
+			ValuesPath: MustGetString("prometheus-operator-values", command)},
+		model.ThanosCanonicalName: {
+			Chart:      MustGetString("thanos-version", command),
+			ValuesPath: MustGetString("thanos-values", command)},
+		model.FluentbitCanonicalName: {
+			Chart:      MustGetString("fluentbit-version", command),
+			ValuesPath: MustGetString("fluentbit-values", command)},
+		model.NginxCanonicalName: {
+			Chart:      MustGetString("nginx-version", command),
+			ValuesPath: MustGetString("nginx-values", command)},
+		model.NginxInternalCanonicalName: {
+			Chart:      MustGetString("nginx-internal-version", command),
+			ValuesPath: MustGetString("nginx-internal-values", command)},
+		model.TeleportCanonicalName: {
+			Chart:      MustGetString("teleport-version", command),
+			ValuesPath: MustGetString("teleport-values", command)},
+		model.PgbouncerCanonicalName: {
+			Chart:      MustGetString("pgbouncer-version", command),
+			ValuesPath: MustGetString("pgbouncer-values", command)},
+		model.StackroxCanonicalName: {
+			Chart:      MustGetString("stackrox-version", command),
+			ValuesPath: MustGetString("stackrox-values", command)},
+		model.KubecostCanonicalName: {
+			Chart:      MustGetString("kubecost-version", command),
+			ValuesPath: MustGetString("kubecost-values", command)},
 	}
 
-	if fluentbitVersion != "" && fluentbitValues != "" {
-		utilityVersions[model.FluentbitCanonicalName] = &model.HelmUtilityVersion{Chart: fluentbitVersion, ValuesPath: fluentbitValues}
+	for name := range utilityVersions {
+		if utilityVersions[name].Chart == "" {
+			utilityVersions[name].Chart = defaultUtilityVersions[name].Chart
+		}
+		if utilityVersions[name].ValuesPath == "" {
+			utilityVersions[name].ValuesPath = defaultUtilityVersions[name].ValuesPath
+		}
 	}
-
-	if nginxVersion != "" && nginxValues != "" {
-		utilityVersions[model.NginxCanonicalName] = &model.HelmUtilityVersion{Chart: nginxVersion, ValuesPath: nginxValues}
-	}
-
-	if nginxInternalVersion != "" && nginxInternalValues != "" {
-		utilityVersions[model.NginxInternalCanonicalName] = &model.HelmUtilityVersion{Chart: nginxInternalVersion, ValuesPath: nginxInternalValues}
-	}
-
-	if teleportVersion != "" && teleportValues != "" {
-		utilityVersions[model.TeleportCanonicalName] = &model.HelmUtilityVersion{Chart: teleportVersion, ValuesPath: teleportValues}
-	}
-
-	if pgbouncerVersion != "" && pgbouncerValues != "" {
-		utilityVersions[model.PgbouncerCanonicalName] = &model.HelmUtilityVersion{Chart: pgbouncerVersion, ValuesPath: pgbouncerValues}
-	}
-
-	if stackroxVersion != "" && stackroxValues != "" {
-		utilityVersions[model.StackroxCanonicalName] = &model.HelmUtilityVersion{Chart: stackroxVersion, ValuesPath: stackroxValues}
-	}
-	if kubecostVersion != "" && kubecostValues != "" {
-		utilityVersions[model.KubecostCanonicalName] = &model.HelmUtilityVersion{Chart: kubecostVersion, ValuesPath: kubecostValues}
-	}
-
 	return utilityVersions
 }
