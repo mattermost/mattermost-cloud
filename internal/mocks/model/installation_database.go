@@ -366,6 +366,50 @@ func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetSingleTenantDat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSingleTenantDatabaseConfigForInstallation", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetSingleTenantDatabaseConfigForInstallation), installationID)
 }
 
+// GetProxyDatabaseResourcesForInstallation mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetProxyDatabaseResourcesForInstallation(installationID string) (*model.DatabaseResourceGrouping, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProxyDatabaseResourcesForInstallation", installationID)
+	ret0, _ := ret[0].(*model.DatabaseResourceGrouping)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProxyDatabaseResourcesForInstallation indicates an expected call of GetProxyDatabaseResourcesForInstallation
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetProxyDatabaseResourcesForInstallation(installationID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProxyDatabaseResourcesForInstallation", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetProxyDatabaseResourcesForInstallation), installationID)
+}
+
+// GetOrCreateProxyDatabaseResourcesForInstallation mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetOrCreateProxyDatabaseResourcesForInstallation(installationID, multitenantDatabaseID string) (*model.DatabaseResourceGrouping, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrCreateProxyDatabaseResourcesForInstallation", installationID, multitenantDatabaseID)
+	ret0, _ := ret[0].(*model.DatabaseResourceGrouping)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOrCreateProxyDatabaseResourcesForInstallation indicates an expected call of GetOrCreateProxyDatabaseResourcesForInstallation
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetOrCreateProxyDatabaseResourcesForInstallation(installationID, multitenantDatabaseID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrCreateProxyDatabaseResourcesForInstallation", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetOrCreateProxyDatabaseResourcesForInstallation), installationID, multitenantDatabaseID)
+}
+
+// DeleteInstallationProxyDatabaseResources mocks base method
+func (m *MockInstallationDatabaseStoreInterface) DeleteInstallationProxyDatabaseResources(multitenantDatabase *model.MultitenantDatabase, databaseSchema *model.DatabaseSchema) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteInstallationProxyDatabaseResources", multitenantDatabase, databaseSchema)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteInstallationProxyDatabaseResources indicates an expected call of DeleteInstallationProxyDatabaseResources
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) DeleteInstallationProxyDatabaseResources(multitenantDatabase, databaseSchema interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstallationProxyDatabaseResources", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).DeleteInstallationProxyDatabaseResources), multitenantDatabase, databaseSchema)
+}
+
 // MockClusterUtilityDatabaseStoreInterface is a mock of ClusterUtilityDatabaseStoreInterface interface
 type MockClusterUtilityDatabaseStoreInterface struct {
 	ctrl     *gomock.Controller
@@ -402,4 +446,19 @@ func (m *MockClusterUtilityDatabaseStoreInterface) GetMultitenantDatabases(filte
 func (mr *MockClusterUtilityDatabaseStoreInterfaceMockRecorder) GetMultitenantDatabases(filter interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantDatabases", reflect.TypeOf((*MockClusterUtilityDatabaseStoreInterface)(nil).GetMultitenantDatabases), filter)
+}
+
+// GetLogicalDatabases mocks base method
+func (m *MockClusterUtilityDatabaseStoreInterface) GetLogicalDatabases(filter *model.LogicalDatabaseFilter) ([]*model.LogicalDatabase, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLogicalDatabases", filter)
+	ret0, _ := ret[0].([]*model.LogicalDatabase)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLogicalDatabases indicates an expected call of GetLogicalDatabases
+func (mr *MockClusterUtilityDatabaseStoreInterfaceMockRecorder) GetLogicalDatabases(filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogicalDatabases", reflect.TypeOf((*MockClusterUtilityDatabaseStoreInterface)(nil).GetLogicalDatabases), filter)
 }

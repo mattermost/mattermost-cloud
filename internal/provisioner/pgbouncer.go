@@ -203,7 +203,7 @@ max_db_connections = 20
 func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface) (string, error) {
 	ini := baseIni
 
-	databases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
+	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
 		MaxInstallationsLimit: model.NoInstallationsLimit,
 		Paging:                model.AllPagesNotDeleted(),
@@ -212,23 +212,30 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get proxy databases")
 	}
-	for _, database := range databases {
-		for logicalDatabase := range database.SharedLogicalDatabaseMappings {
+	for _, multitenantDatabase := range multitenantDatabases {
+		logicalDatabases, err := store.GetLogicalDatabases(&model.LogicalDatabaseFilter{
+			MultitenantDatabaseID: multitenantDatabase.ID,
+			Paging:                model.AllPagesNotDeleted(),
+		})
+		if err != nil {
+			return "", errors.Wrap(err, "failed to get logical databases")
+		}
+		for _, logicalDatabase := range logicalDatabases {
 			// Add writer entry.
 			ini = fmt.Sprintf("%s%s = dbname=%s host=%s port=5432 auth_user=%s\n",
 				ini,
-				logicalDatabase,
-				logicalDatabase,
-				database.WriterEndpoint,
+				logicalDatabase.Name,
+				logicalDatabase.Name,
+				multitenantDatabase.WriterEndpoint,
 				aws.DefaultPGBouncerAuthUsername,
 			)
 
 			// Add reader entry.
 			ini = fmt.Sprintf("%s%s-ro = dbname=%s host=%s port=5432 auth_user=%s\n",
 				ini,
-				logicalDatabase,
-				logicalDatabase,
-				database.ReaderEndpoint,
+				logicalDatabase.Name,
+				logicalDatabase.Name,
+				multitenantDatabase.ReaderEndpoint,
 				aws.DefaultPGBouncerAuthUsername,
 			)
 		}

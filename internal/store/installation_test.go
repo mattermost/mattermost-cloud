@@ -5,6 +5,7 @@
 package store
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -1041,4 +1042,22 @@ func TestDeleteInstallation(t *testing.T) {
 	actualInstallation1, err = sqlStore.GetInstallation(installation1.ID, false, false)
 	require.NoError(t, err)
 	require.Equal(t, installation1, actualInstallation1)
+}
+
+// Helpers
+
+func createAndCheckDummyInstallation(t *testing.T, store *SQLStore) *model.Installation {
+	installation := &model.Installation{
+		OwnerID: model.NewID(),
+		DNS:     fmt.Sprintf("dns-%s.domain.com", model.NewID()),
+	}
+	createAndCheckInstallation(t, store, installation)
+
+	return installation
+}
+
+func createAndCheckInstallation(t *testing.T, store *SQLStore, installation *model.Installation) {
+	err := store.CreateInstallation(installation, nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, installation.ID)
 }

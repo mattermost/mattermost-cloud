@@ -101,7 +101,7 @@ func (i *Installation) CreationDateString() string {
 // DeletionDateString returns a standardized date string for an installation's
 // deletion or 'n/a' if not deleted.
 func (i *Installation) DeletionDateString() string {
-	if i.DeleteAt == 0 {
+	if !i.IsDeleted() {
 		return "n/a"
 	}
 
@@ -118,6 +118,11 @@ func (i *Installation) GetDatabaseWeight() float64 {
 	}
 
 	return DefaultDatabaseWeight
+}
+
+// IsDeleted returns whether the installation was marked as deleted or not.
+func (i *Installation) IsDeleted() bool {
+	return i.DeleteAt != 0
 }
 
 // IsInGroup returns if the installation is in a group or not.

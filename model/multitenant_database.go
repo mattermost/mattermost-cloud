@@ -6,7 +6,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 )
 
@@ -22,45 +21,42 @@ type MultitenantDatabase struct {
 	ReaderEndpoint                     string
 	Installations                      MultitenantDatabaseInstallations
 	MigratedInstallations              MultitenantDatabaseInstallations
-	SharedLogicalDatabaseMappings      SharedLogicalDatabases `json:"SharedLogicalDatabaseMappings,omitempty"`
-	MaxInstallationsPerLogicalDatabase int64                  `json:"MaxInstallationsPerLogicalDatabase,omitempty"`
+	MaxInstallationsPerLogicalDatabase int64 `json:"MaxInstallationsPerLogicalDatabase,omitempty"`
 	CreateAt                           int64
 	DeleteAt                           int64
 	LockAcquiredBy                     *string
 	LockAcquiredAt                     int64
 }
 
-// AddInstallationToLogicalDatabaseMapping adds a new installation to the next
-// available logical database.
-func (d *MultitenantDatabase) AddInstallationToLogicalDatabaseMapping(installationID string) {
-	if d.SharedLogicalDatabaseMappings == nil {
-		d.SharedLogicalDatabaseMappings = make(SharedLogicalDatabases)
-	}
+// LogicalDatabase represents a logical database inside a MultitenantDatabase.
+type LogicalDatabase struct {
+	ID                    string
+	MultitenantDatabaseID string
+	Name                  string
+	CreateAt              int64
+	DeleteAt              int64
+	LockAcquiredBy        *string
+	LockAcquiredAt        int64
+}
 
-	// Ensure we always are adding installations to the logical databases that
-	// are most full for maximum efficiency.
-	var selectedLogicalDatabase string
-	for logicalDatabase, installations := range d.SharedLogicalDatabaseMappings {
-		if len(installations) > int(d.MaxInstallationsPerLogicalDatabase) {
-			continue
-		}
-		if len(selectedLogicalDatabase) == 0 {
-			selectedLogicalDatabase = logicalDatabase
-			continue
-		}
-		if len(installations) > len(d.SharedLogicalDatabaseMappings[selectedLogicalDatabase]) {
-			selectedLogicalDatabase = logicalDatabase
-		}
-	}
+// DatabaseSchema represents a database schema inside a LogicalDatabase.
+type DatabaseSchema struct {
+	ID                string
+	LogicalDatabaseID string
+	InstallationID    string
+	Name              string
+	CreateAt          int64
+	DeleteAt          int64
+	LockAcquiredBy    *string
+	LockAcquiredAt    int64
+}
 
-	if len(selectedLogicalDatabase) == 0 {
-		// None of the existing logical databases had room so create a new one with
-		// a unique ID.
-		d.SharedLogicalDatabaseMappings[fmt.Sprintf("cloud_%s", NewID())] = []string{installationID}
-		return
-	}
-
-	d.SharedLogicalDatabaseMappings[selectedLogicalDatabase] = append(d.SharedLogicalDatabaseMappings[selectedLogicalDatabase], installationID)
+// DatabaseResourceGrouping represents the complete set of database resoureces
+// that comprise proxy database information.
+type DatabaseResourceGrouping struct {
+	MultitenantDatabase *MultitenantDatabase
+	LogicalDatabase     *LogicalDatabase
+	DatabaseSchema      *DatabaseSchema
 }
 
 // GetReaderEndpoint returns the best available reader endpoint for a multitenant
@@ -107,36 +103,6 @@ func (i *MultitenantDatabaseInstallations) Remove(installationID string) {
 	}
 }
 
-// SharedLogicalDatabases is a mapping of logical databases to installations.
-type SharedLogicalDatabases map[string][]string
-
-// GetLogicalDatabaseName returns the logical database that an installation
-// belongs to or an empty string if it hasn't been assigned.
-func (l *SharedLogicalDatabases) GetLogicalDatabaseName(installationID string) string {
-	for logicalDatabase, installations := range *l {
-		for _, installation := range installations {
-			if installation == installationID {
-				return logicalDatabase
-			}
-		}
-	}
-
-	return ""
-}
-
-// RemoveInstallation removes an installation entry from the logical database
-// mapping.
-func (l *SharedLogicalDatabases) RemoveInstallation(installationID string) {
-	for logicalDatabase, installations := range *l {
-		for i, installation := range installations {
-			if installation == installationID {
-				(*l)[logicalDatabase] = append(installations[:i], installations[i+1:]...)
-				return
-			}
-		}
-	}
-}
-
 // MultitenantDatabaseFilter describes the parameters used to constrain a set of
 // MultitenantDatabases.
 type MultitenantDatabaseFilter struct {
@@ -147,6 +113,21 @@ type MultitenantDatabaseFilter struct {
 	VpcID                  string
 	DatabaseType           string
 	MaxInstallationsLimit  int
+}
+
+// LogicalDatabaseFilter describes the parameters used to constrain a set of
+// LogicalDatabase.
+type LogicalDatabaseFilter struct {
+	Paging
+	MultitenantDatabaseID string
+}
+
+// DatabaseSchemaFilter describes the parameters used to constrain a set of
+// DatabaseSchema.
+type DatabaseSchemaFilter struct {
+	Paging
+	LogicalDatabaseID string
+	InstallationID    string
 }
 
 // MultitenantDatabasesFromReader decodes a json-encoded list of multitenant databases from the given io.Reader.
