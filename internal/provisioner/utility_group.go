@@ -67,6 +67,7 @@ var helmRepos = map[string]string{
 	"fluent":               "https://fluent.github.io/helm-charts",
 	"stackrox":             "https://charts.stackrox.io",
 	"kubecost":             "https://kubecost.github.io/cost-analyzer/",
+	"deliveryhero":         "https://charts.deliveryhero.io/",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -129,11 +130,17 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Kubecost")
 	}
+	nodeProblemDetector, err := newNodeProblemDetectorHandle(
+		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
+		provisioner, awsClient, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
+	}
 
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, stackrox, kubecost},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, stackrox, kubecost, nodeProblemDetector},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

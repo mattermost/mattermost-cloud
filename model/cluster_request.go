@@ -106,6 +106,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if _, ok := request.DesiredUtilityVersions[KubecostCanonicalName]; !ok {
 		request.DesiredUtilityVersions[KubecostCanonicalName] = KubecostDefaultVersion
 	}
+	if _, ok := request.DesiredUtilityVersions[NodeProblemDetectorCanonicalName]; !ok {
+		request.DesiredUtilityVersions[NodeProblemDetectorCanonicalName] = NodeProblemDetectorDefaultVersion
+	}
 }
 
 // Validate validates the values of a cluster create request.

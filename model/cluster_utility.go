@@ -31,6 +31,8 @@ const (
 	StackroxCanonicalName = "stackrox-secured-cluster-services"
 	// KubecostCanonicalName is the canonical string representation of kubecost
 	KubecostCanonicalName = "kubecost"
+	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
+	NodeProblemDetectorCanonicalName = "node-problem-detector"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -56,6 +58,8 @@ var (
 	StackroxDefaultVersion = &HelmUtilityVersion{Chart: "62.0.0", ValuesPath: ""}
 	// KubecostDefaultVersion defines the default version for the Helm chart
 	KubecostDefaultVersion = &HelmUtilityVersion{Chart: "1.83.1", ValuesPath: ""}
+	// NodeProblemDetectorDefaultVersion defines the default version for the Helm chart
+	NodeProblemDetectorDefaultVersion = &HelmUtilityVersion{Chart: "2.0.5", ValuesPath: ""}
 )
 
 // SetUtilityDefaults is used to set Utility default version and values.
@@ -87,6 +91,9 @@ func SetUtilityDefaults(url string) {
 	if KubecostDefaultVersion.ValuesPath == "" {
 		KubecostDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
 	}
+	if NodeProblemDetectorDefaultVersion.ValuesPath == "" {
+		NodeProblemDetectorDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnode_problem_detector_values.yaml?ref=master", url)
+	}
 }
 
 // UnmarshalJSON is a custom JSON unmarshaler that can handle both the
@@ -96,26 +103,28 @@ func SetUtilityDefaults(url string) {
 // TODO DELETE THIS
 func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 	type utilityGroupVersions struct {
-		PrometheusOperator *HelmUtilityVersion
-		Thanos             *HelmUtilityVersion
-		Nginx              *HelmUtilityVersion
-		NginxInternal      *HelmUtilityVersion
-		Fluentbit          *HelmUtilityVersion
-		Teleport           *HelmUtilityVersion
-		Pgbouncer          *HelmUtilityVersion
-		Stackrox           *HelmUtilityVersion
-		Kubecost           *HelmUtilityVersion
+		PrometheusOperator  *HelmUtilityVersion
+		Thanos              *HelmUtilityVersion
+		Nginx               *HelmUtilityVersion
+		NginxInternal       *HelmUtilityVersion
+		Fluentbit           *HelmUtilityVersion
+		Teleport            *HelmUtilityVersion
+		Pgbouncer           *HelmUtilityVersion
+		Stackrox            *HelmUtilityVersion
+		Kubecost            *HelmUtilityVersion
+		NodeProblemDetector *HelmUtilityVersion
 	}
 	type oldUtilityGroupVersions struct {
-		PrometheusOperator string
-		Thanos             string
-		Nginx              string
-		NginxInternal      string
-		Fluentbit          string
-		Teleport           string
-		Pgbouncer          string
-		Stackrox           string
-		Kubecost           string
+		PrometheusOperator  string
+		Thanos              string
+		Nginx               string
+		NginxInternal       string
+		Fluentbit           string
+		Teleport            string
+		Pgbouncer           string
+		Stackrox            string
+		Kubecost            string
+		NodeProblemDetector string
 	}
 
 	var utilGrpVers *utilityGroupVersions = &utilityGroupVersions{}
@@ -136,6 +145,7 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
 		h.Stackrox = &HelmUtilityVersion{Chart: oldUtilGrpVers.Stackrox}
 		h.Kubecost = &HelmUtilityVersion{Chart: oldUtilGrpVers.Kubecost}
+		h.NodeProblemDetector = &HelmUtilityVersion{Chart: oldUtilGrpVers.NodeProblemDetector}
 		return nil
 	}
 
@@ -148,21 +158,23 @@ func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
 	h.Pgbouncer = utilGrpVers.Pgbouncer
 	h.Stackrox = utilGrpVers.Stackrox
 	h.Kubecost = utilGrpVers.Kubecost
+	h.NodeProblemDetector = utilGrpVers.NodeProblemDetector
 	return nil
 }
 
 // UtilityGroupVersions holds the concrete metadata for any cluster
 // utilities
 type UtilityGroupVersions struct {
-	PrometheusOperator *HelmUtilityVersion
-	Thanos             *HelmUtilityVersion
-	Nginx              *HelmUtilityVersion
-	NginxInternal      *HelmUtilityVersion
-	Fluentbit          *HelmUtilityVersion
-	Teleport           *HelmUtilityVersion
-	Pgbouncer          *HelmUtilityVersion
-	Stackrox           *HelmUtilityVersion
-	Kubecost           *HelmUtilityVersion
+	PrometheusOperator  *HelmUtilityVersion
+	Thanos              *HelmUtilityVersion
+	Nginx               *HelmUtilityVersion
+	NginxInternal       *HelmUtilityVersion
+	Fluentbit           *HelmUtilityVersion
+	Teleport            *HelmUtilityVersion
+	Pgbouncer           *HelmUtilityVersion
+	Stackrox            *HelmUtilityVersion
+	Kubecost            *HelmUtilityVersion
+	NodeProblemDetector *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -170,15 +182,16 @@ type UtilityGroupVersions struct {
 // struct making up the values
 func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 	return map[string]*HelmUtilityVersion{
-		PrometheusOperatorCanonicalName: h.PrometheusOperator,
-		ThanosCanonicalName:             h.Thanos,
-		NginxCanonicalName:              h.Nginx,
-		NginxInternalCanonicalName:      h.NginxInternal,
-		FluentbitCanonicalName:          h.Fluentbit,
-		TeleportCanonicalName:           h.Teleport,
-		PgbouncerCanonicalName:          h.Pgbouncer,
-		StackroxCanonicalName:           h.Stackrox,
-		KubecostCanonicalName:           h.Kubecost,
+		PrometheusOperatorCanonicalName:  h.PrometheusOperator,
+		ThanosCanonicalName:              h.Thanos,
+		NginxCanonicalName:               h.Nginx,
+		NginxInternalCanonicalName:       h.NginxInternal,
+		FluentbitCanonicalName:           h.Fluentbit,
+		TeleportCanonicalName:            h.Teleport,
+		PgbouncerCanonicalName:           h.Pgbouncer,
+		StackroxCanonicalName:            h.Stackrox,
+		KubecostCanonicalName:            h.Kubecost,
+		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 	}
 }
 
@@ -303,6 +316,8 @@ func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtili
 		return versions.Stackrox
 	case KubecostCanonicalName:
 		return versions.Kubecost
+	case NodeProblemDetectorCanonicalName:
+		return versions.NodeProblemDetector
 	}
 
 	return nil
@@ -332,6 +347,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Stackrox = desiredVersion
 	case KubecostCanonicalName:
 		versions.Kubecost = desiredVersion
+	case NodeProblemDetectorCanonicalName:
+		versions.NodeProblemDetector = desiredVersion
 	}
 }
 
