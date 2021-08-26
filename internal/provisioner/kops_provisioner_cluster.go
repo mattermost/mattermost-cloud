@@ -331,6 +331,13 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete APIService v1beta1.metrics.k8s.io")
 	}
 
+	err = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(ctx, "k8s-spot-termination-handler", metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("DaemonSet k8s-spot-termination-handler not found; skipping...")
+	} else if err != nil {
+		return errors.Wrap(err, "failed to delete DaemonSet k8s-spot-termination-handler")
+	}
+
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
