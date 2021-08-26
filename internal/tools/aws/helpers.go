@@ -103,6 +103,12 @@ func RDSMultitenantSecretName(id string) string {
 	return fmt.Sprintf("rds-multitenant-%s", id)
 }
 
+// MattermostMultitenantDatabaseUsername formats the name of a Mattermost user for
+// use in a multitenant database.
+func MattermostMultitenantDatabaseUsername(installationID string) string {
+	return fmt.Sprintf("user_%s", installationID)
+}
+
 // RDSMultitenantPGBouncerSecretName formats the name of a secret used in a
 // multitenant PGBouncer RDS database.
 func RDSMultitenantPGBouncerSecretName(id string) string {

@@ -83,7 +83,6 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
-
 	request.setUtilitiesDefaults()
 }
 

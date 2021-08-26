@@ -29,16 +29,18 @@ func TestSetUtilityVersion(t *testing.T) {
 
 func TestGetUtilityVersion(t *testing.T) {
 	u := UtilityGroupVersions{
-		PrometheusOperator: &HelmUtilityVersion{Chart: "3"},
-		Thanos:             &HelmUtilityVersion{Chart: "4"},
-		Nginx:              &HelmUtilityVersion{Chart: "5"},
-		Fluentbit:          &HelmUtilityVersion{Chart: "6"},
+		PrometheusOperator:  &HelmUtilityVersion{Chart: "3"},
+		Thanos:              &HelmUtilityVersion{Chart: "4"},
+		Nginx:               &HelmUtilityVersion{Chart: "5"},
+		Fluentbit:           &HelmUtilityVersion{Chart: "6"},
+		NodeProblemDetector: &HelmUtilityVersion{Chart: "7"},
 	}
 
 	assert.Equal(t, &HelmUtilityVersion{Chart: "3"}, getUtilityVersion(u, PrometheusOperatorCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "4"}, getUtilityVersion(u, ThanosCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "5"}, getUtilityVersion(u, NginxCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "6"}, getUtilityVersion(u, FluentbitCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "7"}, getUtilityVersion(u, NodeProblemDetectorCanonicalName))
 	assert.Equal(t, nilHuv, getUtilityVersion(u, "anything else"))
 }
 
@@ -80,24 +82,26 @@ func TestGetActualVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{Chart: ""},
-				Thanos:             &HelmUtilityVersion{Chart: ""},
-				Nginx:              &HelmUtilityVersion{Chart: "10.3"},
-				Fluentbit:          &HelmUtilityVersion{Chart: "1337"},
-				Teleport:           &HelmUtilityVersion{Chart: "12345"},
-				Pgbouncer:          &HelmUtilityVersion{Chart: "123456"},
-				Stackrox:           &HelmUtilityVersion{Chart: "1234567"},
-				Kubecost:           &HelmUtilityVersion{Chart: "12345678"},
+				PrometheusOperator:  &HelmUtilityVersion{Chart: ""},
+				Thanos:              &HelmUtilityVersion{Chart: ""},
+				Nginx:               &HelmUtilityVersion{Chart: "10.3"},
+				Fluentbit:           &HelmUtilityVersion{Chart: "1337"},
+				Teleport:            &HelmUtilityVersion{Chart: "12345"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "123456"},
+				Stackrox:            &HelmUtilityVersion{Chart: "1234567"},
+				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
+				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 			},
 			ActualVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
-				Thanos:             &HelmUtilityVersion{Chart: "thanos-2.4"},
-				Nginx:              &HelmUtilityVersion{Chart: "nginx-10.2"},
-				Fluentbit:          &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:           &HelmUtilityVersion{Chart: "teleport-0.3.0"},
-				Pgbouncer:          &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
-				Stackrox:           &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
-				Kubecost:           &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
+				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
+				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
+				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
+				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.3.0"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
+				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
+				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
+				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 			},
 		},
 	}
@@ -126,6 +130,9 @@ func TestGetActualVersion(t *testing.T) {
 	version = c.ActualUtilityVersion(KubecostCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"}, version)
 
+	version = c.ActualUtilityVersion(NodeProblemDetectorCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"}, version)
+
 	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, version, nilHuv)
 }
@@ -134,24 +141,26 @@ func TestGetDesiredVersion(t *testing.T) {
 	c := &Cluster{
 		UtilityMetadata: &UtilityMetadata{
 			DesiredVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{Chart: ""},
-				Thanos:             &HelmUtilityVersion{Chart: ""},
-				Nginx:              &HelmUtilityVersion{Chart: "10.3"},
-				Fluentbit:          &HelmUtilityVersion{Chart: "1337"},
-				Teleport:           &HelmUtilityVersion{Chart: "12345"},
-				Pgbouncer:          &HelmUtilityVersion{Chart: "123456"},
-				Stackrox:           &HelmUtilityVersion{Chart: "1234567"},
-				Kubecost:           &HelmUtilityVersion{Chart: "12345678"},
+				PrometheusOperator:  &HelmUtilityVersion{Chart: ""},
+				Thanos:              &HelmUtilityVersion{Chart: ""},
+				Nginx:               &HelmUtilityVersion{Chart: "10.3"},
+				Fluentbit:           &HelmUtilityVersion{Chart: "1337"},
+				Teleport:            &HelmUtilityVersion{Chart: "12345"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "123456"},
+				Stackrox:            &HelmUtilityVersion{Chart: "1234567"},
+				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
+				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 			},
 			ActualVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
-				Thanos:             &HelmUtilityVersion{Chart: "thanos-2.4"},
-				Nginx:              &HelmUtilityVersion{Chart: "nginx-10.2"},
-				Fluentbit:          &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:           &HelmUtilityVersion{Chart: "teleport-0.3.0"},
-				Pgbouncer:          &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
-				Stackrox:           &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
-				Kubecost:           &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
+				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
+				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
+				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
+				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.3.0"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
+				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-62.0.0"},
+				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.83.1"},
+				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 			},
 		},
 	}
@@ -179,6 +188,9 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion(KubecostCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "12345678"}, version)
+
+	version = c.DesiredUtilityVersion(NodeProblemDetectorCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "123456789"}, version)
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, nilHuv, version)

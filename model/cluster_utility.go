@@ -29,6 +29,8 @@ const (
 	StackroxCanonicalName = "stackrox-secured-cluster-services"
 	// KubecostCanonicalName is the canonical string representation of kubecost
 	KubecostCanonicalName = "kubecost"
+	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
+	NodeProblemDetectorCanonicalName = "node-problem-detector"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -55,6 +57,21 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	StackroxCanonicalName: {Chart: "62.0.0", ValuesPath: ""},
 	// KubecostDefaultVersion defines the default version for the Helm chart
 	KubecostCanonicalName: {Chart: "1.83.1", ValuesPath: ""},
+	// NodeProblemDetectorDefaultVersion defines the default version for the Helm chart
+	NodeProblemDetectorCanonicalName: {Chart: "2.0.5", ValuesPath: ""},
+}
+
+var defaultUtilityValuesFileNames map[string]string = map[string]string{
+	PrometheusOperatorCanonicalName:  "prometheus_operator_values.yaml",
+	ThanosCanonicalName:              "thanos_values.yaml",
+	NginxCanonicalName:               "nginx_values.yaml",
+	NginxInternalCanonicalName:       "nginx_internal_values.yaml",
+	FluentbitCanonicalName:           "fluent-bit_values.yaml",
+	TeleportCanonicalName:            "teleport_values.yaml",
+	PgbouncerCanonicalName:           "pgbouncer_values.yaml",
+	StackroxCanonicalName:            "stackrox_values.yaml",
+	KubecostCanonicalName:            "kubecost_values.yaml",
+	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 }
 
 var (
@@ -75,18 +92,6 @@ func buildValuesPath(name string) string {
 		defaultBranch)
 }
 
-var defaultUtilityValuesFileNames map[string]string = map[string]string{
-	PrometheusOperatorCanonicalName: "prometheus_operator_values.yaml",
-	ThanosCanonicalName:             "thanos_values.yaml",
-	NginxCanonicalName:              "nginx_values.yaml",
-	NginxInternalCanonicalName:      "nginx_internal_values.yaml",
-	FluentbitCanonicalName:          "fluent-bit_values.yaml",
-	TeleportCanonicalName:           "teleport_values.yaml",
-	PgbouncerCanonicalName:          "pgbouncer_values.yaml",
-	StackroxCanonicalName:           "stackrox_values.yaml",
-	KubecostCanonicalName:           "kubecost_values.yaml",
-}
-
 // SetUtilityDefaults is used to set Utility default version and values.
 func SetUtilityDefaults(url string) {
 	for utility := range defaultUtilityValuesFileNames {
@@ -99,15 +104,16 @@ func SetUtilityDefaults(url string) {
 // UtilityGroupVersions holds the concrete metadata for any cluster
 // utilities
 type UtilityGroupVersions struct {
-	PrometheusOperator *HelmUtilityVersion
-	Thanos             *HelmUtilityVersion
-	Nginx              *HelmUtilityVersion
-	NginxInternal      *HelmUtilityVersion
-	Fluentbit          *HelmUtilityVersion
-	Teleport           *HelmUtilityVersion
-	Pgbouncer          *HelmUtilityVersion
-	Stackrox           *HelmUtilityVersion
-	Kubecost           *HelmUtilityVersion
+	PrometheusOperator  *HelmUtilityVersion
+	Thanos              *HelmUtilityVersion
+	Nginx               *HelmUtilityVersion
+	NginxInternal       *HelmUtilityVersion
+	Fluentbit           *HelmUtilityVersion
+	Teleport            *HelmUtilityVersion
+	Pgbouncer           *HelmUtilityVersion
+	Stackrox            *HelmUtilityVersion
+	Kubecost            *HelmUtilityVersion
+	NodeProblemDetector *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -115,15 +121,16 @@ type UtilityGroupVersions struct {
 // struct making up the values
 func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 	return map[string]*HelmUtilityVersion{
-		PrometheusOperatorCanonicalName: h.PrometheusOperator,
-		ThanosCanonicalName:             h.Thanos,
-		NginxCanonicalName:              h.Nginx,
-		NginxInternalCanonicalName:      h.NginxInternal,
-		FluentbitCanonicalName:          h.Fluentbit,
-		TeleportCanonicalName:           h.Teleport,
-		PgbouncerCanonicalName:          h.Pgbouncer,
-		StackroxCanonicalName:           h.Stackrox,
-		KubecostCanonicalName:           h.Kubecost,
+		PrometheusOperatorCanonicalName:  h.PrometheusOperator,
+		ThanosCanonicalName:              h.Thanos,
+		NginxCanonicalName:               h.Nginx,
+		NginxInternalCanonicalName:       h.NginxInternal,
+		FluentbitCanonicalName:           h.Fluentbit,
+		TeleportCanonicalName:            h.Teleport,
+		PgbouncerCanonicalName:           h.Pgbouncer,
+		StackroxCanonicalName:            h.Stackrox,
+		KubecostCanonicalName:            h.Kubecost,
+		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 	}
 }
 
@@ -259,6 +266,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Stackrox = desiredVersion
 	case KubecostCanonicalName:
 		versions.Kubecost = desiredVersion
+	case NodeProblemDetectorCanonicalName:
+		versions.NodeProblemDetector = desiredVersion
 	}
 }
 

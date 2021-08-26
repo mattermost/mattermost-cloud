@@ -542,7 +542,7 @@ func (d *RDSMultitenantDatabase) RollbackMigration(store model.InstallationDatab
 	rdsID := *rdsCluster.DBClusterIdentifier
 	logger = logger.WithField("rds-cluster-id", rdsID)
 
-	err = d.dropDatabase(rdsID, *rdsCluster.Endpoint, logger)
+	err = d.cleanupDatabase(rdsID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop destination database")
 	}
@@ -909,7 +909,7 @@ func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(datab
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	err = d.dropDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
+	err = d.cleanupDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop multitenant database")
 	}
@@ -943,7 +943,7 @@ func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDataba
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
 
-	err = d.dropDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
+	err = d.cleanupDatabase(database.RdsClusterID, *rdsCluster.Endpoint, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to drop migrated database")
 	}
@@ -957,7 +957,7 @@ func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDataba
 	return nil
 }
 
-func (d *RDSMultitenantDatabase) dropDatabase(rdsClusterID, rdsClusterendpoint string, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoint string, logger log.FieldLogger) error {
 	databaseName := MattermostRDSDatabaseName(d.installationID)
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -979,6 +979,11 @@ func (d *RDSMultitenantDatabase) dropDatabase(rdsClusterID, rdsClusterendpoint s
 	err = d.dropDatabaseIfExists(ctx, databaseName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to drop multitenant RDS database name %s", databaseName)
+	}
+
+	err = dropUserIfExists(ctx, d.db, MattermostMultitenantDatabaseUsername(d.installationID))
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation database user")
 	}
 
 	return nil
@@ -1017,10 +1022,7 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 			},
 		}
 
-		// PostgreSQL username can't start with integers, so prepend something
-		// valid just in case. Name can't be longer than 32 characters for MySQL
-		// databases though.
-		username := fmt.Sprintf("user_%s", d.installationID)
+		username := MattermostMultitenantDatabaseUsername(d.installationID)
 		installationSecret, err = createDatabaseUserSecret(installationSecretName, username, description, tags, d.client)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", installationSecretName)

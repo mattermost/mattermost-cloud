@@ -127,6 +127,10 @@ func TestImportSupervisor(t *testing.T) {
 		awatClient.EXPECT().
 			ReleaseLockOnImport(importID)
 
+		awatClient.EXPECT().
+			CompleteImport(gomock.Any()).
+			Return(nil)
+
 		aws.EXPECT().
 			GetMultitenantBucketNameForInstallation(installationID, store).
 			Return(destBucket, nil)
@@ -236,7 +240,15 @@ func TestImportSupervisor(t *testing.T) {
 			GetImportStatusesByInstallation(installationID).
 			Return([]*awatModel.ImportStatus{}, nil)
 
+		awatClient.EXPECT().
+			CompleteImport(gomock.Any()).
+			Return(nil)
+
 		err := importSupervisor.Do()
+		time.Sleep(time.Second)
+		// sleep to avoid a race that only occurs in testing because some
+		// member of the MockAWATClient ceases to exist when tests are
+		// done, but the Supervisor in the actual code exists forever
 		assert.Error(t, err, "error not handled properly")
 	})
 }
