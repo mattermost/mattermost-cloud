@@ -132,7 +132,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	}
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
-		provisioner, awsClient, kops, logger)
+		provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}

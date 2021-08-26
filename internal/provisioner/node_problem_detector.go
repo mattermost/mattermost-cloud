@@ -7,7 +7,6 @@ package provisioner
 import (
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -16,14 +15,13 @@ import (
 
 type nodeProblemDetector struct {
 	provisioner    *KopsProvisioner
-	awsClient      aws.AWS
 	kops           *kops.Cmd
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newNodeProblemDetectorHandle(version *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nodeProblemDetector, error) {
+func newNodeProblemDetectorHandle(version *model.HelmUtilityVersion, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nodeProblemDetector, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NodeProblemDetector handle with nil logger")
 	}
@@ -32,17 +30,12 @@ func newNodeProblemDetectorHandle(version *model.HelmUtilityVersion, provisioner
 		return nil, errors.New("cannot create a connection to NodeProblemDetector if the provisioner provided is nil")
 	}
 
-	if awsClient == nil {
-		return nil, errors.New("cannot create a connection to NodeProblemDetector if the awsClient provided is nil")
-	}
-
 	if kops == nil {
 		return nil, errors.New("cannot create a connection to NodeProblemDetector if the Kops command provided is nil")
 	}
 
 	return &nodeProblemDetector{
 		provisioner:    provisioner,
-		awsClient:      awsClient,
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.NodeProblemDetectorCanonicalName),
 		desiredVersion: version,
@@ -95,7 +88,7 @@ func (f *nodeProblemDetector) NewHelmDeployment(logger log.FieldLogger) *helmDep
 		namespace:           "node-problem-detector",
 		kopsProvisioner:     f.provisioner,
 		kops:                f.kops,
-		logger:              f.logger,
+		logger:              logger,
 		desiredVersion:      f.desiredVersion,
 	}
 }

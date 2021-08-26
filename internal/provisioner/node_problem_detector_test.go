@@ -7,7 +7,6 @@ package provisioner
 import (
 	"testing"
 
-	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 
@@ -22,9 +21,8 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 
 	provisioner := &KopsProvisioner{}
 	logger := log.New()
-	awsClient := mocks.NewMockAWS(ctrl)
 	kops := &kops.Cmd{}
-	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.0.5"}, provisioner, awsClient, kops, logger)
+	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.0.5"}, provisioner, kops, logger)
 	require.NoError(t, err, "should not error when creating new node-problem-detector handler")
 	require.NotNil(t, nodeProblemDetector, "node-problem-detector should not be nil")
 
