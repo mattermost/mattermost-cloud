@@ -606,11 +606,7 @@ func MustGetString(key string, command *cobra.Command) string {
 
 // processUtilityFlags handles processing the arguments passed for all
 // of the utilities, for cloud cluster create & cloud cluster
-// provision. Use `nil` for the second argument during `create` and in
-// any other scenario where you might reuse this function but a
-// cluster does not exist. If cluster is non-nil, its existing values
-// will be used for unspecified arguments instead of global default
-// values, to allow for updates following a patch pattern
+// provision.
 func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
 	return map[string]*model.HelmUtilityVersion{
 		model.PrometheusOperatorCanonicalName: {
