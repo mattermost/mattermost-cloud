@@ -198,7 +198,6 @@ func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtil
 		}
 	}
 
-	//	desiredVersions := make(map[string]*HelmUtilityVersion)
 	if c.UtilityMetadata == nil {
 		c.UtilityMetadata = new(UtilityMetadata)
 	}
