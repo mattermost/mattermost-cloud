@@ -42,16 +42,16 @@ func init() {
 	clusterCreateCmd.Flags().String("stackrox-version", "", "The version of Stackrox to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
-	clusterCreateCmd.Flags().String("prometheus-operator-values", "", "The branch name of the desired chart value file's version for Prometheus Operator")
-	clusterCreateCmd.Flags().String("thanos-values", "", "The branch name of the desired chart value file's version for Thanos")
-	clusterCreateCmd.Flags().String("fluentbit-values", "", "The branch name of the desired chart value file's version for Fluent-Bit")
-	clusterCreateCmd.Flags().String("nginx-values", "", "The branch name of the desired chart value file's version for NGINX")
-	clusterCreateCmd.Flags().String("nginx-internal-values", "", "The branch name of the desired chart value file's version for NGINX Internal")
-	clusterCreateCmd.Flags().String("teleport-values", "", "The branch name of the desired chart value file's version for Teleport")
-	clusterCreateCmd.Flags().String("pgbouncer-values", "", "The branch name of the desired chart value file's version for Pgbouncer")
-	clusterCreateCmd.Flags().String("stackrox-values", "", "The branch name of the desired chart value file's version for Stackrox")
-	clusterCreateCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
-	clusterCreateCmd.Flags().String("node-problem-detector-values", "", "The branch name of the desired chart value file's version for Node Problem Detector")
+	clusterCreateCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart value file's version for Prometheus Operator")
+	clusterCreateCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart value file's version for Thanos")
+	clusterCreateCmd.Flags().String("fluentbit-values", "", "The full Git URL of the desired chart value file's version for Fluent-Bit")
+	clusterCreateCmd.Flags().String("nginx-values", "", "The full Git URL of the desired chart value file's version for NGINX")
+	clusterCreateCmd.Flags().String("nginx-internal-values", "", "The full Git URL of the desired chart value file's version for NGINX Internal")
+	clusterCreateCmd.Flags().String("teleport-values", "", "The full Git URL of the desired chart value file's version for Teleport")
+	clusterCreateCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart value file's version for Pgbouncer")
+	clusterCreateCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart value file's version for Stackrox")
+	clusterCreateCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired chart value file's version for Kubecost")
+	clusterCreateCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart value file's version for Node Problem Detector")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
@@ -78,8 +78,8 @@ func init() {
 	clusterProvisionCmd.Flags().String("teleport-values", "", "The full Git URL of the desired chart values for Teleport")
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
 	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
-	clusterProvisionCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
-	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The branch name of the desired chart value file's version for Node Problem Detector")
+	clusterProvisionCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired Kubecost chart")
+	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for the Node Problem Detector")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
@@ -585,68 +585,50 @@ var clusterShowStateReport = &cobra.Command{
 	},
 }
 
+// MustGetString works like Cobra Commander's GetString but panicks on
+// error, similar to regexp.MustCompile vs regexp.Compile
+func MustGetString(key string, command *cobra.Command) string {
+	field, err := command.Flags().GetString(key)
+	if err != nil {
+		panic(err)
+	}
+	return field
+}
+
+// processUtilityFlags handles processing the arguments passed for all
+// of the utilities, for cloud cluster create & cloud cluster
+// provision.
 func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
-	prometheusOperatorVersion, _ := command.Flags().GetString("prometheus-operator-version")
-	thanosVersion, _ := command.Flags().GetString("thanos-version")
-	fluentbitVersion, _ := command.Flags().GetString("fluentbit-version")
-	nginxVersion, _ := command.Flags().GetString("nginx-version")
-	nginxInternalVersion, _ := command.Flags().GetString("nginx-internal-version")
-	teleportVersion, _ := command.Flags().GetString("teleport-version")
-	pgbouncerVersion, _ := command.Flags().GetString("pgbouncer-version")
-	stackroxVersion, _ := command.Flags().GetString("stackrox-version")
-	kubecostVersion, _ := command.Flags().GetString("kubecost-version")
-	nodeProblemDetectorVersion, _ := command.Flags().GetString("node-problem-detector-version")
-
-	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
-	thanosValues, _ := command.Flags().GetString("thanos-values")
-	fluentbitValues, _ := command.Flags().GetString("fluentbit-values")
-	nginxValues, _ := command.Flags().GetString("nginx-values")
-	nginxInternalValues, _ := command.Flags().GetString("nginx-internal-values")
-	teleportValues, _ := command.Flags().GetString("teleport-values")
-	pgbouncerValues, _ := command.Flags().GetString("pgbouncer-values")
-	stackroxValues, _ := command.Flags().GetString("stackrox-values")
-	kubecostValues, _ := command.Flags().GetString("kubecost-values")
-	nodeProblemDetectorValues, _ := command.Flags().GetString("node-problem-detector-values")
-
-	utilityVersions := make(map[string]*model.HelmUtilityVersion)
-
-	if prometheusOperatorVersion != "" && prometheusOperatorValues != "" {
-		utilityVersions[model.PrometheusOperatorCanonicalName] = &model.HelmUtilityVersion{Chart: prometheusOperatorVersion, ValuesPath: prometheusOperatorValues}
+	return map[string]*model.HelmUtilityVersion{
+		model.PrometheusOperatorCanonicalName: {
+			Chart:      MustGetString("prometheus-operator-version", command),
+			ValuesPath: MustGetString("prometheus-operator-values", command)},
+		model.ThanosCanonicalName: {
+			Chart:      MustGetString("thanos-version", command),
+			ValuesPath: MustGetString("thanos-values", command)},
+		model.FluentbitCanonicalName: {
+			Chart:      MustGetString("fluentbit-version", command),
+			ValuesPath: MustGetString("fluentbit-values", command)},
+		model.NginxCanonicalName: {
+			Chart:      MustGetString("nginx-version", command),
+			ValuesPath: MustGetString("nginx-values", command)},
+		model.NginxInternalCanonicalName: {
+			Chart:      MustGetString("nginx-internal-version", command),
+			ValuesPath: MustGetString("nginx-internal-values", command)},
+		model.TeleportCanonicalName: {
+			Chart:      MustGetString("teleport-version", command),
+			ValuesPath: MustGetString("teleport-values", command)},
+		model.PgbouncerCanonicalName: {
+			Chart:      MustGetString("pgbouncer-version", command),
+			ValuesPath: MustGetString("pgbouncer-values", command)},
+		model.StackroxCanonicalName: {
+			Chart:      MustGetString("stackrox-version", command),
+			ValuesPath: MustGetString("stackrox-values", command)},
+		model.KubecostCanonicalName: {
+			Chart:      MustGetString("kubecost-version", command),
+			ValuesPath: MustGetString("kubecost-values", command)},
+		model.NodeProblemDetectorCanonicalName: {
+			Chart:      MustGetString("node-problem-detector-version", command),
+			ValuesPath: MustGetString("node-problem-detector-values", command)},
 	}
-
-	if thanosVersion != "" && thanosValues != "" {
-		utilityVersions[model.ThanosCanonicalName] = &model.HelmUtilityVersion{Chart: thanosVersion, ValuesPath: thanosValues}
-	}
-
-	if fluentbitVersion != "" && fluentbitValues != "" {
-		utilityVersions[model.FluentbitCanonicalName] = &model.HelmUtilityVersion{Chart: fluentbitVersion, ValuesPath: fluentbitValues}
-	}
-
-	if nginxVersion != "" && nginxValues != "" {
-		utilityVersions[model.NginxCanonicalName] = &model.HelmUtilityVersion{Chart: nginxVersion, ValuesPath: nginxValues}
-	}
-
-	if nginxInternalVersion != "" && nginxInternalValues != "" {
-		utilityVersions[model.NginxInternalCanonicalName] = &model.HelmUtilityVersion{Chart: nginxInternalVersion, ValuesPath: nginxInternalValues}
-	}
-
-	if teleportVersion != "" && teleportValues != "" {
-		utilityVersions[model.TeleportCanonicalName] = &model.HelmUtilityVersion{Chart: teleportVersion, ValuesPath: teleportValues}
-	}
-
-	if pgbouncerVersion != "" && pgbouncerValues != "" {
-		utilityVersions[model.PgbouncerCanonicalName] = &model.HelmUtilityVersion{Chart: pgbouncerVersion, ValuesPath: pgbouncerValues}
-	}
-
-	if stackroxVersion != "" && stackroxValues != "" {
-		utilityVersions[model.StackroxCanonicalName] = &model.HelmUtilityVersion{Chart: stackroxVersion, ValuesPath: stackroxValues}
-	}
-	if kubecostVersion != "" && kubecostValues != "" {
-		utilityVersions[model.KubecostCanonicalName] = &model.HelmUtilityVersion{Chart: kubecostVersion, ValuesPath: kubecostValues}
-	}
-	if nodeProblemDetectorVersion != "" && nodeProblemDetectorValues != "" {
-		utilityVersions[model.NodeProblemDetectorCanonicalName] = &model.HelmUtilityVersion{Chart: nodeProblemDetectorVersion, ValuesPath: nodeProblemDetectorValues}
-	}
-
-	return utilityVersions
 }

@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -39,127 +37,68 @@ const (
 	GitlabOAuthTokenKey = "GITLAB_OAUTH_TOKEN"
 )
 
-var (
+// DefaultUtilityVersions holds the default values for all of the HelmUtilityVersions
+var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtilityVersion{
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
-	PrometheusOperatorDefaultVersion = &HelmUtilityVersion{Chart: "9.4.4", ValuesPath: ""}
+	PrometheusOperatorCanonicalName: {Chart: "9.4.4", ValuesPath: ""},
 	// ThanosDefaultVersion defines the default version for the Helm chart
-	ThanosDefaultVersion = &HelmUtilityVersion{Chart: "3.2.2", ValuesPath: ""}
+	ThanosCanonicalName: {Chart: "3.2.2", ValuesPath: ""},
 	// NginxDefaultVersion defines the default version for the Helm chart
-	NginxDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: ""}
+	NginxCanonicalName: {Chart: "2.15.0", ValuesPath: ""},
 	// NginxInternalDefaultVersion defines the default version for the Helm chart
-	NginxInternalDefaultVersion = &HelmUtilityVersion{Chart: "2.15.0", ValuesPath: ""}
+	NginxInternalCanonicalName: {Chart: "2.15.0", ValuesPath: ""},
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitDefaultVersion = &HelmUtilityVersion{Chart: "0.15.8", ValuesPath: ""}
+	FluentbitCanonicalName: {Chart: "0.15.8", ValuesPath: ""},
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportDefaultVersion = &HelmUtilityVersion{Chart: "0.3.0", ValuesPath: ""}
+	TeleportCanonicalName: {Chart: "0.3.0", ValuesPath: ""},
 	// PgbouncerDefaultVersion defines the default version for the Helm chart
-	PgbouncerDefaultVersion = &HelmUtilityVersion{Chart: "1.1.0", ValuesPath: ""}
+	PgbouncerCanonicalName: {Chart: "1.1.0", ValuesPath: ""},
 	// StackroxDefaultVersion defines the default version for the Helm chart
-	StackroxDefaultVersion = &HelmUtilityVersion{Chart: "62.0.0", ValuesPath: ""}
+	StackroxCanonicalName: {Chart: "62.0.0", ValuesPath: ""},
 	// KubecostDefaultVersion defines the default version for the Helm chart
-	KubecostDefaultVersion = &HelmUtilityVersion{Chart: "1.83.1", ValuesPath: ""}
+	KubecostCanonicalName: {Chart: "1.83.1", ValuesPath: ""},
 	// NodeProblemDetectorDefaultVersion defines the default version for the Helm chart
-	NodeProblemDetectorDefaultVersion = &HelmUtilityVersion{Chart: "2.0.5", ValuesPath: ""}
+	NodeProblemDetectorCanonicalName: {Chart: "2.0.5", ValuesPath: ""},
+}
+
+var defaultUtilityValuesFileNames map[string]string = map[string]string{
+	PrometheusOperatorCanonicalName:  "prometheus_operator_values.yaml",
+	ThanosCanonicalName:              "thanos_values.yaml",
+	NginxCanonicalName:               "nginx_values.yaml",
+	NginxInternalCanonicalName:       "nginx_internal_values.yaml",
+	FluentbitCanonicalName:           "fluent-bit_values.yaml",
+	TeleportCanonicalName:            "teleport_values.yaml",
+	PgbouncerCanonicalName:           "pgbouncer_values.yaml",
+	StackroxCanonicalName:            "stackrox_values.yaml",
+	KubecostCanonicalName:            "kubecost_values.yaml",
+	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
+}
+
+var (
+	// TODO make these configurable if the gitlab repo must ever be
+	// moved, or if we ever need to specify a different branch or folder
+	// (environment) name to pull the values files from
+	gitlabProjectPath    string = "/api/v4/projects/%d/repository/files/%s" + `%%2F` + "%s?ref=%s"
+	defaultProjectNumber int    = 33
+	defaultEnvironment          = "dev"
+	defaultBranch               = "master"
 )
 
 // SetUtilityDefaults is used to set Utility default version and values.
 func SetUtilityDefaults(url string) {
-	if PrometheusOperatorDefaultVersion.ValuesPath == "" {
-		PrometheusOperatorDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fprometheus_operator_values.yaml?ref=master", url)
-	}
-	if ThanosDefaultVersion.ValuesPath == "" {
-		ThanosDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fthanos_values.yaml?ref=master", url)
-	}
-	if NginxDefaultVersion.ValuesPath == "" {
-		NginxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_values.yaml?ref=master", url)
-	}
-	if NginxInternalDefaultVersion.ValuesPath == "" {
-		NginxInternalDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnginx_internal_values.yaml?ref=master", url)
-	}
-	if FluentbitDefaultVersion.ValuesPath == "" {
-		FluentbitDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Ffluent-bit_values.yaml?ref=master", url)
-	}
-	if TeleportDefaultVersion.ValuesPath == "" {
-		TeleportDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fteleport_values.yaml?ref=master", url)
-	}
-	if PgbouncerDefaultVersion.ValuesPath == "" {
-		PgbouncerDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fpgbouncer_values.yaml?ref=master", url)
-	}
-	if StackroxDefaultVersion.ValuesPath == "" {
-		StackroxDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fstackrox_values.yaml?ref=master", url)
-	}
-	if KubecostDefaultVersion.ValuesPath == "" {
-		KubecostDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fkubecost_values.yaml?ref=master", url)
-	}
-	if NodeProblemDetectorDefaultVersion.ValuesPath == "" {
-		NodeProblemDetectorDefaultVersion.ValuesPath = fmt.Sprintf("%s/api/v4/projects/33/repository/files/dev%%2Fnode_problem_detector_values.yaml?ref=master", url)
+	for utility, filename := range defaultUtilityValuesFileNames {
+		if DefaultUtilityVersions[utility].ValuesPath == "" {
+			DefaultUtilityVersions[utility].ValuesPath = fmt.Sprintf("%s%s", url, buildValuesPath(filename))
+		}
 	}
 }
 
-// UnmarshalJSON is a custom JSON unmarshaler that can handle both the
-// old Version string type and the new type. It is entirely
-// self-contained, including types, so that it can be easily removed
-// when no more clusters exist with the old version format.
-// TODO DELETE THIS
-func (h *UtilityGroupVersions) UnmarshalJSON(bytes []byte) error {
-	type utilityGroupVersions struct {
-		PrometheusOperator  *HelmUtilityVersion
-		Thanos              *HelmUtilityVersion
-		Nginx               *HelmUtilityVersion
-		NginxInternal       *HelmUtilityVersion
-		Fluentbit           *HelmUtilityVersion
-		Teleport            *HelmUtilityVersion
-		Pgbouncer           *HelmUtilityVersion
-		Stackrox            *HelmUtilityVersion
-		Kubecost            *HelmUtilityVersion
-		NodeProblemDetector *HelmUtilityVersion
-	}
-	type oldUtilityGroupVersions struct {
-		PrometheusOperator  string
-		Thanos              string
-		Nginx               string
-		NginxInternal       string
-		Fluentbit           string
-		Teleport            string
-		Pgbouncer           string
-		Stackrox            string
-		Kubecost            string
-		NodeProblemDetector string
-	}
-
-	var utilGrpVers *utilityGroupVersions = &utilityGroupVersions{}
-	var oldUtilGrpVers *oldUtilityGroupVersions = &oldUtilityGroupVersions{}
-	err := json.Unmarshal(bytes, utilGrpVers)
-	if err != nil {
-		secondErr := json.Unmarshal(bytes, oldUtilGrpVers)
-		if secondErr != nil {
-			return fmt.Errorf("%s and %s", errors.Wrap(err, "failed to unmarshal to new HelmUtilityVersion"), errors.Wrap(secondErr, "failed to unmarshal to old HelmUtilityVersion type"))
-		}
-
-		h.PrometheusOperator = &HelmUtilityVersion{Chart: oldUtilGrpVers.PrometheusOperator}
-		h.Thanos = &HelmUtilityVersion{Chart: oldUtilGrpVers.Thanos}
-		h.Nginx = &HelmUtilityVersion{Chart: oldUtilGrpVers.Nginx}
-		h.NginxInternal = &HelmUtilityVersion{Chart: oldUtilGrpVers.NginxInternal}
-		h.Fluentbit = &HelmUtilityVersion{Chart: oldUtilGrpVers.Fluentbit}
-		h.Teleport = &HelmUtilityVersion{Chart: oldUtilGrpVers.Teleport}
-		h.Pgbouncer = &HelmUtilityVersion{Chart: oldUtilGrpVers.Pgbouncer}
-		h.Stackrox = &HelmUtilityVersion{Chart: oldUtilGrpVers.Stackrox}
-		h.Kubecost = &HelmUtilityVersion{Chart: oldUtilGrpVers.Kubecost}
-		h.NodeProblemDetector = &HelmUtilityVersion{Chart: oldUtilGrpVers.NodeProblemDetector}
-		return nil
-	}
-
-	h.PrometheusOperator = utilGrpVers.PrometheusOperator
-	h.Thanos = utilGrpVers.Thanos
-	h.Nginx = utilGrpVers.Nginx
-	h.NginxInternal = utilGrpVers.NginxInternal
-	h.Fluentbit = utilGrpVers.Fluentbit
-	h.Teleport = utilGrpVers.Teleport
-	h.Pgbouncer = utilGrpVers.Pgbouncer
-	h.Stackrox = utilGrpVers.Stackrox
-	h.Kubecost = utilGrpVers.Kubecost
-	h.NodeProblemDetector = utilGrpVers.NodeProblemDetector
-	return nil
+func buildValuesPath(filename string) string {
+	return fmt.Sprintf(gitlabProjectPath,
+		defaultProjectNumber,
+		defaultEnvironment,
+		filename,
+		defaultBranch)
 }
 
 // UtilityGroupVersions holds the concrete metadata for any cluster
@@ -240,19 +179,27 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVe
 // SetUtilityDesiredVersions takes a map of string to string representing
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
-func (c *Cluster) SetUtilityDesiredVersions(versions map[string]*HelmUtilityVersion) error {
-	desiredVersions := make(map[string]*HelmUtilityVersion)
-	if c.UtilityMetadata == nil {
-		c.UtilityMetadata = new(UtilityMetadata)
-	}
-	// at create time there will be no actual versions and it's ok
-	// create will have defaults
-	for k, v := range c.UtilityMetadata.ActualVersions.AsMap() {
-		desiredVersions[k] = v
+func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtilityVersion) error {
+	// set default values for utility versions
+	for utilityName, version := range desiredVersions {
+		auv := c.ActualUtilityVersion(utilityName)
+		if auv == nil {
+			continue
+		}
+		if version == nil {
+			desiredVersions[utilityName] = auv
+			continue
+		}
+		if version.ValuesPath == "" {
+			desiredVersions[utilityName].ValuesPath = auv.ValuesPath
+		}
+		if version.Chart == "" {
+			desiredVersions[utilityName].Chart = auv.Chart
+		}
 	}
 
-	for utility, version := range versions {
-		desiredVersions[utility] = version
+	if c.UtilityMetadata == nil {
+		c.UtilityMetadata = new(UtilityMetadata)
 	}
 
 	for utility, version := range desiredVersions {
@@ -278,6 +225,9 @@ func (c *Cluster) DesiredUtilityVersion(utility string) *HelmUtilityVersion {
 // ActualUtilityVersion fetches the desired version of a utility from the
 // Cluster object
 func (c *Cluster) ActualUtilityVersion(utility string) *HelmUtilityVersion {
+	if c.UtilityMetadata == nil {
+		return nil
+	}
 	return getUtilityVersion(c.UtilityMetadata.ActualVersions, utility)
 }
 
@@ -297,29 +247,9 @@ func UtilityMetadataFromReader(reader io.Reader) (*UtilityMetadata, error) {
 // Gets the version for a utility from a utilityVersions struct using
 // the utility's name's string representation for lookup
 func getUtilityVersion(versions UtilityGroupVersions, utility string) *HelmUtilityVersion {
-	switch utility {
-	case PrometheusOperatorCanonicalName:
-		return versions.PrometheusOperator
-	case ThanosCanonicalName:
-		return versions.Thanos
-	case NginxCanonicalName:
-		return versions.Nginx
-	case NginxInternalCanonicalName:
-		return versions.NginxInternal
-	case FluentbitCanonicalName:
-		return versions.Fluentbit
-	case TeleportCanonicalName:
-		return versions.Teleport
-	case PgbouncerCanonicalName:
-		return versions.Pgbouncer
-	case StackroxCanonicalName:
-		return versions.Stackrox
-	case KubecostCanonicalName:
-		return versions.Kubecost
-	case NodeProblemDetectorCanonicalName:
-		return versions.NodeProblemDetector
+	if r, ok := versions.AsMap()[utility]; ok {
+		return r
 	}
-
 	return nil
 }
 

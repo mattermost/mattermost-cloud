@@ -81,7 +81,7 @@ govet:
 ## Checks if files are formatted with go fmt.
 .PHONY: goformat
 goformat:
-	@echo Checking if code is formated
+	@echo Checking if code is formatted
 	@for package in $(PACKAGES); do \
 		echo "Checking "$$package; \
 		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \

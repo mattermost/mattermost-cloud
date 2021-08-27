@@ -1177,7 +1177,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Fluentbit)
 	assert.Equal(t, &model.HelmUtilityVersion{Chart: "stable"}, utilityMetadata.DesiredVersions.Nginx)
 	assert.Equal(t, &model.HelmUtilityVersion{Chart: "9.4.4", ValuesPath: ""}, utilityMetadata.DesiredVersions.PrometheusOperator)
-	assert.Equal(t, model.FluentbitDefaultVersion, utilityMetadata.DesiredVersions.Fluentbit)
+	assert.Equal(t, model.DefaultUtilityVersions[model.FluentbitCanonicalName], utilityMetadata.DesiredVersions.Fluentbit)
 }
 
 func TestClusterAnnotations(t *testing.T) {
