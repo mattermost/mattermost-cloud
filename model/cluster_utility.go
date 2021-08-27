@@ -203,14 +203,6 @@ func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtil
 		c.UtilityMetadata = new(UtilityMetadata)
 	}
 
-	// for k, v := range c.UtilityMetadata.ActualVersions.AsMap() {
-	// 	desiredVersions[k] = v
-	// }
-
-	// for utility, version := range versions {
-	// 	desiredVersions[utility] = version
-	// }
-
 	for utility, version := range desiredVersions {
 		setUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility, version)
 	}
