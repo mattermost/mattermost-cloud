@@ -595,6 +595,7 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	pgbouncerVersion, _ := command.Flags().GetString("pgbouncer-version")
 	stackroxVersion, _ := command.Flags().GetString("stackrox-version")
 	kubecostVersion, _ := command.Flags().GetString("kubecost-version")
+	nodeProblemDetectorVersion, _ := command.Flags().GetString("node-problem-detector-version")
 
 	prometheusOperatorValues, _ := command.Flags().GetString("prometheus-operator-values")
 	thanosValues, _ := command.Flags().GetString("thanos-values")
@@ -605,6 +606,7 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	pgbouncerValues, _ := command.Flags().GetString("pgbouncer-values")
 	stackroxValues, _ := command.Flags().GetString("stackrox-values")
 	kubecostValues, _ := command.Flags().GetString("kubecost-values")
+	nodeProblemDetectorValues, _ := command.Flags().GetString("node-problem-detector-values")
 
 	utilityVersions := make(map[string]*model.HelmUtilityVersion)
 
@@ -641,6 +643,9 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 	}
 	if kubecostVersion != "" && kubecostValues != "" {
 		utilityVersions[model.KubecostCanonicalName] = &model.HelmUtilityVersion{Chart: kubecostVersion, ValuesPath: kubecostValues}
+	}
+	if nodeProblemDetectorVersion != "" && nodeProblemDetectorValues != "" {
+		utilityVersions[model.NodeProblemDetectorCanonicalName] = &model.HelmUtilityVersion{Chart: nodeProblemDetectorVersion, ValuesPath: nodeProblemDetectorValues}
 	}
 
 	return utilityVersions
