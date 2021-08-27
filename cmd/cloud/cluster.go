@@ -68,7 +68,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("pgbouncer-version", "", "The version of the Pgbouncer Helm chart")
 	clusterProvisionCmd.Flags().String("stackrox-version", "", "The version of the Stackrox Helm chart")
 	clusterProvisionCmd.Flags().String("kubecost-version", "", "The version of the Kubecost Helm chart")
-	clusterProvisionCmd.Flags().String("node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
+	clusterProvisionCmd.Flags().String("node-problem-detector-version", "", "The version of the Node Problem Detector Helm chart")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
