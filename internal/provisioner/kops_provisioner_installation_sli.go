@@ -8,6 +8,8 @@ import (
 	"context"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -56,19 +58,23 @@ func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterI
 	return sli
 }
 
-func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) error {
+func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
 	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Create(ctx, sli, metav1.CreateOptions{})
+	if err != nil && k8sErrors.IsNotFound(err) {
+		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
+		return nil
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation sli")
 	}
 	return nil
 }
 
-func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) error {
+func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
@@ -79,20 +85,21 @@ func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInsta
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		provisioner.createInstallationSLI(clusterInstallation, k8sClient)
+		provisioner.createInstallationSLI(clusterInstallation, k8sClient, logger)
 		return nil
 	}
 
 	return err
 }
 
-func (provisioner *KopsProvisioner) deleteInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) error {
+func (provisioner *KopsProvisioner) deleteInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
 	sli := clusterInstallation.InstallationID
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
 	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli, metav1.GetOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
+		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
 		return nil
 	}
 	err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Delete(ctx, sli, metav1.DeleteOptions{})
