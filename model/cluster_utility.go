@@ -84,21 +84,21 @@ var (
 	defaultBranch               = "master"
 )
 
-func buildValuesPath(name string) string {
-	return fmt.Sprintf(gitlabProjectPath,
-		defaultProjectNumber,
-		defaultUtilityValuesFileNames[name],
-		defaultEnvironment,
-		defaultBranch)
-}
-
 // SetUtilityDefaults is used to set Utility default version and values.
 func SetUtilityDefaults(url string) {
-	for utility := range defaultUtilityValuesFileNames {
+	for utility, filename := range defaultUtilityValuesFileNames {
 		if DefaultUtilityVersions[utility].ValuesPath == "" {
-			DefaultUtilityVersions[utility].ValuesPath = fmt.Sprintf("%s%s", url, buildValuesPath(utility))
+			DefaultUtilityVersions[utility].ValuesPath = fmt.Sprintf("%s%s", url, buildValuesPath(filename))
 		}
 	}
+}
+
+func buildValuesPath(filename string) string {
+	return fmt.Sprintf(gitlabProjectPath,
+		defaultProjectNumber,
+		defaultEnvironment,
+		filename,
+		defaultBranch)
 }
 
 // UtilityGroupVersions holds the concrete metadata for any cluster
@@ -179,20 +179,37 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVe
 // SetUtilityDesiredVersions takes a map of string to string representing
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
-func (c *Cluster) SetUtilityDesiredVersions(versions map[string]*HelmUtilityVersion) error {
-	desiredVersions := make(map[string]*HelmUtilityVersion)
+func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtilityVersion) error {
+	// set default values for utility versions
+	for utilityName, version := range desiredVersions {
+		if version == nil {
+			desiredVersions[utilityName] = c.ActualUtilityVersion(utilityName)
+			continue
+		}
+		if version.Values() != "" && version.Chart != "" {
+			continue
+		}
+		auv := c.ActualUtilityVersion(utilityName)
+		if version.ValuesPath == "" {
+			desiredVersions[utilityName].ValuesPath = auv.ValuesPath
+		}
+		if version.Chart == "" {
+			desiredVersions[utilityName].Chart = auv.Chart
+		}
+	}
+
+	//	desiredVersions := make(map[string]*HelmUtilityVersion)
 	if c.UtilityMetadata == nil {
 		c.UtilityMetadata = new(UtilityMetadata)
 	}
-	// at create time there will be no actual versions and it's ok
-	// create will have defaults
-	for k, v := range c.UtilityMetadata.ActualVersions.AsMap() {
-		desiredVersions[k] = v
-	}
 
-	for utility, version := range versions {
-		desiredVersions[utility] = version
-	}
+	// for k, v := range c.UtilityMetadata.ActualVersions.AsMap() {
+	// 	desiredVersions[k] = v
+	// }
+
+	// for utility, version := range versions {
+	// 	desiredVersions[utility] = version
+	// }
 
 	for utility, version := range desiredVersions {
 		setUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility, version)

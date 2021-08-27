@@ -330,5 +330,6 @@ func NewProvisionClusterRequestFromReader(reader io.Reader) (*ProvisionClusterRe
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode provision cluster request")
 	}
+
 	return &provisionClusterRequest, nil
 }
