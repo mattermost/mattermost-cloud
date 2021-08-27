@@ -182,14 +182,14 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVe
 func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtilityVersion) error {
 	// set default values for utility versions
 	for utilityName, version := range desiredVersions {
-		if version == nil {
-			desiredVersions[utilityName] = c.ActualUtilityVersion(utilityName)
-			continue
-		}
-		if version.Values() != "" && version.Chart != "" {
-			continue
-		}
 		auv := c.ActualUtilityVersion(utilityName)
+		if auv == nil {
+			continue
+		}
+		if version == nil {
+			desiredVersions[utilityName] = auv
+			continue
+		}
 		if version.ValuesPath == "" {
 			desiredVersions[utilityName].ValuesPath = auv.ValuesPath
 		}
@@ -225,6 +225,9 @@ func (c *Cluster) DesiredUtilityVersion(utility string) *HelmUtilityVersion {
 // ActualUtilityVersion fetches the desired version of a utility from the
 // Cluster object
 func (c *Cluster) ActualUtilityVersion(utility string) *HelmUtilityVersion {
+	if c.UtilityMetadata == nil {
+		return nil
+	}
 	return getUtilityVersion(c.UtilityMetadata.ActualVersions, utility)
 }
 
