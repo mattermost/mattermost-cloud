@@ -58,12 +58,8 @@ func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterI
 	return sli
 }
 
-func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) error {
+func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
-	logger := provisioner.logger.WithFields(log.Fields{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
@@ -72,13 +68,13 @@ func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *m
 		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
 		return nil
 	}
-	if err != nil && !k8sErrors.IsNotFound(err) {
+	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation sli")
 	}
 	return nil
 }
 
-func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) error {
+func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
@@ -89,19 +85,15 @@ func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInsta
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		provisioner.createInstallationSLI(clusterInstallation, k8sClient)
+		provisioner.createInstallationSLI(clusterInstallation, k8sClient, logger)
 		return nil
 	}
 
 	return err
 }
 
-func (provisioner *KopsProvisioner) deleteInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) error {
+func (provisioner *KopsProvisioner) deleteInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
-	logger := provisioner.logger.WithFields(log.Fields{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
 	sli := clusterInstallation.InstallationID
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
