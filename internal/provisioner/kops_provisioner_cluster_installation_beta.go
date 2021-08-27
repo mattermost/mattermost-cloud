@@ -95,7 +95,7 @@ func (provisioner *kopsCIBeta) CreateClusterInstallation(cluster *model.Cluster,
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
-	err = provisioner.createInstallationSLI(clusterInstallation, k8sClient)
+	err = provisioner.createInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create installation SLI")
 	}
@@ -144,7 +144,7 @@ func (provisioner *kopsCIBeta) HibernateClusterInstallation(cluster *model.Clust
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
-	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient)
+	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete installation SLI")
 	}
@@ -257,7 +257,7 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	err = provisioner.createIfNotExistInstallationSLI(clusterInstallation, k8sClient)
+	err = provisioner.createIfNotExistInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
 	}
@@ -493,7 +493,7 @@ func (provisioner *kopsCIBeta) DeleteClusterInstallation(cluster *model.Cluster,
 		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
 	}
 
-	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient)
+	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete installation SLI")
 	}
