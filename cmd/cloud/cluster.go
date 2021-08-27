@@ -176,7 +176,7 @@ var clusterCreateCmd = &cobra.Command{
 			KopsAMI:                kopsAMI,
 			Zones:                  strings.Split(zones, ","),
 			AllowInstallations:     allowInstallations,
-			DesiredUtilityVersions: processUtilityFlags(command, nil),
+			DesiredUtilityVersions: processUtilityFlags(command),
 			Annotations:            annotations,
 			Networking:             networking,
 			VPC:                    vpc,
@@ -251,7 +251,7 @@ var clusterProvisionCmd = &cobra.Command{
 		}
 
 		var request *model.ProvisionClusterRequest = nil
-		if desiredUtilityVersions := processUtilityFlags(command, cluster.Cluster); len(desiredUtilityVersions) > 0 {
+		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
 			request = &model.ProvisionClusterRequest{
 				DesiredUtilityVersions: desiredUtilityVersions,
 			}
@@ -611,7 +611,7 @@ func MustGetString(key string, command *cobra.Command) string {
 // cluster does not exist. If cluster is non-nil, its existing values
 // will be used for unspecified arguments instead of global default
 // values, to allow for updates following a patch pattern
-func processUtilityFlags(command *cobra.Command, cluster *model.Cluster) map[string]*model.HelmUtilityVersion {
+func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
 	return map[string]*model.HelmUtilityVersion{
 		model.PrometheusOperatorCanonicalName: {
 			Chart:      MustGetString("prometheus-operator-version", command),
