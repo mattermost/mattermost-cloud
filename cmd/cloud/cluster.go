@@ -79,7 +79,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
 	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired Kubecost chart")
-	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for Stackrox")
+	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for the Node Problem Detector")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
