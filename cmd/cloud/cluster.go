@@ -241,15 +241,6 @@ var clusterProvisionCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 		clusterID, _ := command.Flags().GetString("cluster")
 
-		cluster, err := client.GetCluster(clusterID)
-		if err != nil {
-			return errors.Wrap(err, "failed to get cluster")
-		}
-
-		if cluster == nil {
-			return errors.Errorf("cluster %s not found", clusterID)
-		}
-
 		var request *model.ProvisionClusterRequest = nil
 		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
 			request = &model.ProvisionClusterRequest{
@@ -267,7 +258,7 @@ var clusterProvisionCmd = &cobra.Command{
 			return nil
 		}
 
-		cluster, err = client.ProvisionCluster(clusterID, request)
+		cluster, err := client.ProvisionCluster(clusterID, request)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision cluster")
 		}
