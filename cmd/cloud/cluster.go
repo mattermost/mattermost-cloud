@@ -68,6 +68,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("pgbouncer-version", "", "The version of the Pgbouncer Helm chart")
 	clusterProvisionCmd.Flags().String("stackrox-version", "", "The version of the Stackrox Helm chart")
 	clusterProvisionCmd.Flags().String("kubecost-version", "", "The version of the Kubecost Helm chart")
+	clusterProvisionCmd.Flags().String("node-problem-detector-version", "", "The version of the Node Problem Detector Helm chart")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
@@ -78,6 +79,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
 	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The branch name of the desired chart value file's version for Kubecost")
+	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The branch name of the desired chart value file's version for Node Problem Detector")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
