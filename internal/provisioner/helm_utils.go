@@ -305,7 +305,7 @@ type gitlabValuesFileResponse struct {
 // be returned as the second return value, otherwise that value will
 // be nil
 func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
-	gitlabKey := os.Getenv(model.GitlabOAuthTokenKey)
+	gitlabKey := model.GetGitlabToken()
 	if gitlabKey == "" {
 		return path, nil, nil
 	}

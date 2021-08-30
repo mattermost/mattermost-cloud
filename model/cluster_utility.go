@@ -37,6 +37,20 @@ const (
 	GitlabOAuthTokenKey = "GITLAB_OAUTH_TOKEN"
 )
 
+// gitlabToken is the token that will be used for remote helm charts.
+var gitlabToken string
+
+// SetGitlabToken is used to define the gitlab token that will be used for remote
+// helm charts.
+func SetGitlabToken(val string) {
+	gitlabToken = val
+}
+
+// GetGitlabToken returns the value of gitlabToken.
+func GetGitlabToken() string {
+	return gitlabToken
+}
+
 // DefaultUtilityVersions holds the default values for all of the HelmUtilityVersions
 var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtilityVersion{
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart

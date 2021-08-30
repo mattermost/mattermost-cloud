@@ -104,8 +104,12 @@ var serverCmd = &cobra.Command{
 		helm.SetVerboseHelmLogging(debugHelm)
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
-		if gitlabOAuthToken != "" {
-			os.Setenv(model.GitlabOAuthTokenKey, gitlabOAuthToken)
+		if len(gitlabOAuthToken) == 0 {
+			gitlabOAuthToken = os.Getenv(model.GitlabOAuthTokenKey)
+		}
+		model.SetGitlabToken(gitlabOAuthToken)
+		if len(model.GetGitlabToken()) == 0 {
+			logger.Warnf("The gitlab-oauth flag and %s were empty; using local helm charts", model.GitlabOAuthTokenKey)
 		}
 
 		machineLogs, _ := command.Flags().GetBool("machine-readable-logs")
