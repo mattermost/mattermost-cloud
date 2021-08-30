@@ -133,8 +133,6 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		State:              model.ClusterStateCreationRequested,
 	}
 
-	createClusterRequest.SetDefaults()
-
 	err = cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
 	if err != nil {
 		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
