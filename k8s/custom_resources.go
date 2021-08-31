@@ -93,17 +93,10 @@ func (kc *KubeClient) createOrUpdatePodMonitor(namespace string, pm *monitoringV
 		return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Create(ctx, pm, metav1.CreateOptions{})
 	}
 
-	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Update(ctx, pm, metav1.UpdateOptions{})
-}
-
-func (kc *KubeClient) deletePodMonitor(namespace string, pm *monitoringV1.PodMonitor) error {
-	wait := 60
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	_, err := kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Get(ctx, pm.GetName(), metav1.GetOptions{})
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return err
+	patch, err := json.Marshal(pm)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal new Pod Monitor")
 	}
-	kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Delete(ctx, pm.GetName(), metav1.DeleteOptions{})
-	return nil
+
+	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Patch(ctx, pm.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 }

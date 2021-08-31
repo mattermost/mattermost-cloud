@@ -113,55 +113,6 @@ func (kc *KubeClient) CreateFromFile(file ManifestFile, installationName string)
 	return nil
 }
 
-// DeleteFromFile will delete the Kubernetes resources in the provided file.
-//
-// The current behavior leads to the delete being attempted on all resources in
-// the provided file. An error is returned if any of the delete actions failed.
-// This process equates to running `kubectl delete -f FILENAME`.
-func (kc *KubeClient) DeleteFromFile(file ManifestFile) error {
-	data, err := ioutil.ReadFile(file.Path)
-	if err != nil {
-		return err
-	}
-
-	monitoringscheme.AddToScheme(scheme.Scheme)
-
-	logger := kc.logger.WithFields(log.Fields{
-		"file": file.Basename(),
-	})
-
-	var failures int
-	resources := bytes.Split(data, []byte("\n---"))
-	for _, resource := range resources {
-		if len(resource) == 0 {
-			continue
-		}
-		decode := scheme.Codecs.UniversalDeserializer().Decode
-
-		obj, _, err := decode(resource, nil, nil)
-		if err != nil {
-			logger.WithError(err).Error("unable to decode k8s resource")
-			failures++
-			continue
-		}
-
-		err = kc.deleteFileResource(file.DeployNamespace, obj)
-		if err != nil {
-			logger.WithError(err).Error("unable to delete k8s resource")
-			failures++
-			continue
-		}
-
-		logger.Infof("Resource %q deleted!", file.Path)
-	}
-
-	if failures > 0 {
-		return fmt.Errorf("encountered %d failures trying to update resources", failures)
-	}
-
-	return nil
-}
-
 func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}) (metav1.Object, error) {
 	switch o := obj.(type) {
 	case *apiv1.ServiceAccount:
@@ -219,14 +170,4 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 	default:
 		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
 	}
-}
-
-func (kc *KubeClient) deleteFileResource(deployNamespace string, obj interface{}) error {
-	switch o := obj.(type) {
-	case *monitoringV1.PodMonitor:
-		return kc.deletePodMonitor(deployNamespace, obj.(*monitoringV1.PodMonitor))
-	default:
-		return fmt.Errorf("Error: unsupported k8s manifest type %T", o)
-	}
-
 }
