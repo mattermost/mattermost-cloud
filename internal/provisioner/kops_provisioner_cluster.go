@@ -1065,7 +1065,17 @@ func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClie
 		},
 	}
 
-	err := k8sClient.CreateFromFiles(files)
+	podMonitorFile := k8s.ManifestFile{
+		Path:            "manifests/sloth/sloth_pod_monitor.yaml",
+		DeployNamespace: "prometheus",
+	}
+
+	err := k8sClient.DeleteFromFile(podMonitorFile)
+	if err != nil {
+		return errors.Wrapf(err, "failed to delete sloth pod monitor.")
+	}
+
+	err = k8sClient.CreateFromFiles(files)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create sloth resources.")
 	}

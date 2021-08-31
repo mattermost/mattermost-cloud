@@ -95,3 +95,15 @@ func (kc *KubeClient) createOrUpdatePodMonitor(namespace string, pm *monitoringV
 
 	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Update(ctx, pm, metav1.UpdateOptions{})
 }
+
+func (kc *KubeClient) deletePodMonitor(namespace string, pm *monitoringV1.PodMonitor) error {
+	wait := 60
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	_, err := kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Get(ctx, pm.GetName(), metav1.GetOptions{})
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return err
+	}
+	kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Delete(ctx, pm.GetName(), metav1.DeleteOptions{})
+	return nil
+}
