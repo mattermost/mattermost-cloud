@@ -374,14 +374,19 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		},
 	}
 
-	// Here we need to handle both case i.e creating a new cluster with possible networking value in the changerequest object & 2nd provisioning existing cluster
-	if (len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking == "calico") || (cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
-		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico") {
+	// Only deploy calico CNI at cluster creation time if networking option is calico
+	if cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
+		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico" {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/calico-cni.yaml",
 			DeployNamespace: "kube-system",
 		})
-	} else {
+	}
+
+	// Only deploy or reprovision calico netpol if current networking option is other then calico
+	if (cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
+		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking != "calico") ||
+		(len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking != "calico") {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/calico-network-policy-only.yaml",
 			DeployNamespace: "kube-system",
