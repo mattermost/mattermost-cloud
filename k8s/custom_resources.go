@@ -93,5 +93,10 @@ func (kc *KubeClient) createOrUpdatePodMonitor(namespace string, pm *monitoringV
 		return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Create(ctx, pm, metav1.CreateOptions{})
 	}
 
-	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Update(ctx, pm, metav1.UpdateOptions{})
+	patch, err := json.Marshal(pm)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal new Pod Monitor")
+	}
+
+	return kc.MonitoringClientsetV1.MonitoringV1().PodMonitors(namespace).Patch(ctx, pm.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 }
