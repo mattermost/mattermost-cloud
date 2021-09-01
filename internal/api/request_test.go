@@ -26,7 +26,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Zones:              []string{"us-east-1a"},
 			Networking:         "amazon-vpc-routed-eni",
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":                         {Chart: "0.15.8", ValuesPath: ""},
+				"fluentbit":                         {Chart: "0.16.4", ValuesPath: ""},
 				"nginx":                             {Chart: "2.15.0", ValuesPath: ""},
 				"nginx-internal":                    {Chart: "2.15.0", ValuesPath: ""},
 				"prometheus-operator":               {Chart: "9.4.4", ValuesPath: ""},
@@ -91,7 +91,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Zones:              []string{"zone1", "zone2"},
 			Networking:         "amazon-vpc-routed-eni",
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":                         {Chart: "0.15.8", ValuesPath: ""},
+				"fluentbit":                         {Chart: "0.16.4", ValuesPath: ""},
 				"nginx":                             {Chart: "2.15.0", ValuesPath: ""},
 				"nginx-internal":                    {Chart: "2.15.0", ValuesPath: ""},
 				"prometheus-operator":               {Chart: "9.4.4", ValuesPath: ""},
