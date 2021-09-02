@@ -28,8 +28,9 @@ type simpleNameGenerator struct{}
 var SimpleNameGenerator NameGenerator = simpleNameGenerator{}
 
 const (
-	maxNameLength          = 63
-	randomLength           = 5
+	maxNameLength = 63
+	randomLength  = 5
+	// MaxGeneratedNameLength is the max length of the generated name
 	MaxGeneratedNameLength = maxNameLength - randomLength
 )
 

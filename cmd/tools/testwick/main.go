@@ -48,11 +48,10 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	logger = logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
+	logger.Out = os.Stdout
+	logger.Formatter = &logrus.JSONFormatter{}
 	// Output to stdout instead of the default stderr.
-	logrus.SetOutput(os.Stdout)
+	logger.SetOutput(os.Stdout)
 
 	testerCmd.PersistentFlags().StringVar(&testerConfig.provisioner, "provisioner", "", "The url for the provisioner")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.hostedZoneDomain, "hosted-zone", "", "The hosted zone you need to run your installations eg. test.mattermost.cloud")
