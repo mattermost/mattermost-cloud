@@ -70,12 +70,16 @@ type InstallationDatabaseStoreInterface interface {
 	LockMultitenantDatabases(ids []string, lockerID string) (bool, error)
 	UnlockMultitenantDatabases(ids []string, lockerID string, force bool) (bool, error)
 	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*SingleTenantDatabaseConfig, error)
+	GetProxyDatabaseResourcesForInstallation(installationID string) (*DatabaseResourceGrouping, error)
+	GetOrCreateProxyDatabaseResourcesForInstallation(installationID, multitenantDatabaseID string) (*DatabaseResourceGrouping, error)
+	DeleteInstallationProxyDatabaseResources(multitenantDatabase *MultitenantDatabase, databaseSchema *DatabaseSchema) error
 }
 
 // ClusterUtilityDatabaseStoreInterface is the interface necessary for SQLStore
 // functionality to update cluster utilities as needed.
 type ClusterUtilityDatabaseStoreInterface interface {
 	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
+	GetLogicalDatabases(filter *LogicalDatabaseFilter) ([]*LogicalDatabase, error)
 }
 
 // MysqlOperatorDatabase is a database backed by the MySQL operator.

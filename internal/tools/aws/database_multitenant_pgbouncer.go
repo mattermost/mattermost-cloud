@@ -92,60 +92,63 @@ func (d *RDSMultitenantPGBouncerDatabase) Provision(store model.InstallationData
 		return errors.Wrap(err, "failed to find cluster installation VPC")
 	}
 
-	database, unlockFn, err := d.getAndLockAssignedProxiedDatabase(store, logger)
+	dbResources, unlockFn, err := d.getAndLockAssignedProxiedDatabase(store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get and lock assigned database")
 	}
-	if database == nil {
+	if dbResources == nil {
 		logger.Debug("Assigning installation to multitenant proxy database")
-		database, unlockFn, err = d.assignInstallationToProxiedDatabaseAndLock(*vpc.VpcId, store, logger)
+		dbResources, unlockFn, err = d.assignInstallationToProxiedDatabaseAndLock(*vpc.VpcId, store, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to assign installation to a multitenant proxy database")
 		}
 	}
 	defer unlockFn()
 
-	databaseName := database.SharedLogicalDatabaseMappings.GetLogicalDatabaseName(d.installationID)
 	logger = logger.WithFields(log.Fields{
-		"assigned-database": database.ID,
-		"logical-database":  databaseName,
+		"multitenant-database":      dbResources.MultitenantDatabase.ID,
+		"multitenant-database-type": dbResources.MultitenantDatabase.DatabaseType,
+		"rds-cluster-id":            dbResources.MultitenantDatabase.RdsClusterID,
+		"logical-database":          dbResources.LogicalDatabase.ID,
+		"logical-database-name":     dbResources.LogicalDatabase.Name,
+		"database-schema":           dbResources.DatabaseSchema.ID,
 	})
 
-	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
+	rdsCluster, err := describeRDSCluster(dbResources.MultitenantDatabase.RdsClusterID, d.client)
 	if err != nil {
-		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", database.ID)
+		return errors.Wrapf(err, "failed to describe the multitenant RDS cluster ID %s", dbResources.MultitenantDatabase.ID)
 	}
 	if *rdsCluster.Status != DefaultRDSStatusAvailable {
-		return errors.Errorf("multitenant RDS cluster ID %s is not available (status: %s)", database.ID, *rdsCluster.Status)
+		return errors.Errorf("multitenant RDS cluster ID %s is not available (status: %s)", dbResources.MultitenantDatabase.ID, *rdsCluster.Status)
 	}
 
 	rdsID := *rdsCluster.DBClusterIdentifier
 	logger = logger.WithField("rds-cluster-id", rdsID)
 
-	if database.State == model.DatabaseStateProvisioningRequested {
+	if dbResources.MultitenantDatabase.State == model.DatabaseStateProvisioningRequested {
 		err = d.provisionPGBouncerDatabase(*vpc.VpcId, rdsCluster, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to provision pgbouncer database")
 		}
 
-		database.State = model.DatabaseStateStable
-		err = store.UpdateMultitenantDatabase(database)
+		dbResources.MultitenantDatabase.State = model.DatabaseStateStable
+		err = store.UpdateMultitenantDatabase(dbResources.MultitenantDatabase)
 		if err != nil {
 			return errors.Wrap(err, "failed to update state on provisioned pgbouncer database")
 		}
 	}
 
-	err = d.ensureLogicalDatabaseExists(databaseName, rdsCluster, logger)
+	err = d.ensureLogicalDatabaseExists(dbResources.LogicalDatabase.Name, rdsCluster, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure the logical database is created")
 	}
 
-	err = d.ensureLogicalDatabaseSetup(databaseName, *vpc.VpcId, rdsCluster, logger)
+	err = d.ensureLogicalDatabaseSetup(dbResources.LogicalDatabase.Name, *vpc.VpcId, rdsCluster, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure the logical database is setup")
 	}
 
-	err = updateCounterTagWithCurrentWeight(database, rdsCluster, store, d.client, logger)
+	err = updateCounterTagWithCurrentWeight(dbResources.MultitenantDatabase, rdsCluster, store, d.client, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update counter tag with current weight")
 	}
@@ -160,7 +163,7 @@ func (d *RDSMultitenantPGBouncerDatabase) Provision(store model.InstallationData
 //	1. fetch a multitenant database by installation ID.
 //	2. fetch all multitenant databases in the store which are under the max number of installations limit.
 //	3. fetch all multitenant databases in the RDS cluster that are under the max number of installations limit.
-func (d *RDSMultitenantPGBouncerDatabase) assignInstallationToProxiedDatabaseAndLock(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.MultitenantDatabase, func(), error) {
+func (d *RDSMultitenantPGBouncerDatabase) assignInstallationToProxiedDatabaseAndLock(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.DatabaseResourceGrouping, func(), error) {
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          d.databaseType,
 		MaxInstallationsLimit: d.MaxSupportedDatabases(),
@@ -198,24 +201,15 @@ func (d *RDSMultitenantPGBouncerDatabase) assignInstallationToProxiedDatabaseAnd
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to lock selected database")
 	}
-	// Now that we have selected one and have a lock, ensure the database hasn't
-	// been updated.
-	selectedDatabase, err = store.GetMultitenantDatabase(selectedDatabase.ID)
-	if err != nil {
-		unlockFn()
-		return nil, nil, errors.Wrap(err, "failed to refresh multitenant database after lock")
-	}
 
 	// Finish assigning the installation.
-	selectedDatabase.Installations.Add(d.installationID)
-	selectedDatabase.AddInstallationToLogicalDatabaseMapping(d.installationID)
-	err = store.UpdateMultitenantDatabase(selectedDatabase)
+	databaseResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(d.installationID, selectedDatabase.ID)
 	if err != nil {
 		unlockFn()
 		return nil, nil, errors.Wrap(err, "failed to save installation to selected database")
 	}
 
-	return selectedDatabase, unlockFn, nil
+	return databaseResources, unlockFn, nil
 }
 
 func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTags(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) ([]*model.MultitenantDatabase, error) {
@@ -322,7 +316,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTag
 // getAssignedMultitenantDatabaseResources returns the assigned multitenant
 // database if there is one or nil if there is not. An error is returned if the
 // installation is assigned to more than one database.
-func (d *RDSMultitenantPGBouncerDatabase) getAndLockAssignedProxiedDatabase(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.MultitenantDatabase, func(), error) {
+func (d *RDSMultitenantPGBouncerDatabase) getAndLockAssignedProxiedDatabase(store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.DatabaseResourceGrouping, func(), error) {
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          d.databaseType,
 		InstallationID:        d.installationID,
@@ -343,17 +337,12 @@ func (d *RDSMultitenantPGBouncerDatabase) getAndLockAssignedProxiedDatabase(stor
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to lock multitenant database")
 	}
-	// Take no chances that the stored multitenant database was updated between
-	// retrieving it and locking it. We know this installation is assigned to
-	// exactly one multitenant database at this point so we can use the store
-	// function to directly retrieve it.
-	database, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
+	databaseResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(d.installationID, multitenantDatabases[0].ID)
 	if err != nil {
-		unlockFn()
-		return nil, nil, errors.Wrap(err, "failed to refresh multitenant database after lock")
+		return nil, nil, errors.Wrap(err, "failed to get database resources")
 	}
 
-	return database, unlockFn, nil
+	return databaseResources, unlockFn, nil
 }
 
 func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
@@ -707,21 +696,24 @@ func (d *RDSMultitenantPGBouncerDatabase) GenerateDatabaseSecret(store model.Ins
 		return nil, errors.Wrap(err, "pgbouncer database configuration is invalid")
 	}
 
-	multitenantDatabase, err := store.GetMultitenantDatabaseForInstallationID(d.installationID)
+	dbResources, err := store.GetProxyDatabaseResourcesForInstallation(d.installationID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query for the multitenant database")
+		return nil, errors.Wrap(err, "failed to query for database resources")
 	}
 
-	unlock, err := lockMultitenantDatabase(multitenantDatabase.ID, d.instanceID, store, logger)
+	unlock, err := lockMultitenantDatabase(dbResources.MultitenantDatabase.ID, d.instanceID, store, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to lock multitenant database")
 	}
 	defer unlock()
 
-	installationDatabaseName := multitenantDatabase.SharedLogicalDatabaseMappings.GetLogicalDatabaseName(d.installationID)
 	logger = logger.WithFields(log.Fields{
-		"multitenant-rds-database": installationDatabaseName,
-		"database-type":            d.databaseType,
+		"multitenant-database":      dbResources.MultitenantDatabase.ID,
+		"multitenant-database-type": dbResources.MultitenantDatabase.DatabaseType,
+		"rds-cluster-id":            dbResources.MultitenantDatabase.RdsClusterID,
+		"logical-database":          dbResources.LogicalDatabase.ID,
+		"logical-database-name":     dbResources.LogicalDatabase.Name,
+		"database-schema":           dbResources.DatabaseSchema.ID,
 	})
 
 	installationSecretName := RDSMultitenantPGBouncerSecretName(d.installationID)
@@ -742,7 +734,7 @@ func (d *RDSMultitenantPGBouncerDatabase) GenerateDatabaseSecret(store model.Ins
 		MattermostPostgresPGBouncerConnStrings(
 			installationSecret.MasterUsername,
 			installationSecret.MasterPassword,
-			installationDatabaseName,
+			dbResources.LogicalDatabase.Name,
 		)
 
 	databaseSecret := &corev1.Secret{
@@ -774,13 +766,13 @@ func (d *RDSMultitenantPGBouncerDatabase) Teardown(store model.InstallationDatab
 		logger.Warn("Keepdata is set to true on this server, but this is not yet supported for RDS multitenant PGBouncer databases")
 	}
 
-	database, unlockFn, err := d.getAndLockAssignedProxiedDatabase(store, logger)
+	dbResources, unlockFn, err := d.getAndLockAssignedProxiedDatabase(store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get assigned multitenant database")
 	}
-	if database != nil {
+	if dbResources != nil {
 		defer unlockFn()
-		err = d.removeInstallationPGBouncerResources(database, store, logger)
+		err = d.removeInstallationPGBouncerResources(dbResources, store, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to remove installation database")
 		}
@@ -795,10 +787,10 @@ func (d *RDSMultitenantPGBouncerDatabase) Teardown(store model.InstallationDatab
 
 // removeInstallationFromPGBouncerDatabase performs the work necessary to
 // remove a single installation schema from a multitenant PGBouncer RDS cluster.
-func (d *RDSMultitenantPGBouncerDatabase) removeInstallationPGBouncerResources(database *model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
-	rdsCluster, err := describeRDSCluster(database.RdsClusterID, d.client)
+func (d *RDSMultitenantPGBouncerDatabase) removeInstallationPGBouncerResources(dbResources *model.DatabaseResourceGrouping, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {
+	rdsCluster, err := describeRDSCluster(dbResources.MultitenantDatabase.RdsClusterID, d.client)
 	if err != nil {
-		return errors.Wrap(err, "failed to describe multitenant database")
+		return errors.Wrap(err, "failed to describe rds cluster")
 	}
 
 	logger = logger.WithField("rds-cluster-id", *rdsCluster.DBClusterIdentifier)
@@ -808,22 +800,20 @@ func (d *RDSMultitenantPGBouncerDatabase) removeInstallationPGBouncerResources(d
 		return errors.Wrap(err, "failed to delete multitenant database secret")
 	}
 
-	databaseName := database.SharedLogicalDatabaseMappings.GetLogicalDatabaseName(d.installationID)
 	username := MattermostPGBouncerDatabaseUsername(d.installationID)
 
-	err = d.cleanupDatabase(*rdsCluster.DBClusterIdentifier, *rdsCluster.Endpoint, databaseName, username, logger)
+	err = d.cleanupDatabase(*rdsCluster.DBClusterIdentifier, *rdsCluster.Endpoint, dbResources.LogicalDatabase.Name, username, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to cleanup pgbouncer database")
 	}
 
-	database.Installations.Remove(d.installationID)
-	database.SharedLogicalDatabaseMappings.RemoveInstallation(d.installationID)
-	err = updateCounterTagWithCurrentWeight(database, rdsCluster, store, d.client, logger)
+	dbResources.MultitenantDatabase.Installations.Remove(d.installationID)
+	err = updateCounterTagWithCurrentWeight(dbResources.MultitenantDatabase, rdsCluster, store, d.client, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update counter tag with current weight")
 	}
 
-	err = store.UpdateMultitenantDatabase(database)
+	err = store.DeleteInstallationProxyDatabaseResources(dbResources.MultitenantDatabase, dbResources.DatabaseSchema)
 	if err != nil {
 		return errors.Wrapf(err, "failed to remove installation ID %s from multitenant datastore", d.installationID)
 	}

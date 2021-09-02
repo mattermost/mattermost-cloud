@@ -5,6 +5,9 @@
 package store
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/blang/semver"
 	"github.com/mattermost/mattermost-cloud/model"
 )
@@ -1479,6 +1482,169 @@ var migrations = []migration{
 
 		// The MultitenantDatabaseBackup table will be left for now just in case
 		// and will be cleaned up in a future migration.
+
+		return nil
+	}},
+	{semver.MustParse("0.31.0"), semver.MustParse("0.32.0"), func(e execer) error {
+		_, err := e.Exec(`ALTER TABLE MultitenantDatabase RENAME TO MultitenantDatabaseBackup2;`)
+		if err != nil {
+			return err
+		}
+
+		multitenantDatabaseRows, err := e.Query(`SELECT ID, SharedLogicalDatabaseMappingsRaw FROM MultitenantDatabaseBackup2;`)
+		if err != nil {
+			return err
+		}
+		defer multitenantDatabaseRows.Close()
+
+		sharedDatabaseMapping := make(map[string]map[string][]string)
+		for multitenantDatabaseRows.Next() {
+			var id string
+			var sharedLogicalDatabaseMappingsRaw []byte
+
+			err := multitenantDatabaseRows.Scan(&id, &sharedLogicalDatabaseMappingsRaw)
+			if err != nil {
+				return err
+			}
+
+			var sharedLogicalDatabases map[string][]string
+			if sharedLogicalDatabaseMappingsRaw != nil {
+				err := json.Unmarshal(sharedLogicalDatabaseMappingsRaw, &sharedLogicalDatabases)
+				if err != nil {
+					return err
+				}
+			}
+			sharedDatabaseMapping[id] = sharedLogicalDatabases
+		}
+		err = multitenantDatabaseRows.Err()
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE LogicalDatabase (
+				ID TEXT PRIMARY KEY,
+				MultitenantDatabaseID TEXT NOT NULL,
+				Name TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE DatabaseSchema (
+				ID TEXT PRIMARY KEY,
+				LogicalDatabaseID TEXT NOT NULL,
+				InstallationID TEXT NOT NULL,
+				Name TEXT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		for multitenantDatabaseID, m := range sharedDatabaseMapping {
+			for logicalDatabaseName, installationIDs := range m {
+				logicalDatabaseID := model.NewID()
+				_, err = e.Exec(`
+					INSERT INTO LogicalDatabase VALUES ($1, $2, $3, $4, 0, NULL, 0);`,
+					logicalDatabaseID,
+					multitenantDatabaseID,
+					logicalDatabaseName,
+					model.GetMillis(),
+				)
+				if err != nil {
+					return err
+				}
+
+				for _, installationID := range installationIDs {
+					_, err = e.Exec(`
+						INSERT INTO DatabaseSchema VALUES ($1, $2, $3, $4, $5, 0, NULL, 0);`,
+						model.NewID(),
+						logicalDatabaseID,
+						installationID,
+						fmt.Sprintf("id_%s", installationID),
+						model.GetMillis(),
+					)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE MultitenantDatabase (
+				ID TEXT PRIMARY KEY,
+				RdsClusterID TEXT NOT NULL,
+				VpcID TEXT NOT NULL,
+				DatabaseType TEXT NOT NULL,
+				State TEXT NOT NULL,
+				WriterEndpoint TEXT NOT NULL,
+				ReaderEndpoint TEXT NOT NULL,
+				InstallationsRaw BYTEA NOT NULL,
+				MigratedInstallationsRaw BYTEA NOT NULL,
+				MaxInstallationsPerLogicalDatabase BIGINT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			DROP INDEX MultitenantDatabase_RdsClusterID_DeleteAt;
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE UNIQUE INDEX MultitenantDatabase_RdsClusterID_DeleteAt ON MultitenantDatabase (RdsClusterID, DeleteAt);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			INSERT INTO MultitenantDatabase
+			SELECT
+				ID,
+				RdsClusterID,
+				VpcID,
+				DatabaseType,
+				State,
+				WriterEndpoint,
+				ReaderEndpoint,
+				InstallationsRaw,
+				MigratedInstallationsRaw,
+				MaxInstallationsPerLogicalDatabase,
+				CreateAt,
+				DeleteAt,
+				LockAcquiredBy,
+				LockAcquiredAt
+			FROM
+			MultitenantDatabaseBackup2;
+		`)
+		if err != nil {
+			return err
+		}
+
+		// The MultitenantDatabaseBackup2 table will be left for now just in case
+		// and will be cleaned up in a future migration along with the previous
+		// MultitenantDatabaseBackup table.
 
 		return nil
 	}},

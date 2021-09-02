@@ -263,6 +263,18 @@ func (m mockMultitenantDBStore) GetSingleTenantDatabaseConfigForInstallation(ins
 	return nil, nil
 }
 
+func (m mockMultitenantDBStore) GetProxyDatabaseResourcesForInstallation(installationID string) (*model.DatabaseResourceGrouping, error) {
+	return nil, nil
+}
+
+func (m mockMultitenantDBStore) GetOrCreateProxyDatabaseResourcesForInstallation(installationID, multitenantDatabaseID string) (*model.DatabaseResourceGrouping, error) {
+	return nil, nil
+}
+
+func (m mockMultitenantDBStore) DeleteInstallationProxyDatabaseResources(multitenantDatabase *model.MultitenantDatabase, databaseSchema *model.DatabaseSchema) error {
+	return nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources

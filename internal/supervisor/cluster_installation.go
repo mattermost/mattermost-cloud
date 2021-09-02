@@ -32,6 +32,7 @@ type clusterInstallationStore interface {
 	GetInstallationBackups(filter *model.InstallationBackupFilter) ([]*model.InstallationBackup, error)
 
 	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
+	GetLogicalDatabases(filter *model.LogicalDatabaseFilter) ([]*model.LogicalDatabase, error)
 
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }

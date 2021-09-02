@@ -28,7 +28,6 @@ func init() {
 			"State",
 			"InstallationsRaw",
 			"MigratedInstallationsRaw",
-			"SharedLogicalDatabaseMappingsRaw",
 			"MaxInstallationsPerLogicalDatabase",
 			"WriterEndpoint",
 			"ReaderEndpoint",
@@ -58,12 +57,6 @@ func (r *rawMultitenantDatabase) toMultitenantDatabase() (*model.MultitenantData
 	}
 	if r.MigratedInstallationsRaw != nil {
 		err := json.Unmarshal(r.MigratedInstallationsRaw, &r.MultitenantDatabase.MigratedInstallations)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if r.SharedLogicalDatabaseMappingsRaw != nil {
-		err := json.Unmarshal(r.SharedLogicalDatabaseMappingsRaw, &r.MultitenantDatabase.SharedLogicalDatabaseMappings)
 		if err != nil {
 			return nil, err
 		}
@@ -184,10 +177,6 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal migrated installation IDs")
 	}
-	logicalDatabaseJSON, err := json.Marshal(multitenantDatabase.SharedLogicalDatabaseMappings)
-	if err != nil {
-		return errors.Wrap(err, "unable to marshal migrated installation IDs")
-	}
 
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("MultitenantDatabase").
@@ -199,7 +188,6 @@ func (sqlStore *SQLStore) CreateMultitenantDatabase(multitenantDatabase *model.M
 			"State":                              multitenantDatabase.State,
 			"InstallationsRaw":                   installationsJSON,
 			"MigratedInstallationsRaw":           migratedInstallationsJSON,
-			"SharedLogicalDatabaseMappingsRaw":   logicalDatabaseJSON,
 			"MaxInstallationsPerLogicalDatabase": multitenantDatabase.MaxInstallationsPerLogicalDatabase,
 			"WriterEndpoint":                     multitenantDatabase.WriterEndpoint,
 			"ReaderEndpoint":                     multitenantDatabase.ReaderEndpoint,
@@ -230,10 +218,6 @@ func (sqlStore *SQLStore) updateMultitenantDatabase(db execer, multitenantDataba
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal migrated installation IDs")
 	}
-	logicalDatabaseJSON, err := json.Marshal(multitenantDatabase.SharedLogicalDatabaseMappings)
-	if err != nil {
-		return errors.Wrap(err, "unable to marshal migrated installation IDs")
-	}
 
 	_, err = sqlStore.execBuilder(db, sq.
 		Update("MultitenantDatabase").
@@ -242,7 +226,6 @@ func (sqlStore *SQLStore) updateMultitenantDatabase(db execer, multitenantDataba
 			"MaxInstallationsPerLogicalDatabase": multitenantDatabase.MaxInstallationsPerLogicalDatabase,
 			"InstallationsRaw":                   []byte(installationsJSON),
 			"MigratedInstallationsRaw":           []byte(migratedInstallationsJSON),
-			"SharedLogicalDatabaseMappingsRaw":   logicalDatabaseJSON,
 		}).
 		Where(sq.Eq{"ID": multitenantDatabase.ID}),
 	)

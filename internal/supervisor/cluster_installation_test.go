@@ -64,6 +64,10 @@ func (s *mockClusterInstallationStore) GetMultitenantDatabases(filter *model.Mul
 	return nil, nil
 }
 
+func (s *mockClusterInstallationStore) GetLogicalDatabases(filter *model.LogicalDatabaseFilter) ([]*model.LogicalDatabase, error) {
+	return nil, nil
+}
+
 func (s *mockClusterInstallationStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error) {
 	return nil, nil
 }
