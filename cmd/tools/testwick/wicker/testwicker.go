@@ -10,9 +10,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/goombaio/namegenerator"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
 	mmodel "github.com/mattermost/mattermost-server/v5/model"
-	"github.com/moby/moby/pkg/namesgenerator"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -46,14 +46,17 @@ type TestWicker struct {
 	userID            string
 	channelID         string
 	teamID            string
+	nameGenerator     namegenerator.Generator
 }
 
 // NewTestWicker creates a testwicker
 func NewTestWicker(provisionerRequester ProvisionerRequester, requester MattermostRequester, logger logrus.FieldLogger) *TestWicker {
+	seed := time.Now().UTC().UnixNano()
 	return &TestWicker{
 		logger:            logger,
 		mmClient:          requester,
 		provisionerClient: provisionerRequester,
+		nameGenerator:     namegenerator.NewNameGenerator(seed),
 	}
 }
 
@@ -158,7 +161,7 @@ func (w *TestWicker) CreateChannel() func(w *TestWicker, ctx context.Context) er
 			CreatorId: w.userID,
 			TeamId:    w.teamID,
 			Type:      mmodel.CHANNEL_OPEN,
-			Name:      namesgenerator.GetRandomName(5),
+			Name:      w.nameGenerator.Generate(),
 		})
 		if response.StatusCode != 201 {
 			return fmt.Errorf("failed to create channel status = %d, message = %s", response.StatusCode, response.Error.Message)
