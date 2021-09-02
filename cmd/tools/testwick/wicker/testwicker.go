@@ -157,7 +157,8 @@ func (w *TestWicker) CreateChannel() func(w *TestWicker, ctx context.Context) er
 		if w.userID == "" {
 			return fmt.Errorf("failed to create a channel. You need to create a user first")
 		}
-		channelName := w.nameGenerator.Generate()
+		channelName := SimpleNameGenerator.GenerateName("channel")
+
 		channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
 			CreatorId: w.userID,
 			TeamId:    w.teamID,
