@@ -201,9 +201,9 @@ func (sqlStore *SQLStore) getSchemaCountsPerLogicalDatabase(logicalDatabaseIDs [
 	}
 
 	result := make(map[string]int64, len(logicalDatabaseIDs))
-	for _, logilogicalDatabaseID := range logicalDatabaseIDs {
+	for _, logicalDatabaseID := range logicalDatabaseIDs {
 		// Initialize the map with zeroes in case some logical databases are empty.
-		result[logilogicalDatabaseID] = 0
+		result[logicalDatabaseID] = 0
 	}
 	for _, entry := range output {
 		result[entry.LogicalDatabaseID] = entry.Count

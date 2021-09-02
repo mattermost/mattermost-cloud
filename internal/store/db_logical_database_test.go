@@ -59,15 +59,6 @@ func TestCreateLogicalDatabase(t *testing.T) {
 		}
 		createAndCheckLogicalDatabase(t, store, logicalDatabase)
 	})
-
-	t.Run("invalid multitenant database", func(t *testing.T) {
-		logicalDatabase := &model.LogicalDatabase{
-			MultitenantDatabaseID: model.NewID(),
-			Name:                  "ldb2",
-		}
-		err := store.CreateLogicalDatabase(logicalDatabase)
-		require.Error(t, err)
-	})
 }
 
 func TestDeleteLogicalDatabase(t *testing.T) {

@@ -63,21 +63,13 @@ func (sqlStore *SQLStore) GetLogicalDatabases(filter *model.LogicalDatabaseFilte
 
 // CreateLogicalDatabase records the supplied logical database to the datastore.
 func (sqlStore *SQLStore) CreateLogicalDatabase(logicalDatabase *model.LogicalDatabase) error {
-	multitenantDatabase, err := sqlStore.GetMultitenantDatabase(logicalDatabase.MultitenantDatabaseID)
-	if err != nil {
-		return errors.Wrap(err, "failed to get multitenant database")
-	}
-	if multitenantDatabase == nil {
-		return errors.Errorf("multitenant database %s does not exist", logicalDatabase.MultitenantDatabaseID)
-	}
-
 	logicalDatabase.ID = model.NewID()
 	logicalDatabase.CreateAt = model.GetMillis()
 	if len(logicalDatabase.Name) == 0 {
 		logicalDatabase.Name = fmt.Sprintf("cloud_%s", logicalDatabase.ID)
 	}
 
-	_, err = sqlStore.execBuilder(sqlStore.db, sq.
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert("LogicalDatabase").
 		SetMap(map[string]interface{}{
 			"ID":                    logicalDatabase.ID,
