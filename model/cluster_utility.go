@@ -54,7 +54,7 @@ func GetGitlabToken() string {
 // DefaultUtilityVersions holds the default values for all of the HelmUtilityVersions
 var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtilityVersion{
 	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
-	PrometheusOperatorCanonicalName: {Chart: "9.4.4", ValuesPath: ""},
+	PrometheusOperatorCanonicalName: {Chart: "18.0.3", ValuesPath: ""},
 	// ThanosDefaultVersion defines the default version for the Helm chart
 	ThanosCanonicalName: {Chart: "3.2.2", ValuesPath: ""},
 	// NginxDefaultVersion defines the default version for the Helm chart
