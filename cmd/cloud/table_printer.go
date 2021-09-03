@@ -6,13 +6,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
-	"os"
-	"regexp"
-	"strings"
 )
 
 func registerTableOutputFlags(cmd *cobra.Command) {
