@@ -5,10 +5,7 @@
 package main
 
 import (
-	"os"
-
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +19,8 @@ func init() {
 	installationRestorationsListCmd.Flags().String("installation", "", "The id of the installation to query operations.")
 	installationRestorationsListCmd.Flags().String("state", "", "The state to filter operations by.")
 	installationRestorationsListCmd.Flags().String("cluster-installation", "", "The cluster installation to filter operations by.")
+	registerTableOutputFlags(installationRestorationsListCmd)
 	registerPagingFlags(installationRestorationsListCmd)
-	installationRestorationsListCmd.Flags().Bool("table", false, "Whether to display output in a table or not.")
 
 	installationRestorationGetCmd.Flags().String("restoration", "", "The id of restoration operation.")
 	installationRestorationGetCmd.MarkFlagRequired("restoration")
@@ -90,25 +87,24 @@ var installationRestorationsListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to list installation database restoration operations")
 		}
 
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "INSTALLATION ID", "BACKUP ID", "STATE", "CLUSTER INSTALLATION ID", "TARGET INSTALLATION STATE", "REQUEST AT"})
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
 
-			for _, restoration := range dbRestorationOperations {
-				table.Append([]string{
-					restoration.ID,
-					restoration.InstallationID,
-					restoration.BackupID,
-					string(restoration.State),
-					restoration.ClusterInstallationID,
-					restoration.TargetInstallationState,
-					model.TimeFromMillis(restoration.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
-				})
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(dbRestorationOperations))
+				for _, elem := range dbRestorationOperations {
+					data = append(data, elem)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultDBRestorationOperationTableData(dbRestorationOperations)
 			}
-			table.Render()
 
+			printTable(keys, vals)
 			return nil
 		}
 
@@ -119,6 +115,24 @@ var installationRestorationsListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultDBRestorationOperationTableData(ops []*model.InstallationDBRestorationOperation) ([]string, [][]string) {
+	keys := []string{"ID", "INSTALLATION ID", "BACKUP ID", "STATE", "CLUSTER INSTALLATION ID", "TARGET INSTALLATION STATE", "REQUEST AT"}
+	vals := make([][]string, 0, len(ops))
+
+	for _, restoration := range ops {
+		vals = append(vals, []string{
+			restoration.ID,
+			restoration.InstallationID,
+			restoration.BackupID,
+			string(restoration.State),
+			restoration.ClusterInstallationID,
+			restoration.TargetInstallationState,
+			model.TimeFromMillis(restoration.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
+		})
+	}
+	return keys, vals
 }
 
 var installationRestorationGetCmd = &cobra.Command{

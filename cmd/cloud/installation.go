@@ -11,7 +11,6 @@ import (
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -64,7 +63,7 @@ func init() {
 	installationListCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installations or not.")
 	installationListCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
 	installationListCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
-	installationListCmd.Flags().Bool("table", false, "Whether to display the returned installation list in a table or not.")
+	registerTableOutputFlags(installationListCmd)
 	registerPagingFlags(installationListCmd)
 
 	installationHibernateCmd.Flags().String("installation", "", "The id of the installation to put into hibernation.")
@@ -396,17 +395,24 @@ var installationListCmd = &cobra.Command{
 			}
 		}
 
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "VERSION", "DATABASE", "FILESTORE", "DNS"})
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
 
-			for _, installation := range installations {
-				table.Append([]string{installation.ID, installation.State, installation.Version, installation.Database, installation.Filestore, installation.DNS})
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(installations))
+				for _, inst := range installations {
+					data = append(data, inst)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultInstallationTableData(installations)
 			}
-			table.Render()
 
+			printTable(keys, vals)
 			return nil
 		}
 
@@ -417,6 +423,15 @@ var installationListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultInstallationTableData(installations []*model.InstallationDTO) ([]string, [][]string) {
+	keys := []string{"ID", "STATE", "VERSION", "DATABASE", "FILESTORE", "DNS"}
+	vals := make([][]string, 0, len(installations))
+	for _, installation := range installations {
+		vals = append(vals, []string{installation.ID, installation.State, installation.Version, installation.Database, installation.Filestore, installation.DNS})
+	}
+	return keys, vals
 }
 
 var installationsGetStatuses = &cobra.Command{

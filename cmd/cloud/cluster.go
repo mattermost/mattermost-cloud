@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -112,7 +111,7 @@ func init() {
 	clusterGetCmd.MarkFlagRequired("cluster")
 
 	registerPagingFlags(clusterListCmd)
-	clusterListCmd.Flags().Bool("table", false, "Whether to display the returned cluster list in a table or not")
+	registerTableOutputFlags(clusterListCmd)
 
 	clusterUtilitiesCmd.Flags().String("cluster", "", "The id of the cluster whose utilities are to be fetched.")
 	clusterUtilitiesCmd.MarkFlagRequired("cluster")
@@ -488,31 +487,24 @@ var clusterListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to query clusters")
 		}
 
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID", "NETWORKING", "VPC", "STATUS"})
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
 
-			for _, cluster := range clusters {
-				status := "offline"
-				if cluster.AllowInstallations {
-					status = "online"
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(clusters))
+				for _, cluster := range clusters {
+					data = append(data, cluster)
 				}
-				table.Append([]string{
-					cluster.ID,
-					cluster.State,
-					cluster.ProvisionerMetadataKops.Version,
-					fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
-					fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
-					cluster.ProvisionerMetadataKops.AMI,
-					cluster.ProvisionerMetadataKops.Networking,
-					cluster.ProvisionerMetadataKops.VPC,
-					status,
-				})
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultClustersTableData(clusters)
 			}
-			table.Render()
 
+			printTable(keys, vals)
 			return nil
 		}
 
@@ -523,6 +515,30 @@ var clusterListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]string) {
+	keys := []string{"ID", "STATE", "VERSION", "MASTER NODES", "WORKER NODES", "AMI ID", "NETWORKING", "VPC", "STATUS"}
+	values := make([][]string, 0, len(clusters))
+
+	for _, cluster := range clusters {
+		status := "offline"
+		if cluster.AllowInstallations {
+			status = "online"
+		}
+		values = append(values, []string{
+			cluster.ID,
+			cluster.State,
+			cluster.ProvisionerMetadataKops.Version,
+			fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
+			fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
+			cluster.ProvisionerMetadataKops.AMI,
+			cluster.ProvisionerMetadataKops.Networking,
+			cluster.ProvisionerMetadataKops.VPC,
+			status,
+		})
+	}
+	return keys, values
 }
 
 var clusterUtilitiesCmd = &cobra.Command{
