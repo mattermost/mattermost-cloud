@@ -57,6 +57,7 @@ func init() {
 	serverCmd.PersistentFlags().Int32("backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
 	serverCmd.PersistentFlags().Bool("deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
 	serverCmd.PersistentFlags().Bool("deploy-minio-operator", true, "Whether to deploy the minio operator.")
+	serverCmd.PersistentFlags().Int64("default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -102,6 +103,12 @@ var serverCmd = &cobra.Command{
 
 		debugHelm, _ := command.Flags().GetBool("debug-helm")
 		helm.SetVerboseHelmLogging(debugHelm)
+
+		maxSchemas, _ := command.Flags().GetInt64("default-max-schemas-per-logical-database")
+		err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(maxSchemas)
+		if err != nil {
+			return err
+		}
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {

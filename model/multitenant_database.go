@@ -7,7 +7,31 @@ package model
 import (
 	"encoding/json"
 	"io"
+
+	"github.com/pkg/errors"
 )
+
+// defaultProxyDatabaseMaxInstallationsPerLogicalDatabase is the default value
+// used for MaxInstallationsPerLogicalDatabase when new multitenant databases
+// are created.
+var defaultProxyDatabaseMaxInstallationsPerLogicalDatabase int64 = 10
+
+// SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase is used to define
+// a new value for defaultProxyDatabaseMaxInstallationsPerLogicalDatabase.
+func SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(val int64) error {
+	if val < 1 {
+		return errors.New("MaxInstallationsPerLogicalDatabase must be set to 1 or higher")
+	}
+	defaultProxyDatabaseMaxInstallationsPerLogicalDatabase = val
+
+	return nil
+}
+
+// GetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase returns the value
+// of defaultProxyDatabaseMaxInstallationsPerLogicalDatabase.
+func GetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase() int64 {
+	return defaultProxyDatabaseMaxInstallationsPerLogicalDatabase
+}
 
 // MultitenantDatabase represents database infrastructure that contains multiple
 // installation databases.
