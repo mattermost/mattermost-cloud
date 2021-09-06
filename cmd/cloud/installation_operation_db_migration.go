@@ -5,10 +5,7 @@
 package main
 
 import (
-	"os"
-
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +19,8 @@ func init() {
 
 	installationDBMigrationsListCmd.Flags().String("installation", "", "The id of the installation to query operations.")
 	installationDBMigrationsListCmd.Flags().String("state", "", "The state to filter operations by.")
+	registerTableOutputFlags(installationDBMigrationsListCmd)
 	registerPagingFlags(installationDBMigrationsListCmd)
-	installationDBMigrationsListCmd.Flags().Bool("table", false, "Whether to display output in a table or not.")
 
 	installationDBMigrationGetCmd.Flags().String("db-migration", "", "The id of the installation db migration operation.")
 	installationDBMigrationGetCmd.MarkFlagRequired("db-migration")
@@ -114,22 +111,24 @@ var installationDBMigrationsListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to list installation database migration operations")
 		}
 
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "INSTALLATION ID", "STATE", "REQUEST AT"})
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
 
-			for _, migration := range dbMigrationOperations {
-				table.Append([]string{
-					migration.ID,
-					migration.InstallationID,
-					string(migration.State),
-					model.TimeFromMillis(migration.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
-				})
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(dbMigrationOperations))
+				for _, elem := range dbMigrationOperations {
+					data = append(data, elem)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultDBMigrationOperationTableData(dbMigrationOperations)
 			}
-			table.Render()
 
+			printTable(keys, vals)
 			return nil
 		}
 
@@ -140,6 +139,21 @@ var installationDBMigrationsListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultDBMigrationOperationTableData(ops []*model.InstallationDBMigrationOperation) ([]string, [][]string) {
+	keys := []string{"ID", "INSTALLATION ID", "STATE", "REQUEST AT"}
+	vals := make([][]string, 0, len(ops))
+
+	for _, migration := range ops {
+		vals = append(vals, []string{
+			migration.ID,
+			migration.InstallationID,
+			string(migration.State),
+			model.TimeFromMillis(migration.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
+		})
+	}
+	return keys, vals
 }
 
 var installationDBMigrationGetCmd = &cobra.Command{

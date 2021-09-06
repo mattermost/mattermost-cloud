@@ -5,10 +5,7 @@
 package main
 
 import (
-	"os"
-
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -21,8 +18,8 @@ func init() {
 
 	backupListCmd.Flags().String("installation", "", "The installation id for which the backups should be listed.")
 	backupListCmd.Flags().String("state", "", "The state to filter backups by.")
+	registerTableOutputFlags(backupListCmd)
 	registerPagingFlags(backupListCmd)
-	backupListCmd.Flags().Bool("table", false, "Whether to display the returned backup list in a table or not.")
 
 	backupGetCmd.Flags().String("backup", "", "The id of the backup to get.")
 	backupGetCmd.MarkFlagRequired("backup")
@@ -87,23 +84,24 @@ var backupListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to get backup")
 		}
 
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "INSTALLATION ID", "STATE", "CLUSTER INSTALLATION ID", "REQUEST AT"})
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
 
-			for _, backup := range backups {
-				table.Append([]string{
-					backup.ID,
-					backup.InstallationID,
-					string(backup.State),
-					backup.ClusterInstallationID,
-					model.TimeFromMillis(backup.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
-				})
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(backups))
+				for _, elem := range backups {
+					data = append(data, elem)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultBackupTableData(backups)
 			}
-			table.Render()
 
+			printTable(keys, vals)
 			return nil
 		}
 
@@ -114,6 +112,23 @@ var backupListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultBackupTableData(backups []*model.InstallationBackup) ([]string, [][]string) {
+	keys := []string{"ID", "INSTALLATION ID", "STATE", "CLUSTER INSTALLATION ID", "REQUEST AT"}
+	vals := make([][]string, 0, len(backups))
+
+	for _, backup := range backups {
+		vals = append(vals, []string{
+			backup.ID,
+			backup.InstallationID,
+			string(backup.State),
+			backup.ClusterInstallationID,
+			model.TimeFromMillis(backup.RequestAt).Format("2006-01-02 15:04:05 -0700 MST"),
+		})
+	}
+
+	return keys, vals
 }
 
 var backupGetCmd = &cobra.Command{

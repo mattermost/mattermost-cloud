@@ -6,11 +6,9 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +21,7 @@ func init() {
 
 	clusterInstallationListCmd.Flags().String("cluster", "", "The cluster by which to filter cluster installations.")
 	clusterInstallationListCmd.Flags().String("installation", "", "The installation by which to filter cluster installations.")
-	clusterInstallationListCmd.Flags().Bool("table", false, "Whether to display the returned cluster installation list in a table or not")
+	registerTableOutputFlags(clusterInstallationListCmd)
 	registerPagingFlags(clusterInstallationListCmd)
 
 	clusterInstallationConfigCmd.PersistentFlags().String("cluster-installation", "", "The id of the cluster installation.")
@@ -136,17 +134,24 @@ var clusterInstallationListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to query cluster installations")
 		}
 
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "STATE", "INSTALLATION ID", "CLUSTER ID"})
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
 
-			for _, ci := range clusterInstallations {
-				table.Append([]string{ci.ID, ci.State, ci.InstallationID, ci.ClusterID})
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(clusterInstallations))
+				for _, inst := range clusterInstallations {
+					data = append(data, inst)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultClusterInstallationTableData(clusterInstallations)
 			}
-			table.Render()
 
+			printTable(keys, vals)
 			return nil
 		}
 
@@ -157,6 +162,16 @@ var clusterInstallationListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultClusterInstallationTableData(cis []*model.ClusterInstallation) ([]string, [][]string) {
+	keys := []string{"ID", "STATE", "INSTALLATION ID", "CLUSTER ID"}
+	vals := make([][]string, 0, len(cis))
+
+	for _, ci := range cis {
+		vals = append(vals, []string{ci.ID, ci.State, ci.InstallationID, ci.ClusterID})
+	}
+	return keys, vals
 }
 
 var clusterInstallationConfigCmd = &cobra.Command{
