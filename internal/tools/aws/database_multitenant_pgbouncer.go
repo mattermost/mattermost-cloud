@@ -296,7 +296,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTag
 			State:                              model.DatabaseStateProvisioningRequested,
 			WriterEndpoint:                     *rdsCluster.Endpoint,
 			ReaderEndpoint:                     *rdsCluster.ReaderEndpoint,
-			MaxInstallationsPerLogicalDatabase: 10,
+			MaxInstallationsPerLogicalDatabase: model.GetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(),
 		}
 
 		err = store.CreateMultitenantDatabase(&multitenantDatabase)

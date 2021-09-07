@@ -212,10 +212,6 @@ const (
 	// with a PGBouncer proxy.
 	DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit = 1000
 
-	// DefaultRDSMultitenantDatabasePostgresProxySchemaLimit is the maximum number of
-	// schemas created in each logical database of a proxied DB cluster.
-	DefaultRDSMultitenantDatabasePostgresProxySchemaLimit = 10
-
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
 	// For example: "rds-cluster-multitenant-00000000000000000-a0000000"
