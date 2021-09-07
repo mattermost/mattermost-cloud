@@ -10,6 +10,8 @@ import (
 	"io"
 )
 
+//go:generate provisioner-code-gen generate --out-file=installation_gen.go --boilerplate-file=../hack/boilerplate/boilerplate.generatego.txt --type=github.com/mattermost/mattermost-cloud/model.Installation --generator=get_id,get_state,is_deleted,as_resources
+
 const (
 	// V1alphaCRVersion is a ClusterInstallation CR alpha version.
 	V1alphaCRVersion = "mattermost.com/v1alpha1"
@@ -118,11 +120,6 @@ func (i *Installation) GetDatabaseWeight() float64 {
 	}
 
 	return DefaultDatabaseWeight
-}
-
-// IsDeleted returns whether the installation was marked as deleted or not.
-func (i *Installation) IsDeleted() bool {
-	return i.DeleteAt != 0
 }
 
 // IsInGroup returns if the installation is in a group or not.

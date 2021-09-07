@@ -167,7 +167,14 @@ install: build
 # Generate mocks from the interfaces.
 .PHONY: mocks
 mocks:  $(MOCKGEN)
-	go generate ./...
+	go generate ./internal/mocks/...
+
+.PHONY: code-gen
+code-gen:
+	@echo Installing provisioner-code-gen...
+	go install ./cmd/provisioner-code-gen
+	@echo Generating code
+	go generate ./model
 
 .PHONY: check-modules
 check-modules: $(OUTDATED_GEN) ## Check outdated modules
