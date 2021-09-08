@@ -133,12 +133,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		State:              model.ClusterStateCreationRequested,
 	}
 
-	err = cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
-	if err != nil {
-		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)
 
 	annotations, err := model.AnnotationsFromStringSlice(createClusterRequest.Annotations)
 	if err != nil {
@@ -249,12 +244,7 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	defer unlockOnce()
 
-	err = clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
-	if err != nil {
-		c.Logger.WithError(err).Error("provided utility metadata could not be applied without error")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 
 	if clusterDTO.State != newState {
 		webhookPayload := &model.WebhookPayload{
