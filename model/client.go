@@ -1108,7 +1108,7 @@ func (c *Client) LeaveGroup(installationID string, request *LeaveGroupRequest) e
 }
 
 // GetMultitenantDatabases fetches the list of multitenant databases from the configured provisioning server.
-func (c *Client) GetMultitenantDatabases(request *GetDatabasesRequest) ([]*MultitenantDatabase, error) {
+func (c *Client) GetMultitenantDatabases(request *GetMultitenantDatabasesRequest) ([]*MultitenantDatabase, error) {
 	u, err := url.Parse(c.buildURL("/api/databases"))
 	if err != nil {
 		return nil, err
@@ -1131,8 +1131,28 @@ func (c *Client) GetMultitenantDatabases(request *GetDatabasesRequest) ([]*Multi
 	}
 }
 
+// GetMultitenantDatabase fetches the multitenant database from the configured provisioning server.
+func (c *Client) GetMultitenantDatabase(multitenantDatabaseID string) (*MultitenantDatabase, error) {
+	resp, err := c.doGet(c.buildURL("/api/databases/multitenant_database/%s", multitenantDatabaseID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return MultitenantDatabaseFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // UpdateMultitenantDatabase updates a multitenant database.
-func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchDatabaseRequest) (*MultitenantDatabase, error) {
+func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchMultitenantDatabaseRequest) (*MultitenantDatabase, error) {
 	resp, err := c.doPut(c.buildURL("/api/database/%s", databaseID), request)
 	if err != nil {
 		return nil, err
@@ -1142,6 +1162,94 @@ func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchData
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return MultitenantDatabaseFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetLogicalDatabases fetches the list of logical databases from the configured provisioning server.
+func (c *Client) GetLogicalDatabases(request *GetLogicalDatabasesRequest) ([]*LogicalDatabase, error) {
+	u, err := url.Parse(c.buildURL("/api/databases/logical_databases"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return LogicalDatabasesFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetLogicalDatabase fetches the logical database from the configured provisioning server.
+func (c *Client) GetLogicalDatabase(logicalDatabaseID string) (*LogicalDatabase, error) {
+	resp, err := c.doGet(c.buildURL("/api/databases/logical_database/%s", logicalDatabaseID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return LogicalDatabaseFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetDatabaseSchemas fetches the list of database schemas from the configured provisioning server.
+func (c *Client) GetDatabaseSchemas(request *GetDatabaseSchemaRequest) ([]*DatabaseSchema, error) {
+	u, err := url.Parse(c.buildURL("/api/databases/database_schemas"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return DatababseSchemasFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetDatabaseSchema fetches the database schema from the configured provisioning server.
+func (c *Client) GetDatabaseSchema(multitenantDatabaseID string) (*DatabaseSchema, error) {
+	resp, err := c.doGet(c.buildURL("/api/databases/database_schema/%s", multitenantDatabaseID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return DatababseSchemaFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)

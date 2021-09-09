@@ -59,8 +59,8 @@ type Database interface {
 // https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r424597373
 type InstallationDatabaseStoreInterface interface {
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
-	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
+	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
 	GetMultitenantDatabaseForInstallationID(installationID string) (*MultitenantDatabase, error)
 	GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error)
 	CreateMultitenantDatabase(multitenantDatabase *MultitenantDatabase) error
@@ -69,6 +69,10 @@ type InstallationDatabaseStoreInterface interface {
 	UnlockMultitenantDatabase(multitenantdatabaseID, lockerID string, force bool) (bool, error)
 	LockMultitenantDatabases(ids []string, lockerID string) (bool, error)
 	UnlockMultitenantDatabases(ids []string, lockerID string, force bool) (bool, error)
+	GetLogicalDatabases(filter *LogicalDatabaseFilter) ([]*LogicalDatabase, error)
+	GetLogicalDatabase(logicalDatabaseID string) (*LogicalDatabase, error)
+	GetDatabaseSchemas(filter *DatabaseSchemaFilter) ([]*DatabaseSchema, error)
+	GetDatabaseSchema(databaseSchemaID string) (*DatabaseSchema, error)
 	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*SingleTenantDatabaseConfig, error)
 	GetProxyDatabaseResourcesForInstallation(installationID string) (*DatabaseResourceGrouping, error)
 	GetOrCreateProxyDatabaseResourcesForInstallation(installationID, multitenantDatabaseID string) (*DatabaseResourceGrouping, error)

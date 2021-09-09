@@ -91,10 +91,3 @@ func parseGroupConfig(u *url.URL) (bool, bool, error) {
 
 	return includeGroupConfig, includeGroupConfigOverrides, nil
 }
-
-func parseDatabaseListRequest(u *url.URL) (string, string) {
-	vpcID := parseString(u, "vpc_id", "")
-	databaseType := parseString(u, "database_type", "")
-
-	return vpcID, databaseType
-}

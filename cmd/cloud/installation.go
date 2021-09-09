@@ -670,7 +670,7 @@ var installationDeploymentReportCmd = &cobra.Command{
 		output += fmt.Sprintf(" ├ Environment Variables: %d\n", len(installation.MattermostEnv))
 		output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
 		if model.IsMultiTenantRDS(installation.Database) {
-			databases, err := client.GetMultitenantDatabases(&model.GetDatabasesRequest{
+			databases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 				Paging: model.AllPagesWithDeleted(),
 			})
 			if err != nil {
@@ -682,6 +682,25 @@ var installationDeploymentReportCmd = &cobra.Command{
 					output += fmt.Sprintf(" │ ├ State: %s\n", database.State)
 					output += fmt.Sprintf(" │ ├ VPC: %s\n", database.VpcID)
 					output += fmt.Sprintf(" │ └ Installations: %d\n", len(database.Installations))
+				}
+			}
+			if installation.Database == model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer {
+				schemas, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+					InstallationID: installationID,
+					Paging:         model.AllPagesWithDeleted(),
+				})
+				if err != nil {
+					return errors.Wrap(err, "failed to query installation database schema")
+				}
+				for _, schema := range schemas {
+					logicalDatabase, err := client.GetLogicalDatabase(schema.LogicalDatabaseID)
+					if err != nil {
+						return errors.Wrap(err, "failed to query installation logical database")
+					}
+					output += fmt.Sprintf(" │   ├ Logical Database: %s\n", logicalDatabase.ID)
+					output += fmt.Sprintf(" │   └ Name: %s\n", logicalDatabase.Name)
+					output += fmt.Sprintf(" │     ├ Database Schema: %s\n", schema.ID)
+					output += fmt.Sprintf(" │     └ Name: %s\n", schema.Name)
 				}
 			}
 		}

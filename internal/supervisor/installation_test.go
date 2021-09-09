@@ -275,6 +275,22 @@ func (m mockMultitenantDBStore) DeleteInstallationProxyDatabaseResources(multite
 	return nil
 }
 
+func (s *mockMultitenantDBStore) GetDatabaseSchemas(filter *model.DatabaseSchemaFilter) ([]*model.DatabaseSchema, error) {
+	return nil, nil
+}
+
+func (m *mockMultitenantDBStore) GetDatabaseSchema(databaseSchemaID string) (*model.DatabaseSchema, error) {
+	return nil, nil
+}
+
+func (s *mockMultitenantDBStore) GetLogicalDatabases(filter *model.LogicalDatabaseFilter) ([]*model.LogicalDatabase, error) {
+	return nil, nil
+}
+
+func (m *mockMultitenantDBStore) GetLogicalDatabase(logicalDatabaseID string) (*model.LogicalDatabase, error) {
+	return nil, nil
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources

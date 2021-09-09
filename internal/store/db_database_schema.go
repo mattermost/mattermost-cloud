@@ -85,6 +85,11 @@ func (sqlStore *SQLStore) GetDatabaseSchemaForInstallationID(installationID stri
 	return nil, errors.Errorf("expected no more than one database schema, but got %d", len(databaseSchemas))
 }
 
+// CreateDatabaseSchema records the supplied database schema to the datastore.
+func (sqlStore *SQLStore) CreateDatabaseSchema(databaseSchema *model.DatabaseSchema) error {
+	return sqlStore.createDatabaseSchema(sqlStore.db, databaseSchema)
+}
+
 // createDatabaseSchema records the supplied database schema to the datastore.
 func (sqlStore *SQLStore) createDatabaseSchema(db execer, databaseSchema *model.DatabaseSchema) error {
 	databaseSchema.ID = model.NewID()
