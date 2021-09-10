@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetDatabases(t *testing.T) {
+func TestGetMultitenantDatabases(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
 
@@ -37,7 +37,7 @@ func TestGetDatabases(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	t.Run("no databases", func(t *testing.T) {
-		databases, err := client.GetMultitenantDatabases(&model.GetDatabasesRequest{
+		databases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 			Paging: model.AllPagesWithDeleted(),
 		})
 		require.NoError(t, err)
@@ -104,12 +104,12 @@ func TestGetDatabases(t *testing.T) {
 		t.Run("get databases", func(t *testing.T) {
 			testCases := []struct {
 				Description string
-				Request     *model.GetDatabasesRequest
+				Request     *model.GetMultitenantDatabasesRequest
 				Expected    []*model.MultitenantDatabase
 			}{
 				{
 					"page 0, perPage 2, exclude deleted",
-					&model.GetDatabasesRequest{
+					&model.GetMultitenantDatabasesRequest{
 						Paging: model.Paging{
 							Page:           0,
 							PerPage:        2,
@@ -121,7 +121,7 @@ func TestGetDatabases(t *testing.T) {
 
 				{
 					"page 1, perPage 2, exclude deleted",
-					&model.GetDatabasesRequest{
+					&model.GetMultitenantDatabasesRequest{
 						Paging: model.Paging{
 							Page:           1,
 							PerPage:        2,
@@ -133,7 +133,7 @@ func TestGetDatabases(t *testing.T) {
 
 				{
 					"page 0, perPage 2, include deleted",
-					&model.GetDatabasesRequest{
+					&model.GetMultitenantDatabasesRequest{
 						Paging: model.Paging{
 							Page:           0,
 							PerPage:        2,
@@ -145,7 +145,7 @@ func TestGetDatabases(t *testing.T) {
 
 				{
 					"page 1, perPage 2, include deleted",
-					&model.GetDatabasesRequest{
+					&model.GetMultitenantDatabasesRequest{
 						Paging: model.Paging{
 							Page:           1,
 							PerPage:        2,
@@ -167,7 +167,43 @@ func TestGetDatabases(t *testing.T) {
 	})
 }
 
-func TestUpdateDatabase(t *testing.T) {
+func TestGetMultitenantDatabase(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+
+	multitenantDatabase := &model.MultitenantDatabase{
+		VpcID: model.NewID(),
+	}
+
+	err := sqlStore.CreateMultitenantDatabase(multitenantDatabase)
+	require.NoError(t, err)
+	assert.NotEmpty(t, multitenantDatabase.ID)
+
+	t.Run("success", func(t *testing.T) {
+		fetchedMultitenantDatabase, err := client.GetMultitenantDatabase(multitenantDatabase.ID)
+		require.NoError(t, err)
+		assert.Equal(t, multitenantDatabase, fetchedMultitenantDatabase)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		fetchedMultitenantDatabase, err := client.GetMultitenantDatabase(model.NewID())
+		require.NoError(t, err)
+		assert.Nil(t, fetchedMultitenantDatabase)
+	})
+}
+
+func TestUpdateMultitenantDatabase(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
 
@@ -209,14 +245,14 @@ func TestUpdateDatabase(t *testing.T) {
 	})
 
 	t.Run("unknown database", func(t *testing.T) {
-		databases, err := client.UpdateMultitenantDatabase(model.NewID(), &model.PatchDatabaseRequest{})
+		databases, err := client.UpdateMultitenantDatabase(model.NewID(), &model.PatchMultitenantDatabaseRequest{})
 		require.EqualError(t, err, "failed with status code 404")
 		require.Nil(t, databases)
 	})
 
 	t.Run("update", func(t *testing.T) {
 		database1, err := client.UpdateMultitenantDatabase(database1.ID,
-			&model.PatchDatabaseRequest{
+			&model.PatchMultitenantDatabaseRequest{
 				MaxInstallationsPerLogicalDatabase: iToP(10),
 			})
 		require.NoError(t, err)

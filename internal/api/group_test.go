@@ -718,5 +718,4 @@ func TestGroupsStatus(t *testing.T) {
 			}
 		}
 	})
-
 }

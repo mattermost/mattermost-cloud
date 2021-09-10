@@ -156,26 +156,78 @@ type DatabaseSchemaFilter struct {
 
 // MultitenantDatabasesFromReader decodes a json-encoded list of multitenant databases from the given io.Reader.
 func MultitenantDatabasesFromReader(reader io.Reader) ([]*MultitenantDatabase, error) {
-	databases := []*MultitenantDatabase{}
+	multitenantDatabases := []*MultitenantDatabase{}
 	decoder := json.NewDecoder(reader)
 
-	err := decoder.Decode(&databases)
+	err := decoder.Decode(&multitenantDatabases)
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
 
-	return databases, nil
+	return multitenantDatabases, nil
 }
 
 // MultitenantDatabaseFromReader decodes a json-encoded multitenant database from the given io.Reader.
 func MultitenantDatabaseFromReader(reader io.Reader) (*MultitenantDatabase, error) {
-	database := &MultitenantDatabase{}
+	multitenantDatabase := &MultitenantDatabase{}
 	decoder := json.NewDecoder(reader)
 
-	err := decoder.Decode(&database)
+	err := decoder.Decode(&multitenantDatabase)
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
 
-	return database, nil
+	return multitenantDatabase, nil
+}
+
+// LogicalDatabasesFromReader decodes a json-encoded list of logical databases from the given io.Reader.
+func LogicalDatabasesFromReader(reader io.Reader) ([]*LogicalDatabase, error) {
+	logicalDatabases := []*LogicalDatabase{}
+	decoder := json.NewDecoder(reader)
+
+	err := decoder.Decode(&logicalDatabases)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return logicalDatabases, nil
+}
+
+// LogicalDatabaseFromReader decodes a json-encoded logical database from the given io.Reader.
+func LogicalDatabaseFromReader(reader io.Reader) (*LogicalDatabase, error) {
+	logicalDatabase := &LogicalDatabase{}
+	decoder := json.NewDecoder(reader)
+
+	err := decoder.Decode(&logicalDatabase)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return logicalDatabase, nil
+}
+
+// DatababseSchemasFromReader decodes a json-encoded list of database schemas from the given io.Reader.
+func DatababseSchemasFromReader(reader io.Reader) ([]*DatabaseSchema, error) {
+	databaseSchemas := []*DatabaseSchema{}
+	decoder := json.NewDecoder(reader)
+
+	err := decoder.Decode(&databaseSchemas)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return databaseSchemas, nil
+}
+
+// DatababseSchemaFromReader decodes a json-encoded database schema from the given io.Reader.
+func DatababseSchemaFromReader(reader io.Reader) (*DatabaseSchema, error) {
+	databaseSchema := &DatabaseSchema{}
+	decoder := json.NewDecoder(reader)
+
+	err := decoder.Decode(&databaseSchema)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return databaseSchema, nil
 }
