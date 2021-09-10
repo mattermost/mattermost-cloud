@@ -11,7 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
-// initDatabases registers database schema endpoints on the given router.
+// initDatabaseSchemas registers database schema endpoints on the given router.
 func initDatabaseSchemas(apiRouter *mux.Router, context *Context) {
 	addContext := func(handler contextHandlerFunc) *contextHandler {
 		return newContextHandler(context, handler)

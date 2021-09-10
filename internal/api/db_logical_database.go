@@ -11,7 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
-// initDatabases registers database endpoints on the given router.
+// initLogicalDatabases registers logical database endpoints on the given router.
 func initLogicalDatabases(apiRouter *mux.Router, context *Context) {
 	addContext := func(handler contextHandlerFunc) *contextHandler {
 		return newContextHandler(context, handler)
@@ -24,8 +24,8 @@ func initLogicalDatabases(apiRouter *mux.Router, context *Context) {
 	LogicalDatabaseRouter.Handle("", addContext(handleGetLogicalDatabase)).Methods("GET")
 }
 
-// handleGetMultitenantDatabases responds to GET /api/databases/multitenant_databases,
-// returning a list of multitenant databases.
+// handleGetLogicalDatabases responds to GET /api/databases/logical_databases,
+// returning a list of logical databases.
 func handleGetLogicalDatabases(c *Context, w http.ResponseWriter, r *http.Request) {
 	paging, err := parsePaging(r.URL)
 	if err != nil {
@@ -54,8 +54,8 @@ func handleGetLogicalDatabases(c *Context, w http.ResponseWriter, r *http.Reques
 	outputJSON(c, w, logicalDatabases)
 }
 
-// handleGetMultitenantDatabase responds to GET /api/databases/multitenant_database/{multitenant_database},
-// returning the multitenant database in question.
+// handleGetLogicalDatabase responds to GET /api/databases/logical_database/{logical_database},
+// returning the logical database in question.
 func handleGetLogicalDatabase(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	logicalDatabaseID := vars["logical_database"]

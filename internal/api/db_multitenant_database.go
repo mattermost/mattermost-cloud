@@ -11,7 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
-// initDatabases registers database endpoints on the given router.
+// initMultitenantDatabases registers multitenant database endpoints on the given router.
 func initMultitenantDatabases(apiRouter *mux.Router, context *Context) {
 	addContext := func(handler contextHandlerFunc) *contextHandler {
 		return newContextHandler(context, handler)
