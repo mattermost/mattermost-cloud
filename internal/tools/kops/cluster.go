@@ -198,10 +198,12 @@ func (c *Cmd) GetCluster(name string) (string, error) {
 	return trimmed, nil
 }
 
+const kopsClustersNotFoundError = "no clusters found"
+
 // GetClustersJSON invokes kops get clusters, using the context of the created Cmd, and
 // returns the stdout.
 func (c *Cmd) GetClustersJSON() (string, error) {
-	stdout, _, err := c.run(
+	stdout, stderr, err := c.run(
 		"get",
 		"clusters",
 		arg("state", "s3://", c.s3StateStore),
@@ -209,6 +211,10 @@ func (c *Cmd) GetClustersJSON() (string, error) {
 	)
 	trimmed := strings.TrimSuffix(string(stdout), "\n")
 	if err != nil {
+		// Kops will return 1 exit code if there are no clusters with the 'no clusters found' error message.
+		if strings.Contains(string(stderr), kopsClustersNotFoundError) {
+			return "[]", nil
+		}
 		return trimmed, errors.Wrap(err, "failed to invoke kops get clusters")
 	}
 

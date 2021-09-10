@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/pkg/errors"
@@ -110,12 +111,9 @@ func (provisioner *KopsProvisioner) kopsClusterExists(name string, logger log.Fi
 		return false, errors.Wrap(err, "failed to list clusters with kops")
 	}
 
-	var kopsClusters []struct {
-		Metadata model.KopsMetadata
-	}
-	err = json.Unmarshal([]byte(clustersJSON), &kopsClusters)
+	kopsClusters, err := unmarshalKopsListClustersResponse(clustersJSON)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to unmarshal kops clusters output")
+		return false, err
 	}
 
 	for _, cluster := range kopsClusters {
@@ -125,6 +123,33 @@ func (provisioner *KopsProvisioner) kopsClusterExists(name string, logger log.Fi
 	}
 
 	return false, nil
+}
+
+type kopsCluster struct {
+	Metadata model.KopsMetadata
+}
+
+// unmarshalKopsListClustersResponse unmarshals response from `kops get clusters -o json`.
+// Kops output from this command is not consistent, and it behaves in the following ways:
+//  * If there are multiple clusters an array of clusters is returned.
+//  * If there is only one cluster a single cluster object is returned (not as an array).
+func unmarshalKopsListClustersResponse(output string) ([]kopsCluster, error) {
+	trimmedOut := strings.TrimSpace(output)
+	if strings.HasPrefix(trimmedOut, "[") {
+		var kopsClusters []kopsCluster
+		err := json.Unmarshal([]byte(output), &kopsClusters)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal array of kops clusters output")
+		}
+		return kopsClusters, nil
+	}
+
+	singleCluster := kopsCluster{}
+	err := json.Unmarshal([]byte(output), &singleCluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal single kops cluster output")
+	}
+	return []kopsCluster{singleCluster}, nil
 }
 
 func (provisioner *KopsProvisioner) invalidateCachedKopsClient(name string, logger log.FieldLogger) error {
