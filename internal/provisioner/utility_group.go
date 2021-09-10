@@ -124,9 +124,9 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Stackrox")
 	}
-	kubecost, err := newKubecostHandle(
+	kubecost, err := newKubecostHandle(cluster,
 		cluster.DesiredUtilityVersion(model.KubecostCanonicalName),
-		provisioner, kops, logger)
+		provisioner, awsClient, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Kubecost")
 	}
