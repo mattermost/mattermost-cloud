@@ -42,6 +42,10 @@ func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterI
 						ErrorQuery: "sum(rate(mattermost_api_time_count{job='" + installationName + "',status_code=~'(5..|429|499)'}[{{.window}}]))",
 						TotalQuery: "sum(rate(mattermost_api_time_count{job='" + installationName + "'}[{{.window}}]))",
 					}},
+					Alerting: slothv1.Alerting{
+						PageAlert:   slothv1.Alert{Disable: true},
+						TicketAlert: slothv1.Alert{Disable: true},
+					},
 				}},
 		},
 	}
