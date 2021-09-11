@@ -165,12 +165,10 @@ func (sqlStore *SQLStore) DeleteInstallationProxyDatabaseResources(multitenantDa
 		return errors.Wrap(err, "failed to delete database schema")
 	}
 
-	if multitenantDatabase.Installations.Contains(databaseSchema.InstallationID) {
-		multitenantDatabase.Installations.Remove(databaseSchema.InstallationID)
-		err = sqlStore.updateMultitenantDatabase(tx, multitenantDatabase)
-		if err != nil {
-			return errors.Wrap(err, "failed to update multitenant database")
-		}
+	multitenantDatabase.Installations.Remove(databaseSchema.InstallationID)
+	err = sqlStore.updateMultitenantDatabase(tx, multitenantDatabase)
+	if err != nil {
+		return errors.Wrap(err, "failed to update multitenant database")
 	}
 
 	err = tx.Commit()

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetOrCreateProxyDatabaseResourcesForInstallation(t *testing.T) {
+func TestGetCreateAndDeleteProxyHelpers(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	store := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, store)
@@ -53,9 +53,12 @@ func TestGetOrCreateProxyDatabaseResourcesForInstallation(t *testing.T) {
 	err := store.CreateMultitenantDatabase(multitenantDatabase)
 	require.NoError(t, err)
 
-	t.Run("create resources only once", func(t *testing.T) {
-		installation1 := createAndCheckDummyInstallation(t, store)
+	installation1 := createAndCheckDummyInstallation(t, store)
+	installation2 := createAndCheckDummyInstallation(t, store)
+	installation3 := createAndCheckDummyInstallation(t, store)
+	installation4 := createAndCheckDummyInstallation(t, store)
 
+	t.Run("create resources only once", func(t *testing.T) {
 		createdResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(installation1.ID, multitenantDatabase.ID)
 		require.NoError(t, err)
 		expectedDatabaseResourceCounts(t, store, 1, 1, 1)
@@ -67,13 +70,9 @@ func TestGetOrCreateProxyDatabaseResourcesForInstallation(t *testing.T) {
 	})
 
 	t.Run("reuse exisiting logical database", func(t *testing.T) {
-		installation2 := createAndCheckDummyInstallation(t, store)
-
 		_, err = store.GetOrCreateProxyDatabaseResourcesForInstallation(installation2.ID, multitenantDatabase.ID)
 		require.NoError(t, err)
 		expectedDatabaseResourceCounts(t, store, 1, 1, 2)
-
-		installation3 := createAndCheckDummyInstallation(t, store)
 
 		_, err = store.GetOrCreateProxyDatabaseResourcesForInstallation(installation3.ID, multitenantDatabase.ID)
 		require.NoError(t, err)
@@ -81,8 +80,6 @@ func TestGetOrCreateProxyDatabaseResourcesForInstallation(t *testing.T) {
 	})
 
 	t.Run("create new logical database when max is hit", func(t *testing.T) {
-		installation4 := createAndCheckDummyInstallation(t, store)
-
 		_, err = store.GetOrCreateProxyDatabaseResourcesForInstallation(installation4.ID, multitenantDatabase.ID)
 		require.NoError(t, err)
 		expectedDatabaseResourceCounts(t, store, 1, 2, 4)
@@ -109,5 +106,34 @@ func TestGetOrCreateProxyDatabaseResourcesForInstallation(t *testing.T) {
 		_, err = store.GetOrCreateProxyDatabaseResourcesForInstallation(installation6.ID, model.NewID())
 		require.Error(t, err)
 		expectedDatabaseResourceCounts(t, store, 1, 3, 5)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		multitenantDatabase, err = store.GetMultitenantDatabase(multitenantDatabase.ID)
+		require.NoError(t, err)
+		require.NotNil(t, multitenantDatabase)
+
+		schema, err := store.GetDatabaseSchemaForInstallationID(installation1.ID)
+		require.NoError(t, err)
+		require.NotNil(t, schema)
+
+		err = store.DeleteInstallationProxyDatabaseResources(multitenantDatabase, schema)
+		require.NoError(t, err)
+		expectedDatabaseResourceCounts(t, store, 1, 3, 4)
+	})
+
+	t.Run("remove installation from multitenant database first", func(t *testing.T) {
+		multitenantDatabase, err = store.GetMultitenantDatabase(multitenantDatabase.ID)
+		require.NoError(t, err)
+		require.NotNil(t, multitenantDatabase)
+
+		schema, err := store.GetDatabaseSchemaForInstallationID(installation2.ID)
+		require.NoError(t, err)
+		require.NotNil(t, schema)
+
+		multitenantDatabase.Installations.Remove(installation2.ID)
+		err = store.DeleteInstallationProxyDatabaseResources(multitenantDatabase, schema)
+		require.NoError(t, err)
+		expectedDatabaseResourceCounts(t, store, 1, 3, 3)
 	})
 }
