@@ -80,3 +80,88 @@ func TestGenerateCILicenseName(t *testing.T) {
 	assert.Contains(t, licenseName, fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License)))[0:6])
 	assert.Contains(t, licenseName, "-license")
 }
+
+const (
+	multipleKopsClustersOutput = `[
+  {
+    "kind": "Cluster",
+    "apiVersion": "kops.k8s.io/v1alpha2",
+    "metadata": {
+      "name": "cluster-kops.k8s.local",
+      "generation": 2,
+      "creationTimestamp": "2021-09-09T07:51:20Z"
+    },
+    "spec": {
+      "channel": "stable",
+      "configBase": "s3://kops-state/cluster-kops.k8s.local",
+      "cloudProvider": "aws",
+      "kubernetesVersion": "1.20.9",
+      "masterPublicName": "api.cluster-kops.k8s.local",
+      "networkID": "vpc-cluster"
+    }
+  },
+  {
+    "kind": "Cluster",
+    "apiVersion": "kops.k8s.io/v1alpha2",
+    "metadata": {
+      "name": "test-kops.k8s.local",
+      "generation": 2,
+      "creationTimestamp": "2020-10-26T16:27:47Z"
+    },
+    "spec": {
+      "channel": "stable",
+      "configBase": "s3://kops-state/test-kops.k8s.local",
+      "cloudProvider": "aws",
+      "kubernetesVersion": "1.17.12",
+      "subnets": [
+        {
+          "name": "us-east-1a",
+          "zone": "us-east-1a",
+          "cidr": "10.10.10.0/23",
+          "id": "subnet-abc",
+          "type": "Private"
+        }
+      ],
+      "masterPublicName": "api.test-kops.k8s.local",
+      "networkCIDR": "10.240.112.0/20",
+      "networkID": "vpc-0717d2e34d0e0b137"
+    }
+  }
+]`
+	singleClusterResponse = `{
+    "kind": "Cluster",
+    "apiVersion": "kops.k8s.io/v1alpha2",
+    "metadata": {
+      "name": "single-cluster-kops.k8s.local",
+      "generation": 2,
+      "creationTimestamp": "2021-09-09T07:51:20Z"
+    },
+    "spec": {
+      "channel": "stable",
+      "configBase": "s3://kops-state/cluster-kops.k8s.local",
+      "cloudProvider": "aws",
+      "kubernetesVersion": "1.20.9",
+      "masterPublicName": "api.cluster-kops.k8s.local",
+      "networkID": "vpc-cluster"
+    }
+  }`
+)
+
+func TestUnmarshalKopsListClustersResponse(t *testing.T) {
+	t.Run("single cluster", func(t *testing.T) {
+		clusters, err := unmarshalKopsListClustersResponse(singleClusterResponse)
+		require.NoError(t, err)
+
+		assert.Len(t, clusters, 1)
+		assert.Equal(t, clusters[0].Metadata.Name, "single-cluster-kops.k8s.local")
+	})
+
+	t.Run("multiple clusters", func(t *testing.T) {
+		clusters, err := unmarshalKopsListClustersResponse(multipleKopsClustersOutput)
+		require.NoError(t, err)
+
+		assert.Len(t, clusters, 2)
+		assert.Equal(t, clusters[0].Metadata.Name, "cluster-kops.k8s.local")
+		assert.Equal(t, clusters[1].Metadata.Name, "test-kops.k8s.local")
+	})
+}
