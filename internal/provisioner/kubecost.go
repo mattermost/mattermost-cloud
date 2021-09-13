@@ -83,11 +83,6 @@ func (k *kubecost) ValuesPath() string {
 func (k *kubecost) CreateOrUpgrade() error {
 	logger := k.logger.WithField("kubecost-action", "create")
 
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = aws.DefaultAWSRegion
-	}
-
 	k8sClient, err := k8s.NewFromFile(k.kops.GetKubeConfigPath(), logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up the k8s client")
@@ -125,7 +120,7 @@ func (k *kubecost) CreateOrUpgrade() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
 	defer cancel()
 
-	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger.WithField("kubecost-action", "create"), k.kops.GetKubeConfigPath())
+	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger, k.kops.GetKubeConfigPath())
 	if err != nil {
 		return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Prometheus")
 	}
