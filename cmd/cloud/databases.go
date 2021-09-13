@@ -5,6 +5,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -20,6 +22,7 @@ func init() {
 	// Multitenant Databases
 	multitenantDatabaseListCmd.Flags().String("vpc-id", "", "The VPC ID by which to filter mulitenant databases.")
 	multitenantDatabaseListCmd.Flags().String("database-type", "", "The database type by which to filter mulitenant databases.")
+	registerTableOutputFlags(multitenantDatabaseListCmd)
 	registerPagingFlags(multitenantDatabaseListCmd)
 
 	multitenantDatabaseGetCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to be fetched.")
@@ -35,6 +38,7 @@ func init() {
 
 	// Logical Databases
 	logicalDatabaseListCmd.Flags().String("multitenant-database-id", "", "The multitenant database ID by which to filter logical databases.")
+	registerTableOutputFlags(logicalDatabaseListCmd)
 	registerPagingFlags(logicalDatabaseListCmd)
 
 	logicalDatabaseGetCmd.Flags().String("logical-database", "", "The id of the logical database to be fetched.")
@@ -46,6 +50,7 @@ func init() {
 	// Database Schemas
 	databaseSchemaListCmd.Flags().String("logical-database-id", "", "The logical database ID by which to filter database schemas.")
 	databaseSchemaListCmd.Flags().String("installation-id", "", "The installation ID by which to filter database schemas.")
+	registerTableOutputFlags(databaseSchemaListCmd)
 	registerPagingFlags(databaseSchemaListCmd)
 
 	databaseSchemaGetCmd.Flags().String("database-schema", "", "The id of the database schema to be fetched.")
@@ -78,7 +83,7 @@ var multitenantDatabaseListCmd = &cobra.Command{
 		databaseType, _ := command.Flags().GetString("database-type")
 		paging := parsePagingFlags(command)
 
-		databases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
+		multitenantDatabses, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 			VpcID:        vpcID,
 			DatabaseType: databaseType,
 			Paging:       paging,
@@ -87,13 +92,43 @@ var multitenantDatabaseListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to query multitenant databases")
 		}
 
-		err = printJSON(databases)
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
+
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(multitenantDatabses))
+				for _, mtd := range multitenantDatabses {
+					data = append(data, mtd)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultMultitenantDatabaseTableData(multitenantDatabses)
+			}
+
+			printTable(keys, vals)
+			return nil
+		}
+
+		err = printJSON(multitenantDatabses)
 		if err != nil {
 			return err
 		}
 
 		return nil
 	},
+}
+
+func defaultMultitenantDatabaseTableData(multitenantDatabases []*model.MultitenantDatabase) ([]string, [][]string) {
+	keys := []string{"ID", "RDS CLUSTER ID", "TYPE", "STATE", "INSTALLATIONS"}
+	vals := make([][]string, 0, len(multitenantDatabases))
+	for _, multitenantDatabase := range multitenantDatabases {
+		vals = append(vals, []string{multitenantDatabase.ID, multitenantDatabase.RdsClusterID, multitenantDatabase.DatabaseType, multitenantDatabase.State, fmt.Sprintf("%d", multitenantDatabase.Installations.Count())})
+	}
+	return keys, vals
 }
 
 var multitenantDatabaseGetCmd = &cobra.Command{
@@ -181,6 +216,27 @@ var logicalDatabaseListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to query logical databases")
 		}
 
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
+
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(logicalDatabases))
+				for _, ldb := range logicalDatabases {
+					data = append(data, ldb)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultLogicalDatabaseTableData(logicalDatabases)
+			}
+
+			printTable(keys, vals)
+			return nil
+		}
+
 		err = printJSON(logicalDatabases)
 		if err != nil {
 			return err
@@ -188,6 +244,15 @@ var logicalDatabaseListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func defaultLogicalDatabaseTableData(logicalDatabases []*model.LogicalDatabase) ([]string, [][]string) {
+	keys := []string{"ID", "MULTITENANT DATABASE", "NAME"}
+	vals := make([][]string, 0, len(logicalDatabases))
+	for _, logicalDatabase := range logicalDatabases {
+		vals = append(vals, []string{logicalDatabase.ID, logicalDatabase.MultitenantDatabaseID, logicalDatabase.Name})
+	}
+	return keys, vals
 }
 
 var logicalDatabaseGetCmd = &cobra.Command{
@@ -235,7 +300,7 @@ var databaseSchemaListCmd = &cobra.Command{
 		installationID, _ := command.Flags().GetString("installation-id")
 		paging := parsePagingFlags(command)
 
-		logicalDatabases, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+		databaseSchemas, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
 			LogicalDatabaseID: logicalDatabaseID,
 			InstallationID:    installationID,
 			Paging:            paging,
@@ -244,13 +309,43 @@ var databaseSchemaListCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to query database schemas")
 		}
 
-		err = printJSON(logicalDatabases)
+		if enabled, customCols := tableOutputEnabled(command); enabled {
+			var keys []string
+			var vals [][]string
+
+			if len(customCols) > 0 {
+				data := make([]interface{}, 0, len(databaseSchemas))
+				for _, dbs := range databaseSchemas {
+					data = append(data, dbs)
+				}
+				keys, vals, err = prepareTableData(customCols, data)
+				if err != nil {
+					return errors.Wrap(err, "failed to prepare table output")
+				}
+			} else {
+				keys, vals = defaultDatabaseSchemaTableData(databaseSchemas)
+			}
+
+			printTable(keys, vals)
+			return nil
+		}
+
+		err = printJSON(databaseSchemas)
 		if err != nil {
 			return err
 		}
 
 		return nil
 	},
+}
+
+func defaultDatabaseSchemaTableData(databaseSchemas []*model.DatabaseSchema) ([]string, [][]string) {
+	keys := []string{"ID", "LOGICAL DATABASE", "INSTALLATION", "NAME"}
+	vals := make([][]string, 0, len(databaseSchemas))
+	for _, databaseSchema := range databaseSchemas {
+		vals = append(vals, []string{databaseSchema.ID, databaseSchema.LogicalDatabaseID, databaseSchema.InstallationID, databaseSchema.Name})
+	}
+	return keys, vals
 }
 
 var databaseSchemaGetCmd = &cobra.Command{
