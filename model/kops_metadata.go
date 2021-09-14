@@ -22,14 +22,14 @@ type KopsMetadata struct {
 	NodeInstanceType     string
 	NodeMinCount         int64
 	NodeMaxCount         int64
+	VPC                  string
+	Networking           string
 	MasterInstanceGroups KopsInstanceGroupsMetadata
 	NodeInstanceGroups   KopsInstanceGroupsMetadata
-	CustomInstanceGroups KopsInstanceGroupsMetadata
+	CustomInstanceGroups KopsInstanceGroupsMetadata  `json:"CustomInstanceGroups,omitempty"`
 	ChangeRequest        *KopsMetadataRequestedState `json:"ChangeRequest,omitempty"`
 	RotatorRequest       *RotatorMetadata            `json:"RotatorRequest,omitempty"`
 	Warnings             []string                    `json:"Warnings,omitempty"`
-	Networking           string                      `json:"Networking,omitempty"`
-	VPC                  string                      `json:"VPC,omitempty"`
 }
 
 // KopsInstanceGroupsMetadata is a map of instance group names to their metadata.

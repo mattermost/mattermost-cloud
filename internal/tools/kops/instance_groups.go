@@ -56,7 +56,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.CustomInstanceGroups = make(model.KopsInstanceGroupsMetadata)
 
 	var masterIGCount, nodeIGCount, nodeMinCount, nodeMaxCount int64
-	var masterMachineType, AMI string
+	var masterMachineType, nodeMachineType, AMI string
 	for _, ig := range instanceGroups {
 		switch ig.Spec.Role {
 		case "Master":
@@ -93,6 +93,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 
 			if strings.HasPrefix(ig.Metadata.Name, "nodes") {
 				nodeIGCount++
+				nodeMachineType = ig.Spec.MachineType
 				nodeMinCount += ig.Spec.MinSize
 				nodeMaxCount += ig.Spec.MaxSize
 				metadata.NodeInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
@@ -136,6 +137,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.AMI = AMI
 	metadata.MasterInstanceType = masterMachineType
 	metadata.MasterCount = masterIGCount
+	metadata.NodeInstanceType = nodeMachineType
 	metadata.NodeMinCount = nodeMinCount
 	metadata.NodeMaxCount = nodeMaxCount
 	metadata.Networking = GetCurrentCni(networking)
