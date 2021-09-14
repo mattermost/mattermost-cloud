@@ -61,6 +61,16 @@ def get_refs():
 
     return refs
 
+
+def is_generated_file(filename, data, regexs):
+    for d in skipped_ungenerated_files:
+        if d in filename:
+            return False
+
+    p = regexs["generated"]
+    return p.search(data)
+
+
 def file_passes(filename, refs, regexs):
     try:
         f = open(filename, 'r')
@@ -71,8 +81,14 @@ def file_passes(filename, refs, regexs):
     data = f.read()
     f.close()
 
+    # determine if the file is automatically generated
+    generated = is_generated_file(filename, data, regexs)
+
     basename = os.path.basename(filename)
     extension = file_extension(filename)
+    if generated:
+        if extension == "go":
+            extension = "generatego"
 
     if extension != "":
         ref = refs[extension]
@@ -131,7 +147,7 @@ skipped_dirs = ['Godeps', 'third_party', '_gopath', '_output', '.git', 'internal
                 "pkg/kubectl/generated/bindata.go"]
 
 # list all the files contain 'DO NOT EDIT', but are not generated
-skipped_ungenerated_files = ['hack/lib/swagger.sh', 'hack/boilerplate/boilerplate.py']
+skipped_ungenerated_files = ['hack/lib/swagger.sh', 'hack/boilerplate/boilerplate.py', 'cmd/provisioner-code-gen/util.go']
 
 def normalize_files(files):
     newfiles = []

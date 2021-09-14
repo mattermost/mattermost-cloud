@@ -26,9 +26,11 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slok/sloth v0.6.0
 	github.com/spf13/cobra v1.1.3
+	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/vrischmann/envconfig v1.3.0
 	go.uber.org/zap v1.17.0 // indirect
+	golang.org/x/tools v0.1.3
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.2
 	k8s.io/apiextensions-apiserver v0.20.2
