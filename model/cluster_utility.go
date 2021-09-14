@@ -193,15 +193,22 @@ func (c *Cluster) SetUtilityActualVersion(utility string, version *HelmUtilityVe
 // SetUtilityDesiredVersions takes a map of string to string representing
 // any metadata related to the utility group and stores it as a []byte
 // in Cluster so that it can be inserted into the database
-func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtilityVersion) error {
+func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtilityVersion) {
+	if c.UtilityMetadata == nil {
+		c.UtilityMetadata = new(UtilityMetadata)
+	}
+	if desiredVersions == nil {
+		desiredVersions = map[string]*HelmUtilityVersion{}
+	}
+
 	// set default values for utility versions
-	for utilityName, version := range desiredVersions {
-		auv := c.ActualUtilityVersion(utilityName)
-		if auv == nil {
+	for utilityName, auv := range c.UtilityMetadata.ActualVersions.AsMap() {
+		version, found := desiredVersions[utilityName]
+		if !found || version == nil {
+			desiredVersions[utilityName] = auv
 			continue
 		}
-		if version == nil {
-			desiredVersions[utilityName] = auv
+		if auv == nil {
 			continue
 		}
 		if version.ValuesPath == "" {
@@ -212,15 +219,9 @@ func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtil
 		}
 	}
 
-	if c.UtilityMetadata == nil {
-		c.UtilityMetadata = new(UtilityMetadata)
-	}
-
 	for utility, version := range desiredVersions {
 		setUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility, version)
 	}
-
-	return nil
 }
 
 // DesiredUtilityVersion fetches the desired version of a utility from the

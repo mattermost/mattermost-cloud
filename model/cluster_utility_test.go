@@ -56,26 +56,86 @@ func TestSetActualVersion(t *testing.T) {
 }
 
 func TestSetDesired(t *testing.T) {
-	c := &Cluster{}
 
-	assert.Nil(t, c.UtilityMetadata)
-	err := c.SetUtilityDesiredVersions(map[string]*HelmUtilityVersion{
-		NginxCanonicalName: {Chart: "1.9.9"},
-	})
-	require.NoError(t, err)
-
-	assert.NotNil(t, c.UtilityMetadata)
-
-	version := c.DesiredUtilityVersion(NginxCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "1.9.9"}, version)
-
-	var nilVersion *HelmUtilityVersion = nil
-	version = c.DesiredUtilityVersion(PrometheusOperatorCanonicalName)
-	require.NoError(t, err)
-	assert.Equal(t, nilVersion, version)
-
-	version = c.DesiredUtilityVersion(ThanosCanonicalName)
-	assert.Equal(t, nilVersion, version)
+	for _, testCase := range []struct {
+		description             string
+		currentMetadata         *UtilityMetadata
+		desiredVersions         map[string]*HelmUtilityVersion
+		expectedDesiredVersions UtilityGroupVersions
+	}{
+		{
+			description:     "set desired utility without actual",
+			currentMetadata: nil,
+			desiredVersions: map[string]*HelmUtilityVersion{
+				NginxCanonicalName: {Chart: "1.9.9", ValuesPath: "vals"},
+			},
+			expectedDesiredVersions: UtilityGroupVersions{
+				Nginx: &HelmUtilityVersion{Chart: "1.9.9", ValuesPath: "vals"},
+			},
+		},
+		{
+			description: "set single desired utility, inherit from actual",
+			currentMetadata: &UtilityMetadata{
+				ActualVersions: UtilityGroupVersions{
+					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
+					Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
+				},
+			},
+			desiredVersions: map[string]*HelmUtilityVersion{
+				NginxCanonicalName: {Chart: "3.0.0", ValuesPath: "nginx"},
+			},
+			expectedDesiredVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
+				Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "3.0.0"},
+			},
+		},
+		{
+			description: "use version and values from actual if one is empty",
+			currentMetadata: &UtilityMetadata{
+				ActualVersions: UtilityGroupVersions{
+					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
+					Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
+				},
+			},
+			desiredVersions: map[string]*HelmUtilityVersion{
+				PrometheusOperatorCanonicalName: {Chart: "12.0.0"},
+				NginxCanonicalName:              {ValuesPath: "nginx-new-values"},
+			},
+			expectedDesiredVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "12.0.0"},
+				Nginx:              &HelmUtilityVersion{ValuesPath: "nginx-new-values", Chart: "2.0.0"},
+			},
+		},
+		{
+			description: "use all actual to override current desired",
+			currentMetadata: &UtilityMetadata{
+				ActualVersions: UtilityGroupVersions{
+					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
+					Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
+					Teleport:           &HelmUtilityVersion{ValuesPath: "teleport", Chart: "5.0.0"},
+				},
+				DesiredVersions: UtilityGroupVersions{
+					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prometeus", Chart: "0.1"},
+					Nginx:              &HelmUtilityVersion{ValuesPath: "desired-nginx", Chart: "120.0.0"},
+					Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport", Chart: "15.0.0"},
+				},
+			},
+			desiredVersions: nil,
+			expectedDesiredVersions: UtilityGroupVersions{
+				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
+				Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
+				Teleport:           &HelmUtilityVersion{ValuesPath: "teleport", Chart: "5.0.0"},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			c := &Cluster{
+				UtilityMetadata: testCase.currentMetadata,
+			}
+			c.SetUtilityDesiredVersions(testCase.desiredVersions)
+			assert.Equal(t, testCase.expectedDesiredVersions, c.UtilityMetadata.DesiredVersions)
+		})
+	}
 }
 
 func TestGetActualVersion(t *testing.T) {
