@@ -474,6 +474,10 @@ func (sqlStore *SQLStore) UpdateInstallationCRVersion(installationID, crVersion 
 // GetInstallationsTotalDatabaseWeight returns the total weight value of the
 // provided installations.
 func (sqlStore *SQLStore) GetInstallationsTotalDatabaseWeight(installationIDs []string) (float64, error) {
+	if len(installationIDs) == 0 {
+		return float64(0), nil
+	}
+
 	installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
 		InstallationIDs: installationIDs,
 		Paging:          model.AllPagesNotDeleted(),
