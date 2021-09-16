@@ -961,23 +961,35 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
-	totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation1.ID})
-	require.NoError(t, err)
-	assert.Equal(t, installation1.GetDatabaseWeight(), totalWeight)
-	assert.Equal(t, model.DefaultDatabaseWeight, totalWeight)
-
-	totalWeight, err = sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation3.ID})
-	require.NoError(t, err)
-	assert.Equal(t, installation3.GetDatabaseWeight(), totalWeight)
-	assert.Equal(t, model.HibernatingDatabaseWeight, totalWeight)
-
-	totalWeight, err = sqlStore.GetInstallationsTotalDatabaseWeight([]string{
-		installation1.ID,
-		installation2.ID,
-		installation3.ID,
+	t.Run("no installations in filter", func(t *testing.T) {
+		totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{})
+		require.NoError(t, err)
+		assert.Equal(t, float64(0), totalWeight)
 	})
-	require.NoError(t, err)
-	assert.Equal(t, installation1.GetDatabaseWeight()+installation2.GetDatabaseWeight()+installation3.GetDatabaseWeight(), totalWeight)
+
+	t.Run("stable installation", func(t *testing.T) {
+		totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation1.ID})
+		require.NoError(t, err)
+		assert.Equal(t, installation1.GetDatabaseWeight(), totalWeight)
+		assert.Equal(t, model.DefaultDatabaseWeight, totalWeight)
+	})
+
+	t.Run("hibernating installation", func(t *testing.T) {
+		totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{installation3.ID})
+		require.NoError(t, err)
+		assert.Equal(t, installation3.GetDatabaseWeight(), totalWeight)
+		assert.Equal(t, model.HibernatingDatabaseWeight, totalWeight)
+	})
+
+	t.Run("three installations", func(t *testing.T) {
+		totalWeight, err := sqlStore.GetInstallationsTotalDatabaseWeight([]string{
+			installation1.ID,
+			installation2.ID,
+			installation3.ID,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, installation1.GetDatabaseWeight()+installation2.GetDatabaseWeight()+installation3.GetDatabaseWeight(), totalWeight)
+	})
 }
 
 func TestDeleteInstallation(t *testing.T) {
