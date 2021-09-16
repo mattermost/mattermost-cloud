@@ -298,7 +298,6 @@ func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTag
 			ReaderEndpoint:                     *rdsCluster.ReaderEndpoint,
 			MaxInstallationsPerLogicalDatabase: model.GetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(),
 		}
-
 		err = store.CreateMultitenantDatabase(&multitenantDatabase)
 		if err != nil {
 			logger.WithError(err).Errorf("Failed to create a multitenant database. Skipping RDS cluster ID %s", *rdsClusterID)
@@ -699,6 +698,9 @@ func (d *RDSMultitenantPGBouncerDatabase) GenerateDatabaseSecret(store model.Ins
 	dbResources, err := store.GetProxyDatabaseResourcesForInstallation(d.installationID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for database resources")
+	}
+	if dbResources == nil {
+		return nil, errors.New("no database resources found for this installation; it potentially has not been assigned yet")
 	}
 
 	unlock, err := lockMultitenantDatabase(dbResources.MultitenantDatabase.ID, d.instanceID, store, logger)
