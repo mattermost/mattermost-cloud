@@ -151,24 +151,32 @@ func (w *TestWicker) AddTeamMember() func(w *TestWicker, ctx context.Context) er
 }
 
 // CreateChannel creates a channel so we can post couple of messages
-func (w *TestWicker) CreateChannel() func(w *TestWicker, ctx context.Context) error {
+func (w *TestWicker) CreateChannel(retries int) func(w *TestWicker, ctx context.Context) error {
 	return func(w *TestWicker, ctx context.Context) error {
 		w.logger.WithField("DNS", w.installation.DNS).Info("Creating channel")
 		if w.userID == "" {
 			return fmt.Errorf("failed to create a channel. You need to create a user first")
 		}
-		channelName := SimpleNameGenerator.GenerateName("channel")
+		for i := 0; i < retries; i++ {
+			channelName := SimpleNameGenerator.GenerateName("channel")
 
-		channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
-			CreatorId: w.userID,
-			TeamId:    w.teamID,
-			Type:      mmodel.CHANNEL_OPEN,
-			Name:      channelName,
-		})
-		if response.StatusCode != 201 {
-			return fmt.Errorf("failed to create channel status = %d, message = %s, channel: %s", response.StatusCode, response.Error.Message, channelName)
+			channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
+				CreatorId: w.userID,
+				TeamId:    w.teamID,
+				Type:      mmodel.CHANNEL_OPEN,
+				Name:      channelName,
+			})
+			if response.StatusCode != 201 {
+				// retries exhausted
+				if i == retries-1 {
+					return fmt.Errorf("failed to create channel status = %d, message = %s, channel: %s after %d retries", response.StatusCode, response.Error.Message, channelName, retries)
+
+				}
+				continue
+			}
+			w.channelID = channel.Id
+
 		}
-		w.channelID = channel.Id
 		return nil
 	}
 }

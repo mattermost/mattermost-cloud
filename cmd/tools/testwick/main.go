@@ -130,7 +130,7 @@ var testerCmd = &cobra.Command{
 				for j := 0; j < testerConfig.channelSamples; j++ {
 					workflow.AddStep(testwick.Step{
 						Name: "CreateChannel",
-						Func: testwicker.CreateChannel(),
+						Func: testwicker.CreateChannel(20),
 					}, testwick.Step{
 						Name: "CreateIncomingWebhook",
 						Func: testwicker.CreateIncomingWebhook(),
