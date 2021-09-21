@@ -18,7 +18,7 @@ func init() {
 	clusterInstallationSelect = sq.
 		Select(
 			"ID", "ClusterID", "InstallationID", "Namespace", "State", "CreateAt",
-			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "IsActive",
+			"DeleteAt", "APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "IsActive", "IsMigrated",
 		).
 		From("ClusterInstallation")
 }
@@ -84,6 +84,9 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	}
 	if filter.IsActive != nil {
 		builder = builder.Where("IsActive = ?", *filter.IsActive)
+	}
+	if filter.IsMigrated != nil {
+		builder = builder.Where("IsMigrated = ?", *filter.IsMigrated)
 	}
 	var clusterInstallations []*model.ClusterInstallation
 	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
@@ -216,7 +219,7 @@ func (sqlStore *SQLStore) setClusterInstallationAPILock(id string, lock bool) er
 
 // MigrateClusterInstallations updates the given cluster installation in the database.
 func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error {
-
+	var clusterInstallationIDs []string
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -224,14 +227,21 @@ func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*mo
 	defer tx.RollbackUnlessCommitted()
 
 	for _, clusterInstallation := range clusterInstallations {
+		clusterInstallationIDs = append(clusterInstallationIDs, clusterInstallation.ID)
 		clusterInstallation.ClusterID = targetCluster
 		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
 		clusterInstallation.IsActive = false
+		clusterInstallation.IsMigrated = false
 		err := sqlStore.createClusterInstallation(tx, clusterInstallation)
 
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster installation")
 		}
+	}
+	// Mark the source CIs as migaretd
+	err = sqlStore.UpdateClusterInstallationsMigrationStatus(tx, clusterInstallationIDs, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
 	}
 	err = tx.Commit()
 	if err != nil {
@@ -260,6 +270,7 @@ func (sqlStore *SQLStore) createClusterInstallation(db execer, clusterInstallati
 			"LockAcquiredBy":  nil,
 			"LockAcquiredAt":  0,
 			"IsActive":        clusterInstallation.IsActive,
+			"IsMigrated":      clusterInstallation.IsMigrated,
 		}),
 	)
 	if err != nil {
@@ -304,6 +315,24 @@ func (sqlStore *SQLStore) SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []stri
 	err = tx.Commit()
 	if err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
+	}
+
+	return nil
+}
+
+// UpdateClusterInstallationsMigrationStatus updates the migration status for given cluster installations.
+func (sqlStore *SQLStore) UpdateClusterInstallationsMigrationStatus(db execer, clusterInstallationIDs []string, IsMigrated bool) error {
+	_, err := sqlStore.execBuilder(db, sq.
+		Update("ClusterInstallation").
+		SetMap(map[string]interface{}{
+			"IsMigrated": IsMigrated,
+		}).
+		Where(sq.Eq{
+			"ID": clusterInstallationIDs,
+		}),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation")
 	}
 
 	return nil

@@ -1648,4 +1648,18 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.32.0"), semver.MustParse("0.33.0"), func(e execer) error {
+		// Add IsStale status column for ClusterInstallation.
+		_, err := e.Exec(`ALTER TABLE ClusterInstallation ADD COLUMN IsMigrated BOOLEAN NOT NULL DEFAULT 'false';`)
+		if err != nil {
+			return err
+		}
+		if e.DriverName() == driverSqlite {
+			_, err := e.Exec(`UPDATE ClusterInstallation SET IsMigrated = '0';`)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}},
 }

@@ -381,9 +381,11 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		"target-cluster-id": mcir.TargetClusterID,
 	})
 
+	IsMigrated := false
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.SourceClusterID,
 		InstallationID: mcir.InstallationID,
+		IsMigrated:     &IsMigrated,
 		Paging:         model.AllPagesNotDeleted(),
 	}
 
@@ -439,9 +441,11 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+	IsActive := true
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.SourceClusterID,
 		InstallationID: mcir.InstallationID,
+		IsActive:       &IsActive,
 		Paging:         model.AllPagesNotDeleted(),
 	}
 	clusterInstallations, err := c.Store.GetClusterInstallations(filter)
@@ -456,9 +460,11 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	IsActive = false
 	filter = &model.ClusterInstallationFilter{
 		ClusterID:      mcir.TargetClusterID,
 		InstallationID: mcir.InstallationID,
+		IsActive:       &IsActive,
 		Paging:         model.AllPagesNotDeleted(),
 	}
 	newClusterInstallations, err := c.Store.GetClusterInstallations(filter)

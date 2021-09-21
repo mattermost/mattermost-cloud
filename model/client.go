@@ -1431,7 +1431,7 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
 		return nil
 
 	default:
-		return errors.Errorf("filed with status code %d", resp.StatusCode)
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

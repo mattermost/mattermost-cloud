@@ -22,6 +22,7 @@ type ClusterInstallation struct {
 	LockAcquiredBy  *string
 	LockAcquiredAt  int64
 	IsActive        bool
+	IsMigrated      bool
 }
 
 // ClusterInstallationFilter describes the parameters used to constrain a set of cluster installations.
@@ -31,6 +32,7 @@ type ClusterInstallationFilter struct {
 	InstallationID string
 	ClusterID      string
 	IsActive       *bool
+	IsMigrated     *bool
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.

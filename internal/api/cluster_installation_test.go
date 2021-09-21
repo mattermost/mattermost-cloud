@@ -763,6 +763,8 @@ func TestMigrateDNS(t *testing.T) {
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
@@ -772,6 +774,8 @@ func TestMigrateDNS(t *testing.T) {
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
@@ -781,6 +785,8 @@ func TestMigrateDNS(t *testing.T) {
 		InstallationID: installation3.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation3)
 	require.NoError(t, err)
@@ -912,6 +918,8 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
@@ -921,6 +929,8 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
@@ -1052,6 +1062,8 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
 	require.NoError(t, err)
@@ -1061,6 +1073,8 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+		IsMigrated:     false,
 	}
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
@@ -1103,6 +1117,12 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, cis)
 		assert.Len(t, cis, 2)
+
+		err = client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		require.EqualError(t, err, "failed with status code 404")
+
+		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		require.EqualError(t, err, "failed with status code 404")
 	})
 
 }
