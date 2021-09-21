@@ -62,6 +62,12 @@ func (b *InstallationBuilder) Group(group string) *InstallationBuilder {
 	return b
 }
 
+// Annotations sets Installation's annotations.
+func (b *InstallationBuilder) Annotations(annotations []string) *InstallationBuilder {
+	b.request.Annotations = annotations
+	return b
+}
+
 // CreateRequest returns CreateInstallationRequest based on the builder.
 func (b *InstallationBuilder) CreateRequest() *model.CreateInstallationRequest {
 	return b.request
