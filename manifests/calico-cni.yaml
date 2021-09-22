@@ -4093,3 +4093,22 @@ spec:
       name: calico-typha
   selector:
     k8s-app: calico-typha
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  labels:
+    k8s-app: calico-node
+  name: felix-metrics-svc
+  namespace: kube-system
+spec:
+  ports:
+  - name: metrics
+    port: 9091
+    protocol: TCP
+    targetPort: 9091
+  selector:
+    k8s-app: calico-node
+  sessionAffinity: None
+  type: ClusterIP
