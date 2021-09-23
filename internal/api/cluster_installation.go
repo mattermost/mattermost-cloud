@@ -381,11 +381,10 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		"target-cluster-id": mcir.TargetClusterID,
 	})
 
-	IsMigrated := false
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.SourceClusterID,
 		InstallationID: mcir.InstallationID,
-		IsMigrated:     &IsMigrated,
+		TargetCluster:  mcir.TargetClusterID,
 		Paging:         model.AllPagesNotDeleted(),
 	}
 
@@ -512,7 +511,7 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	totalInstallations := len(installationIDs) + len(hibernatedInstallationIDs)
-	c.Logger.Infof("Total DNS records to migrate: %s", totalInstallations)
+	c.Logger.Infof("Total DNS records to migrate: %d", totalInstallations)
 	if totalInstallations == 0 {
 		c.Logger.Error("No installation(s) found for DNS  migration")
 		w.WriteHeader(http.StatusNotFound)
