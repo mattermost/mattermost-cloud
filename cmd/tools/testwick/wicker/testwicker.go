@@ -161,10 +161,11 @@ func (w *TestWicker) CreateChannel(retries int) func(w *TestWicker, ctx context.
 			channelName := SimpleNameGenerator.GenerateName("channel")
 
 			channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
-				CreatorId: w.userID,
-				TeamId:    w.teamID,
-				Type:      mmodel.CHANNEL_OPEN,
-				Name:      channelName,
+				CreatorId:   w.userID,
+				TeamId:      w.teamID,
+				Type:        mmodel.CHANNEL_OPEN,
+				Name:        channelName,
+				DisplayName: channelName,
 			})
 			if response.StatusCode != 201 {
 				// retries exhausted
@@ -175,6 +176,7 @@ func (w *TestWicker) CreateChannel(retries int) func(w *TestWicker, ctx context.
 				continue
 			}
 			w.channelID = channel.Id
+			break
 
 		}
 		return nil
