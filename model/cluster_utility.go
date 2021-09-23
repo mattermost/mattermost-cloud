@@ -62,7 +62,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// NginxInternalDefaultVersion defines the default version for the Helm chart
 	NginxInternalCanonicalName: {Chart: "2.15.0", ValuesPath: ""},
 	// FluentbitDefaultVersion defines the default version for the Helm chart
-	FluentbitCanonicalName: {Chart: "0.16.6", ValuesPath: ""},
+	FluentbitCanonicalName: {Chart: "0.17.0", ValuesPath: ""},
 	// TeleportDefaultVersion defines the default version for the Helm chart
 	TeleportCanonicalName: {Chart: "0.3.0", ValuesPath: ""},
 	// PgbouncerDefaultVersion defines the default version for the Helm chart
