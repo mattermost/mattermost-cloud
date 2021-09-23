@@ -969,11 +969,11 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		require.NotEmpty(t, cis)
 		assert.Len(t, cis, 2)
 
-		// Verifying the migration of already migrated installations
+		// Verifying if migration has already processed
 		err = client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.EqualError(t, err, "failed with status code 404")
 
-		// Verifying duplicate DNS
+		// Verifying if DNS Switch has already been processed
 		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.EqualError(t, err, "failed with status code 404")
 	})
