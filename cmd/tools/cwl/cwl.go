@@ -5,11 +5,15 @@
 package main
 
 import (
+	"embed"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	cloud "github.com/mattermost/mattermost-cloud/model"
+
+	"github.com/0xAX/notificator"
 )
 
 const (
@@ -18,6 +22,12 @@ const (
 	// ListenPortEnv is the env var name for overriding the default listen port.
 	ListenPortEnv = "CWL_PORT"
 )
+
+//go:embed profile.png
+var profileImageFS embed.FS
+
+var notify *notificator.Notificator
+var icon = fmt.Sprintf("%s/cwl-icon.png", os.TempDir())
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	webhook, err := cloud.WebhookPayloadFromReader(r.Body)
@@ -39,12 +49,26 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		wType = "CLIN"
 	}
 
-	log.Printf("[ %s | %s ] %s -> %s", wType, webhook.ID[0:4], webhook.OldState, webhook.NewState)
+	message := fmt.Sprintf("[ %s | %s ] %s -> %s", wType, webhook.ID[0:4], webhook.OldState, webhook.NewState)
+	log.Printf(message)
+	notify.Push("Cloud Webhook Listener", message, icon, notificator.UR_NORMAL)
 
 	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
+	profileImg, err := profileImageFS.ReadFile("profile.png")
+	if err != nil {
+		panic(err)
+	}
+
+	_ = os.WriteFile(icon, profileImg, 0600)
+
+	notify = notificator.New(notificator.Options{
+		DefaultIcon: icon,
+		AppName:     "Cloud Webhook Listener",
+	})
+
 	port := DefaultPort
 	if len(os.Getenv(ListenPortEnv)) != 0 {
 		port = os.Getenv(ListenPortEnv)
