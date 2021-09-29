@@ -31,7 +31,6 @@ type ClusterInstallationFilter struct {
 	InstallationID string
 	ClusterID      string
 	IsActive       *bool
-	TargetCluster  string
 }
 
 // MigrateClusterInstallationRequest describes the parameters used to compose migration request between two clusters.

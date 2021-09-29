@@ -85,10 +85,6 @@ func (sqlStore *SQLStore) getClusterInstallations(db dbInterface, filter *model.
 	if filter.IsActive != nil {
 		builder = builder.Where("IsActive = ?", *filter.IsActive)
 	}
-	// To avoid already migrated installation to the Target Cluster
-	if len(filter.TargetCluster) > 0 {
-		builder = builder.Where("InstallationID not in (SELECT InstallationID from ClusterInstallation where ClusterID = ?)", filter.TargetCluster)
-	}
 	var clusterInstallations []*model.ClusterInstallation
 	err := sqlStore.selectBuilder(db, &clusterInstallations, builder)
 	if err != nil {
