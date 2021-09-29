@@ -671,13 +671,8 @@ func TestMigrateClusterInstallations(t *testing.T) {
 			assert.False(t, ci.IsActive)
 			assert.Equal(t, model.ClusterInstallationStateCreationRequested, ci.State)
 		}
-	})
 
-	t.Run("skipping already migrated CIs test", func(t *testing.T) {
-		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, InstallationID: "", DNSSwitch: false, LockInstallation: true}
-		t.Log(mcir)
-
-		// New Installation
+		// New Installation to test for already migrated CIs
 		installation3, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:  "owner1",
 			Version:  "version",
