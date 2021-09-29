@@ -9,6 +9,8 @@ package pkg
 import (
 	"path/filepath"
 
+	"k8s.io/client-go/kubernetes"
+
 	restclient "k8s.io/client-go/rest"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -28,4 +30,18 @@ func GetK8sConfig() (*restclient.Config, error) {
 	}
 
 	return k8sConfig, nil
+}
+
+// GetK8sClient gets K8s core client interface.
+func GetK8sClient() (kubernetes.Interface, error) {
+	k8sConfig, err := GetK8sConfig()
+	if err != nil {
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientset, nil
 }

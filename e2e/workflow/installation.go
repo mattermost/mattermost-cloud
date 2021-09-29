@@ -43,6 +43,7 @@ type InstallationSuite struct {
 type InstallationSuiteParams struct {
 	DBType        string
 	FileStoreType string
+	Annotations   []string
 }
 
 // InstallationSuiteMeta contains metadata for InstallationSuite.
@@ -60,7 +61,8 @@ func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 		installationBuilder := pkg.NewInstallationBuilderWithDefaults().
 			DNS(pkg.GetDNS(w.env)).
 			DB(w.Params.DBType).
-			FileStore(w.Params.FileStoreType)
+			FileStore(w.Params.FileStoreType).
+			Annotations(w.Params.Annotations)
 
 		installation, err := w.client.CreateInstallation(installationBuilder.CreateRequest())
 		if err != nil {
@@ -176,6 +178,16 @@ func (w *InstallationSuite) WakeUpInstallation(ctx context.Context) error {
 	err = pkg.WaitForStable(w.client, w.Meta.InstallationID, w.logger)
 	if err != nil {
 		return errors.Wrap(err, "while waiting for installation to wake up")
+	}
+
+	return nil
+}
+
+// CheckHealth checks if installation is accessible from outside.
+func (w *InstallationSuite) CheckHealth(ctx context.Context) error {
+	err := pkg.PingInstallation(w.Meta.InstallationDNS)
+	if err != nil {
+		return errors.Wrap(err, "while checking installation health")
 	}
 
 	return nil

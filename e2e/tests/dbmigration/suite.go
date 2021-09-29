@@ -15,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/vrischmann/envconfig"
-	"k8s.io/client-go/kubernetes"
 )
 
 // TestConfig is test configuration coming from env vars.
@@ -110,26 +109,12 @@ func setupDBMigrationTestSuite(config TestConfig, logger logrus.FieldLogger) (*w
 		DestinationDBID: config.DestinationDB,
 	}
 
-	kubeClient, err := getKubeClient()
+	kubeClient, err := pkg.GetK8sClient()
 	if err != nil {
 		return nil, err
 	}
 
 	return workflow.NewDBMigrationSuite(params, config.Environment, client, kubeClient, logger), nil
-}
-
-func getKubeClient() (kubernetes.Interface, error) {
-	k8sConfig, err := pkg.GetK8sConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "while getting kubeconfig")
-	}
-
-	clientset, err := kubernetes.NewForConfig(k8sConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "while creating kube client")
-	}
-
-	return clientset, nil
 }
 
 // Run runs the test workflow.
