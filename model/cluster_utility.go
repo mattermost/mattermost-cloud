@@ -68,7 +68,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// PgbouncerDefaultVersion defines the default version for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.1.0", ValuesPath: ""},
 	// StackroxDefaultVersion defines the default version for the Helm chart
-	StackroxCanonicalName: {Chart: "62.0.0", ValuesPath: ""},
+	StackroxCanonicalName: {Chart: "65.1.0", ValuesPath: ""},
 	// KubecostDefaultVersion defines the default version for the Helm chart
 	KubecostCanonicalName: {Chart: "1.86.1", ValuesPath: ""},
 	// NodeProblemDetectorDefaultVersion defines the default version for the Helm chart
