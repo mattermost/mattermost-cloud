@@ -639,6 +639,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		InstallationID: installation1.ID,
 		Namespace:      "namespace_10",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
 	}
 
 	time.Sleep(1 * time.Millisecond)
@@ -648,6 +649,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		InstallationID: installation2.ID,
 		Namespace:      "namespace_11",
 		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
 	}
 
 	err = sqlStore.CreateClusterInstallation(clusterInstallation1)
