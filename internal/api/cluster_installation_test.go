@@ -561,11 +561,12 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	sqlStore := store.MakeTestSQLStore(t, logger)
 
 	router := mux.NewRouter()
-	api.Register(router, &api.Context{
+	context := &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
 		Logger:     logger,
-	})
+	}
+	api.Register(router, context)
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
@@ -670,6 +671,38 @@ func TestMigrateClusterInstallations(t *testing.T) {
 			assert.False(t, ci.IsActive)
 			assert.Equal(t, model.ClusterInstallationStateCreationRequested, ci.State)
 		}
+	})
+
+	t.Run("skipping already migrated CIs test", func(t *testing.T) {
+		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, InstallationID: "", DNSSwitch: false, LockInstallation: true}
+		t.Log(mcir)
+
+		// New Installation
+		installation3, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:  "owner1",
+			Version:  "version",
+			Image:    "custom-image",
+			DNS:      "dns1.example.com",
+			Affinity: model.InstallationAffinityIsolated,
+		})
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+		clusterInstallation3 := &model.ClusterInstallation{
+			ClusterID:      sourceCluster.ID,
+			InstallationID: installation3.ID,
+			Namespace:      "namespace_12",
+			State:          model.ClusterInstallationStateCreationRequested,
+			IsActive:       true,
+		}
+
+		err = sqlStore.CreateClusterInstallation(clusterInstallation3)
+		require.NoError(t, err)
+
+		cis, status := api.GetClusterInstallationsForMigration(context, *mcir)
+		assert.Equal(t, status, 0)
+		assert.Len(t, cis, 1)
+
 	})
 }
 

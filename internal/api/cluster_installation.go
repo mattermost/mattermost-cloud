@@ -396,7 +396,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	}
 
 	// Get the CIs for migration
-	clusterInstallations, status := getClusterInstallationsForMigration(c, mcir)
+	clusterInstallations, status := GetClusterInstallationsForMigration(c, mcir)
 	if status != 0 {
 		c.Logger.WithError(err).Error("Failed to get CIs for migration")
 		w.WriteHeader(status)
@@ -645,7 +645,8 @@ func getSourceAndTargetCluster(c *Context, request model.MigrateClusterInstallat
 	return sourceCluster, targetCluster, nil
 }
 
-func getClusterInstallationsForMigration(c *Context, request model.MigrateClusterInstallationRequest) ([]*model.ClusterInstallation, int) {
+// GetClusterInstallationsForMigration compare , filter already migrated installations & returns actual set of CIs for migration
+func GetClusterInstallationsForMigration(c *Context, request model.MigrateClusterInstallationRequest) ([]*model.ClusterInstallation, int) {
 	// Skip already migrated CIs if there is any
 	sourceActiveCIs := true
 	toMigrateFilter := &model.ClusterInstallationFilter{
