@@ -659,6 +659,26 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(clusterInstallation2)
 	require.NoError(t, err)
 
+	// New Installation to test already migrated CIs
+	installation3, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner1",
+		Version:  "version",
+		Image:    "custom-image",
+		DNS:      "dns3.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	clusterInstallation3 := &model.ClusterInstallation{
+		ClusterID:      sourceCluster.ID,
+		InstallationID: installation3.ID,
+		Namespace:      "namespace_12",
+		State:          model.ClusterInstallationStateCreationRequested,
+		IsActive:       true,
+	}
+
 	t.Run("valid migration test", func(t *testing.T) {
 		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
@@ -672,31 +692,12 @@ func TestMigrateClusterInstallations(t *testing.T) {
 			assert.Equal(t, model.ClusterInstallationStateCreationRequested, ci.State)
 		}
 
-		// New Installation to test already migrated CIs
-		// 	installation3, err := client.CreateInstallation(&model.CreateInstallationRequest{
-		// 		OwnerID:  "owner1",
-		// 		Version:  "version",
-		// 		Image:    "custom-image",
-		// 		DNS:      "dns1.example.com",
-		// 		Affinity: model.InstallationAffinityIsolated,
-		// 	})
-		// 	require.NoError(t, err)
-
-		// 	time.Sleep(1 * time.Millisecond)
-		// 	clusterInstallation3 := &model.ClusterInstallation{
-		// 		ClusterID:      sourceCluster.ID,
-		// 		InstallationID: installation3.ID,
-		// 		Namespace:      "namespace_12",
-		// 		State:          model.ClusterInstallationStateCreationRequested,
-		// 		IsActive:       true,
-		// 	}
-
-		// 	err = sqlStore.CreateClusterInstallation(clusterInstallation3)
-		// 	require.NoError(t, err)
-
-		// 	cis, status := api.GetClusterInstallationsForMigration(context, *mcir)
-		// 	assert.Equal(t, status, 0)
-		// 	assert.Len(t, cis, 1)
+		// Should only return 1 valid installation for migration
+		err = sqlStore.CreateClusterInstallation(clusterInstallation3)
+		require.NoError(t, err)
+		cis, status := api.GetClusterInstallationsForMigration(context, *mcir)
+		assert.Equal(t, status, 0)
+		assert.Len(t, cis, 1)
 
 	})
 }
