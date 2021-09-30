@@ -540,7 +540,7 @@ func TestCreateChannel(t *testing.T) {
 			}
 			v.setup(wicker)
 
-			f := wicker.CreateChannel()
+			f := wicker.CreateChannel(1)
 			err := f(wicker, context.TODO())
 
 			v.expected(wicker, err)

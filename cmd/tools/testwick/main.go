@@ -48,17 +48,16 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	logger = logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
+	logger.Out = os.Stdout
+	logger.Formatter = &logrus.JSONFormatter{}
 	// Output to stdout instead of the default stderr.
-	logrus.SetOutput(os.Stdout)
+	logger.SetOutput(os.Stdout)
 
 	testerCmd.PersistentFlags().StringVar(&testerConfig.provisioner, "provisioner", "", "The url for the provisioner")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.hostedZoneDomain, "hosted-zone", "", "The hosted zone you need to run your installations eg. test.mattermost.cloud")
 	testerCmd.PersistentFlags().IntVar(&testerConfig.samples, "samples", 1, "The number of samples installations to interact with")
-	testerCmd.PersistentFlags().IntVar(&testerConfig.samples, "channel-samples", 1, "The number of channel samples to create in installation")
-	testerCmd.PersistentFlags().IntVar(&testerConfig.channelSamples, "channel-messages", 100, "The number of channel messages to post")
+	testerCmd.PersistentFlags().IntVar(&testerConfig.channelSamples, "channel-samples", 1, "The number of channel samples to create in installation")
+	testerCmd.PersistentFlags().IntVar(&testerConfig.messagesSamples, "channel-messages", 100, "The number of channel messages to post")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.owner, "owner", "testwick", "The owner of the installation. Prefer to keep the default")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationSize, "installation-size", "100users", "The size of the installation")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationAffinity, "installation-affinity", cmodel.InstallationAffinityMultiTenant, "The installation affinity type eg. multitenant")
@@ -131,7 +130,7 @@ var testerCmd = &cobra.Command{
 				for j := 0; j < testerConfig.channelSamples; j++ {
 					workflow.AddStep(testwick.Step{
 						Name: "CreateChannel",
-						Func: testwicker.CreateChannel(),
+						Func: testwicker.CreateChannel(20),
 					}, testwick.Step{
 						Name: "CreateIncomingWebhook",
 						Func: testwicker.CreateIncomingWebhook(),

@@ -10,9 +10,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/goombaio/namegenerator"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
 	mmodel "github.com/mattermost/mattermost-server/v5/model"
-	"github.com/moby/moby/pkg/namesgenerator"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -46,14 +46,17 @@ type TestWicker struct {
 	userID            string
 	channelID         string
 	teamID            string
+	nameGenerator     namegenerator.Generator
 }
 
 // NewTestWicker creates a testwicker
 func NewTestWicker(provisionerRequester ProvisionerRequester, requester MattermostRequester, logger logrus.FieldLogger) *TestWicker {
+	seed := time.Now().UTC().UnixNano()
 	return &TestWicker{
 		logger:            logger,
 		mmClient:          requester,
 		provisionerClient: provisionerRequester,
+		nameGenerator:     namegenerator.NewNameGenerator(seed),
 	}
 }
 
@@ -148,22 +151,34 @@ func (w *TestWicker) AddTeamMember() func(w *TestWicker, ctx context.Context) er
 }
 
 // CreateChannel creates a channel so we can post couple of messages
-func (w *TestWicker) CreateChannel() func(w *TestWicker, ctx context.Context) error {
+func (w *TestWicker) CreateChannel(retries int) func(w *TestWicker, ctx context.Context) error {
 	return func(w *TestWicker, ctx context.Context) error {
 		w.logger.WithField("DNS", w.installation.DNS).Info("Creating channel")
 		if w.userID == "" {
 			return fmt.Errorf("failed to create a channel. You need to create a user first")
 		}
-		channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
-			CreatorId: w.userID,
-			TeamId:    w.teamID,
-			Type:      mmodel.CHANNEL_OPEN,
-			Name:      namesgenerator.GetRandomName(5),
-		})
-		if response.StatusCode != 201 {
-			return fmt.Errorf("failed to create channel status = %d, message = %s", response.StatusCode, response.Error.Message)
+		for i := 0; i < retries; i++ {
+			channelName := SimpleNameGenerator.GenerateName("channel")
+
+			channel, response := w.mmClient.CreateChannel(&mmodel.Channel{
+				CreatorId:   w.userID,
+				TeamId:      w.teamID,
+				Type:        mmodel.CHANNEL_OPEN,
+				Name:        channelName,
+				DisplayName: channelName,
+			})
+			if response.StatusCode != 201 {
+				// retries exhausted
+				if i == retries-1 {
+					return fmt.Errorf("failed to create channel status = %d, message = %s, channel: %s after %d retries", response.StatusCode, response.Error.Message, channelName, retries)
+
+				}
+				continue
+			}
+			w.channelID = channel.Id
+			break
+
 		}
-		w.channelID = channel.Id
 		return nil
 	}
 }
