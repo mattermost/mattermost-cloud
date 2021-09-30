@@ -20,12 +20,12 @@ import (
 // WaitForInstallationAvailability pings installation until it responds successfully.
 func WaitForInstallationAvailability(dns string, log logrus.FieldLogger) error {
 	err := WaitForFunc(NewWaitConfig(20*time.Minute, 20*time.Second, 2, log), func() (bool, error) {
-		resp, err := http.Get(pingURL(dns))
+		err := PingInstallation(dns)
 		if err != nil {
 			log.WithError(err).Errorf("Error while making ping request to Installation %s", dns)
 			return false, nil
 		}
-		return resp.StatusCode == http.StatusOK, nil
+		return true, nil
 	})
 
 	return err
@@ -63,6 +63,18 @@ func WaitForStable(client *model.Client, installationID string, log logrus.Field
 		return false, nil
 	})
 	return err
+}
+
+// PingInstallation hits Mattermost ping endpoint.
+func PingInstallation(dns string) error {
+	resp, err := http.Get(pingURL(dns))
+	if err != nil {
+		return errors.Wrap(err, "failed to ping installation")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("error pinging installation, received status: %s", resp.Status)
+	}
+	return nil
 }
 
 func pingURL(dns string) string {

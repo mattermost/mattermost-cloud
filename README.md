@@ -172,11 +172,13 @@ Run the go tests to test:
 $ go test ./...
 ```
 
+### End-to-end tests
+
+There are some end-to-end tests located in `./e2e` directory.
+
 #### DB Migration end-to-end tests
 
-There are some end-to-end tests located in `./e2e` directory. 
-
-Tests can be run with `make e2e`.
+DB Migration e2e tests can be run with `make e2e-db-migration`.
 
 E2e test for DB migration requires the following setup:
 - Local instance of Provisioner.
@@ -184,6 +186,10 @@ E2e test for DB migration requires the following setup:
 - 2 Multi tenant Postgres databases provisioned in the same VPC as the workload cluster.
 - The destination database to which the migration can be performed should be exported as environment variable `DESTINATION_DB`.
 - Kubeconfig of workload cluster exported locally.
+
+#### Cluster end-to-end tests
+
+Cluster provisioning e2e tests can be run with `make e2e-cluster`.
 
 ### Deleting a cluster and installations
 Before deleting a cluster you will **have** to delete the installations first on it.

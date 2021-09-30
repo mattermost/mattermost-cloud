@@ -60,7 +60,7 @@ type DBMigrationSuiteMeta struct {
 
 // GetMultiTenantDBID fetches multi tenant database id for installation.
 func (w *DBMigrationSuite) GetMultiTenantDBID(ctx context.Context) error {
-	dbs, err := w.client.GetMultitenantDatabases(&model.GetDatabasesRequest{
+	dbs, err := w.client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 		Paging: model.AllPagesNotDeleted(),
 	})
 	if err != nil {
