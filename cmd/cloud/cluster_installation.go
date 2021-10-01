@@ -303,13 +303,15 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 
-		err := client.MigrateClusterInstallation(
+		clusterInstallation, err := client.MigrateClusterInstallation(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
 				InstallationID:   installation,
 				DNSSwitch:        false,
 				LockInstallation: false})
+		// Print any output and then check and handle errors.
+		printJSON(clusterInstallation)
 		if err != nil {
 			return err
 		}
@@ -332,12 +334,14 @@ var dnsMigrationCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		err := client.MigrateDNS(
+		clusterInstallation, err := client.MigrateDNS(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
 				InstallationID:   installation,
 				LockInstallation: lockInstallation})
+		// Print any output and then check and handle errors.
+		printJSON(clusterInstallation)
 		if err != nil {
 			return err
 		}

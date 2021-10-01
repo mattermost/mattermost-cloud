@@ -1402,36 +1402,36 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 }
 
 // MigrateClusterInstallation requests the migration of cluster installation(s) from the configured provisioning server.
-func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationRequest) error {
+func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationRequest) ([]*ClusterInstallation, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate"), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return ClusterInstallationsFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
 // MigrateDNS requests the migration of cluster installation(s) from the configured provisioning server.
-func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
+func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) ([]*ClusterInstallation, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/dns"), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return ClusterInstallationsFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

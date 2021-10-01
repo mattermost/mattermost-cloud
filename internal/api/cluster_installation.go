@@ -412,7 +412,9 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, clusterInstallations)
 }
 
 // handleMigrateDns responds to Post /api/cluster_installation/migrate/dns.
@@ -511,7 +513,9 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, clusterInstallations)
 }
 
 // handleDeleteInActiveClusterInstallationsByCluster responds to Delete /api/cluster_installation/migrate/delete_inactive/clusterID.
@@ -535,6 +539,8 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 	}
 
 	c.Logger.Infof("Successfully deleted inactive cluster installations for cluster ID: %s", clusterID)
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -564,6 +570,8 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 		return
 	}
 	c.Logger.Infof("Successfully deleted inactive cluster installations ID %s", clusterInstallationID)
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -623,7 +631,10 @@ func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, mcir)
 }
 
 func getSourceAndTargetCluster(c *Context, request model.MigrateClusterInstallationRequest) (*model.Cluster, *model.Cluster, error) {
