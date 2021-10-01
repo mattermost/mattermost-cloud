@@ -381,24 +381,6 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		"target-cluster-id": mcir.TargetClusterID,
 	})
 
-	filter := &model.ClusterInstallationFilter{
-		ClusterID:      mcir.SourceClusterID,
-		InstallationID: mcir.InstallationID,
-		Paging:         model.AllPagesNotDeleted(),
-	}
-
-	clusterInstallations, err := c.Store.GetClusterInstallations(filter)
-	if err != nil {
-		c.Logger.WithError(err).Error("Failed to query cluster installations")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if len(clusterInstallations) == 0 {
-		c.Logger.Error("No matching cluster installations found")
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
 	sourceCluster, _, err := getSourceAndTargetCluster(c, mcir)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to get source and target clusters")
@@ -410,6 +392,14 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 	if sourceCluster.AllowInstallations {
 		c.Logger.Error("Allow installation must be set to false for the source cluster.")
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get the CIs for migration
+	clusterInstallations, status := GetClusterInstallationsForMigration(c, mcir)
+	if status != 0 {
+		c.Logger.WithError(err).Error("Failed to get CIs for migration")
+		w.WriteHeader(status)
 		return
 	}
 
@@ -439,9 +429,11 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Reset the DNS configuration status for respective installations to update the CNAME with the new LB.
+	IsActive := true
 	filter := &model.ClusterInstallationFilter{
 		ClusterID:      mcir.SourceClusterID,
 		InstallationID: mcir.InstallationID,
+		IsActive:       &IsActive,
 		Paging:         model.AllPagesNotDeleted(),
 	}
 	clusterInstallations, err := c.Store.GetClusterInstallations(filter)
@@ -456,9 +448,11 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	IsActive = false
 	filter = &model.ClusterInstallationFilter{
 		ClusterID:      mcir.TargetClusterID,
 		InstallationID: mcir.InstallationID,
+		IsActive:       &IsActive,
 		Paging:         model.AllPagesNotDeleted(),
 	}
 	newClusterInstallations, err := c.Store.GetClusterInstallations(filter)
@@ -506,7 +500,7 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	totalInstallations := len(installationIDs) + len(hibernatedInstallationIDs)
-	c.Logger.Infof("Total DNS records to migrate: %s", totalInstallations)
+	c.Logger.Infof("Total DNS records to migrate: %d", totalInstallations)
 	if totalInstallations == 0 {
 		c.Logger.Error("No installation(s) found for DNS  migration")
 		w.WriteHeader(http.StatusNotFound)
@@ -649,4 +643,61 @@ func getSourceAndTargetCluster(c *Context, request model.MigrateClusterInstallat
 		return nil, nil, common.NewErr(http.StatusNotFound, errors.New("target cluster not found"))
 	}
 	return sourceCluster, targetCluster, nil
+}
+
+// GetClusterInstallationsForMigration compare , filter already migrated installations & returns actual set of CIs for migration
+func GetClusterInstallationsForMigration(c *Context, request model.MigrateClusterInstallationRequest) ([]*model.ClusterInstallation, int) {
+	// Skip already migrated CIs if there is any
+	sourceActiveCIs := true
+	toMigrateFilter := &model.ClusterInstallationFilter{
+		ClusterID:      request.SourceClusterID,
+		InstallationID: request.InstallationID,
+		IsActive:       &sourceActiveCIs,
+		Paging:         model.AllPagesNotDeleted(),
+	}
+
+	// Get only those CIs for which migration is not completed yet.
+	targetActiveCIs := false
+	alredyMigratedFilter := &model.ClusterInstallationFilter{
+		ClusterID:      request.TargetClusterID,
+		InstallationID: request.InstallationID,
+		IsActive:       &targetActiveCIs,
+		Paging:         model.AllPagesNotDeleted(),
+	}
+
+	sourceClusterCIs, err := c.Store.GetClusterInstallations(toMigrateFilter)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to query cluster installations")
+		return nil, http.StatusInternalServerError
+	}
+	if len(sourceClusterCIs) == 0 {
+		c.Logger.WithError(err).Error("No matching cluster installations found")
+		return nil, http.StatusNotFound
+	}
+
+	migratedCIs, err := c.Store.GetClusterInstallations(alredyMigratedFilter)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to query cluster installations")
+		return nil, http.StatusInternalServerError
+	}
+
+	// Skip comparison if there is no matching CIs in the target cluster
+	if len(migratedCIs) == 0 {
+		return sourceClusterCIs, 0
+	}
+
+	toMigrate := []*model.ClusterInstallation{}
+	for _, ci := range sourceClusterCIs {
+		migrate := true
+		for _, migrated := range migratedCIs {
+			if ci.InstallationID == migrated.InstallationID {
+				migrate = false
+				break
+			}
+		}
+		if migrate {
+			toMigrate = append(toMigrate, ci)
+		}
+	}
+	return toMigrate, 0
 }

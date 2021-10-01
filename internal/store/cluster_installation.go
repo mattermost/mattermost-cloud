@@ -216,7 +216,6 @@ func (sqlStore *SQLStore) setClusterInstallationAPILock(id string, lock bool) er
 
 // MigrateClusterInstallations updates the given cluster installation in the database.
 func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error {
-
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
