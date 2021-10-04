@@ -15,6 +15,15 @@ data:
     auth_file = /etc/userlist/userlist.txt
     admin_users = admin
     ignore_startup_parameters = extra_float_digits
+    tcp_keepalive = 1
+    tcp_keepcnt = 5
+    tcp_keepidle = 5
+    tcp_keepintvl = 1
+    tcp_user_timeout = 10000
+    server_round_robin = 1
+    log_stats = 0
+    log_disconnections = 0
+    log_connections = 0
     pool_mode = transaction
     min_pool_size = 20
     default_pool_size = 20
