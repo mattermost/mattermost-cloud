@@ -970,12 +970,12 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		submittedCis, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		, err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		submittedDNSCis, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
-
+		assert.Equal(t, len(submittedCis), len(submittedDNSCis))
 		// varifying the outcomes
 		var isActiveClusterInstallations = false
 		filter := &model.ClusterInstallationFilter{
@@ -1001,7 +1001,7 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		assert.Len(t, cis, 2)
 
 		// Verifying if migration has already processed
-		err = client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		_, err = client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.EqualError(t, err, "failed with status code 404")
 
 	})
@@ -1036,17 +1036,17 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("No cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -1120,7 +1120,7 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		submittedCis, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		submittedDNSCis, err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		submittedDNSCis, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
 		assert.Equal(t, len(submittedCis), len(submittedDNSCis))
 
@@ -1149,7 +1149,7 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		assert.Len(t, cis, 2)
 
 		// Verifying if DNS Switch has already processed
-		_,err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		_, err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
