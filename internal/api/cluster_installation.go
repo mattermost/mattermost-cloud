@@ -412,7 +412,7 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 
-	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir, model.OperationTypeMigration, len(clusterInstallations))
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir.SourceClusterID, mcir.TargetClusterID, model.OperationTypeMigration, len(clusterInstallations))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -516,7 +516,7 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir, model.OperationTypeDNS, len(clusterInstallations))
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir.SourceClusterID, mcir.TargetClusterID, model.OperationTypeDNS, len(clusterInstallations))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, migrateClusterInstallationResponse)
@@ -541,11 +541,25 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	c.Logger.Infof("Successfully deleted inactive cluster installations for cluster ID: %s", clusterID)
 
+	IsActive := false
+	filter := &model.ClusterInstallationFilter{
+		ClusterID: clusterID,
+		IsActive:  &IsActive,
+		Paging:    model.AllPagesNotDeleted(),
+	}
+	deletedClusterInstallations, err := c.Store.GetClusterInstallations(filter)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to query cluster installations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(clusterID, "", model.OperationTypeDeletingInActiveCIs, len(deletedClusterInstallations))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, migrateClusterInstallationResponse)
 }
 
 // handleDeleteInActiveClusterInstallationByID responds to Post /api/cluster_installation/migrate/delete_inactive/ID.
@@ -718,10 +732,10 @@ func GetClusterInstallationsForMigration(c *Context, request model.MigrateCluste
 	return toMigrate, 0
 }
 
-func getMigrateClusterInstallationResponse(mcir model.MigrateClusterInstallationRequest, operationType string, noOfCIs int) model.MigrateClusterInstallationResponse {
+func getMigrateClusterInstallationResponse(sourceClusterID string, tergetClusterID string, operationType string, noOfCIs int) model.MigrateClusterInstallationResponse {
 	var migrateClusterInstallationResponse model.MigrateClusterInstallationResponse
-	migrateClusterInstallationResponse.SourceClusterID = mcir.SourceClusterID
-	migrateClusterInstallationResponse.TargetClusterID = mcir.TargetClusterID
+	migrateClusterInstallationResponse.SourceClusterID = sourceClusterID
+	migrateClusterInstallationResponse.TargetClusterID = tergetClusterID
 	migrateClusterInstallationResponse.Operation = operationType
 	migrateClusterInstallationResponse.TotalClusterInstallations = noOfCIs
 

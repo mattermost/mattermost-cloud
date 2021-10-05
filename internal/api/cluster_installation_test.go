@@ -1206,8 +1206,9 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation in a given cluster", func(t *testing.T) {
-		err := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
+		deletedCIs, err := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
 		require.NoError(t, err)
+		assert.Equal(t, deletedCIs.TotalClusterInstallations, 2)
 	})
 
 	cis, err := sqlStore.GetClusterInstallations(filter)

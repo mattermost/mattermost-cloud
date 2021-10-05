@@ -1436,19 +1436,19 @@ func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) (*Migrat
 }
 
 // DeleteInActiveClusterInstallationsByCluster requests the deletion of inactive cluster installation(s) from the configured provisioning server.
-func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) error {
+func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) (*MigrateClusterInstallationResponse, error) {
 	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/%s", clusterID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return MigrateClusterInstallationResponseFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

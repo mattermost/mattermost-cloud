@@ -43,12 +43,14 @@ type MigrateClusterInstallationRequest struct {
 }
 
 const (
-	// OperationTypeMigration is used for CIs migration from source to target cluster
+	// OperationTypeMigration is used for CIs migration from source to target cluster.
 	OperationTypeMigration = "MigratingClusterInstallation"
-	// OperationTypeDNS is used for DNS Switch from source to target cluster
+	// OperationTypeDNS is used for DNS Switch from source to target cluster.
 	OperationTypeDNS = "DNSSwitch"
-	// OperationTypeSwitchClusterRoles is used for Switching the tags between source & target clusters
+	// OperationTypeSwitchClusterRoles is used for Switching the tags between source & target clusters.
 	OperationTypeSwitchClusterRoles = "SwitchClusterRoles"
+	// OperationTypeDeletingInActiveCIs is used for Deleting InActive ClusterInstallations from source clusters.
+	OperationTypeDeletingInActiveCIs = "DeletingInActiveClusterInstallations"
 )
 
 // MigrateClusterInstallationResponse describes the summary of migration between two clusters.
