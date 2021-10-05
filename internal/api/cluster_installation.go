@@ -412,9 +412,11 @@ func handleMigrateClusterInstallations(c *Context, w http.ResponseWriter, r *htt
 		return
 	}
 
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir, model.OperationTypeMigration, len(clusterInstallations))
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, clusterInstallations)
+	outputJSON(c, w, migrateClusterInstallationResponse)
 }
 
 // handleMigrateDns responds to Post /api/cluster_installation/migrate/dns.
@@ -513,9 +515,11 @@ func handleMigrateDNS(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		return
 	}
+
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir, model.OperationTypeDNS, len(clusterInstallations))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, clusterInstallations)
+	outputJSON(c, w, migrateClusterInstallationResponse)
 }
 
 // handleDeleteInActiveClusterInstallationsByCluster responds to Delete /api/cluster_installation/migrate/delete_inactive/clusterID.
@@ -573,6 +577,7 @@ func handleDeleteInActiveClusterInstallationByID(c *Context, w http.ResponseWrit
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, clusterInstallation)
 }
 
 func dnsMigration(c *Context, mcir model.MigrateClusterInstallationRequest, oldClusterInstallationIDs []string, newClusterInstallationIDs []string, installationIDs []string, hibernatingInstallationIDs []string) int {
@@ -711,4 +716,14 @@ func GetClusterInstallationsForMigration(c *Context, request model.MigrateCluste
 		}
 	}
 	return toMigrate, 0
+}
+
+func getMigrateClusterInstallationResponse(mcir model.MigrateClusterInstallationRequest, operationType string, noOfCIs int) model.MigrateClusterInstallationResponse {
+	var migrateClusterInstallationResponse model.MigrateClusterInstallationResponse
+	migrateClusterInstallationResponse.SourceClusterID = mcir.SourceClusterID
+	migrateClusterInstallationResponse.TargetClusterID = mcir.TargetClusterID
+	migrateClusterInstallationResponse.Operation = operationType
+	migrateClusterInstallationResponse.TotalClusterInstallations = noOfCIs
+
+	return migrateClusterInstallationResponse
 }

@@ -682,11 +682,11 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	t.Run("valid migration test", func(t *testing.T) {
 		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
-		submittedCis, err := client.MigrateClusterInstallation(mcir)
+		migrationResponse, err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
 		newClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{ClusterID: targetCluster.ID, Paging: model.AllPagesNotDeleted()})
 		require.NoError(t, err)
-		assert.Len(t, newClusterInstallations, len(submittedCis))
+		assert.Equal(t, len(newClusterInstallations), migrationResponse.TotalClusterInstallations)
 		for _, ci := range newClusterInstallations {
 			assert.False(t, ci.IsActive)
 			assert.Equal(t, model.ClusterInstallationStateCreationRequested, ci.State)
@@ -970,12 +970,12 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		submittedCis, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		migrationResponse, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		submittedDNSCis, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		dnsSwitchResponse, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
-		assert.Equal(t, len(submittedCis), len(submittedDNSCis))
+		assert.Equal(t, dnsSwitchResponse.TotalClusterInstallations, migrationResponse.TotalClusterInstallations)
 		// varifying the outcomes
 		var isActiveClusterInstallations = false
 		filter := &model.ClusterInstallationFilter{
@@ -1117,12 +1117,12 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		submittedCis, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		migrationResponse, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		submittedDNSCis, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		dnsSwitchResponse, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
-		assert.Equal(t, len(submittedCis), len(submittedDNSCis))
+		assert.Equal(t, dnsSwitchResponse.TotalClusterInstallations, migrationResponse.TotalClusterInstallations)
 
 		// varifying the outcomes
 		var isActiveClusterInstallations = false
@@ -1260,8 +1260,9 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation by ID", func(t *testing.T) {
-		err := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
+		deletedCi, err := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
 		require.NoError(t, err)
+		assert.Equal(t, deletedCi.ID, clusterInstallation1.ID)
 	})
 
 	ci, err = sqlStore.GetClusterInstallations(filter)

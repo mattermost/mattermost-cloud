@@ -310,11 +310,12 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 				InstallationID:   installation,
 				DNSSwitch:        false,
 				LockInstallation: false})
-		// Print any output and then check and handle errors.
-		printJSON(clusterInstallation)
+
 		if err != nil {
 			return err
 		}
+		// Print any output and then check and handle errors.
+		printJSON(clusterInstallation)
 		return nil
 	},
 }
@@ -340,11 +341,11 @@ var dnsMigrationCmd = &cobra.Command{
 				TargetClusterID:  targetcluster,
 				InstallationID:   installation,
 				LockInstallation: lockInstallation})
-		// Print any output and then check and handle errors.
-		printJSON(clusterInstallation)
 		if err != nil {
 			return err
 		}
+		// Print any output and then check and handle errors.
+		printJSON(clusterInstallation)
 		return nil
 	},
 }
@@ -362,10 +363,12 @@ var deleteInActiveClusterInstallationCmd = &cobra.Command{
 		cluster, _ := command.Flags().GetString("cluster")
 		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
 		if len(clusterInstallationID) != 0 {
-			err := client.DeleteInActiveClusterInstallationByID(clusterInstallationID)
+			deletedCI, err := client.DeleteInActiveClusterInstallationByID(clusterInstallationID)
 			if err != nil {
 				return err
 			}
+			// Print any output and then check and handle errors.
+			printJSON(deletedCI)
 			return nil
 		}
 
@@ -395,7 +398,7 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		err := client.SwitchClusterRoles(
+		mcir, err := client.SwitchClusterRoles(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
@@ -404,6 +407,7 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		printJSON(mcir)
 		return nil
 	},
 }
