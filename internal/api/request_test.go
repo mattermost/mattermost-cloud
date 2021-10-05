@@ -34,7 +34,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"teleport":                          {Chart: "0.3.0", ValuesPath: ""},
 				"pgbouncer":                         {Chart: "1.1.0", ValuesPath: ""},
 				"stackrox-secured-cluster-services": {Chart: "65.1.0", ValuesPath: ""},
-				"kubecost":                          {Chart: "1.86.1", ValuesPath: ""},
+				"kubecost":                          {Chart: "1.87.0", ValuesPath: ""},
 				"node-problem-detector":             {Chart: "2.0.5", ValuesPath: ""},
 			},
 		}
@@ -99,7 +99,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"teleport":                          {Chart: "0.3.0", ValuesPath: ""},
 				"pgbouncer":                         {Chart: "1.1.0", ValuesPath: ""},
 				"stackrox-secured-cluster-services": {Chart: "65.1.0", ValuesPath: ""},
-				"kubecost":                          {Chart: "1.86.1", ValuesPath: ""},
+				"kubecost":                          {Chart: "1.87.0", ValuesPath: ""},
 				"node-problem-detector":             {Chart: "2.0.5", ValuesPath: ""},
 			},
 		}, clusterRequest)
