@@ -535,7 +535,7 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 
 	// Deleting multiple inactive cluster installations
 	c.Logger.Infof("Deleting inactive cluster installations for cluster ID %s", clusterID)
-	err := c.Store.DeleteInActiveClusterInstallationByClusterID(clusterID)
+	rowsDeleted, err := c.Store.DeleteInActiveClusterInstallationByClusterID(clusterID)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to delete inactive cluster installations for cluster ID", clusterID)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -543,20 +543,7 @@ func handleDeleteInActiveClusterInstallationsByCluster(c *Context, w http.Respon
 	}
 	c.Logger.Infof("Successfully deleted inactive cluster installations for cluster ID: %s", clusterID)
 
-	IsActive := false
-	filter := &model.ClusterInstallationFilter{
-		ClusterID: clusterID,
-		IsActive:  &IsActive,
-		Paging:    model.AllPagesNotDeleted(),
-	}
-	deletedClusterInstallations, err := c.Store.GetClusterInstallations(filter)
-	if err != nil {
-		c.Logger.WithError(err).Error("Failed to query cluster installations")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(clusterID, "", model.OperationTypeDeletingInActiveCIs, len(deletedClusterInstallations))
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(clusterID, "", model.OperationTypeDeletingInActiveCIs, int(rowsDeleted))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, migrateClusterInstallationResponse)
@@ -650,10 +637,10 @@ func handleSwitchClusterRoles(c *Context, w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
+	migrateClusterInstallationResponse := getMigrateClusterInstallationResponse(mcir.SourceClusterID, mcir.TargetClusterID, model.OperationTypeSwitchClusterRoles, 0)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, mcir)
+	outputJSON(c, w, migrateClusterInstallationResponse)
 }
 
 func getSourceAndTargetCluster(c *Context, request model.MigrateClusterInstallationRequest) (*model.Cluster, *model.Cluster, error) {
@@ -733,11 +720,10 @@ func GetClusterInstallationsForMigration(c *Context, request model.MigrateCluste
 }
 
 func getMigrateClusterInstallationResponse(sourceClusterID string, tergetClusterID string, operationType string, noOfCIs int) model.MigrateClusterInstallationResponse {
-	var migrateClusterInstallationResponse model.MigrateClusterInstallationResponse
-	migrateClusterInstallationResponse.SourceClusterID = sourceClusterID
-	migrateClusterInstallationResponse.TargetClusterID = tergetClusterID
-	migrateClusterInstallationResponse.Operation = operationType
-	migrateClusterInstallationResponse.TotalClusterInstallations = noOfCIs
-
-	return migrateClusterInstallationResponse
+	return model.MigrateClusterInstallationResponse{
+		SourceClusterID:           sourceClusterID,
+		TargetClusterID:           tergetClusterID,
+		Operation:                 operationType,
+		TotalClusterInstallations: noOfCIs,
+	}
 }
