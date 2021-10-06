@@ -412,7 +412,7 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		mcir, err := client.SwitchClusterRoles(
+		response, err := client.SwitchClusterRoles(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
@@ -423,7 +423,7 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		}
 
 		// Print any output and then check and handle errors.
-		err = printJSON(mcir)
+		err = printJSON(response)
 		if err != nil {
 			return errors.Wrap(err, "failed to print switch cluster roles response")
 		}
