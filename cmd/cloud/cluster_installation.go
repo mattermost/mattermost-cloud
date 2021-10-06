@@ -255,7 +255,6 @@ var clusterInstallationMMCTL = &cobra.Command{
 
 		output, err := client.ExecClusterInstallationCLI(clusterInstallationID, "mmctl", strings.Split(subcommand, " "))
 
-		// Print any output and then check and handle errors.
 		fmt.Println(string(output))
 		if err != nil {
 			return errors.Wrap(err, "failed to run mattermost CLI command")
@@ -279,7 +278,6 @@ var clusterInstallationMattermostCLICmd = &cobra.Command{
 
 		output, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallationID, strings.Split(subcommand, " "))
 
-		// Print any output and then check and handle errors.
 		fmt.Println(string(output))
 		if err != nil {
 			return errors.Wrap(err, "failed to run mattermost CLI command")
@@ -314,7 +312,6 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to migrate cluster installation(s)")
 		}
-		// Print any output and then check and handle errors.
 		err = printJSON(response)
 		if err != nil {
 			return errors.Wrap(err, "failed to print cluster installation's migration response")
@@ -347,7 +344,6 @@ var dnsMigrationCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to perform DNS switch")
 		}
-		// Print any output and then check and handle errors.
 		err = printJSON(response)
 		if err != nil {
 			return errors.Wrap(err, "failed to print DNS switch response")
@@ -373,7 +369,6 @@ var deleteInActiveClusterInstallationCmd = &cobra.Command{
 			if err != nil {
 				return errors.Wrap(err, "failed to delete inactive cluster installations")
 			}
-			// Print any output and then check and handle errors.
 			err = printJSON(deletedCI)
 			if err != nil {
 				return errors.Wrap(err, "failed to print deleting inactive cluster installation response")
@@ -386,7 +381,6 @@ var deleteInActiveClusterInstallationCmd = &cobra.Command{
 			if err != nil {
 				return errors.Wrap(err, "failed to delete inactive cluster installations")
 			}
-			// Print any output and then check and handle errors.
 			err = printJSON(response)
 			if err != nil {
 				return errors.Wrap(err, "failed to print deleting inactive cluster installation response")
@@ -422,7 +416,6 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to switch cluster roles")
 		}
 
-		// Print any output and then check and handle errors.
 		err = printJSON(response)
 		if err != nil {
 			return errors.Wrap(err, "failed to print switch cluster roles response")
