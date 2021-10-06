@@ -166,8 +166,8 @@ func (sqlStore *SQLStore) RecoverClusterInstallation(clusterInstallation *model.
 
 // DeleteInActiveClusterInstallationByClusterID marks the inactive cluster installation as deleted for a given cluster, but does not remove
 // the record from the database.
-func (sqlStore *SQLStore) DeleteInActiveClusterInstallationByClusterID(clusterID string) error {
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+func (sqlStore *SQLStore) DeleteInActiveClusterInstallationByClusterID(clusterID string) (int64, error) {
+	result, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update("ClusterInstallation").
 		Set("State", model.ClusterInstallationStateDeletionRequested).
 		Where("ClusterID = ?", clusterID).
@@ -175,10 +175,13 @@ func (sqlStore *SQLStore) DeleteInActiveClusterInstallationByClusterID(clusterID
 		Where("DeleteAt = 0"),
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to mark inactive cluster installation as deleted")
+		return 0, errors.Wrap(err, "failed to mark inactive cluster installation as deleted")
 	}
-
-	return nil
+	rowsUpdated, err := result.RowsAffected()
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to get total affcted rows from updating inactive cluster statement")
+	}
+	return rowsUpdated, nil
 }
 
 // LockClusterInstallations marks the cluster installation as locked for exclusive use by the caller.

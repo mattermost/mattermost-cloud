@@ -1470,18 +1470,18 @@ func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID str
 }
 
 // SwitchClusterRoles requests the migration of cluster installation(s) from the configured provisioning server.
-func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) (MigrateClusterInstallationRequest, error) {
+func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) (*MigrateClusterInstallationResponse, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/switch_cluster_roles"), request)
 	if err != nil {
-		return MigrateClusterInstallationRequest{}, err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return NewMigrateClusterInstallationRequestFromReader(resp.Body)
+		return MigrateClusterInstallationResponseFromReader(resp.Body)
 
 	default:
-		return MigrateClusterInstallationRequest{}, errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
