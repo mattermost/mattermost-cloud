@@ -586,17 +586,17 @@ func TestMigrateClusterInstallations(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("no cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -682,11 +682,11 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	t.Run("valid migration test", func(t *testing.T) {
 		mcir := &model.MigrateClusterInstallationRequest{SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, InstallationID: "", DNSSwitch: true, LockInstallation: true}
 		t.Log(mcir)
-		err := client.MigrateClusterInstallation(mcir)
+		migrationResponse, err := client.MigrateClusterInstallation(mcir)
 		require.NoError(t, err)
 		newClusterInstallations, err := sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{ClusterID: targetCluster.ID, Paging: model.AllPagesNotDeleted()})
 		require.NoError(t, err)
-		assert.Len(t, newClusterInstallations, 2)
+		assert.Equal(t, len(newClusterInstallations), migrationResponse.TotalClusterInstallations)
 		for _, ci := range newClusterInstallations {
 			assert.False(t, ci.IsActive)
 			assert.Equal(t, model.ClusterInstallationStateCreationRequested, ci.State)
@@ -731,17 +731,17 @@ func TestMigrateDNS(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("No cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -828,10 +828,10 @@ func TestMigrateDNS(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		_, err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
 
 		// varifying the outcomes
@@ -889,17 +889,17 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("No cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -970,12 +970,12 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		migrationResponse, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		dnsSwitchResponse, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
-
+		assert.Equal(t, dnsSwitchResponse.TotalClusterInstallations, migrationResponse.TotalClusterInstallations)
 		// varifying the outcomes
 		var isActiveClusterInstallations = false
 		filter := &model.ClusterInstallationFilter{
@@ -1001,7 +1001,7 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		assert.Len(t, cis, 2)
 
 		// Verifying if migration has already processed
-		err = client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		_, err = client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.EqualError(t, err, "failed with status code 404")
 
 	})
@@ -1036,17 +1036,17 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
 		require.EqualError(t, err, "failed with status code 400")
 	})
 
 	t.Run("No cluster installation found to migrate", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
+		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -1117,11 +1117,12 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 	require.NotNil(t, targetCluster)
 
 	t.Run("valid migration test", func(t *testing.T) {
-		err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
+		migrationResponse, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: false, LockInstallation: false})
 		require.NoError(t, err)
 
-		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		dnsSwitchResponse, err := client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.NoError(t, err)
+		assert.Equal(t, dnsSwitchResponse.TotalClusterInstallations, migrationResponse.TotalClusterInstallations)
 
 		// varifying the outcomes
 		var isActiveClusterInstallations = false
@@ -1148,7 +1149,7 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		assert.Len(t, cis, 2)
 
 		// Verifying if DNS Switch has already processed
-		err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
+		_, err = client.MigrateDNS(&model.MigrateClusterInstallationRequest{InstallationID: "", SourceClusterID: sourceCluster.ID, TargetClusterID: targetCluster.ID, DNSSwitch: true, LockInstallation: true})
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -1205,8 +1206,9 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation in a given cluster", func(t *testing.T) {
-		err := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
+		deletedCIs, err := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
 		require.NoError(t, err)
+		assert.Equal(t, deletedCIs.TotalClusterInstallations, 2)
 	})
 
 	cis, err := sqlStore.GetClusterInstallations(filter)
@@ -1259,8 +1261,9 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation by ID", func(t *testing.T) {
-		err := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
+		deletedCi, err := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
 		require.NoError(t, err)
+		assert.Equal(t, deletedCi.ID, clusterInstallation1.ID)
 	})
 
 	ci, err = sqlStore.GetClusterInstallations(filter)

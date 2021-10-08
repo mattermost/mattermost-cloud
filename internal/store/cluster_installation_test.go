@@ -824,8 +824,9 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, inActiveClusterInstallations)
 
-	err = sqlStore.DeleteInActiveClusterInstallationByClusterID(sourceClusterID)
+	rowsDeleted, err := sqlStore.DeleteInActiveClusterInstallationByClusterID(sourceClusterID)
 	require.NoError(t, err)
+	assert.Equal(t, rowsDeleted, int64(2))
 
 	isActiveClusterInstallations = false
 	inActiveClusterInstallations, err = sqlStore.GetClusterInstallations(&model.ClusterInstallationFilter{Paging: model.AllPagesNotDeleted(), ClusterID: sourceClusterID, IsActive: &isActiveClusterInstallations})
