@@ -31,13 +31,8 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"nginx-internal":                    {Chart: "2.15.0", ValuesPath: ""},
 				"prometheus-operator":               {Chart: "18.0.3", ValuesPath: ""},
 				"thanos":                            {Chart: "5.2.1", ValuesPath: ""},
-<<<<<<< HEAD
-				"teleport":                          {Chart: "0.3.0", ValuesPath: ""},
 				"pgbouncer":                         {Chart: "1.2.0", ValuesPath: ""},
-=======
 				"teleport":                          {Chart: "0.4.1", ValuesPath: ""},
-				"pgbouncer":                         {Chart: "1.1.0", ValuesPath: ""},
->>>>>>> 019fd8b3b19da045347381df07cfc95b91d9d000
 				"stackrox-secured-cluster-services": {Chart: "65.1.0", ValuesPath: ""},
 				"kubecost":                          {Chart: "1.87.0", ValuesPath: ""},
 				"node-problem-detector":             {Chart: "2.0.5", ValuesPath: ""},
