@@ -255,7 +255,6 @@ var clusterInstallationMMCTL = &cobra.Command{
 
 		output, err := client.ExecClusterInstallationCLI(clusterInstallationID, "mmctl", strings.Split(subcommand, " "))
 
-		// Print any output and then check and handle errors.
 		fmt.Println(string(output))
 		if err != nil {
 			return errors.Wrap(err, "failed to run mattermost CLI command")
@@ -279,7 +278,6 @@ var clusterInstallationMattermostCLICmd = &cobra.Command{
 
 		output, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallationID, strings.Split(subcommand, " "))
 
-		// Print any output and then check and handle errors.
 		fmt.Println(string(output))
 		if err != nil {
 			return errors.Wrap(err, "failed to run mattermost CLI command")
@@ -303,15 +301,20 @@ var clusterInstallationsMigrationCmd = &cobra.Command{
 		targetcluster, _ := command.Flags().GetString("target-cluster")
 		installation, _ := command.Flags().GetString("installation")
 
-		err := client.MigrateClusterInstallation(
+		response, err := client.MigrateClusterInstallation(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
 				InstallationID:   installation,
 				DNSSwitch:        false,
 				LockInstallation: false})
+
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to migrate cluster installation(s)")
+		}
+		err = printJSON(response)
+		if err != nil {
+			return errors.Wrap(err, "failed to print cluster installation's migration response")
 		}
 		return nil
 	},
@@ -332,14 +335,18 @@ var dnsMigrationCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		err := client.MigrateDNS(
+		response, err := client.MigrateDNS(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
 				InstallationID:   installation,
 				LockInstallation: lockInstallation})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to perform DNS switch")
+		}
+		err = printJSON(response)
+		if err != nil {
+			return errors.Wrap(err, "failed to print DNS switch response")
 		}
 		return nil
 	},
@@ -358,17 +365,25 @@ var deleteInActiveClusterInstallationCmd = &cobra.Command{
 		cluster, _ := command.Flags().GetString("cluster")
 		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
 		if len(clusterInstallationID) != 0 {
-			err := client.DeleteInActiveClusterInstallationByID(clusterInstallationID)
+			deletedCI, err := client.DeleteInActiveClusterInstallationByID(clusterInstallationID)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to delete inactive cluster installations")
+			}
+			err = printJSON(deletedCI)
+			if err != nil {
+				return errors.Wrap(err, "failed to print deleting inactive cluster installation response")
 			}
 			return nil
 		}
 
 		if len(cluster) != 0 {
-			err := client.DeleteInActiveClusterInstallationsByCluster(cluster)
+			response, err := client.DeleteInActiveClusterInstallationsByCluster(cluster)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to delete inactive cluster installations")
+			}
+			err = printJSON(response)
+			if err != nil {
+				return errors.Wrap(err, "failed to print deleting inactive cluster installation response")
 			}
 			return nil
 		}
@@ -391,14 +406,19 @@ var postMigrationSwitchClusterRolesCmd = &cobra.Command{
 		installation, _ := command.Flags().GetString("installation")
 		lockInstallation, _ := command.Flags().GetBool("lock-installation")
 
-		err := client.SwitchClusterRoles(
+		response, err := client.SwitchClusterRoles(
 			&model.MigrateClusterInstallationRequest{
 				SourceClusterID:  sourceCluster,
 				TargetClusterID:  targetcluster,
 				InstallationID:   installation,
 				LockInstallation: lockInstallation})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to switch cluster roles")
+		}
+
+		err = printJSON(response)
+		if err != nil {
+			return errors.Wrap(err, "failed to print switch cluster roles response")
 		}
 		return nil
 	},

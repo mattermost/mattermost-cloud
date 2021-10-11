@@ -42,6 +42,25 @@ type MigrateClusterInstallationRequest struct {
 	LockInstallation bool
 }
 
+const (
+	// OperationTypeMigration is used for CIs migration from source to target cluster.
+	OperationTypeMigration = "MigratingClusterInstallation"
+	// OperationTypeDNS is used for DNS Switch from source to target cluster.
+	OperationTypeDNS = "DNSSwitch"
+	// OperationTypeSwitchClusterRoles is used for Switching the tags between source & target clusters.
+	OperationTypeSwitchClusterRoles = "SwitchClusterRoles"
+	// OperationTypeDeletingInActiveCIs is used for Deleting InActive ClusterInstallations from source clusters.
+	OperationTypeDeletingInActiveCIs = "DeletingInActiveClusterInstallations"
+)
+
+// MigrateClusterInstallationResponse describes the summary of migration between two clusters.
+type MigrateClusterInstallationResponse struct {
+	SourceClusterID           string
+	TargetClusterID           string
+	Operation                 string
+	TotalClusterInstallations int
+}
+
 // Clone returns a deep copy the cluster installation.
 func (c *ClusterInstallation) Clone() *ClusterInstallation {
 	var clone ClusterInstallation
@@ -92,4 +111,16 @@ func ClusterInstallationConfigFromReader(reader io.Reader) (map[string]interface
 	}
 
 	return config, nil
+}
+
+// MigrateClusterInstallationResponseFromReader decodes a json-encoded cluster migration from the given io.Reader.
+func MigrateClusterInstallationResponseFromReader(reader io.Reader) (*MigrateClusterInstallationResponse, error) {
+	migrateClusterInstallationResponse := MigrateClusterInstallationResponse{}
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&migrateClusterInstallationResponse)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return &migrateClusterInstallationResponse, nil
 }

@@ -157,8 +157,13 @@ func TestGetActualVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
+<<<<<<< HEAD
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.3.0"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
+=======
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.4.1"},
+				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.1.0"},
+>>>>>>> 019fd8b3b19da045347381df07cfc95b91d9d000
 				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
@@ -179,7 +184,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "fluent-bit-0.9"}, version)
 
 	version = c.ActualUtilityVersion(TeleportCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-0.3.0"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-0.4.1"}, version)
 
 	version = c.ActualUtilityVersion(PgbouncerCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"}, version)
@@ -216,8 +221,8 @@ func TestGetDesiredVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.3.0"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.4.1"},
 				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},

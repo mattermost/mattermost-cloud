@@ -1402,86 +1402,86 @@ func (c *Client) makeSecurityCall(resourceType, id, securityType, action string)
 }
 
 // MigrateClusterInstallation requests the migration of cluster installation(s) from the configured provisioning server.
-func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationRequest) error {
+func (c *Client) MigrateClusterInstallation(request *MigrateClusterInstallationRequest) (*MigrateClusterInstallationResponse, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate"), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return MigrateClusterInstallationResponseFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
 // MigrateDNS requests the migration of cluster installation(s) from the configured provisioning server.
-func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) error {
+func (c *Client) MigrateDNS(request *MigrateClusterInstallationRequest) (*MigrateClusterInstallationResponse, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/dns"), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return MigrateClusterInstallationResponseFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
 // DeleteInActiveClusterInstallationsByCluster requests the deletion of inactive cluster installation(s) from the configured provisioning server.
-func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) error {
+func (c *Client) DeleteInActiveClusterInstallationsByCluster(clusterID string) (*MigrateClusterInstallationResponse, error) {
 	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/%s", clusterID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return MigrateClusterInstallationResponseFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
 // DeleteInActiveClusterInstallationByID requests the deletion of specific inactive cluster installation from the configured provisioning server.
-func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID string) error {
+func (c *Client) DeleteInActiveClusterInstallationByID(clusterInstallationID string) (*ClusterInstallation, error) {
 	resp, err := c.doDelete(c.buildURL("/api/cluster_installations/migrate/delete_inactive/cluster_installation/%s", clusterInstallationID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return ClusterInstallationFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 
 // SwitchClusterRoles requests the migration of cluster installation(s) from the configured provisioning server.
-func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) error {
+func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) (*MigrateClusterInstallationResponse, error) {
 	resp, err := c.doPost(c.buildURL("/api/cluster_installations/migrate/switch_cluster_roles"), request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return nil
+		return MigrateClusterInstallationResponseFromReader(resp.Body)
 
 	default:
-		return errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }

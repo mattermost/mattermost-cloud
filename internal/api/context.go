@@ -93,7 +93,7 @@ type Store interface {
 	MigrateClusterInstallations(clusterInstallations []*model.ClusterInstallation, targetCluster string) error
 	SwitchDNS(oldCIsIDs, newCIsIDs, installationIDs []string, hibernatingInstallationIDs []string) error
 	DeleteClusterInstallation(id string) error
-	DeleteInActiveClusterInstallationByClusterID(clusterID string) error
+	DeleteInActiveClusterInstallationByClusterID(clusterID string) (int64, error)
 	LockInstallations(installationIDs []string, lockerID string) (bool, error)
 	UnlockInstallations(installationIDs []string, lockerID string, force bool) (bool, error)
 	UpdateClusterInstallation(clusterInstallation *model.ClusterInstallation) error
