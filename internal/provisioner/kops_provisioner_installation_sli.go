@@ -18,9 +18,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterInstallation) *slothv1.PrometheusServiceLevel {
+func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterInstallation) slothv1.PrometheusServiceLevel {
 	installationName := makeClusterInstallationName(clusterInstallation)
-	sli := &slothv1.PrometheusServiceLevel{
+	sli := slothv1.PrometheusServiceLevel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterInstallation.InstallationID,
 			Labels: map[string]string{
@@ -36,7 +36,7 @@ func (provisioner *KopsProvisioner) makeSLIs(clusterInstallation *model.ClusterI
 			SLOs: []slothv1.SLO{
 				{
 					Name:        "requests-availability",
-					Objective:   99.9,
+					Objective:   99.5,
 					Description: "Availability metric for mattermost API",
 					SLI: slothv1.SLI{Events: &slothv1.SLIEvents{
 						ErrorQuery: "sum(rate(mattermost_api_time_count{job='" + installationName + "',status_code=~'(5..|429|499)'}[{{.window}}]))",
@@ -58,7 +58,7 @@ func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *m
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Create(ctx, sli, metav1.CreateOptions{})
+	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Create(ctx, &sli, metav1.CreateOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
 		return nil
@@ -69,22 +69,50 @@ func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *m
 	return nil
 }
 
-func (provisioner *KopsProvisioner) createIfNotExistInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+func (provisioner *KopsProvisioner) updateInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	wait := 60
+	sli := provisioner.makeSLIs(clusterInstallation)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	defer cancel()
+	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli.Name, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get cluster installation sli")
+	}
+	sli.ResourceVersion = obj.GetResourceVersion()
+	_, err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Update(ctx, &sli, metav1.UpdateOptions{})
+	if err != nil && k8sErrors.IsNotFound(err) {
+		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
+		return nil
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation sli")
+	}
+	return nil
+}
+
+func (provisioner *KopsProvisioner) createIfNotExistOrUpdateInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
 	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
-		return err
+		return errors.Wrap(err, "failed to get cluster installation sli")
 	}
 
 	if err != nil && k8sErrors.IsNotFound(err) {
-		provisioner.createInstallationSLI(clusterInstallation, k8sClient, logger)
+		err = provisioner.createInstallationSLI(clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to create cluster installation sli")
+		}
 		return nil
 	}
 
-	return err
+	err = provisioner.updateInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update cluster installation sli")
+	}
+	return nil
 }
 
 func (provisioner *KopsProvisioner) deleteInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
