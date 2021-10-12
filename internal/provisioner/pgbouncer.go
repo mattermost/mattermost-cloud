@@ -202,13 +202,13 @@ min_pool_size = 20
 default_pool_size = 20
 reserve_pool_size = 5
 max_client_conn = 10000
-max_db_connections = 20
+max_db_connections = %d
 
 [databases]
 `
 
 func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface) (string, error) {
-	ini := baseIni
+	ini := generatePGBouncerBaseINI()
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
@@ -249,6 +249,10 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 	}
 
 	return ini, nil
+}
+
+func generatePGBouncerBaseINI() string {
+	return fmt.Sprintf(baseIni, model.GetMaxDatabaseConnectionsPerPool())
 }
 
 func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {

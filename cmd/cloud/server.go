@@ -84,6 +84,7 @@ func init() {
 	serverCmd.PersistentFlags().String("mattermost-webhook", "", "Set to use a Mattermost webhook for spot instances termination notifications")
 	serverCmd.PersistentFlags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 	serverCmd.PersistentFlags().String("utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
+	serverCmd.PersistentFlags().Int("max-proxy-db-connections-per-pool", 20, "The maximum number of proxy database connections per pool (logical database).")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 }
 
@@ -108,6 +109,12 @@ var serverCmd = &cobra.Command{
 		err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(maxSchemas)
 		if err != nil {
 			return err
+		}
+
+		maxDatabaseConnectionsPerPool, _ := command.Flags().GetInt("max-proxy-db-connections-per-pool")
+		err = model.SetMaxDatabaseConnectionsPerPool(maxDatabaseConnectionsPerPool)
+		if err != nil {
+			return errors.Wrap(err, "failed to set max-proxy-db-connections-per-pool")
 		}
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
@@ -264,6 +271,7 @@ var serverCmd = &cobra.Command{
 			"dev-mode":                               devMode,
 			"deploy-mysql-operator":                  deployMySQLOperator,
 			"deploy-minio-operator":                  deployMinioOperator,
+			"maxDatabaseConnectionsPerPool":          maxDatabaseConnectionsPerPool,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
