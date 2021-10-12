@@ -33,6 +33,27 @@ func GetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase() int64 {
 	return defaultProxyDatabaseMaxInstallationsPerLogicalDatabase
 }
 
+// maxDatabaseConnectionsPerPool is the maximum number of connections per logical
+// database pool when using proxy databases.
+var maxDatabaseConnectionsPerPool int = 20
+
+// SetMaxDatabaseConnectionsPerPool is used to define how many database
+// connections are created per logical database pool with proxy databases.
+func SetMaxDatabaseConnectionsPerPool(val int) error {
+	if val < 1 {
+		return errors.New("maxDatabaseConnectionsPerPool must be set to 1 or higher")
+	}
+	maxDatabaseConnectionsPerPool = val
+
+	return nil
+}
+
+// GetMaxDatabaseConnectionsPerPool returns the value of
+// maxDatabaseConnectionsPerPool.
+func GetMaxDatabaseConnectionsPerPool() int {
+	return maxDatabaseConnectionsPerPool
+}
+
 // MultitenantDatabase represents database infrastructure that contains multiple
 // installation databases.
 type MultitenantDatabase struct {
