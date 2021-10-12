@@ -208,7 +208,7 @@ max_db_connections = %d
 `
 
 func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface) (string, error) {
-	ini := generatePGBouncerBaseINI()
+	ini := generatePGBouncerBaseIni()
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
@@ -251,7 +251,7 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 	return ini, nil
 }
 
-func generatePGBouncerBaseINI() string {
+func generatePGBouncerBaseIni() string {
 	return fmt.Sprintf(baseIni, model.GetMaxDatabaseConnectionsPerPool())
 }
 

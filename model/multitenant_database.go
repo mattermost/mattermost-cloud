@@ -41,7 +41,7 @@ var maxDatabaseConnectionsPerPool int = 20
 // connections are created per logical database pool with proxy databases.
 func SetMaxDatabaseConnectionsPerPool(val int) error {
 	if val < 1 {
-		return errors.New("maxDatabaseConnectionsPerLogicalDatabase must be set to 1 or higher")
+		return errors.New("maxDatabaseConnectionsPerPool must be set to 1 or higher")
 	}
 	maxDatabaseConnectionsPerPool = val
 
