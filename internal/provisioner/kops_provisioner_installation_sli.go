@@ -69,9 +69,8 @@ func (provisioner *KopsProvisioner) createInstallationSLI(clusterInstallation *m
 	return nil
 }
 
-func (provisioner *KopsProvisioner) updateInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+func (provisioner *KopsProvisioner) updateInstallationSLI(sli slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
-	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
 	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli.Name, metav1.GetOptions{})
@@ -80,17 +79,13 @@ func (provisioner *KopsProvisioner) updateInstallationSLI(clusterInstallation *m
 	}
 	sli.ResourceVersion = obj.GetResourceVersion()
 	_, err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Update(ctx, &sli, metav1.UpdateOptions{})
-	if err != nil && k8sErrors.IsNotFound(err) {
-		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
-		return nil
-	}
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation sli")
 	}
 	return nil
 }
 
-func (provisioner *KopsProvisioner) createIfNotExistOrUpdateInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+func (provisioner *KopsProvisioner) createOrUpdateInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	wait := 60
 	sli := provisioner.makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
@@ -108,7 +103,7 @@ func (provisioner *KopsProvisioner) createIfNotExistOrUpdateInstallationSLI(clus
 		return nil
 	}
 
-	err = provisioner.updateInstallationSLI(clusterInstallation, k8sClient, logger)
+	err = provisioner.updateInstallationSLI(sli, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation sli")
 	}
