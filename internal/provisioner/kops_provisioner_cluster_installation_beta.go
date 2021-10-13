@@ -257,7 +257,7 @@ func (provisioner *kopsCIBeta) UpdateClusterInstallation(cluster *model.Cluster,
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	err = provisioner.createIfNotExistInstallationSLI(clusterInstallation, k8sClient, logger)
+	err = provisioner.createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
 	}

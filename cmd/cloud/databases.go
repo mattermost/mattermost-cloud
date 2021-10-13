@@ -83,7 +83,7 @@ var multitenantDatabaseListCmd = &cobra.Command{
 		databaseType, _ := command.Flags().GetString("database-type")
 		paging := parsePagingFlags(command)
 
-		multitenantDatabses, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
+		multitenantDatabases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 			VpcID:        vpcID,
 			DatabaseType: databaseType,
 			Paging:       paging,
@@ -97,8 +97,8 @@ var multitenantDatabaseListCmd = &cobra.Command{
 			var vals [][]string
 
 			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(multitenantDatabses))
-				for _, mtd := range multitenantDatabses {
+				data := make([]interface{}, 0, len(multitenantDatabases))
+				for _, mtd := range multitenantDatabases {
 					data = append(data, mtd)
 				}
 				keys, vals, err = prepareTableData(customCols, data)
@@ -106,14 +106,14 @@ var multitenantDatabaseListCmd = &cobra.Command{
 					return errors.Wrap(err, "failed to prepare table output")
 				}
 			} else {
-				keys, vals = defaultMultitenantDatabaseTableData(multitenantDatabses)
+				keys, vals = defaultMultitenantDatabaseTableData(multitenantDatabases)
 			}
 
 			printTable(keys, vals)
 			return nil
 		}
 
-		err = printJSON(multitenantDatabses)
+		err = printJSON(multitenantDatabases)
 		if err != nil {
 			return err
 		}
