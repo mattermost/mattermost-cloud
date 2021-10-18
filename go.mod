@@ -41,3 +41,5 @@ require (
 )
 
 replace github.com/golang/mock v1.5.0 => github.com/golang/mock v1.4.4
+
+replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
