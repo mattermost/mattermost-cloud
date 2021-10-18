@@ -198,8 +198,8 @@ server_round_robin = 1
 log_disconnections = 1
 log_connections = 1
 pool_mode = transaction
-min_pool_size = 5
-default_pool_size = 5
+min_pool_size = %d
+default_pool_size = %d
 reserve_pool_size = 5
 max_client_conn = 10000
 max_db_connections = %d
@@ -252,7 +252,7 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 }
 
 func generatePGBouncerBaseIni() string {
-	return fmt.Sprintf(baseIni, model.GetMaxDatabaseConnectionsPerPool())
+	return fmt.Sprintf(baseIni, model.GetMinPoolSize(), model.GetDefaultPoolSize(), model.GetMaxDatabaseConnectionsPerPool())
 }
 
 func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {

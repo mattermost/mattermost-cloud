@@ -117,6 +117,18 @@ var serverCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to set max-proxy-db-connections-per-pool")
 		}
 
+		defaultPoolSize, _ := command.Flags().GetInt("default-proxy-db-pool-size")
+		err = model.SetDefaultPoolSize(defaultPoolSize)
+		if err != nil {
+			return errors.Wrap(err, "failed to set default-proxy-db-pool-size")
+		}
+
+		minPoolSize, _ := command.Flags().GetInt("min-proxy-db-pool-size")
+		err = model.SetMinPoolSize(minPoolSize)
+		if err != nil {
+			return errors.Wrap(err, "failed to set min-proxy-db-pool-size")
+		}
+
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {
 			gitlabOAuthToken = os.Getenv(model.GitlabOAuthTokenKey)
@@ -272,6 +284,8 @@ var serverCmd = &cobra.Command{
 			"deploy-mysql-operator":                  deployMySQLOperator,
 			"deploy-minio-operator":                  deployMinioOperator,
 			"maxDatabaseConnectionsPerPool":          maxDatabaseConnectionsPerPool,
+			"defaultPoolSize":                        defaultPoolSize,
+			"minPoolSize":                            minPoolSize,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
