@@ -92,7 +92,7 @@ func (w *TestWicker) DeleteInstallation() func(w *TestWicker, ctx context.Contex
 
 // PostMessage post messages to the different channels which are created
 // automatically by the wicker
-func (w *TestWicker) PostMessage(samples int) func(w *TestWicker, ctx context.Context) error {
+func (w *TestWicker) PostMessage(samples int, sleepDuration time.Duration) func(w *TestWicker, ctx context.Context) error {
 	return func(w *TestWicker, _ context.Context) error {
 		w.logger.WithField("DNS", w.installation.DNS).Info("Posting messages")
 		if w.channelID == "" {
@@ -107,6 +107,7 @@ func (w *TestWicker) PostMessage(samples int) func(w *TestWicker, ctx context.Co
 			if response.StatusCode != 201 {
 				return fmt.Errorf("failed to post a message status = %d, message = %s", response.StatusCode, response.Error.Message)
 			}
+			time.Sleep(sleepDuration)
 		}
 		return nil
 	}

@@ -34,6 +34,7 @@ type testerCfg struct {
 	samples               int
 	channelSamples        int
 	messagesSamples       int
+	messagesSamplesSleep  time.Duration
 }
 
 var testerConfig = testerCfg{}
@@ -58,6 +59,7 @@ func init() {
 	testerCmd.PersistentFlags().IntVar(&testerConfig.samples, "samples", 1, "The number of samples installations to interact with")
 	testerCmd.PersistentFlags().IntVar(&testerConfig.channelSamples, "channel-samples", 1, "The number of channel samples to create in installation")
 	testerCmd.PersistentFlags().IntVar(&testerConfig.messagesSamples, "channel-messages", 100, "The number of channel messages to post")
+	testerCmd.PersistentFlags().DurationVar(&testerConfig.messagesSamplesSleep, "channel-messages-sleep", 10*time.Second, "The number of time to sleep before post the next message")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.owner, "owner", "testwick", "The owner of the installation. Prefer to keep the default")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationSize, "installation-size", "100users", "The size of the installation")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.installationAffinity, "installation-affinity", cmodel.InstallationAffinityMultiTenant, "The installation affinity type eg. multitenant")
@@ -136,7 +138,7 @@ var testerCmd = &cobra.Command{
 						Func: testwicker.CreateIncomingWebhook(),
 					}, testwick.Step{
 						Name: "PostMessages",
-						Func: testwicker.PostMessage(testerConfig.messagesSamples),
+						Func: testwicker.PostMessage(testerConfig.messagesSamples, testerConfig.messagesSamplesSleep),
 					})
 				}
 				workflow.AddStep(testwick.Step{

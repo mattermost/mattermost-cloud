@@ -309,7 +309,7 @@ func TestPostMessage(t *testing.T) {
 			}
 			v.setup(wicker)
 
-			f := wicker.PostMessage(1)
+			f := wicker.PostMessage(1, 10)
 			err := f(wicker, context.TODO())
 
 			v.expected(wicker, err)
