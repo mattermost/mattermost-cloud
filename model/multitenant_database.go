@@ -56,16 +56,19 @@ func SetMaxDatabaseConnectionsPerPool(val int) error {
 
 // SetDefaultPoolSize is used to define the default pool size per user
 func SetDefaultPoolSize(val int) error {
+	if val < 1 {
+		return errors.New("defaultPoolSize must be set to 1 or higher")
+	}
 	defaultPoolSize = val
 
 	return nil
 }
 
 // SetMinPoolSize is used to define the min pool size per user
-func SetMinPoolSize(val int) error {
+func SetMinPoolSize(val int) {
 	minPoolSize = val
 
-	return nil
+	return
 }
 
 // GetMaxDatabaseConnectionsPerPool returns the value of

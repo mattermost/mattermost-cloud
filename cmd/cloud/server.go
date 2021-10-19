@@ -85,6 +85,8 @@ func init() {
 	serverCmd.PersistentFlags().String("mattermost-channel", "", "Set a mattermost channel for spot instances termination notifications")
 	serverCmd.PersistentFlags().String("utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 	serverCmd.PersistentFlags().Int("max-proxy-db-connections-per-pool", 20, "The maximum number of proxy database connections per pool (logical database).")
+	serverCmd.PersistentFlags().Int("default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
+	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 3, "The db proxy min pool size.")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 }
 
@@ -124,10 +126,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		minPoolSize, _ := command.Flags().GetInt("min-proxy-db-pool-size")
-		err = model.SetMinPoolSize(minPoolSize)
-		if err != nil {
-			return errors.Wrap(err, "failed to set min-proxy-db-pool-size")
-		}
+		model.SetMinPoolSize(minPoolSize)
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {
