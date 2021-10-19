@@ -37,6 +37,12 @@ func GetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase() int64 {
 // database pool when using proxy databases.
 var maxDatabaseConnectionsPerPool int = 20
 
+// defaultPoolSize is the default pool size per user
+var defaultPoolSize int = 5
+
+// minPoolSize is the minimum pool size
+var minPoolSize int = 3
+
 // SetMaxDatabaseConnectionsPerPool is used to define how many database
 // connections are created per logical database pool with proxy databases.
 func SetMaxDatabaseConnectionsPerPool(val int) error {
@@ -48,10 +54,37 @@ func SetMaxDatabaseConnectionsPerPool(val int) error {
 	return nil
 }
 
+// SetDefaultPoolSize is used to define the default pool size per user
+func SetDefaultPoolSize(val int) error {
+	if val < 1 {
+		return errors.New("defaultPoolSize must be set to 1 or higher")
+	}
+	defaultPoolSize = val
+
+	return nil
+}
+
+// SetMinPoolSize is used to define the min pool size per user
+func SetMinPoolSize(val int) {
+	minPoolSize = val
+
+	return
+}
+
 // GetMaxDatabaseConnectionsPerPool returns the value of
 // maxDatabaseConnectionsPerPool.
 func GetMaxDatabaseConnectionsPerPool() int {
 	return maxDatabaseConnectionsPerPool
+}
+
+// GetDefaultPoolSize returns the value of defaultPoolSize.
+func GetDefaultPoolSize() int {
+	return defaultPoolSize
+}
+
+// GetMinPoolSize returns the value of minPoolSize.
+func GetMinPoolSize() int {
+	return minPoolSize
 }
 
 // MultitenantDatabase represents database infrastructure that contains multiple

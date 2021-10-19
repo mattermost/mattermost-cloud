@@ -23,7 +23,7 @@ data:
     log_disconnections = 1
     log_connections = 1
     pool_mode = transaction
-    min_pool_size = 5
+    min_pool_size = 3
     default_pool_size = 5
     reserve_pool_size = 5
     max_client_conn = 10000
