@@ -65,3 +65,18 @@ spec:
             - containerPort: 8081
               name: metrics
               protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sloth
+  namespace: prometheus
+  labels:
+    app: sloth
+spec:
+  selector:
+    app: sloth
+  ports:
+    - port: metrics
+      protocol: TCP
+      targetPort: metrics
