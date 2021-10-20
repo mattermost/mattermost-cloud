@@ -57,7 +57,7 @@ func init() {
 	logger.SetOutput(os.Stdout)
 
 	testerCmd.PersistentFlags().StringVar(&testerConfig.provisioner, "provisioner", "", "The url for the provisioner")
-	testerCmd.PersistentFlags().StringVar(&testerConfig.cloudImageName, "provisioner-image-name", "mattermost/mm-ee-cloud:latest", "The Cloud image will be used for provisioner")
+	testerCmd.PersistentFlags().StringVar(&testerConfig.cloudImageName, "provisioner-image-name", "mattermost/mm-ee-cloud", "The Cloud image will be used for provisioner")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.cloudImageTag, "provisioner-image-tag", "latest", "The Cloud image tag will be used for provisioner")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.hostedZoneDomain, "hosted-zone", "", "The hosted zone you need to run your installations eg. test.mattermost.cloud")
 	testerCmd.PersistentFlags().IntVar(&testerConfig.samples, "samples", 1, "The number of samples installations to interact with")
