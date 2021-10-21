@@ -1,5 +1,5 @@
 apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+kind: PodMonitor
 metadata:
   name: sloth
   namespace: prometheus
@@ -10,9 +10,5 @@ spec:
   selector:
     matchLabels:
       app: sloth
-  namespaceSelector:
-    matchNames:
-    - prometheus
-  endpoints:
+  podMetricsEndpoints:
     - port: metrics
-      interval: 60s
