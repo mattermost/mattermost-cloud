@@ -47,9 +47,9 @@ func MattermostPostgresConnStrings(schema, username, password string, dbCluster 
 // Regarding binary_parameters:
 // https://blog.bullgare.com/2019/06/pgbouncer-and-prepared-statements
 func MattermostPostgresPGBouncerConnStrings(username, password, database string) (string, string, string) {
-	dbConnection := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer:5432/%s?connect_timeout=10&sslmode=disable&binary_parameters=yes",
+	dbConnection := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer:5432/%s?connect_timeout=10&sslmode=disable",
 		username, password, database)
-	readReplicas := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer:5432/%s-ro?connect_timeout=10&sslmode=disable&binary_parameters=yes",
+	readReplicas := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer:5432/%s-ro?connect_timeout=10&sslmode=disable",
 		username, password, database)
 	connectionCheck := fmt.Sprintf("postgres://%s:%s@pgbouncer.pgbouncer:5432/%s?connect_timeout=10&sslmode=disable",
 		username, password, database)
