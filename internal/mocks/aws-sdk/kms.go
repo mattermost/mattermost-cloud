@@ -1970,6 +1970,56 @@ func (mr *MockKMSAPIMockRecorder) ReEncryptWithContext(arg0, arg1 interface{}, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReEncryptWithContext", reflect.TypeOf((*MockKMSAPI)(nil).ReEncryptWithContext), varargs...)
 }
 
+// ReplicateKey mocks base method
+func (m *MockKMSAPI) ReplicateKey(arg0 *kms.ReplicateKeyInput) (*kms.ReplicateKeyOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplicateKey", arg0)
+	ret0, _ := ret[0].(*kms.ReplicateKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReplicateKey indicates an expected call of ReplicateKey
+func (mr *MockKMSAPIMockRecorder) ReplicateKey(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateKey", reflect.TypeOf((*MockKMSAPI)(nil).ReplicateKey), arg0)
+}
+
+// ReplicateKeyRequest mocks base method
+func (m *MockKMSAPI) ReplicateKeyRequest(arg0 *kms.ReplicateKeyInput) (*request.Request, *kms.ReplicateKeyOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplicateKeyRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*kms.ReplicateKeyOutput)
+	return ret0, ret1
+}
+
+// ReplicateKeyRequest indicates an expected call of ReplicateKeyRequest
+func (mr *MockKMSAPIMockRecorder) ReplicateKeyRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateKeyRequest", reflect.TypeOf((*MockKMSAPI)(nil).ReplicateKeyRequest), arg0)
+}
+
+// ReplicateKeyWithContext mocks base method
+func (m *MockKMSAPI) ReplicateKeyWithContext(arg0 context.Context, arg1 *kms.ReplicateKeyInput, arg2 ...request.Option) (*kms.ReplicateKeyOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReplicateKeyWithContext", varargs...)
+	ret0, _ := ret[0].(*kms.ReplicateKeyOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReplicateKeyWithContext indicates an expected call of ReplicateKeyWithContext
+func (mr *MockKMSAPIMockRecorder) ReplicateKeyWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateKeyWithContext", reflect.TypeOf((*MockKMSAPI)(nil).ReplicateKeyWithContext), varargs...)
+}
+
 // RetireGrant mocks base method
 func (m *MockKMSAPI) RetireGrant(arg0 *kms.RetireGrantInput) (*kms.RetireGrantOutput, error) {
 	m.ctrl.T.Helper()
@@ -2418,6 +2468,56 @@ func (mr *MockKMSAPIMockRecorder) UpdateKeyDescriptionWithContext(arg0, arg1 int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKeyDescriptionWithContext", reflect.TypeOf((*MockKMSAPI)(nil).UpdateKeyDescriptionWithContext), varargs...)
+}
+
+// UpdatePrimaryRegion mocks base method
+func (m *MockKMSAPI) UpdatePrimaryRegion(arg0 *kms.UpdatePrimaryRegionInput) (*kms.UpdatePrimaryRegionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePrimaryRegion", arg0)
+	ret0, _ := ret[0].(*kms.UpdatePrimaryRegionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePrimaryRegion indicates an expected call of UpdatePrimaryRegion
+func (mr *MockKMSAPIMockRecorder) UpdatePrimaryRegion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrimaryRegion", reflect.TypeOf((*MockKMSAPI)(nil).UpdatePrimaryRegion), arg0)
+}
+
+// UpdatePrimaryRegionRequest mocks base method
+func (m *MockKMSAPI) UpdatePrimaryRegionRequest(arg0 *kms.UpdatePrimaryRegionInput) (*request.Request, *kms.UpdatePrimaryRegionOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePrimaryRegionRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*kms.UpdatePrimaryRegionOutput)
+	return ret0, ret1
+}
+
+// UpdatePrimaryRegionRequest indicates an expected call of UpdatePrimaryRegionRequest
+func (mr *MockKMSAPIMockRecorder) UpdatePrimaryRegionRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrimaryRegionRequest", reflect.TypeOf((*MockKMSAPI)(nil).UpdatePrimaryRegionRequest), arg0)
+}
+
+// UpdatePrimaryRegionWithContext mocks base method
+func (m *MockKMSAPI) UpdatePrimaryRegionWithContext(arg0 context.Context, arg1 *kms.UpdatePrimaryRegionInput, arg2 ...request.Option) (*kms.UpdatePrimaryRegionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdatePrimaryRegionWithContext", varargs...)
+	ret0, _ := ret[0].(*kms.UpdatePrimaryRegionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePrimaryRegionWithContext indicates an expected call of UpdatePrimaryRegionWithContext
+func (mr *MockKMSAPIMockRecorder) UpdatePrimaryRegionWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePrimaryRegionWithContext", reflect.TypeOf((*MockKMSAPI)(nil).UpdatePrimaryRegionWithContext), varargs...)
 }
 
 // Verify mocks base method
