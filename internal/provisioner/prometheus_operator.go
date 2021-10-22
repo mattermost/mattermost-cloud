@@ -62,6 +62,7 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 		logger:         logger.WithField("cluster-utility", model.PrometheusOperatorCanonicalName),
 		provisioner:    provisioner,
 		desiredVersion: chartVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.PrometheusOperator,
 	}, nil
 }
 

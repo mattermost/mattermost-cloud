@@ -21,7 +21,7 @@ type nodeProblemDetector struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newNodeProblemDetectorHandle(version *model.HelmUtilityVersion, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nodeProblemDetector, error) {
+func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nodeProblemDetector, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NodeProblemDetector handle with nil logger")
 	}
@@ -38,7 +38,8 @@ func newNodeProblemDetectorHandle(version *model.HelmUtilityVersion, provisioner
 		provisioner:    provisioner,
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.NodeProblemDetectorCanonicalName),
-		desiredVersion: version,
+		desiredVersion: desiredVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.NodeProblemDetector,
 	}, nil
 }
 

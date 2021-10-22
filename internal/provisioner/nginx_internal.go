@@ -51,8 +51,9 @@ func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cl
 		provisioner:    provisioner,
 		kops:           kops,
 		cluster:        cluster,
-		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
+		logger:         logger.WithField("cluster-utility", model.NginxInternalCanonicalName),
 		desiredVersion: version,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.NginxInternal,
 	}, nil
 }
 

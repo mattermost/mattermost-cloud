@@ -58,6 +58,7 @@ func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsCl
 		logger:         logger.WithField("cluster-utility", model.ThanosCanonicalName),
 		provisioner:    provisioner,
 		desiredVersion: version,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Thanos,
 	}, nil
 }
 

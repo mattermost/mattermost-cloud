@@ -59,6 +59,7 @@ func newKubecostHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.KubecostCanonicalName),
 		desiredVersion: desiredVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Kubecost,
 	}, nil
 
 }

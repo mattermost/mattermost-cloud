@@ -22,7 +22,11 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 	provisioner := &KopsProvisioner{}
 	logger := log.New()
 	kops := &kops.Cmd{}
-	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.0.5"}, provisioner, kops, logger)
+	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.0.5"}, &model.Cluster{
+		UtilityMetadata: &model.UtilityMetadata{
+			ActualVersions: model.UtilityGroupVersions{},
+		},
+	}, provisioner, kops, logger)
 	require.NoError(t, err, "should not error when creating new node-problem-detector handler")
 	require.NotNil(t, nodeProblemDetector, "node-problem-detector should not be nil")
 
