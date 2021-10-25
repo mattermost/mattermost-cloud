@@ -28,5 +28,6 @@ data:
     reserve_pool_size = 5
     max_client_conn = 10000
     max_db_connections = 50
+    server_reset_query_always = 1
     [databases]
     * =

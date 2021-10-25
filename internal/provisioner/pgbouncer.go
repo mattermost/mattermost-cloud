@@ -203,6 +203,7 @@ default_pool_size = %d
 reserve_pool_size = 5
 max_client_conn = 10000
 max_db_connections = %d
+server_reset_query_always = 1
 
 [databases]
 `
