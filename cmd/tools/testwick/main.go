@@ -25,6 +25,8 @@ import (
 
 type testerCfg struct {
 	provisioner           string
+	cloudImageName        string
+	cloudImageTag         string
 	owner                 string
 	installationSize      string
 	installationAffinity  string
@@ -55,6 +57,8 @@ func init() {
 	logger.SetOutput(os.Stdout)
 
 	testerCmd.PersistentFlags().StringVar(&testerConfig.provisioner, "provisioner", "", "The url for the provisioner")
+	testerCmd.PersistentFlags().StringVar(&testerConfig.cloudImageName, "provisioner-image-name", "mattermost/mm-ee-cloud", "The Cloud image will be used for provisioner")
+	testerCmd.PersistentFlags().StringVar(&testerConfig.cloudImageTag, "provisioner-image-tag", "latest", "The Cloud image tag will be used for provisioner")
 	testerCmd.PersistentFlags().StringVar(&testerConfig.hostedZoneDomain, "hosted-zone", "", "The hosted zone you need to run your installations eg. test.mattermost.cloud")
 	testerCmd.PersistentFlags().IntVar(&testerConfig.samples, "samples", 1, "The number of samples installations to interact with")
 	testerCmd.PersistentFlags().IntVar(&testerConfig.channelSamples, "channel-samples", 1, "The number of channel samples to create in installation")
@@ -111,6 +115,8 @@ var testerCmd = &cobra.Command{
 						Affinity:  testerConfig.installationAffinity,
 						Database:  testerConfig.installationDBType,
 						Filestore: testerConfig.installationFilestore,
+						Image:     testerConfig.cloudImageName,
+						Version:   testerConfig.cloudImageTag,
 					}),
 				}, testwick.Step{
 					Name: "WaitForInstallationStable",
