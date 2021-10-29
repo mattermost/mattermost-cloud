@@ -719,15 +719,16 @@ func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) e
 	clientset, err := kubernetes.NewForConfig(k8sClient.GetConfig())
 
 	clusterRotator := rotatorModel.Cluster{
-		ClusterID:            cluster.ID,
-		MaxScaling:           *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxScaling,
-		RotateMasters:        true,
-		RotateWorkers:        true,
-		MaxDrainRetries:      *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxDrainRetries,
-		EvictGracePeriod:     *cluster.ProvisionerMetadataKops.RotatorRequest.Config.EvictGracePeriod,
-		WaitBetweenRotations: *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenRotations,
-		WaitBetweenDrains:    *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenDrains,
-		ClientSet:            clientset,
+		ClusterID:               cluster.ID,
+		MaxScaling:              *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxScaling,
+		RotateMasters:           true,
+		RotateWorkers:           true,
+		MaxDrainRetries:         *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxDrainRetries,
+		EvictGracePeriod:        *cluster.ProvisionerMetadataKops.RotatorRequest.Config.EvictGracePeriod,
+		WaitBetweenRotations:    *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenRotations,
+		WaitBetweenDrains:       *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenDrains,
+		WaitBetweenPodEvictions: *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenPodEvictions,
+		ClientSet:               clientset,
 	}
 
 	rotatorMetadata := cluster.ProvisionerMetadataKops.RotatorRequest.Status

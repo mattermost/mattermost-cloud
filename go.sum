@@ -833,8 +833,8 @@ github.com/mattermost/mattermost-operator v1.15.0 h1:/eJmOV6XZs3BGsLAhwC5K9PhL1i
 github.com/mattermost/mattermost-operator v1.15.0/go.mod h1:9esaQrOcruyyGQme3AnXGnoCDbpER7XAifDVu3HlCm8=
 github.com/mattermost/mattermost-server/v5 v5.23.0/go.mod h1:nMrt08IvThjybZpXPe/nqe/oJuvJxhqKkGI+m7M0R00=
 github.com/mattermost/mmetl v0.0.2-0.20210316151859-38824e5f5efd/go.mod h1:w6GNqrudkzs/GddfgqkgUqsXVQ/4ImK5JJfNj5KJeUQ=
-github.com/mattermost/rotator v0.1.2 h1:vBs/bRArFgKGx82QnVHxheH2qF3XdUupuRe/gWs1C/0=
-github.com/mattermost/rotator v0.1.2/go.mod h1:1oxWiEhVdZRckZ0uHGd5Zqf04yynm4U/YGHUPsf4sQ8=
+github.com/mattermost/rotator v0.2.0 h1:R3dlMHZjGR7t5T2bk76heDwpypl9rd2sZj4GoAZyuWU=
+github.com/mattermost/rotator v0.2.0/go.mod h1:1oxWiEhVdZRckZ0uHGd5Zqf04yynm4U/YGHUPsf4sQ8=
 github.com/mattermost/rsc v0.0.0-20160330161541-bbaefb05eaa0/go.mod h1:nV5bfVpT//+B1RPD2JvRnxbkLmJEYXmRaaVl15fsXjs=
 github.com/mattermost/viper v1.0.4/go.mod h1:uc5hKG9lv4/KRwPOt2c1omOyirS/UnuA2TytiZQSFHM=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=

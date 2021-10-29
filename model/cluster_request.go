@@ -206,6 +206,9 @@ func (p *PatchUpgradeClusterRequest) Validate() error {
 			if p.RotatorConfig.WaitBetweenRotations == nil {
 				return errors.Errorf("rotator config wait between rotations should be set")
 			}
+			if p.RotatorConfig.WaitBetweenPodEvictions == nil {
+				return errors.Errorf("rotator config wait between pod evictions should be set")
+			}
 		}
 	}
 

@@ -95,6 +95,7 @@ func init() {
 	clusterUpgradeCmd.Flags().Int("evict-grace-period", 600, "The pod eviction grace period when draining in seconds.")
 	clusterUpgradeCmd.Flags().Int("wait-between-rotations", 60, "Τhe time to wait between each rotation of a group of nodes.")
 	clusterUpgradeCmd.Flags().Int("wait-between-drains", 60, "The time to wait between each node drain in a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-pod-evictions", 1, "The time to wait between each pod eviction in a node drain.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
@@ -327,14 +328,16 @@ var clusterUpgradeCmd = &cobra.Command{
 		evictGracePeriod, _ := command.Flags().GetInt("evict-grace-period")
 		waitBetweenRotations, _ := command.Flags().GetInt("wait-between-rotations")
 		waitBetweenDrains, _ := command.Flags().GetInt("wait-between-drains")
+		waitBetweenPodEvictions, _ := command.Flags().GetInt("wait-between-pod-evictions")
 
 		rotatorConfig := model.RotatorConfig{
-			UseRotator:           &useRotator,
-			MaxScaling:           &maxScaling,
-			MaxDrainRetries:      &maxDrainRetries,
-			EvictGracePeriod:     &evictGracePeriod,
-			WaitBetweenRotations: &waitBetweenRotations,
-			WaitBetweenDrains:    &waitBetweenDrains,
+			UseRotator:              &useRotator,
+			MaxScaling:              &maxScaling,
+			MaxDrainRetries:         &maxDrainRetries,
+			EvictGracePeriod:        &evictGracePeriod,
+			WaitBetweenRotations:    &waitBetweenRotations,
+			WaitBetweenDrains:       &waitBetweenDrains,
+			WaitBetweenPodEvictions: &waitBetweenPodEvictions,
 		}
 
 		request := &model.PatchUpgradeClusterRequest{
