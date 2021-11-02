@@ -1065,10 +1065,6 @@ func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClie
 			Path:            "manifests/sloth/sloth.yaml",
 			DeployNamespace: "prometheus",
 		},
-		{
-			Path:            "manifests/sloth/sloth_pod_monitor.yaml",
-			DeployNamespace: "prometheus",
-		},
 	}
 
 	err := k8sClient.CreateFromFiles(files)
