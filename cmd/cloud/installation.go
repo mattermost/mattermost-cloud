@@ -681,6 +681,7 @@ var installationDeploymentReportCmd = &cobra.Command{
 					output += fmt.Sprintf(" │ ├ Database: %s\n", database.ID)
 					output += fmt.Sprintf(" │ ├ State: %s\n", database.State)
 					output += fmt.Sprintf(" │ ├ VPC: %s\n", database.VpcID)
+					output += fmt.Sprintf(" │ ├ Database Writer Endpoint: %s\n", database.WriterEndpoint)
 					output += fmt.Sprintf(" │ └ Installations: %d\n", len(database.Installations))
 				}
 			}
