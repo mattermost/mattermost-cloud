@@ -59,6 +59,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 dmitri.shuralyov.com/html/belt v0.0.0-20180602232347-f7d459c86be0/go.mod h1:JLBrvjyP0v+ecvNYvCpyZgu5/xkfAUhi6wJj28eUfSU=
 dmitri.shuralyov.com/service/change v0.0.0-20181023043359-a85b471d5412/go.mod h1:a1inKt/atXimZ4Mv927x+r7UpyzRUf4emIoiiSC2TN4=
 dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c/go.mod h1:0PRwlb0D6DFvNNtx+9ybjezNCa8XF0xaYcETyp6rHWU=
+emperror.dev/errors v0.8.0 h1:4lycVEx0sdJkwDUfQ9pdu6SR0x7rgympt5f4+ok8jDk=
+emperror.dev/errors v0.8.0/go.mod h1:YcRvLPh626Ubn2xqtoprejnA5nFha+TJ+2vew48kWuE=
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 git.apache.org/thrift.git v0.12.0/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 github.com/0xAX/notificator v0.0.0-20210731104411-c42e3d4a43ee h1:LgokYDTCpaZBHtl/oGwLxNCr3kM5Qt+Z7mInv4MqFNM=
@@ -207,8 +209,9 @@ github.com/aws/aws-sdk-go v1.40.11/go.mod h1:585smgzpB/KqRA+K3y/NL/oYRqQvpNJYvLm
 github.com/aws/aws-sdk-go v1.40.37 h1:I+Q6cLctkFyMMrKukcDnj+i2kjrQ37LGiOM6xmsxC48=
 github.com/aws/aws-sdk-go v1.40.37/go.mod h1:585smgzpB/KqRA+K3y/NL/oYRqQvpNJYvLm+LY1U59Q=
 github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZwxzkQq9wy+g=
-github.com/banzaicloud/k8s-objectmatcher v1.4.1 h1:/HaUqQzTa5E+pLqG9qelRKUdrzU1Nl2BYPHDut7e1oU=
 github.com/banzaicloud/k8s-objectmatcher v1.4.1/go.mod h1:j+N22VwgVfa0ajVtNxOz2G72aSOL21lpB7qV2GDrr/I=
+github.com/banzaicloud/k8s-objectmatcher v1.5.2 h1:wY3YBAVnh36Gm957IIlvtZbKVXbg4b+6fwrhoTz3opE=
+github.com/banzaicloud/k8s-objectmatcher v1.5.2/go.mod h1:gygKEl9wM3mB8fkkw7J/x8Myfaef69oeYMaUEm2jSX4=
 github.com/beevik/etree v1.1.0/go.mod h1:r8Aw8JqVegEf0w2fDnATrX9VpkMcyFeM0FhwO62wh+A=
 github.com/benbjohnson/immutable v0.2.1/go.mod h1:uc6OHo6PN2++n98KHLxW8ef4W42ylHiQSENghE1ezxI=
 github.com/benbjohnson/tmpl v1.0.0/go.mod h1:igT620JFIi44B6awvU9IsDhR77IXWtFigTLil/RPdps=
@@ -699,8 +702,6 @@ github.com/golang/mock v1.4.3/go.mod h1:UOMv5ysSaYNkG+OFQykRIcU/QvvxJf3p21QfJ2Bt
 github.com/golang/mock v1.4.4 h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=
 github.com/golang/mock v1.4.4/go.mod h1:l3mdAwkq5BuhzHwde/uurv3sEJeZMXNpwsxVWU71h+4=
 github.com/golang/mock v1.5.0/go.mod h1:CWnOUgYIOo4TcNZ0wHX3YZCqsaM1I1Jvs6v3mP3KVu8=
-github.com/golang/mock v1.6.0 h1:ErTB+efbowRARo13NNdxyJji2egdxLGQhRaY+DUumQc=
-github.com/golang/mock v1.6.0/go.mod h1:p6yTPP+5HYm5mzsMV8JkE6ZKdX+/wYM6Hr+LicevLPs=
 github.com/golang/protobuf v1.0.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
@@ -792,7 +793,6 @@ github.com/googleapis/gnostic v0.4.1/go.mod h1:LRhVm6pbyptWbWbuZ38d1eyptfvIytN3i
 github.com/googleapis/gnostic v0.5.1/go.mod h1:6U4PtQXGIEt/Z3h5MAT7FNofLnw9vXk2cUuW7uA/OeU=
 github.com/googleapis/gnostic v0.5.5 h1:9fHAtK0uDfpveeqqo1hkEZJcFvYXAiCN3UutL8F9xHw=
 github.com/googleapis/gnostic v0.5.5/go.mod h1:7+EbHbldMins07ALC74bsA81Ovc97DwqyJO1AENw9kA=
-github.com/goph/emperror v0.17.2 h1:yLapQcmEsO0ipe9p5TaN22djm3OFV/TfM/fcYP0/J18=
 github.com/goph/emperror v0.17.2/go.mod h1:+ZbQ+fUNO/6FNiUo0ujtMjhgad9Xa6fQL9KhH4LNHic=
 github.com/gophercloud/gophercloud v0.1.0/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEoIEcSTewFxm1c5g8=
 github.com/gophercloud/gophercloud v0.10.0/go.mod h1:gmC5oQqMDOMO1t1gq5DquX/yAU808e/4mzjjDA76+Ss=
@@ -1041,8 +1041,8 @@ github.com/mattermost/ldap v0.0.0-20191128190019-9f62ba4b8d4d/go.mod h1:HLbgMEI5
 github.com/mattermost/ldap v3.0.4+incompatible/go.mod h1:b4reDCcGpBxJ4WX0f224KFY+OR0npin7or7EFpeIko4=
 github.com/mattermost/mattermost-cloud v0.39.0/go.mod h1:GbWfZajyp+DvdEpoNfFeJ3ZplwTtDV9pl6PhNnp+wq4=
 github.com/mattermost/mattermost-operator v1.12.0/go.mod h1:a6pSJI6bDaIfO65M/Hvuqg8kUNYQQYDHLayoT5XZx5o=
-github.com/mattermost/mattermost-operator v1.15.0 h1:/eJmOV6XZs3BGsLAhwC5K9PhL1itLSYoXhS2KljUKjU=
-github.com/mattermost/mattermost-operator v1.15.0/go.mod h1:9esaQrOcruyyGQme3AnXGnoCDbpER7XAifDVu3HlCm8=
+github.com/mattermost/mattermost-operator v1.16.0 h1:RZzuVdwVGBK3V2U3cBg4ZcvKiyU53gW8OynqYVDfDiU=
+github.com/mattermost/mattermost-operator v1.16.0/go.mod h1:pUS6pyAiW7511k9vH+9gLpo/KpHkDQfwRHTziVUmaCg=
 github.com/mattermost/mattermost-server/v5 v5.23.0/go.mod h1:nMrt08IvThjybZpXPe/nqe/oJuvJxhqKkGI+m7M0R00=
 github.com/mattermost/mmetl v0.0.2-0.20210316151859-38824e5f5efd/go.mod h1:w6GNqrudkzs/GddfgqkgUqsXVQ/4ImK5JJfNj5KJeUQ=
 github.com/mattermost/rotator v0.2.0 h1:R3dlMHZjGR7t5T2bk76heDwpypl9rd2sZj4GoAZyuWU=
@@ -2317,6 +2317,7 @@ k8s.io/apimachinery v0.18.3/go.mod h1:OaXp26zu/5J7p0f92ASynJa1pZo06YlV9fG7BoWbCk
 k8s.io/apimachinery v0.18.6/go.mod h1:OaXp26zu/5J7p0f92ASynJa1pZo06YlV9fG7BoWbCko=
 k8s.io/apimachinery v0.18.8/go.mod h1:6sQd+iHEqmOtALqOFjSWp2KZ9F0wlU/nWm0ZgsYWMig=
 k8s.io/apimachinery v0.18.15/go.mod h1:PF5taHbXgTEJLU+xMypMmYTXTWPJ5LaW8bfsisxnEXk=
+k8s.io/apimachinery v0.19.2/go.mod h1:DnPGDnARWFvYa3pMHgSxtbZb7gpzzAZ1pTfaUNDVlmA=
 k8s.io/apimachinery v0.20.1/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.20.2/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
 k8s.io/apimachinery v0.20.4/go.mod h1:WlLqWAHZGg07AeltaI0MV5uk1Omp8xaN0JGLY6gkRpU=
