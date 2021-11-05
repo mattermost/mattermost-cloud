@@ -22,7 +22,7 @@ import (
 
 func (kc *KubeClient) createOrUpdateCustomResourceDefinitionBetaV1(crd *apixv1beta1.CustomResourceDefinition) (metav1.Object, error) {
 	ctx := context.TODO()
-	_, err := kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, crd.GetName(), metav1.GetOptions{})
+	oldCRD, err := kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, crd.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
@@ -31,25 +31,13 @@ func (kc *KubeClient) createOrUpdateCustomResourceDefinitionBetaV1(crd *apixv1be
 		return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{})
 	}
 
-	// TODO: investigate issue where standard update fails
-	// Trying to use a standard update on CRDs failed for the mysql operator
-	// custom resources definitions. This seems to be related to an issue
-	// where a last-modified value is set after the CRD is deployed to the
-	// kubernetes cluster.
-	// Error: invalid: metadata.resourceVersion: Invalid value: 0x0: must be
-	// specified for an update
-	// Workaround: https://github.com/zalando/postgres-operator/pull/558
-	patch, err := json.Marshal(crd)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal new Custom Resource Defintion")
-	}
-
-	return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Patch(ctx, crd.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	crd.ResourceVersion = oldCRD.ResourceVersion
+	return kc.ApixClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(ctx, crd, metav1.UpdateOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateCustomResourceDefinitionV1(crd *apixv1.CustomResourceDefinition) (metav1.Object, error) {
 	ctx := context.TODO()
-	_, err := kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crd.GetName(), metav1.GetOptions{})
+	oldCRD, err := kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, crd.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return nil, err
 	}
@@ -58,12 +46,8 @@ func (kc *KubeClient) createOrUpdateCustomResourceDefinitionV1(crd *apixv1.Custo
 		return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Create(ctx, crd, metav1.CreateOptions{})
 	}
 
-	patch, err := json.Marshal(crd)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal new Custom Resource Defintion")
-	}
-
-	return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Patch(ctx, crd.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	crd.ResourceVersion = oldCRD.ResourceVersion
+	return kc.ApixClientset.ApiextensionsV1().CustomResourceDefinitions().Update(ctx, crd, metav1.UpdateOptions{})
 }
 
 func (kc *KubeClient) createOrUpdateClusterInstallation(namespace string, ci *mmv1alpha1.ClusterInstallation) (metav1.Object, error) {
