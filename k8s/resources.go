@@ -31,9 +31,9 @@ func (r *ClusterResources) CalculateMemoryPercentUsed(additional int64) int {
 
 // CalculateTotalPodMilliResourceRequests calculates the total CPU and memory
 // milli resource requirements of a list of pods.
-func CalculateTotalPodMilliResourceRequests(pods *corev1.PodList) (int64, int64) {
+func CalculateTotalPodMilliResourceRequests(pods []corev1.Pod) (int64, int64) {
 	var totalCPU, totalMemory int64
-	for _, pod := range pods.Items {
+	for _, pod := range pods {
 		for _, container := range pod.Spec.Containers {
 			totalCPU += container.Resources.Requests.Cpu().MilliValue()
 			totalMemory += container.Resources.Requests.Memory().MilliValue()
