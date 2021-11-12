@@ -5,6 +5,7 @@
 package supervisor
 
 import (
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
@@ -392,7 +393,19 @@ func (s *DBMigrationSupervisor) updateInstallationConfig(dbMigration *model.Inst
 		return dbMigration.State
 	}
 
-	command := []string{"/bin/sh", "-c", "mattermost config set SqlSettings.DataSource $MM_CONFIG"}
+	var command []string
+	if strings.HasPrefix(installation.Version, "5.") {
+		command = []string{"/bin/sh", "-c", "mattermost config set SqlSettings.DataSource $MM_CONFIG"}
+	} else {
+		// As `mattermost config` command was removed in v6 we need to work around performing config change without any other running server.
+		// This command does the following:
+		// - Start Mattermost server with disabled clustering as a background job.
+		// - Waits for a successful ping.
+		// - Executes config change with mmctl.
+		// - Attempts to terminate Mattermost server (we want it to should down gracefully if possible).
+		// WARNING: this should not be done if other MM pods are online as disabled clustering may lead to some issues.
+		command = []string{"/bin/sh", "-c", "MM_CLUSTERSETTINGS_ENABLE=false mattermost & pid=$!; until $(curl --output /dev/null --silent --fail localhost:8065/api/v4/system/ping); do sleep 2; done; mmctl --local config set SqlSettings.DataSource $MM_CONFIG && kill $pid"}
+	}
 
 	err = s.dbMigrationCIProvisioner.ExecClusterInstallationJob(cluster, clusterInstallation, command...)
 	if err != nil {

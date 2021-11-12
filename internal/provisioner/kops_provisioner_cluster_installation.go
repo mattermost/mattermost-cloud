@@ -638,6 +638,8 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 	// TODO: refactor above method in Mattermost Operator to take command and handle this logic inside.
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Command = args
+		// We want to match bifrost network policy so that server can come up quicker.
+		job.Spec.Template.Labels["app"] = "mattermost"
 	}
 	jobTTL := ciExecJobTTLSeconds
 	job.Spec.TTLSecondsAfterFinished = &jobTTL
@@ -656,12 +658,12 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 		return errors.Wrap(err, "failed to create CLI command job")
 	}
 
-	err = wait.Poll(time.Second, 1*time.Minute, func() (bool, error) {
+	err = wait.Poll(time.Second, 2*time.Minute, func() (bool, error) {
 		job, err = jobsClient.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to get %q job", jobName)
 		}
-		if job.Status.Succeeded > 0 {
+		if job.Status.Succeeded < 1 {
 			logger.Infof("job %q not yet finished, waiting up to 1 minute", jobName)
 			return false, nil
 		}
