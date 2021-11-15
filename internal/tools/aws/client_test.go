@@ -194,7 +194,10 @@ func (a *AWSTestSuite) TearDown() {
 }
 
 func TestAWSSuite(t *testing.T) {
-	suite.Run(t, NewAWSTestSuite(t))
+	testSuite := NewAWSTestSuite(t)
+	defer testSuite.TearDown()
+
+	suite.Run(t, testSuite)
 }
 
 func newClientDummyCache() *cache {

@@ -10,12 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/golang/mock/gomock"
-
-	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	log "github.com/sirupsen/logrus"
 )
 
 // Tests provisioning a multitenante database. Use this test for deriving other tests.

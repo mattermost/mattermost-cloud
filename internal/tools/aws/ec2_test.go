@@ -11,10 +11,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/mock/gomock"
-	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,12 +30,9 @@ func (a *AWSTestSuite) TestTagResource() {
 }
 
 func (a *AWSTestSuite) TestTagResourceError() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			CreateTags(gomock.Any()).
-			Return(nil, errors.New("invalid tag")))
+	a.Mocks.API.EC2.EXPECT().
+		CreateTags(gomock.Any()).
+		Return(nil, errors.New("invalid tag"))
 
 	err := a.Mocks.AWS.TagResource(a.ResourceID, "tag-key", "tag-value", a.Mocks.Log.Logger)
 	a.Assert().Error(err)
@@ -56,13 +52,6 @@ func (a *AWSTestSuite) TestUntagResource() {
 }
 
 func (a *AWSTestSuite) TestUntagResourceEmptyResourceID() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			DeleteTags(gomock.Any()).
-			Return(&ec2.DeleteTagsOutput{}, nil))
-
 	err := a.Mocks.AWS.UntagResource("", "tag-key", "tag-value", a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
@@ -70,12 +59,9 @@ func (a *AWSTestSuite) TestUntagResourceEmptyResourceID() {
 }
 
 func (a *AWSTestSuite) TestUntagResourceError() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{"tag-key": "tag-key", "tag-value": "tag-value"}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			DeleteTags(gomock.Any()).
-			Return(nil, errors.New("tag not found")))
+	a.Mocks.API.EC2.EXPECT().
+		DeleteTags(gomock.Any()).
+		Return(nil, errors.New("tag not found"))
 
 	err := a.Mocks.AWS.UntagResource(a.ResourceID, "tag-key", "tag-value", a.Mocks.Log.Logger)
 
@@ -84,27 +70,17 @@ func (a *AWSTestSuite) TestUntagResourceError() {
 }
 
 func (a *AWSTestSuite) TestIsValidAMIEmptyResourceID() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			DescribeImages(gomock.Any()).
-			Return(nil, errors.New("tag not found")))
-
 	ok, err := a.Mocks.AWS.IsValidAMI("", a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 	a.Assert().True(ok)
 }
 
 func (a *AWSTestSuite) TestIsValidAMI() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			DescribeImages(gomock.Any()).
-			Return(&ec2.DescribeImagesOutput{
-				Images: make([]*ec2.Image, 2),
-			}, nil))
+	a.Mocks.API.EC2.EXPECT().
+		DescribeImages(gomock.Any()).
+		Return(&ec2.DescribeImagesOutput{
+			Images: make([]*ec2.Image, 2),
+		}, nil)
 
 	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
@@ -112,14 +88,11 @@ func (a *AWSTestSuite) TestIsValidAMI() {
 }
 
 func (a *AWSTestSuite) TestIsValidAMINoImages() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			DescribeImages(gomock.Any()).
-			Return(&ec2.DescribeImagesOutput{
-				Images: make([]*ec2.Image, 0),
-			}, nil))
+	a.Mocks.API.EC2.EXPECT().
+		DescribeImages(gomock.Any()).
+		Return(&ec2.DescribeImagesOutput{
+			Images: make([]*ec2.Image, 0),
+		}, nil)
 
 	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.Log.Logger)
 
@@ -128,14 +101,11 @@ func (a *AWSTestSuite) TestIsValidAMINoImages() {
 }
 
 func (a *AWSTestSuite) TestIsValidAMIError() {
-	a.Mocks.Log.Logger.EXPECT().
-		WithFields(logrus.Fields{}).
-		Return(testlib.NewLoggerEntry()).Times(1).
-		After(a.Mocks.API.EC2.EXPECT().
-			DescribeImages(gomock.Any()).
-			Return(nil, errors.New("resource id not found")))
+	a.Mocks.API.EC2.EXPECT().
+		DescribeImages(gomock.Any()).
+		Return(nil, errors.New("resource id not found"))
 
-	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, log.New())
+	ok, err := a.Mocks.AWS.IsValidAMI(a.ResourceID, a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().False(ok)
