@@ -1648,4 +1648,17 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.32.0"), semver.MustParse("0.32.1"), func(e execer) error {
+		_, err := e.Exec(`DROP TABLE MultitenantDatabaseBackup;`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`DROP TABLE MultitenantDatabaseBackup2;`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
