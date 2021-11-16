@@ -15,7 +15,7 @@ rules:
     verbs:
       - '*'
   - apiGroups:
-      - "coordination.k8s.io"
+      - coordination.k8s.io
     resources:
       - leases
     verbs:
@@ -47,6 +47,8 @@ rules:
     verbs:
       - get
       - list
+      - watch
+      - delete
   - apiGroups:
       - batch
     resources:

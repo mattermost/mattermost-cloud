@@ -719,15 +719,16 @@ func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) e
 	clientset, err := kubernetes.NewForConfig(k8sClient.GetConfig())
 
 	clusterRotator := rotatorModel.Cluster{
-		ClusterID:            cluster.ID,
-		MaxScaling:           *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxScaling,
-		RotateMasters:        true,
-		RotateWorkers:        true,
-		MaxDrainRetries:      *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxDrainRetries,
-		EvictGracePeriod:     *cluster.ProvisionerMetadataKops.RotatorRequest.Config.EvictGracePeriod,
-		WaitBetweenRotations: *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenRotations,
-		WaitBetweenDrains:    *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenDrains,
-		ClientSet:            clientset,
+		ClusterID:               cluster.ID,
+		MaxScaling:              *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxScaling,
+		RotateMasters:           true,
+		RotateWorkers:           true,
+		MaxDrainRetries:         *cluster.ProvisionerMetadataKops.RotatorRequest.Config.MaxDrainRetries,
+		EvictGracePeriod:        *cluster.ProvisionerMetadataKops.RotatorRequest.Config.EvictGracePeriod,
+		WaitBetweenRotations:    *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenRotations,
+		WaitBetweenDrains:       *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenDrains,
+		WaitBetweenPodEvictions: *cluster.ProvisionerMetadataKops.RotatorRequest.Config.WaitBetweenPodEvictions,
+		ClientSet:               clientset,
 	}
 
 	rotatorMetadata := cluster.ProvisionerMetadataKops.RotatorRequest.Status
@@ -970,17 +971,13 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}
 
 	ctx := context.TODO()
-	allPods, err := k8sClient.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	usedCPU, usedMemory := k8s.CalculateTotalPodMilliResourceRequests(allPods)
-
-	var totalCPU, totalMemory int64
 	nodes, err := k8sClient.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to list nodes")
 	}
+
+	var allPods []v1.Pod
+	var totalCPU, totalMemory, workerNodeCount int64
 	for _, node := range nodes.Items {
 		var skipNode bool
 
@@ -1004,10 +1001,23 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 		}
 
 		if !skipNode {
+			nodePods, err := k8sClient.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("spec.nodeName=%s", node.GetName()),
+			})
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to list pods for node %s", node.GetName())
+			}
+
+			allPods = append(allPods, nodePods.Items...)
 			totalCPU += node.Status.Allocatable.Cpu().MilliValue()
 			totalMemory += node.Status.Allocatable.Memory().MilliValue()
+			workerNodeCount++
 		}
 	}
+
+	usedCPU, usedMemory := k8s.CalculateTotalPodMilliResourceRequests(allPods)
+
+	logger.Debugf("Resource usage calculated from %d pods on %d worker nodes", len(allPods), workerNodeCount)
 
 	return &k8s.ClusterResources{
 		MilliTotalCPU:    totalCPU,
@@ -1062,10 +1072,6 @@ func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClie
 		},
 		{
 			Path:            "manifests/sloth/sloth.yaml",
-			DeployNamespace: "prometheus",
-		},
-		{
-			Path:            "manifests/sloth/sloth_pod_monitor.yaml",
 			DeployNamespace: "prometheus",
 		},
 	}

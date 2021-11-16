@@ -63,12 +63,13 @@ type RotatorMetadata struct {
 
 // RotatorConfig is the config setup for the Rotator tool run
 type RotatorConfig struct {
-	UseRotator           *bool `json:"use-rotator,omitempty"`
-	MaxScaling           *int  `json:"max-scaling,omitempty"`
-	MaxDrainRetries      *int  `json:"max-drain-retries,omitempty"`
-	EvictGracePeriod     *int  `json:"evict-grace-period,omitempty"`
-	WaitBetweenRotations *int  `json:"wait-between-rotations,omitempty"`
-	WaitBetweenDrains    *int  `json:"wait-between-drains,omitempty"`
+	UseRotator              *bool `json:"use-rotator,omitempty"`
+	MaxScaling              *int  `json:"max-scaling,omitempty"`
+	MaxDrainRetries         *int  `json:"max-drain-retries,omitempty"`
+	EvictGracePeriod        *int  `json:"evict-grace-period,omitempty"`
+	WaitBetweenRotations    *int  `json:"wait-between-rotations,omitempty"`
+	WaitBetweenDrains       *int  `json:"wait-between-drains,omitempty"`
+	WaitBetweenPodEvictions *int  `json:"wait-between-pod-evictions,omitempty"`
 }
 
 // ValidateChangeRequest ensures that the ChangeRequest has at least one

@@ -21,7 +21,6 @@ import (
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
@@ -219,11 +218,6 @@ func (a *AWSTestSuite) TestSnapshot() {
 			a.Assert().Equal(*input.Tags[0].Key, DefaultClusterInstallationSnapshotTagKey)
 			a.Assert().Equal(*input.Tags[0].Value, RDSSnapshotTagValue(CloudID(a.ClusterA.ID)))
 		}).Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("installation-id", a.InstallationA.ID).
-			Return(testlib.NewLoggerEntry()).
-			Times(1),
 	)
 
 	err := database.Snapshot(a.Mocks.AWS.store, a.Mocks.Log.Logger)
@@ -249,11 +243,6 @@ func (a *AWSTestSuite) TestSnapshotError() {
 		a.Mocks.API.RDS.EXPECT().
 			CreateDBClusterSnapshot(gomock.Any()).
 			Return(nil, errors.New("database is not stable")).
-			Times(1),
-
-		a.Mocks.Log.Logger.EXPECT().
-			WithField("installation-id", a.InstallationA.ID).
-			Return(testlib.NewLoggerEntry()).
 			Times(1),
 	)
 
@@ -337,10 +326,6 @@ func (a *AWSTestSuite) SetExpectCreateDBInstance() {
 				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSReplicaInstanceID(a.InstallationA.ID, 0))
 			}),
-
-		a.Mocks.Log.Logger.EXPECT().WithField("db-instance-name", RDSMasterInstanceID(a.InstallationA.ID)).
-			Return(testlib.NewLoggerEntry()).
-			Times(1),
 	)
 }
 
@@ -355,7 +340,7 @@ func TestDatabaseProvision(t *testing.T) {
 		return
 	}
 
-	logger := logrus.New()
+	logger := log.New()
 	database := NewRDSDatabase(model.DatabaseEngineTypeMySQL, id, &Client{
 		mux: &sync.Mutex{},
 	})
@@ -370,7 +355,7 @@ func TestDatabaseTeardown(t *testing.T) {
 		return
 	}
 
-	logger := logrus.New()
+	logger := log.New()
 	database := NewRDSDatabase(model.DatabaseEngineTypeMySQL, id, &Client{
 		mux: &sync.Mutex{},
 	})
