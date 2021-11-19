@@ -324,6 +324,7 @@ func NewResizeClusterRequestFromReader(reader io.Reader) (*PatchClusterSizeReque
 // ProvisionClusterRequest contains metadata related to changing the installed cluster state.
 type ProvisionClusterRequest struct {
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
+	Force                  bool                           `json:"force"`
 }
 
 // NewProvisionClusterRequestFromReader will create an UpdateClusterRequest from an io.Reader with JSON data.

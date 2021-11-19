@@ -5,9 +5,6 @@
 package provisioner
 
 import (
-	"regexp"
-	"strings"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -176,11 +173,6 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 	return nil
 }
 
-var (
-	gitHashPattern         = regexp.MustCompile(`[0-9a-f]{8}`)
-	gitlabReferencePattern = regexp.MustCompile(`ref=\S+$`)
-)
-
 // ProvisionUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
 func (group utilityGroup) ProvisionUtilityGroup() error {
 	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
@@ -194,21 +186,13 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	}
 
 	for _, utility := range group.utilities {
-		isGitReference := true
-		versionGitReference := strings.TrimPrefix(
-			gitlabReferencePattern.FindString(utility.DesiredVersion().ValuesPath), "ref=")
-		if versionGitReference == "" ||
-			gitHashPattern.FindString(versionGitReference) == "" {
-			logger.Warnf("Desired utility values path reference \"%s\" for utility \"%s\" does not appear to be a git commit reference. It is STRONGLY RECOMMENDED that you use the 8-40 character short or long git commit hash after \"?ref=\" in the Gitlab URL to reference the desired values file version, rather than using a branch or tag name, to prevent constant unnecessary reprovisioning of this utility.", versionGitReference, utility.Name())
-			isGitReference = false
-		}
-		if !isUpToDate(utility) || !isGitReference {
+		if utility.DesiredVersion().IsEmpty() {
+			logger.Infof("Skipping reprovision of utility \"%s\"", utility.Name())
+		} else {
 			err := utility.CreateOrUpgrade()
 			if err != nil {
 				return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
 			}
-		} else {
-			logger.Infof("Skipping reprovision of utility \"%s\" as version & values file reference are unchanged", utility.Name())
 		}
 
 		err := group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())

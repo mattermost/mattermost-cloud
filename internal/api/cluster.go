@@ -244,6 +244,11 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 	defer unlockOnce()
 
+	if provisionClusterRequest.Force {
+		// set default values for utility versions
+		provisionClusterRequest = supplyDefaultDesiredUtilityVersions(provisionClusterRequest, clusterDTO)
+	}
+
 	clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 
 	if clusterDTO.State != newState {
@@ -641,4 +646,27 @@ func getClusterForTransition(c *Context, clusterID, newState string) (*model.Clu
 	}
 
 	return clusterDTO, 0, unlockOnce
+}
+
+// supplyDefaultDesiredUtilityVersions fills in the DesiredVersions
+// map with the current versions of utilities so that they will be
+// reprovisioned without changing the version specified
+func supplyDefaultDesiredUtilityVersions(pcr *model.ProvisionClusterRequest, cluster *model.ClusterDTO) *model.ProvisionClusterRequest {
+	for utilityName, actualVersion := range cluster.UtilityMetadata.ActualVersions.AsMap() {
+		version, found := pcr.DesiredUtilityVersions[utilityName]
+		if !found || version == nil {
+			pcr.DesiredUtilityVersions[utilityName] = actualVersion
+			continue
+		}
+		if actualVersion == nil {
+			continue
+		}
+		if version.ValuesPath == "" {
+			pcr.DesiredUtilityVersions[utilityName].ValuesPath = actualVersion.ValuesPath
+		}
+		if version.Chart == "" {
+			pcr.DesiredUtilityVersions[utilityName].Chart = actualVersion.Chart
+		}
+	}
+	return pcr
 }

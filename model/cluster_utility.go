@@ -200,25 +200,6 @@ func (c *Cluster) SetUtilityDesiredVersions(desiredVersions map[string]*HelmUtil
 	if desiredVersions == nil {
 		desiredVersions = map[string]*HelmUtilityVersion{}
 	}
-
-	// set default values for utility versions
-	for utilityName, auv := range c.UtilityMetadata.ActualVersions.AsMap() {
-		version, found := desiredVersions[utilityName]
-		if !found || version == nil {
-			desiredVersions[utilityName] = auv
-			continue
-		}
-		if auv == nil {
-			continue
-		}
-		if version.ValuesPath == "" {
-			desiredVersions[utilityName].ValuesPath = auv.ValuesPath
-		}
-		if version.Chart == "" {
-			desiredVersions[utilityName].Chart = auv.Chart
-		}
-	}
-
 	for utility, version := range desiredVersions {
 		setUtilityVersion(&c.UtilityMetadata.DesiredVersions, utility, version)
 	}
@@ -313,4 +294,12 @@ func (u *HelmUtilityVersion) Version() string {
 // values file
 func (u *HelmUtilityVersion) Values() string {
 	return u.ValuesPath
+}
+
+// IsEmpty returns true if the HelmUtilityVersion is nil or if either
+// of the values inside are undefined
+func (u *HelmUtilityVersion) IsEmpty() bool {
+	return u == nil ||
+		u.ValuesPath == "" ||
+		u.Chart == ""
 }
