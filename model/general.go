@@ -11,4 +11,7 @@ const (
 	// NoInstallationsLimit signals the store to return all multitenant database instances independently
 	// of the number of installations using each instance.
 	NoInstallationsLimit = -1
+
+	// NonApplicableState represents constant use for StateChangeEvents when resource did not have a previous state.
+	NonApplicableState = "n/a"
 )

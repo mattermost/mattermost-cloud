@@ -12,7 +12,11 @@ import (
 
 // lockRow marks the row in the given table as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) lockRows(table string, ids []string, lockerID string) (bool, error) {
-	result, err := sqlStore.execBuilder(sqlStore.db, sq.
+	return sqlStore.lockRowsTx(sqlStore.db, table, ids, lockerID)
+}
+
+func (sqlStore *SQLStore) lockRowsTx(db execer, table string, ids []string, lockerID string) (bool, error) {
+	result, err := sqlStore.execBuilder(db, sq.
 		Update(table).
 		SetMap(map[string]interface{}{
 			"LockAcquiredBy": lockerID,

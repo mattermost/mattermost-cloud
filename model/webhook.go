@@ -9,21 +9,29 @@ import (
 	"io"
 )
 
+// ResourceType specifies a type of Provisioners' resource.
+type ResourceType string
+
 const (
 	// TypeCluster is the string value that represents a cluster.
-	TypeCluster = "cluster"
+	TypeCluster ResourceType = "cluster"
 	// TypeInstallation is the string value that represents an installation.
-	TypeInstallation = "installation"
+	TypeInstallation ResourceType = "installation"
 	// TypeClusterInstallation is the string value that represents a cluster
 	// installation.
-	TypeClusterInstallation = "cluster_installaton"
+	TypeClusterInstallation ResourceType = "cluster_installation"
 	// TypeInstallationBackup is the string value that represents an installation backup.
-	TypeInstallationBackup = "installation_backup"
+	TypeInstallationBackup ResourceType = "installation_backup"
 	// TypeInstallationDBRestoration is the string value that represents an installation db restoration operation.
-	TypeInstallationDBRestoration = "installation_db_restoration_operation"
+	TypeInstallationDBRestoration ResourceType = "installation_db_restoration_operation"
 	// TypeInstallationDBMigration is the string value that represents an installation db migration operation.
-	TypeInstallationDBMigration = "installation_db_migration_operation"
+	TypeInstallationDBMigration ResourceType = "installation_db_migration_operation"
 )
+
+// String converts ResourceType to string.
+func (t ResourceType) String() string {
+	return string(t)
+}
 
 // Webhook is
 type Webhook struct {
@@ -42,9 +50,10 @@ type WebhookFilter struct {
 
 // WebhookPayload is the payload sent in every webhook.
 type WebhookPayload struct {
+	EventID   string            `json:"event_id"`
 	Timestamp int64             `json:"timestamp"`
 	ID        string            `json:"id"`
-	Type      string            `json:"type"`
+	Type      ResourceType      `json:"type"`
 	NewState  string            `json:"new_state"`
 	OldState  string            `json:"old_state"`
 	ExtraData map[string]string `json:"extra_data,omitempty"`

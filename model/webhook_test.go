@@ -29,6 +29,7 @@ func TestWebhookIsDeleted(t *testing.T) {
 
 func TestWebhookPayloadToJSON(t *testing.T) {
 	payload := &WebhookPayload{
+		EventID:   "test-event",
 		Timestamp: 123456789,
 		ID:        "id",
 		Type:      "type",
@@ -36,7 +37,7 @@ func TestWebhookPayloadToJSON(t *testing.T) {
 		OldState:  "state2",
 	}
 
-	expectedStr := `{"timestamp":123456789,"id":"id","type":"type","new_state":"state1","old_state":"state2"}`
+	expectedStr := `{"event_id":"test-event","timestamp":123456789,"id":"id","type":"type","new_state":"state1","old_state":"state2"}`
 
 	payloadStr, err := payload.ToJSON()
 	require.NoError(t, err)
@@ -152,6 +153,7 @@ func TestWebhookPayloadFromReader(t *testing.T) {
 
 	t.Run("request", func(t *testing.T) {
 		payload, err := WebhookPayloadFromReader(strings.NewReader(`{
+			"event_id":"test-event",
 			"timestamp":1234,
 			"id":"id",
 			"type":"installation",
@@ -160,6 +162,7 @@ func TestWebhookPayloadFromReader(t *testing.T) {
 		}`))
 		require.NoError(t, err)
 		require.Equal(t, &WebhookPayload{
+			EventID:   "test-event",
 			Timestamp: 1234,
 			ID:        "id",
 			Type:      "installation",

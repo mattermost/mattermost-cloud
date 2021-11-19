@@ -1485,3 +1485,105 @@ func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) 
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
+
+// ListStateChangeEvents request events lists from the configured provisioning server.
+func (c *Client) ListStateChangeEvents(request *ListStateChangeEventsRequest) ([]*StateChangeEventData, error) {
+	u, err := url.Parse(c.buildURL("/api/events/state-change"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewStateChangeEventsDataFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// CreateSubscription requests the creation of a subscription from the configured provisioning server.
+func (c *Client) CreateSubscription(request *CreateSubscriptionRequest) (*Subscription, error) {
+	resp, err := c.doPost(c.buildURL("/api/subscriptions"), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return NewSubscriptionFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetSubscription fetches the subscription from the configured provisioning server.
+func (c *Client) GetSubscription(subID string) (*Subscription, error) {
+	resp, err := c.doGet(c.buildURL("/api/subscription/%s", subID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewSubscriptionFromReader(resp.Body)
+
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// ListSubscriptions requests list of subscriptions from the configured provisioning server.
+func (c *Client) ListSubscriptions(request *ListSubscriptionsRequest) ([]*Subscription, error) {
+	u, err := url.Parse(c.buildURL("/api/subscriptions"))
+	if err != nil {
+		return nil, err
+	}
+
+	request.ApplyToURL(u)
+
+	resp, err := c.doGet(u.String())
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewSubscriptionsFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteSubscription deletes the given subscription.
+func (c *Client) DeleteSubscription(subID string) error {
+	resp, err := c.doDelete(c.buildURL("/api/subscription/%s", subID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
