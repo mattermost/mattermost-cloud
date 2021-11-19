@@ -203,22 +203,3 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 
 	return nil
 }
-
-func isUpToDate(utility Utility) bool {
-	currentVersion := utility.ActualVersion()
-	desiredVersion := utility.DesiredVersion()
-	if currentVersion == nil {
-		return false
-	}
-	if currentVersion.ValuesPath == "" || currentVersion.Chart == "" {
-		return false
-	}
-	if currentVersion.ValuesPath != desiredVersion.ValuesPath {
-		return false
-	}
-	if currentVersion.Chart != desiredVersion.Chart {
-		return false
-	}
-
-	return true
-}
