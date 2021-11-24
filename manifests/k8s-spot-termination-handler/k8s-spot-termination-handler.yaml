@@ -96,11 +96,11 @@ spec:
                   fieldPath: metadata.namespace
           resources:
             requests:
-              cpu: 5m
-              memory: 20Mi
+              cpu: 20m
+              memory: 40Mi
             limits:
-              cpu: 100m
-              memory: 100Mi
+              cpu: 200m
+              memory: 200Mi
       nodeSelector:
         "node-role.kubernetes.io/spot-worker": "true"
 ---
