@@ -48,7 +48,8 @@ func (sqlStore *SQLStore) CreateStateChangeEvent(event *model.StateChangeEventDa
 		return errors.Wrap(err, "failed to create state change event")
 	}
 
-	subscriptions, err := sqlStore.getSubscriptions(tx, &model.SubscriptionsFilter{EventType: event.Event.EventType, Paging: model.AllPagesNotDeleted()})
+	subFilter := model.SubscriptionsFilter{EventType: event.Event.EventType, Paging: model.AllPagesNotDeleted()}
+	subscriptions, err := sqlStore.getSubscriptions(tx, &subFilter)
 	if err != nil {
 		return errors.Wrap(err, "failed to get subscriptions")
 	}
@@ -307,7 +308,7 @@ func (sqlStore *SQLStore) GetDeliveriesForSubscription(subID string) ([]*model.E
 	deliveries := []*model.EventDelivery{}
 	err := sqlStore.selectBuilder(sqlStore.db, &deliveries, query)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update event delivery status")
+		return nil, errors.Wrap(err, "failed to get event delivery")
 	}
 
 	return deliveries, nil
