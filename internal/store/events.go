@@ -308,7 +308,7 @@ func (sqlStore *SQLStore) GetDeliveriesForSubscription(subID string) ([]*model.E
 	deliveries := []*model.EventDelivery{}
 	err := sqlStore.selectBuilder(sqlStore.db, &deliveries, query)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get event delivery")
+		return nil, errors.Wrap(err, "failed to get event deliveries")
 	}
 
 	return deliveries, nil
