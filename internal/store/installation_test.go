@@ -886,7 +886,7 @@ func TestUpdateInstallationCRVersion(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
-		CRVersion: model.V1alphaCRVersion,
+		CRVersion: model.V1betaCRVersion,
 	}
 
 	err := sqlStore.CreateInstallation(installation1, nil)
@@ -917,7 +917,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateStable,
-		CRVersion: model.V1alphaCRVersion,
+		CRVersion: model.V1betaCRVersion,
 	}
 
 	err := sqlStore.CreateInstallation(installation1, nil)
@@ -935,7 +935,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateStable,
-		CRVersion: model.V1alphaCRVersion,
+		CRVersion: model.V1betaCRVersion,
 	}
 
 	err = sqlStore.CreateInstallation(installation2, nil)
@@ -953,7 +953,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		Size:      mmv1alpha1.Size100String,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateHibernating,
-		CRVersion: model.V1alphaCRVersion,
+		CRVersion: model.V1betaCRVersion,
 	}
 
 	err = sqlStore.CreateInstallation(installation3, nil)
