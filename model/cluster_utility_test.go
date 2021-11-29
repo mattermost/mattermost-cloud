@@ -103,7 +103,7 @@ func TestSetDesired(t *testing.T) {
 			},
 			desiredVersions: nil,
 			expectedDesiredVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prometeus", Chart: "0.1"},
+				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "desired-prometheus", Chart: "0.1"},
 				Nginx:              &HelmUtilityVersion{ValuesPath: "desired-nginx", Chart: "120.0.0"},
 				Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport", Chart: "15.0.0"},
 			},
