@@ -45,6 +45,7 @@ func newStackroxHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.StackroxCanonicalName),
 		desiredVersion: desiredVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Stackrox,
 	}, nil
 
 }

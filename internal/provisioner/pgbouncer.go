@@ -53,6 +53,7 @@ func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilit
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.PgbouncerCanonicalName),
 		desiredVersion: desiredVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Pgbouncer,
 	}, nil
 
 }

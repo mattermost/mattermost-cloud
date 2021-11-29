@@ -56,7 +56,6 @@ func TestSetActualVersion(t *testing.T) {
 }
 
 func TestSetDesired(t *testing.T) {
-
 	for _, testCase := range []struct {
 		description             string
 		currentMetadata         *UtilityMetadata
@@ -74,7 +73,7 @@ func TestSetDesired(t *testing.T) {
 			},
 		},
 		{
-			description: "set single desired utility, inherit from actual",
+			description: "set single desired utility, don't inherit from actual",
 			currentMetadata: &UtilityMetadata{
 				ActualVersions: UtilityGroupVersions{
 					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
@@ -85,25 +84,7 @@ func TestSetDesired(t *testing.T) {
 				NginxCanonicalName: {Chart: "3.0.0", ValuesPath: "nginx"},
 			},
 			expectedDesiredVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
-				Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "3.0.0"},
-			},
-		},
-		{
-			description: "use version and values from actual if one is empty",
-			currentMetadata: &UtilityMetadata{
-				ActualVersions: UtilityGroupVersions{
-					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
-					Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
-				},
-			},
-			desiredVersions: map[string]*HelmUtilityVersion{
-				PrometheusOperatorCanonicalName: {Chart: "12.0.0"},
-				NginxCanonicalName:              {ValuesPath: "nginx-new-values"},
-			},
-			expectedDesiredVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "12.0.0"},
-				Nginx:              &HelmUtilityVersion{ValuesPath: "nginx-new-values", Chart: "2.0.0"},
+				Nginx: &HelmUtilityVersion{ValuesPath: "nginx", Chart: "3.0.0"},
 			},
 		},
 		{
@@ -115,16 +96,16 @@ func TestSetDesired(t *testing.T) {
 					Teleport:           &HelmUtilityVersion{ValuesPath: "teleport", Chart: "5.0.0"},
 				},
 				DesiredVersions: UtilityGroupVersions{
-					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prometeus", Chart: "0.1"},
+					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "desired-prometheus", Chart: "0.1"},
 					Nginx:              &HelmUtilityVersion{ValuesPath: "desired-nginx", Chart: "120.0.0"},
 					Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport", Chart: "15.0.0"},
 				},
 			},
 			desiredVersions: nil,
 			expectedDesiredVersions: UtilityGroupVersions{
-				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
-				Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
-				Teleport:           &HelmUtilityVersion{ValuesPath: "teleport", Chart: "5.0.0"},
+				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "desired-prometheus", Chart: "0.1"},
+				Nginx:              &HelmUtilityVersion{ValuesPath: "desired-nginx", Chart: "120.0.0"},
+				Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport", Chart: "15.0.0"},
 			},
 		},
 	} {

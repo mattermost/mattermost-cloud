@@ -48,6 +48,7 @@ func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.TeleportCanonicalName),
 		desiredVersion: desiredVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Teleport,
 	}, nil
 
 }

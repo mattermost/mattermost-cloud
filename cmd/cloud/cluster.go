@@ -79,6 +79,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("stackrox-values", "", "The full Git URL of the desired chart values for Stackrox")
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired Kubecost chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for the Node Problem Detector")
+	clusterProvisionCmd.Flags().Bool("reprovision-all-utilities", false, "Set to true if all utilities should be reprovisioned and not just ones with new versions")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
 
@@ -241,11 +242,11 @@ var clusterProvisionCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 		clusterID, _ := command.Flags().GetString("cluster")
 
-		var request *model.ProvisionClusterRequest = nil
+		var request *model.ProvisionClusterRequest = new(model.ProvisionClusterRequest)
+		request.Force, _ = command.Flags().GetBool("reprovision-all-utilities")
+
 		if desiredUtilityVersions := processUtilityFlags(command); len(desiredUtilityVersions) > 0 {
-			request = &model.ProvisionClusterRequest{
-				DesiredUtilityVersions: desiredUtilityVersions,
-			}
+			request.DesiredUtilityVersions = desiredUtilityVersions
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

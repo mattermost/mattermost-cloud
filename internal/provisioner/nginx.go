@@ -53,6 +53,7 @@ func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, p
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
 		desiredVersion: version,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Nginx,
 	}, nil
 
 }

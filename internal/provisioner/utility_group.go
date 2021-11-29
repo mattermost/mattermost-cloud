@@ -98,6 +98,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	}
 
 	fluentbit, err := newFluentbitHandle(
+		cluster,
 		cluster.DesiredUtilityVersion(model.FluentbitCanonicalName),
 		provisioner, awsClient, kops, logger)
 	if err != nil {
@@ -132,7 +133,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	}
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
-		provisioner, kops, logger)
+		cluster, provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
@@ -185,12 +186,16 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 	}
 
 	for _, utility := range group.utilities {
-		err := utility.CreateOrUpgrade()
-		if err != nil {
-			return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+		if utility.DesiredVersion().IsEmpty() {
+			logger.Infof("Skipping reprovision of utility \"%s\"", utility.Name())
+		} else {
+			err := utility.CreateOrUpgrade()
+			if err != nil {
+				return errors.Wrap(err, "failed to upgrade one of the cluster utilities")
+			}
 		}
 
-		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
+		err := group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
 		if err != nil {
 			return err
 		}

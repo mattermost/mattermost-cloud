@@ -23,7 +23,7 @@ type fluentbit struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newFluentbitHandle(version *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
+func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
 	}
@@ -45,7 +45,8 @@ func newFluentbitHandle(version *model.HelmUtilityVersion, provisioner *KopsProv
 		awsClient:      awsClient,
 		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.FluentbitCanonicalName),
-		desiredVersion: version,
+		desiredVersion: desiredVersion,
+		actualVersion:  cluster.UtilityMetadata.ActualVersions.Fluentbit,
 	}, nil
 }
 
