@@ -126,7 +126,9 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 		return
 	}
 
-	output, err := c.Provisioner.ExecMattermostCLI(cluster, clusterInstallation, "config", "show", "--json")
+	// TODO: `--format` is now deprecated in favor of `--json` however the new flag was introduced 6.0 so it does not work with earlier versions.
+	// We should keep an eye on mmctl for removal of the flag, and switch to use `--json` when we are sure we no longer support 5.x servers.
+	output, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, "mmctl", "--local", "config", "show", "--format", "json")
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to execute mattermost cli")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -211,7 +213,7 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 
 			valueStr, ok := value.(string)
 			if ok {
-				_, err := c.Provisioner.ExecMattermostCLI(cluster, clusterInstallation, "config", "set", fullKey, valueStr)
+				_, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, "mmctl", "--local", "config", "set", fullKey, valueStr)
 				if err != nil {
 					c.Logger.WithError(err).Errorf("failed to set key %s to value %s", fullKey, valueStr)
 					return err
