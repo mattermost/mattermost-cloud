@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
+
 	"github.com/mattermost/mattermost-operator/pkg/resources"
 	"github.com/pborman/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -18,7 +20,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +29,8 @@ import (
 )
 
 const (
-	hibernationReplicaCount       = -1
-	bifrostEndpoint               = "bifrost.bifrost:80"
-	ciExecJobTTLSeconds     int32 = 180
+	bifrostEndpoint           = "bifrost.bifrost:80"
+	ciExecJobTTLSeconds int32 = 180
 )
 
 // ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
@@ -50,31 +50,23 @@ type ClusterInstallationProvisioner interface {
 // ClusterInstallationProvisioner function returns an implementation of ClusterInstallationProvisioner interface
 // based on specified Custom Resource version.
 func (provisioner *KopsProvisioner) ClusterInstallationProvisioner(crVersion string) ClusterInstallationProvisioner {
-	if crVersion == model.V1betaCRVersion {
-		return &kopsCIBeta{KopsProvisioner: provisioner}
+	if crVersion != model.V1betaCRVersion {
+		provisioner.logger.Errorf("Unexpected resource version: %s", crVersion)
 	}
 
-	return &kopsCIAlpha{KopsProvisioner: provisioner}
+	return &crProvisionerWrapper{KopsProvisioner: provisioner}
 }
 
-type kopsCIAlpha struct {
+type crProvisionerWrapper struct {
 	*KopsProvisioner
 }
 
-func (provisioner *kopsCIAlpha) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-	logger.Info("Ensuring migration for v1alpha1 is not supported")
-	return true, nil
-}
-
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
+		"version":      "v1beta1",
 	})
 	logger.Info("Creating cluster installation")
 
@@ -89,11 +81,6 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	_, err = k8sClient.CreateOrUpdateNamespace(clusterInstallation.Namespace)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create namespace %s", clusterInstallation.Namespace)
-	}
-
 	installationName, err := provisioner.prepareClusterInstallationEnv(clusterInstallation, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
@@ -101,17 +88,13 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
 
-	mattermostInstallation := &mmv1alpha1.ClusterInstallation{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterInstallation",
-			APIVersion: "mattermost.com/v1alpha1",
-		},
+	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      installationName,
 			Namespace: clusterInstallation.Namespace,
 			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation),
 		},
-		Spec: mmv1alpha1.ClusterInstallationSpec{
+		Spec: mmv1beta1.MattermostSpec{
 			Size:               installation.Size,
 			Version:            translateMattermostVersion(installation.Version),
 			Image:              installation.Image,
@@ -121,8 +104,15 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 			IngressAnnotations: getIngressAnnotations(),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
-			Affinity:       generateAffinityConfig(installation, clusterInstallation),
+			Scheduling: mmv1beta1.Scheduling{
+				Affinity: generateAffinityConfig(installation, clusterInstallation),
+			},
 		},
+	}
+
+	if installation.State == model.InstallationStateHibernating {
+		logger.Info("creating hibernated cluster installation")
+		configureInstallationForHibernation(mattermost)
 	}
 
 	if installation.License != "" {
@@ -131,17 +121,22 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
 
-		mattermostInstallation.Spec.MattermostLicenseSecret = licenseSecretName
+		mattermost.Spec.LicenseSecret = licenseSecretName
 		logger.Debug("Cluster installation configured with a Mattermost license")
 	}
 
-	err = provisioner.ensureFilestoreAndDatabase(mattermostInstallation, installation, clusterInstallation, k8sClient, logger)
+	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
+	err = provisioner.createInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create installation SLI")
+	}
+
 	ctx := context.TODO()
-	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Create(ctx, mattermostInstallation, metav1.CreateOptions{})
+	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Create(ctx, mattermost, metav1.CreateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to create cluster installation")
 	}
@@ -153,7 +148,7 @@ func (provisioner *kopsCIAlpha) CreateClusterInstallation(cluster *model.Cluster
 
 // HibernateClusterInstallation updates a cluster installation to consume fewer
 // resources.
-func (provisioner *kopsCIAlpha) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -173,37 +168,40 @@ func (provisioner *kopsCIAlpha) HibernateClusterInstallation(cluster *model.Clus
 	ctx := context.TODO()
 	name := makeClusterInstallationName(clusterInstallation)
 
-	cr, err := k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
+	cr, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
-	configInstallationForHibernation(cr)
+	configureInstallationForHibernation(cr)
 
-	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
+	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
-
+	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation SLI")
+	}
 	logger.Info("Updated cluster installation")
 
 	return nil
 }
 
-func configInstallationForHibernation(mattermost *mmv1alpha1.ClusterInstallation) {
+func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
 	// Hibernation is currently considered changing the Mattermost app deployment
 	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
 	// The current way to do this is to set a negative replica count in the
 	// k8s custom resource. Custom ingress annotations are also used.
 	// TODO: enhance hibernation to include database and/or filestore.
-	mattermost.Spec.Replicas = hibernationReplicaCount
+	mattermost.Spec.Replicas = int32Ptr(0)
 	mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
 	mattermost.Spec.Size = ""
 }
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
-func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -220,37 +218,38 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	name, err := provisioner.prepareClusterInstallationEnv(clusterInstallation, k8sClient)
+	installationName, err := provisioner.prepareClusterInstallationEnv(clusterInstallation, k8sClient)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare cluster installation env")
 	}
 
 	ctx := context.TODO()
 
-	cr, err := k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
+	mattermost, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, installationName, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+		return errors.Wrapf(err, "failed to get mattermost installation %s", clusterInstallation.ID)
 	}
 
-	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
+	logger.WithField("status", fmt.Sprintf("%+v", mattermost.Status)).Debug("Got mattermost installation")
 
-	cr.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
-	cr.Spec.ResourceLabels = clusterInstallationBaseLabels(installation, clusterInstallation)
-	cr.Spec.Affinity = generateAffinityConfig(installation, clusterInstallation)
+	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
+	mattermost.Spec.ResourceLabels = clusterInstallationBaseLabels(installation, clusterInstallation)
+
+	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
 	version := translateMattermostVersion(installation.Version)
-	if cr.Spec.Version == version {
-		logger.Debugf("Cluster installation already on version %s", version)
+	if mattermost.Spec.Version == version {
+		logger.Debugf("Mattermost installation already on version %s", version)
 	} else {
-		logger.Debugf("Cluster installation version updated from %s to %s", cr.Spec.Version, installation.Version)
-		cr.Spec.Version = version
+		logger.Debugf("Mattermost installation version updated from %s to %s", mattermost.Spec.Version, installation.Version)
+		mattermost.Spec.Version = version
 	}
 
-	if cr.Spec.Image == installation.Image {
-		logger.Debugf("Cluster installation already on image %s", installation.Image)
+	if mattermost.Spec.Image == installation.Image {
+		logger.Debugf("Mattermost installation already on image %s", installation.Image)
 	} else {
-		logger.Debugf("Cluster installation image updated from %s to %s", cr.Spec.Image, installation.Image)
-		cr.Spec.Image = installation.Image
+		logger.Debugf("Mattermost installation image updated from %s to %s", mattermost.Spec.Image, installation.Image)
+		mattermost.Spec.Image = installation.Image
 	}
 
 	// A few notes on installation sizing changes:
@@ -260,39 +259,42 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 	//    when the size request change comes in on the API, but would require
 	//    new scheduling logic. For now, take care when resizing.
 	//    TODO: address these issue.
-	cr.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
+	mattermost.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
 
+	mattermost.Spec.LicenseSecret = ""
+	secretName := fmt.Sprintf("%s-license", installationName)
 	if installation.License != "" {
-		secretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
+		secretName, err = prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}
 
-		if cr.Spec.MattermostLicenseSecret != secretName {
-			logger.Debugf("Cluster installation license secret name updated from %s to %s", cr.Spec.MattermostLicenseSecret, secretName)
-		}
-		cr.Spec.MattermostLicenseSecret = secretName
+		mattermost.Spec.LicenseSecret = secretName
 	} else {
-		cr.Spec.MattermostLicenseSecret = ""
 		err = cleanupOldLicenseSecrets("", clusterInstallation, k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to cleanup old license secrets")
 		}
 	}
 
-	err = provisioner.ensureFilestoreAndDatabase(cr, installation, clusterInstallation, k8sClient, logger)
+	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
-	cr.Spec.MattermostEnv = mattermostEnv.ToEnvList()
+	mattermost.Spec.MattermostEnv = mattermostEnv.ToEnvList()
 
-	cr.Spec.IngressAnnotations = getIngressAnnotations()
+	mattermost.Spec.IngressAnnotations = getIngressAnnotations()
 
-	_, err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
+	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
+	}
+
+	err = provisioner.createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
 	}
 
 	logger.Info("Updated cluster installation")
@@ -301,7 +303,7 @@ func (provisioner *kopsCIAlpha) UpdateClusterInstallation(cluster *model.Cluster
 }
 
 // RefreshSecrets deletes old secrets for database and file store and replaces them with new ones.
-func (provisioner *kopsCIAlpha) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -317,14 +319,14 @@ func (provisioner *kopsCIAlpha) RefreshSecrets(cluster *model.Cluster, installat
 	installationName := makeClusterInstallationName(clusterInstallation)
 
 	ctx := context.TODO()
-	mmClient := k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace)
+	mmClient := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace)
 
 	mattermost, err := mmClient.Get(ctx, installationName, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get mattermost installation %s", clusterInstallation.ID)
 	}
 
-	err = provisioner.deleteCISecrets(clusterInstallation.Namespace, mattermost, k8sClient, logger)
+	err = provisioner.deleteMMSecrets(clusterInstallation.Namespace, mattermost, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete old secrets")
 	}
@@ -336,7 +338,7 @@ func (provisioner *kopsCIAlpha) RefreshSecrets(cluster *model.Cluster, installat
 
 	_, err = mmClient.Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "failed to update cluster installation %s", mattermost.Name)
+		return errors.Wrapf(err, "failed to update mattermost CR %s", mattermost.Name)
 	}
 
 	logger.Info("Refreshed database and file store secrets")
@@ -344,11 +346,11 @@ func (provisioner *kopsCIAlpha) RefreshSecrets(cluster *model.Cluster, installat
 	return nil
 }
 
-func (provisioner *kopsCIAlpha) deleteCISecrets(ns string, mattermost *mmv1alpha1.ClusterInstallation, kubeClient *k8s.KubeClient, logger log.FieldLogger) error {
+func (provisioner *crProvisionerWrapper) deleteMMSecrets(ns string, mattermost *mmv1beta1.Mattermost, kubeClient *k8s.KubeClient, logger log.FieldLogger) error {
 	secretsClient := kubeClient.Clientset.CoreV1().Secrets(ns)
 
-	if mattermost.Spec.Database.Secret != "" {
-		err := secretsClient.Delete(context.Background(), mattermost.Spec.Database.Secret, metav1.DeleteOptions{})
+	if mattermost.Spec.Database.External != nil {
+		err := secretsClient.Delete(context.Background(), mattermost.Spec.Database.External.Secret, metav1.DeleteOptions{})
 		if err != nil {
 			if !k8sErrors.IsNotFound(err) {
 				return errors.Wrap(err, "failed to delete old database secret")
@@ -357,8 +359,8 @@ func (provisioner *kopsCIAlpha) deleteCISecrets(ns string, mattermost *mmv1alpha
 		}
 	}
 
-	if mattermost.Spec.Minio.Secret != "" {
-		err := secretsClient.Delete(context.Background(), mattermost.Spec.Minio.Secret, metav1.DeleteOptions{})
+	if mattermost.Spec.FileStore.External != nil {
+		err := secretsClient.Delete(context.Background(), mattermost.Spec.FileStore.External.Secret, metav1.DeleteOptions{})
 		if err != nil {
 			if !k8sErrors.IsNotFound(err) {
 				return errors.Wrap(err, "failed to delete old file store secret")
@@ -370,8 +372,8 @@ func (provisioner *kopsCIAlpha) deleteCISecrets(ns string, mattermost *mmv1alpha
 	return nil
 }
 
-func (provisioner *kopsCIAlpha) ensureFilestoreAndDatabase(
-	mattermost *mmv1alpha1.ClusterInstallation,
+func (provisioner *crProvisionerWrapper) ensureFilestoreAndDatabase(
+	mattermost *mmv1beta1.Mattermost,
 	installation *model.Installation,
 	clusterInstallation *model.ClusterInstallation,
 	k8sClient *k8s.KubeClient,
@@ -381,15 +383,18 @@ func (provisioner *kopsCIAlpha) ensureFilestoreAndDatabase(
 	if err != nil {
 		return errors.Wrap(err, "failed to generate database configuration")
 	}
+	// If Secret is nil - the default will be used
 	if databaseSecret != nil {
 		_, err = k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, databaseSecret)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create the database secret %s/%s", clusterInstallation.Namespace, databaseSecret.Name)
 		}
-		mattermost.Spec.Database = mmv1alpha1.Database{Secret: databaseSecret.Name}
+		mattermost.Spec.Database = mmv1beta1.Database{
+			External: &mmv1beta1.ExternalDatabase{Secret: databaseSecret.Name},
+		}
 	}
 
-	filestoreSpec, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(provisioner.store, logger)
+	filestoreConfig, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(provisioner.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate filestore configuration")
 	}
@@ -399,15 +404,26 @@ func (provisioner *kopsCIAlpha) ensureFilestoreAndDatabase(
 			return errors.Wrapf(err, "failed to create the filestore secret %s/%s", clusterInstallation.Namespace, filestoreSecret.Name)
 		}
 	}
-	if filestoreSpec != nil {
-		mattermost.Spec.Minio = mmv1alpha1.Minio{
-			ExternalURL:    filestoreSpec.URL,
-			ExternalBucket: filestoreSpec.Bucket,
-			Secret:         filestoreSpec.Secret,
-		}
+	// If FilestoreConfig is nil - the default will be used
+	if filestoreConfig != nil {
+		mattermost.Spec.FileStore = mmv1beta1.FileStore{External: &mmv1beta1.ExternalFileStore{
+			URL:    filestoreConfig.URL,
+			Bucket: filestoreConfig.Bucket,
+			Secret: filestoreConfig.Secret,
+		}}
 	}
 
 	return nil
+}
+
+func (provisioner *crProvisionerWrapper) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+	logger.Debug("All cluster installation are expected to be v1beta version")
+
+	return true, nil
 }
 
 // VerifyClusterInstallationMatchesConfig attempts to verify that a cluster
@@ -416,7 +432,7 @@ func (provisioner *kopsCIAlpha) ensureFilestoreAndDatabase(
 // NOTE: this does NOT ensure that other resources such as network policies for
 // that namespace are correct. Also, the values checked are ONLY values that are
 // defined by both the installation and group configuration.
-func (provisioner *kopsCIAlpha) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
+func (provisioner *crProvisionerWrapper) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -424,26 +440,26 @@ func (provisioner *kopsCIAlpha) VerifyClusterInstallationMatchesConfig(cluster *
 
 	logger.Info("Verifying cluster installation resource configuration")
 
-	cr, err := provisioner.getClusterInstallationResource(cluster, clusterInstallation, logger)
+	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
 	version := translateMattermostVersion(installation.Version)
 	if cr.Spec.Version != version {
-		logger.Debugf("Cluster installation resource on version %s when expecting %s", cr.Spec.Version, version)
+		logger.Debugf("Mattermost installation resource on version %s when expecting %s", cr.Spec.Version, version)
 		return false, nil
 	}
 
 	if cr.Spec.Image != installation.Image {
-		logger.Debugf("Cluster installation resource on image %s when expecting %s", cr.Spec.Image, installation.Image)
+		logger.Debugf("Mattermost installation resource on image %s when expecting %s", cr.Spec.Image, installation.Image)
 		return false, nil
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
 	for _, wanted := range mattermostEnv.ToEnvList() {
 		if !ensureEnvMatch(wanted, cr.Spec.MattermostEnv) {
-			logger.Debugf("Cluster installation resource couldn't find env match for %s", wanted.Name)
+			logger.Debugf("Mattermost installation resource couldn't find env match for %s", wanted.Name)
 			return false, nil
 		}
 	}
@@ -453,18 +469,8 @@ func (provisioner *kopsCIAlpha) VerifyClusterInstallationMatchesConfig(cluster *
 	return true, nil
 }
 
-func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
-	for _, env := range all {
-		if env == wanted {
-			return true
-		}
-	}
-
-	return false
-}
-
 // DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
-func (provisioner *kopsCIAlpha) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -484,8 +490,7 @@ func (provisioner *kopsCIAlpha) DeleteClusterInstallation(cluster *model.Cluster
 	name := makeClusterInstallationName(clusterInstallation)
 
 	ctx := context.TODO()
-
-	err = k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Warnf("Cluster installation %s not found, assuming already deleted", name)
 	} else if err != nil {
@@ -506,36 +511,105 @@ func (provisioner *kopsCIAlpha) DeleteClusterInstallation(cluster *model.Cluster
 		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
 	}
 
+	err = provisioner.deleteInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation SLI")
+	}
+
 	logger.Info("Successfully deleted cluster installation")
 
 	return nil
 }
 
 // IsResourceReady checks if the ClusterInstallation Custom Resource is ready on the cluster.
-func (provisioner *kopsCIAlpha) IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+func (provisioner *crProvisionerWrapper) IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	cr, err := provisioner.getClusterInstallationResource(cluster, clusterInstallation, logger)
+	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
 
-	// Perform hibernation logic correction.
-	expectedReplicas := cr.Spec.Replicas
-	if expectedReplicas == hibernationReplicaCount {
-		expectedReplicas = 0
-	}
-
-	if cr.Status.State != mmv1alpha1.Stable ||
-		expectedReplicas != cr.Status.Replicas ||
-		cr.Spec.Version != cr.Status.Version {
+	if cr.Status.State != mmv1beta1.Stable {
 		return false, nil
+	}
+	if cr.Status.ObservedGeneration != 0 {
+		if cr.Generation != cr.Status.ObservedGeneration {
+			return false, nil
+		}
+	} else {
+		// The new ObservedGeneration check is not supported because the operator
+		// has not yet been updated. Log this and fall back to original check.
+		// TODO: remove once all clusters have been reprovisioned.
+		logger.Warn("ObservedGeneration status value missing during reconciliation check; update mattermost operator on this cluster")
+		if unwrapInt32(cr.Spec.Replicas) != cr.Status.Replicas ||
+			cr.Spec.Version != cr.Status.Version {
+			return false, nil
+		}
 	}
 
 	return true, nil
+}
+
+// generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
+// across different availability zones and nodes.
+func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation) *corev1.Affinity {
+	return &corev1.Affinity{
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+				{
+					Weight: 100,
+					PodAffinityTerm: corev1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+						},
+						Namespaces:  []string{clusterInstallation.Namespace},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+				{
+					Weight: 100,
+					PodAffinityTerm: corev1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+						},
+						Namespaces:  []string{clusterInstallation.Namespace},
+						TopologyKey: "topology.kubernetes.io/zone",
+					},
+				},
+			},
+		},
+	}
+}
+
+// getMattermostCustomResource gets the cluster installation resource from
+// the kubernetes API.
+func (provisioner *crProvisionerWrapper) getMattermostCustomResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1beta1.Mattermost, error) {
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	name := makeClusterInstallationName(clusterInstallation)
+
+	ctx := context.TODO()
+	cr, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return cr, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
+
+	return cr, nil
 }
 
 // ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
@@ -674,33 +748,6 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 	}
 
 	return nil
-}
-
-// getClusterInstallationResource gets the cluster installation resource from
-// the kubernetes API.
-func (provisioner *kopsCIAlpha) getClusterInstallationResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1alpha1.ClusterInstallation, error) {
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kops config from cache")
-	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
-
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create k8s client from file")
-	}
-
-	name := makeClusterInstallationName(clusterInstallation)
-
-	ctx := context.TODO()
-	cr, err := k8sClient.MattermostClientsetV1Alpha.MattermostV1alpha1().ClusterInstallations(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return cr, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
-	}
-
-	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
-
-	return cr, nil
 }
 
 // DeleteOldClusterInstallationLicenseSecrets removes k8s secrets found matching
@@ -969,4 +1016,26 @@ func getHibernatingIngressAnnotations() map[string]string {
 	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
 
 	return annotations
+}
+
+func int32Ptr(i int) *int32 {
+	i32 := int32(i)
+	return &i32
+}
+
+func unwrapInt32(i *int32) int32 {
+	if i != nil {
+		return *i
+	}
+	return 0
+}
+
+func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
+	for _, env := range all {
+		if env == wanted {
+			return true
+		}
+	}
+
+	return false
 }

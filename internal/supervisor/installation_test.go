@@ -2371,7 +2371,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Size:      mmv1alpha1.Size100String,
 			Affinity:  model.InstallationAffinityMultiTenant,
 			State:     model.InstallationStateUpdateRequested,
-			CRVersion: model.V1alphaCRVersion,
+			CRVersion: model.V1betaCRVersion,
 		}
 
 		err = sqlStore.CreateInstallation(installation, nil)

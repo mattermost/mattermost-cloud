@@ -13,8 +13,6 @@ import (
 //go:generate provisioner-code-gen generate --out-file=installation_gen.go --boilerplate-file=../hack/boilerplate/boilerplate.generatego.txt --type=github.com/mattermost/mattermost-cloud/model.Installation --generator=get_id,get_state,is_deleted,as_resources
 
 const (
-	// V1alphaCRVersion is a ClusterInstallation CR alpha version.
-	V1alphaCRVersion = "mattermost.com/v1alpha1"
 	// V1betaCRVersion is a Mattermost CR beta version.
 	V1betaCRVersion = "installation.mattermost.com/v1beta1"
 	// DefaultCRVersion is a default CR version used for new installations.
