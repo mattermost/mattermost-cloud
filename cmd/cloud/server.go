@@ -86,7 +86,7 @@ func init() {
 	serverCmd.PersistentFlags().String("utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 	serverCmd.PersistentFlags().Int("max-proxy-db-connections-per-pool", 20, "The maximum number of proxy database connections per pool (logical database).")
 	serverCmd.PersistentFlags().Int("default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
-	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 3, "The db proxy min pool size.")
+	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 1, "The db proxy min pool size.")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 }
 
