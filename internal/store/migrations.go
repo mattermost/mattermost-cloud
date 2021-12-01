@@ -1661,4 +1661,74 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.32.1"), semver.MustParse("0.33.0"), func(e execer) error {
+		// Add new tables for Provisioner Events:
+		// - Event
+		// - StateChangeEvent
+		// - Subscription
+		// - EventDelivery
+
+		_, err := e.Exec(`
+			CREATE TABLE Event (
+				ID TEXT PRIMARY KEY,
+				Timestamp BIGINT NOT NULL,
+				EventType TEXT NOT NULL,
+				ExtraData BYTEA NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE StateChangeEvent (
+				ID TEXT PRIMARY KEY,
+				EventID TEXT NOT NULL,
+				ResourceID TEXT NOT NULL,
+				ResourceType TEXT NOT NULL,
+				OldState TEXT NOT NULL,
+				NewState TEXT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE Subscription (
+				ID TEXT PRIMARY KEY,
+				Name TEXT NOT NULL,
+				URL TEXT NOT NULL,
+				OwnerID TEXT NOT NULL,
+				EventType TEXT NOT NULL,
+				LastDeliveryAttemptAt BIGINT NOT NULL,
+				LastDeliveryStatus TEXT NOT NULL,
+				FailureThreshold BIGINT NOT NULL,
+				CreateAt BIGINT NOT NULL,
+				DeleteAt BIGINT NOT NULL,
+				LockAcquiredBy TEXT NULL,
+				LockAcquiredAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec(`
+			CREATE TABLE EventDelivery (
+				ID TEXT PRIMARY KEY,
+				EventID TEXT NOT NULL,
+				SubscriptionID TEXT NOT NULL,
+				Status TEXT NOT NULL,
+				LastAttempt BIGINT NOT NULL,
+				Attempts INT NOT NULL
+
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
