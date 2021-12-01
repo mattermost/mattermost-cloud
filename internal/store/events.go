@@ -117,9 +117,8 @@ func (sqlStore *SQLStore) createEventDeliveries(db dbInterface, event *model.Eve
 	// Although we do not expect huge number of subscriptions
 	// max number of prepared statement tokens is 999, so we batch
 	// for sake of future proofing.
-	batchStart := 0
 	batchSize := 50
-	for batchStart < len(subscriptions) {
+	for batchStart := 0; batchStart < len(subscriptions); batchStart += batchSize {
 		end := batchStart + batchSize
 		if end > len(subscriptions) {
 			end = len(subscriptions)
@@ -128,7 +127,6 @@ func (sqlStore *SQLStore) createEventDeliveries(db dbInterface, event *model.Eve
 		if err != nil {
 			return err
 		}
-		batchStart += batchSize
 	}
 
 	return nil
