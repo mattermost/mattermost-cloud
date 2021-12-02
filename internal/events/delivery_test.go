@@ -28,7 +28,7 @@ func TestDelivery_Workers(t *testing.T) {
 	defer cancel()
 
 	cfg := DelivererConfig{
-		IdleNewWorkers: 4,
+		UpToDateWorkers: 4,
 	}
 	_ = NewDeliverer(ctx, sqlStore, instanceID, logger, cfg)
 
@@ -53,8 +53,8 @@ func TestDelivery_WorkersRetrying(t *testing.T) {
 	defer cancel()
 
 	cfg := DelivererConfig{
-		IdleRetryWorkers: 4,
-		MaxBurstWorkers:  50,
+		RetryWorkers:    4,
+		MaxBurstWorkers: 50,
 	}
 	eventsDeliverer := NewDeliverer(ctx, sqlStore, instanceID, logger, cfg)
 	// Adjust for the purpose of tests.
@@ -142,8 +142,8 @@ func TestDelivery_GiveUpWhenThresholdReached(t *testing.T) {
 	defer cancel()
 
 	cfg := DelivererConfig{
-		IdleRetryWorkers: 4,
-		MaxBurstWorkers:  50,
+		RetryWorkers:    4,
+		MaxBurstWorkers: 50,
 	}
 	eventsDeliverer := NewDeliverer(ctx, sqlStore, instanceID, logger, cfg)
 

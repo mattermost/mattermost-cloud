@@ -24,7 +24,7 @@ import (
 const (
 	contentTypeApplicationJSON = "application/json"
 
-	processingDelay = 5 * time.Second
+	workerIdleDelay = 6 * time.Second
 
 	retryDelay = 20 * time.Second
 )
@@ -54,9 +54,9 @@ type EventDeliverer struct {
 
 // DelivererConfig is config of EventDeliverer component.
 type DelivererConfig struct {
-	IdleRetryWorkers int
-	IdleNewWorkers   int
-	MaxBurstWorkers  int
+	RetryWorkers    int
+	UpToDateWorkers int
+	MaxBurstWorkers int
 }
 
 // NewDeliverer creates new EventDeliverer component.
@@ -71,11 +71,11 @@ func NewDeliverer(ctx context.Context, store delivererStore, instanceID string, 
 		retryDelay: retryDelay,
 	}
 
-	for i := 0; i < delivery.config.IdleRetryWorkers; i++ {
+	for i := 0; i < delivery.config.RetryWorkers; i++ {
 		go delivery.newWorker().ProcessRetrying(ctx)
 	}
 
-	for i := 0; i < delivery.config.IdleNewWorkers; i++ {
+	for i := 0; i < delivery.config.UpToDateWorkers; i++ {
 		go delivery.newWorker().ProcessUpToDate(ctx)
 	}
 
@@ -186,7 +186,7 @@ func (s *sender) process(ctx context.Context, claimFunc func(instanceID string) 
 		default:
 			// If last time we did not get subscription to process, wait before trying again.
 			if !subscriptionProcessed {
-				time.Sleep(processingDelay)
+				time.Sleep(workerIdleDelay)
 			}
 			subscriptionProcessed = s.processSubscriptionEvents(claimFunc)
 		}
