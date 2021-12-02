@@ -141,7 +141,7 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.4.1"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
-				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"},
+				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 			},
 		},
@@ -169,7 +169,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"}, version)
 
 	version = c.ActualUtilityVersion(KubecostCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"}, version)
 
 	version = c.ActualUtilityVersion(NodeProblemDetectorCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"}, version)
@@ -200,7 +200,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.4.1"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
-				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"},
+				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 			},
 		},
