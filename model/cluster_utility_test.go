@@ -93,19 +93,19 @@ func TestSetDesired(t *testing.T) {
 				ActualVersions: UtilityGroupVersions{
 					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "prom", Chart: "1.0.0"},
 					Nginx:              &HelmUtilityVersion{ValuesPath: "nginx", Chart: "2.0.0"},
-					Teleport:           &HelmUtilityVersion{ValuesPath: "teleport", Chart: "5.0.0"},
+					Teleport:           &HelmUtilityVersion{ValuesPath: "teleport-kube-agent", Chart: "5.0.0"},
 				},
 				DesiredVersions: UtilityGroupVersions{
 					PrometheusOperator: &HelmUtilityVersion{ValuesPath: "desired-prometheus", Chart: "0.1"},
 					Nginx:              &HelmUtilityVersion{ValuesPath: "desired-nginx", Chart: "120.0.0"},
-					Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport", Chart: "15.0.0"},
+					Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport-kube-agent", Chart: "15.0.0"},
 				},
 			},
 			desiredVersions: nil,
 			expectedDesiredVersions: UtilityGroupVersions{
 				PrometheusOperator: &HelmUtilityVersion{ValuesPath: "desired-prometheus", Chart: "0.1"},
 				Nginx:              &HelmUtilityVersion{ValuesPath: "desired-nginx", Chart: "120.0.0"},
-				Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport", Chart: "15.0.0"},
+				Teleport:           &HelmUtilityVersion{ValuesPath: "desired-teleport-kube-agent", Chart: "15.0.0"},
 			},
 		},
 	} {
@@ -138,7 +138,7 @@ func TestGetActualVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.4.1"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"},
@@ -160,7 +160,7 @@ func TestGetActualVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "fluent-bit-0.9"}, version)
 
 	version = c.ActualUtilityVersion(TeleportCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-0.4.1"}, version)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"}, version)
 
 	version = c.ActualUtilityVersion(PgbouncerCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"}, version)
@@ -197,7 +197,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Thanos:              &HelmUtilityVersion{Chart: "thanos-2.4"},
 				Nginx:               &HelmUtilityVersion{Chart: "nginx-10.2"},
 				Fluentbit:           &HelmUtilityVersion{Chart: "fluent-bit-0.9"},
-				Teleport:            &HelmUtilityVersion{Chart: "teleport-0.4.1"},
+				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.87.0"},
