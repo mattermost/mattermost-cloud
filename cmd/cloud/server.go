@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/events"
+
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
 	awat "github.com/mattermost/awat/model"
@@ -341,6 +343,17 @@ var serverCmd = &cobra.Command{
 
 		cloudMetrics := metrics.New()
 
+		delivererCfg := events.DelivererConfig{
+			RetryWorkers:    2,
+			UpToDateWorkers: 2,
+			MaxBurstWorkers: 100,
+		}
+		deliveryCtx, deliveryCancel := context.WithCancel(context.Background())
+		eventsDeliverer := events.NewDeliverer(deliveryCtx, sqlStore, instanceID, logger, delivererCfg)
+		defer deliveryCancel()
+
+		eventsProducer := events.NewProducer(sqlStore, eventsDeliverer, awsClient.GetCloudEnvironmentName(), logger)
+
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
@@ -386,13 +399,14 @@ var serverCmd = &cobra.Command{
 		router := mux.NewRouter()
 
 		api.Register(router, &api.Context{
-			Store:       sqlStore,
-			Supervisor:  supervisor,
-			Provisioner: kopsProvisioner,
-			DBProvider:  resourceUtil,
-			Environment: awsClient.GetCloudEnvironmentName(),
-			Logger:      logger,
-			AwsClient:   awsClient,
+			Store:         sqlStore,
+			Supervisor:    supervisor,
+			Provisioner:   kopsProvisioner,
+			DBProvider:    resourceUtil,
+			EventProducer: eventsProducer,
+			Environment:   awsClient.GetCloudEnvironmentName(),
+			Logger:        logger,
+			AwsClient:     awsClient,
 		})
 
 		listen, _ := command.Flags().GetString("listen")
