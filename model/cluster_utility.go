@@ -22,7 +22,7 @@ const (
 	// FluentbitCanonicalName is the canonical string representation of fluentbit
 	FluentbitCanonicalName = "fluentbit"
 	// TeleportCanonicalName is the canonical string representation of teleport
-	TeleportCanonicalName = "teleport"
+	TeleportCanonicalName = "teleport-kube-agent"
 	// PgbouncerCanonicalName is the canonical string representation of pgbouncer
 	PgbouncerCanonicalName = "pgbouncer"
 	// StackroxCanonicalName is the canonical string representation of stackrox
@@ -64,7 +64,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// FluentbitDefaultVersion defines the default version for the Helm chart
 	FluentbitCanonicalName: {Chart: "0.17.0", ValuesPath: ""},
 	// TeleportDefaultVersion defines the default version for the Helm chart
-	TeleportCanonicalName: {Chart: "0.4.1", ValuesPath: ""},
+	TeleportCanonicalName: {Chart: "6.2.8", ValuesPath: ""},
 	// PgbouncerDefaultVersion defines the default version for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
 	// StackroxDefaultVersion defines the default version for the Helm chart
