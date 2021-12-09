@@ -5,6 +5,7 @@
 package api
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
@@ -104,6 +105,13 @@ type Store interface {
 	UpdateInstallationDBMigrationOperationState(dbMigration *model.InstallationDBMigrationOperation) error
 	LockInstallationDBMigrationOperation(id, lockerID string) (bool, error)
 	UnlockInstallationDBMigrationOperation(id, lockerID string, force bool) (bool, error)
+
+	CreateSubscription(sub *model.Subscription) error
+	GetSubscriptions(filter *model.SubscriptionsFilter) ([]*model.Subscription, error)
+	GetSubscription(subID string) (*model.Subscription, error)
+	DeleteSubscription(subID string) error
+
+	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
@@ -123,28 +131,36 @@ type DBProvider interface {
 	GetDatabase(installationID, dbType string) model.Database
 }
 
+// EventProducer produces Provisioners' state change events.
+type EventProducer interface {
+	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
+	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
+}
+
 // Context provides the API with all necessary data and interfaces for responding to requests.
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
 type Context struct {
-	Store       Store
-	Supervisor  Supervisor
-	Provisioner Provisioner
-	DBProvider  DBProvider
-	RequestID   string
-	Environment string
-	Logger      logrus.FieldLogger
-	AwsClient   AwsClient
+	Store         Store
+	Supervisor    Supervisor
+	Provisioner   Provisioner
+	DBProvider    DBProvider
+	EventProducer EventProducer
+	RequestID     string
+	Environment   string
+	Logger        logrus.FieldLogger
+	AwsClient     AwsClient
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
 func (c *Context) Clone() *Context {
 	return &Context{
-		Store:       c.Store,
-		Supervisor:  c.Supervisor,
-		Provisioner: c.Provisioner,
-		DBProvider:  c.DBProvider,
-		Logger:      c.Logger,
-		AwsClient:   c.AwsClient,
+		Store:         c.Store,
+		Supervisor:    c.Supervisor,
+		Provisioner:   c.Provisioner,
+		DBProvider:    c.DBProvider,
+		EventProducer: c.EventProducer,
+		Logger:        c.Logger,
+		AwsClient:     c.AwsClient,
 	}
 }

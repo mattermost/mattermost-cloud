@@ -1488,7 +1488,7 @@ func (c *Client) SwitchClusterRoles(request *MigrateClusterInstallationRequest) 
 
 // ListStateChangeEvents request events lists from the configured provisioning server.
 func (c *Client) ListStateChangeEvents(request *ListStateChangeEventsRequest) ([]*StateChangeEventData, error) {
-	u, err := url.Parse(c.buildURL("/api/events/state-change"))
+	u, err := url.Parse(c.buildURL("/api/events/state_change"))
 	if err != nil {
 		return nil, err
 	}

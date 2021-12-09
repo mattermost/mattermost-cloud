@@ -35,6 +35,8 @@ func init() {
 	rootCmd.AddCommand(workbenchCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(dashboardCmd)
+	rootCmd.AddCommand(eventsCmd)
+	rootCmd.AddCommand(subscriptionCmd)
 }
 
 func main() {

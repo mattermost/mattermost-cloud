@@ -60,7 +60,7 @@ func handleGetWebhook(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	webhook, err := c.Store.GetWebhook(webhookID)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to query installation")
+		c.Logger.WithError(err).Error("failed to query webhook")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -23,4 +23,6 @@ func Register(rootRouter *mux.Router, context *Context) {
 	initWebhook(apiRouter, context)
 	initDatabases(apiRouter, context)
 	initSecurity(apiRouter, context)
+	initSubscription(apiRouter, context)
+	initEvent(apiRouter, context)
 }
