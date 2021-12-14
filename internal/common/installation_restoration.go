@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/events"
+
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -18,8 +20,12 @@ type installationRestorationStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
+type eventProducer interface {
+	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
+}
+
 // TriggerInstallationDBRestoration validates, triggers and reports installation database restoration.
-func TriggerInstallationDBRestoration(store installationRestorationStore, installation *model.Installation, backup *model.InstallationBackup, env string, logger log.FieldLogger) (*model.InstallationDBRestorationOperation, error) {
+func TriggerInstallationDBRestoration(store installationRestorationStore, installation *model.Installation, backup *model.InstallationBackup, eventsProducer eventProducer, env string, logger log.FieldLogger) (*model.InstallationDBRestorationOperation, error) {
 	err := model.EnsureInstallationReadyForDBRestoration(installation, backup)
 	if err != nil {
 		return nil, ErrWrap(http.StatusBadRequest, err, "installation cannot be restored")
@@ -45,17 +51,9 @@ func TriggerInstallationDBRestoration(store installationRestorationStore, instal
 		logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
-	installationWebhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldInstallationState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": env},
-	}
-	err = webhook.SendToAllWebhooks(store, installationWebhookPayload, logger.WithField("webhookEvent", installationWebhookPayload.NewState))
+	err = eventsProducer.ProduceInstallationStateChangeEvent(installation, oldInstallationState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return dbRestoration, nil

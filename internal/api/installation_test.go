@@ -16,6 +16,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -350,9 +351,10 @@ func TestCreateInstallation(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -624,9 +626,10 @@ func TestRetryCreateInstallation(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -711,9 +714,10 @@ func TestUpdateInstallation(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -958,9 +962,10 @@ func TestJoinGroup(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1079,9 +1084,10 @@ func TestWakeUpInstallation(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1196,9 +1202,10 @@ func TestLeaveGroup(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1313,9 +1320,10 @@ func TestDeleteInstallation(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1427,9 +1435,10 @@ func TestInstallationAnnotations(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Logger:     logger,
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
 	})
 
 	ts := httptest.NewServer(router)

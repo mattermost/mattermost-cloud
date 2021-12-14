@@ -5,14 +5,11 @@
 package supervisor
 
 import (
-	"time"
-
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -47,21 +44,23 @@ type clusterInstallationProvisioner interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type ClusterInstallationSupervisor struct {
-	store       clusterInstallationStore
-	provisioner clusterInstallationProvisioner
-	aws         aws.AWS
-	instanceID  string
-	logger      log.FieldLogger
+	store          clusterInstallationStore
+	provisioner    clusterInstallationProvisioner
+	aws            aws.AWS
+	eventsProducer eventProducer
+	instanceID     string
+	logger         log.FieldLogger
 }
 
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
-func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *ClusterInstallationSupervisor {
+func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, eventsProducer eventProducer, instanceID string, logger log.FieldLogger) *ClusterInstallationSupervisor {
 	return &ClusterInstallationSupervisor{
-		store:       store,
-		provisioner: clusterInstallationProvisioner,
-		aws:         aws,
-		instanceID:  instanceID,
-		logger:      logger,
+		store:          store,
+		provisioner:    clusterInstallationProvisioner,
+		aws:            aws,
+		eventsProducer: eventsProducer,
+		instanceID:     instanceID,
+		logger:         logger,
 	}
 }
 
@@ -135,17 +134,9 @@ func (s *ClusterInstallationSupervisor) Supervise(clusterInstallation *model.Clu
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeClusterInstallation,
-		ID:        clusterInstallation.ID,
-		NewState:  newState,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"ClusterID": clusterInstallation.ClusterID, "Environment": s.aws.GetCloudEnvironmentName()},
-	}
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create cluster installation state change event")
 	}
 
 	logger.Debugf("Transitioned cluster installation from %s to %s", oldState, newState)

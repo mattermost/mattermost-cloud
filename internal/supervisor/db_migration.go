@@ -75,6 +75,7 @@ type DBMigrationSupervisor struct {
 	environment              string
 	logger                   log.FieldLogger
 	dbMigrationCIProvisioner dbMigrationCIProvisioner
+	eventsProducer           eventProducer
 }
 
 // NewInstallationDBMigrationSupervisor creates a new DBMigrationSupervisor.
@@ -84,6 +85,7 @@ func NewInstallationDBMigrationSupervisor(
 	dbProvider databaseProvider,
 	instanceID string,
 	provisioner dbMigrationCIProvisioner,
+	eventsProducer eventProducer,
 	logger log.FieldLogger) *DBMigrationSupervisor {
 	return &DBMigrationSupervisor{
 		store:                    store,
@@ -92,6 +94,7 @@ func NewInstallationDBMigrationSupervisor(
 		instanceID:               instanceID,
 		environment:              aws.GetCloudEnvironmentName(),
 		logger:                   logger,
+		eventsProducer:           eventsProducer,
 		dbMigrationCIProvisioner: provisioner,
 	}
 }
@@ -329,7 +332,7 @@ func (s *DBMigrationSupervisor) triggerInstallationRestoration(dbMigration *mode
 		return model.InstallationDBMigrationStateFailing
 	}
 
-	dbRestoration, err := common.TriggerInstallationDBRestoration(s.store, installation, backup, s.environment, logger)
+	dbRestoration, err := common.TriggerInstallationDBRestoration(s.store, installation, backup, s.eventsProducer, s.environment, logger)
 	if err != nil {
 		s.logger.WithError(err).Error("Failed to trigger installation db restoration")
 		return dbMigration.State
@@ -433,18 +436,9 @@ func (s *DBMigrationSupervisor) finalizeMigration(dbMigration *model.Installatio
 		return dbMigration.State
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.environment},
-	}
-
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	dbMigration.CompleteAt = model.GetMillis()
@@ -474,18 +468,9 @@ func (s *DBMigrationSupervisor) failMigration(dbMigration *model.InstallationDBM
 		return dbMigration.State
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.environment},
-	}
-
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return model.InstallationDBMigrationStateFailed
@@ -529,18 +514,9 @@ func (s *DBMigrationSupervisor) rollbackMigration(dbMigration *model.Installatio
 		return dbMigration.State
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.environment},
-	}
-
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return model.InstallationDBMigrationStateRollbackFinished

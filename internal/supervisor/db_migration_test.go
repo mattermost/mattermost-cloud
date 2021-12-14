@@ -206,7 +206,7 @@ func TestDBMigrationSupervisor_Do(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockDBMigrationStore{}
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(mockStore, &mockAWS{}, &utils.ResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(mockStore, &mockAWS{}, &utils.ResourceUtil{}, "instanceID", nil, nil, logger)
 		err := dbMigrationSupervisor.Do()
 		require.NoError(t, err)
 
@@ -231,7 +231,15 @@ func TestDBMigrationSupervisor_Do(t *testing.T) {
 			UnlockChan:           make(chan interface{}),
 		}
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(mockStore, &mockAWS{}, &utils.ResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			mockStore,
+			&mockAWS{},
+			&utils.ResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		err := dbMigrationSupervisor.Do()
 		require.NoError(t, err)
 
@@ -256,7 +264,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &utils.ResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&utils.ResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -323,7 +339,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 				err = sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 				require.NoError(t, err)
 
-				dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &utils.ResourceUtil{}, "instanceID", nil, logger)
+				dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+					sqlStore,
+					&mockAWS{},
+					&utils.ResourceUtil{},
+					"instanceID",
+					nil,
+					&mockEventProducer{},
+					logger,
+				)
 				dbMigrationSupervisor.Supervise(migrationOp)
 
 				// Assert
@@ -353,7 +377,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -381,7 +413,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", &mockMigrationProvisioner{}, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			&mockMigrationProvisioner{},
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -413,7 +453,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err = sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -444,7 +492,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -513,7 +569,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 				err = sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 				require.NoError(t, err)
 
-				dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &utils.ResourceUtil{}, "instanceID", nil, logger)
+				dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+					sqlStore,
+					&mockAWS{},
+					&utils.ResourceUtil{},
+					"instanceID",
+					nil,
+					&mockEventProducer{},
+					logger,
+				)
 				dbMigrationSupervisor.Supervise(migrationOp)
 
 				// Assert
@@ -539,7 +603,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", &mockMigrationProvisioner{}, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			&mockMigrationProvisioner{},
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -563,7 +635,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -592,7 +672,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", nil, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			nil,
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -620,7 +708,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", &mockMigrationProvisioner{}, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			&mockMigrationProvisioner{},
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert
@@ -648,7 +744,15 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBMigrationOperation(migrationOp)
 		require.NoError(t, err)
 
-		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(sqlStore, &mockAWS{}, &mockResourceUtil{}, "instanceID", &mockMigrationProvisioner{}, logger)
+		dbMigrationSupervisor := supervisor.NewInstallationDBMigrationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			&mockResourceUtil{},
+			"instanceID",
+			&mockMigrationProvisioner{},
+			&mockEventProducer{},
+			logger,
+		)
 		dbMigrationSupervisor.Supervise(migrationOp)
 
 		// Assert

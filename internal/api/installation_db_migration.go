@@ -115,17 +115,9 @@ func handleTriggerInstallationDatabaseMigration(c *Context, w http.ResponseWrite
 		c.Logger.WithError(err).Error("Unable to process and send webhooks")
 	}
 
-	installationWebhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installationDTO.ID,
-		NewState:  installationDTO.State,
-		OldState:  oldInstallationState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-	}
-	err = webhook.SendToAllWebhooks(c.Store, installationWebhookPayload, c.Logger.WithField("webhookEvent", installationWebhookPayload.NewState))
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldInstallationState)
 	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	unlockOnce()

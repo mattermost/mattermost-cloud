@@ -6,13 +6,11 @@ package api
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/pkg/errors"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -149,17 +147,9 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeCluster,
-		ID:        cluster.ID,
-		NewState:  model.ClusterStateCreationRequested,
-		OldState:  "n/a",
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"Environment": c.Environment},
-	}
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = c.EventProducer.ProduceClusterStateChangeEvent(&cluster, model.NonApplicableState)
 	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		c.Logger.WithError(err).Error("Failed to create cluster state change event")
 	}
 
 	c.Supervisor.Do()
@@ -189,14 +179,7 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 	defer unlockOnce()
 
 	if clusterDTO.State != newState {
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeCluster,
-			ID:        clusterDTO.ID,
-			NewState:  newState,
-			OldState:  clusterDTO.State,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"Environment": c.Environment},
-		}
+		oldState := clusterDTO.State
 		clusterDTO.State = newState
 
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
@@ -206,9 +189,9 @@ func handleRetryCreateCluster(c *Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
 		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
+			c.Logger.WithError(err).Error("Failed to create cluster state change event")
 		}
 	}
 
@@ -252,15 +235,9 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 	clusterDTO.SetUtilityDesiredVersions(provisionClusterRequest.DesiredUtilityVersions)
 
 	if clusterDTO.State != newState {
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeCluster,
-			ID:        clusterDTO.ID,
-			NewState:  newState,
-			OldState:  clusterDTO.State,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"Environment": c.Environment},
-		}
+		oldState := clusterDTO.State
 		clusterDTO.State = newState
+
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
 			c.Logger.WithError(err).Errorf("failed to mark cluster provisioning state")
@@ -268,9 +245,9 @@ func handleProvisionCluster(c *Context, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
 		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
+			c.Logger.WithError(err).Error("Failed to create cluster state change event")
 		}
 	}
 
@@ -362,18 +339,9 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		if oldState != newState {
-			webhookPayload := &model.WebhookPayload{
-				Type:      model.TypeCluster,
-				ID:        clusterDTO.ID,
-				NewState:  newState,
-				OldState:  oldState,
-				Timestamp: time.Now().UnixNano(),
-				ExtraData: map[string]string{"Environment": c.Environment},
-			}
-
-			err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+			err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
 			if err != nil {
-				c.Logger.WithError(err).Error("Unable to process and send webhooks")
+				c.Logger.WithError(err).Error("Failed to create cluster state change event")
 			}
 		}
 	}
@@ -430,18 +398,9 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		}
 
 		if oldState != newState {
-			webhookPayload := &model.WebhookPayload{
-				Type:      model.TypeCluster,
-				ID:        clusterDTO.ID,
-				NewState:  newState,
-				OldState:  oldState,
-				Timestamp: time.Now().UnixNano(),
-				ExtraData: map[string]string{"Environment": c.Environment},
-			}
-
-			err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+			err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
 			if err != nil {
-				c.Logger.WithError(err).Error("Unable to process and send webhooks")
+				c.Logger.WithError(err).Error("Failed to create cluster state change event")
 			}
 		}
 	}
@@ -487,14 +446,7 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if clusterDTO.State != newState {
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeCluster,
-			ID:        clusterDTO.ID,
-			NewState:  newState,
-			OldState:  clusterDTO.State,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"Environment": c.Environment},
-		}
+		oldState := clusterDTO.State
 		clusterDTO.State = newState
 
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
@@ -504,9 +456,9 @@ func handleDeleteCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		err = c.EventProducer.ProduceClusterStateChangeEvent(clusterDTO.Cluster, oldState)
 		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
+			c.Logger.WithError(err).Error("Failed to create cluster state change event")
 		}
 	}
 
