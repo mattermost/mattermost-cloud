@@ -2,7 +2,7 @@
 # See LICENSE.txt for license information.
 
 # Build the mattermost cloud
-ARG DOCKER_BUILD_IMAGE=golang:1.16
+ARG DOCKER_BUILD_IMAGE=golang:1.17
 ARG DOCKER_BASE_IMAGE=alpine:3.14
 
 FROM ${DOCKER_BUILD_IMAGE} AS build

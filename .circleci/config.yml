@@ -2,15 +2,15 @@ version: 2.1
 executors:
   default:
     docker:
-    - image: circleci/golang:1.16.2
+    - image: cimg/go:1.17.4
 
 aliases:
 - &restore_cache
   restore_cache:
-    key: go-mod-v1-{{ checksum "go.sum" }}
+    key: go-mod-v2-{{ checksum "go.sum" }}
 - &save_cache
   save_cache:
-    key: go-mod-v1-{{ checksum "go.sum" }}
+    key: go-mod-v2-{{ checksum "go.sum" }}
     paths:
       - "/go/pkg/mod"
 
@@ -71,7 +71,7 @@ jobs:
 
   test-postgres:
     docker:
-    - image: circleci/golang:1.16.2
+    - image: cimg/go:1.17.4
       environment:
         CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
     - image: circleci/postgres:11.2-alpine
