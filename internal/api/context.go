@@ -118,6 +118,7 @@ type Store interface {
 type Provisioner interface {
 	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	ExecMmctl(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error)
 }
 

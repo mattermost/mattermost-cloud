@@ -35,6 +35,7 @@ func initClusterInstallation(apiRouter *mux.Router, context *Context) {
 	clusterInstallationRouter.Handle("/config", addContext(handleSetClusterInstallationConfig)).Methods("PUT")
 	clusterInstallationRouter.Handle("/exec/{command}", addContext(handleRunClusterInstallationExecCommand)).Methods("POST")
 	clusterInstallationRouter.Handle("/mattermost_cli", addContext(handleRunClusterInstallationMattermostCLI)).Methods("POST")
+	clusterInstallationRouter.Handle("/mmctl", addContext(handleRunClusterInstallationMmctl)).Methods("POST")
 }
 
 // handleGetClusterInstallations responds to GET /api/cluster_installations, returning the specified page of cluster installations.
@@ -361,6 +362,65 @@ func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter
 	output, err := c.Provisioner.ExecMattermostCLI(cluster, clusterInstallation, clusterInstallationMattermostCLISubcommandRequest...)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to execute mattermost cli")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(output)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(output)
+}
+
+func handleRunClusterInstallationMmctl(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	clusterInstallationID := vars["cluster_installation"]
+	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
+
+	clusterInstallationMmctlSubcommandRequest, err := model.NewClusterInstallationMmctlSubcommandFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	clusterInstallation, err := c.Store.GetClusterInstallation(clusterInstallationID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if clusterInstallation == nil {
+		c.Logger.Error("cluster installation not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if clusterInstallation.IsDeleted() {
+		c.Logger.Error("cluster installation is deleted")
+		w.WriteHeader(http.StatusGone)
+		return
+	}
+
+	if clusterInstallation.APISecurityLock {
+		logSecurityLockConflict("cluster-installation", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	cluster, err := c.Store.GetCluster(clusterInstallation.ClusterID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query cluster")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if cluster == nil {
+		c.Logger.Errorf("failed to find cluster %s associated with cluster installations", clusterInstallation.ClusterID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	output, err := c.Provisioner.ExecMmctl(cluster, clusterInstallation, clusterInstallationMmctlSubcommandRequest...)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to execute mmctl command")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(output)
 		return

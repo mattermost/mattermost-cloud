@@ -57,6 +57,20 @@ func NewClusterInstallationMattermostCLISubcommandFromReader(reader io.Reader) (
 	return clusterInstallationMattermostCLISubcommand, nil
 }
 
+// ClusterInstallationMmctlSubcommand describes the payload necessary to run the mmctl command line tool on a cluster installation.
+type ClusterInstallationMmctlSubcommand []string
+
+// NewClusterInstallationMmctlSubcommandFromReader will create a ClusterInstallationMmctlSubcommand from an io.Reader.
+func NewClusterInstallationMmctlSubcommandFromReader(reader io.Reader) (ClusterInstallationMmctlSubcommand, error) {
+	var clusterInstallationMmctlSubcommand ClusterInstallationMmctlSubcommand
+	err := json.NewDecoder(reader).Decode(&clusterInstallationMmctlSubcommand)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode cluster installation mmctl request")
+	}
+
+	return clusterInstallationMmctlSubcommand, nil
+}
+
 // ClusterInstallationExecSubcommand describes the payload necessary to run container exec commands on a cluster installation.
 type ClusterInstallationExecSubcommand []string
 

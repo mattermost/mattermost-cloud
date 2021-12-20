@@ -37,6 +37,14 @@ func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstal
 	return s.Output, s.CommandError
 }
 
+func (s *mockProvisioner) ExecMmctl(*model.Cluster, *model.ClusterInstallation, ...string) ([]byte, error) {
+	if len(s.Output) == 0 {
+		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)
+	}
+
+	return s.Output, s.CommandError
+}
+
 func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error) {
 	return nil, nil
 }
