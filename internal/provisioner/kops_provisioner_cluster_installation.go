@@ -617,7 +617,7 @@ func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, cl
 	return provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
 }
 
-// ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
+// ExecMmctl invokes the mmctl command for the given cluster installation with the given args.
 func (provisioner *KopsProvisioner) ExecMmctl(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
 	args = append(args, "--local")
 	return provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
