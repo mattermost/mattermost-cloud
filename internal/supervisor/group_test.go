@@ -80,7 +80,7 @@ func TestGroupSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockGroupStore{}
 
-		supervisor := supervisor.NewGroupSupervisor(mockStore, "instanceID", logger)
+		supervisor := supervisor.NewGroupSupervisor(mockStore, nil, "instanceID", logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -106,7 +106,12 @@ func TestGroupSupervisorDo(t *testing.T) {
 		}
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewGroupSupervisor(mockStore, "instanceID", logger)
+		supervisor := supervisor.NewGroupSupervisor(
+			mockStore,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -160,7 +165,12 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("no installations", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewGroupSupervisor(sqlStore, "instanceID", logger)
+		supervisor := supervisor.NewGroupSupervisor(
+			sqlStore,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 
 		group := standardGroup()
 		err := sqlStore.CreateGroup(group)
@@ -173,7 +183,12 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("one installation, stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewGroupSupervisor(sqlStore, "instanceID", logger)
+		supervisor := supervisor.NewGroupSupervisor(
+			sqlStore,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 
 		group := standardGroup()
 		err := sqlStore.CreateGroup(group)
@@ -201,7 +216,12 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("three installations, stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewGroupSupervisor(sqlStore, "instanceID", logger)
+		supervisor := supervisor.NewGroupSupervisor(
+			sqlStore,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 
 		group := standardGroup()
 		group.MaxRolling = 10
@@ -256,7 +276,12 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("one installation, not stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewGroupSupervisor(sqlStore, "instanceID", logger)
+		supervisor := supervisor.NewGroupSupervisor(
+			sqlStore,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 
 		group := standardGroup()
 		err := sqlStore.CreateGroup(group)
@@ -285,7 +310,12 @@ func TestGroupSupervisor(t *testing.T) {
 		t.Run("two installations, stable", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewGroupSupervisor(sqlStore, "instanceID", logger)
+			supervisor := supervisor.NewGroupSupervisor(
+				sqlStore,
+				&mockEventProducer{},
+				"instanceID",
+				logger,
+			)
 
 			group := standardGroup()
 			err := sqlStore.CreateGroup(group)
@@ -328,7 +358,12 @@ func TestGroupSupervisor(t *testing.T) {
 		t.Run("two installations, one stable", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewGroupSupervisor(sqlStore, "instanceID", logger)
+			supervisor := supervisor.NewGroupSupervisor(
+				sqlStore,
+				&mockEventProducer{},
+				"instanceID",
+				logger,
+			)
 
 			group := standardGroup()
 			err := sqlStore.CreateGroup(group)

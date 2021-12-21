@@ -44,6 +44,7 @@ func TestImportSupervisor(t *testing.T) {
 			awatClient,
 			store,
 			&mockImportProvisioner{Fail: false},
+			&mockEventProducer{},
 			logger)
 
 		awatClient.EXPECT().
@@ -96,6 +97,7 @@ func TestImportSupervisor(t *testing.T) {
 			awatClient,
 			store,
 			&mockImportProvisioner{Fail: true},
+			&mockEventProducer{},
 			logger)
 
 		awatClient.EXPECT().
@@ -152,6 +154,7 @@ func TestImportSupervisor(t *testing.T) {
 			awatClient,
 			store,
 			&mockImportProvisioner{Fail: false},
+			&mockEventProducer{},
 			logger)
 
 		awatClient.EXPECT().
@@ -176,6 +179,7 @@ func TestImportSupervisor(t *testing.T) {
 			awatClient,
 			store,
 			&mockImportProvisioner{Fail: false},
+			&mockEventProducer{},
 			logger)
 
 		awatClient.EXPECT().
@@ -200,6 +204,7 @@ func TestImportSupervisor(t *testing.T) {
 			awatClient,
 			store,
 			&mockImportProvisioner{Fail: false},
+			&mockEventProducer{},
 			logger)
 
 		awatClient.EXPECT().

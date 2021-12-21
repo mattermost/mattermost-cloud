@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/events"
+
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/pkg/errors"
@@ -16,7 +18,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
@@ -72,6 +73,12 @@ type installationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
+type eventProducer interface {
+	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
+	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
+	ProduceClusterInstallationStateChangeEvent(clusterInstallation *model.ClusterInstallation, oldState string, extraDataFields ...events.DataField) error
+}
+
 // provisioner abstracts the provisioning operations required by the installation supervisor.
 type installationProvisioner interface {
 	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
@@ -94,6 +101,7 @@ type InstallationSupervisor struct {
 	resourceUtil      *utils.ResourceUtil
 	logger            log.FieldLogger
 	metrics           *metrics.CloudMetrics
+	eventsProducer    eventProducer
 	forceCRUpgrade    bool
 }
 
@@ -117,6 +125,7 @@ func NewInstallationSupervisor(
 	resourceUtil *utils.ResourceUtil,
 	logger log.FieldLogger,
 	metrics *metrics.CloudMetrics,
+	eventsProducer eventProducer,
 	forceCRUpgrade bool) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
@@ -129,6 +138,7 @@ func NewInstallationSupervisor(
 		resourceUtil:      resourceUtil,
 		logger:            logger,
 		metrics:           metrics,
+		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
 	}
 }
@@ -233,17 +243,9 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.aws.GetCloudEnvironmentName()},
-	}
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	logger.Debugf("Transitioned installation from %s to %s", oldState, installation.State)
@@ -505,18 +507,9 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 			return nil
 		}
 
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeCluster,
-			ID:        cluster.ID,
-			NewState:  model.ClusterStateResizeRequested,
-			OldState:  model.ClusterStateStable,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
-		}
-
-		err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+		err = s.eventsProducer.ProduceClusterStateChangeEvent(cluster, model.ClusterStateStable)
 		if err != nil {
-			logger.WithError(err).Error("Unable to process and send webhooks")
+			logger.WithError(err).Error("Failed to create cluster state change event")
 		}
 	}
 
@@ -535,17 +528,9 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		return nil
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeClusterInstallation,
-		ID:        clusterInstallation.ID,
-		NewState:  model.ClusterInstallationStateCreationRequested,
-		OldState:  "n/a",
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
-	}
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, model.NonApplicableState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create cluster installation state change event")
 	}
 
 	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%", cluster.ID, cpuPercent, memoryPercent)
@@ -791,17 +776,9 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 				return installation.State
 			}
 
-			webhookPayload := &model.WebhookPayload{
-				Type:      model.TypeClusterInstallation,
-				ID:        clusterInstallation.ID,
-				NewState:  clusterInstallation.State,
-				OldState:  oldState,
-				Timestamp: time.Now().UnixNano(),
-				ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
-			}
-			err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+			err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, oldState)
 			if err != nil {
-				logger.WithError(err).Error("Unable to process and send webhooks")
+				logger.WithError(err).Error("Failed to create cluster installation state change event")
 			}
 		}
 	}

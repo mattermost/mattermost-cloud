@@ -11,9 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/events"
+
 	awat "github.com/mattermost/awat/model"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -41,12 +42,13 @@ type AWATClient interface {
 // the AWAT for Imports waiting to be performed and then performs
 // imports serially
 type ImportSupervisor struct {
-	awsClient   toolsAWS.AWS
-	awatClient  AWATClient
-	logger      logrus.FieldLogger
-	store       importStore
-	provisioner importProvisioner
-	ID          string
+	awsClient      toolsAWS.AWS
+	awatClient     AWATClient
+	logger         logrus.FieldLogger
+	store          importStore
+	provisioner    importProvisioner
+	eventsProducer eventProducer
+	ID             string
 }
 
 type importStore interface {
@@ -92,13 +94,14 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner importProvisioner, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner importProvisioner, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
-		awsClient:   awsClient,
-		awatClient:  awat,
-		store:       store,
-		logger:      logger,
-		provisioner: provisioner,
+		awsClient:      awsClient,
+		awatClient:     awat,
+		store:          store,
+		logger:         logger,
+		provisioner:    provisioner,
+		eventsProducer: eventsProducer,
 
 		// TODO replace this with the Pod ID from env var
 		ID: model.NewID(),
@@ -205,15 +208,9 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to mark Installation %s as %s", installation.ID, model.InstallationStateImportInProgress)
 	}
-	err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  model.InstallationStateImportInProgress,
-		OldState:  model.InstallationStateStable,
-		ExtraData: map[string]string{"TranslationID": imprt.TranslationID, "ImportID": imprt.ID},
-	}, s.logger.WithField("webhookEvent", model.InstallationStateImportInProgress))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, model.InstallationStateStable, importEventExtraData(imprt)...)
 	if err != nil {
-		s.logger.WithError(err).Errorf("failed to send webhooks")
+		s.logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	defer func() {
@@ -223,15 +220,9 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 			s.logger.WithError(err).Errorf("Failed to mark Installation %s as state stable", installation.ID)
 			return
 		}
-		err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
-			Type:      model.TypeInstallation,
-			ID:        installation.ID,
-			NewState:  model.InstallationStateImportComplete,
-			OldState:  model.InstallationStateImportInProgress,
-			ExtraData: map[string]string{"TranslationID": imprt.TranslationID, "ImportID": imprt.ID},
-		}, s.logger.WithField("webhookEvent", model.InstallationStateImportInProgress))
+		err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, model.InstallationStateImportInProgress, importEventExtraData(imprt)...)
 		if err != nil {
-			s.logger.WithError(err).Errorf("failed to send webhooks")
+			s.logger.WithError(err).Error("Failed to create installation state change event")
 		}
 	}()
 
@@ -513,16 +504,18 @@ func (s *ImportSupervisor) checkInstallation(installation *model.Installation) e
 	if err != nil {
 		return errors.Wrap(err, "failed to mark Installation stable")
 	}
-	err = webhook.SendToAllWebhooks(s.store, &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  model.InstallationStateStable,
-		OldState:  model.InstallationStateImportComplete,
-		ExtraData: map[string]string{"TranslationID": mostRecentImport.TranslationID, "ImportID": mostRecentImport.ID},
-	}, s.logger.WithField("webhookEvent", model.InstallationStateImportComplete))
+
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, model.InstallationStateImportComplete, importEventExtraData(mostRecentImport)...)
 	if err != nil {
-		return errors.Wrap(err, "failed to send webhook")
+		s.logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return nil
+}
+
+func importEventExtraData(importStatus *awat.ImportStatus) []events.DataField {
+	return []events.DataField{
+		{Key: "TranslationID", Value: importStatus.TranslationID},
+		{Key: "ImportID", Value: importStatus.ID},
+	}
 }

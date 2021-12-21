@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -36,17 +35,19 @@ type groupStore interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to
 // be shared with other clients needing to coordinate background jobs.
 type GroupSupervisor struct {
-	store      groupStore
-	instanceID string
-	logger     log.FieldLogger
+	store          groupStore
+	eventsProducer eventProducer
+	instanceID     string
+	logger         log.FieldLogger
 }
 
 // NewGroupSupervisor creates a new GroupSupervisor.
-func NewGroupSupervisor(store groupStore, instanceID string, logger log.FieldLogger) *GroupSupervisor {
+func NewGroupSupervisor(store groupStore, eventsProducer eventProducer, instanceID string, logger log.FieldLogger) *GroupSupervisor {
 	return &GroupSupervisor{
-		store:      store,
-		instanceID: instanceID,
-		logger:     logger,
+		store:          store,
+		eventsProducer: eventsProducer,
+		instanceID:     instanceID,
+		logger:         logger,
 	}
 }
 
@@ -144,16 +145,9 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 		} else {
 			moved++
 
-			webhookPayload := &model.WebhookPayload{
-				Type:      model.TypeInstallation,
-				ID:        installation.ID,
-				NewState:  installation.State,
-				OldState:  oldState,
-				Timestamp: time.Now().UnixNano(),
-			}
-			err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+			err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 			if err != nil {
-				logger.WithError(err).Error("Unable to process and send webhooks")
+				logger.WithError(err).Error("Failed to create installation state change event")
 			}
 		}
 		installationLock.Unlock()

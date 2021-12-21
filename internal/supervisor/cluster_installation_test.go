@@ -7,6 +7,8 @@ package supervisor_test
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
+
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
@@ -83,7 +85,14 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockClusterInstallationStore{}
 
-		supervisor := supervisor.NewClusterInstallationSupervisor(mockStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterInstallationSupervisor(
+			mockStore,
+			&mockClusterInstallationProvisioner{},
+			&mockAWS{},
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -108,7 +117,14 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		}
 		mockStore.ClusterInstallation = mockStore.UnlockedClusterInstallationsPendingWork[0]
 
-		supervisor := supervisor.NewClusterInstallationSupervisor(mockStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterInstallationSupervisor(
+			mockStore,
+			&mockClusterInstallationProvisioner{},
+			&mockAWS{},
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -140,7 +156,14 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			t.Run(tc.Description, func(t *testing.T) {
 				logger := testlib.MakeLogger(t)
 				sqlStore := store.MakeTestSQLStore(t, logger)
-				supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+				supervisor := supervisor.NewClusterInstallationSupervisor(
+					sqlStore,
+					&mockClusterInstallationProvisioner{},
+					&mockAWS{},
+					testutil.SetupTestEventsProducer(sqlStore, logger),
+					"instanceID",
+					logger,
+				)
 
 				installation := &model.Installation{}
 				err := sqlStore.CreateInstallation(installation, nil)
@@ -175,7 +198,14 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			t.Run(tc.Description, func(t *testing.T) {
 				logger := testlib.MakeLogger(t)
 				sqlStore := store.MakeTestSQLStore(t, logger)
-				supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+				supervisor := supervisor.NewClusterInstallationSupervisor(
+					sqlStore,
+					&mockClusterInstallationProvisioner{},
+					&mockAWS{},
+					testutil.SetupTestEventsProducer(sqlStore, logger),
+					"instanceID",
+					logger,
+				)
 
 				cluster := &model.Cluster{}
 				err := sqlStore.CreateCluster(cluster, nil)
@@ -199,7 +229,14 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 	t.Run("cannot delete when backup is running", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterInstallationSupervisor(
+			sqlStore,
+			&mockClusterInstallationProvisioner{},
+			&mockAWS{},
+			testutil.SetupTestEventsProducer(sqlStore, logger),
+			"instanceID",
+			logger,
+		)
 
 		cluster := &model.Cluster{}
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -245,7 +282,14 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			t.Run(tc.Description, func(t *testing.T) {
 				logger := testlib.MakeLogger(t)
 				sqlStore := store.MakeTestSQLStore(t, logger)
-				supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+				supervisor := supervisor.NewClusterInstallationSupervisor(
+					sqlStore,
+					&mockClusterInstallationProvisioner{},
+					&mockAWS{},
+					testutil.SetupTestEventsProducer(sqlStore, logger),
+					"instanceID",
+					logger,
+				)
 
 				cluster := &model.Cluster{}
 				err := sqlStore.CreateCluster(cluster, nil)
@@ -273,7 +317,14 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 	t.Run("state has changed since cluster installation was selected to be worked on", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewClusterInstallationSupervisor(sqlStore, &mockClusterInstallationProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterInstallationSupervisor(
+			sqlStore,
+			&mockClusterInstallationProvisioner{},
+			&mockAWS{},
+			testutil.SetupTestEventsProducer(sqlStore, logger),
+			"instanceID",
+			logger,
+		)
 
 		cluster := &model.Cluster{}
 		err := sqlStore.CreateCluster(cluster, nil)

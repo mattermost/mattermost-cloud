@@ -51,13 +51,13 @@ type restoreOperator interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type InstallationDBRestorationSupervisor struct {
-	store       installationDBRestorationStore
-	aws         aws.AWS
-	instanceID  string
-	environment string
-	logger      log.FieldLogger
-
+	store           installationDBRestorationStore
+	aws             aws.AWS
+	instanceID      string
+	environment     string
+	logger          log.FieldLogger
 	restoreOperator restoreOperator
+	eventsProducer  eventProducer
 }
 
 // NewInstallationDBRestorationSupervisor creates a new InstallationDBRestorationSupervisor.
@@ -65,12 +65,14 @@ func NewInstallationDBRestorationSupervisor(
 	store installationDBRestorationStore,
 	aws aws.AWS,
 	restoreOperator restoreOperator,
+	eventsProducer eventProducer,
 	instanceID string,
 	logger log.FieldLogger) *InstallationDBRestorationSupervisor {
 	return &InstallationDBRestorationSupervisor{
 		store:           store,
 		aws:             aws,
 		restoreOperator: restoreOperator,
+		eventsProducer:  eventsProducer,
 		instanceID:      instanceID,
 		environment:     aws.GetCloudEnvironmentName(),
 		logger:          logger,
@@ -284,18 +286,9 @@ func (s *InstallationDBRestorationSupervisor) finalizeRestoration(restoration *m
 		return restoration.State
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.environment},
-	}
-
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return model.InstallationDBRestorationStateSucceeded
@@ -317,18 +310,9 @@ func (s *InstallationDBRestorationSupervisor) failRestoration(restoration *model
 		return restoration.State
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  installation.State,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": s.environment},
-	}
-
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return model.InstallationDBRestorationStateFailed

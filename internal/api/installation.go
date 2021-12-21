@@ -6,14 +6,12 @@ package api
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
 
 	"github.com/gorilla/mux"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -215,17 +213,9 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installation.ID,
-		NewState:  model.InstallationStateCreationRequested,
-		OldState:  "n/a",
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installation.DNS, "Environment": c.Environment},
-	}
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(&installation, model.NonApplicableState)
 	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	groupUnlockOnce()
@@ -306,17 +296,9 @@ func handleUpdateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 			return
 		}
 
-		webhookPayload := &model.WebhookPayload{
-			Type:      model.TypeInstallation,
-			ID:        installationDTO.ID,
-			NewState:  newState,
-			OldState:  oldState,
-			Timestamp: time.Now().UnixNano(),
-			ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-		}
-		err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+		err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
 		if err != nil {
-			c.Logger.WithError(err).Error("Unable to process and send webhooks")
+			c.Logger.WithError(err).Error("Failed to create installation state change event")
 		}
 	}
 
@@ -506,17 +488,9 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installationDTO.ID,
-		NewState:  newState,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-	}
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
 	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	unlockOnce()
@@ -658,14 +632,7 @@ func updateInstallationState(c *Context, installationDTO *model.InstallationDTO,
 		return nil
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeInstallation,
-		ID:        installationDTO.ID,
-		NewState:  newState,
-		OldState:  installationDTO.State,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"DNS": installationDTO.DNS, "Environment": c.Environment},
-	}
+	oldState := installationDTO.State
 	installationDTO.State = newState
 
 	err := c.Store.UpdateInstallationState(installationDTO.Installation)
@@ -673,9 +640,9 @@ func updateInstallationState(c *Context, installationDTO *model.InstallationDTO,
 		return err
 	}
 
-	err = webhook.SendToAllWebhooks(c.Store, webhookPayload, c.Logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
 	if err != nil {
-		c.Logger.WithError(err).Error("Unable to process and send webhooks")
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	return nil

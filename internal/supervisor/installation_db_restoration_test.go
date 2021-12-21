@@ -135,7 +135,7 @@ func TestInstallationDBRestorationSupervisor_Do(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockRestorationStore{}
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(mockStore, &mockAWS{}, &mockRestoreProvisioner{}, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(mockStore, &mockAWS{}, &mockRestoreProvisioner{}, nil, "instanceID", logger)
 		err := restorationSupervisor.Do()
 		require.NoError(t, err)
 
@@ -160,7 +160,14 @@ func TestInstallationDBRestorationSupervisor_Do(t *testing.T) {
 			UnlockChan:                       make(chan interface{}),
 		}
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(mockStore, &mockAWS{}, &mockRestoreProvisioner{}, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
+			mockStore,
+			&mockAWS{},
+			&mockRestoreProvisioner{},
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		err := restorationSupervisor.Do()
 		require.NoError(t, err)
 
@@ -189,7 +196,14 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
 		require.NoError(t, err)
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(sqlStore, &mockAWS{}, mockRestoreOp, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			mockRestoreOp,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		restorationSupervisor.Supervise(restorationOp)
 
 		// Assert
@@ -246,7 +260,14 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 				err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
 				require.NoError(t, err)
 
-				restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(sqlStore, &mockAWS{}, testCase.mockRestoreOp, "instanceID", logger)
+				restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
+					sqlStore,
+					&mockAWS{},
+					testCase.mockRestoreOp,
+					&mockEventProducer{},
+					"instanceID",
+					logger,
+				)
 				restorationSupervisor.Supervise(restorationOp)
 
 				// Assert
@@ -277,7 +298,14 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
 		require.NoError(t, err)
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(sqlStore, &mockAWS{}, mockRestoreOp, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			mockRestoreOp,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		restorationSupervisor.Supervise(restorationOp)
 
 		// Assert
@@ -309,7 +337,14 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
 		require.NoError(t, err)
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(sqlStore, &mockAWS{}, mockRestoreOp, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			mockRestoreOp,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		restorationSupervisor.Supervise(restorationOp)
 
 		// Assert
@@ -340,7 +375,14 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
 		require.NoError(t, err)
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(sqlStore, &mockAWS{}, mockRestoreOp, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
+			sqlStore,
+			&mockAWS{},
+			mockRestoreOp,
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		restorationSupervisor.Supervise(restorationOp)
 
 		// Assert

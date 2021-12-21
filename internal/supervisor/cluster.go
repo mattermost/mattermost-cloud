@@ -5,10 +5,7 @@
 package supervisor
 
 import (
-	"time"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
@@ -42,21 +39,23 @@ type clusterProvisioner interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type ClusterSupervisor struct {
-	store       clusterStore
-	provisioner clusterProvisioner
-	aws         aws.AWS
-	instanceID  string
-	logger      log.FieldLogger
+	store          clusterStore
+	provisioner    clusterProvisioner
+	aws            aws.AWS
+	eventsProducer eventProducer
+	instanceID     string
+	logger         log.FieldLogger
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, aws aws.AWS, instanceID string, logger log.FieldLogger) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger) *ClusterSupervisor {
 	return &ClusterSupervisor{
-		store:       store,
-		provisioner: clusterProvisioner,
-		aws:         aws,
-		instanceID:  instanceID,
-		logger:      logger,
+		store:          store,
+		provisioner:    clusterProvisioner,
+		aws:            aws,
+		eventsProducer: eventProducer,
+		instanceID:     instanceID,
+		logger:         logger,
 	}
 }
 
@@ -129,17 +128,9 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 		return
 	}
 
-	webhookPayload := &model.WebhookPayload{
-		Type:      model.TypeCluster,
-		ID:        cluster.ID,
-		NewState:  newState,
-		OldState:  oldState,
-		Timestamp: time.Now().UnixNano(),
-		ExtraData: map[string]string{"Environment": s.aws.GetCloudEnvironmentName()},
-	}
-	err = webhook.SendToAllWebhooks(s.store, webhookPayload, logger.WithField("webhookEvent", webhookPayload.NewState))
+	err = s.eventsProducer.ProduceClusterStateChangeEvent(cluster, oldState)
 	if err != nil {
-		logger.WithError(err).Error("Unable to process and send webhooks")
+		logger.WithError(err).Error("Failed to create cluster state change event")
 	}
 
 	logger.Debugf("Transitioned cluster from %s to %s", oldState, newState)

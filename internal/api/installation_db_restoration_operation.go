@@ -64,7 +64,7 @@ func handleTriggerInstallationDBRestoration(c *Context, w http.ResponseWriter, r
 		return
 	}
 
-	dbRestoration, err := common.TriggerInstallationDBRestoration(c.Store, installationDTO.Installation, backup, c.Environment, c.Logger)
+	dbRestoration, err := common.TriggerInstallationDBRestoration(c.Store, installationDTO.Installation, backup, c.EventProducer, c.Environment, c.Logger)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to trigger installation db restoration")
 		w.WriteHeader(common.ErrToStatus(err))

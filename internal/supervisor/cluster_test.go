@@ -7,6 +7,8 @@ package supervisor_test
 import (
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
+
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -95,7 +97,14 @@ func TestClusterSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockClusterStore{}
 
-		supervisor := supervisor.NewClusterSupervisor(mockStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterSupervisor(
+			mockStore,
+			&mockClusterProvisioner{},
+			&mockAWS{},
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -113,7 +122,14 @@ func TestClusterSupervisorDo(t *testing.T) {
 		mockStore.Cluster = mockStore.UnlockedClustersPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewClusterSupervisor(mockStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterSupervisor(
+			mockStore,
+			&mockClusterProvisioner{},
+			&mockAWS{},
+			&mockEventProducer{},
+			"instanceID",
+			logger,
+		)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -141,7 +157,14 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		t.Run(tc.Description, func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
-			supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
+			supervisor := supervisor.NewClusterSupervisor(
+				sqlStore,
+				&mockClusterProvisioner{},
+				&mockAWS{},
+				testutil.SetupTestEventsProducer(sqlStore, logger),
+				"instanceID",
+				logger,
+			)
 
 			cluster := &model.Cluster{
 				Provider:                model.ProviderAWS,
@@ -162,7 +185,14 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 	t.Run("state has changed since cluster was selected to be worked on", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
-		supervisor := supervisor.NewClusterSupervisor(sqlStore, &mockClusterProvisioner{}, &mockAWS{}, "instanceID", logger)
+		supervisor := supervisor.NewClusterSupervisor(
+			sqlStore,
+			&mockClusterProvisioner{},
+			&mockAWS{},
+			testutil.SetupTestEventsProducer(sqlStore, logger),
+			"instanceID",
+			logger,
+		)
 
 		cluster := &model.Cluster{
 			Provider: model.ProviderAWS,
