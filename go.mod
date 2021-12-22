@@ -14,7 +14,7 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
 	github.com/mattermost/awat v0.0.0-20210616202500-f0bdd4f43f90
-	github.com/mattermost/mattermost-operator v1.16.0
+	github.com/mattermost/mattermost-operator v1.17.0
 	github.com/mattermost/rotator v0.2.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
