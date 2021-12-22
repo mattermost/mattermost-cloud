@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: mattermost-operator
+    name: mattermost-operator
+  name: mattermost-operator
+  namespace: mattermost-operator
+spec:
+  ports:
+  - name: metrics
+    port: 8383
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    name: mattermost-operator
+  type: ClusterIP
+status:
+  loadBalancer: {}

@@ -1042,8 +1042,8 @@ github.com/mattermost/ldap v0.0.0-20191128190019-9f62ba4b8d4d/go.mod h1:HLbgMEI5
 github.com/mattermost/ldap v3.0.4+incompatible/go.mod h1:b4reDCcGpBxJ4WX0f224KFY+OR0npin7or7EFpeIko4=
 github.com/mattermost/mattermost-cloud v0.39.0/go.mod h1:GbWfZajyp+DvdEpoNfFeJ3ZplwTtDV9pl6PhNnp+wq4=
 github.com/mattermost/mattermost-operator v1.12.0/go.mod h1:a6pSJI6bDaIfO65M/Hvuqg8kUNYQQYDHLayoT5XZx5o=
-github.com/mattermost/mattermost-operator v1.16.0 h1:RZzuVdwVGBK3V2U3cBg4ZcvKiyU53gW8OynqYVDfDiU=
-github.com/mattermost/mattermost-operator v1.16.0/go.mod h1:pUS6pyAiW7511k9vH+9gLpo/KpHkDQfwRHTziVUmaCg=
+github.com/mattermost/mattermost-operator v1.17.0 h1:xd4wUUy1L3NqujcM4MLjhMpnNVfgewhq901uwOjbGxA=
+github.com/mattermost/mattermost-operator v1.17.0/go.mod h1:dkHtdbd6Frq6gnjiQCYOXG2p/1L2BtGPhH1CWBQg8kE=
 github.com/mattermost/mattermost-server/v5 v5.23.0/go.mod h1:nMrt08IvThjybZpXPe/nqe/oJuvJxhqKkGI+m7M0R00=
 github.com/mattermost/mmetl v0.0.2-0.20210316151859-38824e5f5efd/go.mod h1:w6GNqrudkzs/GddfgqkgUqsXVQ/4ImK5JJfNj5KJeUQ=
 github.com/mattermost/rotator v0.2.0 h1:R3dlMHZjGR7t5T2bk76heDwpypl9rd2sZj4GoAZyuWU=
