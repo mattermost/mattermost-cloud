@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+// +build e2e
 
 package workflow
 

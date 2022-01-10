@@ -65,6 +65,26 @@ func WaitForStable(client *model.Client, installationID string, log logrus.Field
 	return err
 }
 
+// WaitForInstallationDeletion waits until Installation reaches Deleted state.
+func WaitForInstallationDeletion(client *model.Client, installationID string, log logrus.FieldLogger) error {
+	err := WaitForFunc(NewWaitConfig(5*time.Minute, 10*time.Second, 2, log), func() (bool, error) {
+		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{})
+		if err != nil {
+			return false, errors.Wrap(err, "while waiting for deletion")
+		}
+
+		if installation.State == model.InstallationStateDeleted {
+			return true, nil
+		}
+		log.Infof("Installation %s not deleted: %s", installationID, installation.State)
+		if installation.State == model.InstallationStateDeletionFailed {
+			return false, errors.New("installation deletion failed")
+		}
+		return false, nil
+	})
+	return err
+}
+
 // PingInstallation hits Mattermost ping endpoint.
 func PingInstallation(dns string) error {
 	resp, err := http.Get(pingURL(dns))
@@ -80,3 +100,4 @@ func PingInstallation(dns string) error {
 func pingURL(dns string) string {
 	return fmt.Sprintf("https://%s/api/v4/system/ping", dns)
 }
+

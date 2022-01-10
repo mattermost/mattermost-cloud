@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/e2e/workflow"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,24 +24,32 @@ func Test_ClusterLifecycle(t *testing.T) {
 
 	test, err := SetupClusterLifecycleTest()
 	require.NoError(t, err)
-	if test.Cleanup {
-		defer func() {
-			err := test.ClusterSuite.DeleteCluster(context.Background())
-			if err != nil {
-				test.Logger.WithError(err).Error("Error cleaning up cluster")
-			}
-			err = test.InstallationSuite.Cleanup(context.Background())
-			if err != nil {
-				test.Logger.WithError(err).Error("Error cleaning up installation")
-			}
-		}()
-	}
 	// Always cleanup webhook
 	defer func() {
 		err := test.WebhookCleanup()
 		assert.NoError(t, err)
 	}()
+	if test.Cleanup {
+		defer func() {
+			err = test.InstallationSuite.Cleanup(context.Background())
+			if err != nil {
+				test.Logger.WithError(err).Error("Error cleaning up installation")
+			}
+			err := test.ClusterSuite.DeleteCluster(context.Background())
+			if err != nil {
+				test.Logger.WithError(err).Error("Error cleaning up cluster")
+			}
+		}()
+	}
+	err = test.EventsRecorder.Start(test.ProvisionerClient)
+	require.NoError(t, err)
+	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
 
 	err = test.Run()
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
+	// Make sure that expected events occurred in correct order.
+	expectedEvents := workflow.GetExpectedEvents(test.Steps)
+	err = test.EventsRecorder.VerifyInOrder(expectedEvents)
+	require.NoError(t, err)
 }

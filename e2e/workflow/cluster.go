@@ -2,12 +2,14 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+// +build e2e
 
 package workflow
 
 import (
 	"context"
+
+	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -60,7 +62,19 @@ func (w *ClusterSuite) CreateCluster(ctx context.Context) error {
 		w.Meta.ClusterID = cluster.ID
 	}
 
-	err := pkg.WaitForClusterToBeStable(ctx, w.Meta.ClusterID, w.whChan, w.logger)
+	// Make sure cluster not ready or failed - otherwise we will hang on webhook
+	cluster, err := w.client.GetCluster(w.Meta.ClusterID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get cluster")
+	}
+	if cluster.State == model.ClusterStateStable {
+		return nil
+	}
+	if cluster.State == model.ClusterStateCreationFailed || cluster.State == model.ClusterStateProvisioningFailed {
+		return errors.New("cluster creation failed")
+	}
+
+	err = pkg.WaitForClusterToBeStable(ctx, w.Meta.ClusterID, w.whChan, w.logger)
 	if err != nil {
 		return errors.Wrap(err, "while waiting for cluster creation")
 	}
@@ -96,4 +110,61 @@ func (w *ClusterSuite) DeleteCluster(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// ClusterCreationEvents returns expected events that should occur while creating the cluster.
+// This method should be called only after executing the workflow so that IDs are not empty.
+func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
+	return []eventstest.EventOccurrence{
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     "n/a",
+			NewState:     model.ClusterStateCreationRequested,
+		},
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateCreationRequested,
+			NewState:     model.ClusterStateStable,
+		},
+	}
+}
+
+// ClusterReprovisionEvents returns expected events that should occur while reprovisioning the cluster.
+// This method should be called only after executing the workflow so that IDs are not empty.
+func (w *ClusterSuite) ClusterReprovisionEvents() []eventstest.EventOccurrence {
+	return []eventstest.EventOccurrence{
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateStable,
+			NewState:     model.ClusterStateProvisioningRequested,
+		},
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateProvisioningRequested,
+			NewState:     model.ClusterStateStable,
+		},
+	}
+}
+
+// ClusterDeletionEvents returns expected events that should occur while deleting the cluster.
+// This method should be called only after executing the workflow so that IDs are not empty.
+func (w *ClusterSuite) ClusterDeletionEvents() []eventstest.EventOccurrence {
+	return []eventstest.EventOccurrence{
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateStable,
+			NewState:     model.ClusterStateDeletionRequested,
+		},
+		{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateDeletionRequested,
+			NewState:     model.ClusterStateDeleted,
+		},
+	}
 }

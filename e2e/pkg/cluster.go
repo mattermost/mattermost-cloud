@@ -14,6 +14,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	ClusterProvisioningFailedStates = []string{model.ClusterStateCreationFailed, model.ClusterStateProvisioningFailed}
+)
+
+
 // WaitForClusterToBeStable waits until Cluster reaches Stable state.
 func WaitForClusterToBeStable(ctx context.Context, clusterID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
 	waitCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
@@ -21,9 +26,9 @@ func WaitForClusterToBeStable(ctx context.Context, clusterID string, whChan <-ch
 
 	whWaiter := webhookWaiter{
 		whChan:        whChan,
-		resourceType:  model.TypeCluster,
+		resourceType:  model.TypeCluster.String(),
 		desiredState:  model.ClusterStateStable,
-		failureStates: []string{model.ClusterStateCreationFailed, model.ClusterStateProvisioningFailed},
+		failureStates: ClusterProvisioningFailedStates,
 		logger: log.WithFields(map[string]interface{}{
 			"cluster":       clusterID,
 			"desired-state": model.ClusterStateStable,
@@ -40,7 +45,7 @@ func WaitForClusterDeletion(ctx context.Context, clusterID string, whChan <-chan
 
 	whWaiter := webhookWaiter{
 		whChan:        whChan,
-		resourceType:  model.TypeCluster,
+		resourceType:  model.TypeCluster.String(),
 		desiredState:  model.ClusterStateDeleted,
 		failureStates: []string{model.ClusterStateDeletionFailed},
 		logger: log.WithFields(map[string]interface{}{

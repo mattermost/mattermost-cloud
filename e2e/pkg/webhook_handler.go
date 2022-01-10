@@ -20,12 +20,12 @@ import (
 )
 
 // SetupTestWebhook sets up webhook used by test.
-func SetupTestWebhook(client *model.Client, address, testID string, logger logrus.FieldLogger) (<-chan *model.WebhookPayload, func() error, error) {
+func SetupTestWebhook(client *model.Client, address, owner string, logger logrus.FieldLogger) (<-chan *model.WebhookPayload, func() error, error) {
 	whURL, err := url.Parse(address)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to parse webhook address")
 	}
-	wh, err := registerWebhook(client, address, fmt.Sprintf("e2e-test-%s", testID))
+	wh, err := registerWebhook(client, address, owner)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to register webhook")
 	}
@@ -118,13 +118,13 @@ func (s *webhookWaiter) waitForState(ctx context.Context, id string) error {
 	for {
 		select {
 		case payload := <-s.whChan:
-			if payload.Type != s.resourceType || payload.ID != id {
+			if payload.Type.String() != s.resourceType || payload.ID != id {
 				continue
 			}
 			if payload.NewState == s.desiredState {
 				return nil
 			}
-			if contains(payload.NewState, s.failureStates) {
+			if Contains(payload.NewState, s.failureStates) {
 				return errors.Errorf("error waiting for state: resource reached a failure state %q", payload.NewState)
 			}
 			s.logger.Infof("Resource %q with ID %q transitioned to %q", s.resourceType, id, payload.NewState)
@@ -134,7 +134,7 @@ func (s *webhookWaiter) waitForState(ctx context.Context, id string) error {
 	}
 }
 
-func contains(s string, all []string) bool {
+func Contains(s string, all []string) bool {
 	for _, str := range all {
 		if s == str {
 			return true
