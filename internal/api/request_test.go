@@ -32,7 +32,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"prometheus-operator":               {Chart: "18.0.3", ValuesPath: ""},
 				"thanos":                            {Chart: "5.2.1", ValuesPath: ""},
 				"teleport-kube-agent":               {Chart: "6.2.8", ValuesPath: ""},
-				"pgbouncer":                         {Chart: "1.2.0", ValuesPath: ""},
+				"pgbouncer":                         {Chart: "1.15.0", ValuesPath: ""},
 				"stackrox-secured-cluster-services": {Chart: "65.1.0", ValuesPath: ""},
 				"kubecost":                          {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector":             {Chart: "2.0.5", ValuesPath: ""},
