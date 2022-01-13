@@ -24,6 +24,8 @@ import (
 func Test_ProduceAndDeliverEvents(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
 	instanceID := model.NewID()
 
 	installation := &model.Installation{

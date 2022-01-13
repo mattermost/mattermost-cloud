@@ -590,6 +590,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("unexpected state", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -640,6 +642,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("state has changed since installation was selected to be worked on", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -686,6 +690,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, no clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -724,6 +730,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, cluster doesn't allow scheduling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -767,6 +775,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, no empty clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -818,6 +828,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -869,6 +881,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -920,6 +934,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation DNS, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -971,6 +987,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1022,6 +1040,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations stable, in group with different sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1086,6 +1105,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("pre provisioning requested, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1137,6 +1157,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1188,6 +1209,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1239,6 +1261,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1290,6 +1313,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations stable, in group with same sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1361,6 +1385,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation in progress, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1412,6 +1437,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation final tasks, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1463,6 +1489,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, no clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1501,6 +1528,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, no available clusters", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1552,6 +1580,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("no compatible clusters, cluster installations not yet created, available cluster", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1594,6 +1623,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1645,6 +1675,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations stable, in group with different sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1709,6 +1740,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1760,6 +1792,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations reconciling, in group with different sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1824,6 +1857,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1875,6 +1909,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("update requested, cluster installations stable, in group with same sequence", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -1949,6 +1984,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("hibernation requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2000,6 +2036,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("hibernation in progress, cluster installations reconciling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2051,6 +2088,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("hibernation in progress, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2102,6 +2140,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("wake up requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2153,6 +2192,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2204,6 +2244,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations deleting", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2255,6 +2296,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion in progress, cluster installations failed", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2306,6 +2348,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, cluster installations failed, so retry", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2357,6 +2400,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, delete backups", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2418,6 +2462,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("deletion requested, delete migrations and restorations", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2489,6 +2534,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations deleted", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
@@ -2541,6 +2587,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, available cluster", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewInstallationSupervisor(
 				sqlStore,
 				&mockInstallationProvisioner{},
@@ -2584,6 +2631,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, 3 installations, available cluster", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewInstallationSupervisor(
 				sqlStore,
 				&mockInstallationProvisioner{},
@@ -2631,6 +2679,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, 1 isolated and 1 multitenant, available cluster", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewInstallationSupervisor(
 				sqlStore,
 				&mockInstallationProvisioner{},
@@ -2694,6 +2743,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		t.Run("creation requested, cluster installations not yet created, insufficient cluster resources", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
+
 			mockInstallationProvisioner := &mockInstallationProvisioner{
 				UseCustomClusterResources: true,
 				CustomClusterResources: &k8s.ClusterResources{
@@ -2747,6 +2798,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, insufficient cluster resources, but scale", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		mockInstallationProvisioner := &mockInstallationProvisioner{
 			UseCustomClusterResources: true,
 			CustomClusterResources: &k8s.ClusterResources{
@@ -2800,6 +2853,8 @@ func TestInstallationSupervisor(t *testing.T) {
 	t.Run("creation requested, cluster installations not yet created, use balanced installation scheduling", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
 		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,

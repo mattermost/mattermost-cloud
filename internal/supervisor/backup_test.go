@@ -173,6 +173,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("trigger backup", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		mockBackupOp := &mockBackupProvisioner{}
 
 		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
@@ -198,6 +199,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("do not trigger backup if installation not hibernated", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		mockBackupOp := &mockBackupProvisioner{}
 
 		installation, _ := setupBackupRequiredResources(t, sqlStore)
@@ -224,6 +226,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("set backup as failed if installation deleted", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		mockBackupOp := &mockBackupProvisioner{}
 
 		backupMeta := &model.InstallationBackup{
@@ -272,6 +275,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 			t.Run(testCase.description, func(t *testing.T) {
 				logger := testlib.MakeLogger(t)
 				sqlStore := store.MakeTestSQLStore(t, logger)
+				defer store.CloseConnection(t, sqlStore)
 
 				installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
 
@@ -301,6 +305,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("cleanup backup", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		mockBackupOp := &mockBackupProvisioner{}
 
 		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
@@ -336,6 +341,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 	t.Run("full backup lifecycle", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		mockBackupOp := &mockBackupProvisioner{}
 
 		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
