@@ -165,6 +165,7 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("no installations", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewGroupSupervisor(
 			sqlStore,
 			&mockEventProducer{},
@@ -183,6 +184,7 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("one installation, stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewGroupSupervisor(
 			sqlStore,
 			&mockEventProducer{},
@@ -216,6 +218,7 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("three installations, stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewGroupSupervisor(
 			sqlStore,
 			&mockEventProducer{},
@@ -276,6 +279,7 @@ func TestGroupSupervisor(t *testing.T) {
 	t.Run("one installation, not stable", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewGroupSupervisor(
 			sqlStore,
 			&mockEventProducer{},
@@ -310,6 +314,7 @@ func TestGroupSupervisor(t *testing.T) {
 		t.Run("two installations, stable", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewGroupSupervisor(
 				sqlStore,
 				&mockEventProducer{},
@@ -358,6 +363,7 @@ func TestGroupSupervisor(t *testing.T) {
 		t.Run("two installations, one stable", func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewGroupSupervisor(
 				sqlStore,
 				&mockEventProducer{},

@@ -23,6 +23,8 @@ import (
 func TestDelivery_Workers(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
 	instanceID := model.NewID()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -48,6 +50,8 @@ func TestDelivery_Workers(t *testing.T) {
 func TestDelivery_WorkersRetrying(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
 	instanceID := model.NewID()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -109,6 +113,8 @@ func TestDelivery_SignalNewEvents(t *testing.T) {
 		t.Run(testCase.description, func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
+
 			instanceID := model.NewID()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -137,6 +143,8 @@ func TestDelivery_SignalNewEvents(t *testing.T) {
 func TestDelivery_GiveUpWhenThresholdReached(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
 	instanceID := model.NewID()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

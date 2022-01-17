@@ -157,6 +157,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		t.Run(tc.Description, func(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
+			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewClusterSupervisor(
 				sqlStore,
 				&mockClusterProvisioner{},
@@ -185,6 +186,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 	t.Run("state has changed since cluster was selected to be worked on", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewClusterSupervisor(
 			sqlStore,
 			&mockClusterProvisioner{},
