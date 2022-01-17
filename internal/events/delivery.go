@@ -101,15 +101,16 @@ func (d *EventDeliverer) SignalNewEvents(eventType model.EventType) {
 	// until all subscriptions subscribed to the event where attempted
 	// or a worker did not find any subscription to process.
 	semaphore := make(chan token, d.config.MaxBurstWorkers)
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 	wg := &sync.WaitGroup{}
 
+loop:
 	for i := int64(0); i < burst; i++ {
 		// In case any of burst workers did not find any more work stop early.
 		select {
 		case <-done:
 			d.logger.Debug("No more subscriptions to process, stopping burst early")
-			break
+			break loop
 		default:
 			semaphore <- token{}
 		}
@@ -122,23 +123,17 @@ func (d *EventDeliverer) SignalNewEvents(eventType model.EventType) {
 			}()
 
 			if !d.newWorker().ProcessUpToDateOnce() {
-				closeIfOpen(done)
+				select {
+				case done <- struct{}{}:
+				default:
+					return
+				}
 			}
 		}()
 	}
-	wg.Wait()
 	close(semaphore)
-
-	// Make sure done channel was closed
-	closeIfOpen(done)
-}
-
-func closeIfOpen(c chan struct{}) {
-	select {
-	case <-c:
-	default:
-		close(c)
-	}
+	wg.Wait()
+	close(done)
 }
 
 // sender is a helper struct for separation of logic.
