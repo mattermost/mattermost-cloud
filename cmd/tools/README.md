@@ -41,3 +41,28 @@ Example:
 ```
 export CWL_PORT=9001
 ```
+
+
+## Event Listener
+
+Event listener is similar to CWL but instead of webhooks it listens for Events.
+
+Event listener registers subscription if it does not already exist and starts to listen for events.
+
+Events are printed to stdout in JSON format.
+
+### Running event listener
+
+```bash
+go run ./cmd/tools/event-listener
+```
+
+### Configuration
+
+If you want to run multiple event listeners configure them to use different ports 
+and subscription owners with environment variables.
+- `EVENTS_PORT` - configures listener port (default `8099`)
+- `SUB_OWNER` - owner of the subscription (default `local-event-listener`)
+
+By default, subscription will be deleted when you stop the event listener.
+You can keep it around by setting `CLEANUP_SUB` to `false`.
