@@ -2,12 +2,14 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+// +build e2e
 
 package workflow
 
 import (
 	"context"
+
+	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -199,6 +201,10 @@ func (w *InstallationSuite) Cleanup(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "while getting installation to wake up")
 	}
+	if installation == nil {
+		w.logger.Info("installation never created")
+		return nil
+	}
 	if installation.State == model.InstallationStateDeleted {
 		w.logger.Info("installation already deleted")
 		return nil
@@ -215,5 +221,81 @@ func (w *InstallationSuite) Cleanup(ctx context.Context) error {
 		return errors.Wrap(err, "while requesting installation removal")
 	}
 
+	err = pkg.WaitForInstallationDeletion(w.client, installation.ID, w.logger)
+	if err != nil {
+		return errors.Wrap(err, "while waiting for installation deletion")
+	}
+
 	return nil
+}
+
+func (w *InstallationSuite) InstallationCreationEvents() []eventstest.EventOccurrence {
+	return []eventstest.EventOccurrence{
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     "n/a",
+			NewState:     model.InstallationStateCreationRequested,
+		},
+		{
+			ResourceType: model.TypeClusterInstallation.String(),
+			ResourceID:   w.Meta.ClusterInstallationID,
+			OldState:     "n/a",
+			NewState:     model.ClusterInstallationStateCreationRequested,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateCreationRequested,
+			NewState:     model.InstallationStateCreationInProgress,
+		},
+		{
+			ResourceType: model.TypeClusterInstallation.String(),
+			ResourceID:   w.Meta.ClusterInstallationID,
+			OldState:     model.ClusterInstallationStateCreationRequested,
+			NewState:     model.ClusterInstallationStateReconciling,
+		},
+		{
+			ResourceType: model.TypeClusterInstallation.String(),
+			ResourceID:   w.Meta.ClusterInstallationID,
+			OldState:     model.ClusterInstallationStateReconciling,
+			NewState:     model.ClusterInstallationStateStable,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateCreationInProgress,
+			NewState:     model.InstallationStateStable,
+		},
+	}
+}
+
+func (w *InstallationSuite) InstallationDeletionEvents() []eventstest.EventOccurrence {
+	return []eventstest.EventOccurrence{
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateStable,
+			NewState:     model.InstallationStateDeletionRequested,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateDeletionRequested,
+			NewState:     model.InstallationStateDeletionInProgress,
+		},
+		// TODO: Provisioner does not send webhook for CI - Stable -> DeletionRequested
+		{
+			ResourceType: model.TypeClusterInstallation.String(),
+			ResourceID:   w.Meta.ClusterInstallationID,
+			OldState:     model.ClusterInstallationStateDeletionRequested,
+			NewState:     model.ClusterInstallationStateDeleted,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateDeletionInProgress,
+			NewState:     model.InstallationStateDeleted,
+		},
+	}
 }

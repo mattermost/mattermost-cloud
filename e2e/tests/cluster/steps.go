@@ -13,14 +13,16 @@ import (
 func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuite *workflow.InstallationSuite) []*workflow.Step {
 	return []*workflow.Step{
 		{
-			Name:      "CreateCluster",
-			Func:      clusterSuite.CreateCluster,
-			DependsOn: []string{},
+			Name:              "CreateCluster",
+			Func:              clusterSuite.CreateCluster,
+			DependsOn:         []string{},
+			GetExpectedEvents: clusterSuite.ClusterCreationEvents,
 		},
 		{
-			Name:      "CreateInstallation",
-			Func:      installationSuite.CreateInstallation,
-			DependsOn: []string{"CreateCluster"},
+			Name:              "CreateInstallation",
+			Func:              installationSuite.CreateInstallation,
+			DependsOn:         []string{"CreateCluster"},
+			GetExpectedEvents: installationSuite.InstallationCreationEvents,
 		},
 		{
 			Name:      "GetCI",
@@ -33,9 +35,10 @@ func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuit
 			DependsOn: []string{"GetCI"},
 		},
 		{
-			Name:      "ProvisionCluster",
-			Func:      clusterSuite.ProvisionCluster,
-			DependsOn: []string{"PopulateSampleData"},
+			Name:              "ProvisionCluster",
+			Func:              clusterSuite.ProvisionCluster,
+			DependsOn:         []string{"PopulateSampleData"},
+			GetExpectedEvents: clusterSuite.ClusterReprovisionEvents,
 		},
 		{
 			Name:      "CheckInstallation",
@@ -43,14 +46,16 @@ func clusterLifecycleSteps(clusterSuite *workflow.ClusterSuite, installationSuit
 			DependsOn: []string{"ProvisionCluster"},
 		},
 		{
-			Name:      "DeleteInstallation",
-			Func:      installationSuite.Cleanup,
-			DependsOn: []string{"CheckInstallation"},
+			Name:              "DeleteInstallation",
+			Func:              installationSuite.Cleanup,
+			DependsOn:         []string{"CheckInstallation"},
+			GetExpectedEvents: installationSuite.InstallationDeletionEvents,
 		},
 		{
-			Name:      "DeleteCluster",
-			Func:      clusterSuite.DeleteCluster,
-			DependsOn: []string{"DeleteInstallation"},
+			Name:              "DeleteCluster",
+			Func:              clusterSuite.DeleteCluster,
+			DependsOn:         []string{"DeleteInstallation"},
+			GetExpectedEvents: clusterSuite.ClusterDeletionEvents,
 		},
 	}
 }

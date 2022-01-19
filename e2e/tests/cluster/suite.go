@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
+
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
@@ -29,15 +31,19 @@ type TestConfig struct {
 	InstallationFileStoreType string `envconfig:"default=minio-operator"`
 	Environment               string `envconfig:"default=dev"`
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
+	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
 	Cleanup                   bool   `envconfig:"default=true"`
 }
 
 // Test holds all data required for a db migration test.
 type Test struct {
 	Logger            logrus.FieldLogger
+	ProvisionerClient *model.Client
 	Workflow          *workflow.Workflow
+	Steps             []*workflow.Step
 	ClusterSuite      *workflow.ClusterSuite
 	InstallationSuite *workflow.InstallationSuite
+	EventsRecorder    *eventstest.EventsRecorder
 	WebhookCleanup    func() error
 	Cleanup           bool
 }
@@ -80,9 +86,11 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		return nil, err
 	}
 
+	subOwner := fmt.Sprintf("e2e-test-%s", testID)
+
 	// We need to be cautious with introducing some parallelism for tests especially on step level
 	// as webhook event will be delivered to only one channel.
-	webhookChan, cleanup, err := pkg.SetupTestWebhook(client, config.WebhookAddress, testID, logger)
+	webhookChan, cleanup, err := pkg.SetupTestWebhook(client, config.WebhookAddress, subOwner, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup webhook")
 	}
@@ -90,12 +98,19 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	clusterSuite := workflow.NewClusterSuite(clusterParams, config.Environment, client, webhookChan, logger)
 	installationSuite := workflow.NewInstallationSuite(installationParams, config.Environment, client, kubeClient, logger)
 
+	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
+
+	testWorkflowSteps := clusterLifecycleSteps(clusterSuite, installationSuite)
+
 	return &Test{
 		Logger:            logger,
+		ProvisionerClient: client,
 		WebhookCleanup:    cleanup,
-		Workflow:          workflow.NewWorkflow(clusterLifecycleSteps(clusterSuite, installationSuite)),
+		Workflow:          workflow.NewWorkflow(testWorkflowSteps),
+		Steps:             testWorkflowSteps,
 		ClusterSuite:      clusterSuite,
 		InstallationSuite: installationSuite,
+		EventsRecorder:    eventsRecorder,
 		Cleanup:           config.Cleanup,
 	}, nil
 }

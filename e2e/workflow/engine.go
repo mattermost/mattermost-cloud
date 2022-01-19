@@ -2,14 +2,15 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+// +build e2e
 
 package workflow
 
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -20,10 +21,11 @@ type StepFunc func(ctx context.Context) error
 
 // Step is a single step in a workflow.
 type Step struct {
-	Name      string
-	Func      StepFunc
-	Done      bool
-	DependsOn []string
+	Name              string
+	Func              StepFunc
+	Done              bool
+	DependsOn         []string
+	GetExpectedEvents func() []eventstest.EventOccurrence
 }
 
 // NewWorkflow creates new Workflow.
@@ -53,7 +55,6 @@ func RunWorkflow(workflow *Workflow, logger logrus.FieldLogger) error {
 		workflow: *workflow,
 		queue:    make([]Step, 0, len(workflow.Steps)),
 		inQueue:  make(map[string]bool, len(workflow.Steps)),
-		retries:  3,
 	}
 
 	err := runner.makeQueue()
@@ -71,13 +72,8 @@ func RunWorkflow(workflow *Workflow, logger logrus.FieldLogger) error {
 
 		logrus.Infof("Running step: %s", step.Name)
 		err := step.Func(ctx)
-		for i := 1; i < runner.retries && err != nil; i++ {
-			logger.WithError(err).Errorf("Step %s failed %d times, waiting 3 seconds before retry", step.Name, i)
-			time.Sleep(3 * time.Second)
-			err = step.Func(ctx)
-		}
 		if err != nil {
-			return errors.Wrapf(err, "Step %s failed %d times", step.Name, runner.retries)
+			return errors.Wrapf(err, "step %s failed", step.Name)
 		}
 		logger.Infof("Step %s finished successfully", step.Name)
 		workflow.Steps[step.Name].Done = true
@@ -89,7 +85,6 @@ func RunWorkflow(workflow *Workflow, logger logrus.FieldLogger) error {
 }
 
 type runner struct {
-	retries  int
 	queue    []Step
 	workflow Workflow
 	inQueue  map[string]bool
