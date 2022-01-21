@@ -25,6 +25,7 @@ func New() *CloudMetrics {
 				Name:    "mm_cloud_create_installation_duration_seconds",
 				Help:    "The duration of Installation creation tasks",
 				Buckets: prometheus.LinearBuckets(0, 30, 20),
-			}),
+			},
+		),
 	}
 }

@@ -136,7 +136,7 @@ func (s *ImportSupervisor) Do() error {
 
 	err = s.importTranslation(work)
 	if err != nil {
-		s.logger.WithError(err).Errorf("failed to perform work on Import %s", work.ID)
+		s.logger.WithError(err).Errorf("Failed to perform work on Import %s", work.ID)
 		workError := err.Error()
 		go func() {
 			for {
@@ -168,7 +168,12 @@ func (s *ImportSupervisor) Shutdown() {
 }
 
 func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
-	// get installation metadata
+	logger := s.logger.WithFields(logrus.Fields{
+		"import":       imprt.ID,
+		"installation": imprt.InstallationID,
+	})
+	logger.Info("Starting installation import")
+
 	installation, err := s.store.GetInstallation(imprt.InstallationID, false, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to look up Installation %s", imprt.InstallationID)
@@ -233,7 +238,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 			InstallationID: installation.ID,
 		})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to lookup cluster installation for cluster")
 	}
 
 	if len(clusterInstallations) < 1 {
@@ -243,22 +248,29 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 
 	cluster, err := s.store.GetCluster(ci.ClusterID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to lookup cluster for cluster installation")
 	}
 
 	// ensure that the Installation will be able to accept the import
 	mmctl := &mmctl{cluster: cluster, clusterInstallation: ci, ImportSupervisor: s}
 	err = s.ensureTeamSettings(mmctl, imprt)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to ensure team settings")
 	}
 
-	srcKey, err := s.copyImportToWorkspaceFilestore(imprt, installation)
+	srcKey, err := s.copyImportToWorkspaceFilestore(imprt, installation, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to copy workspace import archive to Installation %s filestore", installation.ID)
 	}
 
-	return s.startImportProcessAndWait(mmctl, srcKey, imprt.ID)
+	err = s.startImportProcessAndWait(mmctl, logger, srcKey, imprt.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to complete import process")
+	}
+
+	logger.Info("Installation import job complete")
+
+	return nil
 }
 
 func (s *ImportSupervisor) teamAlreadyExists(mmctl *mmctl, teamName string) (bool, error) {
@@ -332,7 +344,7 @@ func (s *ImportSupervisor) getBucketForInstallation(installation *model.Installa
 // copyImportToWorkspaceFilestorecopies the archive from the AWAT's bucket to the Installation's
 // bucket. Returns the key of the archive in the source bucket or an
 // error
-func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStatus, installation *model.Installation) (string, error) {
+func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStatus, installation *model.Installation, logger logrus.FieldLogger) (string, error) {
 	// calculate necessary paths and copy the archive to the Installation's S3 bucket
 	source := strings.SplitN(imprt.Resource, "/", 2)
 	if len(source) != 2 {
@@ -346,7 +358,8 @@ func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStat
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to determine bucket name for Installation %s", installation.ID)
 	}
-	s.logger.Debugf("copying %s/%s to %s/%s", srcBucket, srcKey, destBucket, destKey)
+
+	logger.Debugf("Copying %s/%s to %s/%s", srcBucket, srcKey, destBucket, destKey)
 	err = s.awsClient.S3LargeCopy(&srcBucket, &srcKey, &destBucket, &destKey)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to copy archive to Installation %s", installation.ID)
@@ -355,7 +368,7 @@ func (s *ImportSupervisor) copyImportToWorkspaceFilestore(imprt *awat.ImportStat
 	return srcKey, nil
 }
 
-func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, importArchiveFilename string, awatImportID string) error {
+func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, logger logrus.FieldLogger, importArchiveFilename, awatImportID string) error {
 	output, err := mmctl.Run("import", "process", importArchiveFilename)
 	if err != nil {
 		return errors.Wrap(err, "failed to start import process in Mattermost itself")
@@ -372,11 +385,11 @@ func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, importArchive
 	}
 
 	jobID := jobResponses[0].ID
-	s.logger.Infof("Started Import job %s", jobID)
-	return s.waitForImportToComplete(mmctl, jobID, awatImportID)
+	logger.Infof("Started Import job %s", jobID)
+	return s.waitForImportToComplete(mmctl, logger, jobID, awatImportID)
 }
 
-func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID string, awatImportID string) error {
+func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, logger logrus.FieldLogger, mattermostJobID, awatImportID string) error {
 	complete := false
 	var (
 		resp         *jobResponse
@@ -387,14 +400,14 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID
 	for !complete {
 		output, err := mmctl.Run("import", "job", "show", mattermostJobID)
 		if err != nil {
-			s.logger.WithError(err).Warn("failed to check job")
+			logger.WithError(err).Warn("failed to check job")
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
 		err = json.Unmarshal([]byte(output), &jobResponses)
 		if err != nil {
-			s.logger.WithError(err).Warn("failed to check job; bad JSON")
+			logger.WithError(err).Warn("failed to check job; bad JSON")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -416,12 +429,13 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, mattermostJobID
 			return errors.New(errorString)
 		}
 
-		s.logger.Debugf("Waiting for job %s to complete. Status: %s Progress: %d", resp.ID, resp.Status, resp.Progress)
+		logger.Debugf("Waiting for job %s to complete. Status: %s Progress: %d", resp.ID, resp.Status, resp.Progress)
 		time.Sleep(5 * time.Second)
 	}
 
-	s.logger.Infof("Import Job %s successfully completed", resp.ID)
-	s.logger.Debugf("Completed with output %s", output)
+	logger.Infof("Import Job %s successfully completed", resp.ID)
+	logger.Debugf("Completed with output: %s", output)
+
 	return nil
 }
 
