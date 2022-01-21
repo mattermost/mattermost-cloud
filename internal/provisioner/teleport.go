@@ -103,15 +103,6 @@ func (n *teleport) Destroy() error {
 		return errors.Wrap(err, "unable to delete Teleport bucket")
 	}
 
-	err = n.awsClient.DynamoDBEnsureTableDeleted(teleportClusterName, n.logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to delete Teleport dynamodb table")
-	}
-
-	err = n.awsClient.DynamoDBEnsureTableDeleted(fmt.Sprintf("%s-events", teleportClusterName), n.logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to delete Teleport dynamodb events table")
-	}
 	return nil
 }
 
