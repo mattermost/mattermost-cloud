@@ -19,23 +19,23 @@ import (
 )
 
 // NewInstallationSuite creates new Installation testing suite.
-func NewInstallationSuite(params InstallationSuiteParams, env string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *InstallationSuite {
+func NewInstallationSuite(params InstallationSuiteParams, dnsSubdomain string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *InstallationSuite {
 	return &InstallationSuite{
-		client:     client,
-		kubeClient: kubeClient,
-		logger:     logger.WithField("suite", "installation"),
-		env:        env,
-		Params:     params,
-		Meta:       InstallationSuiteMeta{},
+		client:       client,
+		kubeClient:   kubeClient,
+		logger:       logger.WithField("suite", "installation"),
+		dnsSubdomain: dnsSubdomain,
+		Params:       params,
+		Meta:         InstallationSuiteMeta{},
 	}
 }
 
 // InstallationSuite is testing suite for Installations.
 type InstallationSuite struct {
-	client     *model.Client
-	kubeClient kubernetes.Interface
-	logger     logrus.FieldLogger
-	env        string
+	client       *model.Client
+	kubeClient   kubernetes.Interface
+	logger       logrus.FieldLogger
+	dnsSubdomain string
 
 	Params InstallationSuiteParams
 	Meta   InstallationSuiteMeta
@@ -61,7 +61,7 @@ type InstallationSuiteMeta struct {
 func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 	if w.Meta.InstallationID == "" {
 		installationBuilder := pkg.NewInstallationBuilderWithDefaults().
-			DNS(pkg.GetDNS(w.env)).
+			DNS(pkg.GetDNS(w.dnsSubdomain)).
 			DB(w.Params.DBType).
 			FileStore(w.Params.FileStoreType).
 			Annotations(w.Params.Annotations)

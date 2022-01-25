@@ -23,7 +23,7 @@ type TestConfig struct {
 	DestinationDB             string
 	InstallationDBType        string `envconfig:"default=aws-multitenant-rds-postgres"`
 	InstallationFileStoreType string `envconfig:"default=bifrost"`
-	Environment               string `envconfig:"default=dev"`
+	DNSSubdomain              string `envconfig:"default=dev.cloud.mattermost.com"`
 	Cleanup                   bool   `envconfig:"default=true"`
 }
 
@@ -114,7 +114,7 @@ func setupDBMigrationTestSuite(config TestConfig, logger logrus.FieldLogger) (*w
 		return nil, err
 	}
 
-	return workflow.NewDBMigrationSuite(params, config.Environment, client, kubeClient, logger), nil
+	return workflow.NewDBMigrationSuite(params, config.DNSSubdomain, client, kubeClient, logger), nil
 }
 
 // Run runs the test workflow.

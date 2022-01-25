@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	installationDNSFormat = "e2e-test-%s.%s.cloud.mattermost.com"
+	installationDNSFormat = "e2e-test-%s.%s"
 )
 
 // GetDNS returns e2e test dns with random suffix.
-func GetDNS(env string) string {
-	return fmt.Sprintf(installationDNSFormat, randStringBytes(4), env)
+func GetDNS(domain string) string {
+	return fmt.Sprintf(installationDNSFormat, randStringBytes(4), domain)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
