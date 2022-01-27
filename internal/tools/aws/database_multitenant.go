@@ -338,6 +338,10 @@ func (d *RDSMultitenantDatabase) TeardownMigrated(store model.InstallationDataba
 		logger.Info("Source database does not exist, skipping removal")
 		return nil
 	}
+	if db.DeleteAt > 0 {
+		logger.Info("Source database marked as deleted, skipping removal")
+		return nil
+	}
 
 	unlockFn, err := lockMultitenantDatabase(migrationOp.SourceMultiTenant.DatabaseID, d.instanceID, store, logger)
 	if err != nil {
