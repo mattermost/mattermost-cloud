@@ -20,6 +20,7 @@ KUBECTL_VERSION=v1.21.2
 GO ?= $(shell command -v go 2> /dev/null)
 PACKAGES=$(shell go list ./... | grep -v internal/mocks)
 MATTERMOST_CLOUD_IMAGE ?= mattermost/mattermost-cloud:test
+MATTERMOST_CLOUD_E2E_IMAGE ?= mattermost/mattermost-cloud-e2e:test
 MACHINE = $(shell uname -m)
 GOFLAGS ?= $(GOFLAGS:)
 BUILD_TIME := $(shell date -u +%Y%m%d.%H%M%S)
@@ -194,6 +195,14 @@ verify-mocks:  $(MOCKGEN) mocks
 	@if !(git diff --quiet HEAD); then \
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
+
+.PHONY: build-image-e2e
+build-image-e2e:
+	@echo Building e2e image
+	docker build \
+	--build-arg DOCKER_BUILD_IMAGE=$(DOCKER_BUILD_IMAGE) \
+	--build-arg DOCKER_BASE_IMAGE=$(DOCKER_BASE_IMAGE) \
+	. -f build/Dockerfile.e2e -t $(MATTERMOST_CLOUD_E2E_IMAGE)
 
 .PHONY: e2e-db-migration
 e2e-db-migration:

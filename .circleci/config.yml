@@ -103,6 +103,7 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
+    - run: make build-image-e2e
     - run: ./scripts/push-docker-pr.sh
     - run:
         name: Re-run Docker Push if fail
@@ -118,6 +119,7 @@ jobs:
     - checkout
     - setup_remote_docker
     - run: make build-image
+    - run: make build-image-e2e
     - run: ./scripts/push-docker.sh
     - run:
         name: Re-run Docker Push if fail
