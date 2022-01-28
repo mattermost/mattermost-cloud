@@ -19,8 +19,8 @@ import (
 )
 
 // NewDBMigrationSuite creates new DBMigrationSuite.
-func NewDBMigrationSuite(params DBMigrationSuiteParams, env string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *DBMigrationSuite {
-	installationSuite := NewInstallationSuite(params.InstallationSuiteParams, env, client, kubeClient, logger)
+func NewDBMigrationSuite(params DBMigrationSuiteParams, dnsSubdomain string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *DBMigrationSuite {
+	installationSuite := NewInstallationSuite(params.InstallationSuiteParams, dnsSubdomain, client, kubeClient, logger)
 
 	return &DBMigrationSuite{
 		InstallationSuite: installationSuite,

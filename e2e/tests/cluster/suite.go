@@ -29,7 +29,7 @@ type TestConfig struct {
 	CloudURL                  string `envconfig:"default=http://localhost:8075"`
 	InstallationDBType        string `envconfig:"default=mysql-operator"`
 	InstallationFileStoreType string `envconfig:"default=minio-operator"`
-	Environment               string `envconfig:"default=dev"`
+	DNSSubdomain              string `envconfig:"default=dev.cloud.mattermost.com"`
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
 	Cleanup                   bool   `envconfig:"default=true"`
@@ -95,8 +95,8 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		return nil, errors.Wrap(err, "failed to setup webhook")
 	}
 
-	clusterSuite := workflow.NewClusterSuite(clusterParams, config.Environment, client, webhookChan, logger)
-	installationSuite := workflow.NewInstallationSuite(installationParams, config.Environment, client, kubeClient, logger)
+	clusterSuite := workflow.NewClusterSuite(clusterParams, client, webhookChan, logger)
+	installationSuite := workflow.NewInstallationSuite(installationParams, config.DNSSubdomain, client, kubeClient, logger)
 
 	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
 
