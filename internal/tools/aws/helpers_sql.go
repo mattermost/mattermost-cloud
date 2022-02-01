@@ -32,10 +32,13 @@ func RDSMySQLConnString(schema, endpoint, username, password string) string {
 
 // MattermostPostgresConnStrings formats the connection strings used by Mattermost
 // servers to access a PostgreSQL database.
+//
+// Regarding binary_parameters:
+// https://blog.bullgare.com/2019/06/pgbouncer-and-prepared-statements
 func MattermostPostgresConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
-	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
+	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10&binary_parameters=yes",
 		username, password, *dbCluster.Endpoint, schema)
-	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
+	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10&binary_parameters=yes",
 		username, password, *dbCluster.ReaderEndpoint, schema)
 
 	return dbConnection, readReplicas
