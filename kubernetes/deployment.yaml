@@ -43,6 +43,8 @@ spec:
         ports:
         - containerPort: 8075
           name: api
+        - containerPort: 8076
+          name: metrics
         resources:
           {}
         env:
