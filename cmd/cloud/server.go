@@ -18,13 +18,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
 	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"

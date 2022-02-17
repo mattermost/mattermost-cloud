@@ -15,3 +15,8 @@ func GetMillis() int64 {
 func TimeFromMillis(millis int64) time.Time {
 	return time.Unix(0, millis*int64(time.Millisecond))
 }
+
+// ElapsedTimeInSeconds returns time in seconds since the provided millis.
+func ElapsedTimeInSeconds(millis int64) float64 {
+	return float64(GetMillis()-millis) / 1000
+}

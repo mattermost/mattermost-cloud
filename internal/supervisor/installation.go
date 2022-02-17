@@ -6,7 +6,6 @@ package supervisor
 
 import (
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 
@@ -67,6 +66,8 @@ type installationStore interface {
 	GetInstallationDBRestorationOperations(filter *model.InstallationDBRestorationFilter) ([]*model.InstallationDBRestorationOperation, error)
 	UpdateInstallationDBRestorationOperationState(operation *model.InstallationDBRestorationOperation) error
 	installationDBRestorationLockStore
+
+	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
 
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 
@@ -241,6 +242,11 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 	if err != nil {
 		logger.WithError(err).Errorf("Failed to set installation state to %s", newState)
 		return
+	}
+
+	err = s.processInstallationMetrics(installation, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to process installation metrics")
 	}
 
 	err = s.eventsProducer.ProduceInstallationStateChangeEvent(installation, oldState)
@@ -1343,7 +1349,7 @@ func (s *InstallationSupervisor) deleteMigrationOperations(installation *model.I
 
 func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installation, logger log.FieldLogger) string {
 	logger.Info("Finished final creation tasks")
-	s.metrics.InstallationCreationDurationHist.Observe(elapsedTimeInSeconds(installation.CreateAt))
+
 	return model.InstallationStateStable
 }
 
@@ -1438,13 +1444,8 @@ func getAnnotationsNames(annotations []*model.Annotation) []string {
 	return names
 }
 
-func elapsedTimeInSeconds(createAtMillis int64) float64 {
-	return float64(time.Now().Unix()*1000-createAtMillis) / 1000
-}
-
 // dnsSwitchForHibernatingInstallation deals with dns update for hibernating installations during migration
 func (s *InstallationSupervisor) dnsSwitchForHibernatingInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-
 	endpoints, err := s.getPublicLBEndpoint(installation, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
@@ -1460,4 +1461,51 @@ func (s *InstallationSupervisor) dnsSwitchForHibernatingInstallation(installatio
 	logger.Infof("Successfully configured DNS %s", installation.DNS)
 
 	return s.waitForHibernationStable(installation, instanceID, logger)
+}
+
+func (s *InstallationSupervisor) processInstallationMetrics(installation *model.Installation, logger log.FieldLogger) error {
+	if installation.State != model.InstallationStateStable &&
+		installation.State != model.InstallationStateHibernating &&
+		installation.State != model.InstallationStateDeleted {
+		return nil
+	}
+
+	// Get the latest event of a 'requested' type to emit the correct metrics.
+	events, err := s.store.GetStateChangeEvents(&model.StateChangeEventFilter{
+		ResourceID:   installation.ID,
+		ResourceType: model.TypeInstallation,
+		NewStates:    model.AllInstallationRequestStates,
+		Paging:       model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get state change events")
+	}
+	if len(events) != 1 {
+		return errors.Errorf("expected 1 state change event, but got %d", len(events))
+	}
+
+	event := events[0]
+	elapsedSeconds := model.ElapsedTimeInSeconds(event.Event.Timestamp)
+
+	switch event.StateChange.NewState {
+	case model.InstallationStateCreationRequested:
+		s.metrics.InstallationCreationDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Installation was created in %d seconds", int(elapsedSeconds))
+	case model.InstallationStateUpdateRequested:
+		s.metrics.InstallationUpdateDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Installation was updated in %d seconds", int(elapsedSeconds))
+	case model.InstallationStateHibernationRequested:
+		s.metrics.InstallationHibernationDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Installation was hibernated in %d seconds", int(elapsedSeconds))
+	case model.InstallationStateWakeUpRequested:
+		s.metrics.InstallationWakeUpDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Installation was woken up in %d seconds", int(elapsedSeconds))
+	case model.InstallationStateDeletionRequested:
+		s.metrics.InstallationDeletionDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Installation was deleted in %d seconds", int(elapsedSeconds))
+	default:
+		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
+	}
+
+	return nil
 }
