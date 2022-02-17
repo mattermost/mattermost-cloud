@@ -23,56 +23,92 @@ const (
 	hostedZonePrefix       = "/hostedzone/"
 )
 
+type awsHostedZone struct {
+	ID string
+}
+
 type route53Cache struct {
 	privateHostedZoneID string
-	publicHostedZoneID  string
+	publicHostedZones   map[string]awsHostedZone
 }
 
 func (a *Client) buildRoute53Cache() error {
 	privateID, err := a.getHostedZoneIDWithTag(Tag{
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPrivateCloudDNSTagValue,
-	}, a.logger)
+	})
 	if err != nil {
 		return errors.Wrap(err, "failed to get private hosted zone ID")
 	}
 
-	publicID, err := a.getHostedZoneIDWithTag(Tag{
+	publicTag := Tag{
 		Key:   DefaultCloudDNSTagKey,
 		Value: DefaultPublicCloudDNSTagValue,
-	}, a.logger)
+	}
+
+	zones, err := a.GetHostedZonesWithTag(publicTag)
 	if err != nil {
 		return errors.Wrap(err, "failed to get public hosted zone ID")
+	}
+	if len(zones) == 0 {
+		return errors.Errorf("no hosted zone associated with tag: %s", publicTag.String())
+	}
+
+	zoneMap := map[string]awsHostedZone{}
+
+	for _, zone := range zones {
+		zoneID, err := parseHostedZoneResourceID(zone)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse hosted zone ID")
+		}
+
+		zoneMap[strings.TrimSuffix(getString(zone.Name), ".")] = awsHostedZone{ID: zoneID}
 	}
 
 	a.cache.route53 = &route53Cache{
 		privateHostedZoneID: privateID,
-		publicHostedZoneID:  publicID,
+		publicHostedZones:   zoneMap,
 	}
 
 	return nil
 }
 
-// GetPublicHostedZoneID returns the public R53 hosted zone ID for the AWS
-// account.
-func (a *Client) GetPublicHostedZoneID() string {
-	return a.cache.route53.publicHostedZoneID
+func (a *Client) getDNSZoneID(dns string) (string, bool) {
+	for domainName, zone := range a.cache.route53.publicHostedZones {
+		if strings.HasSuffix(dns, domainName) {
+			return zone.ID, true
+		}
+	}
+
+	return "", false
 }
 
 // CreatePublicCNAME creates a record in Route53 for a public domain name.
 func (a *Client) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
-	return a.createCNAME(a.GetPublicHostedZoneID(), dnsName, dnsEndpoints, dnsIdentifier, logger)
+	zoneID, found := a.getDNSZoneID(dnsName)
+	if !found {
+		return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+	}
+	return a.createCNAME(zoneID, dnsName, dnsEndpoints, dnsIdentifier, logger)
 }
 
 // UpdatePublicRecordIDForCNAME updates the record ID for the record corresponding
 // to a DNS value in the public hosted zone.
 func (a *Client) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error {
-	return a.updateResourceRecordIDs(a.GetPublicHostedZoneID(), dnsName, newID, logger)
+	zoneID, found := a.getDNSZoneID(dnsName)
+	if !found {
+		return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+	}
+	return a.updateResourceRecordIDs(zoneID, dnsName, newID, logger)
 }
 
 // DeletePublicCNAME deletes a AWS route53 record for a public domain name.
 func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
-	return a.deleteCNAME(a.GetPublicHostedZoneID(), dnsName, logger)
+	zoneID, found := a.getDNSZoneID(dnsName)
+	if !found {
+		return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+	}
+	return a.deleteCNAME(zoneID, dnsName, logger)
 }
 
 // GetPrivateHostedZoneID returns the private R53 hosted zone ID for the AWS
@@ -345,18 +381,40 @@ func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string, logger log.Fi
 }
 
 // getHostedZoneIDWithTag returns R53 hosted zone ID for a given tag
-func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string, error) {
+func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
+	zones, err := a.getHostedZonesWithTag(tag, true)
+	if err != nil {
+		return "", err
+	}
+	if len(zones) == 0 {
+		return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
+	}
+	return getString(zones[0].Name), nil
+}
+
+// GetHostedZonesWithTag returns R53 hosted zone for a given tag
+func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*route53.HostedZone, error) {
+	zones, err := a.getHostedZonesWithTag(tag, true)
+	if err != nil {
+		return nil, err
+	}
+	return zones, nil
+}
+
+func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*route53.HostedZone, error) {
+	var zones []*route53.HostedZone
 	var next *string
+
 	for {
 		zoneList, err := a.Service().route53.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
 		if err != nil {
-			return "", errors.Wrapf(err, "failed to list all hosted zones")
+			return nil, errors.Wrapf(err, "failed to list all hosted zones")
 		}
 
 		for _, zone := range zoneList.HostedZones {
 			id, err := parseHostedZoneResourceID(zone)
 			if err != nil {
-				return "", errors.Wrapf(err, "failed to parse hosted zone ID: %s", zone.String())
+				return nil, errors.Wrapf(err, "failed to parse hosted zone ID: %s", zone.String())
 			}
 
 			tagList, err := a.Service().route53.ListTagsForResource(&route53.ListTagsForResourceInput{
@@ -364,13 +422,17 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string
 				ResourceType: aws.String(hostedZoneResourceType),
 			})
 			if err != nil {
-				return "", errors.Wrap(err, "failed to get tag list for hosted zone")
+				return nil, errors.Wrap(err, "failed to get tag list for hosted zone")
 			}
 
 			for _, resourceTag := range tagList.ResourceTagSet.Tags {
 				if tag.Compare(resourceTag) {
-					return id, nil
+					zones = append(zones, zone)
+					break
 				}
+			}
+			if firstOnly && len(zones) > 0 {
+				return zones, nil
 			}
 		}
 
@@ -380,7 +442,7 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string
 		next = zoneList.Marker
 	}
 
-	return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
+	return zones, nil
 }
 
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {
@@ -392,6 +454,7 @@ func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string 
 	return string(prettyResp)
 }
 
+// parseHostedZoneResourceID removes prefix from hosted zone ID.
 func parseHostedZoneResourceID(hostedZone *route53.HostedZone) (string, error) {
 	id := strings.TrimLeft(*hostedZone.Id, hostedZonePrefix)
 	if len(id) < hostedZoneIDLength {
@@ -431,4 +494,11 @@ func (t *Tag) String() string {
 // hosted zone domain names.
 func trimTrailingDomainDot(domain string) string {
 	return strings.TrimRight(domain, ".")
+}
+
+func getString(str *string) string {
+	if str != nil {
+		return *str
+	}
+	return ""
 }
