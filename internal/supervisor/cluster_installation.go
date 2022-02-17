@@ -5,7 +5,9 @@
 package supervisor
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/pkg/errors"
 
 	log "github.com/sirupsen/logrus"
 
@@ -31,6 +33,8 @@ type clusterInstallationStore interface {
 	GetMultitenantDatabases(filter *model.MultitenantDatabaseFilter) ([]*model.MultitenantDatabase, error)
 	GetLogicalDatabases(filter *model.LogicalDatabaseFilter) ([]*model.LogicalDatabase, error)
 
+	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
+
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
@@ -50,10 +54,11 @@ type ClusterInstallationSupervisor struct {
 	eventsProducer eventProducer
 	instanceID     string
 	logger         log.FieldLogger
+	metrics        *metrics.CloudMetrics
 }
 
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
-func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, eventsProducer eventProducer, instanceID string, logger log.FieldLogger) *ClusterInstallationSupervisor {
+func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, eventsProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterInstallationSupervisor {
 	return &ClusterInstallationSupervisor{
 		store:          store,
 		provisioner:    clusterInstallationProvisioner,
@@ -61,6 +66,7 @@ func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterIns
 		eventsProducer: eventsProducer,
 		instanceID:     instanceID,
 		logger:         logger,
+		metrics:        metrics,
 	}
 }
 
@@ -132,6 +138,11 @@ func (s *ClusterInstallationSupervisor) Supervise(clusterInstallation *model.Clu
 	if err != nil {
 		logger.WithError(err).Errorf("failed to set cluster installation state to %s", newState)
 		return
+	}
+
+	err = s.processClusterInstallationMetrics(clusterInstallation, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to process cluster installation metrics")
 	}
 
 	err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, oldState)
@@ -268,4 +279,41 @@ func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clus
 
 	logger.Info("Cluster installation finished reconciling")
 	return model.ClusterInstallationStateStable
+}
+
+func (s *ClusterInstallationSupervisor) processClusterInstallationMetrics(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) error {
+	if clusterInstallation.State != model.ClusterInstallationStateStable &&
+		clusterInstallation.State != model.ClusterInstallationStateDeleted {
+		return nil
+	}
+
+	// Get the latest event of a 'requested' type to emit the correct metrics.
+	events, err := s.store.GetStateChangeEvents(&model.StateChangeEventFilter{
+		ResourceID:   clusterInstallation.ID,
+		ResourceType: model.TypeClusterInstallation,
+		NewStates:    []string{model.ClusterInstallationStateReconciling, model.ClusterInstallationStateDeletionRequested},
+		Paging:       model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get state change events")
+	}
+	if len(events) != 1 {
+		return errors.Errorf("expected 1 state change event, but got %d", len(events))
+	}
+
+	event := events[0]
+	elapsedSeconds := model.ElapsedTimeInSeconds(event.Event.Timestamp)
+
+	switch event.StateChange.NewState {
+	case model.ClusterInstallationStateReconciling:
+		s.metrics.ClusterInstallationReconcilingDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Cluster installation was reconciled in %d seconds", int(elapsedSeconds))
+	case model.ClusterInstallationStateDeletionRequested:
+		s.metrics.ClusterInstallationDeletionDurationHist.Observe(elapsedSeconds)
+		logger.Debugf("Cluster installation was deleted in %d seconds", int(elapsedSeconds))
+	default:
+		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
+	}
+
+	return nil
 }

@@ -17,11 +17,16 @@ const (
 // CloudMetrics holds all of the metrics needed to properly instrument
 // the Provisioning server
 type CloudMetrics struct {
+	// Installation
 	InstallationCreationDurationHist    prometheus.Histogram
 	InstallationUpdateDurationHist      prometheus.Histogram
 	InstallationHibernationDurationHist prometheus.Histogram
 	InstallationWakeUpDurationHist      prometheus.Histogram
 	InstallationDeletionDurationHist    prometheus.Histogram
+
+	// ClusterInstallation
+	ClusterInstallationReconcilingDurationHist prometheus.Histogram
+	ClusterInstallationDeletionDurationHist    prometheus.Histogram
 }
 
 // New creates a new Prometheus-based Metrics object to be used
@@ -75,6 +80,26 @@ func New() *CloudMetrics {
 				Subsystem: provisionerSubsystemApp,
 				Name:      "installation_deletion_duration_seconds",
 				Help:      "The duration of installation deletion tasks",
+				Buckets:   standardDurationBuckets(),
+			},
+		),
+
+		ClusterInstallationReconcilingDurationHist: promauto.NewHistogram(
+			prometheus.HistogramOpts{
+				Namespace: provisionerNamespace,
+				Subsystem: provisionerSubsystemApp,
+				Name:      "cluster_installation_reconciling_duration_seconds",
+				Help:      "The duration of cluster installation reconciliation tasks",
+				Buckets:   standardDurationBuckets(),
+			},
+		),
+
+		ClusterInstallationDeletionDurationHist: promauto.NewHistogram(
+			prometheus.HistogramOpts{
+				Namespace: provisionerNamespace,
+				Subsystem: provisionerSubsystemApp,
+				Name:      "cluster_installation_deletion_duration_seconds",
+				Help:      "The duration of cluster installation deletion tasks",
 				Buckets:   standardDurationBuckets(),
 			},
 		),

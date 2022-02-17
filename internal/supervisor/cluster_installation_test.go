@@ -74,6 +74,10 @@ func (s *mockClusterInstallationStore) GetWebhooks(filter *model.WebhookFilter) 
 	return nil, nil
 }
 
+func (s *mockClusterInstallationStore) GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error) {
+	return nil, nil
+}
+
 type mockClusterInstallationProvisioner struct{}
 
 func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
@@ -92,6 +96,7 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 			&mockEventProducer{},
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -124,6 +129,7 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 			&mockEventProducer{},
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -164,6 +170,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
 					logger,
+					cloudMetrics,
 				)
 
 				installation := &model.Installation{}
@@ -207,6 +214,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
 					logger,
+					cloudMetrics,
 				)
 
 				cluster := &model.Cluster{}
@@ -239,6 +247,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 
 		cluster := &model.Cluster{}
@@ -293,6 +302,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
 					logger,
+					cloudMetrics,
 				)
 
 				cluster := &model.Cluster{}
@@ -329,6 +339,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 
 		cluster := &model.Cluster{}
