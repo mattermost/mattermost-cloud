@@ -220,6 +220,10 @@ func (s *mockInstallationStore) UnlockInstallationDBRestorationOperations(backup
 	return true, nil
 }
 
+func (s *mockInstallationStore) GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error) {
+	return nil, nil
+}
+
 type mockMultitenantDBStore struct{}
 
 func (m *mockMultitenantDBStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {

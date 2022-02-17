@@ -261,6 +261,12 @@ func (sqlStore *SQLStore) GetStateChangeEvents(filter *model.StateChangeEventFil
 	if filter.ResourceID != "" {
 		query = query.Where("sc.ResourceID = ?", filter.ResourceID)
 	}
+	if filter.OldStates != nil {
+		query = query.Where(sq.Eq{"sc.OldState": filter.OldStates})
+	}
+	if filter.NewStates != nil {
+		query = query.Where(sq.Eq{"sc.NewState": filter.NewStates})
+	}
 
 	var eventsData []stateChangeEventData
 	err := sqlStore.selectBuilder(sqlStore.db, &eventsData, query)
