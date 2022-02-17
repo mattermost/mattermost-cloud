@@ -185,7 +185,7 @@ func (c *Client) buildCache() error {
 	c.logger.WithFields(log.Fields{
 		"environment":            c.cache.environment,
 		"private-hosted-zone-id": c.cache.route53.privateHostedZoneID,
-		"public-hosted-zone-ids":  c.cache.route53.publicHostedZones,
+		"public-hosted-zone-ids": c.cache.route53.publicHostedZones,
 	}).Info("AWS client cache initialized")
 
 	return nil
