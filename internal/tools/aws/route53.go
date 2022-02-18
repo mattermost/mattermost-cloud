@@ -24,8 +24,10 @@ const (
 )
 
 type route53Cache struct {
-	privateHostedZoneID string
-	publicHostedZoneID  string
+	privateHostedZoneID   string
+	publicHostedZoneID    string
+	privateHostedZoneName string
+	publicHostedZoneName  string
 }
 
 func (a *Client) buildRoute53Cache() error {
@@ -45,9 +47,19 @@ func (a *Client) buildRoute53Cache() error {
 		return errors.Wrap(err, "failed to get public hosted zone ID")
 	}
 
+	privateZoneName, err := a.getHostedZoneNameWithID(privateID, a.logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get private hosted zone name")
+	}
+	publicZoneName, err := a.getHostedZoneNameWithID(publicID, a.logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to get public hosted zone name")
+	}
 	a.cache.route53 = &route53Cache{
-		privateHostedZoneID: privateID,
-		publicHostedZoneID:  publicID,
+		privateHostedZoneID:   privateID,
+		publicHostedZoneID:    publicID,
+		privateHostedZoneName: privateZoneName,
+		publicHostedZoneName:  publicZoneName,
 	}
 
 	return nil
@@ -79,6 +91,18 @@ func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
 // account.
 func (a *Client) GetPrivateHostedZoneID() string {
 	return a.cache.route53.privateHostedZoneID
+}
+
+// GetPublicHostedZoneName returns the public R53 hosted zone Name for the AWS
+// account.
+func (a *Client) GetPublicHostedZoneName() string {
+	return a.cache.route53.publicHostedZoneName
+}
+
+// GetPrivateHostedZoneID returns the private R53 hosted zone Name for the AWS
+// account.
+func (a *Client) GetPrivateHostedZoneName() string {
+	return a.cache.route53.privateHostedZoneName
 }
 
 // CreatePrivateCNAME creates a record in Route53 for a private domain name.
@@ -381,6 +405,22 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag, logger log.FieldLogger) (string
 	}
 
 	return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
+}
+
+// getHostedZoneNameWithTag returns R53 hosted zone Name for a given zoneID
+func (a *Client) getHostedZoneNameWithID(zoneID string, logger log.FieldLogger) (hostedZoneName string, err error) {
+
+	input := &route53.GetHostedZoneInput{
+		Id: aws.String(zoneID),
+	}
+
+	hostedZoneName53, err := a.Service().route53.GetHostedZone(input)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to get hosted zone name with ID: %s", zoneID)
+	}
+	hostedZoneName = strings.TrimRight(*hostedZoneName53.HostedZone.Name, ".")
+
+	return hostedZoneName, nil
 }
 
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {

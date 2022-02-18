@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
+	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
@@ -34,7 +35,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
-	logrus "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -354,6 +355,11 @@ var serverCmd = &cobra.Command{
 
 		eventsProducer := events.NewProducer(sqlStore, eventsDeliverer, awsClient.GetCloudEnvironmentName(), logger)
 
+		cloudflareClient, err := cloudflare.NewClientWithToken(os.Getenv("CLOUDFLARE_API_TOKEN"))
+		if err != nil {
+			return errors.Wrap(err, "failed to build Cloudflare client")
+		}
+
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger))
@@ -363,7 +369,7 @@ var serverCmd = &cobra.Command{
 		}
 		if installationSupervisor {
 			scheduling := supervisor.NewInstallationSupervisorSchedulingOptions(balancedInstallationScheduling, clusterResourceThreshold, clusterResourceThresholdScaleValue)
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, cloudflareClient))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger))

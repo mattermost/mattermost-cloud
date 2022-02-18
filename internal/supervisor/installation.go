@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
+
 	"github.com/mattermost/mattermost-cloud/internal/events"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
@@ -103,6 +105,7 @@ type InstallationSupervisor struct {
 	metrics           *metrics.CloudMetrics
 	eventsProducer    eventProducer
 	forceCRUpgrade    bool
+	cloudflareClient  *cloudflare.Client
 }
 
 // InstallationSupervisorSchedulingOptions are the various options that control
@@ -126,7 +129,8 @@ func NewInstallationSupervisor(
 	logger log.FieldLogger,
 	metrics *metrics.CloudMetrics,
 	eventsProducer eventProducer,
-	forceCRUpgrade bool) *InstallationSupervisor {
+	forceCRUpgrade bool,
+	cloudflareClient *cloudflare.Client) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -140,6 +144,7 @@ func NewInstallationSupervisor(
 		metrics:           metrics,
 		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
+		cloudflareClient:  cloudflareClient,
 	}
 }
 
@@ -634,10 +639,35 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
 		return model.InstallationStateCreationDNS
 	}
-
-	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, "", logger)
+	publicHostedZoneName := s.aws.GetPublicHostedZoneName()
 	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record")
+		logger.WithError(err).Error("Failed to get public hosted zone name from Route53")
+		return model.InstallationStateCreationDNS
+	}
+
+	var cloudflareDNSName []string
+	cloudflareDNSName = append(cloudflareDNSName, installation.DNS+".cdn.cloudflare.net")
+
+	if len(endpoints) == 0 {
+		logger.WithError(err).Error("no DNS endpoints provided for Cloudflare creation request")
+		return model.InstallationStateCreationDNS
+	}
+	for _, endpoint := range endpoints {
+		if endpoint == "" {
+			logger.WithError(err).Error("at least one of the DNS endpoints was set to an empty string")
+			return model.InstallationStateCreationDNS
+		}
+	}
+
+	err = s.aws.CreatePublicCNAME(installation.DNS, cloudflareDNSName, "", logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Route53")
+		return model.InstallationStateCreationDNS
+	}
+
+	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, publicHostedZoneName, endpoints[0], "", logger) // need to rethink about the endpoints[0] if it has more than 1 item
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return model.InstallationStateCreationDNS
 	}
 
@@ -1064,7 +1094,19 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.aws.DeletePublicCNAME(installation.DNS, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to delete installation DNS")
+		logger.WithError(err).Error("Failed to delete DNS record from Route53")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+
+	publicHostedZoneName := s.aws.GetPublicHostedZoneName()
+	if err != nil {
+		logger.WithError(err).Error("Failed to get public hosted zone name from Route53")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+
+	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, publicHostedZoneName, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
