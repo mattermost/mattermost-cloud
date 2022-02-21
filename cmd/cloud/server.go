@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
