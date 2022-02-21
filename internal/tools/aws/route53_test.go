@@ -19,14 +19,13 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 			Do(func(input *route53.ChangeResourceRecordSetsInput) {
 				a.Assert().Equal("mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.Name)
 				a.Assert().Equal("example.mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.ResourceRecords[0].Value)
-				a.Assert().Equal(a.Mocks.AWS.GetPublicHostedZoneID(), *input.HostedZoneId)
 			}).
 			Return(&route53.ChangeResourceRecordSetsOutput{}, nil),
 
 		a.Mocks.Log.Logger.EXPECT().WithFields(log.Fields{
 			"route53-dns-value":      "mattermost.com",
 			"route53-dns-endpoints":  []string{"example.mattermost.com"},
-			"route53-hosted-zone-id": a.Mocks.AWS.GetPublicHostedZoneID(),
+			"route53-hosted-zone-id": "HZONE2",
 		}).
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
@@ -67,7 +66,6 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEChangeRecordSetsError() {
 			Do(func(input *route53.ChangeResourceRecordSetsInput) {
 				a.Assert().Equal("mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.Name)
 				a.Assert().Equal("example.mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.ResourceRecords[0].Value)
-				a.Assert().Equal(a.Mocks.AWS.GetPublicHostedZoneID(), *input.HostedZoneId)
 			}).
 			Return(nil, errors.New("unable to change recordsets")).
 			Times(1),
