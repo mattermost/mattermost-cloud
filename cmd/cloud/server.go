@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,11 +20,13 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	"github.com/gorilla/mux"
 	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/api"
+	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
@@ -49,6 +52,7 @@ func init() {
 	// General
 	serverCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	serverCmd.PersistentFlags().String("listen", ":8075", "The interface and port on which to listen.")
+	serverCmd.PersistentFlags().Int("metrics-port", 8076, "Port on which the metrics server should be listening.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	serverCmd.PersistentFlags().StringSlice("vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
@@ -402,6 +406,28 @@ var serverCmd = &cobra.Command{
 		supervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
 		defer supervisor.Close()
 
+		metricsPort, _ := command.Flags().GetInt("metrics-port")
+		metricsRouter := mux.NewRouter()
+		metricsRouter.Handle("/metrics", promhttp.Handler())
+
+		metricsServer := &http.Server{
+			Addr:           fmt.Sprintf(":%d", metricsPort),
+			Handler:        metricsRouter,
+			ReadTimeout:    180 * time.Second,
+			WriteTimeout:   180 * time.Second,
+			IdleTimeout:    time.Second * 180,
+			MaxHeaderBytes: 1 << 20,
+			ErrorLog:       log.New(&logrusWriter{logger: logger}, "", 0),
+		}
+
+		go func() {
+			logger.WithField("addr", metricsServer.Addr).Info("Metrics server listening")
+			err := metricsServer.ListenAndServe()
+			if err != nil && err != http.ErrServerClosed {
+				logger.WithError(err).Error("Failed to listen and serve metrics")
+			}
+		}()
+
 		router := mux.NewRouter()
 
 		api.Register(router, &api.Context{
@@ -427,7 +453,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		go func() {
-			logger.WithField("addr", srv.Addr).Info("Listening")
+			logger.WithField("addr", srv.Addr).Info("API server listening")
 			err := srv.ListenAndServe()
 			if err != nil && err != http.ErrServerClosed {
 				logger.WithError(err).Error("Failed to listen and serve")

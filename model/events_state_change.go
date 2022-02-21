@@ -100,6 +100,8 @@ type StateChangeEventFilter struct {
 	Paging
 	ResourceType ResourceType
 	ResourceID   string
+	OldStates    []string
+	NewStates    []string
 }
 
 // ListStateChangeEventsRequest represents request for state change events query.

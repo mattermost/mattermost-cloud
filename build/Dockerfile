@@ -42,5 +42,6 @@ WORKDIR /mattermost-cloud/
 USER ${USER_UID}
 
 EXPOSE 8075
+EXPOSE 8076
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]

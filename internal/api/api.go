@@ -6,14 +6,10 @@ package api
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Register registers the API endpoints on the given router.
 func Register(rootRouter *mux.Router, context *Context) {
-	// metrics handler at /metrics
-	rootRouter.Handle("/metrics", promhttp.Handler())
-
 	// api handler at /api
 	apiRouter := rootRouter.PathPrefix("/api").Subrouter()
 	initCluster(apiRouter, context)

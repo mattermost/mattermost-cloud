@@ -222,16 +222,19 @@ func TestGetStateChangeEvents(t *testing.T) {
 
 	events := []*model.StateChangeEventData{
 		{
-			Event:       model.Event{EventType: "test", Timestamp: 1000},
-			StateChange: model.StateChangeEvent{ResourceType: model.TypeInstallation, ResourceID: "inst1"},
+			Event: model.Event{EventType: "test", Timestamp: 1000},
+			StateChange: model.StateChangeEvent{ResourceType: model.TypeInstallation, ResourceID: "inst1",
+				OldState: model.InstallationStateHibernationInProgress, NewState: model.InstallationStateHibernating},
 		},
 		{
-			Event:       model.Event{EventType: "test", Timestamp: 2000},
-			StateChange: model.StateChangeEvent{ResourceType: model.TypeInstallation, ResourceID: "inst2"},
+			Event: model.Event{EventType: "test", Timestamp: 2000},
+			StateChange: model.StateChangeEvent{ResourceType: model.TypeInstallation, ResourceID: "inst2",
+				OldState: model.InstallationStateDeletionInProgress, NewState: model.InstallationStateDeleted},
 		},
 		{
-			Event:       model.Event{EventType: "test", Timestamp: 3000},
-			StateChange: model.StateChangeEvent{ResourceType: model.TypeCluster, ResourceID: "cluster1"},
+			Event: model.Event{EventType: "test", Timestamp: 3000},
+			StateChange: model.StateChangeEvent{ResourceType: model.TypeCluster, ResourceID: "cluster1",
+				OldState: model.ClusterStateCreationRequested, NewState: model.ClusterStateStable},
 		},
 	}
 
@@ -252,9 +255,19 @@ func TestGetStateChangeEvents(t *testing.T) {
 			fetched:     2,
 		},
 		{
-			description: "fetch all fon specific ID",
+			description: "fetch all for specific ID",
 			filter:      &model.StateChangeEventFilter{ResourceID: "inst2", Paging: model.AllPagesNotDeleted()},
 			fetched:     1,
+		},
+		{
+			description: "fetch all installations with old state of deletion-in-progress",
+			filter:      &model.StateChangeEventFilter{OldStates: []string{model.InstallationStateDeletionInProgress}, Paging: model.AllPagesNotDeleted()},
+			fetched:     1,
+		},
+		{
+			description: "fetch all installations with new state of deletion-in-progress",
+			filter:      &model.StateChangeEventFilter{NewStates: []string{model.InstallationStateDeletionInProgress}, Paging: model.AllPagesNotDeleted()},
+			fetched:     0,
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

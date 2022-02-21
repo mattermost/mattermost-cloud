@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: provisioner-e2e
+spec:
+  backoffLimit: 0
+  completions: 1
+  template:
+    metadata:
+      labels:
+        app: provisioner-e2e-test
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: mattermost-cloud-e2e
+        image: mattermost/mattermost-cloud-e2e:latest
+        imagePullPolicy: Always
+        ports:
+          - name: http-webhooks
+            containerPort: 11111
+            protocol: TCP
+          - name: http-events
+            containerPort: 11112
+            protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: provisioner-e2e-config
