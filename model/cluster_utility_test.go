@@ -130,7 +130,6 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "12345"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "123456"},
 				Promtail:            &HelmUtilityVersion{Chart: "123456"},
-				Stackrox:            &HelmUtilityVersion{Chart: "1234567"},
 				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 			},
@@ -142,7 +141,6 @@ func TestGetActualVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-3.10.0"},
-				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 			},
@@ -170,9 +168,6 @@ func TestGetActualVersion(t *testing.T) {
 	version = c.ActualUtilityVersion(PromtailCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "promtail-3.10.0"}, version)
 
-	version = c.ActualUtilityVersion(StackroxCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"}, version)
-
 	version = c.ActualUtilityVersion(KubecostCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"}, version)
 
@@ -194,7 +189,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "12345"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "123456"},
 				Promtail:            &HelmUtilityVersion{Chart: "123456"},
-				Stackrox:            &HelmUtilityVersion{Chart: "1234567"},
 				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 			},
@@ -206,7 +200,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Teleport:            &HelmUtilityVersion{Chart: "teleport-kube-agent-6.2.8"},
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-3.10.0"},
-				Stackrox:            &HelmUtilityVersion{Chart: "stackrox-secured-cluster-services-65.1.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 			},
@@ -233,9 +226,6 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion(PromtailCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "123456"}, version)
-
-	version = c.DesiredUtilityVersion(StackroxCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "1234567"}, version)
 
 	version = c.DesiredUtilityVersion(KubecostCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "12345678"}, version)
