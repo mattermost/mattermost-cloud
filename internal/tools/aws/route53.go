@@ -389,12 +389,12 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
 	if len(zones) == 0 {
 		return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
 	}
-	return getString(zones[0].Name), nil
+	return parseHostedZoneResourceID(zones[0])
 }
 
 // GetHostedZonesWithTag returns R53 hosted zone for a given tag
 func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*route53.HostedZone, error) {
-	zones, err := a.getHostedZonesWithTag(tag, true)
+	zones, err := a.getHostedZonesWithTag(tag, false)
 	if err != nil {
 		return nil, err
 	}
