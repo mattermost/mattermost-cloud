@@ -66,7 +66,6 @@ var helmRepos = map[string]string{
 	"bitnami":              "https://charts.bitnami.com/bitnami",
 	"fluent":               "https://fluent.github.io/helm-charts",
 	"grafana":              "https://grafana.github.io/helm-charts",
-	"stackrox":             "https://charts.stackrox.io",
 	"kubecost":             "https://kubecost.github.io/cost-analyzer/",
 	"deliveryhero":         "https://charts.deliveryhero.io/",
 }
@@ -127,12 +126,6 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	stackrox, err := newStackroxHandle(
-		cluster, cluster.DesiredUtilityVersion(model.StackroxCanonicalName),
-		provisioner, awsClient, kops, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Stackrox")
-	}
 	kubecost, err := newKubecostHandle(cluster,
 		cluster.DesiredUtilityVersion(model.KubecostCanonicalName),
 		provisioner, awsClient, kops, logger)
@@ -149,7 +142,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, stackrox, kubecost, nodeProblemDetector},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
