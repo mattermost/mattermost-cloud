@@ -93,7 +93,7 @@ var (
 	// moved, or if we ever need to specify a different branch or folder
 	// (environment) name to pull the values files from
 	gitlabProjectPath    string = "/api/v4/projects/%d/repository/files/%s" + `%%2F` + "%s?ref=%s"
-	defaultProjectNumber int    = 33
+	defaultProjectNumber int    = 295
 	defaultEnvironment          = "dev"
 	defaultBranch               = "master"
 )
