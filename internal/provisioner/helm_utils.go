@@ -316,7 +316,7 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 	}
 
 	// silently allow other public non-Gitlab URLs
-	if !strings.HasPrefix(valPathURL.Host, "gitlab") {
+	if !strings.HasPrefix(valPathURL.Host, "git") {
 		return path, nil, nil
 	}
 

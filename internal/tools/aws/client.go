@@ -184,11 +184,17 @@ func (c *Client) buildCache() error {
 	}
 
 	c.logger.WithFields(log.Fields{
+<<<<<<< HEAD
 		"environment":              c.cache.environment,
 		"private-hosted-zone-id":   c.cache.route53.privateHostedZoneID,
 		"public-hosted-zone-id":    c.cache.route53.publicHostedZoneID,
 		"private-hosted-zone-name": c.cache.route53.privateHostedZoneName,
 		"public-hosted-zone-name":  c.cache.route53.publicHostedZoneName,
+=======
+		"environment":            c.cache.environment,
+		"private-hosted-zone-id": c.cache.route53.privateHostedZoneID,
+		"public-hosted-zone-ids": c.cache.route53.publicHostedZones,
+>>>>>>> e708855c775971d254edd264ceba562c2cbcf1ae
 	}).Info("AWS client cache initialized")
 
 	return nil
@@ -204,8 +210,8 @@ func (c *Client) validateCache() error {
 	if len(c.cache.route53.privateHostedZoneID) == 0 {
 		return errors.New("private hosted zone ID cache value is empty")
 	}
-	if len(c.cache.route53.publicHostedZoneID) == 0 {
-		return errors.New("public hosted zone ID cache value is empty")
+	if len(c.cache.route53.publicHostedZones) == 0 {
+		return errors.New("public hosted zone IDs cache is empty")
 	}
 
 	return nil

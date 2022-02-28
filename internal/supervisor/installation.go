@@ -958,11 +958,17 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 			return installation.State
 		}
 
+		oldState := clusterInstallation.State
 		clusterInstallation.State = model.ClusterInstallationStateReconciling
 		err = s.store.UpdateClusterInstallation(clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
 			return installation.State
+		}
+
+		err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, oldState)
+		if err != nil {
+			logger.WithError(err).Error("Failed to create cluster installation state change event")
 		}
 	}
 
@@ -1067,11 +1073,17 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 			return model.InstallationStateDeletionFailed
 		}
 
+		oldState := clusterInstallation.State
 		clusterInstallation.State = model.ClusterInstallationStateDeletionRequested
 		err = s.store.UpdateClusterInstallation(clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Warnf("Failed to mark cluster installation %s for deletion", clusterInstallation.ID)
 			return installation.State
+		}
+
+		err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, oldState)
+		if err != nil {
+			logger.WithError(err).Error("Failed to create cluster installation state change event")
 		}
 
 		deletingClusterInstallations++

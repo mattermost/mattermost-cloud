@@ -279,12 +279,17 @@ func (w *InstallationSuite) InstallationDeletionEvents() []eventstest.EventOccur
 			NewState:     model.InstallationStateDeletionRequested,
 		},
 		{
+			ResourceType: model.TypeClusterInstallation.String(),
+			ResourceID:   w.Meta.ClusterInstallationID,
+			OldState:     model.ClusterInstallationStateStable,
+			NewState:     model.ClusterInstallationStateDeletionRequested,
+		},
+		{
 			ResourceType: model.TypeInstallation.String(),
 			ResourceID:   w.Meta.InstallationID,
 			OldState:     model.InstallationStateDeletionRequested,
 			NewState:     model.InstallationStateDeletionInProgress,
 		},
-		// TODO: Provisioner does not send webhook for CI - Stable -> DeletionRequested
 		{
 			ResourceType: model.TypeClusterInstallation.String(),
 			ResourceID:   w.Meta.ClusterInstallationID,

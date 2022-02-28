@@ -375,7 +375,7 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, cloudflareClient))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 		}
 		if backupSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))

@@ -27,8 +27,6 @@ const (
 	PgbouncerCanonicalName = "pgbouncer"
 	// PromtailCanonicalName is the canonical string representation of promtail
 	PromtailCanonicalName = "promtail"
-	// StackroxCanonicalName is the canonical string representation of stackrox
-	StackroxCanonicalName = "stackrox-secured-cluster-services"
 	// KubecostCanonicalName is the canonical string representation of kubecost
 	KubecostCanonicalName = "kubecost"
 	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
@@ -71,8 +69,6 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
 	// PromtailDefaultVersion defines the default version for the Helm chart
 	PromtailCanonicalName: {Chart: "3.10.0", ValuesPath: ""},
-	// StackroxDefaultVersion defines the default version for the Helm chart
-	StackroxCanonicalName: {Chart: "65.1.0", ValuesPath: ""},
 	// KubecostDefaultVersion defines the default version for the Helm chart
 	KubecostCanonicalName: {Chart: "1.88.1", ValuesPath: ""},
 	// NodeProblemDetectorDefaultVersion defines the default version for the Helm chart
@@ -88,7 +84,6 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	TeleportCanonicalName:            "teleport_values.yaml",
 	PgbouncerCanonicalName:           "pgbouncer_values.yaml",
 	PromtailCanonicalName:            "promtail_values.yaml",
-	StackroxCanonicalName:            "stackrox_values.yaml",
 	KubecostCanonicalName:            "kubecost_values.yaml",
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 }
@@ -98,7 +93,7 @@ var (
 	// moved, or if we ever need to specify a different branch or folder
 	// (environment) name to pull the values files from
 	gitlabProjectPath    string = "/api/v4/projects/%d/repository/files/%s" + `%%2F` + "%s?ref=%s"
-	defaultProjectNumber int    = 33
+	defaultProjectNumber int    = 295
 	defaultEnvironment          = "dev"
 	defaultBranch               = "master"
 )
@@ -131,7 +126,6 @@ type UtilityGroupVersions struct {
 	Teleport            *HelmUtilityVersion
 	Pgbouncer           *HelmUtilityVersion
 	Promtail            *HelmUtilityVersion
-	Stackrox            *HelmUtilityVersion
 	Kubecost            *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
 }
@@ -149,7 +143,6 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		TeleportCanonicalName:            h.Teleport,
 		PgbouncerCanonicalName:           h.Pgbouncer,
 		PromtailCanonicalName:            h.Promtail,
-		StackroxCanonicalName:            h.Stackrox,
 		KubecostCanonicalName:            h.Kubecost,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 	}
@@ -278,8 +271,6 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Pgbouncer = desiredVersion
 	case PromtailCanonicalName:
 		versions.Promtail = desiredVersion
-	case StackroxCanonicalName:
-		versions.Stackrox = desiredVersion
 	case KubecostCanonicalName:
 		versions.Kubecost = desiredVersion
 	case NodeProblemDetectorCanonicalName:
