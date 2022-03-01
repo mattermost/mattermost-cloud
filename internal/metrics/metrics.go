@@ -18,15 +18,15 @@ const (
 // the Provisioning server
 type CloudMetrics struct {
 	// Installation
-	InstallationCreationDurationHist    prometheus.Histogram
-	InstallationUpdateDurationHist      prometheus.Histogram
-	InstallationHibernationDurationHist prometheus.Histogram
-	InstallationWakeUpDurationHist      prometheus.Histogram
-	InstallationDeletionDurationHist    prometheus.Histogram
+	InstallationCreationDurationHist    *prometheus.HistogramVec
+	InstallationUpdateDurationHist      *prometheus.HistogramVec
+	InstallationHibernationDurationHist *prometheus.HistogramVec
+	InstallationWakeUpDurationHist      *prometheus.HistogramVec
+	InstallationDeletionDurationHist    *prometheus.HistogramVec
 
 	// ClusterInstallation
-	ClusterInstallationReconcilingDurationHist prometheus.Histogram
-	ClusterInstallationDeletionDurationHist    prometheus.Histogram
+	ClusterInstallationReconcilingDurationHist *prometheus.HistogramVec
+	ClusterInstallationDeletionDurationHist    *prometheus.HistogramVec
 }
 
 // New creates a new Prometheus-based Metrics object to be used
@@ -34,7 +34,7 @@ type CloudMetrics struct {
 // metrics
 func New() *CloudMetrics {
 	return &CloudMetrics{
-		InstallationCreationDurationHist: promauto.NewHistogram(
+		InstallationCreationDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -42,9 +42,10 @@ func New() *CloudMetrics {
 				Help:      "The duration of installation creation tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"group"},
 		),
 
-		InstallationUpdateDurationHist: promauto.NewHistogram(
+		InstallationUpdateDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -52,9 +53,10 @@ func New() *CloudMetrics {
 				Help:      "The duration of installation update tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"group"},
 		),
 
-		InstallationHibernationDurationHist: promauto.NewHistogram(
+		InstallationHibernationDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -62,9 +64,10 @@ func New() *CloudMetrics {
 				Help:      "The duration of installation hibernation tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"group"},
 		),
 
-		InstallationWakeUpDurationHist: promauto.NewHistogram(
+		InstallationWakeUpDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -72,9 +75,10 @@ func New() *CloudMetrics {
 				Help:      "The duration of installation wake up tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"group"},
 		),
 
-		InstallationDeletionDurationHist: promauto.NewHistogram(
+		InstallationDeletionDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -82,9 +86,10 @@ func New() *CloudMetrics {
 				Help:      "The duration of installation deletion tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"group"},
 		),
 
-		ClusterInstallationReconcilingDurationHist: promauto.NewHistogram(
+		ClusterInstallationReconcilingDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -92,9 +97,10 @@ func New() *CloudMetrics {
 				Help:      "The duration of cluster installation reconciliation tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"cluster"},
 		),
 
-		ClusterInstallationDeletionDurationHist: promauto.NewHistogram(
+		ClusterInstallationDeletionDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
 				Subsystem: provisionerSubsystemApp,
@@ -102,6 +108,7 @@ func New() *CloudMetrics {
 				Help:      "The duration of cluster installation deletion tasks",
 				Buckets:   standardDurationBuckets(),
 			},
+			[]string{"cluster"},
 		),
 	}
 }

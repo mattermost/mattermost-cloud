@@ -1496,24 +1496,28 @@ func (s *InstallationSupervisor) processInstallationMetrics(installation *model.
 		return errors.Errorf("expected 1 state change event, but got %d", len(events))
 	}
 
+	groupID := "none"
+	if installation.GroupID != nil && len(*installation.GroupID) != 0 {
+		groupID = *installation.GroupID
+	}
 	event := events[0]
 	elapsedSeconds := model.ElapsedTimeInSeconds(event.Event.Timestamp)
 
 	switch event.StateChange.NewState {
 	case model.InstallationStateCreationRequested:
-		s.metrics.InstallationCreationDurationHist.Observe(elapsedSeconds)
+		s.metrics.InstallationCreationDurationHist.WithLabelValues(groupID).Observe(elapsedSeconds)
 		logger.Debugf("Installation was created in %d seconds", int(elapsedSeconds))
 	case model.InstallationStateUpdateRequested:
-		s.metrics.InstallationUpdateDurationHist.Observe(elapsedSeconds)
+		s.metrics.InstallationUpdateDurationHist.WithLabelValues(groupID).Observe(elapsedSeconds)
 		logger.Debugf("Installation was updated in %d seconds", int(elapsedSeconds))
 	case model.InstallationStateHibernationRequested:
-		s.metrics.InstallationHibernationDurationHist.Observe(elapsedSeconds)
+		s.metrics.InstallationHibernationDurationHist.WithLabelValues(groupID).Observe(elapsedSeconds)
 		logger.Debugf("Installation was hibernated in %d seconds", int(elapsedSeconds))
 	case model.InstallationStateWakeUpRequested:
-		s.metrics.InstallationWakeUpDurationHist.Observe(elapsedSeconds)
+		s.metrics.InstallationWakeUpDurationHist.WithLabelValues(groupID).Observe(elapsedSeconds)
 		logger.Debugf("Installation was woken up in %d seconds", int(elapsedSeconds))
 	case model.InstallationStateDeletionRequested:
-		s.metrics.InstallationDeletionDurationHist.Observe(elapsedSeconds)
+		s.metrics.InstallationDeletionDurationHist.WithLabelValues(groupID).Observe(elapsedSeconds)
 		logger.Debugf("Installation was deleted in %d seconds", int(elapsedSeconds))
 	default:
 		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
