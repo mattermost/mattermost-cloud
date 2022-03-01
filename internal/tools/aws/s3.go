@@ -136,7 +136,7 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 
 	objectSize := *objectMetadata.ContentLength
 	var (
-		partSize     int64 = 5 * 1024 * 1024 // 5 MB parts
+		partSize     int64 = 256 * 1024 * 1024 // 256 MB parts
 		bytePosition int64 = 0
 		partNum      int64 = 1
 	)
