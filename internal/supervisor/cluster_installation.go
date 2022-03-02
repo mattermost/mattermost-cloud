@@ -306,10 +306,10 @@ func (s *ClusterInstallationSupervisor) processClusterInstallationMetrics(cluste
 
 	switch event.StateChange.NewState {
 	case model.ClusterInstallationStateReconciling:
-		s.metrics.ClusterInstallationReconcilingDurationHist.Observe(elapsedSeconds)
+		s.metrics.ClusterInstallationReconcilingDurationHist.WithLabelValues(clusterInstallation.ClusterID).Observe(elapsedSeconds)
 		logger.Debugf("Cluster installation was reconciled in %d seconds", int(elapsedSeconds))
 	case model.ClusterInstallationStateDeletionRequested:
-		s.metrics.ClusterInstallationDeletionDurationHist.Observe(elapsedSeconds)
+		s.metrics.ClusterInstallationDeletionDurationHist.WithLabelValues(clusterInstallation.ClusterID).Observe(elapsedSeconds)
 		logger.Debugf("Cluster installation was deleted in %d seconds", int(elapsedSeconds))
 	default:
 		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
