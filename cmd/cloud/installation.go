@@ -54,6 +54,7 @@ func init() {
 	installationGetCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installation or not.")
 	installationGetCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installation or not.")
 	installationGetCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
+	installationGetCmd.Flags().Bool("hide-env", true, "Whether to hide env vars in the output or not.")
 	installationGetCmd.MarkFlagRequired("installation")
 
 	installationListCmd.Flags().String("owner", "", "The owner ID to filter installations by.")
@@ -63,6 +64,7 @@ func init() {
 	installationListCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installations or not.")
 	installationListCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
 	installationListCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
+	installationListCmd.Flags().Bool("hide-env", true, "Whether to hide env vars in the output or not.")
 	registerTableOutputFlags(installationListCmd)
 	registerPagingFlags(installationListCmd)
 
@@ -332,6 +334,7 @@ var installationGetCmd = &cobra.Command{
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
 		hideLicense, _ := command.Flags().GetBool("hide-license")
+		hideEnv, _ := command.Flags().GetBool("hide-env")
 
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{
 			IncludeGroupConfig:          includeGroupConfig,
@@ -343,8 +346,11 @@ var installationGetCmd = &cobra.Command{
 		if installation == nil {
 			return nil
 		}
-		if hideLicense && len(installation.License) != 0 {
-			installation.License = hiddenLicense
+		if hideLicense {
+			hideMattermostLicense(installation.Installation)
+		}
+		if hideEnv {
+			hideMattermostEnv(installation.Installation)
 		}
 
 		err = printJSON(installation)
@@ -372,6 +378,7 @@ var installationListCmd = &cobra.Command{
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
 		hideLicense, _ := command.Flags().GetBool("hide-license")
+		hideEnv, _ := command.Flags().GetBool("hide-env")
 		paging := parsePagingFlags(command)
 
 		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
@@ -389,9 +396,13 @@ var installationListCmd = &cobra.Command{
 
 		if hideLicense {
 			for _, installation := range installations {
-				if len(installation.License) != 0 {
-					installation.License = hiddenLicense
-				}
+				hideMattermostLicense(installation.Installation)
+			}
+		}
+
+		if hideEnv {
+			for _, installation := range installations {
+				hideMattermostEnv(installation.Installation)
 			}
 		}
 
@@ -743,4 +754,18 @@ var installationDeploymentReportCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func hideMattermostLicense(installation *model.Installation) {
+	if len(installation.License) != 0 {
+		installation.License = hiddenLicense
+	}
+}
+
+func hideMattermostEnv(installation *model.Installation) {
+	if installation.MattermostEnv != nil {
+		installation.MattermostEnv = model.EnvVarMap{
+			fmt.Sprintf("hidden (%d env vars) (--hide-env=true)", len(installation.MattermostEnv)): model.EnvVar{},
+		}
+	}
 }
