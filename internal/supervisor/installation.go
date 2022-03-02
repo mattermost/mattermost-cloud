@@ -645,14 +645,12 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
 		return model.InstallationStateCreationDNS
 	}
-	publicHostedZoneName := s.aws.GetPublicHostedZoneName()
+
+	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, "", logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get public hosted zone name from Route53")
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Route53")
 		return model.InstallationStateCreationDNS
 	}
-
-	var cloudflareDNSName []string
-	cloudflareDNSName = append(cloudflareDNSName, installation.DNS+".cdn.cloudflare.net")
 
 	if len(endpoints) == 0 {
 		logger.WithError(err).Error("no DNS endpoints provided for Cloudflare creation request")
@@ -665,13 +663,13 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		}
 	}
 
-	err = s.aws.CreatePublicCNAME(installation.DNS, cloudflareDNSName, "", logger)
+	publicHostedZoneNameList := s.aws.GetPublicHostedZoneNames()
 	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record in Route53")
+		logger.WithError(err).Error("Failed to get public hosted zone name list from Route53")
 		return model.InstallationStateCreationDNS
 	}
 
-	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, publicHostedZoneName, endpoints[0], "", logger) // need to rethink about the endpoints[0] if it has more than 1 item
+	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, publicHostedZoneNameList, endpoints[0], logger) // need to rethink about the endpoints[0] if it has more than 1 item
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return model.InstallationStateCreationDNS
@@ -1116,13 +1114,13 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	publicHostedZoneName := s.aws.GetPublicHostedZoneName()
+	publicHostedZoneNameList := s.aws.GetPublicHostedZoneNames()
 	if err != nil {
-		logger.WithError(err).Error("Failed to get public hosted zone name from Route53")
+		logger.WithError(err).Error("Failed to get public hosted zone name list from Route53")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, publicHostedZoneName, logger)
+	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, publicHostedZoneNameList, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 		return model.InstallationStateDeletionFinalCleanup

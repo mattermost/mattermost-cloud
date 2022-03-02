@@ -28,8 +28,6 @@ type awsHostedZone struct {
 }
 
 type route53Cache struct {
-	privateHostedZoneName string
-	publicHostedZoneName  string
 	privateHostedZoneID string
 	publicHostedZones   map[string]awsHostedZone
 }
@@ -67,17 +65,16 @@ func (a *Client) buildRoute53Cache() error {
 		zoneMap[strings.TrimSuffix(getString(zone.Name), ".")] = awsHostedZone{ID: zoneID}
 	}
 
-	privateZoneName, err := a.getHostedZoneNameWithID(privateID, a.logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to get private hosted zone name")
-	}
-	publicZoneName, err := a.getHostedZoneNameWithID(publicID, a.logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to get public hosted zone name")
-	}
+	//privateZoneName, err := a.getHostedZoneNameWithID(privateID, a.logger)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to get private hosted zone name")
+	//}
+	//publicZoneName, err := a.getHostedZoneNameWithID(zoneMap["dev.cloud"].ID, a.logger)
+	//publicZoneName, err := a.getHostedZoneNameWithID(string(zoneMap[]), a.logger)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to get public hosted zone name")
+	//}
 	a.cache.route53 = &route53Cache{
-		privateHostedZoneName: privateZoneName,
-		publicHostedZoneName:  publicZoneName,
 		privateHostedZoneID: privateID,
 		publicHostedZones:   zoneMap,
 	}
@@ -129,16 +126,13 @@ func (a *Client) GetPrivateHostedZoneID() string {
 	return a.cache.route53.privateHostedZoneID
 }
 
-// GetPublicHostedZoneName returns the public R53 hosted zone Name for the AWS
-// account.
-func (a *Client) GetPublicHostedZoneName() string {
-	return a.cache.route53.publicHostedZoneName
-}
-
-// GetPrivateHostedZoneID returns the private R53 hosted zone Name for the AWS
-// account.
-func (a *Client) GetPrivateHostedZoneName() string {
-	return a.cache.route53.privateHostedZoneName
+// GetPublicHostedZoneNames returns the public R53 hosted zone Name list for the AWS account.
+func (a *Client) GetPublicHostedZoneNames() []string {
+	var domainNameList []string
+	for domainName, _ := range a.cache.route53.publicHostedZones {
+		domainNameList = append(domainNameList, domainName)
+	}
+	return domainNameList
 }
 
 // CreatePrivateCNAME creates a record in Route53 for a private domain name.
@@ -467,22 +461,6 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*route53.Host
 	}
 
 	return zones, nil
-}
-
-// getHostedZoneNameWithTag returns R53 hosted zone Name for a given zoneID
-func (a *Client) getHostedZoneNameWithID(zoneID string, logger log.FieldLogger) (hostedZoneName string, err error) {
-
-	input := &route53.GetHostedZoneInput{
-		Id: aws.String(zoneID),
-	}
-
-	hostedZoneName53, err := a.Service().route53.GetHostedZone(input)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to get hosted zone name with ID: %s", zoneID)
-	}
-	hostedZoneName = strings.TrimRight(*hostedZoneName53.HostedZone.Name, ".")
-
-	return hostedZoneName, nil
 }
 
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {

@@ -55,7 +55,7 @@ type AWS interface {
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 	GetPrivateHostedZoneID() string
-	GetPublicHostedZoneName() string
+	GetPublicHostedZoneNames() []string
 	GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error)
 
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
@@ -184,17 +184,9 @@ func (c *Client) buildCache() error {
 	}
 
 	c.logger.WithFields(log.Fields{
-<<<<<<< HEAD
-		"environment":              c.cache.environment,
-		"private-hosted-zone-id":   c.cache.route53.privateHostedZoneID,
-		"public-hosted-zone-id":    c.cache.route53.publicHostedZoneID,
-		"private-hosted-zone-name": c.cache.route53.privateHostedZoneName,
-		"public-hosted-zone-name":  c.cache.route53.publicHostedZoneName,
-=======
 		"environment":            c.cache.environment,
 		"private-hosted-zone-id": c.cache.route53.privateHostedZoneID,
 		"public-hosted-zone-ids": c.cache.route53.publicHostedZones,
->>>>>>> e708855c775971d254edd264ceba562c2cbcf1ae
 	}).Info("AWS client cache initialized")
 
 	return nil
