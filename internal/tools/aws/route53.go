@@ -65,15 +65,6 @@ func (a *Client) buildRoute53Cache() error {
 		zoneMap[strings.TrimSuffix(getString(zone.Name), ".")] = awsHostedZone{ID: zoneID}
 	}
 
-	//privateZoneName, err := a.getHostedZoneNameWithID(privateID, a.logger)
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to get private hosted zone name")
-	//}
-	//publicZoneName, err := a.getHostedZoneNameWithID(zoneMap["dev.cloud"].ID, a.logger)
-	//publicZoneName, err := a.getHostedZoneNameWithID(string(zoneMap[]), a.logger)
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to get public hosted zone name")
-	//}
 	a.cache.route53 = &route53Cache{
 		privateHostedZoneID: privateID,
 		publicHostedZones:   zoneMap,

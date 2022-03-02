@@ -204,8 +204,6 @@ func newClientDummyCache() *cache {
 	return &cache{
 		environment: "dev",
 		route53: &route53Cache{
-			privateHostedZoneName: "priv.cloud.mattermost.com",
-			publicHostedZoneName:  "public.cloud.mattermost.com",
 			privateHostedZoneID: "HZONE1",
 			publicHostedZones: map[string]awsHostedZone{
 				"mattermost.com": {ID: "HZONE2"},
