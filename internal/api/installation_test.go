@@ -444,12 +444,17 @@ func TestCreateInstallation(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
+		envs := model.EnvVarMap{
+			"MM_TEST2": model.EnvVar{Value: "test2"},
+		}
+
 		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 			OwnerID:     "owner",
 			Version:     "version",
 			DNS:         "dns.example.com",
 			Affinity:    model.InstallationAffinityIsolated,
 			Annotations: []string{"my-annotation"},
+			PriorityEnv: envs,
 		})
 		require.NoError(t, err)
 		require.Equal(t, "owner", installation.OwnerID)
@@ -464,6 +469,7 @@ func TestCreateInstallation(t *testing.T) {
 		require.NotEqual(t, 0, installation.CreateAt)
 		require.EqualValues(t, 0, installation.DeleteAt)
 		assert.True(t, containsAnnotation("my-annotation", installation.Annotations))
+		assert.Equal(t, envs, installation.PriorityEnv)
 	})
 
 	t.Run("valid with custom image and capital letters in DNS", func(t *testing.T) {
@@ -953,6 +959,30 @@ func TestUpdateInstallation(t *testing.T) {
 		ensureInstallationMatchesRequest(t, installation1.Installation, updateRequest)
 		require.Equal(t, installationResponse, installation1)
 	})
+
+	t.Run("update envs", func(t *testing.T) {
+		envs := model.EnvVarMap{
+			"MM_TEST": model.EnvVar{Value: "test"},
+		}
+		priorityEnvs := model.EnvVarMap{
+			"MM_TEST2": model.EnvVar{Value: "test2"},
+		}
+
+		updateRequest := &model.PatchInstallationRequest{
+			MattermostEnv: envs,
+			PriorityEnv:   priorityEnvs,
+		}
+		installationResponse, err := client.UpdateInstallation(installation1.ID, updateRequest)
+		require.NoError(t, err)
+
+		installation1, err = client.GetInstallation(installation1.ID, nil)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateUpdateRequested, installation1.State)
+		ensureInstallationMatchesRequest(t, installation1.Installation, updateRequest)
+		require.Equal(t, installationResponse, installation1)
+		assert.Equal(t, envs, installation1.MattermostEnv)
+		assert.Equal(t, priorityEnvs, installation1.PriorityEnv)
+	})
 }
 
 func TestJoinGroup(t *testing.T) {
@@ -1310,6 +1340,103 @@ func TestLeaveGroup(t *testing.T) {
 		installation1, err = client.GetInstallation(installation1.ID, nil)
 		require.NoError(t, err)
 		require.Nil(t, installation1.GroupID)
+	})
+}
+
+// This test is somewhat limited as we cannot check what is passed to the deployment in unit test,
+// but it tests all underlying mechanisms.
+func TestConfigPriority(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	groupEnv := model.EnvVarMap{
+		"MM_GROUP": model.EnvVar{Value: "test-group"},
+		"MM_TEST":  model.EnvVar{Value: "group-value"},
+	}
+
+	group1, err := client.CreateGroup(&model.CreateGroupRequest{
+		Name:          "group-name",
+		Version:       "group-version",
+		Image:         "sample/group-image",
+		MattermostEnv: groupEnv,
+	})
+	require.NoError(t, err)
+
+	mmEnv := model.EnvVarMap{
+		"MM_BASE": model.EnvVar{Value: "test-base"},
+		"MM_TEST": model.EnvVar{Value: "mm-base-value"},
+	}
+
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:       "owner",
+		Version:       "version",
+		DNS:           "dns.example.com",
+		GroupID:       group1.ID,
+		MattermostEnv: mmEnv,
+		Affinity:      model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	installation1.State = model.InstallationStateStable
+	err = sqlStore.UpdateInstallation(installation1.Installation)
+	require.NoError(t, err)
+
+	expectedMMEnv := model.EnvVarMap{
+		"MM_BASE":  model.EnvVar{Value: "test-base"},
+		"MM_GROUP": model.EnvVar{Value: "test-group"},
+		"MM_TEST":  model.EnvVar{Value: "group-value"},
+	}
+
+	t.Run("should use group env over MattermostEnv", func(t *testing.T) {
+		fetchedInstallation, err := client.GetInstallation(
+			installation1.ID,
+			&model.GetInstallationRequest{IncludeGroupConfig: true, IncludeGroupConfigOverrides: true},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, expectedMMEnv, fetchedInstallation.MattermostEnv)
+		assert.Equal(t, expectedMMEnv, fetchedInstallation.GetEnvVars())
+	})
+
+	priorityEnv := model.EnvVarMap{
+		"MM_PRIORITY": model.EnvVar{Value: "test-priority"},
+		"MM_TEST":     model.EnvVar{Value: "priority-value"},
+	}
+
+	installation1, err = client.UpdateInstallation(installation1.ID, &model.PatchInstallationRequest{
+		PriorityEnv: priorityEnv,
+	})
+
+	t.Run("should use priority env over group env", func(t *testing.T) {
+		expectedEnv := model.EnvVarMap{
+			"MM_BASE":     model.EnvVar{Value: "test-base"},
+			"MM_GROUP":    model.EnvVar{Value: "test-group"},
+			"MM_PRIORITY": model.EnvVar{Value: "test-priority"},
+			"MM_TEST":     model.EnvVar{Value: "priority-value"},
+		}
+
+		fetchedInstallation, err := client.GetInstallation(
+			installation1.ID,
+			&model.GetInstallationRequest{IncludeGroupConfig: true, IncludeGroupConfigOverrides: true},
+		)
+		require.NoError(t, err)
+
+		// MattermostEnv stays the same as PriorityEnv is separate field
+		assert.Equal(t, expectedMMEnv, fetchedInstallation.MattermostEnv)
+		assert.Equal(t, expectedEnv, fetchedInstallation.GetEnvVars())
 	})
 }
 

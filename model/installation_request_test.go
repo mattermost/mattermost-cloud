@@ -130,6 +130,17 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 			},
 		},
 		{
+			"invalid priority mattermost env",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "domain4321.com",
+				PriorityEnv: model.EnvVarMap{
+					"key1": {Value: ""},
+				},
+			},
+		},
+		{
 			"invalid single tenant db replicas",
 			true,
 			&model.CreateInstallationRequest{

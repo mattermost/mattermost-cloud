@@ -1722,8 +1722,19 @@ var migrations = []migration{
 				Status TEXT NOT NULL,
 				LastAttempt BIGINT NOT NULL,
 				Attempts INT NOT NULL
-
 			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.33.0"), semver.MustParse("0.34.0"), func(e execer) error {
+		// Add PriorityEnv column to Installation
+		_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN PriorityEnvRaw BYTEA NULL;
 		`)
 		if err != nil {
 			return err
