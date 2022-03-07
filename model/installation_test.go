@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestInstallationClone(t *testing.T) {
@@ -335,4 +336,52 @@ func TestMergeWithGroup(t *testing.T) {
 		checkMergeValues(t, installation, group)
 		assert.False(t, installation.InstallationSequenceMatchesMergedGroupSequence())
 	})
+}
+
+func TestInstallation_GetEnvVars(t *testing.T) {
+	for _, testCase := range []struct {
+		description  string
+		installation Installation
+		expectedEnv  EnvVarMap
+	}{
+		{
+			description:  "no envs",
+			installation: Installation{},
+			expectedEnv:  EnvVarMap{},
+		},
+		{
+			description: "use regular envs",
+			installation: Installation{MattermostEnv: EnvVarMap{
+				"MM_TEST":  EnvVar{Value: "test"},
+				"MM_TEST2": EnvVar{ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{Key: "test"}}}},
+			},
+			expectedEnv: EnvVarMap{
+				"MM_TEST":  EnvVar{Value: "test"},
+				"MM_TEST2": EnvVar{ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{Key: "test"}}},
+			},
+		},
+		{
+			description: "prioritize priority envs",
+			installation: Installation{
+				MattermostEnv: EnvVarMap{
+					"MM_TEST":  EnvVar{Value: "test"},
+					"MM_TEST2": EnvVar{ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{Key: "test"}}},
+				},
+				PriorityEnv: EnvVarMap{
+					"MM_TEST2": EnvVar{ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{Key: "secret-test"}}},
+					"MM_TEST3": EnvVar{Value: "test3"},
+				},
+			},
+			expectedEnv: EnvVarMap{
+				"MM_TEST":  EnvVar{Value: "test"},
+				"MM_TEST2": EnvVar{ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{Key: "secret-test"}}},
+				"MM_TEST3": EnvVar{Value: "test3"},
+			},
+		},
+	} {
+		t.Run(testCase.description, func(t *testing.T) {
+			envs := testCase.installation.GetEnvVars()
+			assert.Equal(t, testCase.expectedEnv, envs)
+		})
+	}
 }

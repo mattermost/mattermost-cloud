@@ -33,6 +33,7 @@ func init() {
 	installationCreateCmd.Flags().String("database", model.InstallationDatabaseMysqlOperator, "The Mattermost server database type. Accepts mysql-operator, aws-rds, aws-rds-postgres, aws-multitenant-rds, or aws-multitenant-rds-postgres")
 	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator, aws-s3, bifrost, or aws-multitenant-s3")
 	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationCreateCmd.Flags().StringArray("priority-env", []string{}, "Env vars to add to the Mattermost App that take priority over group config. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	installationCreateCmd.Flags().String("rds-primary-instance", "", "The machine instance type used for primary replica of database cluster. Works only with single tenant RDS databases.")
 	installationCreateCmd.Flags().String("rds-replica-instance", "", "The machine instance type used for reader replicas of database cluster. Works only with single tenant RDS databases.")
@@ -47,7 +48,9 @@ func init() {
 	installationUpdateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationUpdateCmd.Flags().StringArray("priority-env", []string{}, "Env vars to add to the Mattermost App that take priority over group config. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
+	installationUpdateCmd.Flags().Bool("priority-env-clear", false, "Clears all priority env var data.")
 	installationUpdateCmd.MarkFlagRequired("installation")
 
 	installationGetCmd.Flags().String("installation", "", "The id of the installation to be fetched.")
@@ -134,9 +137,14 @@ var installationCreateCmd = &cobra.Command{
 		database, _ := command.Flags().GetString("database")
 		filestore, _ := command.Flags().GetString("filestore")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		priorityEnv, _ := command.Flags().GetStringArray("priority-env")
 		annotations, _ := command.Flags().GetStringArray("annotation")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
+		if err != nil {
+			return err
+		}
+		priorityEnvVarMap, err := parseEnvVarInput(priorityEnv, false)
 		if err != nil {
 			return err
 		}
@@ -153,6 +161,7 @@ var installationCreateCmd = &cobra.Command{
 			Database:      database,
 			Filestore:     filestore,
 			MattermostEnv: envVarMap,
+			PriorityEnv:   priorityEnvVarMap,
 			Annotations:   annotations,
 		}
 
@@ -201,8 +210,14 @@ var installationUpdateCmd = &cobra.Command{
 		installationID, _ := command.Flags().GetString("installation")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
+		priorityEnv, _ := command.Flags().GetStringArray("priority-env")
+		priorityEnvClear, _ := command.Flags().GetBool("priority-env-clear")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
+		if err != nil {
+			return err
+		}
+		priorityEnvVarMap, err := parseEnvVarInput(priorityEnv, priorityEnvClear)
 		if err != nil {
 			return err
 		}
@@ -214,6 +229,7 @@ var installationUpdateCmd = &cobra.Command{
 			Size:          getStringFlagPointer(command, "size"),
 			License:       getStringFlagPointer(command, "license"),
 			MattermostEnv: envVarMap,
+			PriorityEnv:   priorityEnvVarMap,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

@@ -21,7 +21,7 @@ func init() {
 		Select(
 			"Installation.ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "State", "License",
-			"MattermostEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
+			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
 		From("Installation")
@@ -30,6 +30,7 @@ func init() {
 type rawInstallation struct {
 	*model.Installation
 	MattermostEnvRaw              []byte
+	PriorityEnvRaw                []byte
 	SingleTenantDatabaseConfigRaw []byte
 }
 
@@ -46,6 +47,15 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 		}
 	}
 	r.Installation.MattermostEnv = *mattermostEnv
+
+	priorityEnv := &model.EnvVarMap{}
+	if r.PriorityEnvRaw != nil {
+		priorityEnv, err = model.EnvVarFromJSON(r.PriorityEnvRaw)
+		if err != nil {
+			return nil, err
+		}
+	}
+	r.Installation.PriorityEnv = *priorityEnv
 
 	if r.SingleTenantDatabaseConfigRaw != nil {
 		singleTenantDBConfig := &model.SingleTenantDatabaseConfig{}
@@ -332,6 +342,11 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
+	priorityEnvJSON, err := json.Marshal(installation.PriorityEnv)
+	if err != nil {
+		return errors.Wrap(err, "unable to marshal PriorityEnv")
+	}
+
 	insertsMap := map[string]interface{}{
 		"ID":               installation.ID,
 		"OwnerID":          installation.OwnerID,
@@ -347,6 +362,7 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"State":            installation.State,
 		"License":          installation.License,
 		"MattermostEnvRaw": []byte(envJSON),
+		"PriorityEnvRaw":   []byte(priorityEnvJSON),
 		"CreateAt":         installation.CreateAt,
 		"DeleteAt":         0,
 		"APISecurityLock":  installation.APISecurityLock,
@@ -390,6 +406,11 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
 
+	priorityEnvJSON, err := json.Marshal(installation.PriorityEnv)
+	if err != nil {
+		return errors.Wrap(err, "unable to marshal PriorityEnv")
+	}
+
 	_, err = sqlStore.execBuilder(db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
@@ -405,6 +426,7 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"Affinity":         installation.Affinity,
 			"License":          installation.License,
 			"MattermostEnvRaw": []byte(envJSON),
+			"PriorityEnvRaw":   []byte(priorityEnvJSON),
 			"State":            installation.State,
 			"CRVersion":        installation.CRVersion,
 		}).

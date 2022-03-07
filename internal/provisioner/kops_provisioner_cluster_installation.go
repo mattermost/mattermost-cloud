@@ -953,7 +953,7 @@ func clusterInstallationBaseLabels(installation *model.Installation, clusterInst
 // NOTE: this should be called whenever the Mattermost custom resource is created
 // or updated.
 func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVarMap {
-	mattermostEnv := installation.MattermostEnv
+	mattermostEnv := installation.GetEnvVars()
 	if mattermostEnv == nil {
 		mattermostEnv = map[string]model.EnvVar{}
 	}

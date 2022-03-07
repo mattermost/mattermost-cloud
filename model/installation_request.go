@@ -50,6 +50,7 @@ type CreateInstallationRequest struct {
 	Filestore       string
 	APISecurityLock bool
 	MattermostEnv   EnvVarMap
+	PriorityEnv     EnvVarMap
 	Annotations     []string
 	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
 	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
@@ -110,15 +111,20 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Errorf("unsupported filestore %s", request.Filestore)
 	}
 	err = request.MattermostEnv.Validate()
+	if err != nil {
+		return errors.Wrap(err, "invalid env var settings")
+	}
+	err = request.PriorityEnv.Validate()
+	if err != nil {
+		return errors.Wrap(err, "invalid priority env var settings")
+	}
+
 	if requireAnnotatedInstallations {
 		if len(request.Annotations) == 0 {
 			return errors.Errorf("at least one annotation is required")
 		}
 	}
 
-	if err != nil {
-		return errors.Wrap(err, "invalid env var settings")
-	}
 	if IsSingleTenantRDS(request.Database) {
 		err = request.SingleTenantDatabaseConfig.Validate()
 		if err != nil {
@@ -248,6 +254,7 @@ type PatchInstallationRequest struct {
 	Version       *string
 	Size          *string
 	License       *string
+	PriorityEnv   EnvVarMap
 	MattermostEnv EnvVarMap
 }
 
@@ -297,6 +304,11 @@ func (p *PatchInstallationRequest) Apply(installation *Installation) bool {
 	}
 	if p.MattermostEnv != nil {
 		if installation.MattermostEnv.ClearOrPatch(&p.MattermostEnv) {
+			applied = true
+		}
+	}
+	if p.PriorityEnv != nil {
+		if installation.PriorityEnv.ClearOrPatch(&p.PriorityEnv) {
 			applied = true
 		}
 	}
