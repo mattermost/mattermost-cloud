@@ -652,24 +652,13 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		return model.InstallationStateCreationDNS
 	}
 
-	if len(endpoints) == 0 {
-		logger.WithError(err).Error("no DNS endpoints provided for Cloudflare creation request")
-		return model.InstallationStateCreationDNS
-	}
-	for _, endpoint := range endpoints {
-		if endpoint == "" {
-			logger.WithError(err).Error("at least one of the DNS endpoints was set to an empty string")
-			return model.InstallationStateCreationDNS
-		}
-	}
-
 	publicHostedZoneNameList := s.aws.GetPublicHostedZoneNames()
 	if err != nil {
 		logger.WithError(err).Error("Failed to get public hosted zone name list from Route53")
 		return model.InstallationStateCreationDNS
 	}
 
-	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, publicHostedZoneNameList, endpoints[0], logger) // need to rethink about the endpoints[0] if it has more than 1 item
+	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, publicHostedZoneNameList, endpoints, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return model.InstallationStateCreationDNS
