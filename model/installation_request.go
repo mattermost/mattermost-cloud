@@ -43,6 +43,7 @@ type CreateInstallationRequest struct {
 	Version         string
 	Image           string
 	DNS             string
+	FirstTeamName   string
 	License         string
 	Size            string
 	Affinity        string

@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 
 	"github.com/gorilla/mux"
@@ -214,7 +215,12 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = c.EventProducer.ProduceInstallationStateChangeEvent(&installation, model.NonApplicableState)
+	extraFields := events.DataField{
+		Key:   "FirstTeamName",
+		Value: createInstallationRequest.FirstTeamName,
+	}
+
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(&installation, model.NonApplicableState, extraFields)
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
