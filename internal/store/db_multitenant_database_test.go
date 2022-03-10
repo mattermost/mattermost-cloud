@@ -351,3 +351,23 @@ func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteMultitenantDatabase(t *testing.T) {
+	sqlStore := MakeTestSQLStore(t, testlib.MakeLogger(t))
+	defer CloseConnection(t, sqlStore)
+
+	database1 := &model.MultitenantDatabase{
+		RdsClusterID:  "database_id0",
+		VpcID:         "vpc_id0",
+	}
+
+	err := sqlStore.CreateMultitenantDatabase(database1)
+	require.NoError(t, err)
+
+	err = sqlStore.DeleteMultitenantDatabase(database1.ID)
+	require.NoError(t, err)
+
+	db, err := sqlStore.GetMultitenantDatabase(database1.ID)
+	require.NoError(t, err)
+	assert.NotEqual(t, int64(0), db.DeleteAt)
+}

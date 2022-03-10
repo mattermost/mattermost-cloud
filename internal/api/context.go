@@ -19,6 +19,7 @@ type Supervisor interface {
 // Store describes the interface required to persist changes made via API requests.
 type Store interface {
 	model.InstallationDatabaseStoreInterface
+	DeleteMultitenantDatabase(multitenantDatabaseID string) error
 
 	CreateCluster(cluster *model.Cluster, annotations []*model.Annotation) error
 	GetCluster(clusterID string) (*model.Cluster, error)
@@ -124,6 +125,7 @@ type Provisioner interface {
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
 	SwitchClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
+	RDSDBCLusterExists(awsID string) (bool, error)
 }
 
 // DBProvider describes the interface required to get database for specific installation and specified type.
