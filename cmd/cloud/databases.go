@@ -32,9 +32,14 @@ func init() {
 	multitenantDatabaseUpdateCmd.Flags().Int64("max-installations-per-logical-db", 10, "The maximum number of installations permitted in a single logical database (only applies to proxy databases).")
 	multitenantDatabaseUpdateCmd.MarkFlagRequired("multitenant-database")
 
+	multitenantDatabaseDeleteCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to delete.")
+	multitenantDatabaseDeleteCmd.Flags().Bool("force", false, "Specifies whether to delete record even if database cluster exists.")
+	multitenantDatabaseDeleteCmd.MarkFlagRequired("multitenant-database")
+
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseListCmd)
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseGetCmd)
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseUpdateCmd)
+	multitenantDatabaseCmd.AddCommand(multitenantDatabaseDeleteCmd)
 
 	// Logical Databases
 	logicalDatabaseListCmd.Flags().String("multitenant-database-id", "", "The multitenant database ID by which to filter logical databases.")
@@ -188,6 +193,26 @@ var multitenantDatabaseUpdateCmd = &cobra.Command{
 		}
 
 		return printJSON(multitenantDatabase)
+	},
+}
+
+var multitenantDatabaseDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete an multitenant database's configuration",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database")
+		force, _ := command.Flags().GetBool("force")
+
+		err := client.DeleteMultitenantDatabase(multitenantDatabaseID, force)
+		if err != nil {
+			return errors.Wrap(err, "failed to update multitenant database")
+		}
+		return nil
 	},
 }
 

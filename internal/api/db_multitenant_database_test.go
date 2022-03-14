@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -262,4 +263,81 @@ func TestUpdateMultitenantDatabase(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int64(10), database1.MaxInstallationsPerLogicalDatabase)
 	})
+}
+
+type mockAWSClient struct {
+	clusterExists bool
+	expectedRDSID string
+}
+
+func (m mockAWSClient) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (m mockAWSClient) RDSDBCLusterExists(awsID string) (bool, error) {
+	if awsID != m.expectedRDSID {
+		panic("expected different RDS ID")
+	}
+	return m.clusterExists, nil
+}
+
+func TestDeleteMultitenantDatabase(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+
+	router := mux.NewRouter()
+	context := &api.Context{
+		Store:      sqlStore,
+		Supervisor: &mockSupervisor{},
+		Logger:     logger,
+		AwsClient: mockAWSClient{clusterExists: false, expectedRDSID: "rds-id"},
+	}
+	api.Register(router, context)
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	t.Run("fail when deleting invalid cluster", func(t *testing.T) {
+		err := client.DeleteMultitenantDatabase("invalid-cluster", false)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "404")
+	})
+
+	makeDBCluster := func() *model.MultitenantDatabase {
+		database1 := &model.MultitenantDatabase{
+			ID:                                 model.NewID(),
+			DatabaseType:                       model.DatabaseEngineTypePostgres,
+			RdsClusterID: "rds-id",
+		}
+		err := sqlStore.CreateMultitenantDatabase(database1)
+		require.NoError(t, err)
+		return database1
+	}
+
+	db := makeDBCluster()
+
+	// Delete without force when cluster does not exist.
+	err := client.DeleteMultitenantDatabase(db.ID, false)
+	require.NoError(t, err)
+	fetched, err := sqlStore.GetMultitenantDatabase(db.ID)
+	require.NoError(t, err)
+	assert.True(t, fetched.DeleteAt > 0)
+
+	t.Run("do not fail when already deleted", func(t *testing.T) {
+		err = client.DeleteMultitenantDatabase(db.ID, false)
+		require.NoError(t, err)
+	})
+
+	// Fail without force if cluster does not exist.
+	context.AwsClient = mockAWSClient{clusterExists: true, expectedRDSID: "rds-id"}
+	db2 := makeDBCluster()
+
+	err = client.DeleteMultitenantDatabase(db2.ID, false)
+	require.Error(t, err)
+	assert.Contains(t,err.Error(), "400")
+
+	// Succeed with force even if cluster exists.
+	err = client.DeleteMultitenantDatabase(db2.ID, true)
+	require.NoError(t, err)
 }

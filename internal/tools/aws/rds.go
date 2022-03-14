@@ -18,6 +18,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// RDSDBCLusterExists check whether RDS cluster with specified ID exists.
+func (a *Client) RDSDBCLusterExists(awsID string) (bool, error) {
+	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
+		DBClusterIdentifier: aws.String(awsID),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == rds.ErrCodeDBClusterNotFoundFault {
+				return false, nil
+			}
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (a *Client) rdsGetDBSecurityGroupIDs(vpcID, tagValue string, logger log.FieldLogger) ([]string, error) {
 	result, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
 		Filters: []*ec2.Filter{

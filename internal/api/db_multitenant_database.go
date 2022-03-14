@@ -6,6 +6,7 @@ package api
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -23,6 +24,7 @@ func initMultitenantDatabases(apiRouter *mux.Router, context *Context) {
 	MultitenantDatabaseRouter := apiRouter.PathPrefix("/multitenant_database/{multitenant_database:[A-Za-z0-9]{26}}").Subrouter()
 	MultitenantDatabaseRouter.Handle("", addContext(handleGetMultitenantDatabase)).Methods("GET")
 	MultitenantDatabaseRouter.Handle("", addContext(handleUpdateMultitenantDatabase)).Methods("PUT")
+	MultitenantDatabaseRouter.Handle("", addContext(handleDeleteMultitenantDatabase)).Methods("DELETE")
 }
 
 // handleGetMultitenantDatabases responds to GET /api/databases/multitenant_databases,
@@ -115,4 +117,59 @@ func handleUpdateMultitenantDatabase(c *Context, w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, multitenantDatabase)
+}
+
+// handleDeleteMultitenantDatabase responds to DELETE /api/databases/multitenant_database/{multitenant_database},
+// marking the database as deleted.
+// WARNING: It does not delete actual database cluster.
+func handleDeleteMultitenantDatabase(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	multitenantDatabaseID := vars["multitenant_database"]
+	c.Logger = c.Logger.WithField("multitenant_database", multitenantDatabaseID)
+
+	query := r.URL.Query()
+	force, err := strconv.ParseBool(query.Get("force"))
+	if err != nil { // If we failed to pase, assume false
+		force = false
+	}
+
+	db, err := c.Store.GetMultitenantDatabase(multitenantDatabaseID)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to get multitenant database by ID")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if db == nil {
+		c.Logger.Debug("Multitenat database for deletion not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if db.DeleteAt > 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// If deletion is forced we do not check and just delete.
+	if !force {
+		exists, err := c.AwsClient.RDSDBCLusterExists(db.RdsClusterID)
+		if err != nil {
+			c.Logger.WithError(err).Error("Failed to check if DB cluster exists")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if exists {
+			c.Logger.Error("Cannot delete multitenant database if DB cluster exists.")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	err = c.Store.DeleteMultitenantDatabase(multitenantDatabaseID)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to mark multitenant database as deleted")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
