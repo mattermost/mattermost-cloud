@@ -53,10 +53,21 @@ func TestInstallations(t *testing.T) {
 		GroupID:   &groupID1,
 		CRVersion: model.V1betaCRVersion,
 		State:     model.InstallationStateCreationRequested,
+		PriorityEnv: model.EnvVarMap{
+			"V1": model.EnvVar{
+				Value: "test",
+			},
+		},
 	}
 
 	err = sqlStore.CreateInstallation(installation1, annotations)
 	require.NoError(t, err)
+
+	t.Run("get installation", func(t *testing.T) {
+		fetched, err := sqlStore.GetInstallation(installation1.ID, false, false)
+		require.NoError(t, err)
+		assert.Equal(t, installation1, fetched)
+	})
 
 	t.Run("fail on not unique DNS", func(t *testing.T) {
 		if sqlStore.db.DriverName() != "postgres" {
@@ -660,6 +671,31 @@ func TestUpdateInstallation(t *testing.T) {
 	installation1.GroupID = &groupID2
 	installation1.CRVersion = model.V1betaCRVersion
 	installation1.State = model.InstallationStateDeletionRequested
+	installation1.PriorityEnv = model.EnvVarMap{
+		"V1": model.EnvVar{
+			Value: "test",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "1",
+					FieldPath:  "some/path/neat",
+				},
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					Key:      "key_string",
+					Optional: &someBool,
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "configMap_localObjectReference",
+					},
+				},
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "secret_localObjectReference",
+					},
+					Key:      "key_secret",
+					Optional: &someBool,
+				},
+			},
+		},
+	}
 
 	err = sqlStore.UpdateInstallation(installation1)
 	require.NoError(t, err)

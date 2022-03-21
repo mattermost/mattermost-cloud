@@ -62,10 +62,10 @@ func (em *EnvVarMap) ClearOrPatch(new *EnvVarMap) bool {
 	}
 
 	if len(*new) == 0 {
-		orginalEmpty := len(*em) != 0
+		originalEmpty := len(*em) != 0
 		*em = nil
 
-		return orginalEmpty
+		return originalEmpty
 	}
 
 	return em.Patch(*new)

@@ -91,7 +91,7 @@ func (n *teleport) ActualVersion() *model.HelmUtilityVersion {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(n.actualVersion.Version(), "kube-agent-"),
+		Chart:      strings.TrimPrefix(n.actualVersion.Version(), "teleport-kube-agent-"),
 		ValuesPath: n.actualVersion.Values(),
 	}
 }

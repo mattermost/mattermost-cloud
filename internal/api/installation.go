@@ -194,6 +194,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		Affinity:                   createInstallationRequest.Affinity,
 		APISecurityLock:            createInstallationRequest.APISecurityLock,
 		MattermostEnv:              createInstallationRequest.MattermostEnv,
+		PriorityEnv:                createInstallationRequest.PriorityEnv,
 		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		CRVersion:                  model.DefaultCRVersion,
 		State:                      model.InstallationStateCreationRequested,

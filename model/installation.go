@@ -37,6 +37,7 @@ type Installation struct {
 	Filestore                  string
 	License                    string
 	MattermostEnv              EnvVarMap
+	PriorityEnv                EnvVarMap
 	Size                       string
 	Affinity                   string
 	State                      string
@@ -194,6 +195,22 @@ func (i *Installation) MergeWithGroup(group *Group, includeOverrides bool) {
 		}
 		i.MattermostEnv[key] = value
 	}
+}
+
+// GetEnvVars returns Mattermost environment variables that will be applied to the installation.
+// If the installation was not merged with group, group env vars may impact the actual result.
+func (i Installation) GetEnvVars() EnvVarMap {
+	envs := make(map[string]EnvVar, len(i.MattermostEnv))
+
+	// First apply standard env, then override PriorityEnv.
+	for k, v := range i.MattermostEnv {
+		envs[k] = v
+	}
+	for k, v := range i.PriorityEnv {
+		envs[k] = v
+	}
+
+	return envs
 }
 
 // InstallationFromReader decodes a json-encoded installation from the given io.Reader.

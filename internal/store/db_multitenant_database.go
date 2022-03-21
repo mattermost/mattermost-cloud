@@ -236,6 +236,21 @@ func (sqlStore *SQLStore) updateMultitenantDatabase(db execer, multitenantDataba
 	return nil
 }
 
+// DeleteMultitenantDatabase marks multitenant database as deleted.
+func (sqlStore *SQLStore) DeleteMultitenantDatabase(multitenantDatabaseID string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update("MultitenantDatabase").
+		Set("DeleteAt", model.GetMillis()).
+		Where("ID = ?", multitenantDatabaseID).
+		Where("DeleteAt = 0"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to mark multitenant database as deleted")
+	}
+
+	return nil
+}
+
 // LockMultitenantDatabase marks the database cluster as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockMultitenantDatabase(multitenantDatabaseID, lockerID string) (bool, error) {
 	return sqlStore.lockRows("MultitenantDatabase", []string{multitenantDatabaseID}, lockerID)

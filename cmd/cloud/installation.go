@@ -33,6 +33,7 @@ func init() {
 	installationCreateCmd.Flags().String("database", model.InstallationDatabaseMysqlOperator, "The Mattermost server database type. Accepts mysql-operator, aws-rds, aws-rds-postgres, aws-multitenant-rds, or aws-multitenant-rds-postgres")
 	installationCreateCmd.Flags().String("filestore", model.InstallationFilestoreMinioOperator, "The Mattermost server filestore type. Accepts minio-operator, aws-s3, bifrost, or aws-multitenant-s3")
 	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationCreateCmd.Flags().StringArray("priority-env", []string{}, "Env vars to add to the Mattermost App that take priority over group config. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	installationCreateCmd.Flags().String("rds-primary-instance", "", "The machine instance type used for primary replica of database cluster. Works only with single tenant RDS databases.")
 	installationCreateCmd.Flags().String("rds-replica-instance", "", "The machine instance type used for reader replicas of database cluster. Works only with single tenant RDS databases.")
@@ -47,13 +48,16 @@ func init() {
 	installationUpdateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationUpdateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
 	installationUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	installationUpdateCmd.Flags().StringArray("priority-env", []string{}, "Env vars to add to the Mattermost App that take priority over group config. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
+	installationUpdateCmd.Flags().Bool("priority-env-clear", false, "Clears all priority env var data.")
 	installationUpdateCmd.MarkFlagRequired("installation")
 
 	installationGetCmd.Flags().String("installation", "", "The id of the installation to be fetched.")
 	installationGetCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installation or not.")
 	installationGetCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installation or not.")
 	installationGetCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
+	installationGetCmd.Flags().Bool("hide-env", true, "Whether to hide env vars in the output or not.")
 	installationGetCmd.MarkFlagRequired("installation")
 
 	installationListCmd.Flags().String("owner", "", "The owner ID to filter installations by.")
@@ -63,6 +67,7 @@ func init() {
 	installationListCmd.Flags().Bool("include-group-config", true, "Whether to include group configuration in the installations or not.")
 	installationListCmd.Flags().Bool("include-group-config-overrides", true, "Whether to include a group configuration override summary in the installations or not.")
 	installationListCmd.Flags().Bool("hide-license", true, "Whether to hide the license value in the output or not.")
+	installationListCmd.Flags().Bool("hide-env", true, "Whether to hide env vars in the output or not.")
 	registerTableOutputFlags(installationListCmd)
 	registerPagingFlags(installationListCmd)
 
@@ -132,9 +137,14 @@ var installationCreateCmd = &cobra.Command{
 		database, _ := command.Flags().GetString("database")
 		filestore, _ := command.Flags().GetString("filestore")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		priorityEnv, _ := command.Flags().GetStringArray("priority-env")
 		annotations, _ := command.Flags().GetStringArray("annotation")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
+		if err != nil {
+			return err
+		}
+		priorityEnvVarMap, err := parseEnvVarInput(priorityEnv, false)
 		if err != nil {
 			return err
 		}
@@ -151,6 +161,7 @@ var installationCreateCmd = &cobra.Command{
 			Database:      database,
 			Filestore:     filestore,
 			MattermostEnv: envVarMap,
+			PriorityEnv:   priorityEnvVarMap,
 			Annotations:   annotations,
 		}
 
@@ -199,8 +210,14 @@ var installationUpdateCmd = &cobra.Command{
 		installationID, _ := command.Flags().GetString("installation")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
+		priorityEnv, _ := command.Flags().GetStringArray("priority-env")
+		priorityEnvClear, _ := command.Flags().GetBool("priority-env-clear")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
+		if err != nil {
+			return err
+		}
+		priorityEnvVarMap, err := parseEnvVarInput(priorityEnv, priorityEnvClear)
 		if err != nil {
 			return err
 		}
@@ -212,6 +229,7 @@ var installationUpdateCmd = &cobra.Command{
 			Size:          getStringFlagPointer(command, "size"),
 			License:       getStringFlagPointer(command, "license"),
 			MattermostEnv: envVarMap,
+			PriorityEnv:   priorityEnvVarMap,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -332,6 +350,7 @@ var installationGetCmd = &cobra.Command{
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
 		hideLicense, _ := command.Flags().GetBool("hide-license")
+		hideEnv, _ := command.Flags().GetBool("hide-env")
 
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{
 			IncludeGroupConfig:          includeGroupConfig,
@@ -343,8 +362,11 @@ var installationGetCmd = &cobra.Command{
 		if installation == nil {
 			return nil
 		}
-		if hideLicense && len(installation.License) != 0 {
-			installation.License = hiddenLicense
+		if hideLicense {
+			hideMattermostLicense(installation.Installation)
+		}
+		if hideEnv {
+			hideMattermostEnv(installation.Installation)
 		}
 
 		err = printJSON(installation)
@@ -372,6 +394,7 @@ var installationListCmd = &cobra.Command{
 		includeGroupConfig, _ := command.Flags().GetBool("include-group-config")
 		includeGroupConfigOverrides, _ := command.Flags().GetBool("include-group-config-overrides")
 		hideLicense, _ := command.Flags().GetBool("hide-license")
+		hideEnv, _ := command.Flags().GetBool("hide-env")
 		paging := parsePagingFlags(command)
 
 		installations, err := client.GetInstallations(&model.GetInstallationsRequest{
@@ -389,9 +412,13 @@ var installationListCmd = &cobra.Command{
 
 		if hideLicense {
 			for _, installation := range installations {
-				if len(installation.License) != 0 {
-					installation.License = hiddenLicense
-				}
+				hideMattermostLicense(installation.Installation)
+			}
+		}
+
+		if hideEnv {
+			for _, installation := range installations {
+				hideMattermostEnv(installation.Installation)
 			}
 		}
 
@@ -743,4 +770,18 @@ var installationDeploymentReportCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func hideMattermostLicense(installation *model.Installation) {
+	if len(installation.License) != 0 {
+		installation.License = hiddenLicense
+	}
+}
+
+func hideMattermostEnv(installation *model.Installation) {
+	if installation.MattermostEnv != nil {
+		installation.MattermostEnv = model.EnvVarMap{
+			fmt.Sprintf("hidden (%d env vars) (--hide-env=true)", len(installation.MattermostEnv)): model.EnvVar{},
+		}
+	}
 }

@@ -1168,6 +1168,24 @@ func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchMult
 	}
 }
 
+// DeleteMultitenantDatabase marks multitenant database as deleted.
+func (c *Client) DeleteMultitenantDatabase(databaseID string, force bool) error {
+	u := c.buildURL("/api/databases/multitenant_database/%s?force=%t", databaseID, force)
+	resp, err := c.doDelete(u)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // GetLogicalDatabases fetches the list of logical databases from the configured provisioning server.
 func (c *Client) GetLogicalDatabases(request *GetLogicalDatabasesRequest) ([]*LogicalDatabase, error) {
 	u, err := url.Parse(c.buildURL("/api/databases/logical_databases"))
