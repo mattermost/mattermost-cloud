@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -480,41 +481,50 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
 		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
-			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
-			if err != nil {
-				return errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
+			attempts := 5
+			var daemonSetObj *appsv1.DaemonSet
+			for attempt := 0; attempt < attempts; attempt++ {
+				daemonSetObj, err = k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
+				if err != nil && attempt < 5 {
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				if err != nil && attempt >= 5 {
+					return errors.Wrapf(err, "Nr of attempts: %s, failed to get daemonSet %s", strconv.Itoa(attempt), daemonSet)
+				}
 			}
-
 			var payload []k8s.PatchStringValue
-			for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
-				if envVar.Name == "CLUSTER" {
-					payload = []k8s.PatchStringValue{{
-						Op:    "replace",
-						Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-						Value: cluster.ID,
-					}}
-				}
-				if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
-					payload = append(payload,
-						k8s.PatchStringValue{
+			if daemonSetObj.Spec.Selector != nil {
+				for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
+					if envVar.Name == "CLUSTER" {
+						payload = []k8s.PatchStringValue{{
 							Op:    "replace",
 							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-							Value: os.Getenv(model.MattermostChannel),
-						})
+							Value: cluster.ID,
+						}}
+					}
+					if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
+						payload = append(payload,
+							k8s.PatchStringValue{
+								Op:    "replace",
+								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+								Value: os.Getenv(model.MattermostChannel),
+							})
+					}
+					if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
+						payload = append(payload,
+							k8s.PatchStringValue{
+								Op:    "replace",
+								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+								Value: os.Getenv(model.MattermostWebhook),
+							})
+					}
 				}
-				if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
-					payload = append(payload,
-						k8s.PatchStringValue{
-							Op:    "replace",
-							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-							Value: os.Getenv(model.MattermostWebhook),
-						})
-				}
-			}
 
-			err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
-			if err != nil {
-				return err
+				err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
