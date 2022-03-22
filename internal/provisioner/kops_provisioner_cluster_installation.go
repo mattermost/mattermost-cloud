@@ -95,13 +95,11 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation),
 		},
 		Spec: mmv1beta1.MattermostSpec{
-			Size:               installation.Size,
-			Version:            translateMattermostVersion(installation.Version),
-			Image:              installation.Image,
-			IngressName:        installation.DNS,
-			MattermostEnv:      mattermostEnv.ToEnvList(),
-			UseIngressTLS:      false,
-			IngressAnnotations: getIngressAnnotations(),
+			Size:          installation.Size,
+			Version:       translateMattermostVersion(installation.Version),
+			Image:         installation.Image,
+			MattermostEnv: mattermostEnv.ToEnvList(),
+			Ingress:       makeIngressSpec(installation.DNS),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
 			Scheduling: mmv1beta1.Scheduling{
@@ -285,7 +283,10 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
 	mattermost.Spec.MattermostEnv = mattermostEnv.ToEnvList()
 
-	mattermost.Spec.IngressAnnotations = getIngressAnnotations()
+	// Just to be sure, for the update we reset deprecated fields.
+	mattermost.Spec.IngressName = ""
+	mattermost.Spec.IngressAnnotations = nil
+	mattermost.Spec.Ingress = makeIngressSpec(installation.DNS)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -552,6 +553,16 @@ func (provisioner *crProvisionerWrapper) IsResourceReady(cluster *model.Cluster,
 	}
 
 	return true, nil
+}
+
+func makeIngressSpec(installationDNS string) *mmv1beta1.Ingress {
+	ingressClass := "nginx-controller"
+	return &mmv1beta1.Ingress{
+		Enabled:      true,
+		Host:         installationDNS,
+		Annotations:  getIngressAnnotations(),
+		IngressClass: &ingressClass,
+	}
 }
 
 // generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
@@ -988,7 +999,6 @@ func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVa
 // getIngressAnnotations returns ingress annotations used by Mattermost installations.
 func getIngressAnnotations() map[string]string {
 	return map[string]string{
-		"kubernetes.io/ingress.class":                          "nginx-controller",
 		"kubernetes.io/tls-acme":                               "true",
 		"nginx.ingress.kubernetes.io/proxy-buffering":          "on",
 		"nginx.ingress.kubernetes.io/proxy-body-size":          "100m",
