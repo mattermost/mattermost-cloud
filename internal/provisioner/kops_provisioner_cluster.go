@@ -20,7 +20,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -291,7 +290,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
-	// Need to remove two items from the calico because the fields after the creation are immutable so the
+	// Need to remove two items from the calico because the fields after the creation are immutable so
 	// create/update does not work. We might want to refactor this in the future to avoid this
 	logger.Info("Cleaning up some calico resources to reapply")
 	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
@@ -475,23 +474,19 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}
 	}
 
+	wait = 240
 	supportAppsWithDaemonSets := map[string]string{
 		"calico-node":                  "kube-system",
 		"k8s-spot-termination-handler": "kube-system",
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
 		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
-			attempts := 5
-			var daemonSetObj *appsv1.DaemonSet
-			for attempt := 0; attempt < attempts; attempt++ {
-				daemonSetObj, err = k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
-				if err != nil && attempt < 5 {
-					time.Sleep(5 * time.Second)
-					continue
-				}
-				if err != nil && attempt >= 5 {
-					return errors.Wrapf(err, "Nr of attempts: %s, failed to get daemonSet %s", strconv.Itoa(attempt), daemonSet)
-				}
+			logger.Infof("Waiting up to %d seconds for %q daemonset to get it...", wait, daemonSet)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
+			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
+			if err != nil {
+				return errors.Wrapf(err, " failed to get daemonSet %s", daemonSet)
 			}
 			var payload []k8s.PatchStringValue
 			if daemonSetObj.Spec.Selector != nil {
