@@ -23,14 +23,15 @@ type Client struct {
 }
 
 // NewClientWithToken creates a new client that can be used to run the other functions.
-func NewClientWithToken(token string) (*Client, error) {
-	client, err := cf.NewWithAPIToken(token)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to initialize cloudflare client using API token")
-	}
+func NewClientWithToken(client *cf.API) *Client {
+	//client, err := cf.NewWithAPIToken(token)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "Failed to initialize cloudflare client using API token")
+	//}
+
 	return &Client{
 		cfClient: client,
-	}, nil
+	}
 }
 
 func (c *Client) getZoneId(zoneName string) (zoneID string, err error) {
@@ -113,7 +114,7 @@ func (c *Client) CreateDNSRecord(customerDnsName string, zoneNameList []string, 
 		"cloudflare-dns-value":    customerDnsName,
 		"cloudflare-dns-endpoint": dnsEndpoint,
 		"cloudflare-zone-id":      zoneID,
-	}).Debugf("Cloudflare create DNS record response: %s", recordResp)
+	}).Debugf("Cloudflare create DNS record response: %v", recordResp)
 
 	return nil
 }
@@ -156,38 +157,3 @@ func (c *Client) DeleteDNSRecord(customerDnsName string, zoneNameList []string, 
 	}
 	return nil
 }
-
-//func (c *Client) UpdateDNSRecord(customerDnsName, zoneName, newEndpoint string, logger logrus.FieldLogger) error {
-//	zoneID, err := c.getZoneId(zoneName)
-//	if err != nil {
-//		logger.WithError(err).Error("failed to get zone ID from Cloudflare")
-//		return err
-//	}
-//
-//	recordID, err := c.getRecordId(zoneID, customerDnsName)
-//	if err != nil {
-//		logger.WithError(err).Error("failed to get record ID from Cloudflare")
-//		return err
-//	}
-//
-//	proxied := true
-//
-//	// Most API calls require a Context
-//	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-//	defer cancel()
-//
-//	err = c.cfClient.UpdateDNSRecord(ctx, zoneID, recordID, cf.DNSRecord{
-//		Name:    customerDnsName,
-//		Type:    "CNAME",
-//		Content: newEndpoint,
-//		TTL:     1,
-//		Proxied: &proxied,
-//	})
-//	if err != nil {
-//		logger.WithError(err).Error("failed to update record ID from Cloudflare")
-//		return err
-//	}
-//
-//	return nil
-//
-//}
