@@ -5,6 +5,7 @@
 package cloudflare
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -14,22 +15,26 @@ import (
 )
 
 type mockCloudflare struct {
-	cfClient *cf.API
-	//mockNewClientWithToken func(token string) (*Client, error)
+	cfClient      *cf.API
 	mockGetZoneId func(zoneName string) (zoneID string, err error)
 }
 
-func (e *mockCloudflare) NewClientWithToken(token string) *Client {
-	return e.mockNewClientWithToken(token)
+func (e *mockCloudflare) ZoneIDByName(zoneName string) (string, error) {
+	return e.mockGetZoneId(zoneName)
+}
+func (e *mockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+	return nil, nil
+}
+func (e *mockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
+	return nil, nil
 }
 
-func (e *mockCloudflare) getZoneId(zoneName string) (zoneID string, err error) {
-	return e.mockGetZoneId(zoneName)
+func (e *mockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
+	return nil
 }
 
 func TestGetZoneId(t *testing.T) {
-
-	mockCF := mockCloudflare{}
+	mockCF := &mockCloudflare{}
 	samples := []struct {
 		description string
 		zoneName    string

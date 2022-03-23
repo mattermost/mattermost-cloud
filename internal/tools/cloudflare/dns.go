@@ -18,17 +18,19 @@ import (
 
 const defaultTimeout = 30 * time.Second
 
+type Cloudflarer interface {
+	ZoneIDByName(zoneName string) (string, error)
+	DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
+	CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
+	DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error
+}
+
 type Client struct {
-	cfClient *cf.API
+	cfClient Cloudflarer
 }
 
 // NewClientWithToken creates a new client that can be used to run the other functions.
-func NewClientWithToken(client *cf.API) *Client {
-	//client, err := cf.NewWithAPIToken(token)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "Failed to initialize cloudflare client using API token")
-	//}
-
+func NewClientWithToken(client Cloudflarer) *Client {
 	return &Client{
 		cfClient: client,
 	}
