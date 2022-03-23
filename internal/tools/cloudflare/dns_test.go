@@ -15,7 +15,6 @@ import (
 )
 
 type mockCloudflare struct {
-	cfClient      *cf.API
 	mockGetZoneId func(zoneName string) (zoneID string, err error)
 }
 
