@@ -113,7 +113,7 @@ func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importSt
 func (s *ImportSupervisor) Do() error {
 	err := s.completeImports()
 	if err != nil {
-		s.logger.WithError(err).Warn("failed to move Installations with completed imports back to state stable")
+		s.logger.WithError(err).Warn("Failed to move installations with completed imports back to state stable")
 	}
 
 	work, err := s.awatClient.GetTranslationReadyToImport(
@@ -127,10 +127,11 @@ func (s *ImportSupervisor) Do() error {
 		// nothing to do
 		return nil
 	}
+
 	defer func() {
 		err = s.awatClient.ReleaseLockOnImport(work.ID)
 		if err != nil {
-			s.logger.WithError(err).Warnf("failed to release lock on Import %s", work.ID)
+			s.logger.WithError(err).Warnf("Failed to release lock on Import %s", work.ID)
 		}
 	}()
 
@@ -143,7 +144,7 @@ func (s *ImportSupervisor) Do() error {
 				err := s.awatClient.CompleteImport(
 					&awat.ImportCompletedWorkRequest{
 						ID:         work.ID,
-						CompleteAt: awat.Timestamp(),
+						CompleteAt: model.GetMillis(),
 						Error:      workError,
 					})
 				if err == nil {
@@ -195,7 +196,7 @@ func (s *ImportSupervisor) importTranslation(imprt *awat.ImportStatus) error {
 			err = s.awatClient.CompleteImport(
 				&awat.ImportCompletedWorkRequest{
 					ID:         imprt.ID,
-					CompleteAt: time.Now().UnixNano() / 1000,
+					CompleteAt: model.GetMillis(),
 					Error:      "installation was deleted",
 				})
 			if err != nil {
