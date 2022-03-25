@@ -193,8 +193,12 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
 	// k8s custom resource. Custom ingress annotations are also used.
 	// TODO: enhance hibernation to include database and/or filestore.
 	mattermost.Spec.Replicas = int32Ptr(0)
-	mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
 	mattermost.Spec.Size = ""
+	if mattermost.Spec.Ingress != nil { // In case Installation was not yet updated and still uses old Ingress spec.
+		mattermost.Spec.Ingress.Annotations = getHibernatingIngressAnnotations()
+	} else {
+		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+	}
 }
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
