@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+
 	"github.com/sirupsen/logrus"
 
 	cf "github.com/cloudflare/cloudflare-go"
@@ -152,6 +153,7 @@ func TestGetZoneName(t *testing.T) {
 	}
 
 	for _, s := range samples {
+		println("  === RUN Sub-test " + s.description)
 		mockCF.mockGetZoneName = s.setup
 		client := NewClientWithToken(mockCF)
 		name, found := client.getZoneName(s.zoneNameList, s.customerDnsName)
@@ -162,6 +164,7 @@ func TestGetZoneName(t *testing.T) {
 }
 
 func TestGetRecordId(t *testing.T) {
+	logger := testlib.MakeLogger(t)
 	type Expected struct {
 		string
 		error
@@ -171,7 +174,6 @@ func TestGetRecordId(t *testing.T) {
 		description     string
 		zoneID          string
 		customerDnsName string
-		logger          *testlib.MockedFieldLogger
 		setup           func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
 		expected        Expected
 	}{
@@ -179,8 +181,6 @@ func TestGetRecordId(t *testing.T) {
 			description:     "success with 1 zone name in the list",
 			zoneID:          "THISISAZONEIDFROMCLOUDFLARE",
 			customerDnsName: "customer.cloud.mattermost.com",
-			//logger:          logrus.Info("failed creating third party resources"),
-			//logger:          logger.Info("failed creating third party resources"),
 			setup: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
 				return "CLOUDFLARERECORDID", nil
 			},
@@ -189,11 +189,11 @@ func TestGetRecordId(t *testing.T) {
 	}
 
 	for _, s := range samples {
+		println("  === RUN Sub-test " + s.description)
 		mockCF.mockGetRecordId = s.setup
 		client := NewClientWithToken(mockCF)
-		name, found := client.getRecordId(s.zoneID, s.customerDnsName, s.logger)
+		name, found := client.getRecordId(s.zoneID, s.customerDnsName, logger)
 		result := Expected{name, found}
-		println(s.description)
 		assert.Equal(t, s.expected, result, s.description)
 	}
 
