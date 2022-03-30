@@ -738,6 +738,56 @@ func (mr *MockRDSAPIMockRecorder) CreateCustomAvailabilityZoneWithContext(arg0, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomAvailabilityZoneWithContext", reflect.TypeOf((*MockRDSAPI)(nil).CreateCustomAvailabilityZoneWithContext), varargs...)
 }
 
+// CreateCustomDBEngineVersion mocks base method
+func (m *MockRDSAPI) CreateCustomDBEngineVersion(arg0 *rds.CreateCustomDBEngineVersionInput) (*rds.CreateCustomDBEngineVersionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCustomDBEngineVersion", arg0)
+	ret0, _ := ret[0].(*rds.CreateCustomDBEngineVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateCustomDBEngineVersion indicates an expected call of CreateCustomDBEngineVersion
+func (mr *MockRDSAPIMockRecorder) CreateCustomDBEngineVersion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomDBEngineVersion", reflect.TypeOf((*MockRDSAPI)(nil).CreateCustomDBEngineVersion), arg0)
+}
+
+// CreateCustomDBEngineVersionRequest mocks base method
+func (m *MockRDSAPI) CreateCustomDBEngineVersionRequest(arg0 *rds.CreateCustomDBEngineVersionInput) (*request.Request, *rds.CreateCustomDBEngineVersionOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateCustomDBEngineVersionRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*rds.CreateCustomDBEngineVersionOutput)
+	return ret0, ret1
+}
+
+// CreateCustomDBEngineVersionRequest indicates an expected call of CreateCustomDBEngineVersionRequest
+func (mr *MockRDSAPIMockRecorder) CreateCustomDBEngineVersionRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomDBEngineVersionRequest", reflect.TypeOf((*MockRDSAPI)(nil).CreateCustomDBEngineVersionRequest), arg0)
+}
+
+// CreateCustomDBEngineVersionWithContext mocks base method
+func (m *MockRDSAPI) CreateCustomDBEngineVersionWithContext(arg0 context.Context, arg1 *rds.CreateCustomDBEngineVersionInput, arg2 ...request.Option) (*rds.CreateCustomDBEngineVersionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateCustomDBEngineVersionWithContext", varargs...)
+	ret0, _ := ret[0].(*rds.CreateCustomDBEngineVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateCustomDBEngineVersionWithContext indicates an expected call of CreateCustomDBEngineVersionWithContext
+func (mr *MockRDSAPIMockRecorder) CreateCustomDBEngineVersionWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomDBEngineVersionWithContext", reflect.TypeOf((*MockRDSAPI)(nil).CreateCustomDBEngineVersionWithContext), varargs...)
+}
+
 // CreateDBCluster mocks base method
 func (m *MockRDSAPI) CreateDBCluster(arg0 *rds.CreateDBClusterInput) (*rds.CreateDBClusterOutput, error) {
 	m.ctrl.T.Helper()
@@ -1536,6 +1586,56 @@ func (mr *MockRDSAPIMockRecorder) DeleteCustomAvailabilityZoneWithContext(arg0, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomAvailabilityZoneWithContext", reflect.TypeOf((*MockRDSAPI)(nil).DeleteCustomAvailabilityZoneWithContext), varargs...)
+}
+
+// DeleteCustomDBEngineVersion mocks base method
+func (m *MockRDSAPI) DeleteCustomDBEngineVersion(arg0 *rds.DeleteCustomDBEngineVersionInput) (*rds.DeleteCustomDBEngineVersionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCustomDBEngineVersion", arg0)
+	ret0, _ := ret[0].(*rds.DeleteCustomDBEngineVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteCustomDBEngineVersion indicates an expected call of DeleteCustomDBEngineVersion
+func (mr *MockRDSAPIMockRecorder) DeleteCustomDBEngineVersion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomDBEngineVersion", reflect.TypeOf((*MockRDSAPI)(nil).DeleteCustomDBEngineVersion), arg0)
+}
+
+// DeleteCustomDBEngineVersionRequest mocks base method
+func (m *MockRDSAPI) DeleteCustomDBEngineVersionRequest(arg0 *rds.DeleteCustomDBEngineVersionInput) (*request.Request, *rds.DeleteCustomDBEngineVersionOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCustomDBEngineVersionRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*rds.DeleteCustomDBEngineVersionOutput)
+	return ret0, ret1
+}
+
+// DeleteCustomDBEngineVersionRequest indicates an expected call of DeleteCustomDBEngineVersionRequest
+func (mr *MockRDSAPIMockRecorder) DeleteCustomDBEngineVersionRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomDBEngineVersionRequest", reflect.TypeOf((*MockRDSAPI)(nil).DeleteCustomDBEngineVersionRequest), arg0)
+}
+
+// DeleteCustomDBEngineVersionWithContext mocks base method
+func (m *MockRDSAPI) DeleteCustomDBEngineVersionWithContext(arg0 context.Context, arg1 *rds.DeleteCustomDBEngineVersionInput, arg2 ...request.Option) (*rds.DeleteCustomDBEngineVersionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteCustomDBEngineVersionWithContext", varargs...)
+	ret0, _ := ret[0].(*rds.DeleteCustomDBEngineVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteCustomDBEngineVersionWithContext indicates an expected call of DeleteCustomDBEngineVersionWithContext
+func (mr *MockRDSAPIMockRecorder) DeleteCustomDBEngineVersionWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCustomDBEngineVersionWithContext", reflect.TypeOf((*MockRDSAPI)(nil).DeleteCustomDBEngineVersionWithContext), varargs...)
 }
 
 // DeleteDBCluster mocks base method
@@ -5893,6 +5993,56 @@ func (mr *MockRDSAPIMockRecorder) ModifyCurrentDBClusterCapacityWithContext(arg0
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModifyCurrentDBClusterCapacityWithContext", reflect.TypeOf((*MockRDSAPI)(nil).ModifyCurrentDBClusterCapacityWithContext), varargs...)
 }
 
+// ModifyCustomDBEngineVersion mocks base method
+func (m *MockRDSAPI) ModifyCustomDBEngineVersion(arg0 *rds.ModifyCustomDBEngineVersionInput) (*rds.ModifyCustomDBEngineVersionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ModifyCustomDBEngineVersion", arg0)
+	ret0, _ := ret[0].(*rds.ModifyCustomDBEngineVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ModifyCustomDBEngineVersion indicates an expected call of ModifyCustomDBEngineVersion
+func (mr *MockRDSAPIMockRecorder) ModifyCustomDBEngineVersion(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModifyCustomDBEngineVersion", reflect.TypeOf((*MockRDSAPI)(nil).ModifyCustomDBEngineVersion), arg0)
+}
+
+// ModifyCustomDBEngineVersionRequest mocks base method
+func (m *MockRDSAPI) ModifyCustomDBEngineVersionRequest(arg0 *rds.ModifyCustomDBEngineVersionInput) (*request.Request, *rds.ModifyCustomDBEngineVersionOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ModifyCustomDBEngineVersionRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*rds.ModifyCustomDBEngineVersionOutput)
+	return ret0, ret1
+}
+
+// ModifyCustomDBEngineVersionRequest indicates an expected call of ModifyCustomDBEngineVersionRequest
+func (mr *MockRDSAPIMockRecorder) ModifyCustomDBEngineVersionRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModifyCustomDBEngineVersionRequest", reflect.TypeOf((*MockRDSAPI)(nil).ModifyCustomDBEngineVersionRequest), arg0)
+}
+
+// ModifyCustomDBEngineVersionWithContext mocks base method
+func (m *MockRDSAPI) ModifyCustomDBEngineVersionWithContext(arg0 context.Context, arg1 *rds.ModifyCustomDBEngineVersionInput, arg2 ...request.Option) (*rds.ModifyCustomDBEngineVersionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ModifyCustomDBEngineVersionWithContext", varargs...)
+	ret0, _ := ret[0].(*rds.ModifyCustomDBEngineVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ModifyCustomDBEngineVersionWithContext indicates an expected call of ModifyCustomDBEngineVersionWithContext
+func (mr *MockRDSAPIMockRecorder) ModifyCustomDBEngineVersionWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModifyCustomDBEngineVersionWithContext", reflect.TypeOf((*MockRDSAPI)(nil).ModifyCustomDBEngineVersionWithContext), varargs...)
+}
+
 // ModifyDBCluster mocks base method
 func (m *MockRDSAPI) ModifyDBCluster(arg0 *rds.ModifyDBClusterInput) (*rds.ModifyDBClusterOutput, error) {
 	m.ctrl.T.Helper()
@@ -6791,6 +6941,56 @@ func (mr *MockRDSAPIMockRecorder) PurchaseReservedDBInstancesOfferingWithContext
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurchaseReservedDBInstancesOfferingWithContext", reflect.TypeOf((*MockRDSAPI)(nil).PurchaseReservedDBInstancesOfferingWithContext), varargs...)
+}
+
+// RebootDBCluster mocks base method
+func (m *MockRDSAPI) RebootDBCluster(arg0 *rds.RebootDBClusterInput) (*rds.RebootDBClusterOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebootDBCluster", arg0)
+	ret0, _ := ret[0].(*rds.RebootDBClusterOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RebootDBCluster indicates an expected call of RebootDBCluster
+func (mr *MockRDSAPIMockRecorder) RebootDBCluster(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebootDBCluster", reflect.TypeOf((*MockRDSAPI)(nil).RebootDBCluster), arg0)
+}
+
+// RebootDBClusterRequest mocks base method
+func (m *MockRDSAPI) RebootDBClusterRequest(arg0 *rds.RebootDBClusterInput) (*request.Request, *rds.RebootDBClusterOutput) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebootDBClusterRequest", arg0)
+	ret0, _ := ret[0].(*request.Request)
+	ret1, _ := ret[1].(*rds.RebootDBClusterOutput)
+	return ret0, ret1
+}
+
+// RebootDBClusterRequest indicates an expected call of RebootDBClusterRequest
+func (mr *MockRDSAPIMockRecorder) RebootDBClusterRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebootDBClusterRequest", reflect.TypeOf((*MockRDSAPI)(nil).RebootDBClusterRequest), arg0)
+}
+
+// RebootDBClusterWithContext mocks base method
+func (m *MockRDSAPI) RebootDBClusterWithContext(arg0 context.Context, arg1 *rds.RebootDBClusterInput, arg2 ...request.Option) (*rds.RebootDBClusterOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RebootDBClusterWithContext", varargs...)
+	ret0, _ := ret[0].(*rds.RebootDBClusterOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RebootDBClusterWithContext indicates an expected call of RebootDBClusterWithContext
+func (mr *MockRDSAPIMockRecorder) RebootDBClusterWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebootDBClusterWithContext", reflect.TypeOf((*MockRDSAPI)(nil).RebootDBClusterWithContext), varargs...)
 }
 
 // RebootDBInstance mocks base method
