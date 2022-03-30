@@ -21,8 +21,9 @@ type mockCloudflare struct {
 	mockGetZoneId       func(zoneName string) (zoneID string, err error)
 	mockGetZoneName     func(zoneNameList []string, customerDnsName string) (zoneName string, found bool)
 	mockGetRecordId     func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
-	mockCreateDNSRecord func(customerDnsName string, zoneNameList []string, dnsEndpoints []string, logger logrus.FieldLogger) error
-	mockDeleteDNSRecord func(customerDnsName string, zoneNameList []string, logger logrus.FieldLogger) error
+	mockCreateDNSRecord func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
+	mockDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
+	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 }
 
 func (e *mockCloudflare) ZoneIDByName(zoneName string) (string, error) {
@@ -38,14 +39,14 @@ func (e *mockCloudflare) getRecordId(zoneID, customerDnsName string, logger logr
 }
 
 func (e *mockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-	return nil, nil
+	return e.mockDNSRecords(ctx, zoneID, rr)
 }
 func (e *mockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-	return nil, nil
+	return e.mockCreateDNSRecord(ctx, zoneID, rr)
 }
 
 func (e *mockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
-	return nil
+	return e.mockDeleteDNSRecord(ctx, zoneID, recordID)
 }
 
 func TestGetZoneId(t *testing.T) {
@@ -174,15 +175,19 @@ func TestGetRecordId(t *testing.T) {
 		description     string
 		zoneID          string
 		customerDnsName string
-		setup           func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
+		setup           func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 		expected        Expected
 	}{
 		{
 			description:     "success with 1 zone name in the list",
 			zoneID:          "THISISAZONEIDFROMCLOUDFLARE",
 			customerDnsName: "customer.cloud.mattermost.com",
-			setup: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
-				return "CLOUDFLARERECORDID", nil
+			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				return []cf.DNSRecord{
+					{
+						ID: "CLOUDFLARERECORDID",
+					},
+				}, nil
 			},
 			expected: Expected{"CLOUDFLARERECORDID", nil},
 		},
@@ -190,7 +195,7 @@ func TestGetRecordId(t *testing.T) {
 
 	for _, s := range samples {
 		println("  === RUN Sub-test " + s.description)
-		mockCF.mockGetRecordId = s.setup
+		mockCF.mockDNSRecords = s.setup
 		client := NewClientWithToken(mockCF)
 		name, found := client.getRecordId(s.zoneID, s.customerDnsName, logger)
 		result := Expected{name, found}
