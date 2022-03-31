@@ -6,8 +6,9 @@ package cloudflare
 
 import (
 	"context"
-	"errors"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 
@@ -298,6 +299,26 @@ func TestCreateDNSRecord(t *testing.T) {
 				}, nil
 			},
 			expected: nil,
+		},
+		{
+			description:     "failure with empty zone name",
+			customerDnsName: "customer.cloud.mattermost.com",
+			zoneNameList:    []string{},
+			dnsEndpoints:    []string{"load.balancer.endpoint"},
+			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
+				return "cloud.mattermost.com", true
+			},
+			setupId: func(zoneName string) (zoneID string, err error) {
+				return "RANDOMDIDFROMCLOUDFLARE", nil
+			},
+			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
+				return &cf.DNSRecordResponse{
+					Result: cf.DNSRecord{
+						ID: "CLOUDFLARERECORDID",
+					},
+				}, nil
+			},
+			expected: errors.Errorf("hosted zone for %q domain name not found", "customer.cloud.mattermost.com"),
 		},
 	}
 
