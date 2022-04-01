@@ -1174,7 +1174,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 			Provider: model.ProviderAWS,
 			Zones:    []string{"zone"},
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"prometheus-operator": {Chart: "18.0.3"},
+				"prometheus-operator": {Chart: "34.6.0"},
 				"nginx":               {Chart: "stable"},
 			},
 		})
@@ -1186,7 +1186,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Nginx)
 	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Fluentbit)
 	assert.Equal(t, &model.HelmUtilityVersion{Chart: "stable"}, utilityMetadata.DesiredVersions.Nginx)
-	assert.Equal(t, &model.HelmUtilityVersion{Chart: "18.0.3", ValuesPath: ""}, utilityMetadata.DesiredVersions.PrometheusOperator)
+	assert.Equal(t, &model.HelmUtilityVersion{Chart: "34.6.0", ValuesPath: ""}, utilityMetadata.DesiredVersions.PrometheusOperator)
 	assert.Equal(t, model.DefaultUtilityVersions[model.FluentbitCanonicalName], utilityMetadata.DesiredVersions.Fluentbit)
 }
 
