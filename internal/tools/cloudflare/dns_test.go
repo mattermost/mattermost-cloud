@@ -312,11 +312,7 @@ func TestCreateDNSRecord(t *testing.T) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return &cf.DNSRecordResponse{
-					Result: cf.DNSRecord{
-						ID: "CLOUDFLARERECORDID",
-					},
-				}, nil
+				return &cf.DNSRecordResponse{}, nil
 			},
 			expected: errors.Errorf("hosted zone for %q domain name not found", "customer.cloud.mattermost.com"),
 		},
@@ -329,7 +325,9 @@ func TestCreateDNSRecord(t *testing.T) {
 			mockCF.mockCreateDNSRecord = s.setupDNS
 			client := NewClientWithToken(mockCF)
 			err := client.CreateDNSRecord(s.customerDnsName, s.zoneNameList, s.dnsEndpoints, logger)
-			assert.Equal(t, s.expected, err)
+			if err != nil {
+				assert.EqualError(t, s.expected, err.Error())
+			}
 		})
 	}
 }
