@@ -290,7 +290,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
-	// Need to remove two items from the calico because the fields after the creation are immutable so the
+	// Need to remove two items from the calico because the fields after the creation are immutable so
 	// create/update does not work. We might want to refactor this in the future to avoid this
 	logger.Info("Cleaning up some calico resources to reapply")
 	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
@@ -474,47 +474,52 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}
 	}
 
+	wait = 240
 	supportAppsWithDaemonSets := map[string]string{
 		"calico-node":                  "kube-system",
 		"k8s-spot-termination-handler": "kube-system",
 	}
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
 		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
+			logger.Infof("Waiting up to %d seconds for %q daemonset to get it...", wait, daemonSet)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel()
 			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
 			if err != nil {
-				return errors.Wrapf(err, "failed to get daemonSet %s", daemonSet)
+				return errors.Wrapf(err, " failed to get daemonSet %s", daemonSet)
 			}
-
 			var payload []k8s.PatchStringValue
-			for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
-				if envVar.Name == "CLUSTER" {
-					payload = []k8s.PatchStringValue{{
-						Op:    "replace",
-						Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-						Value: cluster.ID,
-					}}
-				}
-				if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
-					payload = append(payload,
-						k8s.PatchStringValue{
+			if daemonSetObj.Spec.Selector != nil {
+				for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
+					if envVar.Name == "CLUSTER" {
+						payload = []k8s.PatchStringValue{{
 							Op:    "replace",
 							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-							Value: os.Getenv(model.MattermostChannel),
-						})
+							Value: cluster.ID,
+						}}
+					}
+					if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
+						payload = append(payload,
+							k8s.PatchStringValue{
+								Op:    "replace",
+								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+								Value: os.Getenv(model.MattermostChannel),
+							})
+					}
+					if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
+						payload = append(payload,
+							k8s.PatchStringValue{
+								Op:    "replace",
+								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
+								Value: os.Getenv(model.MattermostWebhook),
+							})
+					}
 				}
-				if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
-					payload = append(payload,
-						k8s.PatchStringValue{
-							Op:    "replace",
-							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-							Value: os.Getenv(model.MattermostWebhook),
-						})
-				}
-			}
 
-			err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
-			if err != nil {
-				return err
+				err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
