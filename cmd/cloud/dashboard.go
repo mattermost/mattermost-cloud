@@ -91,7 +91,7 @@ var dashboardCmd = &cobra.Command{
 				case model.InstallationStateHibernating:
 					installationsHibernatingCount++
 				default:
-					unstableList = append(unstableList, fmt.Sprintf("Installation: %s (%s)", installation.ID, installation.State))
+					unstableList = append(unstableList, fmt.Sprintf("Installation: %s | %s (%s)", installation.ID, installation.DNS, installation.State))
 				}
 			}
 

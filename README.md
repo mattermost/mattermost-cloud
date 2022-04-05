@@ -27,7 +27,7 @@ The following is required to properly run the cloud server.
 ##### Note: when versions are specified, it is extremely important to follow the requirement. Newer versions will often not work as expected
 
 1. Install [Go](https://golang.org/doc/install)
-2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.13.7
+2. Install [Terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) version v0.14.11
    1. Try using [tfswitch](https://warrensbox.github.io/terraform-switcher/) for switching easily between versions
 3. Install [kops](https://github.com/kubernetes/kops/blob/master/docs/install.md) version 1.21.X
 4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.5.X
@@ -264,7 +264,7 @@ For more information on this change and reasoning for it, check out the [kops re
 This is related to the changes introduced in [PR-263](https://github.com/mattermost/mattermost-cloud/pull/263)
 
 Please follow the steps below for the reprovisioning of existing clusters:
-- Reprovision the cluster by running ```cloud cluster provision --cluster <cluster_id> --nginx-version 4.0.17```.
+- Reprovision the cluster by running ```cloud cluster provision --cluster <cluster_id> --nginx-version 4.0.18```.
 - Check that new nginx deployed both internal and public Load Balancers (nginx-ingress-nginx-controller-internal and nginx-ingress-nginx-controller).
 - Manually update Prometheus Route53 record to use the new private Load Balancer (nginx-ingress-nginx-controller-internal).
 - Manually update cluster installations Route53 records one by one to use the new public Load balancer (nginx-ingress-nginx-controller).
