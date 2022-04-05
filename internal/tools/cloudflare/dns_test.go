@@ -219,8 +219,12 @@ func TestGetRecordId(t *testing.T) {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockDNSRecords = s.setup
 			client := NewClientWithToken(mockCF)
-			name, found := client.getRecordId(s.zoneID, s.customerDnsName, logger)
-			result := Expected{name, found}
+			name, err := client.getRecordId(s.zoneID, s.customerDnsName, logger)
+			result := Expected{name, err}
+			if err != nil {
+				assert.EqualError(t, s.expected, err.Error())
+				return
+			}
 			assert.Equal(t, s.expected, result)
 		})
 	}
@@ -306,15 +310,63 @@ func TestCreateDNSRecord(t *testing.T) {
 			zoneNameList:    []string{},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
+				return "", false
 			},
 			setupId: func(zoneName string) (zoneID string, err error) {
-				return "RANDOMDIDFROMCLOUDFLARE", nil
+				return "", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
 				return &cf.DNSRecordResponse{}, nil
 			},
-			expected: errors.Errorf("hosted zone for %q domain name not found", "customer.cloud.mattermost.com"),
+			expected: errors.New("hosted zone for \"customer.cloud.mattermost.com\" domain name not found"),
+		},
+		{
+			description:     "failure with no DNS endpoints",
+			customerDnsName: "customer.cloud.mattermost.com",
+			zoneNameList:    []string{"cloud.mattermost.com"},
+			dnsEndpoints:    []string{},
+			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
+				return "", false
+			},
+			setupId: func(zoneName string) (zoneID string, err error) {
+				return "", nil
+			},
+			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
+				return &cf.DNSRecordResponse{}, nil
+			},
+			expected: errors.New("no DNS endpoints provided for Cloudflare creation request"),
+		},
+		{
+			description:     "failure with empty string DNS endpoint",
+			customerDnsName: "customer.cloud.mattermost.com",
+			zoneNameList:    []string{"cloud.mattermost.com"},
+			dnsEndpoints:    []string{""},
+			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
+				return "", false
+			},
+			setupId: func(zoneName string) (zoneID string, err error) {
+				return "", nil
+			},
+			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
+				return &cf.DNSRecordResponse{}, nil
+			},
+			expected: errors.New("DNS endpoint was an empty string"),
+		},
+		{
+			description:     "failure with zone ID fetching",
+			customerDnsName: "customer.cloud.mattermost.com",
+			zoneNameList:    []string{"cloud.mattermost.com"},
+			dnsEndpoints:    []string{"load.balancer.endpoint"},
+			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
+				return "", false
+			},
+			setupId: func(zoneName string) (zoneID string, err error) {
+				return "", nil
+			},
+			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
+				return &cf.DNSRecordResponse{}, nil
+			},
+			expected: errors.New("failed to fetch Zone ID from Cloudflare"),
 		},
 	}
 
