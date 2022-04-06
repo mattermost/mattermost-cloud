@@ -24,7 +24,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"us-east-1a"},
-			Networking:         "amazon-vpc-routed-eni",
+			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
@@ -89,7 +89,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
 			Zones:              []string{"zone1", "zone2"},
-			Networking:         "amazon-vpc-routed-eni",
+			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
