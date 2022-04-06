@@ -12,6 +12,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// NetworkingCalico is Calico networking plugin.
+	NetworkingCalico = "calico"
+	// NetworkingAmazon is Amazon networking plugin.
+	NetworkingAmazon = "amazon-vpc-routed-eni"
+)
+
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
 	Provider               string                         `json:"provider,omitempty"`
@@ -78,7 +85,7 @@ func (request *CreateClusterRequest) SetDefaults() {
 		request.NodeMaxCount = request.NodeMinCount
 	}
 	if len(request.Networking) == 0 {
-		request.Networking = "amazon-vpc-routed-eni"
+		request.Networking = NetworkingCalico
 	}
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
