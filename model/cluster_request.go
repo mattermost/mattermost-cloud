@@ -13,7 +13,9 @@ import (
 )
 
 const (
+	// NetworkingCalico is Calico networking plugin.
 	NetworkingCalico = "calico"
+	// NetworkingAmazon is Amazon networking plugin.
 	NetworkingAmazon = "amazon-vpc-routed-eni"
 )
 
