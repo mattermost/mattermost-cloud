@@ -12,7 +12,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
 
 	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -24,6 +23,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -516,6 +516,16 @@ func (m *mockEventProducer) ProduceClusterInstallationStateChangeEvent(clusterIn
 	return nil
 }
 
+type mockCloudflareClient struct{}
+
+func (m *mockCloudflareClient) CreateDNSRecord(customerDNSName string, zoneNameList []string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+	return nil
+
+}
+func (m *mockCloudflareClient) DeleteDNSRecord(customerDNSName string, zoneNameList []string, logger logrus.FieldLogger) error {
+	return nil
+}
+
 func TestInstallationSupervisorDo(t *testing.T) {
 	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
 
@@ -523,7 +533,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &cloudflare.Client{})
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{})
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -541,7 +551,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		mockStore.Installation = mockStore.UnlockedInstallationsPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &cloudflare.Client{})
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{})
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -614,7 +624,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -668,7 +678,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -717,7 +727,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		owner := model.NewID()
@@ -758,7 +768,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -804,7 +814,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -858,7 +868,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -912,7 +922,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -966,7 +976,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1020,7 +1030,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1073,7 +1083,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1139,7 +1149,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1192,7 +1202,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1245,7 +1255,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1298,7 +1308,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1351,7 +1361,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1424,7 +1434,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1477,7 +1487,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1530,7 +1540,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		owner := model.NewID()
@@ -1570,7 +1580,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1623,7 +1633,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1667,7 +1677,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1720,7 +1730,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1786,7 +1796,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1839,7 +1849,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1905,7 +1915,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -1958,7 +1968,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2034,7 +2044,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2087,7 +2097,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2140,7 +2150,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2193,7 +2203,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2246,7 +2256,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2299,7 +2309,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2352,7 +2362,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2405,7 +2415,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2458,7 +2468,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2521,7 +2531,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2594,7 +2604,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2648,7 +2658,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -2693,7 +2703,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -2742,7 +2752,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -2817,7 +2827,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -2874,7 +2884,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()
@@ -2921,7 +2931,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			false,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster1 := standardStableTestCluster()
@@ -2989,7 +2999,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -3024,7 +3034,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -3059,7 +3069,7 @@ func TestInstallationSupervisor(t *testing.T) {
 				cloudMetrics,
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				false,
-				&cloudflare.Client{},
+				&mockCloudflareClient{},
 			)
 
 			cluster := standardStableTestCluster()
@@ -3095,7 +3105,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			cloudMetrics,
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			true,
-			&cloudflare.Client{},
+			&mockCloudflareClient{},
 		)
 
 		cluster := standardStableTestCluster()

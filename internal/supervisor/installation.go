@@ -7,13 +7,12 @@ package supervisor
 import (
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
-
 	"github.com/mattermost/mattermost-cloud/internal/events"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -76,6 +75,12 @@ type installationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
+// Cloudflarer interface that holds Cloudflare functions
+type Cloudflarer interface {
+	CreateDNSRecord(customerDNSName string, zoneNameList []string, dnsEndpoints []string, logger logrus.FieldLogger) error
+	DeleteDNSRecord(customerDNSName string, zoneNameList []string, logger logrus.FieldLogger) error
+}
+
 type eventProducer interface {
 	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
 	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
@@ -106,7 +111,7 @@ type InstallationSupervisor struct {
 	metrics           *metrics.CloudMetrics
 	eventsProducer    eventProducer
 	forceCRUpgrade    bool
-	cloudflareClient  *cloudflare.Client
+	cloudflareClient  Cloudflarer
 }
 
 // InstallationSupervisorSchedulingOptions are the various options that control
@@ -131,7 +136,7 @@ func NewInstallationSupervisor(
 	metrics *metrics.CloudMetrics,
 	eventsProducer eventProducer,
 	forceCRUpgrade bool,
-	cloudflareClient *cloudflare.Client) *InstallationSupervisor {
+	cloudflareClient Cloudflarer) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,

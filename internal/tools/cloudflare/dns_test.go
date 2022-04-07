@@ -18,40 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCloudflare struct {
-	mockGetZoneID       func(zoneName string) (zoneID string, err error)
-	mockGetZoneName     func(zoneNameList []string, customerDNSName string) (zoneName string, found bool)
-	mockGetRecordID     func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error)
-	mockCreateDNSRecord func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
-	mockDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
-	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
-}
-
-func (c *mockCloudflare) ZoneIDByName(zoneName string) (string, error) {
-	return c.mockGetZoneID(zoneName)
-}
-
-func (c *mockCloudflare) getZoneName(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-	return c.mockGetZoneName(zoneNameList, customerDNSName)
-}
-
-func (c *mockCloudflare) getRecordID(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-	return c.mockGetRecordID(zoneID, customerDNSName, logger)
-}
-
-func (c *mockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-	return c.mockDNSRecords(ctx, zoneID, rr)
-}
-func (c *mockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-	return c.mockCreateDNSRecord(ctx, zoneID, rr)
-}
-
-func (c *mockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
-	return c.mockDeleteDNSRecord(ctx, zoneID, recordID)
-}
-
 func TestGetZoneID(t *testing.T) {
-	mockCF := &mockCloudflare{}
+	mockCF := &MockCloudflare{}
 	samples := []struct {
 		description string
 		zoneName    string
@@ -92,7 +60,7 @@ func TestGetZoneName(t *testing.T) {
 		string
 		bool
 	}
-	mockCF := &mockCloudflare{}
+	mockCF := &MockCloudflare{}
 	samples := []struct {
 		description     string
 		zoneNameList    []string
@@ -174,7 +142,7 @@ func TestGetRecordID(t *testing.T) {
 		string
 		error
 	}
-	mockCF := &mockCloudflare{}
+	mockCF := &MockCloudflare{}
 	samples := []struct {
 		description     string
 		zoneID          string
@@ -234,7 +202,7 @@ func TestGetRecordID(t *testing.T) {
 func TestCreateDNSRecord(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 
-	mockCF := &mockCloudflare{}
+	mockCF := &MockCloudflare{}
 	samples := []struct {
 		description     string
 		customerDNSName string
@@ -388,7 +356,7 @@ func TestCreateDNSRecord(t *testing.T) {
 func TestDeleteDNSRecord(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 
-	mockCF := &mockCloudflare{}
+	mockCF := &MockCloudflare{}
 	samples := []struct {
 		description          string
 		customerDNSName      string
