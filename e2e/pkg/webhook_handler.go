@@ -25,7 +25,7 @@ func SetupTestWebhook(client *model.Client, address, owner string, logger logrus
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to parse webhook address")
 	}
-	wh, err := registerWebhook(client, address, owner)
+	wh, err := registerWebhook(client, address, owner, logger)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to register webhook")
 	}
@@ -42,7 +42,23 @@ func SetupTestWebhook(client *model.Client, address, owner string, logger logrus
 	return whChan, cleanup, nil
 }
 
-func registerWebhook(client *model.Client, address, owner string) (*model.Webhook, error) {
+func registerWebhook(client *model.Client, address, owner string, logger logrus.FieldLogger) (*model.Webhook, error) {
+	existingWh, err := client.GetWebhooks(&model.GetWebhooksRequest{
+		Paging:  model.AllPagesNotDeleted(),
+		OwnerID: owner,
+	})
+	if err != nil {
+		logger.WithError(err).Error("failed to get e2e webhooks")
+		// We do not want to fail over this, we will try to register.
+	}
+	for _, wh := range existingWh {
+		if wh.URL == address {
+			logger.Infof("Found existing webhook %q", wh.ID)
+			return wh, nil
+		}
+	}
+	logger.Infof("Webhook not found, registering...")
+	
 	whReq := &model.CreateWebhookRequest{
 		OwnerID: owner,
 		URL:     address,

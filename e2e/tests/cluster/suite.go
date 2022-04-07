@@ -86,7 +86,7 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		return nil, err
 	}
 
-	subOwner := fmt.Sprintf("e2e-test-%s", testID)
+	subOwner := "e2e-test"
 
 	// We need to be cautious with introducing some parallelism for tests especially on step level
 	// as webhook event will be delivered to only one channel.

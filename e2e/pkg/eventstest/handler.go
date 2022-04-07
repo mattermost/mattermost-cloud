@@ -57,13 +57,13 @@ func NewEventsRecorder(owner, listenAddr string, logger log.FieldLogger, recordR
 	}
 }
 
-func (ev *EventsRecorder) Start(client *model.Client) error {
+func (ev *EventsRecorder) Start(client *model.Client, logger log.FieldLogger) error {
 	err := ev.runServer()
 	if err != nil {
 		return err
 	}
 
-	sub, err := RegisterStateChangeSubscription(client, ev.owner, ev.listenerAddress)
+	sub, err := RegisterStateChangeSubscription(client, ev.owner, ev.listenerAddress, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to register subscription")
 	}
@@ -186,7 +186,23 @@ func (ev *EventsRecorder) VerifyInOrder(expectedEvents []EventOccurrence) error 
 	return nil
 }
 
-func RegisterStateChangeSubscription(client *model.Client, owner, subURL string) (*model.Subscription, error) {
+func RegisterStateChangeSubscription(client *model.Client, owner, subURL string, logger log.FieldLogger) (*model.Subscription, error) {
+	subs, err := client.ListSubscriptions(&model.ListSubscriptionsRequest{
+		Paging:    model.AllPagesNotDeleted(),
+		Owner:     owner,
+	})
+	if err != nil {
+		logger.WithError(err).Error("Failed to list e2e subscriptions")
+		// We do not fail, we will try to register
+	}
+	for _, sub := range subs {
+		if sub.URL == subURL {
+			logger.Infof("Found existing subscription %q", sub.ID)
+			return sub, nil
+		}
+	}
+	logger.Infof("Subscription not found, registering...")
+
 	createSubReq := model.CreateSubscriptionRequest{
 		Name:             "E2e Event Listener",
 		URL:              subURL,
