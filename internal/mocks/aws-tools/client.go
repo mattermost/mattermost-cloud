@@ -263,6 +263,14 @@ func (m *MockAWS) DeletePublicCNAME(dnsName string, logger logrus.FieldLogger) e
 	return ret0
 }
 
+// GetPublicHostedZoneNames mocks the public R53 hosted zone Name list for an AWS account.
+func (m *MockAWS) GetPublicHostedZoneNames() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPublicHostedZoneNames")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
 // DeletePublicCNAME indicates an expected call of DeletePublicCNAME
 func (mr *MockAWSMockRecorder) DeletePublicCNAME(dnsName, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

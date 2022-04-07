@@ -27,27 +27,27 @@ type mockCloudflare struct {
 	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 }
 
-func (e *mockCloudflare) ZoneIDByName(zoneName string) (string, error) {
-	return e.mockGetZoneId(zoneName)
+func (c *mockCloudflare) ZoneIDByName(zoneName string) (string, error) {
+	return c.mockGetZoneId(zoneName)
 }
 
-func (e *mockCloudflare) getZoneName(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
-	return e.mockGetZoneName(zoneNameList, customerDnsName)
+func (c *mockCloudflare) getZoneName(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
+	return c.mockGetZoneName(zoneNameList, customerDnsName)
 }
 
-func (e *mockCloudflare) getRecordId(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
-	return e.mockGetRecordId(zoneID, customerDnsName, logger)
+func (c *mockCloudflare) getRecordId(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+	return c.mockGetRecordId(zoneID, customerDnsName, logger)
 }
 
-func (e *mockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
-	return e.mockDNSRecords(ctx, zoneID, rr)
+func (c *mockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+	return c.mockDNSRecords(ctx, zoneID, rr)
 }
-func (e *mockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-	return e.mockCreateDNSRecord(ctx, zoneID, rr)
+func (c *mockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
+	return c.mockCreateDNSRecord(ctx, zoneID, rr)
 }
 
-func (e *mockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
-	return e.mockDeleteDNSRecord(ctx, zoneID, recordID)
+func (c *mockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
+	return c.mockDeleteDNSRecord(ctx, zoneID, recordID)
 }
 
 func TestGetZoneId(t *testing.T) {
