@@ -14,18 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
+	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	rotatorModel "github.com/mattermost/rotator/model"
@@ -956,8 +954,8 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 }
 
 // GetClusterResources returns a snapshot of resources of a given cluster.
-func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
-	logger := provisioner.logger.WithField("cluster", cluster.ID)
+func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
+	logger = logger.WithField("cluster", cluster.ID)
 
 	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {

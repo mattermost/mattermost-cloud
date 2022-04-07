@@ -339,7 +339,7 @@ func (p *mockInstallationProvisioner) VerifyClusterInstallationMatchesConfig(clu
 	return true, nil
 }
 
-func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error) {
+func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger log.FieldLogger) (*k8s.ClusterResources, error) {
 	if p.UseCustomClusterResources {
 		return p.CustomClusterResources, nil
 	}
