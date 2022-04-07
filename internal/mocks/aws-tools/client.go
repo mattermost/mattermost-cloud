@@ -170,6 +170,20 @@ func (mr *MockAWSMockRecorder) GetPrivateHostedZoneID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrivateHostedZoneID", reflect.TypeOf((*MockAWS)(nil).GetPrivateHostedZoneID))
 }
 
+// GetPublicHostedZoneNames mocks base method
+func (m *MockAWS) GetPublicHostedZoneNames() []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPublicHostedZoneNames")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetPublicHostedZoneNames indicates an expected call of GetPublicHostedZoneNames
+func (mr *MockAWSMockRecorder) GetPublicHostedZoneNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPublicHostedZoneNames", reflect.TypeOf((*MockAWS)(nil).GetPublicHostedZoneNames))
+}
+
 // GetTagByKeyAndZoneID mocks base method
 func (m *MockAWS) GetTagByKeyAndZoneID(key, id string, logger logrus.FieldLogger) (*aws.Tag, error) {
 	m.ctrl.T.Helper()
@@ -260,14 +274,6 @@ func (m *MockAWS) DeletePublicCNAME(dnsName string, logger logrus.FieldLogger) e
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeletePublicCNAME", dnsName, logger)
 	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// GetPublicHostedZoneNames mocks the public R53 hosted zone Name list for an AWS account.
-func (m *MockAWS) GetPublicHostedZoneNames() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPublicHostedZoneNames")
-	ret0, _ := ret[0].([]string)
 	return ret0
 }
 
