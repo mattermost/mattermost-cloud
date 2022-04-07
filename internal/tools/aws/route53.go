@@ -120,7 +120,7 @@ func (a *Client) GetPrivateHostedZoneID() string {
 // GetPublicHostedZoneNames returns the public R53 hosted zone Name list for the AWS account.
 func (a *Client) GetPublicHostedZoneNames() []string {
 	var domainNameList []string
-	for domainName, _ := range a.cache.route53.publicHostedZones {
+	for domainName := range a.cache.route53.publicHostedZones {
 		domainNameList = append(domainNameList, domainName)
 	}
 	return domainNameList

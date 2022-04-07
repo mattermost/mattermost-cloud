@@ -18,6 +18,7 @@ import (
 
 const defaultTimeout = 30 * time.Second
 
+// Cloudflarer interface that holds Cloudflare functions
 type Cloudflarer interface {
 	ZoneIDByName(zoneName string) (string, error)
 	DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
@@ -25,6 +26,7 @@ type Cloudflarer interface {
 	DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error
 }
 
+// Client struct
 type Client struct {
 	cfClient Cloudflarer
 }
@@ -36,7 +38,7 @@ func NewClientWithToken(client Cloudflarer) *Client {
 	}
 }
 
-func (c *Client) getZoneId(zoneName string) (zoneID string, err error) {
+func (c *Client) getZoneID(zoneName string) (zoneID string, err error) {
 	zoneID, err = c.cfClient.ZoneIDByName(zoneName)
 	if err != nil {
 		return "", err
@@ -45,20 +47,20 @@ func (c *Client) getZoneId(zoneName string) (zoneID string, err error) {
 	return zoneID, err
 }
 
-func (c *Client) getZoneName(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
+func (c *Client) getZoneName(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
 	for _, zoneName := range zoneNameList {
-		if strings.HasSuffix(customerDnsName, zoneName) {
+		if strings.HasSuffix(customerDNSName, zoneName) {
 			return zoneName, true
 		}
 	}
 	return "", false
 }
 
-func (c *Client) getRecordId(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+func (c *Client) getRecordID(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
-	dnsRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{Name: customerDnsName})
+	dnsRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{Name: customerDNSName})
 	if err != nil {
 		logger.WithError(err).Error("failed to get DNS Record ID from Cloudflare")
 		return "", err
@@ -72,7 +74,8 @@ func (c *Client) getRecordId(zoneID, customerDnsName string, logger logrus.Field
 
 }
 
-func (c *Client) CreateDNSRecord(customerDnsName string, zoneNameList []string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+// CreateDNSRecord creates a DNS record in the first given Cloudflare zone name of the list
+func (c *Client) CreateDNSRecord(customerDNSName string, zoneNameList []string, dnsEndpoints []string, logger logrus.FieldLogger) error {
 
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for Cloudflare creation request")
@@ -83,13 +86,13 @@ func (c *Client) CreateDNSRecord(customerDnsName string, zoneNameList []string, 
 	}
 
 	// Fetch the zone name for that customer DNS name
-	zoneName, found := c.getZoneName(zoneNameList, customerDnsName)
+	zoneName, found := c.getZoneName(zoneNameList, customerDNSName)
 	if !found {
-		return errors.Errorf("hosted zone for %q domain name not found", customerDnsName)
+		return errors.Errorf("hosted zone for %q domain name not found", customerDNSName)
 	}
 
 	// Fetch the zone ID
-	zoneID, err := c.getZoneId(zoneName)
+	zoneID, err := c.getZoneID(zoneName)
 	if err != nil {
 		logger.WithError(err).Error("failed to fetch Zone ID from Cloudflare")
 		return err
@@ -100,7 +103,7 @@ func (c *Client) CreateDNSRecord(customerDnsName string, zoneNameList []string, 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, cf.DNSRecord{
-		Name:    customerDnsName,
+		Name:    customerDNSName,
 		Type:    "CNAME",
 		Content: dnsEndpoint,
 		TTL:     1,
@@ -113,7 +116,7 @@ func (c *Client) CreateDNSRecord(customerDnsName string, zoneNameList []string, 
 	fmt.Println(recordResp)
 
 	logger.WithFields(logrus.Fields{
-		"cloudflare-dns-value":    customerDnsName,
+		"cloudflare-dns-value":    customerDNSName,
 		"cloudflare-dns-endpoint": dnsEndpoint,
 		"cloudflare-zone-id":      zoneID,
 	}).Debugf("Cloudflare create DNS record response: %v", recordResp)
@@ -122,24 +125,24 @@ func (c *Client) CreateDNSRecord(customerDnsName string, zoneNameList []string, 
 }
 
 // DeleteDNSRecord gets DNS name and zone name which uses to delete that DNS record from Cloudflare
-func (c *Client) DeleteDNSRecord(customerDnsName string, zoneNameList []string, logger logrus.FieldLogger) error {
+func (c *Client) DeleteDNSRecord(customerDNSName string, zoneNameList []string, logger logrus.FieldLogger) error {
 
 	// Fetch the zone name for that customer DNS name
-	zoneName, found := c.getZoneName(zoneNameList, customerDnsName)
+	zoneName, found := c.getZoneName(zoneNameList, customerDNSName)
 	if !found {
-		return errors.Errorf("hosted zone for %q domain name not found", customerDnsName)
+		return errors.Errorf("hosted zone for %q domain name not found", customerDNSName)
 	}
 
 	// Fetch the zone ID
-	zoneID, err := c.getZoneId(zoneName)
+	zoneID, err := c.getZoneID(zoneName)
 	if err != nil {
 		logger.WithError(err).Error("failed to fetch Zone ID from Cloudflare")
 		return err
 	}
 
-	recordID, err := c.getRecordId(zoneID, customerDnsName, logger)
+	recordID, err := c.getRecordID(zoneID, customerDNSName, logger)
 	if err != nil {
-		logger.WithError(err).Errorf("Failed to get record ID from Cloudflare for DNS: %s", customerDnsName)
+		logger.WithError(err).Errorf("Failed to get record ID from Cloudflare for DNS: %s", customerDNSName)
 		return err
 	}
 

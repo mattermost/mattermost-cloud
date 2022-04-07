@@ -19,24 +19,24 @@ import (
 )
 
 type mockCloudflare struct {
-	mockGetZoneId       func(zoneName string) (zoneID string, err error)
+	mockGetZoneID       func(zoneName string) (zoneID string, err error)
 	mockGetZoneName     func(zoneNameList []string, customerDnsName string) (zoneName string, found bool)
-	mockGetRecordId     func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
+	mockGetRecordID     func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
 	mockCreateDNSRecord func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
 	mockDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
 	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 }
 
 func (c *mockCloudflare) ZoneIDByName(zoneName string) (string, error) {
-	return c.mockGetZoneId(zoneName)
+	return c.mockGetZoneID(zoneName)
 }
 
-func (c *mockCloudflare) getZoneName(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
-	return c.mockGetZoneName(zoneNameList, customerDnsName)
+func (c *mockCloudflare) getZoneName(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
+	return c.mockGetZoneName(zoneNameList, customerDNSName)
 }
 
-func (c *mockCloudflare) getRecordId(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
-	return c.mockGetRecordId(zoneID, customerDnsName, logger)
+func (c *mockCloudflare) getRecordId(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
+	return c.mockGetRecordID(zoneID, customerDNSName, logger)
 }
 
 func (c *mockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
@@ -50,7 +50,7 @@ func (c *mockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID s
 	return c.mockDeleteDNSRecord(ctx, zoneID, recordID)
 }
 
-func TestGetZoneId(t *testing.T) {
+func TestGetZoneID(t *testing.T) {
 	mockCF := &mockCloudflare{}
 	samples := []struct {
 		description string
@@ -78,9 +78,9 @@ func TestGetZoneId(t *testing.T) {
 
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
-			mockCF.mockGetZoneId = s.setup
+			mockCF.mockGetZoneID = s.setup
 			client := NewClientWithToken(mockCF)
-			id, _ := client.getZoneId(s.zoneName)
+			id, _ := client.getZoneID(s.zoneName)
 			assert.Equal(t, s.expected, id)
 		})
 	}
@@ -96,14 +96,14 @@ func TestGetZoneName(t *testing.T) {
 	samples := []struct {
 		description     string
 		zoneNameList    []string
-		customerDnsName string
+		customerDNSName string
 		setup           func(zoneNameList []string, customerDnsName string) (zoneName string, found bool)
 		expected        Expected
 	}{
 		{
 			description:     "success with 1 zone name in the list",
 			zoneNameList:    []string{"cloud.mattermost.com"},
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
@@ -112,7 +112,7 @@ func TestGetZoneName(t *testing.T) {
 		{
 			description:     "success with 2 zone name in the list",
 			zoneNameList:    []string{"cloud.mattermost.com", "cloud.test.mattermost.com"},
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
@@ -121,7 +121,7 @@ func TestGetZoneName(t *testing.T) {
 		{
 			description:     "failure with 1 zone name in the list",
 			zoneNameList:    []string{"cloud.env.mattermost.com"},
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
@@ -130,7 +130,7 @@ func TestGetZoneName(t *testing.T) {
 		{
 			description:     "failure with 2 zone name in the list",
 			zoneNameList:    []string{"cloud.env.mattermost.com", "cloud.test.mattermost.com"},
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
@@ -139,7 +139,7 @@ func TestGetZoneName(t *testing.T) {
 		{
 			description:     "failure empty zone name in the list",
 			zoneNameList:    []string{},
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
@@ -148,7 +148,7 @@ func TestGetZoneName(t *testing.T) {
 		{
 			description:     "failure empty customer DNS name",
 			zoneNameList:    []string{"cloud.env.mattermost.com", "cloud.test.mattermost.com"},
-			customerDnsName: "",
+			customerDNSName: "",
 			setup: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
@@ -160,7 +160,7 @@ func TestGetZoneName(t *testing.T) {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockGetZoneName = s.setup
 			client := NewClientWithToken(mockCF)
-			name, found := client.getZoneName(s.zoneNameList, s.customerDnsName)
+			name, found := client.getZoneName(s.zoneNameList, s.customerDNSName)
 			result := Expected{name, found}
 			assert.Equal(t, s.expected, result)
 		})
@@ -168,7 +168,7 @@ func TestGetZoneName(t *testing.T) {
 
 }
 
-func TestGetRecordId(t *testing.T) {
+func TestGetRecordID(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	type Expected struct {
 		string
@@ -178,14 +178,14 @@ func TestGetRecordId(t *testing.T) {
 	samples := []struct {
 		description     string
 		zoneID          string
-		customerDnsName string
+		customerDNSName string
 		setup           func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 		expected        Expected
 	}{
 		{
 			description:     "success with 1 zone name in the list",
 			zoneID:          "THISISAZONEIDFROMCLOUDFLARE",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 				return []cf.DNSRecord{
 					{
@@ -198,7 +198,7 @@ func TestGetRecordId(t *testing.T) {
 		{
 			description:     "non existing zone ID at Cloudflare",
 			zoneID:          "NONEXISTINGIDATCLOUDFLARE",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 				return []cf.DNSRecord{}, nil
 			},
@@ -207,7 +207,7 @@ func TestGetRecordId(t *testing.T) {
 		{
 			description:     "error while calling cloudflare API",
 			zoneID:          "NONEXISTINGIDATCLOUDFLARE",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 				return []cf.DNSRecord{}, errors.New("Cloudflare API error")
 			},
@@ -219,7 +219,7 @@ func TestGetRecordId(t *testing.T) {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockDNSRecords = s.setup
 			client := NewClientWithToken(mockCF)
-			name, err := client.getRecordId(s.zoneID, s.customerDnsName, logger)
+			name, err := client.getRecordID(s.zoneID, s.customerDNSName, logger)
 			result := Expected{name, err}
 			if err != nil {
 				assert.EqualError(t, s.expected, err.Error())
@@ -237,23 +237,23 @@ func TestCreateDNSRecord(t *testing.T) {
 	mockCF := &mockCloudflare{}
 	samples := []struct {
 		description     string
-		customerDnsName string
+		customerDNSName string
 		zoneNameList    []string
 		dnsEndpoints    []string
 		setupName       func(zoneNameList []string, customerDnsName string) (zoneName string, found bool)
-		setupId         func(zoneName string) (zoneID string, err error)
+		setupID         func(zoneName string) (zoneID string, err error)
 		setupDNS        func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
 		expected        error
 	}{
 		{
 			description:     "success with 1 zone name in the list",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			zoneNameList:    []string{"cloud.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -267,13 +267,13 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "success with 2 zone name, 1 dns endpoints in the list",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			zoneNameList:    []string{"cloud.mattermost.com", "cloud.test.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -287,13 +287,13 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "success with 2 zone name, 2 dns endpoints in the list",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			zoneNameList:    []string{"cloud.mattermost.com", "cloud.test.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint", "second.load.balancer.endpoint"},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -307,13 +307,13 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with empty zone name",
-			customerDnsName: "",
+			customerDNSName: "",
 			zoneNameList:    []string{},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -323,13 +323,13 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with no DNS endpoints",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			zoneNameList:    []string{"cloud.mattermost.com"},
 			dnsEndpoints:    []string{},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -339,13 +339,13 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with empty string DNS endpoint",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			zoneNameList:    []string{"cloud.mattermost.com"},
 			dnsEndpoints:    []string{""},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -355,13 +355,13 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with zone ID fetching",
-			customerDnsName: "customer.cloud.mattermost.com",
+			customerDNSName: "customer.cloud.mattermost.com",
 			zoneNameList:    []string{"cloud.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "", false
 			},
-			setupId: func(zoneName string) (zoneID string, err error) {
+			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
@@ -374,10 +374,10 @@ func TestCreateDNSRecord(t *testing.T) {
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockGetZoneName = s.setupName
-			mockCF.mockGetZoneId = s.setupId
+			mockCF.mockGetZoneID = s.setupID
 			mockCF.mockCreateDNSRecord = s.setupDNS
 			client := NewClientWithToken(mockCF)
-			err := client.CreateDNSRecord(s.customerDnsName, s.zoneNameList, s.dnsEndpoints, logger)
+			err := client.CreateDNSRecord(s.customerDNSName, s.zoneNameList, s.dnsEndpoints, logger)
 			if err != nil {
 				assert.EqualError(t, s.expected, err.Error())
 			}
@@ -395,8 +395,8 @@ func TestDeleteDNSRecord(t *testing.T) {
 		zoneNameList         []string
 		zoneID               string
 		setupName            func(zoneNameList []string, customerDnsName string) (zoneName string, found bool)
-		setupZoneId          func(zoneName string) (zoneID string, err error)
-		setupRecordId        func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
+		setupZoneID          func(zoneName string) (zoneID string, err error)
+		setupRecordID        func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error)
 		setupDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
 		setupDNSRecord       func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 		expected             error
@@ -409,10 +409,10 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupZoneId: func(zoneName string) (zoneID string, err error) {
+			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupRecordId: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+			setupRecordID: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
 				return "RANDOMRECORDIDFROMCLOUDFLARE", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
@@ -435,10 +435,10 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupZoneId: func(zoneName string) (zoneID string, err error) {
+			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupRecordId: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+			setupRecordID: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
 				return "RANDOMRECORDIDFROMCLOUDFLARE", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
@@ -461,10 +461,10 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupZoneId: func(zoneName string) (zoneID string, err error) {
+			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "", errors.New("failed to get zone ID")
 			},
-			setupRecordId: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+			setupRecordID: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
 				return "", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
@@ -483,10 +483,10 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupZoneId: func(zoneName string) (zoneID string, err error) {
+			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupRecordId: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+			setupRecordID: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
 				return "", errors.New("failed to get record ID")
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
@@ -505,10 +505,10 @@ func TestDeleteDNSRecord(t *testing.T) {
 			setupName: func(zoneNameList []string, customerDnsName string) (zoneName string, found bool) {
 				return "cloud.mattermost.com", true
 			},
-			setupZoneId: func(zoneName string) (zoneID string, err error) {
+			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
-			setupRecordId: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
+			setupRecordID: func(zoneID, customerDnsName string, logger logrus.FieldLogger) (recordID string, err error) {
 				return "RANDOMRECORDIDFROMCLOUDFLARE", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
@@ -524,8 +524,8 @@ func TestDeleteDNSRecord(t *testing.T) {
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockGetZoneName = s.setupName
-			mockCF.mockGetZoneId = s.setupZoneId
-			mockCF.mockGetRecordId = s.setupRecordId
+			mockCF.mockGetZoneID = s.setupZoneID
+			mockCF.mockGetRecordID = s.setupRecordID
 			mockCF.mockDeleteDNSRecord = s.setupDeleteDNSRecord
 			mockCF.mockDNSRecords = s.setupDNSRecord
 			client := NewClientWithToken(mockCF)
