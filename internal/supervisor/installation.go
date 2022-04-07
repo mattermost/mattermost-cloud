@@ -6,6 +6,7 @@ package supervisor
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
@@ -112,7 +113,9 @@ type InstallationSupervisor struct {
 // cluster resources.
 type InstallationSupervisorCache struct {
 	initialized         bool
+	running             bool
 	stop                chan bool
+	mu                  sync.Mutex
 	installationMetrics map[string]*k8s.ClusterResources
 }
 
@@ -151,7 +154,7 @@ func NewInstallationSupervisor(
 		metrics:           metrics,
 		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
-		cache:             InstallationSupervisorCache{false, make(chan bool), make(map[string]*k8s.ClusterResources)},
+		cache:             InstallationSupervisorCache{false, false, make(chan bool), sync.Mutex{}, make(map[string]*k8s.ClusterResources)},
 	}
 }
 
@@ -167,14 +170,15 @@ func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clust
 // Shutdown performs graceful shutdown tasks for the installation supervisor.
 func (s *InstallationSupervisor) Shutdown() {
 	s.logger.Debug("Shutting down installation supervisor")
-	s.cache.stop <- true
+	if s.cache.running {
+		s.cache.stop <- true
+	}
 }
 
 // Do looks for work to be done on any pending installations and attempts to schedule the required work.
 func (s *InstallationSupervisor) Do() error {
 	if !s.cache.initialized {
-		go s.manageInstallationResourcesCache()
-		s.cache.initialized = true
+		s.initializeInstallationResourcesCacheManager()
 	}
 
 	installations, err := s.store.GetUnlockedInstallationsPendingWork()
@@ -457,7 +461,8 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 // getClusterResources returns cluster resources from cache or will obtain them
 // directly if they don't exist.
 func (s *InstallationSupervisor) getClusterResources(cluster *model.Cluster, logger log.FieldLogger) (*k8s.ClusterResources, error) {
-	if clusterResources, ok := s.cache.installationMetrics[cluster.ID]; ok {
+	clusterResources := s.cache.getCachedClusterResources(cluster.ID)
+	if clusterResources != nil {
 		logger.Debug("Using cached cluster resources")
 		return clusterResources, nil
 	}
@@ -1489,13 +1494,27 @@ func getAnnotationsNames(annotations []*model.Annotation) []string {
 	return names
 }
 
-func (s *InstallationSupervisor) manageInstallationResourcesCache() {
+func (c *InstallationSupervisorCache) getCachedClusterResources(clusterID string) *k8s.ClusterResources {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if clusterResources, ok := c.installationMetrics[clusterID]; ok {
+		return clusterResources
+	}
+	return nil
+}
+
+func (s *InstallationSupervisor) initializeInstallationResourcesCacheManager() {
+	s.cache.initialized = true
 	if !s.scheduling.balanceInstallations {
 		return
 	}
+	s.cache.running = true
 
 	s.logger.Info("Starting installation supervisor cache manager")
+	go s.manageInstallationResourcesCache()
+}
 
+func (s *InstallationSupervisor) manageInstallationResourcesCache() {
 	// Create new logger with error level logging to keep logs clean.
 	cacheLogger := log.New().WithFields(log.Fields{
 		"instance": s.instanceID,
@@ -1512,9 +1531,15 @@ func (s *InstallationSupervisor) manageInstallationResourcesCache() {
 				clusterResources, err := s.provisioner.GetClusterResources(cluster, true, cacheLogger)
 				if err != nil {
 					cacheLogger.WithError(err).Error("Failed to get cluster resources")
+					s.cache.mu.Lock()
+					delete(s.cache.installationMetrics, cluster.ID)
+					s.cache.mu.Unlock()
 					continue
 				}
+
+				s.cache.mu.Lock()
 				s.cache.installationMetrics[cluster.ID] = clusterResources
+				s.cache.mu.Unlock()
 			}
 		}
 
@@ -1523,7 +1548,9 @@ func (s *InstallationSupervisor) manageInstallationResourcesCache() {
 		case <-s.cache.stop:
 			// Cleanup just in case.
 			s.logger.Debug("Shutting down installation supervisor cache manager")
+			s.cache.mu.Lock()
 			s.cache.installationMetrics = make(map[string]*k8s.ClusterResources)
+			s.cache.mu.Unlock()
 			return
 		}
 	}
