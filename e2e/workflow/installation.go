@@ -121,7 +121,7 @@ func (w *InstallationSuite) GetConnectionStrAndExport(ctx context.Context) error
 func (w *InstallationSuite) PopulateSampleData(ctx context.Context) error {
 	// Do not generate guest user as by default guest accounts are disabled,
 	// which results in guest users being deactivated when Mattermost restarts.
-	_, err := w.client.RunMattermostCLICommandOnClusterInstallation(w.Meta.ClusterInstallationID, []string{"sampledata", "--teams", "4", "--channels-per-team", "15", "--guests", "0"})
+	_, err := w.client.ExecClusterInstallationCLI(w.Meta.ClusterInstallationID, "mmctl", []string{"--local", "sampledata", "--teams", "4", "--channels-per-team", "15", "--guests", "0"})
 	if err != nil {
 		return errors.Wrap(err, "while populating sample data for CI")
 	}
