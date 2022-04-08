@@ -7,6 +7,7 @@ package api_test
 import (
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	log "github.com/sirupsen/logrus"
 )
 
 type mockSupervisor struct {
@@ -37,7 +38,7 @@ func (s *mockProvisioner) ExecMattermostCLI(*model.Cluster, *model.ClusterInstal
 	return s.Output, s.CommandError
 }
 
-func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error) {
+func (s *mockProvisioner) GetClusterResources(*model.Cluster, bool, log.FieldLogger) (*k8s.ClusterResources, error) {
 	return nil, nil
 }
 

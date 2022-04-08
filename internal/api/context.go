@@ -9,6 +9,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // Supervisor describes the interface to notify the background jobs of an actionable change.
@@ -119,7 +120,7 @@ type Store interface {
 type Provisioner interface {
 	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
-	GetClusterResources(*model.Cluster, bool) (*k8s.ClusterResources, error)
+	GetClusterResources(*model.Cluster, bool, log.FieldLogger) (*k8s.ClusterResources, error)
 }
 
 // AwsClient describes the interface required to communicate with the AWS
