@@ -77,8 +77,28 @@ type installationStore interface {
 
 // Cloudflarer interface that holds Cloudflare functions
 type Cloudflarer interface {
-	CreateDNSRecord(customerDNSName string, zoneNameList []string, dnsEndpoints []string, logger logrus.FieldLogger) error
-	DeleteDNSRecord(customerDNSName string, zoneNameList []string, logger logrus.FieldLogger) error
+	CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error
+	DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error
+}
+
+// noopCloudflarer is used as a dummy Cloudflarer interface
+type noopCloudflarer struct {
+	Cloudflarer
+}
+
+// NoopCloudflarer returns an empty noopCloudflarer struct
+func NoopCloudflarer() Cloudflarer {
+	return noopCloudflarer{}
+}
+
+// CreateDNSRecord returns an empty dummy func for noopCloudflarer
+func (noopCloudflarer) CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+	return nil
+}
+
+// DeleteDNSRecord returns an empty dummy func for noopCloudflarer
+func (noopCloudflarer) DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error {
+	return nil
 }
 
 type eventProducer interface {
@@ -657,13 +677,7 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		return model.InstallationStateCreationDNS
 	}
 
-	publicHostedZoneNameList := s.aws.GetPublicHostedZoneNames()
-	if err != nil {
-		logger.WithError(err).Error("Failed to get public hosted zone name list from Route53")
-		return model.InstallationStateCreationDNS
-	}
-
-	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, publicHostedZoneNameList, endpoints, logger)
+	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, endpoints, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return model.InstallationStateCreationDNS
@@ -1108,13 +1122,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	publicHostedZoneNameList := s.aws.GetPublicHostedZoneNames()
-	if err != nil {
-		logger.WithError(err).Error("Failed to get public hosted zone name list from Route53")
-		return model.InstallationStateDeletionFinalCleanup
-	}
-
-	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, publicHostedZoneNameList, logger)
+	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 		return model.InstallationStateDeletionFinalCleanup

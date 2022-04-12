@@ -21,6 +21,7 @@ import (
 	cf "github.com/cloudflare/cloudflare-go"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
@@ -359,11 +360,18 @@ var serverCmd = &cobra.Command{
 		defer deliveryCancel()
 
 		eventsProducer := events.NewProducer(sqlStore, eventsDeliverer, awsClient.GetCloudEnvironmentName(), logger)
-		client, err := cf.NewWithAPIToken(os.Getenv("CLOUDFLARE_API_TOKEN"))
-		if err != nil {
-			return errors.Wrap(err, "Failed to initialize cloudflare client using API token")
+
+		var cloudflareClient supervisor.Cloudflarer
+		if cloudflareToken := os.Getenv("CLOUDFLARE_API_TOKEN"); cloudflareToken != "" {
+			cfClient, err := cf.NewWithAPIToken(os.Getenv("CLOUDFLARE_API_TOKEN"))
+			if err != nil {
+				return errors.Wrap(err, "Failed to initialize cloudflare client using API token")
+			}
+			cloudflareClient = cloudflare.NewClientWithToken(cfClient, awsClient)
+		} else {
+			logger.Warn("Cloudflare token not provided, using noop client")
+			cloudflareClient = supervisor.NoopCloudflarer()
 		}
-		cloudflareClient := cloudflare.NewClientWithToken(client)
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {

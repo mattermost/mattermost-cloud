@@ -16,6 +16,14 @@ type MockCloudflare struct {
 	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 }
 
+type MockAWSClient struct {
+	mockGetPublicHostedZoneNames func() []string
+}
+
+func (a *MockAWSClient) GetPublicHostedZoneNames() []string {
+	return a.mockGetPublicHostedZoneNames()
+}
+
 func (c *MockCloudflare) ZoneIDByName(zoneName string) (string, error) {
 	return c.mockGetZoneID(zoneName)
 }
