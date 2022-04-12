@@ -183,11 +183,8 @@ func NewInstallationSupervisor(
 		metrics:           metrics,
 		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
-<<<<<<< HEAD
-		cloudflareClient:  cloudflareClient,
-=======
 		cache:             InstallationSupervisorCache{false, false, make(chan bool), sync.Mutex{}, make(map[string]*k8s.ClusterResources)},
->>>>>>> 8ece73c86d5ed371c652c5794ecaec7ead9e5304
+		cloudflareClient:  cloudflareClient,
 	}
 }
 
