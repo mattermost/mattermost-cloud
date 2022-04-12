@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// MockCloudflare mocks the Cloudflarer  interface
 type MockCloudflare struct {
 	mockGetZoneID       func(zoneName string) (zoneID string, err error)
 	mockGetZoneName     func(zoneNameList []string, customerDNSName string) (zoneName string, found bool)
@@ -16,14 +17,17 @@ type MockCloudflare struct {
 	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 }
 
+// MockAWSClient mocks the AWS client interface
 type MockAWSClient struct {
 	mockGetPublicHostedZoneNames func() []string
 }
 
+// mocks GetPublicHostedZoneNames of AWS client
 func (a *MockAWSClient) GetPublicHostedZoneNames() []string {
 	return a.mockGetPublicHostedZoneNames()
 }
 
+// ZoneIDByName mocks the getZoneID
 func (c *MockCloudflare) ZoneIDByName(zoneName string) (string, error) {
 	return c.mockGetZoneID(zoneName)
 }
@@ -36,13 +40,17 @@ func (c *MockCloudflare) getRecordID(zoneID, customerDNSName string, logger logr
 	return c.mockGetRecordID(zoneID, customerDNSName, logger)
 }
 
+// mocks DNSRecords of cloudflare package
 func (c *MockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 	return c.mockDNSRecords(ctx, zoneID, rr)
 }
+
+// mocks CreateDNSRecord of cloudflare package
 func (c *MockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
 	return c.mockCreateDNSRecord(ctx, zoneID, rr)
 }
 
+// mocks DeleteDNSRecord of cloudflare package
 func (c *MockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
 	return c.mockDeleteDNSRecord(ctx, zoneID, recordID)
 }

@@ -25,6 +25,7 @@ type Cloudflarer interface {
 	DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error
 }
 
+// AWSClient interface that holds AWS client function
 type AWSClient interface {
 	GetPublicHostedZoneNames() []string
 }
