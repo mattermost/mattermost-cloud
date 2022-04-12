@@ -19,9 +19,9 @@ var installationSelect sq.SelectBuilder
 func init() {
 	installationSelect = sq.
 		Select(
-			"Installation.ID", "OwnerID", "Version", "Image", "DNS", "Database", "Filestore", "Size",
-			"Affinity", "GroupID", "GroupSequence", "State", "License",
-			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "CreateAt", "DeleteAt",
+			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image", "Database", "Filestore", "Size",
+			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
+			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "Installation.CreateAt", "Installation.DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
 		From("Installation")
@@ -115,8 +115,19 @@ func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, include
 
 // GetInstallations fetches the given page of created installations. The first page is 0.
 func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error) {
-	builder := installationSelect.
-		OrderBy("CreateAt ASC")
+	builder := installationSelect
+
+	// We need to apply DeleteAt constraint at join level just to avoid some edge cases
+	// where there is no InstallationDNS for Installation.
+	if !filter.IncludeDeleted {
+		builder = builder.LeftJoin("InstallationDNS ON Installation.ID=InstallationID AND InstallationDNS.DeleteAt = 0")
+	} else {
+		builder = builder.LeftJoin("InstallationDNS ON Installation.ID=InstallationID")
+	}
+
+	builder = builder.
+		GroupBy("Installation.ID").
+		OrderBy("Installation.CreateAt ASC")
 	builder = sqlStore.applyInstallationFilter(builder, filter)
 
 	var rawInstallations rawInstallations
@@ -148,7 +159,7 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 }
 
 func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filter *model.InstallationFilter) sq.SelectBuilder {
-	builder = applyPagingFilter(builder, filter.Paging)
+	builder = applyPagingFilter(builder, filter.Paging, "Installation")
 
 	if len(filter.InstallationIDs) != 0 {
 		builder = builder.Where(sq.Eq{"Installation.ID": filter.InstallationIDs})
@@ -163,7 +174,10 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 		builder = builder.Where("State = ?", filter.State)
 	}
 	if filter.DNS != "" {
-		builder = builder.Where("DNS = ?", filter.DNS)
+		builder = builder.Where("InstallationDNS.DomainName = ?", filter.DNS)
+	}
+	if filter.Name != "" {
+		builder = builder.Where("Installation.Name = ?", filter.Name)
 	}
 
 	return builder
@@ -301,7 +315,7 @@ func (sqlStore *SQLStore) GetSingleTenantDatabaseConfigForInstallation(installat
 }
 
 // CreateInstallation records the given installation to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, annotations []*model.Annotation) error {
+func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, annotations []*model.Annotation, dnsRecords []*model.InstallationDNS) error {
 	tx, err := sqlStore.beginTransaction(sqlStore.db)
 	if err != nil {
 		return errors.Wrap(err, "failed to begin transaction")
@@ -311,6 +325,14 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, a
 	err = sqlStore.createInstallation(tx, installation)
 	if err != nil {
 		return errors.Wrap(err, "failed to create installation")
+	}
+
+	// We can do bulk insert for better performance, but currently we do not expect more than 1 record.
+	for _, record := range dnsRecords {
+		err = sqlStore.createInstallationDNS(tx, installation.ID, record)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(annotations) > 0 {
@@ -348,13 +370,13 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 	}
 
 	insertsMap := map[string]interface{}{
+		"Name":             installation.Name,
 		"ID":               installation.ID,
 		"OwnerID":          installation.OwnerID,
 		"GroupID":          installation.GroupID,
 		"GroupSequence":    nil,
 		"Version":          installation.Version,
 		"Image":            installation.Image,
-		"DNS":              installation.DNS,
 		"Database":         installation.Database,
 		"Filestore":        installation.Filestore,
 		"Size":             installation.Size,
@@ -414,12 +436,12 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 	_, err = sqlStore.execBuilder(db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
+			"Name":             installation.Name,
 			"OwnerID":          installation.OwnerID,
 			"GroupID":          installation.GroupID,
 			"GroupSequence":    installation.GroupSequence,
 			"Version":          installation.Version,
 			"Image":            installation.Image,
-			"DNS":              installation.DNS,
 			"Database":         installation.Database,
 			"Filestore":        installation.Filestore,
 			"Size":             installation.Size,
@@ -463,7 +485,11 @@ func (sqlStore *SQLStore) UpdateInstallationGroupSequence(installation *model.In
 
 // UpdateInstallationState updates the given installation to a new state.
 func (sqlStore *SQLStore) UpdateInstallationState(installation *model.Installation) error {
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+	return sqlStore.updateInstallationState(sqlStore.db, installation)
+}
+
+func (sqlStore *SQLStore) updateInstallationState(execer execer, installation *model.Installation) error {
+	_, err := sqlStore.execBuilder(execer, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
 			"State": installation.State,

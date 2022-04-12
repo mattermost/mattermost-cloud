@@ -59,7 +59,11 @@ func (e *EventProducer) ProduceInstallationStateChangeEvent(installation *model.
 	}
 
 	extraData := e.initExtraData(extraDataFields)
-	extraData["DNS"] = installation.DNS
+
+	// TODO: we can still pass the DNS, tho we would require passing DNS zone
+	// to EventProducer.
+	//extraData["DNS"] = installation.DNS
+	extraData["Name"] = installation.Name
 
 	return e.produceStateChangeEvent(stateChangeEvent, extraData)
 }

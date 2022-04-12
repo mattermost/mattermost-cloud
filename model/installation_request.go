@@ -38,11 +38,14 @@ func SetDeployOperators(mysql, minio bool) {
 
 // CreateInstallationRequest specifies the parameters for a new installation.
 type CreateInstallationRequest struct {
-	OwnerID         string
-	GroupID         string
-	Version         string
-	Image           string
+	Name    string
+	OwnerID string
+	GroupID string
+	Version string
+	Image   string
+	// Deprecated: Use DNSNames instead.
 	DNS             string
+	DNSNames        []string
 	License         string
 	Size            string
 	Affinity        string
@@ -61,6 +64,20 @@ var hostnamePattern *regexp.Regexp = regexp.MustCompile(`[a-zA-Z0-9][\.a-z-A-Z\-
 
 // SetDefaults sets the default values for an installation create request.
 func (request *CreateInstallationRequest) SetDefaults() {
+	// If DNS is provided add it on the beginning of DNSNames slice.
+	if request.DNS != "" {
+		request.DNSNames = append([]string{request.DNS}, request.DNSNames...)
+	}
+	request.DNS = strings.ToLower(request.DNS)
+	for i := range request.DNSNames {
+		request.DNSNames[i] = strings.ToLower(request.DNSNames[i])
+	}
+
+	// For backwards compatibility set Name based on DNS
+	if request.Name == "" && request.DNS != "" {
+		request.Name = strings.Split(request.DNS, ".")[0]
+	}
+	request.Name = strings.ToLower(request.Name)
 	if request.Version == "" {
 		request.Version = "stable"
 	}
@@ -82,18 +99,23 @@ func (request *CreateInstallationRequest) SetDefaults() {
 	if IsSingleTenantRDS(request.Database) {
 		request.SingleTenantDatabaseConfig.SetDefaults()
 	}
-	request.DNS = strings.ToLower(request.DNS)
 }
 
 // Validate validates the values of an installation create request.
 func (request *CreateInstallationRequest) Validate() error {
+	if request.Name == "" {
+		return errors.New("name needs to be specified")
+	}
 	if request.OwnerID == "" {
 		return errors.New("must specify owner")
 	}
-	if err := isValidDNS(request.DNS); err != nil {
+
+	err := request.validateDNSNames()
+	if err != nil {
 		return err
 	}
-	_, err := mmv1alpha1.GetClusterSize(request.Size)
+
+	_, err = mmv1alpha1.GetClusterSize(request.Size)
 	if err != nil {
 		return errors.Wrap(err, "invalid size")
 	}
@@ -139,6 +161,32 @@ func (request *CreateInstallationRequest) Validate() error {
 		return errors.Errorf("mysql operator database cannot be used when mysql operator is not deployed")
 	}
 	return checkSpaces(request)
+}
+
+func (request *CreateInstallationRequest) validateDNSNames() error {
+	if len(request.DNSNames) == 0 {
+		return errors.New("at least one DNS name is required")
+	}
+
+	for _, dns := range request.DNSNames {
+		if err := isValidDNS(dns); err != nil {
+			return err
+		}
+
+		err := ensureDNSMatchesName(dns, request.Name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureDNSMatchesName(dns string, name string) error {
+	dnsPrefix := strings.Split(dns, ".")[0]
+	if dnsPrefix != name {
+		return errors.Errorf("domain name must start with Installation Name")
+	}
+	return nil
 }
 
 func isValidDNS(dns string) error {
@@ -225,6 +273,7 @@ type GetInstallationsRequest struct {
 	GroupID                     string
 	State                       string
 	DNS                         string
+	Name                        string
 	IncludeGroupConfig          bool
 	IncludeGroupConfigOverrides bool
 }
@@ -236,6 +285,7 @@ func (request *GetInstallationsRequest) ApplyToURL(u *url.URL) {
 	q.Add("group", request.GroupID)
 	q.Add("state", request.State)
 	q.Add("dns_name", request.DNS)
+	q.Add("name", request.Name)
 	if !request.IncludeGroupConfig {
 		q.Add("include_group_config", "false")
 	}

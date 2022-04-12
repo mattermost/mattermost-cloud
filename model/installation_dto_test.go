@@ -53,7 +53,6 @@ func TestInstallationDTOFromReader(t *testing.T) {
 				OwnerID:        "owner",
 				GroupID:        sToP("group_id"),
 				Version:        "version",
-				DNS:            "dns",
 				License:        "this_is_my_license",
 				MattermostEnv:  EnvVarMap{"key1": {Value: "value1"}},
 				Affinity:       "affinity",
@@ -63,6 +62,7 @@ func TestInstallationDTOFromReader(t *testing.T) {
 				LockAcquiredBy: nil,
 				LockAcquiredAt: int64(0),
 			},
+			DNS:         "dns",
 			Annotations: []*Annotation{{ID: "abc", Name: "efg"}},
 		}, installationDTO)
 	})
@@ -127,7 +127,6 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 					OwnerID:        "owner1",
 					GroupID:        sToP("group_id1"),
 					Version:        "version1",
-					DNS:            "dns1",
 					MattermostEnv:  EnvVarMap{"key1": {Value: "value1"}},
 					Affinity:       "affinity1",
 					State:          "state1",
@@ -136,6 +135,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 					LockAcquiredBy: nil,
 					LockAcquiredAt: 0,
 				},
+				DNS:         "dns1",
 				Annotations: []*Annotation{{ID: "abc", Name: "efg"}},
 			},
 			{
@@ -144,7 +144,6 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 					OwnerID:        "owner2",
 					GroupID:        sToP("group_id2"),
 					Version:        "version2",
-					DNS:            "dns2",
 					License:        "this_is_my_license",
 					MattermostEnv:  EnvVarMap{"key2": {Value: "value2"}},
 					Affinity:       "affinity2",
@@ -154,6 +153,7 @@ func TestInstallationDTOsFromReader(t *testing.T) {
 					LockAcquiredBy: sToP("tester"),
 					LockAcquiredAt: 50,
 				},
+				DNS: "dns2",
 			},
 		}, installationDTOs)
 	})

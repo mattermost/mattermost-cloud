@@ -224,6 +224,16 @@ func (s *mockInstallationStore) GetStateChangeEvents(filter *model.StateChangeEv
 	return nil, nil
 }
 
+func (s *mockInstallationStore) GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error) {
+	return []*model.InstallationDNS{
+		{ID: "abcd", DomainName: "dns.example.com", InstallationID: s.Installation.ID},
+	}, nil
+}
+
+func (s *mockInstallationStore) DeleteInstallationDNS(installationID string, dnsName string) error {
+	return nil
+}
+
 type mockMultitenantDBStore struct{}
 
 func (m *mockMultitenantDBStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
@@ -311,11 +321,11 @@ func (p *mockInstallationProvisioner) IsResourceReady(cluster *model.Cluster, cl
 	return true, nil
 }
 
-func (p *mockInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (p *mockInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, dnsRecords []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
 
-func (p *mockInstallationProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (p *mockInstallationProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, dnsRecords []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
 	return nil
 }
 
@@ -428,6 +438,10 @@ func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logg
 }
 
 func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
+	return nil
+}
+
+func (a *mockAWS) UpsertPublicCNAMEs(dnsNames, recordIDs, endpoints []string, logger log.FieldLogger) error {
 	return nil
 }
 
@@ -619,14 +633,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateStable,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -672,14 +686,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		// The stored installation is InstallationStateCreationInProgress, so we
@@ -716,14 +730,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err := sqlStore.CreateInstallation(installation, nil)
+		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -761,14 +775,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -814,14 +828,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -858,14 +872,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -911,14 +925,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -964,14 +978,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationDNS,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1017,14 +1031,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1078,14 +1092,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1134,14 +1148,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationPreProvisioning,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1186,14 +1200,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationPreProvisioning,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1238,14 +1252,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1290,14 +1304,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1353,14 +1367,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		installation.MergeWithGroup(group, false)
@@ -1414,14 +1428,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1466,14 +1480,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationFinalTasks,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1514,14 +1528,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationNoCompatibleClusters,
 		}
 
-		err := sqlStore.CreateInstallation(installation, nil)
+		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -1566,14 +1580,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationNoCompatibleClusters,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -1609,14 +1623,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationNoCompatibleClusters,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -1652,14 +1666,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateUpdateRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1713,14 +1727,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateUpdateRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1769,14 +1783,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1830,14 +1844,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1886,14 +1900,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -1952,14 +1966,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateUpdateInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		installation.MergeWithGroup(group, false)
@@ -2013,14 +2027,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateHibernationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2065,14 +2079,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateHibernationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2117,14 +2131,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateHibernationInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2169,14 +2183,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateWakeUpRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2221,14 +2235,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2273,14 +2287,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2325,14 +2339,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionInProgress,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2377,14 +2391,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2429,13 +2443,13 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
 		}
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2491,13 +2505,13 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
 		}
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2563,14 +2577,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &groupID,
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -2616,14 +2630,14 @@ func TestInstallationSupervisor(t *testing.T) {
 			installation := &model.Installation{
 				OwnerID:  owner,
 				Version:  "version",
-				DNS:      "dns.example.com",
+				Name:     "dns",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityMultiTenant,
 				GroupID:  &groupID,
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(installation, nil)
+			err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -2662,14 +2676,14 @@ func TestInstallationSupervisor(t *testing.T) {
 					installation := &model.Installation{
 						OwnerID:  owner,
 						Version:  "version",
-						DNS:      fmt.Sprintf("dns%d.example.com", i),
+						Name:     fmt.Sprintf("dns%d", i),
 						Size:     mmv1alpha1.Size100String,
 						Affinity: model.InstallationAffinityMultiTenant,
 						GroupID:  &groupID,
 						State:    model.InstallationStateCreationRequested,
 					}
 
-					err = sqlStore.CreateInstallation(installation, nil)
+					err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation(fmt.Sprintf("dns%d.example.com", i)))
 					require.NoError(t, err)
 
 					supervisor.Supervise(installation)
@@ -2708,14 +2722,14 @@ func TestInstallationSupervisor(t *testing.T) {
 			isolatedInstallation := &model.Installation{
 				OwnerID:  owner,
 				Version:  "version",
-				DNS:      "iso-dns.example.com",
+				Name:     "iso-dns",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &groupID,
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(isolatedInstallation, nil)
+			err = sqlStore.CreateInstallation(isolatedInstallation, nil, testutil.DNSForInstallation("iso-dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(isolatedInstallation)
@@ -2728,14 +2742,14 @@ func TestInstallationSupervisor(t *testing.T) {
 			multitenantInstallation := &model.Installation{
 				OwnerID:  owner,
 				Version:  "version",
-				DNS:      "mt-dns.example.com",
+				Name:     "mt-dns",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityMultiTenant,
 				GroupID:  &groupID,
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(multitenantInstallation, nil)
+			err = sqlStore.CreateInstallation(multitenantInstallation, nil, testutil.DNSForInstallation("mt-dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(multitenantInstallation)
@@ -2782,14 +2796,14 @@ func TestInstallationSupervisor(t *testing.T) {
 			installation := &model.Installation{
 				OwnerID:  owner,
 				Version:  "version",
-				DNS:      "dns.example.com",
+				Name:     "dns",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityMultiTenant,
 				GroupID:  &groupID,
 				State:    model.InstallationStateCreationRequested,
 			}
 
-			err = sqlStore.CreateInstallation(installation, nil)
+			err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -2838,14 +2852,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityMultiTenant,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -2887,14 +2901,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  owner,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityMultiTenant,
 			GroupID:  &groupID,
 			State:    model.InstallationStateCreationRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)
@@ -2915,7 +2929,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			return &model.Installation{
 				OwnerID:  model.NewID(),
 				Version:  "version",
-				DNS:      "dns.example.com",
+				Name:     "dns",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityMultiTenant,
 				GroupID:  &groupID,
@@ -2948,7 +2962,7 @@ func TestInstallationSupervisor(t *testing.T) {
 
 			installation := installationInCreationRequestedState()
 
-			err = sqlStore.CreateInstallation(installation, annotations)
+			err = sqlStore.CreateInstallation(installation, annotations, testutil.DNSForInstallation("dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -2982,7 +2996,7 @@ func TestInstallationSupervisor(t *testing.T) {
 
 			installation := installationInCreationRequestedState()
 
-			err = sqlStore.CreateInstallation(installation, annotations)
+			err = sqlStore.CreateInstallation(installation, annotations, testutil.DNSForInstallation("dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -3016,7 +3030,7 @@ func TestInstallationSupervisor(t *testing.T) {
 
 			installation := installationInCreationRequestedState()
 
-			err = sqlStore.CreateInstallation(installation, nil)
+			err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(installation)
@@ -3051,14 +3065,14 @@ func TestInstallationSupervisor(t *testing.T) {
 
 		installation := &model.Installation{
 			Version:   "version",
-			DNS:       "dns.example.com",
+			Name:      "dns",
 			Size:      mmv1alpha1.Size100String,
 			Affinity:  model.InstallationAffinityMultiTenant,
 			State:     model.InstallationStateUpdateRequested,
 			CRVersion: model.V1betaCRVersion,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(installation)

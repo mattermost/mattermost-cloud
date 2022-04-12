@@ -290,7 +290,7 @@ func TestDeleteMultitenantDatabase(t *testing.T) {
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
 		Logger:     logger,
-		AwsClient: mockAWSClient{clusterExists: false, expectedRDSID: "rds-id"},
+		AwsClient:  mockAWSClient{clusterExists: false, expectedRDSID: "rds-id"},
 	}
 	api.Register(router, context)
 	ts := httptest.NewServer(router)
@@ -306,8 +306,8 @@ func TestDeleteMultitenantDatabase(t *testing.T) {
 
 	makeDBCluster := func() *model.MultitenantDatabase {
 		database1 := &model.MultitenantDatabase{
-			ID:                                 model.NewID(),
-			DatabaseType:                       model.DatabaseEngineTypePostgres,
+			ID:           model.NewID(),
+			DatabaseType: model.DatabaseEngineTypePostgres,
 			RdsClusterID: "rds-id",
 		}
 		err := sqlStore.CreateMultitenantDatabase(database1)
@@ -335,7 +335,7 @@ func TestDeleteMultitenantDatabase(t *testing.T) {
 
 	err = client.DeleteMultitenantDatabase(db2.ID, false)
 	require.Error(t, err)
-	assert.Contains(t,err.Error(), "400")
+	assert.Contains(t, err.Error(), "400")
 
 	// Succeed with force even if cluster exists.
 	err = client.DeleteMultitenantDatabase(db2.ID, true)

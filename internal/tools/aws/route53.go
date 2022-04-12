@@ -102,6 +102,31 @@ func (a *Client) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.
 	return a.updateResourceRecordIDs(zoneID, dnsName, newID, logger)
 }
 
+// UpsertPublicCNAMEs updates or creates specified dnsNames.
+// The record ID will be set to DNS name with idSuffix appended after '-'.
+func (a *Client) UpsertPublicCNAMEs(dnsNames, recordIDs []string, endpoints []string, logger log.FieldLogger) error {
+	if len(dnsNames) != len(recordIDs) {
+		return errors.New("expected the same number of DNS names and record IDs")
+	}
+
+	// TODO: for now we do not expect having multiple domains for the same hosted zone
+	// therefore we just do updates in a loop instead of trying to batch.
+	// If this ever changes, we can optimize by updating all records in same zone at once
+
+	for i, dns := range dnsNames {
+		zoneID, found := a.getDNSZoneID(dns)
+		if !found {
+			return errors.Errorf("hosted zone for %q domain name not found", dns)
+		}
+
+		err := a.upsertCNAMERecord(zoneID, dns, recordIDs[i], endpoints, logger)
+		if err != nil {
+			return errors.Wrapf(err, "failed to update CNAME for DNS %q", dns)
+		}
+	}
+	return nil
+}
+
 // DeletePublicCNAME deletes a AWS route53 record for a public domain name.
 func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
 	zoneID, found := a.getDNSZoneID(dnsName)
@@ -189,20 +214,9 @@ func (a *Client) getZoneDNS(hostedZoneID string, logger log.FieldLogger) (string
 }
 
 func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
-	if len(dnsEndpoints) == 0 {
-		return errors.New("no DNS endpoints provided for route53 creation request")
-	}
-	for _, endpoint := range dnsEndpoints {
-		if endpoint == "" {
-			return errors.New("at least one of the DNS endpoints was set to an empty string")
-		}
-	}
-
-	var resourceRecords []*route53.ResourceRecord
-	for _, endpoint := range dnsEndpoints {
-		resourceRecords = append(resourceRecords, &route53.ResourceRecord{
-			Value: aws.String(endpoint),
-		})
+	resourceRecords, err := recordsFromEndpoints(dnsEndpoints)
+	if err != nil {
+		return errors.Wrap(err, "failed to create Resource Records from endpoints")
 	}
 
 	identifier := dnsName
@@ -217,7 +231,7 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 					Action: aws.String("UPSERT"),
 					ResourceRecordSet: &route53.ResourceRecordSet{
 						Name:            aws.String(dnsName),
-						Type:            aws.String("CNAME"),
+						Type:            aws.String(route53.RRTypeCname),
 						ResourceRecords: resourceRecords,
 						TTL:             aws.Int64(defaultTTL),
 						Weight:          aws.Int64(defaultWeight),
@@ -242,7 +256,7 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 }
 
 func (a *Client) isProvisionedCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) bool {
-	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName, logger)
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName)
 	if err != nil {
 		logger.WithError(err).Errorf("failed to get record sets for dns name %s", dnsName)
 		return false
@@ -258,7 +272,7 @@ func (a *Client) isProvisionedCNAME(hostedZoneID, dnsName string, logger log.Fie
 }
 
 func (a *Client) updateResourceRecordIDs(hostedZoneID, dnsName, newID string, logger log.FieldLogger) error {
-	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName, logger)
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
 	}
@@ -267,25 +281,27 @@ func (a *Client) updateResourceRecordIDs(hostedZoneID, dnsName, newID string, lo
 	if len(recordSets) != 1 {
 		return errors.Errorf("expected exactly 1 resource record, but found %d", len(recordSets))
 	}
-
 	recordSet := recordSets[0]
 	if *recordSet.SetIdentifier == newID {
 		return nil
 	}
-
 	newRecordSet := *recordSet
 	newRecordSet.SetIdentifier = aws.String(newID)
 
+	return a.updateResourceRecordSets(recordSet, &newRecordSet, hostedZoneID, logger)
+}
+
+func (a *Client) updateResourceRecordSets(oldRec, newRec *route53.ResourceRecordSet, hostedZoneID string, logger log.FieldLogger) error {
 	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
 		ChangeBatch: &route53.ChangeBatch{
 			Changes: []*route53.Change{
 				{
 					Action:            aws.String("UPSERT"),
-					ResourceRecordSet: &newRecordSet,
+					ResourceRecordSet: newRec,
 				},
 				{
 					Action:            aws.String("DELETE"),
-					ResourceRecordSet: recordSet,
+					ResourceRecordSet: oldRec,
 				},
 			},
 		},
@@ -296,15 +312,48 @@ func (a *Client) updateResourceRecordIDs(hostedZoneID, dnsName, newID string, lo
 	}
 
 	logger.WithFields(log.Fields{
-		"route53-dns-value":      dnsName,
+		"route53-dns-value":      getString(newRec.Name),
 		"route53-hosted-zone-id": hostedZoneID,
 	}).Debugf("AWS route53 record update response: %s", prettyRoute53Response(resp))
 
 	return nil
 }
 
+func (a *Client) upsertCNAMERecord(hostedZoneID, dnsName, newID string, endpoints []string, logger log.FieldLogger) error {
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
+	}
+
+	if len(recordSets) == 0 {
+		return a.createCNAME(hostedZoneID, dnsName, endpoints, newID, logger)
+	}
+
+	// There should only be one returned record.
+	if len(recordSets) != 1 {
+		return errors.Errorf("expected exactly 0 or 1 resource record, but found %d", len(recordSets))
+	}
+
+	recordSet := recordSets[0]
+	if *recordSet.SetIdentifier == newID {
+		return nil
+	}
+	newRecordSet := *recordSet
+	newRecordSet.SetIdentifier = aws.String(newID)
+
+	// As this function takes endpoints as argument we also update endpoints
+	// to not make behavior surprising.
+	resourceRecords, err := recordsFromEndpoints(endpoints)
+	if err != nil {
+		return errors.Wrap(err, "failed to create Resource Records from endpoints")
+	}
+	newRecordSet.ResourceRecords = resourceRecords
+
+	return a.updateResourceRecordSets(recordSet, &newRecordSet, hostedZoneID, logger)
+}
+
 func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogger) error {
-	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName, logger)
+	recordSets, err := a.getRecordSetsForDNS(hostedZoneID, dnsName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
 	}
@@ -355,7 +404,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 // this doesn't scale and leads to rate limiting issues. As such, this should
 // only be called when expecting less than 10 records for a given DNS value and
 // we will cross our fingers that the records will always be ordered correctly.
-func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string, logger log.FieldLogger) ([]*route53.ResourceRecordSet, error) {
+func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string) ([]*route53.ResourceRecordSet, error) {
 	var recordSets []*route53.ResourceRecordSet
 	recordList, err := a.Service().route53.ListResourceRecordSets(
 		&route53.ListResourceRecordSetsInput{
@@ -443,6 +492,26 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*route53.Host
 	}
 
 	return zones, nil
+}
+
+func recordsFromEndpoints(dnsEndpoints []string) ([]*route53.ResourceRecord, error) {
+	if len(dnsEndpoints) == 0 {
+		return nil, errors.New("no DNS endpoints provided for route53 creation request")
+	}
+	for _, endpoint := range dnsEndpoints {
+		if endpoint == "" {
+			return nil, errors.New("at least one of the DNS endpoints was set to an empty string")
+		}
+	}
+
+	var resourceRecords []*route53.ResourceRecord
+	for _, endpoint := range dnsEndpoints {
+		resourceRecords = append(resourceRecords, &route53.ResourceRecord{
+			Value: aws.String(endpoint),
+		})
+	}
+
+	return resourceRecords, nil
 }
 
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {

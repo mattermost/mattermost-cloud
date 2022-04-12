@@ -33,7 +33,7 @@ type Store interface {
 	UnlockClusterAPI(clusterID string) error
 	DeleteCluster(clusterID string) error
 
-	CreateInstallation(installation *model.Installation, annotations []*model.Annotation) error
+	CreateInstallation(installation *model.Installation, annotations []*model.Annotation, dnsRecords []*model.InstallationDNS) error
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetInstallationDTO(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.InstallationDTO, error)
 	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)

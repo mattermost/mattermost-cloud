@@ -359,8 +359,11 @@ func TestRollbackInstallationDBMigrationOperation(t *testing.T) {
 	ts := httptest.NewServer(router)
 	client := model.NewClient(ts.URL)
 
-	installation := &model.Installation{DNS: "dns.com", State: model.InstallationStateHibernating}
-	err := sqlStore.CreateInstallation(installation, nil)
+	installation := &model.Installation{
+		Name:  "name",
+		State: model.InstallationStateHibernating,
+	}
+	err := sqlStore.CreateInstallation(installation, nil, nil)
 	require.NoError(t, err)
 
 	migrationOp := &model.InstallationDBMigrationOperation{
