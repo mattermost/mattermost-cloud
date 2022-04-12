@@ -41,7 +41,7 @@ func Test_ClusterLifecycle(t *testing.T) {
 			}
 		}()
 	}
-	err = test.EventsRecorder.Start(test.ProvisionerClient)
+	err = test.EventsRecorder.Start(test.ProvisionerClient, test.Logger)
 	require.NoError(t, err)
 	defer test.EventsRecorder.ShutDown(test.ProvisionerClient)
 
