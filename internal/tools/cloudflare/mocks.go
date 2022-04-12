@@ -22,7 +22,7 @@ type MockAWSClient struct {
 	mockGetPublicHostedZoneNames func() []string
 }
 
-// mocks GetPublicHostedZoneNames of AWS client
+// GetPublicHostedZoneNames mocks AWS client method
 func (a *MockAWSClient) GetPublicHostedZoneNames() []string {
 	return a.mockGetPublicHostedZoneNames()
 }
@@ -40,17 +40,17 @@ func (c *MockCloudflare) getRecordID(zoneID, customerDNSName string, logger logr
 	return c.mockGetRecordID(zoneID, customerDNSName, logger)
 }
 
-// mocks DNSRecords of cloudflare package
+// DNSRecords mocks cloudflare package same method
 func (c *MockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 	return c.mockDNSRecords(ctx, zoneID, rr)
 }
 
-// mocks CreateDNSRecord of cloudflare package
+// CreateDNSRecord mocks cloudflare package same method
 func (c *MockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
 	return c.mockCreateDNSRecord(ctx, zoneID, rr)
 }
 
-// mocks DeleteDNSRecord of cloudflare package
+// DeleteDNSRecord mocks cloudflare package same method
 func (c *MockCloudflare) DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error {
 	return c.mockDeleteDNSRecord(ctx, zoneID, recordID)
 }
