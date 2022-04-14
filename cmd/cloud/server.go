@@ -363,14 +363,14 @@ var serverCmd = &cobra.Command{
 
 		var cloudflareClient supervisor.Cloudflarer
 		if cloudflareToken := os.Getenv("CLOUDFLARE_API_TOKEN"); cloudflareToken != "" {
-			cfClient, err := cf.NewWithAPIToken(os.Getenv("CLOUDFLARE_API_TOKEN"))
+			cfClient, err := cf.NewWithAPIToken(cloudflareToken)
 			if err != nil {
 				return errors.Wrap(err, "Failed to initialize cloudflare client using API token")
 			}
 			cloudflareClient = cloudflare.NewClientWithToken(cfClient, awsClient)
 		} else {
 			logger.Warn("Cloudflare token not provided, using noop client")
-			cloudflareClient = supervisor.NoopCloudflarer()
+			cloudflareClient = cloudflare.NoopClient()
 		}
 
 		var multiDoer supervisor.MultiDoer

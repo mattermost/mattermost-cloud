@@ -17,33 +17,6 @@ import (
 
 const defaultTimeout = 30 * time.Second
 
-// Cloudflarer interface that holds Cloudflare functions
-type Cloudflarer interface {
-	ZoneIDByName(zoneName string) (string, error)
-	DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
-	CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
-	DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error
-}
-
-// AWSClient interface that holds AWS client function
-type AWSClient interface {
-	GetPublicHostedZoneNames() []string
-}
-
-// Client is a wrapper on to of Cloudflare library client.
-type Client struct {
-	cfClient Cloudflarer
-	aws      AWSClient
-}
-
-// NewClientWithToken creates a new client that can be used to run the other functions.
-func NewClientWithToken(client Cloudflarer, aws AWSClient) *Client {
-	return &Client{
-		cfClient: client,
-		aws:      aws,
-	}
-}
-
 func (c *Client) getZoneID(zoneName string) (zoneID string, err error) {
 	zoneID, err = c.cfClient.ZoneIDByName(zoneName)
 	if err != nil {

@@ -6,7 +6,6 @@ package cloudflare
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -527,7 +526,6 @@ func TestDeleteDNSRecord(t *testing.T) {
 			mockAWS.mockGetPublicHostedZoneNames = s.awsZoneNameList
 			client := NewClientWithToken(mockCF, mockAWS)
 			err := client.DeleteDNSRecord(s.customerDNSName, logger)
-			fmt.Println(err)
 			if s.expected != nil {
 				assert.EqualError(t, s.expected, err.Error())
 			}

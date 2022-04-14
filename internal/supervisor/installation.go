@@ -83,26 +83,6 @@ type Cloudflarer interface {
 	DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error
 }
 
-// noopCloudflarer is used as a dummy Cloudflarer interface
-type noopCloudflarer struct {
-	Cloudflarer
-}
-
-// NoopCloudflarer returns an empty noopCloudflarer struct
-func NoopCloudflarer() Cloudflarer {
-	return noopCloudflarer{}
-}
-
-// CreateDNSRecord returns an empty dummy func for noopCloudflarer
-func (noopCloudflarer) CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
-	return nil
-}
-
-// DeleteDNSRecord returns an empty dummy func for noopCloudflarer
-func (noopCloudflarer) DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error {
-	return nil
-}
-
 type eventProducer interface {
 	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
 	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
