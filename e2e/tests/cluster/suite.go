@@ -2,14 +2,13 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+//go:build e2e
 
 package cluster
 
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
@@ -32,6 +31,7 @@ type TestConfig struct {
 	DNSSubdomain              string `envconfig:"default=dev.cloud.mattermost.com"`
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
+	FetchAMI                  bool   `envconfig:"default=true"`
 	Cleanup                   bool   `envconfig:"default=true"`
 }
 
@@ -67,6 +67,16 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		AllowInstallations: true,
 		Annotations:        testAnnotations(testID),
 	}
+
+	// If specified, we fetch AMI from existing clusters.
+	if config.FetchAMI {
+		ami, err := fetchAMI(client, logger)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch AMI")
+		}
+		createClusterReq.KopsAMI = ami
+	}
+
 	err = clusterdictionary.ApplyToCreateClusterRequest("SizeAlef1000", createClusterReq)
 	if err != nil {
 		return nil, err
@@ -143,4 +153,19 @@ func (w *Test) Run() error {
 		return errors.Wrap(err, "error running workflow")
 	}
 	return nil
+}
+
+func fetchAMI(cloudClient *model.Client, logger logrus.FieldLogger) (string, error) {
+	clusters, err := cloudClient.GetClusters(&model.GetClustersRequest{Paging: model.AllPagesNotDeleted()})
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get clusters to fetch AMI")
+	}
+	if len(clusters) == 0 {
+		return "", errors.Errorf("no clusters found to fetch AMI")
+	}
+
+	ami := clusters[0].ProvisionerMetadataKops.AMI
+	logrus.Infof("Fetched AMI from existing cluster: %q", ami)
+
+	return ami, nil
 }

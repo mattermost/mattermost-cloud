@@ -40,7 +40,7 @@ func WaitForClusterToBeStable(ctx context.Context, clusterID string, whChan <-ch
 
 // WaitForClusterDeletion waits until Cluster is deleted.
 func WaitForClusterDeletion(ctx context.Context, clusterID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
-	waitCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 
 	whWaiter := webhookWaiter{
