@@ -365,7 +365,7 @@ var serverCmd = &cobra.Command{
 		if cloudflareToken := os.Getenv("CLOUDFLARE_API_TOKEN"); cloudflareToken != "" {
 			cfClient, err := cf.NewWithAPIToken(cloudflareToken)
 			if err != nil {
-				return errors.Wrap(err, "Failed to initialize cloudflare client using API token")
+				return errors.Wrap(err, "failed to initialize cloudflare client using API token")
 			}
 			cloudflareClient = cloudflare.NewClientWithToken(cfClient, awsClient)
 		} else {
