@@ -272,14 +272,15 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return err
 	}
 
-	// The bifrost utility cannot have downtime so it is not part of the namespace
-	// cleanup and recreation flow. We always only update bifrost.
+	// The bifrost and nginx utilities cannot have downtime so it is not part of the namespace
+	// cleanup and recreation flow.
 	bifrostNamespace := "bifrost"
-	namespaces = append(namespaces, bifrostNamespace)
+	nginxNamespace := "nginx"
+	namespaces = append(namespaces, bifrostNamespace, nginxNamespace)
 	logger.Info("Creating utility namespaces")
 	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
 	if err != nil {
-		return errors.Wrap(err, "failed to create bifrost namespace")
+		return errors.Wrap(err, "failed to create namespaces")
 	}
 
 	logger.Info("Creating or updating bifrost secret")
@@ -369,6 +370,9 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		}, {
 			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
 			DeployNamespace: "kube-system",
+		}, {
+			Path:            "manifests/nginx/nginx_template.yaml",
+			DeployNamespace: nginxNamespace,
 		},
 	}
 
