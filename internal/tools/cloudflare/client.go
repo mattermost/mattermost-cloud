@@ -38,22 +38,22 @@ func NewClientWithToken(client Cloudflarer, aws AWSClient) *Client {
 	}
 }
 
-// noopCloudflarer is used as a dummy Cloudflarer interface
-type noopCloudflarer struct{}
+// NoopCloudflarer is used as a dummy Cloudflarer interface
+type NoopCloudflarer struct{}
 
-// NoopCloudflarer returns an empty noopCloudflarer struct
-func NoopClient() *noopCloudflarer {
-	return &noopCloudflarer{}
+// NoopClient returns an empty noopCloudflarer struct
+func NoopClient() *NoopCloudflarer {
+	return &NoopCloudflarer{}
 }
 
 // CreateDNSRecord returns an empty dummy func for noopCloudflarer
-func (*noopCloudflarer) CreateDNSRecord(_ string, _ []string, logger logrus.FieldLogger) error {
+func (*NoopCloudflarer) CreateDNSRecord(_ string, _ []string, logger logrus.FieldLogger) error {
 	logger.Debug("Using noop Cloudflare client, CreateDNSRecord function")
 	return nil
 }
 
 // DeleteDNSRecord returns an empty dummy func for noopCloudflarer
-func (*noopCloudflarer) DeleteDNSRecord(_ string, logger logrus.FieldLogger) error {
+func (*NoopCloudflarer) DeleteDNSRecord(_ string, logger logrus.FieldLogger) error {
 	logger.Debug("Using noop Cloudflare client, DeleteDNSRecord function")
 	return nil
 }
