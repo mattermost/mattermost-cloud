@@ -532,11 +532,11 @@ func (m *mockEventProducer) ProduceClusterInstallationStateChangeEvent(clusterIn
 
 type mockCloudflareClient struct{}
 
-func (m *mockCloudflareClient) CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+func (m *mockCloudflareClient) CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger logrus.FieldLogger) error {
 	return nil
 
 }
-func (m *mockCloudflareClient) DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error {
+func (m *mockCloudflareClient) DeleteDNSRecords(customerDNSName []string, logger logrus.FieldLogger) error {
 	return nil
 }
 

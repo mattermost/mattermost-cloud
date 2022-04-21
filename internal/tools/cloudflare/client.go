@@ -46,14 +46,14 @@ func NoopClient() *NoopCloudflarer {
 	return &NoopCloudflarer{}
 }
 
-// CreateDNSRecord returns an empty dummy func for noopCloudflarer
-func (*NoopCloudflarer) CreateDNSRecord(_ string, _ []string, logger logrus.FieldLogger) error {
-	logger.Debug("Using noop Cloudflare client, CreateDNSRecord function")
+// CreateDNSRecords returns an empty dummy func for noopCloudflarer
+func (*NoopCloudflarer) CreateDNSRecords(_ []string, _ []string, logger logrus.FieldLogger) error {
+	logger.Debug("Using noop Cloudflare client, CreateDNSRecords function")
 	return nil
 }
 
-// DeleteDNSRecord returns an empty dummy func for noopCloudflarer
-func (*NoopCloudflarer) DeleteDNSRecord(_ string, logger logrus.FieldLogger) error {
-	logger.Debug("Using noop Cloudflare client, DeleteDNSRecord function")
+// DeleteDNSRecords returns an empty dummy func for noopCloudflarer
+func (*NoopCloudflarer) DeleteDNSRecords(_ []string, logger logrus.FieldLogger) error {
+	logger.Debug("Using noop Cloudflare client, DeleteDNSRecords function")
 	return nil
 }

@@ -82,8 +82,8 @@ type installationStore interface {
 
 // Cloudflarer interface that holds Cloudflare functions
 type Cloudflarer interface {
-	CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error
-	DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error
+	CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger logrus.FieldLogger) error
+	DeleteDNSRecords(customerDNSName []string, logger logrus.FieldLogger) error
 }
 
 type eventProducer interface {
@@ -690,12 +690,6 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 		logger.WithError(err).Error("Failed to configure Installation DNS.")
 		return model.InstallationStateCreationDNS
 	}
-	// TODO: multiple DNS
-	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, endpoints, logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
-		return model.InstallationStateCreationDNS
-	}
 
 	return s.waitForCreationStable(installation, instanceID, logger)
 }
@@ -1170,8 +1164,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 			logger.WithError(err).Error("Failed to delete installation DNS")
 			return model.InstallationStateDeletionFinalCleanup
 		}
-		// TODO: multiple DNS
-		err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, logger)
+		err = s.cloudflareClient.DeleteDNSRecords([]string{record.ID}, logger)
 		if err != nil {
 			logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 			return model.InstallationStateDeletionFinalCleanup
@@ -1474,10 +1467,17 @@ func (s *InstallationSupervisor) configureDNS(installation *model.Installation, 
 	if err != nil {
 		return errors.Wrap(err, "failed to get DNS records for Installation")
 	}
+	dnsRecordsIDs := model.DNSNamesFromRecords(dnsRecords)
 
-	err = s.upsertPublicCNAMEs(model.DNSNamesFromRecords(dnsRecords), "", endpoints, logger)
+	err = s.upsertPublicCNAMEs(dnsRecordsIDs, "", endpoints, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DNS CNAME records")
+	}
+
+	err = s.cloudflareClient.CreateDNSRecords(dnsRecordsIDs, endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
+		return errors.Wrap(err, "failed to create Cloudflare DNS records")
 	}
 
 	logger.Infof("Successfully configured DNS %s", dnsRecords[0].DomainName)

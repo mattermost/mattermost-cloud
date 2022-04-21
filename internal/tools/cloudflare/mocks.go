@@ -4,14 +4,11 @@ import (
 	"context"
 
 	cf "github.com/cloudflare/cloudflare-go"
-	"github.com/sirupsen/logrus"
 )
 
 // MockCloudflare mocks the Cloudflarer  interface
 type MockCloudflare struct {
 	mockGetZoneID       func(zoneName string) (zoneID string, err error)
-	mockGetZoneName     func(zoneNameList []string, customerDNSName string) (zoneName string, found bool)
-	mockGetRecordID     func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error)
 	mockCreateDNSRecord func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
 	mockDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
 	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
@@ -30,14 +27,6 @@ func (a *MockAWSClient) GetPublicHostedZoneNames() []string {
 // ZoneIDByName mocks the getZoneID
 func (c *MockCloudflare) ZoneIDByName(zoneName string) (string, error) {
 	return c.mockGetZoneID(zoneName)
-}
-
-func (c *MockCloudflare) getZoneName(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-	return c.mockGetZoneName(zoneNameList, customerDNSName)
-}
-
-func (c *MockCloudflare) getRecordID(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-	return c.mockGetRecordID(zoneID, customerDNSName, logger)
 }
 
 // DNSRecords mocks cloudflare package same method
