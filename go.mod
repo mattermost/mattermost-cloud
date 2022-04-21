@@ -7,6 +7,7 @@ require (
 	github.com/Masterminds/squirrel v1.4.0
 	github.com/aws/aws-sdk-go v1.42.16
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/cloudflare/cloudflare-go v0.31.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/mux v1.8.0

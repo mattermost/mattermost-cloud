@@ -7,12 +7,15 @@ package supervisor
 import (
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -77,6 +80,12 @@ type installationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
+// Cloudflarer interface that holds Cloudflare functions
+type Cloudflarer interface {
+	CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error
+	DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error
+}
+
 type eventProducer interface {
 	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
 	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
@@ -86,7 +95,7 @@ type eventProducer interface {
 // provisioner abstracts the provisioning operations required by the installation supervisor.
 type installationProvisioner interface {
 	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
-	GetClusterResources(cluster *model.Cluster, onlySchedulable bool) (*k8s.ClusterResources, error)
+	GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger log.FieldLogger) (*k8s.ClusterResources, error)
 	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
 }
 
@@ -107,6 +116,18 @@ type InstallationSupervisor struct {
 	metrics           *metrics.CloudMetrics
 	eventsProducer    eventProducer
 	forceCRUpgrade    bool
+	cache             InstallationSupervisorCache
+	cloudflareClient  Cloudflarer
+}
+
+// InstallationSupervisorCache contains configuration and cached data for
+// cluster resources.
+type InstallationSupervisorCache struct {
+	initialized         bool
+	running             bool
+	stop                chan bool
+	mu                  sync.Mutex
+	installationMetrics map[string]*k8s.ClusterResources
 }
 
 // InstallationSupervisorSchedulingOptions are the various options that control
@@ -130,7 +151,8 @@ func NewInstallationSupervisor(
 	logger log.FieldLogger,
 	metrics *metrics.CloudMetrics,
 	eventsProducer eventProducer,
-	forceCRUpgrade bool) *InstallationSupervisor {
+	forceCRUpgrade bool,
+	cloudflareClient Cloudflarer) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -144,6 +166,8 @@ func NewInstallationSupervisor(
 		metrics:           metrics,
 		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
+		cache:             InstallationSupervisorCache{false, false, make(chan bool), sync.Mutex{}, make(map[string]*k8s.ClusterResources)},
+		cloudflareClient:  cloudflareClient,
 	}
 }
 
@@ -159,10 +183,17 @@ func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clust
 // Shutdown performs graceful shutdown tasks for the installation supervisor.
 func (s *InstallationSupervisor) Shutdown() {
 	s.logger.Debug("Shutting down installation supervisor")
+	if s.cache.running {
+		s.cache.stop <- true
+	}
 }
 
 // Do looks for work to be done on any pending installations and attempts to schedule the required work.
 func (s *InstallationSupervisor) Do() error {
+	if !s.cache.initialized {
+		s.initializeInstallationResourcesCacheManager()
+	}
+
 	installations, err := s.store.GetUnlockedInstallationsPendingWork()
 	if err != nil {
 		s.logger.WithError(err).Warn("Failed to query for installation pending work")
@@ -404,7 +435,7 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 			continue
 		}
 
-		clusterResources, err := s.provisioner.GetClusterResources(cluster, true)
+		clusterResources, err := s.getClusterResources(cluster, logger)
 		if err != nil {
 			logger.WithError(err).Error("Failed to get cluster resources")
 			continue
@@ -440,6 +471,23 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 	return filteredPrioritizedClusters
 }
 
+// getClusterResources returns cluster resources from cache or will obtain them
+// directly if they don't exist.
+func (s *InstallationSupervisor) getClusterResources(cluster *model.Cluster, logger log.FieldLogger) (*k8s.ClusterResources, error) {
+	clusterResources := s.cache.getCachedClusterResources(cluster.ID)
+	if clusterResources != nil {
+		logger.Debug("Using cached cluster resources")
+		return clusterResources, nil
+	}
+
+	clusterResources, err := s.provisioner.GetClusterResources(cluster, true, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get cluster resources")
+	}
+
+	return clusterResources, nil
+}
+
 // createClusterInstallation attempts to schedule a cluster installation onto the given cluster.
 func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluster, installation *model.Installation, instanceID string, logger log.FieldLogger) *model.ClusterInstallation {
 	clusterLock := newClusterLock(cluster.ID, instanceID, s.store, logger)
@@ -460,7 +508,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		logger.WithError(err).Error("Invalid cluster installation size")
 		return nil
 	}
-	clusterResources, err := s.provisioner.GetClusterResources(cluster, true)
+	clusterResources, err := s.provisioner.GetClusterResources(cluster, true, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster resources")
 		return nil
@@ -639,7 +687,13 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.configureDNS(installation, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to configure Installation DNS.")
+		logger.WithError(err).Error("Failed to configure Installation DNS.")
+		return model.InstallationStateCreationDNS
+	}
+	// TODO: multiple DNS
+	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return model.InstallationStateCreationDNS
 	}
 
@@ -1116,6 +1170,12 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 			logger.WithError(err).Error("Failed to delete installation DNS")
 			return model.InstallationStateDeletionFinalCleanup
 		}
+		// TODO: multiple DNS
+		err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, logger)
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
+			return model.InstallationStateDeletionFinalCleanup
+		}
 		err = s.store.DeleteInstallationDNS(installation.ID, record.DomainName)
 		if err != nil {
 			logger.WithError(err).Error("Failed to delete installation DNS record from database")
@@ -1512,6 +1572,68 @@ func getAnnotationsNames(annotations []*model.Annotation) []string {
 		names = append(names, ann.Name)
 	}
 	return names
+}
+
+func (c *InstallationSupervisorCache) getCachedClusterResources(clusterID string) *k8s.ClusterResources {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if clusterResources, ok := c.installationMetrics[clusterID]; ok {
+		return clusterResources
+	}
+	return nil
+}
+
+func (s *InstallationSupervisor) initializeInstallationResourcesCacheManager() {
+	s.cache.initialized = true
+	if !s.scheduling.balanceInstallations {
+		return
+	}
+	s.cache.running = true
+
+	s.logger.Info("Starting installation supervisor cache manager")
+	go s.manageInstallationResourcesCache()
+}
+
+func (s *InstallationSupervisor) manageInstallationResourcesCache() {
+	// Create new logger with error level logging to keep logs clean.
+	cacheLogger := log.New().WithFields(log.Fields{
+		"instance": s.instanceID,
+		"cache":    "cluster-resources",
+	})
+	cacheLogger.Logger.SetLevel(log.ErrorLevel)
+
+	for {
+		clusters, err := s.store.GetClusters(&model.ClusterFilter{Paging: model.AllPagesNotDeleted()})
+		if err != nil {
+			cacheLogger.WithError(err).Warn("Failed to query clusters")
+		} else {
+			for _, cluster := range clusters {
+				clusterResources, err := s.provisioner.GetClusterResources(cluster, true, cacheLogger)
+				if err != nil {
+					cacheLogger.WithError(err).Error("Failed to get cluster resources")
+					s.cache.mu.Lock()
+					delete(s.cache.installationMetrics, cluster.ID)
+					s.cache.mu.Unlock()
+					continue
+				}
+
+				s.cache.mu.Lock()
+				s.cache.installationMetrics[cluster.ID] = clusterResources
+				s.cache.mu.Unlock()
+			}
+		}
+
+		select {
+		case <-time.After(3 * time.Minute):
+		case <-s.cache.stop:
+			// Cleanup just in case.
+			s.logger.Debug("Shutting down installation supervisor cache manager")
+			s.cache.mu.Lock()
+			s.cache.installationMetrics = make(map[string]*k8s.ClusterResources)
+			s.cache.mu.Unlock()
+			return
+		}
+	}
 }
 
 // dnsSwitchForHibernatingInstallation deals with dns update for hibernating installations during migration

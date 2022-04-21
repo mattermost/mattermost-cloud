@@ -142,6 +142,15 @@ func (a *Client) GetPrivateHostedZoneID() string {
 	return a.cache.route53.privateHostedZoneID
 }
 
+// GetPublicHostedZoneNames returns the public R53 hosted zone Name list for the AWS account.
+func (a *Client) GetPublicHostedZoneNames() []string {
+	var domainNameList []string
+	for domainName := range a.cache.route53.publicHostedZones {
+		domainNameList = append(domainNameList, domainName)
+	}
+	return domainNameList
+}
+
 // CreatePrivateCNAME creates a record in Route53 for a private domain name.
 func (a *Client) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return a.createCNAME(a.GetPrivateHostedZoneID(), dnsName, dnsEndpoints, "", logger)
