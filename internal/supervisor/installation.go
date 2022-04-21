@@ -14,6 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -76,6 +77,12 @@ type installationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
+// Cloudflarer interface that holds Cloudflare functions
+type Cloudflarer interface {
+	CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error
+	DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error
+}
+
 type eventProducer interface {
 	ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error
 	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
@@ -107,6 +114,7 @@ type InstallationSupervisor struct {
 	eventsProducer    eventProducer
 	forceCRUpgrade    bool
 	cache             InstallationSupervisorCache
+	cloudflareClient  Cloudflarer
 }
 
 // InstallationSupervisorCache contains configuration and cached data for
@@ -140,7 +148,8 @@ func NewInstallationSupervisor(
 	logger log.FieldLogger,
 	metrics *metrics.CloudMetrics,
 	eventsProducer eventProducer,
-	forceCRUpgrade bool) *InstallationSupervisor {
+	forceCRUpgrade bool,
+	cloudflareClient Cloudflarer) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -155,6 +164,7 @@ func NewInstallationSupervisor(
 		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
 		cache:             InstallationSupervisorCache{false, false, make(chan bool), sync.Mutex{}, make(map[string]*k8s.ClusterResources)},
+		cloudflareClient:  cloudflareClient,
 	}
 }
 
@@ -681,7 +691,13 @@ func (s *InstallationSupervisor) configureInstallationDNS(installation *model.In
 
 	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, "", logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record")
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Route53")
+		return model.InstallationStateCreationDNS
+	}
+
+	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return model.InstallationStateCreationDNS
 	}
 
@@ -1120,7 +1136,13 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	err := s.aws.DeletePublicCNAME(installation.DNS, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to delete installation DNS")
+		logger.WithError(err).Error("Failed to delete DNS record from Route53")
+		return model.InstallationStateDeletionFinalCleanup
+	}
+
+	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 

@@ -18,6 +18,10 @@ import (
 	"syscall"
 	"time"
 
+	cf "github.com/cloudflare/cloudflare-go"
+
+	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
@@ -36,7 +40,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
-	logrus "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -357,6 +361,18 @@ var serverCmd = &cobra.Command{
 
 		eventsProducer := events.NewProducer(sqlStore, eventsDeliverer, awsClient.GetCloudEnvironmentName(), logger)
 
+		var cloudflareClient supervisor.Cloudflarer
+		if cloudflareToken := os.Getenv("CLOUDFLARE_API_TOKEN"); cloudflareToken != "" {
+			cfClient, err := cf.NewWithAPIToken(cloudflareToken)
+			if err != nil {
+				return errors.Wrap(err, "failed to initialize cloudflare client using API token")
+			}
+			cloudflareClient = cloudflare.NewClientWithToken(cfClient, awsClient)
+		} else {
+			logger.Warn("Cloudflare token not provided, using noop client")
+			cloudflareClient = cloudflare.NoopClient()
+		}
+
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger))
@@ -366,7 +382,7 @@ var serverCmd = &cobra.Command{
 		}
 		if installationSupervisor {
 			scheduling := supervisor.NewInstallationSupervisorSchedulingOptions(balancedInstallationScheduling, clusterResourceThreshold, clusterResourceThresholdScaleValue)
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, cloudflareClient))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))

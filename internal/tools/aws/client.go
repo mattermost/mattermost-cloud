@@ -55,6 +55,7 @@ type AWS interface {
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 	GetPrivateHostedZoneID() string
+	GetPublicHostedZoneNames() []string
 	GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error)
 
 	CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error
