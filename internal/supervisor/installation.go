@@ -1164,7 +1164,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 			logger.WithError(err).Error("Failed to delete installation DNS")
 			return model.InstallationStateDeletionFinalCleanup
 		}
-		err = s.cloudflareClient.DeleteDNSRecords([]string{record.ID}, logger)
+		err = s.cloudflareClient.DeleteDNSRecords([]string{record.DomainName}, logger)
 		if err != nil {
 			logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 			return model.InstallationStateDeletionFinalCleanup
@@ -1467,14 +1467,14 @@ func (s *InstallationSupervisor) configureDNS(installation *model.Installation, 
 	if err != nil {
 		return errors.Wrap(err, "failed to get DNS records for Installation")
 	}
-	dnsRecordsIDs := model.DNSNamesFromRecords(dnsRecords)
+	domainNames := model.DNSNamesFromRecords(dnsRecords)
 
-	err = s.upsertPublicCNAMEs(dnsRecordsIDs, "", endpoints, logger)
+	err = s.upsertPublicCNAMEs(domainNames, "", endpoints, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DNS CNAME records")
 	}
 
-	err = s.cloudflareClient.CreateDNSRecords(dnsRecordsIDs, endpoints, logger)
+	err = s.cloudflareClient.CreateDNSRecords(domainNames, endpoints, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return errors.Wrap(err, "failed to create Cloudflare DNS records")
