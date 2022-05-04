@@ -5,6 +5,7 @@
 package supervisor
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -37,12 +38,14 @@ type installationStore interface {
 	clusterLockStore
 
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
+	GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error)
 	GetUnlockedInstallationsPendingWork() ([]*model.Installation, error)
 	UpdateInstallation(installation *model.Installation) error
 	UpdateInstallationGroupSequence(installation *model.Installation) error
 	UpdateInstallationState(*model.Installation) error
 	UpdateInstallationCRVersion(installationID, crVersion string) error
 	DeleteInstallation(installationID string) error
+	DeleteInstallationDNS(installationID, dnsName string) error
 	installationLockStore
 
 	GetSingleTenantDatabaseConfigForInstallation(installationID string) (*model.SingleTenantDatabaseConfig, error)
@@ -79,8 +82,8 @@ type installationStore interface {
 
 // Cloudflarer interface that holds Cloudflare functions
 type Cloudflarer interface {
-	CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error
-	DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error
+	CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger logrus.FieldLogger) error
+	DeleteDNSRecords(customerDNSName []string, logger logrus.FieldLogger) error
 }
 
 type eventProducer interface {
@@ -682,31 +685,16 @@ func (s *InstallationSupervisor) waitForCreationStable(installation *model.Insta
 }
 
 func (s *InstallationSupervisor) configureInstallationDNS(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-
-	endpoints, err := s.getPublicLBEndpoint(installation, logger)
+	err := s.configureDNS(installation, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
+		logger.WithError(err).Error("Failed to configure Installation DNS.")
 		return model.InstallationStateCreationDNS
 	}
-
-	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, "", logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record in Route53")
-		return model.InstallationStateCreationDNS
-	}
-
-	err = s.cloudflareClient.CreateDNSRecord(installation.DNS, endpoints, logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
-		return model.InstallationStateCreationDNS
-	}
-
-	logger.Infof("Successfully configured DNS %s", installation.DNS)
 
 	return s.waitForCreationStable(installation, instanceID, logger)
 }
 
-func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Installation, logger log.FieldLogger) ([]string, error) {
+func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Installation) ([]string, error) {
 	isActive := true
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
@@ -798,6 +786,12 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		}
 	}
 
+	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get DNS records for Installation")
+		return installation.State
+	}
+
 	for _, clusterInstallation := range clusterInstallations {
 		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
 		if err != nil {
@@ -821,7 +815,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 		}
 
 		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
-			UpdateClusterInstallation(cluster, installation, clusterInstallation)
+			UpdateClusterInstallation(cluster, installation, dnsRecords, clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Error("Failed to update cluster installation")
 			return installation.State
@@ -865,9 +859,24 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 		return model.InstallationStateUpdateInProgress
 	}
 
-	err = s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, installation.DNS, logger)
+	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to update the installation route53 record to the standard ID value")
+		logger.WithError(err).Error("Failed to get DNS records for Installation")
+		return model.InstallationStateUpdateFailed
+	}
+
+	dnsNames := model.DNSNamesFromRecords(dnsRecords)
+
+	endpoints, err := s.getPublicLBEndpoint(installation)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
+		return model.InstallationStateUpdateFailed
+	}
+
+	// This state can happen from update, therefore new DNS could have been added.
+	err = s.upsertPublicCNAMEs(dnsNames, "", endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to update the installation route53 records")
 		return installation.State
 	}
 
@@ -915,7 +924,13 @@ func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstalla
 }
 
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := s.aws.UpdatePublicRecordIDForCNAME(installation.DNS, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
+	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get DNS records for Installation")
+		return installation.State
+	}
+
+	err = s.updatePublicRecordsIDForCNAME(model.DNSNamesFromRecords(dnsRecords), aws.HibernatingInstallationResourceRecordIDPrefix, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update the installation route53 record with hibernation prefix")
 		return installation.State
@@ -1134,16 +1149,31 @@ func (s *InstallationSupervisor) deleteInstallation(installation *model.Installa
 }
 
 func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	err := s.aws.DeletePublicCNAME(installation.DNS, logger)
+	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
 	if err != nil {
-		logger.WithError(err).Error("Failed to delete DNS record from Route53")
+		logger.WithError(err).Error("Failed to get DNS records for Installation")
 		return model.InstallationStateDeletionFinalCleanup
 	}
 
-	err = s.cloudflareClient.DeleteDNSRecord(installation.DNS, logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
-		return model.InstallationStateDeletionFinalCleanup
+	for _, record := range dnsRecords {
+		if record.DeleteAt > 0 {
+			continue
+		}
+		err = s.aws.DeletePublicCNAME(record.DomainName, logger)
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete installation DNS")
+			return model.InstallationStateDeletionFinalCleanup
+		}
+		err = s.cloudflareClient.DeleteDNSRecords([]string{record.DomainName}, logger)
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
+			return model.InstallationStateDeletionFinalCleanup
+		}
+		err = s.store.DeleteInstallationDNS(installation.ID, record.DomainName)
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete installation DNS record from database")
+			return model.InstallationStateDeletionFinalCleanup
+		}
 	}
 
 	// Backups are stored in Installations file store, therefore if file store is deleted
@@ -1427,6 +1457,34 @@ func (s *InstallationSupervisor) finalCreationTasks(installation *model.Installa
 
 // Helper funcs
 
+func (s *InstallationSupervisor) configureDNS(installation *model.Installation, logger log.FieldLogger) error {
+	endpoints, err := s.getPublicLBEndpoint(installation)
+	if err != nil {
+		return errors.Wrap(err, "failed to find load balancer endpoint (nginx) for Cluster Installation")
+	}
+
+	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get DNS records for Installation")
+	}
+	domainNames := model.DNSNamesFromRecords(dnsRecords)
+
+	err = s.upsertPublicCNAMEs(domainNames, "", endpoints, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create DNS CNAME records")
+	}
+
+	err = s.cloudflareClient.CreateDNSRecords(domainNames, endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
+		return errors.Wrap(err, "failed to create Cloudflare DNS records")
+	}
+
+	logger.Infof("Successfully configured DNS %s", dnsRecords[0].DomainName)
+
+	return nil
+}
+
 // checkIfClusterInstallationsAreStable returns if all cluster installations
 // belonging to an installation are stable or not. Any errors that will likely
 // not succeed on future retries will also be returned. Otherwise, the error will
@@ -1580,21 +1638,52 @@ func (s *InstallationSupervisor) manageInstallationResourcesCache() {
 
 // dnsSwitchForHibernatingInstallation deals with dns update for hibernating installations during migration
 func (s *InstallationSupervisor) dnsSwitchForHibernatingInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	endpoints, err := s.getPublicLBEndpoint(installation, logger)
+	err := s.configureDNS(installation, logger)
 	if err != nil {
-		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
+		logger.WithError(err).Warn("Failed to switch DNS for hibernated installation.")
 		return model.InstallationStateDNSMigrationHibernating
 	}
-
-	err = s.aws.CreatePublicCNAME(installation.DNS, endpoints, aws.HibernatingInstallationResourceRecordIDPrefix+installation.DNS, logger)
-	if err != nil {
-		logger.WithError(err).Error("Failed to create DNS CNAME record")
-		return model.InstallationStateDNSMigrationHibernating
-	}
-
-	logger.Infof("Successfully configured DNS %s", installation.DNS)
 
 	return s.waitForHibernationStable(installation, instanceID, logger)
+}
+
+// The record ID will be set to DNS name with idSuffix appended after '-'.
+func (s *InstallationSupervisor) updatePublicRecordsIDForCNAME(dnsNames []string, idSuffix string, logger log.FieldLogger) error {
+	for _, dns := range dnsNames {
+		recordID := determineRecordID(dns, idSuffix)
+
+		// TODO: for now we do not expect having multiple domains for the same hosted zone
+		// therefore we just do updates in a loop instead of trying to batch.
+		// If this ever changes, we can optimize by updating all records in same zone at once
+		err := s.aws.UpdatePublicRecordIDForCNAME(dns, recordID, logger)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// The record ID will be set to DNS name with idSuffix appended after '-'.
+func (s *InstallationSupervisor) upsertPublicCNAMEs(dnsNames []string, idSuffix string, endpoints []string, logger log.FieldLogger) error {
+	recordIDs := make([]string, 0, len(dnsNames))
+	for _, d := range dnsNames {
+		recordIDs = append(recordIDs, determineRecordID(d, idSuffix))
+	}
+
+	err := s.aws.UpsertPublicCNAMEs(dnsNames, recordIDs, endpoints, logger)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func determineRecordID(dnsName, idSuffix string) string {
+	recordID := dnsName
+	if idSuffix != "" {
+		recordID = fmt.Sprintf("%s-%s", recordID, idSuffix)
+	}
+	return recordID
 }
 
 func (s *InstallationSupervisor) processInstallationMetrics(installation *model.Installation, logger log.FieldLogger) error {

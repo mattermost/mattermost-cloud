@@ -38,109 +38,120 @@ func (c *Client) getZoneName(zoneNameList []string, customerDNSName string) (zon
 	return "", false
 }
 
-func (c *Client) getRecordID(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-
+func (c *Client) getRecordIDs(zoneID, customerDNSName string, logger logrus.FieldLogger) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
 	dnsRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{Name: customerDNSName})
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get DNS Record ID from Cloudflare")
+		return nil, errors.Wrap(err, "failed to get DNS Record ID from Cloudflare")
 	}
 	if len(dnsRecords) == 0 {
-		logger.Info("Unable to find any DNS records in Cloudflare; skipping...")
-		return "", nil
+		logger.Infof("No DNS records for %q domain found in Cloudflare %q zone", customerDNSName, zoneID)
+		return nil, nil
 	}
 
-	return dnsRecords[0].ID, nil
+	ids := make([]string, 0, len(dnsRecords))
+	for _, rec := range dnsRecords {
+		ids = append(ids, rec.ID)
+	}
+
+	return ids, nil
 
 }
 
-// CreateDNSRecord creates a DNS record in the first given Cloudflare zone name of the list
-func (c *Client) CreateDNSRecord(customerDNSName string, dnsEndpoints []string, logger logrus.FieldLogger) error {
-	zoneNameList := c.aws.GetPublicHostedZoneNames()
-	if len(zoneNameList) == 0 {
-		return errors.New("no public hosted zones names found from AWS")
+// CreateDNSRecords creates a DNS records in the first given Cloudflare zone name of the list
+func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logger logrus.FieldLogger) error {
+	if len(dnsNames) == 0 {
+		return errors.New("no domain names provided")
 	}
-
 	if len(dnsEndpoints) == 0 {
 		return errors.New("no DNS endpoints provided for Cloudflare creation request")
+	}
+	if len(dnsEndpoints) > 1 {
+		return errors.New("creating record for more than one endpoint not supported")
 	}
 	dnsEndpoint := dnsEndpoints[0]
 	if dnsEndpoint == "" {
 		return errors.New("DNS endpoint was an empty string")
 	}
 
-	// Fetch the zone name for that customer DNS name
-	zoneName, found := c.getZoneName(zoneNameList, customerDNSName)
-	if !found {
-		return errors.Errorf("hosted zone for %q domain name not found", customerDNSName)
-	}
-
-	// Fetch the zone ID
-	zoneID, err := c.getZoneID(zoneName)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
-	}
-
-	proxied := true
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-	recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, cf.DNSRecord{
-		Name:    customerDNSName,
-		Type:    "CNAME",
-		Content: dnsEndpoint,
-		TTL:     1,
-		Proxied: &proxied,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
-	}
-
-	logger.WithFields(logrus.Fields{
-		"cloudflare-dns-value":    customerDNSName,
-		"cloudflare-dns-endpoint": dnsEndpoint,
-		"cloudflare-zone-id":      zoneID,
-	}).Debugf("Cloudflare create DNS record response: %v", recordResp)
-
-	return nil
-}
-
-// DeleteDNSRecord gets DNS name and zone name which uses to delete that DNS record from Cloudflare
-func (c *Client) DeleteDNSRecord(customerDNSName string, logger logrus.FieldLogger) error {
 	zoneNameList := c.aws.GetPublicHostedZoneNames()
 	if len(zoneNameList) == 0 {
 		return errors.New("no public hosted zones names found from AWS")
 	}
-	// Fetch the zone name for that customer DNS name
-	zoneName, found := c.getZoneName(zoneNameList, customerDNSName)
-	if !found {
-		return errors.Errorf("hosted zone for %q domain name not found", customerDNSName)
+
+	for _, dnsName := range dnsNames {
+		// Fetch the zone name for that customer DNS name
+		zoneName, found := c.getZoneName(zoneNameList, dnsName)
+		if !found {
+			return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+		}
+
+		// Fetch the zone ID
+		zoneID, err := c.getZoneID(zoneName)
+		if err != nil {
+			return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
+		}
+
+		proxied := true
+
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+		defer cancel()
+		recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, cf.DNSRecord{
+			Name:    dnsName,
+			Type:    "CNAME",
+			Content: dnsEndpoint,
+			TTL:     1,
+			Proxied: &proxied,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
+		}
+
+		logger.WithFields(logrus.Fields{
+			"cloudflare-dns-value":    dnsName,
+			"cloudflare-dns-endpoint": dnsEndpoint,
+			"cloudflare-zone-id":      zoneID,
+		}).Debugf("Cloudflare create DNS record response: %v", recordResp)
 	}
 
-	// Fetch the zone ID
-	zoneID, err := c.getZoneID(zoneName)
-	if err != nil {
-		return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
+	return nil
+}
+
+// DeleteDNSRecords gets DNS name and zone name which uses to delete that DNS record from Cloudflare
+func (c *Client) DeleteDNSRecords(dnsNames []string, logger logrus.FieldLogger) error {
+	zoneNameList := c.aws.GetPublicHostedZoneNames()
+	if len(zoneNameList) == 0 {
+		return errors.New("no public hosted zones names found from AWS")
 	}
 
-	recordID, err := c.getRecordID(zoneID, customerDNSName, logger)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to get record ID from Cloudflare for DNS: %s", customerDNSName)
-	}
+	for _, dnsName := range dnsNames {
+		// Fetch the zone name for that customer DNS name
+		zoneName, found := c.getZoneName(zoneNameList, dnsName)
+		if !found {
+			return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+		}
 
-	// Unable to find any record, skipping deletion
-	if recordID == "" {
-		logger.Info("Unable to find any DNS records in Cloudflare; skipping...")
-		return nil
-	}
+		// Fetch the zone ID
+		zoneID, err := c.getZoneID(zoneName)
+		if err != nil {
+			return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
+		}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
+		recordIDs, err := c.getRecordIDs(zoneID, dnsName, logger)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to get record ID from Cloudflare for DNS: %s", dnsName)
+		}
 
-	err = c.cfClient.DeleteDNSRecord(ctx, zoneID, recordID)
-	if err != nil {
-		return errors.Wrap(err, "Failed to delete DNS Record at Cloudflare")
+		for _, recID := range recordIDs {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+			defer cancel()
+
+			err = c.cfClient.DeleteDNSRecord(ctx, zoneID, recID)
+			if err != nil {
+				return errors.Wrap(err, "Failed to delete DNS Record at Cloudflare")
+			}
+		}
 	}
 	return nil
 }

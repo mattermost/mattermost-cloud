@@ -6,6 +6,7 @@ package store
 
 import (
 	"testing"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -19,7 +20,7 @@ func TestInstallationDTOs(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 	defer CloseConnection(t, sqlStore)
 
-	t.Run("get unknown cluster DTO", func(t *testing.T) {
+	t.Run("get unknown installation DTO", func(t *testing.T) {
 		cluster, err := sqlStore.GetInstallationDTO("unknown", false, false)
 		require.NoError(t, err)
 		require.Nil(t, cluster)
@@ -42,9 +43,9 @@ func TestInstallationDTOs(t *testing.T) {
 	groupID1 := model.NewID()
 
 	installation1 := &model.Installation{
+		Name:                       "test",
 		OwnerID:                    "owner1",
 		Version:                    "version",
-		DNS:                        "dns.example.com",
 		Database:                   model.InstallationDatabaseMysqlOperator,
 		Filestore:                  model.InstallationFilestoreMinioOperator,
 		Size:                       mmv1alpha1.Size100String,
@@ -55,10 +56,10 @@ func TestInstallationDTOs(t *testing.T) {
 	}
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   "owner1",
 		Version:   "version2",
 		Image:     "custom-image",
-		DNS:       "dns2.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -67,10 +68,15 @@ func TestInstallationDTOs(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, annotations)
+	dnsRecords1 := fixDNSRecords(1)
+	err = sqlStore.CreateInstallation(installation1, annotations, dnsRecords1)
 	require.NoError(t, err)
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	// Wait 1ms to guarantee the order.
+	time.Sleep(1 * time.Millisecond)
+
+	dnsRecords2 := fixDNSRecords(2)
+	err = sqlStore.CreateInstallation(installation2, nil, dnsRecords2)
 	require.NoError(t, err)
 
 	t.Run("get installation DTO", func(t *testing.T) {
@@ -92,6 +98,6 @@ func TestInstallationDTOs(t *testing.T) {
 		for _, i := range installationDTOs {
 			model.SortAnnotations(i.Annotations)
 		}
-		assert.Equal(t, []*model.InstallationDTO{installation1.ToDTO(annotations), installation2.ToDTO(nil)}, installationDTOs)
+		assert.Equal(t, []*model.InstallationDTO{installation1.ToDTO(annotations, dnsRecords1), installation2.ToDTO(nil, dnsRecords2)}, installationDTOs)
 	})
 }

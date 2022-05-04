@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -22,11 +23,13 @@ func init() {
 	installationCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 	installationCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
 
+	installationCreateCmd.Flags().String("name", "", "Unique human-readable installation name. It should be the same as first segment of domain name.")
 	installationCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the installation.")
 	installationCreateCmd.Flags().String("group", "", "The id of the group to join")
 	installationCreateCmd.Flags().String("version", "stable", "The Mattermost version to install.")
 	installationCreateCmd.Flags().String("image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
-	installationCreateCmd.Flags().String("dns", "", "The URL at which the Mattermost server will be available.")
+	installationCreateCmd.Flags().StringSlice("dns", []string{}, "URLs at which the Mattermost server will be available.")
+
 	installationCreateCmd.Flags().String("size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	installationCreateCmd.Flags().String("affinity", model.InstallationAffinityIsolated, "How other installations may be co-located in the same cluster.")
 	installationCreateCmd.Flags().String("license", "", "The Mattermost License to use in the server.")
@@ -126,12 +129,13 @@ var installationCreateCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
+		name, _ := command.Flags().GetString("name")
 		ownerID, _ := command.Flags().GetString("owner")
 		groupID, _ := command.Flags().GetString("group")
 		version, _ := command.Flags().GetString("version")
 		image, _ := command.Flags().GetString("image")
 		size, _ := command.Flags().GetString("size")
-		dns, _ := command.Flags().GetString("dns")
+		dns, _ := command.Flags().GetStringSlice("dns")
 		affinity, _ := command.Flags().GetString("affinity")
 		license, _ := command.Flags().GetString("license")
 		database, _ := command.Flags().GetString("database")
@@ -150,12 +154,12 @@ var installationCreateCmd = &cobra.Command{
 		}
 
 		request := &model.CreateInstallationRequest{
+			Name:          name,
 			OwnerID:       ownerID,
 			GroupID:       groupID,
 			Version:       version,
 			Image:         image,
 			Size:          size,
-			DNS:           dns,
 			License:       license,
 			Affinity:      affinity,
 			Database:      database,
@@ -163,6 +167,13 @@ var installationCreateCmd = &cobra.Command{
 			MattermostEnv: envVarMap,
 			PriorityEnv:   priorityEnvVarMap,
 			Annotations:   annotations,
+		}
+		// For CLI to be backward compatible, if only one DNS is passed we use
+		// the old field.
+		if len(dns) == 1 {
+			request.DNS = dns[0]
+		} else {
+			request.DNSNames = dns
 		}
 
 		if model.IsSingleTenantRDS(database) {
@@ -456,9 +467,14 @@ func defaultInstallationTableData(installations []*model.InstallationDTO) ([]str
 	keys := []string{"ID", "STATE", "VERSION", "DATABASE", "FILESTORE", "DNS"}
 	vals := make([][]string, 0, len(installations))
 	for _, installation := range installations {
-		vals = append(vals, []string{installation.ID, installation.State, installation.Version, installation.Database, installation.Filestore, installation.DNS})
+		vals = append(vals, []string{installation.ID, installation.State, installation.Version, installation.Database, installation.Filestore, dnsNames(installation.DNSRecords)})
 	}
 	return keys, vals
+}
+
+func dnsNames(dnsRecords []*model.InstallationDNS) string {
+	names := model.DNSNamesFromRecords(dnsRecords)
+	return strings.Join(names, ", ")
 }
 
 var installationsGetStatuses = &cobra.Command{
@@ -540,10 +556,10 @@ var installationRecoveryCmd = &cobra.Command{
 			return errors.New("installation recovery can only be performed on deleted installations")
 		}
 
-		// DNS could have been claimed by a new installation, so we need to check
+		// Name/DNS could have been claimed by a new installation, so we need to check
 		// that as well.
 		installations, err := sqlStore.GetInstallations(&model.InstallationFilter{
-			DNS:    installation.DNS,
+			Name:   installation.Name,
 			Paging: model.AllPagesNotDeleted(),
 		}, false, false)
 		if err != nil {

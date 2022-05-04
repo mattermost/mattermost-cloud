@@ -664,9 +664,9 @@ func TestSwitchDNS(t *testing.T) {
 	annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
 
 	installation1 := &model.Installation{
+		Name:      "test",
 		OwnerID:   ownerID1,
 		Version:   "version",
-		DNS:       "dns.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -676,15 +676,15 @@ func TestSwitchDNS(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, annotations)
+	err = sqlStore.CreateInstallation(installation1, annotations, fixDNSRecords(1))
 	require.NoError(t, err)
 	time.Sleep(1 * time.Millisecond)
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   ownerID1,
 		Version:   "version2",
 		Image:     "custom-image",
-		DNS:       "dns2.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -694,16 +694,16 @@ func TestSwitchDNS(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(2))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	installation3 := &model.Installation{
+		Name:      "test3",
 		OwnerID:   ownerID1,
 		Version:   "version2",
 		Image:     "custom-image",
-		DNS:       "dns3.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -713,7 +713,7 @@ func TestSwitchDNS(t *testing.T) {
 		State:     model.InstallationStateHibernating,
 	}
 
-	err = sqlStore.CreateInstallation(installation3, nil)
+	err = sqlStore.CreateInstallation(installation3, nil, fixDNSRecords(3))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 )
 
 type migration struct {
@@ -1738,6 +1739,195 @@ var migrations = []migration{
 		`)
 		if err != nil {
 			return err
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.34.0"), semver.MustParse("0.35.0"), func(e execer) error {
+		// Create new table for Installation DNS records.
+		// Drop DNS from Installation.
+
+		_, err := e.Exec(`
+			CREATE TABLE InstallationDNS (
+				ID TEXT PRIMARY KEY,
+				DomainName TEXT NOT NULL,
+				InstallationID TEXT NOT NULL,
+				IsPrimary BOOLEAN NOT NULL,
+				CreateAt BIGINT NOT NULL, 
+				DeleteAt BIGINT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		_, err = e.Exec("ALTER TABLE Installation ADD COLUMN name TEXT;")
+		if err != nil {
+			return err
+		}
+
+		// For existing installations Name is set as first part of DNS.
+		if e.DriverName() == driverPostgres {
+			_, err = e.Exec("UPDATE Installation SET name = (SUBSTRING(dns, 0,  POSITION('.' in dns)));")
+			if err != nil {
+				return errors.Wrap(err, "failed to set name based on DNS")
+			}
+		} else if e.DriverName() == driverSqlite {
+			_, err = e.Exec("UPDATE Installation SET name = (SUBSTR(DNS, 0, INSTR(DNS, '.')));")
+			if err != nil {
+				return err
+			}
+		}
+
+		rows, err := e.Query("SELECT id, dns, createAt, deleteAt FROM INSTALLATION;")
+		if err != nil {
+			return errors.Wrap(err, "failed to fetch installation")
+		}
+		defer rows.Close()
+
+		type installationDNS struct {
+			installationID string
+			dns            string
+			createAt       int64
+			deleteAt       int64
+		}
+
+		var existingRecs []installationDNS
+
+		for rows.Next() {
+			var installationID, dns string
+			var createAt int64
+			var deleteAt int64
+
+			err = rows.Scan(&installationID, &dns, &createAt, &deleteAt)
+			if err != nil {
+				return errors.Wrap(err, "failed to scan rows")
+			}
+
+			existingRecs = append(existingRecs, installationDNS{
+				installationID: installationID,
+				dns:            dns,
+				createAt:       createAt,
+				deleteAt:       deleteAt,
+			})
+		}
+		err = rows.Err()
+		if err != nil {
+			return errors.Wrap(err, "rows scanning error")
+		}
+
+		for _, dns := range existingRecs {
+			_, err = e.Exec("INSERT INTO InstallationDNS(ID, DomainName, InstallationID, IsPrimary, CreateAt, DeleteAt) VALUES ($1, $2, $3, $4, $5, $6);",
+				model.NewID(),
+				dns.dns,
+				dns.installationID,
+				true,
+				dns.createAt,
+				dns.deleteAt)
+			if err != nil {
+				return errors.Wrap(err, "failed to insert installation DNS")
+			}
+		}
+
+		if e.DriverName() == driverPostgres {
+			_, err = e.Exec("ALTER TABLE Installation DROP COLUMN DNS;")
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec("ALTER TABLE Installation ALTER COLUMN name SET NOT NULL;")
+			if err != nil {
+				return errors.Wrap(err, "failed to remove not null name constraint")
+			}
+		} else if e.DriverName() == driverSqlite {
+			// We DROP DNS here and add NOT NULL for Name
+			_, err := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					CREATE TABLE Installation (
+						ID TEXT PRIMARY KEY,
+						OwnerID TEXT NOT NULL,
+						Name TEXT NOT NULL,
+						Version TEXT NOT NULL,
+						Image TEXT NOT NULL,
+						Database TEXT NOT NULL,
+						Filestore TEXT NOT NULL,
+						License TEXT NULL,
+						Size TEXT NOT NULL,
+						MattermostEnvRaw BYTEA NULL,
+						PriorityEnvRaw BYTEA NULL,
+						Affinity TEXT NOT NULL,
+						GroupSequence BIGINT NULL,
+						GroupID TEXT NULL,
+						State TEXT NOT NULL,
+						APISecurityLock NOT NULL DEFAULT FALSE,
+						SingleTenantDatabaseConfigRaw BYTEA NULL,
+						CRVersion TEXT NOT NULL DEFAULT 'mattermost.com/v1alpha1',
+						CreateAt BIGINT NOT NULL,
+						DeleteAt BIGINT NOT NULL,
+						LockAcquiredBy TEXT NULL,
+						LockAcquiredAt BIGINT NOT NULL
+					);
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+					INSERT INTO Installation
+					SELECT
+						ID,
+						OwnerID,
+						Name,
+						Version,
+						Image,
+						Database,
+						Filestore,
+						License,
+						Size,
+						MattermostEnvRaw,
+						PriorityEnvRaw,
+						Affinity,
+						GroupSequence,
+						GroupID,
+						State,
+						APISecurityLock,
+						SingleTenantDatabaseConfigRaw,
+						CRVersion,
+						CreateAt,
+						DeleteAt,
+						LockAcquiredBy,
+						LockAcquiredAt
+					FROM
+					InstallationTemp;
+				`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = e.Exec("CREATE UNIQUE INDEX Installation_Name_DeleteAt ON Installation (Name, DeleteAt);")
+		if err != nil {
+			return errors.Wrap(err, "failed to create InstallationDNS constraint")
+		}
+
+		_, err = e.Exec("CREATE UNIQUE INDEX InstallationDNS_DomainName_DeleteAt ON InstallationDNS (DomainName, DeleteAt);")
+		if err != nil {
+			return errors.Wrap(err, "failed to create InstallationDNS constraint")
+		}
+
+		// Make sure only one DNS for Installation is primary.
+		_, err = e.Exec("CREATE UNIQUE INDEX InstallationDNS_IsPrimary_Installation_ID ON InstallationDNS (InstallationID) WHERE IsPrimary=True;")
+		if err != nil {
+			return errors.Wrap(err, "failed to create InstallationDNS constraint")
 		}
 
 		return nil

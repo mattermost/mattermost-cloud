@@ -35,10 +35,10 @@ const (
 
 // ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
 type ClusterInstallationProvisioner interface {
-	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error
 	EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
 	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error
 	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
 	DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
@@ -62,7 +62,7 @@ type crProvisionerWrapper struct {
 }
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -99,7 +99,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
-			Ingress:       makeIngressSpec(installation.DNS),
+			Ingress:       makeIngressSpec(installationDNS),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
 			Scheduling: mmv1beta1.Scheduling{
@@ -203,7 +203,7 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
-func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -290,7 +290,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	// Just to be sure, for the update we reset deprecated fields.
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
-	mattermost.Spec.Ingress = makeIngressSpec(installation.DNS)
+	mattermost.Spec.Ingress = makeIngressSpec(installationDNS)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -559,14 +559,35 @@ func (provisioner *crProvisionerWrapper) IsResourceReady(cluster *model.Cluster,
 	return true, nil
 }
 
-func makeIngressSpec(installationDNS string) *mmv1beta1.Ingress {
+func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {
+	primaryRecord := installationDNS[0]
+	for _, rec := range installationDNS {
+		if rec.IsPrimary {
+			primaryRecord = rec
+			break
+		}
+	}
+
 	ingressClass := "nginx-controller"
 	return &mmv1beta1.Ingress{
 		Enabled:      true,
-		Host:         installationDNS,
+		Host:         primaryRecord.DomainName,
+		Hosts:        mapDomains(installationDNS),
 		Annotations:  getIngressAnnotations(),
 		IngressClass: &ingressClass,
 	}
+}
+
+func mapDomains(installationDNS []*model.InstallationDNS) []mmv1beta1.IngressHost {
+	hosts := make([]mmv1beta1.IngressHost, 0, len(installationDNS))
+
+	for _, dns := range installationDNS {
+		hosts = append(hosts, mmv1beta1.IngressHost{
+			HostName: dns.DomainName,
+		})
+	}
+
+	return hosts
 }
 
 // generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation

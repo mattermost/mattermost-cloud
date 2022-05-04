@@ -91,17 +91,13 @@ func handleGetInstallations(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	owner := r.URL.Query().Get("owner")
-	group := r.URL.Query().Get("group")
-	state := r.URL.Query().Get("state")
-	dns := r.URL.Query().Get("dns_name")
-
 	filter := &model.InstallationFilter{
-		OwnerID: owner,
-		GroupID: group,
-		State:   state,
+		OwnerID: r.URL.Query().Get("owner"),
+		GroupID: r.URL.Query().Get("group"),
+		State:   r.URL.Query().Get("state"),
 		Paging:  paging,
-		DNS:     dns,
+		DNS:     r.URL.Query().Get("dns_name"),
+		Name:    r.URL.Query().Get("name"),
 	}
 
 	installations, err := c.Store.GetInstallationDTOs(filter, includeGroupConfig, includeGroupConfigOverrides)
@@ -182,11 +178,11 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	installation := model.Installation{
+		Name:                       createInstallationRequest.Name,
 		OwnerID:                    createInstallationRequest.OwnerID,
 		GroupID:                    &createInstallationRequest.GroupID,
 		Version:                    createInstallationRequest.Version,
 		Image:                      createInstallationRequest.Image,
-		DNS:                        createInstallationRequest.DNS,
 		Database:                   createInstallationRequest.Database,
 		Filestore:                  createInstallationRequest.Filestore,
 		License:                    createInstallationRequest.License,
@@ -200,6 +196,13 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		State:                      model.InstallationStateCreationRequested,
 	}
 
+	dnsRecords := make([]*model.InstallationDNS, 0, len(createInstallationRequest.DNSNames))
+	for _, domainName := range createInstallationRequest.DNSNames {
+		dnsRecords = append(dnsRecords, &model.InstallationDNS{DomainName: domainName})
+	}
+	// Set first DNS record as primary
+	dnsRecords[0].IsPrimary = true
+
 	annotations, err := model.AnnotationsFromStringSlice(createInstallationRequest.Annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to validate extra annotations")
@@ -207,7 +210,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = c.Store.CreateInstallation(&installation, annotations)
+	err = c.Store.CreateInstallation(&installation, annotations, dnsRecords)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to create installation")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -224,7 +227,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	outputJSON(c, w, installation.ToDTO(annotations))
+	outputJSON(c, w, installation.ToDTO(annotations, dnsRecords))
 }
 
 // handleRetryCreateInstallation responds to POST /api/installation/{installation}, retrying a
@@ -623,7 +626,6 @@ func handleDeleteInstallationAnnotation(c *Context, w http.ResponseWriter, r *ht
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
 }
 

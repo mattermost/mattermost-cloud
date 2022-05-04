@@ -1290,7 +1290,7 @@ func TestClusterAnnotations(t *testing.T) {
 		}
 
 		installation := &model.Installation{}
-		err = sqlStore.CreateInstallation(installation, annotations)
+		err = sqlStore.CreateInstallation(installation, annotations, nil)
 
 		clusterInstallation := &model.ClusterInstallation{
 			InstallationID: installation.ID,

@@ -17,13 +17,17 @@ import (
 
 // CreateBackupCompatibleInstallation is a helper function for tests which creates Installation compatible with backup.
 func CreateBackupCompatibleInstallation(t *testing.T, sqlStore *store.SQLStore) *model.Installation {
+	name := uuid.NewRandom().String()[:6]
 	installation := &model.Installation{
+		Name:      name,
 		Database:  model.InstallationDatabaseMultiTenantRDSPostgres,
 		Filestore: model.InstallationFilestoreBifrost,
 		State:     model.InstallationStateHibernating,
-		DNS:       fmt.Sprintf("dns-%s", uuid.NewRandom().String()[:6]),
 	}
-	err := sqlStore.CreateInstallation(installation, nil)
+	dnsRecords := []*model.InstallationDNS{
+		{DomainName: fmt.Sprintf("dns-%s", name)},
+	}
+	err := sqlStore.CreateInstallation(installation, nil, dnsRecords)
 	require.NoError(t, err)
 	return installation
 }

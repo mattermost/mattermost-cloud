@@ -346,7 +346,6 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 		OwnerID:   model.NewID(),
 		GroupID:   &group1.ID,
 		Version:   "version",
-		DNS:       "dns.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -354,7 +353,7 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -429,7 +428,6 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		OwnerID:   model.NewID(),
 		GroupID:   &group1.ID,
 		Version:   "version",
-		DNS:       "dns.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -437,7 +435,7 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -656,7 +654,6 @@ func TestGetGroupStatus(t *testing.T) {
 		OwnerID:   model.NewID(),
 		GroupID:   &group1.ID,
 		Version:   "version",
-		DNS:       "dns.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -664,7 +661,7 @@ func TestGetGroupStatus(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)

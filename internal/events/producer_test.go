@@ -29,10 +29,10 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 	instanceID := model.NewID()
 
 	installation := &model.Installation{
-		DNS:   "test.installation.com",
+		Name:   "test",
 		State: model.InstallationStateStable,
 	}
-	err := sqlStore.CreateInstallation(installation, nil)
+	err := sqlStore.CreateInstallation(installation, nil, nil)
 	require.NoError(t, err)
 
 	eventChan := make(chan *model.StateChangeEventPayload)
@@ -90,7 +90,7 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 	assert.NotEmpty(t, eventPayload.EventID)
 	assert.NotEmpty(t, eventPayload.Timestamp)
 	assert.Equal(t, "test", eventPayload.ExtraData["Environment"])
-	assert.Equal(t, installation.DNS, eventPayload.ExtraData["DNS"])
+	assert.Equal(t, installation.Name, eventPayload.ExtraData["Name"])
 
 	// Asset Webhook
 	assert.Equal(t, installation.ID, webhookPayload.ID)
@@ -100,7 +100,7 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 	assert.NotEmpty(t, webhookPayload.EventID)
 	assert.NotEmpty(t, webhookPayload.Timestamp)
 	assert.Equal(t, "test", webhookPayload.ExtraData["Environment"])
-	assert.Equal(t, installation.DNS, webhookPayload.ExtraData["DNS"])
+	assert.Equal(t, installation.Name, webhookPayload.ExtraData["Name"])
 }
 
 func awaitWebhookAndEvent(webhookChan <-chan *model.WebhookPayload, eventChan <-chan *model.StateChangeEventPayload) (*model.WebhookPayload, *model.StateChangeEventPayload, error) {

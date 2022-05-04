@@ -285,12 +285,12 @@ type installationAnnotation struct {
 // GetAnnotationsForInstallations fetches all annotations assigned to installations.
 func (sqlStore *SQLStore) GetAnnotationsForInstallations(filter *model.InstallationFilter) (map[string][]*model.Annotation, error) {
 	var installationAnnotations []*installationAnnotation
-
 	builder := sq.Select(
 		"Installation.ID as InstallationID",
 		"Annotation.ID as AnnotationID",
 		"Annotation.Name as AnnotationName").
 		From("Installation").
+		LeftJoin(fmt.Sprintf("InstallationDNS ON InstallationDNS.InstallationID = Installation.ID")).
 		LeftJoin(fmt.Sprintf("%s ON %s.InstallationID = Installation.ID", installationAnnotationTable, installationAnnotationTable)).
 		Join("Annotation ON Annotation.ID=AnnotationID")
 	builder = sqlStore.applyInstallationFilter(builder, filter)
