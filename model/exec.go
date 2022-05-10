@@ -4,9 +4,17 @@
 
 package model
 
-const execMMCTL = "mmctl"
+const (
+	execMMCTL         = "mmctl"
+	execMattermostCLI = "mattermost"
+)
 
 // IsValidExecCommand returns wheather the provided command is valid or not.
 func IsValidExecCommand(command string) bool {
-	return command == execMMCTL
+	switch command {
+	case execMMCTL, execMattermostCLI:
+		return true
+	}
+
+	return false
 }

@@ -19,10 +19,19 @@ func (s *mockSupervisor) Do() error {
 
 type mockProvisioner struct {
 	Output       []byte
+	ExecError    error
 	CommandError error
 }
 
-func (s *mockProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+func (s *mockProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	if len(s.Output) == 0 {
+		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)
+	}
+
+	return s.Output, s.ExecError, s.CommandError
+}
+
+func (s *mockProvisioner) ExecMMCTL(*model.Cluster, *model.ClusterInstallation, ...string) ([]byte, error) {
 	if len(s.Output) == 0 {
 		s.Output = []byte(`{"ServiceSettings":{"SiteURL":"http://test.example.com"}}`)
 	}
