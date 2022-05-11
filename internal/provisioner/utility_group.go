@@ -146,12 +146,17 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		cluster, provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
+	velero, err := newVeleroHandle(
+		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
+		provisioner, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
 
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, metricsServer},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, metricsServer, velero},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

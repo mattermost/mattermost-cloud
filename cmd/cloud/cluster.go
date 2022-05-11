@@ -657,5 +657,8 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 		model.MetricsServerCanonicalName: {
 			Chart:      MustGetString("metrics-server-version", command),
 			ValuesPath: MustGetString("metrics-server-values", command)},
+		model.VeleroCanonicalName: {
+			Chart:      MustGetString("velero-version", command),
+			ValuesPath: MustGetString("velero-values", command)},
 	}
 }
