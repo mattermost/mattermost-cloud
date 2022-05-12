@@ -58,7 +58,7 @@ type importStore interface {
 }
 
 type importProvisioner interface {
-	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 }
 
 type mmctl struct {
@@ -70,8 +70,8 @@ type mmctl struct {
 }
 
 func (m *mmctl) Run(args ...string) ([]byte, error) {
-	args = append([]string{"mmctl", "--format", "json", "--local"}, args...)
-	return m.provisioner.ExecClusterInstallationCLI(m.cluster, m.clusterInstallation, args...)
+	args = append([]string{"--format", "json", "--local"}, args...)
+	return m.provisioner.ExecMMCTL(m.cluster, m.clusterInstallation, args...)
 }
 
 type team struct {
@@ -307,8 +307,11 @@ func (s *ImportSupervisor) ensureTeamSettings(mmctl *mmctl, imprt *awat.ImportSt
 		}
 	}
 
-	// ensure that there will be enough new user slots for this import
+	if imprt.Users == 0 {
+		return nil
+	}
 
+	// ensure that there will be enough new user slots for this import
 	output, err := mmctl.Run("config", "get", "TeamSettings.MaxUsersPerTeam")
 	if err != nil {
 		return errors.Wrapf(err, "failed to get max user limit")
@@ -401,7 +404,7 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, logger logrus.F
 	for !complete {
 		output, err := mmctl.Run("import", "job", "show", mattermostJobID)
 		if err != nil {
-			logger.WithError(err).Warn("failed to check job")
+			logger.WithError(err).Warn("failed to check import job")
 			time.Sleep(5 * time.Second)
 			continue
 		}

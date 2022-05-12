@@ -262,7 +262,7 @@ type mockImportProvisioner struct {
 	Fail bool
 }
 
-func (m *mockImportProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+func (m *mockImportProvisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
 	switch args[len(args)-1] {
 	case "TeamSettings.MaxUsersPerTeam":
 		return []byte("10"), nil

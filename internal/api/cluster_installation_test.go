@@ -419,8 +419,14 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		require.Empty(t, bytes)
 	})
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("mmctl success", func(t *testing.T) {
 		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
+		require.NoError(t, err)
+		require.NotEmpty(t, bytes)
+	})
+
+	t.Run("mattermost cli success", func(t *testing.T) {
+		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, "mattermost", subcommand)
 		require.NoError(t, err)
 		require.NotEmpty(t, bytes)
 	})
@@ -452,7 +458,7 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("non-zero exit command", func(t *testing.T) {
+	t.Run("error setting up exec command", func(t *testing.T) {
 		mProvisioner.CommandError = errors.New("encountered a command error")
 
 		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
@@ -461,6 +467,18 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		resp, err := http.DefaultClient.Do(httpRequest)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("non-zero exit command", func(t *testing.T) {
+		mProvisioner.CommandError = nil
+		mProvisioner.ExecError = errors.New("encountered an error running exec")
+
+		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusConflict, resp.StatusCode)
 	})
 
 	t.Run("cluster installation deleted", func(t *testing.T) {

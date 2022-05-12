@@ -118,7 +118,8 @@ type Store interface {
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
 type Provisioner interface {
-	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error)
+	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	GetClusterResources(*model.Cluster, bool, log.FieldLogger) (*k8s.ClusterResources, error)
 }
