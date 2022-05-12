@@ -48,14 +48,6 @@ func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cl
 	}, nil
 }
 
-func (f *velero) Destroy() error {
-	return nil
-}
-
-func (f *velero) Migrate() error {
-	return nil
-}
-
 func (f *velero) CreateOrUpgrade() error {
 	logger := f.logger.WithField("velero-action", "upgrade")
 	h := f.NewHelmDeployment(logger)
@@ -67,6 +59,18 @@ func (f *velero) CreateOrUpgrade() error {
 
 	err = f.updateVersion(h)
 	return err
+}
+
+func (f *velero) Name() string {
+	return model.VeleroCanonicalName
+}
+
+func (f *velero) Destroy() error {
+	return nil
+}
+
+func (f *velero) Migrate() error {
+	return nil
 }
 
 func (f *velero) DesiredVersion() *model.HelmUtilityVersion {
@@ -83,11 +87,9 @@ func (f *velero) ActualVersion() *model.HelmUtilityVersion {
 	}
 }
 
-func (f *velero) Name() string {
-	return model.VeleroCanonicalName
-}
-
 func (f *velero) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation.prefix=%s", f.cluster.ID)
+
 	return &helmDeployment{
 		chartDeploymentName: "velero",
 		chartName:           "vmware-tanzu/velero",
@@ -95,6 +97,7 @@ func (f *velero) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 		kopsProvisioner:     f.provisioner,
 		kops:                f.kops,
 		logger:              logger,
+		setArgument:         helmValueArguments,
 		desiredVersion:      f.desiredVersion,
 	}
 }
