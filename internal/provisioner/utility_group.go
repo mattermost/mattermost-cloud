@@ -150,7 +150,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
 		provisioner, kops, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
+		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
 	// the order of utilities here matters; the utilities are deployed
