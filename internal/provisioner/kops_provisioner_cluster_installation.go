@@ -632,10 +632,10 @@ func (provisioner *crProvisionerWrapper) getMattermostCustomResource(cluster *mo
 func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
 	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
 	if err != nil {
-		return output, errors.Wrap(err, "failed to setup mattermost exec command")
+		return output, errors.Wrap(err, "failed to run mattermost command")
 	}
 	if execErr != nil {
-		return output, errors.Wrap(execErr, "failed to run mattermost exec command")
+		return output, errors.Wrap(execErr, "mattermost command encountered an error")
 	}
 
 	return output, nil
@@ -646,10 +646,10 @@ func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, cl
 func (provisioner *KopsProvisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
 	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
 	if err != nil {
-		return output, errors.Wrap(err, "failed to setup mmctl exec command")
+		return output, errors.Wrap(err, "failed to run mmctl command")
 	}
 	if execErr != nil {
-		return output, errors.Wrap(execErr, "failed to run mmctl exec command")
+		return output, errors.Wrap(execErr, "mmctl command encountered an error")
 	}
 
 	return output, nil
