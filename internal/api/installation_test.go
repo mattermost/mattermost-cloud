@@ -1434,6 +1434,7 @@ func TestConfigPriority(t *testing.T) {
 	installation1, err = client.UpdateInstallation(installation1.ID, &model.PatchInstallationRequest{
 		PriorityEnv: priorityEnv,
 	})
+	require.NoError(t, err)
 
 	t.Run("should use priority env over group env", func(t *testing.T) {
 		expectedEnv := model.EnvVarMap{

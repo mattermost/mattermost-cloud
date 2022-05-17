@@ -8,7 +8,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -126,7 +125,7 @@ type Provisioner interface {
 
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
-	SwitchClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
+	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 	RDSDBCLusterExists(awsID string) (bool, error)
 }
 
@@ -152,7 +151,7 @@ type Context struct {
 	EventProducer EventProducer
 	RequestID     string
 	Environment   string
-	Logger        logrus.FieldLogger
+	Logger        log.FieldLogger
 	AwsClient     AwsClient
 }
 

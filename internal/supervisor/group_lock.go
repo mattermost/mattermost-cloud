@@ -43,7 +43,7 @@ func (l *groupLock) Unlock() {
 	unlocked, err := l.store.UnlockGroup(l.groupID, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock group")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for group")
 	}
 }

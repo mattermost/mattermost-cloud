@@ -720,6 +720,9 @@ func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) e
 		return err
 	}
 	clientset, err := kubernetes.NewForConfig(k8sClient.GetConfig())
+	if err != nil {
+		return err
+	}
 
 	clusterRotator := rotatorModel.Cluster{
 		ClusterID:               cluster.ID,

@@ -881,28 +881,6 @@ func lockMultitenantDatabase(multitenantDatabaseID, instanceID string, store mod
 	return unlockFN, nil
 }
 
-func (d *RDSMultitenantDatabase) validateMultitenantDatabaseInstallations(multitenantDatabaseID string, installations model.MultitenantDatabaseInstallations, store model.InstallationDatabaseStoreInterface) error {
-	multitenantDatabase, err := store.GetMultitenantDatabase(multitenantDatabaseID)
-	if err != nil {
-		return errors.Wrap(err, "failed to query for multitenant database")
-	}
-	if multitenantDatabase == nil {
-		return errors.Errorf("failed to find a multitenant database with ID %s", multitenantDatabaseID)
-	}
-
-	if installations.Count() != multitenantDatabase.Installations.Count() {
-		return errors.Errorf("supplied %d installations, but multitenant database ID %s has %d", installations.Count(), multitenantDatabase.ID, multitenantDatabase.Installations.Count())
-	}
-
-	for _, installation := range installations {
-		if !multitenantDatabase.Installations.Contains(installation) {
-			return errors.Errorf("failed to find installation ID %s in the multitenant database ID %s", installation, multitenantDatabase.ID)
-		}
-	}
-
-	return nil
-}
-
 // removeInstallationFromMultitenantDatabase performs the work necessary to
 // remove a single installation database from a multitenant RDS cluster.
 func (d *RDSMultitenantDatabase) removeInstallationFromMultitenantDatabase(database *model.MultitenantDatabase, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) error {

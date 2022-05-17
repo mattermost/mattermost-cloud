@@ -52,7 +52,7 @@ func (l *clusterInstallationLock) Unlock() {
 	unlocked, err := l.store.UnlockClusterInstallations(l.clusterInstallationIDs, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock cluster installations")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for cluster installations")
 	}
 }

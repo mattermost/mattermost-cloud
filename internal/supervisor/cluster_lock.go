@@ -43,7 +43,7 @@ func (l *clusterLock) Unlock() {
 	unlocked, err := l.store.UnlockCluster(l.clusterID, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock cluster")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for cluster")
 	}
 }
