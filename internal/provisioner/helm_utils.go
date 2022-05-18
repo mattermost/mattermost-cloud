@@ -5,8 +5,6 @@
 package provisioner
 
 import (
-	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,9 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -59,24 +55,6 @@ func (d *helmDeployment) Delete() error {
 		return errors.Wrap(err, fmt.Sprintf("got an error trying to delete the helm chart %s", d.chartDeploymentName))
 	}
 	return nil
-}
-
-// waitForHelmRunning is used to check when Helm is ready to install charts.
-func waitForHelmRunning(ctx context.Context, configPath string) error {
-	for {
-		cmd := exec.Command("helm", "ls", "--kubeconfig", configPath)
-		var out bytes.Buffer
-		cmd.Stderr = &out
-		cmd.Run()
-		if out.String() == "" {
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "timed out waiting for helm to become ready")
-		case <-time.After(5 * time.Second):
-		}
-	}
 }
 
 // helmRepoAdd adds new helm repos
@@ -224,15 +202,6 @@ type helmReleaseJSON struct {
 // HelmListOutput is a struct for holding the unmarshaled
 // representation of the output from helm list --output json
 type HelmListOutput []helmReleaseJSON
-
-func (l HelmListOutput) containsRelease(name string) bool {
-	for _, rel := range l {
-		if rel.Name == name {
-			return true
-		}
-	}
-	return false
-}
 
 func (l HelmListOutput) asSlice() []helmReleaseJSON {
 	return l

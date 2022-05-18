@@ -142,6 +142,7 @@ func TestGetInstallationBackups(t *testing.T) {
 	err = sqlStore.DeleteInstallationBackup(deletedMeta.ID)
 	require.NoError(t, err)
 	deletedMeta, err = sqlStore.GetInstallationBackup(deletedMeta.ID)
+	require.NoError(t, err)
 
 	for _, testCase := range []struct {
 		description string

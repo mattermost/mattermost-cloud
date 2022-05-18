@@ -190,9 +190,7 @@ func (m *mockResourceUtil) GetDatabase(installationID, dbType string) model.Data
 	return &mockDatabase{}
 }
 
-type mockMigrationProvisioner struct {
-	expectedCommand []string
-}
+type mockMigrationProvisioner struct{}
 
 func (m *mockMigrationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
 	return &mockInstallationProvisioner{}

@@ -43,7 +43,7 @@ func (l *installationLock) Unlock() {
 	unlocked, err := l.store.UnlockInstallation(l.installationID, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock installation")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for installation")
 	}
 }

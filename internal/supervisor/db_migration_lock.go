@@ -50,7 +50,7 @@ func (l *installationDBMigrationOperationLock) Unlock() {
 	unlocked, err := l.store.UnlockInstallationDBMigrationOperations(l.ids, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock installationDBMigrationOperations")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for installationDBMigrationOperations")
 	}
 }

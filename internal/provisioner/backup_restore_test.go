@@ -187,7 +187,7 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 	}
 
 	k8sClient := fake.NewSimpleClientset()
-	jobClinet := k8sClient.BatchV1().Jobs("installation-1")
+	jobClient := k8sClient.BatchV1().Jobs("installation-1")
 
 	operator := NewBackupOperator("mattermost/backup-restore:test", "us", 0)
 
@@ -218,7 +218,7 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 	} {
 		t.Run(testCase.description, func(t *testing.T) {
 			t.Run("error when job does not exists", func(t *testing.T) {
-				_, err := testCase.checkFunc(jobClinet, backupMeta, logrus.New())
+				_, err := testCase.checkFunc(jobClient, backupMeta, logrus.New())
 				require.Error(t, err)
 			})
 
@@ -228,31 +228,31 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 				Status:     batchv1.JobStatus{},
 			}
 			var err error
-			job, err = jobClinet.Create(context.Background(), job, metav1.CreateOptions{})
+			job, err = jobClient.Create(context.Background(), job, metav1.CreateOptions{})
 			require.NoError(t, err)
 
 			t.Run("return -1 start time if not finished", func(t *testing.T) {
-				timestamp, err := testCase.checkFunc(jobClinet, backupMeta, logrus.New())
+				timestamp, err := testCase.checkFunc(jobClient, backupMeta, logrus.New())
 				require.NoError(t, err)
 				assert.Equal(t, int64(-1), timestamp)
 			})
 
 			job.Status.Failed = backupBackoffLimit + 1
-			job, err = jobClinet.Update(context.Background(), job, metav1.UpdateOptions{})
+			job, err = jobClient.Update(context.Background(), job, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
 			t.Run("ErrJobBackoffLimitReached when failed enough times", func(t *testing.T) {
-				_, err = testCase.checkFunc(jobClinet, backupMeta, logrus.New())
+				_, err = testCase.checkFunc(jobClient, backupMeta, logrus.New())
 				require.Error(t, err)
 				assert.Equal(t, ErrJobBackoffLimitReached, err)
 			})
 
 			job.Status = testCase.successStatus
-			job, err = jobClinet.Update(context.Background(), job, metav1.UpdateOptions{})
+			_, err = jobClient.Update(context.Background(), job, metav1.UpdateOptions{})
 			require.NoError(t, err)
 
 			t.Run("return timestamp when succeeded", func(t *testing.T) {
-				timestamp, err := testCase.checkFunc(jobClinet, backupMeta, logrus.New())
+				timestamp, err := testCase.checkFunc(jobClient, backupMeta, logrus.New())
 				require.NoError(t, err)
 				assert.Equal(t, testCase.expectedTimestamp, timestamp)
 			})

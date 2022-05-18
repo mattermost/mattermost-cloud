@@ -632,7 +632,7 @@ var installationRecoveryCmd = &cobra.Command{
 				logger.WithError(err).Error("Failed to unlock multitenant database")
 				return
 			}
-			if unlocked != true {
+			if !unlocked {
 				logger.Error("Failed to release lock for multitenant database")
 			}
 		}()

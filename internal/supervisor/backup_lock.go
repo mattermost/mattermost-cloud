@@ -52,7 +52,7 @@ func (l *backupLock) Unlock() {
 	unlocked, err := l.store.UnlockInstallationBackups(l.backupsID, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock backup")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for backup")
 	}
 }

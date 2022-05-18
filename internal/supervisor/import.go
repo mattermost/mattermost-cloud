@@ -64,7 +64,6 @@ type importProvisioner interface {
 type mmctl struct {
 	cluster             *model.Cluster
 	clusterInstallation *model.ClusterInstallation
-	installation        *model.Installation
 
 	*ImportSupervisor
 }

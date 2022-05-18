@@ -264,7 +264,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	mattermost.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
 
 	mattermost.Spec.LicenseSecret = ""
-	secretName := fmt.Sprintf("%s-license", installationName)
+	var secretName string
 	if installation.License != "" {
 		secretName, err = prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
