@@ -69,14 +69,10 @@ func (p *rtcd) ValuesPath() string {
 }
 
 func (p *rtcd) CreateOrUpgrade() error {
-	err := p.DeployManifests()
-	if err != nil {
-		return err
-	}
 
 	h := p.NewHelmDeployment()
 
-	err = h.Update()
+	err := h.Update()
 	if err != nil {
 		return err
 	}
@@ -110,7 +106,7 @@ func (p *rtcd) Migrate() error {
 func (p *rtcd) NewHelmDeployment() *helmDeployment {
 	return &helmDeployment{
 		chartDeploymentName: "rtcd",
-		chartName:           "chartmuseum/rtcd", #########################################################################
+		chartName:           "mattermost/rtcd",
 		namespace:           "mattermost-rtcd",
 		kopsProvisioner:     p.provisioner,
 		kops:                p.kops,

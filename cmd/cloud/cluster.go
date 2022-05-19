@@ -38,6 +38,7 @@ func init() {
 	clusterCreateCmd.Flags().String("nginx-internal-version", "", "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("teleport-version", "", "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("pgbouncer-version", "", "The version of Pgbouncer to provision. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("rtcd-version", "", "The version of RTCD to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("promtail-version", "", "The version of Promtail to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
@@ -48,6 +49,7 @@ func init() {
 	clusterCreateCmd.Flags().String("nginx-internal-values", "", "The full Git URL of the desired chart value file's version for NGINX Internal")
 	clusterCreateCmd.Flags().String("teleport-values", "", "The full Git URL of the desired chart value file's version for Teleport")
 	clusterCreateCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart value file's version for Pgbouncer")
+	clusterCreateCmd.Flags().String("rtcd-values", "", "The full Git URL of the desired chart value file's version for RTCD")
 	clusterCreateCmd.Flags().String("promtail-values", "", "The full Git URL of the desired chart value file's version for Promtail")
 	clusterCreateCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired chart value file's version for Kubecost")
 	clusterCreateCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart value file's version for Node Problem Detector")
@@ -65,6 +67,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("nginx-internal-version", "", "The version of the internal NGINX Helm chart")
 	clusterProvisionCmd.Flags().String("teleport-version", "", "The version of the Teleport Helm chart")
 	clusterProvisionCmd.Flags().String("pgbouncer-version", "", "The version of the Pgbouncer Helm chart")
+	clusterProvisionCmd.Flags().String("rtcd-version", "", "The version of the RTCD Helm chart")
 	clusterProvisionCmd.Flags().String("promtail-version", "", "The version of the Promtail Helm chart")
 	clusterProvisionCmd.Flags().String("kubecost-version", "", "The version of the Kubecost Helm chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-version", "", "The version of the Node Problem Detector Helm chart")
@@ -76,6 +79,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("nginx-internal-values", "", "The full Git URL of the desired chart values for Nginx Internal")
 	clusterProvisionCmd.Flags().String("teleport-values", "", "The full Git URL of the desired chart values for Teleport")
 	clusterProvisionCmd.Flags().String("pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
+	clusterProvisionCmd.Flags().String("rtcd-values", "", "The full Git URL of the desired chart values for RTCD")
 	clusterProvisionCmd.Flags().String("promtail-values", "", "The full Git URL of the desired chart values for Promtail")
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired Kubecost chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for the Node Problem Detector")
@@ -644,6 +648,9 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 		model.PromtailCanonicalName: {
 			Chart:      MustGetString("promtail-version", command),
 			ValuesPath: MustGetString("promtail-values", command)},
+		model.RtcdCanonicalName: {
+			Chart:      MustGetString("rtcd-version", command),
+			ValuesPath: MustGetString("rtcd-values", command)},
 		model.KubecostCanonicalName: {
 			Chart:      MustGetString("kubecost-version", command),
 			ValuesPath: MustGetString("kubecost-values", command)},
