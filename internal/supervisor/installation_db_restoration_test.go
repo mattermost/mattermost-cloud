@@ -12,6 +12,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
@@ -394,13 +395,14 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 }
 
 func setupRestoreRequiredResources(t *testing.T, sqlStore *store.SQLStore) (*model.Installation, *model.ClusterInstallation, *model.InstallationBackup) {
+	name := uuid.NewRandom().String()[:6]
 	installation := &model.Installation{
 		Database:  model.InstallationDatabaseMultiTenantRDSPostgres,
 		Filestore: model.InstallationFilestoreBifrost,
 		State:     model.InstallationStateDBRestorationInProgress,
-		DNS:       fmt.Sprintf("dns-%s", uuid.NewRandom().String()[:6]),
+		Name:      name,
 	}
-	err := sqlStore.CreateInstallation(installation, nil)
+	err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation(fmt.Sprintf("dns-%s", name)))
 	require.NoError(t, err)
 
 	cluster := &model.Cluster{}

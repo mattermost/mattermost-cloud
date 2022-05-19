@@ -6,11 +6,13 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -43,9 +45,9 @@ func TestInstallations(t *testing.T) {
 	annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
 
 	installation1 := &model.Installation{
+		Name:      "test1",
 		OwnerID:   ownerID1,
 		Version:   "version",
-		DNS:       "dns.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -60,7 +62,7 @@ func TestInstallations(t *testing.T) {
 		},
 	}
 
-	err = sqlStore.CreateInstallation(installation1, annotations)
+	err = sqlStore.CreateInstallation(installation1, annotations, fixDNSRecords(0))
 	require.NoError(t, err)
 
 	t.Run("get installation", func(t *testing.T) {
@@ -70,20 +72,24 @@ func TestInstallations(t *testing.T) {
 	})
 
 	t.Run("fail on not unique DNS", func(t *testing.T) {
-		if sqlStore.db.DriverName() != "postgres" {
-			t.Skip()
-		}
-		err := sqlStore.CreateInstallation(&model.Installation{DNS: "dns.example.com"}, nil)
+		err := sqlStore.CreateInstallation(&model.Installation{}, nil, fixDNSRecords(0))
 		require.Error(t, err)
+		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint")
+	})
+
+	t.Run("fail on not unique Name", func(t *testing.T) {
+		err := sqlStore.CreateInstallation(&model.Installation{Name: "test1"}, nil, fixDNSRecords(11))
+		require.Error(t, err)
+		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint")
 	})
 
 	time.Sleep(1 * time.Millisecond)
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   ownerID1,
 		Version:   "version2",
 		Image:     "custom-image",
-		DNS:       "dns2.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -93,15 +99,15 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	installation3 := &model.Installation{
+		Name:      "test3",
 		OwnerID:   ownerID2,
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Size:      mmv1alpha1.Size100String,
@@ -110,7 +116,8 @@ func TestInstallations(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation3, nil)
+	dnsRecords3 := fixDNSRecords(3)
+	err = sqlStore.CreateInstallation(installation3, nil, dnsRecords3)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -121,9 +128,9 @@ func TestInstallations(t *testing.T) {
 		ReplicasCount:       4,
 	}
 	installation4 := &model.Installation{
+		Name:                       "test4",
 		OwnerID:                    ownerID2,
 		Version:                    "version",
-		DNS:                        "dns4.example.com",
 		Database:                   model.InstallationDatabaseMysqlOperator,
 		Filestore:                  model.InstallationFilestoreMinioOperator,
 		Size:                       mmv1alpha1.Size100String,
@@ -133,7 +140,7 @@ func TestInstallations(t *testing.T) {
 		SingleTenantDatabaseConfig: &dbConfig,
 	}
 
-	err = sqlStore.CreateInstallation(installation4, nil)
+	err = sqlStore.CreateInstallation(installation4, nil, fixDNSRecords(4))
 	require.NoError(t, err)
 
 	t.Run("get unknown installation", func(t *testing.T) {
@@ -294,7 +301,7 @@ func TestInstallations(t *testing.T) {
 		{
 			"dns 3",
 			&model.InstallationFilter{
-				DNS:    installation3.DNS,
+				DNS:    "dns-3.example.com",
 				Paging: model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation3},
@@ -314,6 +321,14 @@ func TestInstallations(t *testing.T) {
 				Paging: model.AllPagesNotDeleted(),
 			},
 			[]*model.Installation{installation1, installation3},
+		},
+		{
+			"with name",
+			&model.InstallationFilter{
+				Paging: model.AllPagesNotDeleted(),
+				Name:   "test1",
+			},
+			[]*model.Installation{installation1},
 		},
 	}
 
@@ -335,42 +350,42 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 	groupID := model.NewID()
 
 	creationRequestedInstallation := &model.Installation{
+		Name:      "test",
 		OwnerID:   ownerID,
 		Version:   "version",
-		DNS:       "dns1.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
 		GroupID:   &groupID,
 		State:     model.InstallationStateCreationRequested,
 	}
-	err := sqlStore.CreateInstallation(creationRequestedInstallation, nil)
+	err := sqlStore.CreateInstallation(creationRequestedInstallation, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	updateRequestedInstallation := &model.Installation{
+		Name:     "test2",
 		OwnerID:  ownerID,
 		Version:  "version",
-		DNS:      "dns2.example.com",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID,
 		State:    model.InstallationStateUpdateRequested,
 	}
-	err = sqlStore.CreateInstallation(updateRequestedInstallation, nil)
+	err = sqlStore.CreateInstallation(updateRequestedInstallation, nil, fixDNSRecords(2))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	deletionRequestedInstallation := &model.Installation{
+		Name:     "test3",
 		OwnerID:  ownerID,
 		Version:  "version",
-		DNS:      "dns3.example.com",
 		Affinity: model.InstallationAffinityIsolated,
 		GroupID:  &groupID,
 		State:    model.InstallationStateDeletionRequested,
 	}
-	err = sqlStore.CreateInstallation(deletionRequestedInstallation, nil)
+	err = sqlStore.CreateInstallation(deletionRequestedInstallation, nil, fixDNSRecords(3))
 	require.NoError(t, err)
 
 	otherStates := []string{
@@ -431,10 +446,10 @@ func TestGetSingleTenantDatabaseConfigForInstallation(t *testing.T) {
 	}
 
 	installation1 := model.Installation{
-		DNS:                        "dns1.com",
+		Name:                       "test",
 		SingleTenantDatabaseConfig: dbConfig,
 	}
-	err := sqlStore.CreateInstallation(&installation1, nil)
+	err := sqlStore.CreateInstallation(&installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	fetchedDBConfig, err := sqlStore.GetSingleTenantDatabaseConfigForInstallation(installation1.ID)
@@ -442,8 +457,8 @@ func TestGetSingleTenantDatabaseConfigForInstallation(t *testing.T) {
 	assert.Equal(t, dbConfig, fetchedDBConfig)
 
 	t.Run("no db config for installation", func(t *testing.T) {
-		installation := model.Installation{}
-		err := sqlStore.CreateInstallation(&installation, nil)
+		installation := model.Installation{Name: "test2"}
+		err := sqlStore.CreateInstallation(&installation, nil, fixDNSRecords(2))
 		require.NoError(t, err)
 
 		_, err = sqlStore.GetSingleTenantDatabaseConfigForInstallation(installation.ID)
@@ -463,17 +478,17 @@ func TestLockInstallation(t *testing.T) {
 	ownerID := model.NewID()
 
 	installation1 := &model.Installation{
+		Name:    "test",
 		OwnerID: ownerID,
-		DNS:     "dns1.example.com",
 	}
-	err := sqlStore.CreateInstallation(installation1, nil)
+	err := sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
+		Name:    "test2",
 		OwnerID: ownerID,
-		DNS:     "dns2.example.com",
 	}
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(2))
 	require.NoError(t, err)
 
 	t.Run("installations should start unlocked", func(t *testing.T) {
@@ -605,9 +620,9 @@ func TestUpdateInstallation(t *testing.T) {
 	someBool := false
 
 	installation1 := &model.Installation{
+		Name:      "test",
 		OwnerID:   ownerID1,
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -643,13 +658,13 @@ func TestUpdateInstallation(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   ownerID1,
 		Version:   "version2",
-		DNS:       "dns4.example.com",
 		Image:     "custom/image",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -659,13 +674,12 @@ func TestUpdateInstallation(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(2))
 	require.NoError(t, err)
 
 	installation1.OwnerID = ownerID2
 	installation1.Version = "version3"
 	installation1.Version = "custom/image"
-	installation1.DNS = "dns5.example.com"
 	installation1.Size = mmv1alpha1.Size1000String
 	installation1.Affinity = model.InstallationAffinityIsolated
 	installation1.GroupID = &groupID2
@@ -749,7 +763,6 @@ func TestUpdateInstallationSequence(t *testing.T) {
 	installation1 := &model.Installation{
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -759,7 +772,7 @@ func TestUpdateInstallationSequence(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	t.Run("group config not merged", func(t *testing.T) {
@@ -793,7 +806,6 @@ func TestUpdateInstallationState(t *testing.T) {
 	installation1 := &model.Installation{
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -802,7 +814,7 @@ func TestUpdateInstallationState(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1, nil)
+	err := sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -825,9 +837,9 @@ func TestGetInstallationsStatus(t *testing.T) {
 	defer CloseConnection(t, sqlStore)
 
 	installation1 := &model.Installation{
+		Name:      "test",
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns1.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -836,7 +848,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1, nil)
+	err := sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	status, err := sqlStore.GetInstallationsStatus()
@@ -849,9 +861,9 @@ func TestGetInstallationsStatus(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns2.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -860,7 +872,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		State:     model.ClusterInstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(2))
 	require.NoError(t, err)
 
 	status, err = sqlStore.GetInstallationsStatus()
@@ -873,9 +885,9 @@ func TestGetInstallationsStatus(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	installation3 := &model.Installation{
+		Name:      "test3",
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -884,7 +896,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 		State:     model.InstallationStateHibernating,
 	}
 
-	err = sqlStore.CreateInstallation(installation3, nil)
+	err = sqlStore.CreateInstallation(installation3, nil, fixDNSRecords(3))
 	require.NoError(t, err)
 
 	status, err = sqlStore.GetInstallationsStatus()
@@ -915,7 +927,6 @@ func TestUpdateInstallationCRVersion(t *testing.T) {
 	installation1 := &model.Installation{
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -925,7 +936,7 @@ func TestUpdateInstallationCRVersion(t *testing.T) {
 		CRVersion: model.V1betaCRVersion,
 	}
 
-	err := sqlStore.CreateInstallation(installation1, nil)
+	err := sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(3))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -944,9 +955,9 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 	defer CloseConnection(t, sqlStore)
 
 	installation1 := &model.Installation{
+		Name:      "test",
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns1.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -956,15 +967,15 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		CRVersion: model.V1betaCRVersion,
 	}
 
-	err := sqlStore.CreateInstallation(installation1, nil)
+	err := sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns2.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -974,15 +985,15 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		CRVersion: model.V1betaCRVersion,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(3))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	installation3 := &model.Installation{
+		Name:      "test3",
 		OwnerID:   model.NewID(),
 		Version:   "version",
-		DNS:       "dns3.example.com",
 		License:   "this-is-a-license",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
@@ -992,7 +1003,7 @@ func TestGetInstallationsTotalDatabaseWeight(t *testing.T) {
 		CRVersion: model.V1betaCRVersion,
 	}
 
-	err = sqlStore.CreateInstallation(installation3, nil)
+	err = sqlStore.CreateInstallation(installation3, nil, fixDNSRecords(4))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -1039,9 +1050,9 @@ func TestDeleteInstallation(t *testing.T) {
 	groupID2 := model.NewID()
 
 	installation1 := &model.Installation{
+		Name:      "test",
 		OwnerID:   ownerID1,
 		Version:   "version",
-		DNS:       "dns6.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
@@ -1049,15 +1060,15 @@ func TestDeleteInstallation(t *testing.T) {
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err := sqlStore.CreateInstallation(installation1, nil)
+	err := sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
 
 	installation2 := &model.Installation{
+		Name:      "test2",
 		OwnerID:   ownerID2,
 		Version:   "version2",
-		DNS:       "dns7.example.com",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
@@ -1065,7 +1076,7 @@ func TestDeleteInstallation(t *testing.T) {
 		State:     model.InstallationStateStable,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(2))
 	require.NoError(t, err)
 
 	err = sqlStore.DeleteInstallation(installation1.ID)
@@ -1096,8 +1107,8 @@ func TestDeleteInstallation(t *testing.T) {
 
 func createAndCheckDummyInstallation(t *testing.T, store *SQLStore) *model.Installation {
 	installation := &model.Installation{
+		Name:    uuid.New()[:5],
 		OwnerID: model.NewID(),
-		DNS:     fmt.Sprintf("dns-%s.domain.com", model.NewID()),
 	}
 	createAndCheckInstallation(t, store, installation)
 
@@ -1105,7 +1116,17 @@ func createAndCheckDummyInstallation(t *testing.T, store *SQLStore) *model.Insta
 }
 
 func createAndCheckInstallation(t *testing.T, store *SQLStore, installation *model.Installation) {
-	err := store.CreateInstallation(installation, nil)
+	records := []*model.InstallationDNS{
+		{DomainName: fmt.Sprintf("dns-%s.domain.com", model.NewID())},
+	}
+
+	err := store.CreateInstallation(installation, nil, records)
 	require.NoError(t, err)
 	require.NotEmpty(t, installation.ID)
+}
+
+func fixDNSRecords(num int) []*model.InstallationDNS {
+	return []*model.InstallationDNS{
+		{DomainName: fmt.Sprintf("dns-%d.example.com", num)},
+	}
 }

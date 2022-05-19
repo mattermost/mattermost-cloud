@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,7 +45,7 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 				logger = logger.WithField("params", params)
 			}
 
-			logger = logger.WithFields(logrus.Fields{
+			logger = logger.WithFields(log.Fields{
 				"aws-service-id":     r.ClientInfo.ServiceID,
 				"aws-operation-name": r.Operation.Name,
 			})
@@ -61,7 +60,7 @@ func NewAWSSessionWithLogger(config *aws.Config, logger log.FieldLogger) (*sessi
 // This is far from an ideal way to handle the sanitization
 // but we can retain some AWS logs and debuggability without investing
 // to much time into sophisticated sanitization/logging mechanism.
-func sanitizeParams(reqParams interface{}, logger logrus.FieldLogger) string {
+func sanitizeParams(reqParams interface{}, logger log.FieldLogger) string {
 	paramsJSON, err := json.Marshal(reqParams)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to marshal AWS request parameters")

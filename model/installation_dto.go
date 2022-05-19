@@ -13,6 +13,9 @@ import (
 type InstallationDTO struct {
 	*Installation
 	Annotations []*Annotation `json:"Annotations,omitempty"`
+	// Deprecated: This is for backward compatibility until we switch all clients, as DNS was removed from Installation.
+	DNS        string
+	DNSRecords []*InstallationDNS
 }
 
 // InstallationDTOFromReader decodes a json-encoded installation DTO from the given io.Reader.

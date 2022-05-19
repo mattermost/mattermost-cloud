@@ -13,40 +13,46 @@ import (
 )
 
 func TestCustomColumnsTable(t *testing.T) {
-	columnsExpression := []string{"ID:.ID", "Owner:{.OwnerID}", "DNS:.DNS", "State:State", "FirstAnnotation:{Annotations[0].Name}", "Smell:.Smell"}
+	columnsExpression := []string{"ID:.ID", "Owner:{.OwnerID}", "DNS:.DNSRecords[0].DomainName", "State:State", "FirstAnnotation:{Annotations[0].Name}", "Smell:.Smell"}
 
 	data := []interface{}{
 		model.InstallationDTO{
 			Installation: &model.Installation{
 				ID:      "installation-1",
 				OwnerID: "unit-test",
-				DNS:     "unit-test.mattermost.com",
 				State:   model.InstallationStateStable,
 			},
 			Annotations: []*model.Annotation{
 				{Name: "test", ID: "annotation-1"},
+			},
+			DNSRecords: []*model.InstallationDNS{
+				{DomainName: "unit-test.mattermost.com"},
 			},
 		},
 		model.InstallationDTO{
 			Installation: &model.Installation{
 				ID:      "installation-2",
 				OwnerID: "unit-test",
-				DNS:     "unit-test2.mattermost.com",
 				State:   model.InstallationStateCreationInProgress,
 			},
 			Annotations: []*model.Annotation{
 				{Name: "test-123", ID: "annotation-2"},
 			},
+			DNSRecords: []*model.InstallationDNS{
+				{DomainName: "unit-test2.mattermost.com"},
+			},
 		},
 		model.InstallationDTO{
 			Installation: &model.Installation{
 				ID:    "installation-3",
-				DNS:   "unit-test3.mattermost.com",
 				State: model.InstallationStateDeleted,
 			},
 			Annotations: []*model.Annotation{
 				{Name: "test-123", ID: "annotation-2"},
 				{Name: "test", ID: "annotation-1"},
+			},
+			DNSRecords: []*model.InstallationDNS{
+				{DomainName: "unit-test3.mattermost.com"},
 			},
 		},
 	}

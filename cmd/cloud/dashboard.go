@@ -128,7 +128,7 @@ var dashboardCmd = &cobra.Command{
 			})
 
 			table.Render()
-			renderedDashboard := fmt.Sprintf("\n### CLOUD DASHBOARD\n\n")
+			renderedDashboard := "\n### CLOUD DASHBOARD\n\n"
 			renderedDashboard += tableString.String()
 			for _, entry := range unstableList {
 				renderedDashboard += fmt.Sprintf("%s\n", entry)

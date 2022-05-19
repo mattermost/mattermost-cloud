@@ -132,12 +132,12 @@ func TestGetInstallations(t *testing.T) {
 		installation1 := &model.Installation{
 			OwnerID:  ownerID1,
 			Version:  "version",
-			DNS:      "dns.example.com",
+			Name:     "dns",
 			Size:     "1000users",
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateCreationRequested,
 		}
-		err := sqlStore.CreateInstallation(installation1, annotations)
+		err := sqlStore.CreateInstallation(installation1, annotations, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -145,11 +145,11 @@ func TestGetInstallations(t *testing.T) {
 		installation2 := &model.Installation{
 			OwnerID:  ownerID2,
 			Version:  "version",
-			DNS:      "dns2.example.com",
+			Name:     "dns2.example",
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateCreationRequested,
 		}
-		err = sqlStore.CreateInstallation(installation2, nil)
+		err = sqlStore.CreateInstallation(installation2, nil, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -157,11 +157,11 @@ func TestGetInstallations(t *testing.T) {
 		installation3 := &model.Installation{
 			OwnerID:  ownerID1,
 			Version:  "version",
-			DNS:      "dns3.example.com",
+			Name:     "dns3.example",
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateCreationRequested,
 		}
-		err = sqlStore.CreateInstallation(installation3, nil)
+		err = sqlStore.CreateInstallation(installation3, nil, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -169,11 +169,11 @@ func TestGetInstallations(t *testing.T) {
 		installation4 := &model.Installation{
 			OwnerID:  ownerID2,
 			Version:  "version",
-			DNS:      "dns4.example.com",
+			Name:     "dns4.example",
 			Affinity: model.InstallationAffinityIsolated,
 			State:    model.InstallationStateCreationRequested,
 		}
-		err = sqlStore.CreateInstallation(installation4, nil)
+		err = sqlStore.CreateInstallation(installation4, nil, nil)
 		require.NoError(t, err)
 		err = sqlStore.DeleteInstallation(installation4.ID)
 		require.NoError(t, err)
@@ -197,12 +197,13 @@ func TestGetInstallations(t *testing.T) {
 				require.Equal(t, installation4, installationDTO.Installation)
 			})
 
-			t.Run("get installation by name", func(t *testing.T) {
-				installation, err := client.GetInstallationByDNS(installation1.DNS, nil)
+			t.Run("get installation by dns", func(t *testing.T) {
+				installation, err := client.GetInstallationByDNS("dns.example.com", nil)
 				assert.NoError(t, err)
 				require.NotNil(t, installation)
 				assert.Equal(t, installation1.ID, installation.ID)
-				assert.Equal(t, installation1.DNS, installation.DNS)
+				assert.Equal(t, "dns.example.com", installation.DNS)
+				assert.Equal(t, "dns.example.com", installation.DNSRecords[0].DomainName)
 
 				noInstallation, err := client.GetInstallationByDNS("notreal", nil)
 				assert.Nil(t, noInstallation)
@@ -275,7 +276,7 @@ func TestGetInstallations(t *testing.T) {
 				{
 					"filter by dns",
 					&model.GetInstallationsRequest{
-						DNS:    installation1.DNS,
+						DNS:    "dns.example.com",
 						Paging: model.AllPagesNotDeleted(),
 					},
 					[]*model.Installation{installation1},
@@ -295,6 +296,14 @@ func TestGetInstallations(t *testing.T) {
 						Paging: model.AllPagesNotDeleted(),
 					},
 					[]*model.Installation{},
+				},
+				{
+					"filter by name",
+					&model.GetInstallationsRequest{
+						Paging: model.AllPagesNotDeleted(),
+						Name:   "dns",
+					},
+					[]*model.Installation{installation1},
 				},
 			}
 
@@ -461,6 +470,7 @@ func TestCreateInstallation(t *testing.T) {
 		require.Equal(t, "version", installation.Version)
 		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation.Image)
 		require.Equal(t, "dns.example.com", installation.DNS)
+		require.Equal(t, "dns", installation.Name)
 		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
 		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
 		require.Equal(t, model.DefaultCRVersion, installation.CRVersion)
@@ -470,6 +480,11 @@ func TestCreateInstallation(t *testing.T) {
 		require.EqualValues(t, 0, installation.DeleteAt)
 		assert.True(t, containsAnnotation("my-annotation", installation.Annotations))
 		assert.Equal(t, envs, installation.PriorityEnv)
+
+		// Assert fetch installation is the same as returned from create.
+		fetched, err := client.GetInstallation(installation.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, installation, fetched)
 	})
 
 	t.Run("valid with custom image and capital letters in DNS", func(t *testing.T) {
@@ -1419,6 +1434,7 @@ func TestConfigPriority(t *testing.T) {
 	installation1, err = client.UpdateInstallation(installation1.ID, &model.PatchInstallationRequest{
 		PriorityEnv: priorityEnv,
 	})
+	require.NoError(t, err)
 
 	t.Run("should use priority env over group env", func(t *testing.T) {
 		expectedEnv := model.EnvVarMap{

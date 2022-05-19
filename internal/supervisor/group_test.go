@@ -11,6 +11,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -201,14 +202,14 @@ func TestGroupSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  model.NewID(),
 			Version:  "version",
-			DNS:      "dns1.example.com",
+			Name:     "dns1",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns1.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(group)
@@ -236,12 +237,12 @@ func TestGroupSupervisor(t *testing.T) {
 		err = sqlStore.CreateInstallation(&model.Installation{
 			OwnerID:  model.NewID(),
 			Version:  "version",
-			DNS:      "dns1.example.com",
+			Name:     "dns1",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
-		}, nil)
+		}, nil, testutil.DNSForInstallation("dns1.example.com"))
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -249,12 +250,12 @@ func TestGroupSupervisor(t *testing.T) {
 		err = sqlStore.CreateInstallation(&model.Installation{
 			OwnerID:  model.NewID(),
 			Version:  "version",
-			DNS:      "dns2.example.com",
+			Name:     "dns2",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
-		}, nil)
+		}, nil, testutil.DNSForInstallation("dns2.example.com"))
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -262,12 +263,12 @@ func TestGroupSupervisor(t *testing.T) {
 		err = sqlStore.CreateInstallation(&model.Installation{
 			OwnerID:  model.NewID(),
 			Version:  "version",
-			DNS:      "dns3.example.com",
+			Name:     "dns3",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateStable,
-		}, nil)
+		}, nil, testutil.DNSForInstallation("dns3.example.com"))
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -296,14 +297,14 @@ func TestGroupSupervisor(t *testing.T) {
 		installation := &model.Installation{
 			OwnerID:  model.NewID(),
 			Version:  "version",
-			DNS:      "dns1.example.com",
+			Name:     "dns1",
 			Size:     mmv1alpha1.Size100String,
 			Affinity: model.InstallationAffinityIsolated,
 			GroupID:  &group.ID,
 			State:    model.InstallationStateDeletionRequested,
 		}
 
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns1.example.com"))
 		require.NoError(t, err)
 
 		supervisor.Supervise(group)
@@ -331,12 +332,12 @@ func TestGroupSupervisor(t *testing.T) {
 			err = sqlStore.CreateInstallation(&model.Installation{
 				OwnerID:  model.NewID(),
 				Version:  "version",
-				DNS:      "dns1.example.com",
+				Name:     "dns1",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
-			}, nil)
+			}, nil, testutil.DNSForInstallation("dns1.example.com"))
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Millisecond)
@@ -344,12 +345,12 @@ func TestGroupSupervisor(t *testing.T) {
 			err = sqlStore.CreateInstallation(&model.Installation{
 				OwnerID:  model.NewID(),
 				Version:  "version",
-				DNS:      "dns2.example.com",
+				Name:     "dns2",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
-			}, nil)
+			}, nil, testutil.DNSForInstallation("dns2.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(group)
@@ -380,12 +381,12 @@ func TestGroupSupervisor(t *testing.T) {
 			err = sqlStore.CreateInstallation(&model.Installation{
 				OwnerID:  model.NewID(),
 				Version:  "version",
-				DNS:      "dns1.example.com",
+				Name:     "dns1",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateStable,
-			}, nil)
+			}, nil, testutil.DNSForInstallation("dns1.example.com"))
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Millisecond)
@@ -393,12 +394,12 @@ func TestGroupSupervisor(t *testing.T) {
 			err = sqlStore.CreateInstallation(&model.Installation{
 				OwnerID:  model.NewID(),
 				Version:  "version",
-				DNS:      "dns2.example.com",
+				Name:     "dns2",
 				Size:     mmv1alpha1.Size100String,
 				Affinity: model.InstallationAffinityIsolated,
 				GroupID:  &group.ID,
 				State:    model.InstallationStateDeletionInProgress,
-			}, nil)
+			}, nil, testutil.DNSForInstallation("dns2.example.com"))
 			require.NoError(t, err)
 
 			supervisor.Supervise(group)

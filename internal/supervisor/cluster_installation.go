@@ -20,6 +20,7 @@ type clusterInstallationStore interface {
 	GetCluster(clusterID string) (*model.Cluster, error)
 
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
+	GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error)
 
 	GetClusterInstallation(clusterInstallationID string) (*model.ClusterInstallation, error)
 	GetUnlockedClusterInstallationsPendingWork() ([]*model.ClusterInstallation, error)
@@ -208,8 +209,14 @@ func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstall
 		return model.ClusterInstallationStateCreationRequested
 	}
 
+	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
+	if err != nil {
+		logger.WithError(err).Error("Failed to get DNS records for Installation")
+		return model.ClusterInstallationStateCreationRequested
+	}
+
 	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
-		CreateClusterInstallation(cluster, installation, clusterInstallation)
+		CreateClusterInstallation(cluster, installation, dnsRecords, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")
 		return model.ClusterInstallationStateCreationRequested

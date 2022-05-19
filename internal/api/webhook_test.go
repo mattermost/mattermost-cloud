@@ -176,6 +176,7 @@ func TestGetWebhooks(t *testing.T) {
 			OwnerID: ownerID2,
 			URL:     "https://validurl4.com",
 		})
+		require.NoError(t, err)
 		err = sqlStore.DeleteWebhook(webhook4.ID)
 		require.NoError(t, err)
 		webhook4, err = client.GetWebhook(webhook4.ID)

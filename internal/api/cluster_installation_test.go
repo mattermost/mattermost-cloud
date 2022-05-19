@@ -419,8 +419,14 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		require.Empty(t, bytes)
 	})
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("mmctl success", func(t *testing.T) {
 		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
+		require.NoError(t, err)
+		require.NotEmpty(t, bytes)
+	})
+
+	t.Run("mattermost cli success", func(t *testing.T) {
+		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, "mattermost", subcommand)
 		require.NoError(t, err)
 		require.NotEmpty(t, bytes)
 	})
@@ -452,7 +458,7 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("non-zero exit command", func(t *testing.T) {
+	t.Run("error setting up exec command", func(t *testing.T) {
 		mProvisioner.CommandError = errors.New("encountered a command error")
 
 		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
@@ -461,6 +467,18 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		resp, err := http.DefaultClient.Do(httpRequest)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("non-zero exit command", func(t *testing.T) {
+		mProvisioner.CommandError = nil
+		mProvisioner.ExecError = errors.New("encountered an error running exec")
+
+		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusConflict, resp.StatusCode)
 	})
 
 	t.Run("cluster installation deleted", func(t *testing.T) {
@@ -782,14 +800,14 @@ func TestMigrateDNS(t *testing.T) {
 		OwnerID:   "owner3",
 		Version:   "version3",
 		Image:     "custom-image",
-		DNS:       "dns3.example.com",
+		Name:      "dns3.example",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateHibernating,
 	}
 
-	err = sqlStore.CreateInstallation(installation3, nil)
+	err = sqlStore.CreateInstallation(installation3, nil, testutil.DNSForInstallation("dns3.example.com"))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -921,28 +939,28 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		OwnerID:   "owner1",
 		Version:   "version1",
 		Image:     "custom-image",
-		DNS:       "dns1.example.com",
+		Name:      "dns1.example",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateHibernating,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, testutil.DNSForInstallation("dns1.example"))
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
 		OwnerID:   "owner2",
 		Version:   "version2",
 		Image:     "custom-image",
-		DNS:       "dns3.example.com",
+		Name:      "dns3.example",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateHibernating,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, testutil.DNSForInstallation("dns3.example.com"))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -1069,28 +1087,28 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		OwnerID:   "owner1",
 		Version:   "version1",
 		Image:     "custom-image",
-		DNS:       "dns1.example.com",
+		Name:      "dns1.example",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation1, nil)
+	err = sqlStore.CreateInstallation(installation1, nil, nil)
 	require.NoError(t, err)
 
 	installation2 := &model.Installation{
 		OwnerID:   "owner2",
 		Version:   "version2",
 		Image:     "custom-image",
-		DNS:       "dns3.example.com",
+		Name:      "dns3.example",
 		Database:  model.InstallationDatabaseMysqlOperator,
 		Filestore: model.InstallationFilestoreMinioOperator,
 		Affinity:  model.InstallationAffinityIsolated,
 		State:     model.InstallationStateCreationRequested,
 	}
 
-	err = sqlStore.CreateInstallation(installation2, nil)
+	err = sqlStore.CreateInstallation(installation2, nil, testutil.DNSForInstallation("dns3.example.com"))
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)

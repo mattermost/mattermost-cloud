@@ -50,7 +50,7 @@ func (l *installationDBRestorationLock) Unlock() {
 	unlocked, err := l.store.UnlockInstallationDBRestorationOperations(l.ids, l.lockerID, false)
 	if err != nil {
 		l.logger.WithError(err).Error("failed to unlock installationDBRestorations")
-	} else if unlocked != true {
+	} else if !unlocked {
 		l.logger.Error("failed to release lock for installationDBRestorations")
 	}
 }

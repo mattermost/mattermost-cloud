@@ -35,10 +35,10 @@ const (
 
 // ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
 type ClusterInstallationProvisioner interface {
-	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error
 	EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
 	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
+	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error
 	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
 	DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
@@ -62,7 +62,7 @@ type crProvisionerWrapper struct {
 }
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -99,7 +99,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
-			Ingress:       makeIngressSpec(installation.DNS),
+			Ingress:       makeIngressSpec(installationDNS),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
 			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
 			Scheduling: mmv1beta1.Scheduling{
@@ -203,7 +203,7 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
-func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -264,7 +264,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	mattermost.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
 
 	mattermost.Spec.LicenseSecret = ""
-	secretName := fmt.Sprintf("%s-license", installationName)
+	var secretName string
 	if installation.License != "" {
 		secretName, err = prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
@@ -290,7 +290,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	// Just to be sure, for the update we reset deprecated fields.
 	mattermost.Spec.IngressName = ""
 	mattermost.Spec.IngressAnnotations = nil
-	mattermost.Spec.Ingress = makeIngressSpec(installation.DNS)
+	mattermost.Spec.Ingress = makeIngressSpec(installationDNS)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, mattermost, metav1.UpdateOptions{})
 	if err != nil {
@@ -559,14 +559,35 @@ func (provisioner *crProvisionerWrapper) IsResourceReady(cluster *model.Cluster,
 	return true, nil
 }
 
-func makeIngressSpec(installationDNS string) *mmv1beta1.Ingress {
+func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {
+	primaryRecord := installationDNS[0]
+	for _, rec := range installationDNS {
+		if rec.IsPrimary {
+			primaryRecord = rec
+			break
+		}
+	}
+
 	ingressClass := "nginx-controller"
 	return &mmv1beta1.Ingress{
 		Enabled:      true,
-		Host:         installationDNS,
+		Host:         primaryRecord.DomainName,
+		Hosts:        mapDomains(installationDNS),
 		Annotations:  getIngressAnnotations(),
 		IngressClass: &ingressClass,
 	}
+}
+
+func mapDomains(installationDNS []*model.InstallationDNS) []mmv1beta1.IngressHost {
+	hosts := make([]mmv1beta1.IngressHost, 0, len(installationDNS))
+
+	for _, dns := range installationDNS {
+		hosts = append(hosts, mmv1beta1.IngressHost{
+			HostName: dns.DomainName,
+		})
+	}
+
+	return hosts
 }
 
 // generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
@@ -627,13 +648,38 @@ func (provisioner *crProvisionerWrapper) getMattermostCustomResource(cluster *mo
 	return cr, nil
 }
 
-// ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation with the given args.
+// ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation
+// with the given args. Setup and exec errors both result in a single return error.
 func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	return provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
+	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
+	if err != nil {
+		return output, errors.Wrap(err, "failed to run mattermost command")
+	}
+	if execErr != nil {
+		return output, errors.Wrap(execErr, "mattermost command encountered an error")
+	}
+
+	return output, nil
 }
 
-// ExecClusterInstallationCLI execs the provided command on the defined cluster installation.
-func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+// ExecMMCTL runs the given MMCTL command against the given cluster installation.
+// Setup and exec errors both result in a single return error.
+func (provisioner *KopsProvisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
+	if err != nil {
+		return output, errors.Wrap(err, "failed to run mmctl command")
+	}
+	if execErr != nil {
+		return output, errors.Wrap(execErr, "mmctl command encountered an error")
+	}
+
+	return output, nil
+}
+
+// ExecClusterInstallationCLI execs the provided command on the defined cluster
+// installation and returns both exec preparation errors as well as errors from
+// the exec command itself.
+func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -641,13 +687,13 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 
 	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kops config from cache")
+		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create k8s client from file")
+		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
 	}
 
 	ctx := context.TODO()
@@ -655,7 +701,7 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 		LabelSelector: "app=mattermost",
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query mattermost pods")
+		return nil, nil, errors.Wrap(err, "failed to query mattermost pods")
 	}
 
 	// In the future, we'd ideally just spin our own container on demand, allowing
@@ -663,12 +709,12 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 	// we find the first pod running Mattermost, and pick the first container therein.
 
 	if len(podList.Items) == 0 {
-		return nil, errors.New("failed to find mattermost pods on which to exec")
+		return nil, nil, errors.New("failed to find mattermost pods on which to exec")
 	}
 
 	pod := podList.Items[0]
 	if len(pod.Spec.Containers) == 0 {
-		return nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
+		return nil, nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
 	}
 
 	container := pod.Spec.Containers[0]
@@ -689,11 +735,11 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 		}, scheme.ParameterCodec)
 
 	now := time.Now()
-	output, err := k8sClient.RemoteCommand("POST", execRequest.URL())
+	output, execErr := k8sClient.RemoteCommand("POST", execRequest.URL())
 
 	logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
 
-	return output, err
+	return output, execErr, nil
 }
 
 // ExecClusterInstallationJob creates job executing command on cluster installation.

@@ -128,9 +128,9 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 
 	// TODO: `--format` is now deprecated in favor of `--json` however the new flag was introduced 6.0 so it does not work with earlier versions.
 	// We should keep an eye on mmctl for removal of the flag, and switch to use `--json` when we are sure we no longer support 5.x servers.
-	output, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, "mmctl", "--local", "config", "show", "--format", "json")
+	output, err := c.Provisioner.ExecMMCTL(cluster, clusterInstallation, "--local", "config", "show", "--format", "json")
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to execute mattermost cli")
+		c.Logger.WithError(err).Error("failed to exec mmctl config show")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -213,7 +213,7 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 
 			valueStr, ok := value.(string)
 			if ok {
-				_, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, "mmctl", "--local", "config", "set", fullKey, valueStr)
+				_, err := c.Provisioner.ExecMMCTL(cluster, clusterInstallation, "--local", "config", "set", fullKey, valueStr)
 				if err != nil {
 					c.Logger.WithError(err).Errorf("failed to set key %s to value %s", fullKey, valueStr)
 					return err
@@ -297,10 +297,15 @@ func handleRunClusterInstallationExecCommand(c *Context, w http.ResponseWriter, 
 	}
 
 	args := append([]string{fmt.Sprintf("./bin/%s", command)}, clusterInstallationExecSubcommand...)
-	output, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, args...)
+	output, execErr, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, args...)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to execute command")
+		c.Logger.WithError(err).Error("failed to prepare command execution")
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if execErr != nil {
+		c.Logger.WithError(execErr).Error("failed to execute command")
+		w.WriteHeader(http.StatusConflict)
 		w.Write(output)
 		return
 	}
@@ -315,6 +320,7 @@ func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter
 	vars := mux.Vars(r)
 	clusterInstallationID := vars["cluster_installation"]
 	c.Logger = c.Logger.WithField("cluster_installation", clusterInstallationID)
+	c.Logger.Debug("deprecated mattermost_cli exec api endpoint used")
 
 	clusterInstallationMattermostCLISubcommandRequest, err := model.NewClusterInstallationMattermostCLISubcommandFromReader(r.Body)
 	if err != nil {

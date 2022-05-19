@@ -172,8 +172,15 @@ func (ev *EventsRecorder) VerifyInOrder(expectedEvents []EventOccurrence) error 
 		}
 		expected := expectedEvents[0]
 
+		// The order of some events might be different depending on which
+		// supervisor run earlier therefore we check first 2 events.
 		if expected.MatchPayload(e) {
 			expectedEvents = expectedEvents[1:]
+		} else if len(expectedEvents) > 1 {
+			expected = expectedEvents[1]
+			if expected.MatchPayload(e) {
+				expectedEvents = append(expectedEvents[:1], expectedEvents[2:]...)
+			}
 		}
 	}
 

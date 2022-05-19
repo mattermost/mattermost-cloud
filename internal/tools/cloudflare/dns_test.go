@@ -12,8 +12,6 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 
-	"github.com/sirupsen/logrus"
-
 	cf "github.com/cloudflare/cloudflare-go"
 	"github.com/stretchr/testify/assert"
 )
@@ -65,68 +63,48 @@ func TestGetZoneName(t *testing.T) {
 		description     string
 		zoneNameList    []string
 		customerDNSName string
-		setup           func(zoneNameList []string, customerDNSName string) (zoneName string, found bool)
 		expected        Expected
 	}{
 		{
 			description:     "success with 1 zone name in the list",
 			zoneNameList:    []string{"cloud.mattermost.com"},
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
 			expected: Expected{"cloud.mattermost.com", true},
 		},
 		{
 			description:     "success with 2 zone name in the list",
 			zoneNameList:    []string{"cloud.mattermost.com", "cloud.test.mattermost.com"},
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
 			expected: Expected{"cloud.mattermost.com", true},
 		},
 		{
 			description:     "failure with 1 zone name in the list",
 			zoneNameList:    []string{"cloud.env.mattermost.com"},
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			expected: Expected{"", false},
 		},
 		{
 			description:     "failure with 2 zone name in the list",
 			zoneNameList:    []string{"cloud.env.mattermost.com", "cloud.test.mattermost.com"},
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			expected: Expected{"", false},
 		},
 		{
 			description:     "failure empty zone name in the list",
 			zoneNameList:    []string{},
 			customerDNSName: "customer.cloud.mattermost.com",
-			setup: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			expected: Expected{"", false},
 		},
 		{
 			description:     "failure empty customer DNS name",
 			zoneNameList:    []string{"cloud.env.mattermost.com", "cloud.test.mattermost.com"},
 			customerDNSName: "",
-			setup: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			expected: Expected{"", false},
 		},
 	}
 
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
-			mockCF.mockGetZoneName = s.setup
 			client := NewClientWithToken(mockCF, nil)
 			name, found := client.getZoneName(s.zoneNameList, s.customerDNSName)
 			result := Expected{name, found}
@@ -136,11 +114,11 @@ func TestGetZoneName(t *testing.T) {
 
 }
 
-func TestGetRecordID(t *testing.T) {
+func TestGetRecordIDs(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	type Expected struct {
-		string
-		error
+		ids []string
+		err error
 	}
 	mockCF := &MockCloudflare{}
 	samples := []struct {
@@ -161,7 +139,19 @@ func TestGetRecordID(t *testing.T) {
 					},
 				}, nil
 			},
-			expected: Expected{"CLOUDFLARERECORDID", nil},
+			expected: Expected{[]string{"CLOUDFLARERECORDID"}, nil},
+		},
+		{
+			description:     "success with multiple ids",
+			zoneID:          "THISISAZONEIDFROMCLOUDFLARE",
+			customerDNSName: "customer.cloud.mattermost.com",
+			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				return []cf.DNSRecord{
+					{ID: "CLOUDFLARERECORDID"},
+					{ID: "CLOUDFLARERECORDID2"},
+				}, nil
+			},
+			expected: Expected{[]string{"CLOUDFLARERECORDID","CLOUDFLARERECORDID2"}, nil},
 		},
 		{
 			description:     "non existing zone ID at Cloudflare",
@@ -170,7 +160,7 @@ func TestGetRecordID(t *testing.T) {
 			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 				return []cf.DNSRecord{}, nil
 			},
-			expected: Expected{"", nil},
+			expected: Expected{nil, nil},
 		},
 		{
 			description:     "error while calling cloudflare API",
@@ -179,7 +169,7 @@ func TestGetRecordID(t *testing.T) {
 			setup: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 				return []cf.DNSRecord{}, errors.New("Cloudflare API error")
 			},
-			expected: Expected{"", errors.New("failed to get DNS Record ID from Cloudflare: Cloudflare API error")},
+			expected: Expected{nil, errors.New("failed to get DNS Record ID from Cloudflare: Cloudflare API error")},
 		},
 	}
 
@@ -187,10 +177,10 @@ func TestGetRecordID(t *testing.T) {
 		t.Run(s.description, func(t *testing.T) {
 			mockCF.mockDNSRecords = s.setup
 			client := NewClientWithToken(mockCF, nil)
-			name, err := client.getRecordID(s.zoneID, s.customerDNSName, logger)
-			result := Expected{name, err}
+			ids, err := client.getRecordIDs(s.zoneID, s.customerDNSName, logger)
+			result := Expected{ids, err}
 			if err != nil {
-				assert.EqualError(t, s.expected, err.Error())
+				assert.EqualError(t, s.expected.err, err.Error())
 				return
 			}
 			assert.Equal(t, s.expected, result)
@@ -206,9 +196,8 @@ func TestCreateDNSRecord(t *testing.T) {
 	MockAWS := &MockAWSClient{}
 	samples := []struct {
 		description     string
-		customerDNSName string
+		customerDNSName []string
 		dnsEndpoints    []string
-		setupName       func(zoneNameList []string, customerDNSName string) (zoneName string, found bool)
 		setupID         func(zoneName string) (zoneID string, err error)
 		setupDNS        func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
 		awsZoneNameList func() []string
@@ -216,11 +205,8 @@ func TestCreateDNSRecord(t *testing.T) {
 	}{
 		{
 			description:     "success with 1 zone name in the list",
-			customerDNSName: "customer.cloud.mattermost.com",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
@@ -238,11 +224,8 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "success with 2 zone name, 1 dns endpoints in the list",
-			customerDNSName: "customer.cloud.mattermost.com",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
@@ -258,13 +241,11 @@ func TestCreateDNSRecord(t *testing.T) {
 			},
 			expected: nil,
 		},
+		// TODO: success with multiple DNS names
 		{
-			description:     "success with 2 zone name, 2 dns endpoints in the list",
-			customerDNSName: "customer.cloud.mattermost.com",
-			dnsEndpoints:    []string{"load.balancer.endpoint", "second.load.balancer.endpoint"},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
+			description:     "success with multiple domain names",
+			customerDNSName: []string{"customer.cloud.mattermost.com", "customer.cloud.mattermost.io"},
+			dnsEndpoints:    []string{"load.balancer.endpoint"},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
@@ -276,17 +257,29 @@ func TestCreateDNSRecord(t *testing.T) {
 				}, nil
 			},
 			awsZoneNameList: func() []string {
-				return []string{"cloud.mattermost.com", "cloud.test.mattermost.com"}
+				return []string{"cloud.mattermost.com", "cloud.mattermost.io"}
 			},
 			expected: nil,
+		},
+		{
+			description:     "failure with multiple dns endpoints in the list",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
+			dnsEndpoints:    []string{"load.balancer.endpoint", "second.load.balancer.endpoint"},
+			expected: errors.New("creating record for more than one endpoint not supported"),
+		},
+		{
+			description:     "failure with no domain names",
+			customerDNSName: nil,
+			dnsEndpoints:    []string{"load.balancer.endpoint"},
+			setupID:         nil,
+			setupDNS:        nil,
+			awsZoneNameList: nil,
+			expected:        errors.New("no domain names provided"),
 		},
 		{
 			description:     "failure with empty zone name",
-			customerDNSName: "",
+			customerDNSName: []string{""},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
@@ -300,11 +293,8 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with no DNS endpoints",
-			customerDNSName: "customer.cloud.mattermost.com",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
 			dnsEndpoints:    []string{},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
@@ -318,11 +308,8 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with empty string DNS endpoint",
-			customerDNSName: "customer.cloud.mattermost.com",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
 			dnsEndpoints:    []string{""},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", nil
 			},
@@ -336,11 +323,8 @@ func TestCreateDNSRecord(t *testing.T) {
 		},
 		{
 			description:     "failure with zone ID fetching",
-			customerDNSName: "customer.cloud.mattermost.com",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
 			dnsEndpoints:    []string{"load.balancer.endpoint"},
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "", false
-			},
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "", errors.New("failed to get zone ID")
 			},
@@ -356,48 +340,42 @@ func TestCreateDNSRecord(t *testing.T) {
 
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
-			mockCF.mockGetZoneName = s.setupName
 			mockCF.mockGetZoneID = s.setupID
 			mockCF.mockCreateDNSRecord = s.setupDNS
 			MockAWS.mockGetPublicHostedZoneNames = s.awsZoneNameList
 			client := NewClientWithToken(mockCF, MockAWS)
-			err := client.CreateDNSRecord(s.customerDNSName, s.dnsEndpoints, logger)
+			err := client.CreateDNSRecords(s.customerDNSName, s.dnsEndpoints, logger)
 			if s.expected != nil {
 				assert.EqualError(t, s.expected, err.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
 }
 
+//// TODO: adjust to multiple
 func TestDeleteDNSRecord(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 
 	mockCF := &MockCloudflare{}
 	mockAWS := &MockAWSClient{}
 	samples := []struct {
-		description          string
-		customerDNSName      string
-		zoneID               string
-		setupName            func(zoneNameList []string, customerDNSName string) (zoneName string, found bool)
+		description      string
+		customerDNSNames []string
+		zoneID           string
 		setupZoneID          func(zoneName string) (zoneID string, err error)
-		setupRecordID        func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error)
 		setupDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
 		setupDNSRecord       func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 		awsZoneNameList      func() []string
 		expected             error
 	}{
 		{
-			description:     "success path",
-			customerDNSName: "customer.cloud.mattermost.com",
-			zoneID:          "RANDOMDIDFROMCLOUDFLARE",
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
+			description:      "success path",
+			customerDNSNames: []string{"customer.cloud.mattermost.com"},
+			zoneID:           "RANDOMDIDFROMCLOUDFLARE",
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
-			},
-			setupRecordID: func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-				return "RANDOMRECORDIDFROMCLOUDFLARE", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
 				return nil
@@ -415,17 +393,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 			expected: nil,
 		},
 		{
-			description:     "success with 2 zone name, 1 dns endpoints in the list",
-			customerDNSName: "customer.cloud.mattermost.com",
-			zoneID:          "RANDOMDIDFROMCLOUDFLARE",
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
+			description:      "success with 2 zone names",
+			customerDNSNames: []string{"customer.cloud.mattermost.com"},
+			zoneID:           "RANDOMDIDFROMCLOUDFLARE",
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
-			},
-			setupRecordID: func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-				return "RANDOMRECORDIDFROMCLOUDFLARE", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
 				return nil
@@ -443,17 +415,32 @@ func TestDeleteDNSRecord(t *testing.T) {
 			expected: nil,
 		},
 		{
-			description:     "failure to get zone ID",
-			customerDNSName: "customer.cloud.mattermost.com",
-			zoneID:          "RANDOMDIDFROMCLOUDFLARE",
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
+			description:      "success with multiple domain names",
+			customerDNSNames: []string{"customer.cloud.mattermost.com","customer.cloud.mattermost.io"},
+			zoneID:           "RANDOMDIDFROMCLOUDFLARE",
+			setupZoneID: func(zoneName string) (zoneID string, err error) {
+				return "RANDOMDIDFROMCLOUDFLARE", nil
 			},
+			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
+				return nil
+			},
+			setupDNSRecord: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				return []cf.DNSRecord{
+					{ID: "CLOUDFLARERECORDID"},
+					{ID: "CLOUDFLARERECORDID2"},
+				}, nil
+			},
+			awsZoneNameList: func() []string {
+				return []string{"cloud.mattermost.com", "cloud.mattermost.io"}
+			},
+			expected: nil,
+		},
+		{
+			description:      "failure to get zone ID",
+			customerDNSNames: []string{"customer.cloud.mattermost.com"},
+			zoneID:           "RANDOMDIDFROMCLOUDFLARE",
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "", errors.New("failed to get zone ID")
-			},
-			setupRecordID: func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-				return "", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
 				return nil
@@ -467,17 +454,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 			expected: errors.New("failed to fetch Zone ID from Cloudflare: failed to get zone ID"),
 		},
 		{
-			description:     "failure to get record ID",
-			customerDNSName: "customer.cloud.mattermost.com",
-			zoneID:          "RANDOMDIDFROMCLOUDFLARE",
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
+			description:      "failure to get record ID",
+			customerDNSNames: []string{"customer.cloud.mattermost.com"},
+			zoneID:           "RANDOMDIDFROMCLOUDFLARE",
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
-			},
-			setupRecordID: func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-				return "", errors.New("failed to get record ID")
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
 				return nil
@@ -491,17 +472,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 			expected: errors.New("Failed to get record ID from Cloudflare for DNS: customer.cloud.mattermost.com: failed to get DNS Record ID from Cloudflare: failed to get DNS records"),
 		},
 		{
-			description:     "failure to delete DNS record",
-			customerDNSName: "customer.cloud.mattermost.com",
-			zoneID:          "RANDOMDIDFROMCLOUDFLARE",
-			setupName: func(zoneNameList []string, customerDNSName string) (zoneName string, found bool) {
-				return "cloud.mattermost.com", true
-			},
+			description:      "failure to delete DNS record",
+			customerDNSNames: []string{"customer.cloud.mattermost.com"},
+			zoneID:           "RANDOMDIDFROMCLOUDFLARE",
 			setupZoneID: func(zoneName string) (zoneID string, err error) {
 				return "RANDOMDIDFROMCLOUDFLARE", nil
-			},
-			setupRecordID: func(zoneID, customerDNSName string, logger logrus.FieldLogger) (recordID string, err error) {
-				return "RANDOMRECORDIDFROMCLOUDFLARE", nil
 			},
 			setupDeleteDNSRecord: func(ctx context.Context, zoneID, recordID string) error {
 				return errors.New("failed to delete DNS record")
@@ -518,14 +493,12 @@ func TestDeleteDNSRecord(t *testing.T) {
 
 	for _, s := range samples {
 		t.Run(s.description, func(t *testing.T) {
-			mockCF.mockGetZoneName = s.setupName
 			mockCF.mockGetZoneID = s.setupZoneID
-			mockCF.mockGetRecordID = s.setupRecordID
 			mockCF.mockDeleteDNSRecord = s.setupDeleteDNSRecord
 			mockCF.mockDNSRecords = s.setupDNSRecord
 			mockAWS.mockGetPublicHostedZoneNames = s.awsZoneNameList
 			client := NewClientWithToken(mockCF, mockAWS)
-			err := client.DeleteDNSRecord(s.customerDNSName, logger)
+			err := client.DeleteDNSRecords(s.customerDNSNames, logger)
 			if s.expected != nil {
 				assert.EqualError(t, s.expected, err.Error())
 			}

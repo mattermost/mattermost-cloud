@@ -158,7 +158,7 @@ func TestAnnotations_Installation(t *testing.T) {
 
 	annotations := []*model.Annotation{&annotation1, &annotation2}
 
-	installation1 := model.Installation{}
+	installation1 := model.Installation{Name: "test"}
 	err = sqlStore.createInstallation(sqlStore.db, &installation1)
 	require.NoError(t, err)
 
@@ -179,8 +179,8 @@ func TestAnnotations_Installation(t *testing.T) {
 		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint") // Make sure error comes from DB
 	})
 
-	installation2 := model.Installation{DNS: "dns2.com"}
-	err = sqlStore.CreateInstallation(&installation2, annotations)
+	installation2 := model.Installation{Name: "test2"}
+	err = sqlStore.CreateInstallation(&installation2, annotations, nil)
 	require.NoError(t, err)
 
 	t.Run("get annotations for installation2", func(t *testing.T) {
@@ -223,8 +223,8 @@ func TestAnnotations_Installation(t *testing.T) {
 		cluster := model.Cluster{}
 		err = sqlStore.CreateCluster(&cluster, []*model.Annotation{&annotation1})
 		require.NoError(t, err)
-		installation := model.Installation{DNS: "dns3.com"}
-		err = sqlStore.CreateInstallation(&installation, nil)
+		installation := model.Installation{}
+		err = sqlStore.CreateInstallation(&installation, nil, nil)
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{

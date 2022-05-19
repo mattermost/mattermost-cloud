@@ -8,7 +8,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,7 +33,7 @@ type Store interface {
 	UnlockClusterAPI(clusterID string) error
 	DeleteCluster(clusterID string) error
 
-	CreateInstallation(installation *model.Installation, annotations []*model.Annotation) error
+	CreateInstallation(installation *model.Installation, annotations []*model.Annotation, dnsRecords []*model.InstallationDNS) error
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetInstallationDTO(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.InstallationDTO, error)
 	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
@@ -118,14 +117,15 @@ type Store interface {
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
 type Provisioner interface {
-	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+	ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error)
+	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 	GetClusterResources(*model.Cluster, bool, log.FieldLogger) (*k8s.ClusterResources, error)
 }
 
 // AwsClient describes the interface required to communicate with the AWS
 type AwsClient interface {
-	SwitchClusterTags(clusterID string, targetClusterID string, logger logrus.FieldLogger) error
+	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 	RDSDBCLusterExists(awsID string) (bool, error)
 }
 
@@ -151,7 +151,7 @@ type Context struct {
 	EventProducer EventProducer
 	RequestID     string
 	Environment   string
-	Logger        logrus.FieldLogger
+	Logger        log.FieldLogger
 	AwsClient     AwsClient
 }
 

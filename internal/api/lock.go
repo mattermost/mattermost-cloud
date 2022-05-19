@@ -39,7 +39,7 @@ func lockCluster(c *Context, clusterID string) (*model.ClusterDTO, int, func()) 
 			unlocked, err := c.Store.UnlockCluster(clusterDTO.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock cluster")
-			} else if unlocked != true {
+			} else if !unlocked {
 				c.Logger.Error("failed to release lock for cluster")
 			}
 		})
@@ -74,7 +74,7 @@ func lockGroup(c *Context, groupID string) (*model.Group, int, func()) {
 			unlocked, err := c.Store.UnlockGroup(group.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock group")
-			} else if unlocked != true {
+			} else if !unlocked {
 				c.Logger.Warn("failed to release lock for group")
 			}
 		})
@@ -109,7 +109,7 @@ func lockInstallation(c *Context, installationID string) (*model.InstallationDTO
 			unlocked, err := c.Store.UnlockInstallation(installationDTO.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock installation")
-			} else if unlocked != true {
+			} else if !unlocked {
 				c.Logger.Warn("failed to release lock for installation")
 			}
 		})
@@ -144,7 +144,7 @@ func lockInstallationBackup(c *Context, backupID string) (*model.InstallationBac
 			unlocked, err := c.Store.UnlockInstallationBackup(backup.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock backup")
-			} else if unlocked != true {
+			} else if !unlocked {
 				c.Logger.Warn("failed to release lock for backup")
 			}
 		})
@@ -179,7 +179,7 @@ func lockInstallationDBMigrationOperation(c *Context, operationID string) (*mode
 			unlocked, err := c.Store.UnlockInstallationDBMigrationOperation(dbMigrationOperation.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock db migration operation")
-			} else if unlocked != true {
+			} else if !unlocked {
 				c.Logger.Warn("failed to release lock for db migration operation")
 			}
 		})
@@ -214,7 +214,7 @@ func lockDatabase(c *Context, databaseID string) (*model.MultitenantDatabase, in
 			unlocked, err := c.Store.UnlockMultitenantDatabase(database.ID, c.RequestID, false)
 			if err != nil {
 				c.Logger.WithError(err).Errorf("failed to unlock database")
-			} else if unlocked != true {
+			} else if !unlocked {
 				c.Logger.Warn("failed to release lock for database")
 			}
 		})

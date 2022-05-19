@@ -78,6 +78,12 @@ func (s *mockClusterInstallationStore) GetStateChangeEvents(filter *model.StateC
 	return nil, nil
 }
 
+func (s *mockClusterInstallationStore) GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error) {
+	return []*model.InstallationDNS{
+		{ID: "abcd", DomainName: "dns.example.com", InstallationID: s.Installation.ID},
+	}, nil
+}
+
 type mockClusterInstallationProvisioner struct{}
 
 func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
@@ -174,7 +180,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				)
 
 				installation := &model.Installation{}
-				err := sqlStore.CreateInstallation(installation, nil)
+				err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.examole.com"))
 				require.NoError(t, err)
 
 				clusterInstallation := &model.ClusterInstallation{
@@ -255,7 +261,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		require.NoError(t, err)
 
 		installation := &model.Installation{}
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{
@@ -310,7 +316,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				require.NoError(t, err)
 
 				installation := &model.Installation{}
-				err = sqlStore.CreateInstallation(installation, nil)
+				err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 				require.NoError(t, err)
 
 				clusterInstallation := &model.ClusterInstallation{
@@ -347,7 +353,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		require.NoError(t, err)
 
 		installation := &model.Installation{}
-		err = sqlStore.CreateInstallation(installation, nil)
+		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
 		clusterInstallation := &model.ClusterInstallation{

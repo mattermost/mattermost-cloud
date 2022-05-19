@@ -1178,9 +1178,10 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 				"nginx":               {Chart: "stable"},
 			},
 		})
-
 	require.NoError(t, err)
+
 	utilityMetadata, err := client.GetClusterUtilities(c.ID)
+	require.NoError(t, err)
 
 	var nilVersion *model.HelmUtilityVersion = nil
 	assert.Equal(t, nilVersion, utilityMetadata.ActualVersions.Nginx)
@@ -1290,7 +1291,7 @@ func TestClusterAnnotations(t *testing.T) {
 		}
 
 		installation := &model.Installation{}
-		err = sqlStore.CreateInstallation(installation, annotations)
+		err = sqlStore.CreateInstallation(installation, annotations, nil)
 
 		clusterInstallation := &model.ClusterInstallation{
 			InstallationID: installation.ID,

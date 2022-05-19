@@ -9,6 +9,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
@@ -19,10 +20,10 @@ func TestValidateDBMigrationDestination(t *testing.T) {
 	defer store.CloseConnection(t, sqlStore)
 
 	installation := &model.Installation{
-		DNS:   "dns.com",
+		Name:   "dns",
 		State: model.InstallationStateStable,
 	}
-	err := sqlStore.CreateInstallation(installation, nil)
+	err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.com"))
 	require.NoError(t, err)
 
 	database := &model.MultitenantDatabase{

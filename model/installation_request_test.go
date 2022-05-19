@@ -183,6 +183,57 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 				Database:  "",
 			},
 		},
+		{
+			"new DNS format with name provided",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNSNames: []string{"my-installation.example.com"},
+				Name:     "my-installation",
+			},
+		},
+		{
+			"validate all DNS",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNSNames: []string{"my-installation.example.com", "invalid dns.example.com"},
+				Name:     "my-installation",
+			},
+		},
+		{
+			"name does not match DNS",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNSNames: []string{"my-installation.example.com", "some-installation.example.com"},
+				Name:     "some-installation",
+			},
+		},
+		{
+			"new DNS format without",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNSNames: []string{"my-installation.example.com"},
+			},
+		},
+		{
+			"no DNS provided",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNSNames: []string{},
+			},
+		},
+		{
+			"validate DNS provided as DNSNames",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				DNSNames: []string{"my invalid-dns.com"},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -214,15 +265,31 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 		model.SetRequireAnnotatedInstallations(false)
 	})
 
-	t.Run("convert DNS to lowercase", func(t *testing.T) {
+	t.Run("convert DNS and name to lowercase", func(t *testing.T) {
 		request := &model.CreateInstallationRequest{
-			OwnerID: "owner1",
-			DNS:     "AWesoMeDomaiN4321.cOM",
+			OwnerID:  "owner1",
+			DNS:      "AWesoMeDomaiN4321.cOM",
+			DNSNames: []string{"SOME-dnS123.COM"},
+			Name:     "My-INSTALLATION",
 		}
 
 		request.SetDefaults()
 
 		assert.Equal(t, "awesomedomain4321.com", request.DNS)
+		assert.Equal(t, "some-dns123.com", request.DNSNames[1])
+		assert.Equal(t, "my-installation", request.Name)
+	})
+
+	t.Run("set name based on dns and convert to DNSNames", func(t *testing.T) {
+		request := &model.CreateInstallationRequest{
+			OwnerID: "owner1",
+			DNS:     "my-installation.mattermost.cloud.com",
+		}
+
+		request.SetDefaults()
+
+		assert.Equal(t, "my-installation", request.Name)
+		assert.Equal(t, []string{"my-installation.mattermost.cloud.com"}, request.DNSNames)
 	})
 }
 
@@ -248,6 +315,8 @@ func TestCreateInstallationRequestFromReader(t *testing.T) {
 			"OwnerID":"owner",
 			"Version":"version",
 			"DNS":"dns4321.com",
+			"Name": "dns4321",
+			"DNSNames": ["dns4321.cloud.com","dns4321.io"],
 			"License": "this_is_my_license",
 			"MattermostEnv": {"key1": {"Value": "value1"}},
 			"Affinity":"multitenant"
@@ -258,6 +327,8 @@ func TestCreateInstallationRequestFromReader(t *testing.T) {
 			OwnerID:       "owner",
 			Version:       "version",
 			DNS:           "dns4321.com",
+			Name:          "dns4321",
+			DNSNames:      []string{"dns4321.cloud.com", "dns4321.io"},
 			License:       "this_is_my_license",
 			MattermostEnv: model.EnvVarMap{"key1": {Value: "value1"}},
 			Affinity:      "multitenant",

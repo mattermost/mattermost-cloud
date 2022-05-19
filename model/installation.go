@@ -32,7 +32,7 @@ type Installation struct {
 	GroupSequence              *int64 `json:"GroupSequence,omitempty"`
 	Version                    string
 	Image                      string
-	DNS                        string
+	Name                       string
 	Database                   string
 	Filestore                  string
 	License                    string
@@ -74,6 +74,7 @@ type InstallationFilter struct {
 	GroupID         string
 	State           string
 	DNS             string
+	Name            string
 }
 
 // Clone returns a deep copy the installation.
@@ -86,10 +87,16 @@ func (i *Installation) Clone() *Installation {
 }
 
 // ToDTO expands installation to InstallationDTO.
-func (i *Installation) ToDTO(annotations []*Annotation) *InstallationDTO {
+func (i *Installation) ToDTO(annotations []*Annotation, dnsRecords []*InstallationDNS) *InstallationDTO {
+	dns := ""
+	if len(dnsRecords) > 0 {
+		dns = dnsRecords[0].DomainName
+	}
 	return &InstallationDTO{
 		Installation: i,
 		Annotations:  annotations,
+		DNSRecords:   dnsRecords,
+		DNS:          dns,
 	}
 }
 

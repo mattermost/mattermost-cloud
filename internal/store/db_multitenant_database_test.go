@@ -40,14 +40,14 @@ func (s *TestMultitenantDatabaseSuite) SetupTest() {
 	s.sqlStore = MakeTestSQLStore(s.t, testlib.MakeLogger(s.t))
 
 	installations := []*model.Installation{
-		{DNS: "dns0.com"},
-		{DNS: "dns1.com"},
-		{DNS: "dns2.com"},
-		{DNS: "dns3.com"},
-		{DNS: "dns4.com"},
+		{Name: "test"},
+		{Name: "test2"},
+		{Name: "test3"},
+		{Name: "test4"},
+		{Name: "test5"},
 	}
 	for i := range installations {
-		err := s.sqlStore.CreateInstallation(installations[i], nil)
+		err := s.sqlStore.CreateInstallation(installations[i], nil, nil)
 		require.NoError(s.t, err)
 	}
 
@@ -281,21 +281,21 @@ func TestGetMultitenantDatabases_WeightCalculation(t *testing.T) {
 
 	// 2 + 6.75 = 8.75
 	installations := []*model.Installation{
-		{DNS: "test0.dns.com", State: model.InstallationStateStable},
-		{DNS: "test1.dns.com", State: model.InstallationStateStable},
-		{DNS: "test2.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test3.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test4.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test5.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test6.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test7.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test8.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test9.dns.com", State: model.InstallationStateHibernating},
-		{DNS: "test10.dns.com", State: model.InstallationStateHibernating},
+		{Name: "test", State: model.InstallationStateStable},
+		{Name: "test2", State: model.InstallationStateStable},
+		{Name: "test3", State: model.InstallationStateHibernating},
+		{Name: "test4", State: model.InstallationStateHibernating},
+		{Name: "test5", State: model.InstallationStateHibernating},
+		{Name: "test6", State: model.InstallationStateHibernating},
+		{Name: "test7", State: model.InstallationStateHibernating},
+		{Name: "test8", State: model.InstallationStateHibernating},
+		{Name: "test9", State: model.InstallationStateHibernating},
+		{Name: "test10", State: model.InstallationStateHibernating},
+		{Name: "test11", State: model.InstallationStateHibernating},
 	}
 	installationIDs := model.MultitenantDatabaseInstallations{}
 	for i := range installations {
-		err := sqlStore.CreateInstallation(installations[i], nil)
+		err := sqlStore.CreateInstallation(installations[i], nil, nil)
 		require.NoError(t, err)
 
 		installationIDs = append(installationIDs, installations[i].ID)
@@ -357,8 +357,8 @@ func TestDeleteMultitenantDatabase(t *testing.T) {
 	defer CloseConnection(t, sqlStore)
 
 	database1 := &model.MultitenantDatabase{
-		RdsClusterID:  "database_id0",
-		VpcID:         "vpc_id0",
+		RdsClusterID: "database_id0",
+		VpcID:        "vpc_id0",
 	}
 
 	err := sqlStore.CreateMultitenantDatabase(database1)

@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -64,7 +63,7 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 		return "", d.toSetupError(err)
 	}
 
-	logger.WithFields(logrus.Fields{
+	logger.WithFields(log.Fields{
 		"master-installation-id": d.masterInstallationID,
 		"slave-installation-id":  d.slaveInstallationID,
 	}).Info("Database migration setup completed")
@@ -104,7 +103,7 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 		return "", d.toTeardownError(err)
 	}
 
-	logger.WithFields(logrus.Fields{
+	logger.WithFields(log.Fields{
 		"master-installation-id": d.masterInstallationID,
 		"slave-installation-id":  d.slaveInstallationID,
 	}).Info("Database migration teardown completed")

@@ -5,14 +5,12 @@
 package store
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/pborman/uuid"
-
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -357,12 +355,10 @@ func setupHibernatingInstallation(t *testing.T, sqlStore *SQLStore) *model.Insta
 
 func setupInstallation(t *testing.T, sqlStore *SQLStore, state string) *model.Installation {
 	installation := &model.Installation{
+		Name:  uuid.New()[:5],
 		State: state,
-		DNS:   fmt.Sprintf("dns-%s", uuid.NewRandom().String()[:6]),
 	}
-
-	err := sqlStore.CreateInstallation(installation, nil)
-	require.NoError(t, err)
+	createAndCheckInstallation(t, sqlStore, installation)
 
 	return installation
 }
