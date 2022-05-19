@@ -23,6 +23,7 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		{"negative node counts", &model.CreateClusterRequest{NodeMinCount: -1, NodeMaxCount: -1}, true},
 		{"negative master count", &model.CreateClusterRequest{MasterCount: -1}, true},
 		{"mismatched node count", &model.CreateClusterRequest{NodeMinCount: 2, NodeMaxCount: 3}, true},
+		{"max pods too low", &model.CreateClusterRequest{MaxPodsPerNode: 1}, true},
 	}
 
 	for _, tc := range testCases {
@@ -48,6 +49,7 @@ func TestUpgradeClusterRequestValid(t *testing.T) {
 		{"valid version", &model.PatchUpgradeClusterRequest{Version: sToP("1.15.2")}, false},
 		{"invalid version", &model.PatchUpgradeClusterRequest{Version: sToP("invalid")}, true},
 		{"blank version", &model.PatchUpgradeClusterRequest{Version: sToP("")}, true},
+		{"max pods too low", &model.PatchUpgradeClusterRequest{MaxPodsPerNode: i64oP(1)}, true},
 	}
 
 	for _, tc := range testCases {
@@ -109,6 +111,22 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			&model.KopsMetadata{
 				ChangeRequest: &model.KopsMetadataRequestedState{
 					AMI: "image1",
+				},
+				RotatorRequest: &model.RotatorMetadata{},
+			},
+		},
+		{
+			"max pods only",
+			true,
+			&model.PatchUpgradeClusterRequest{
+				MaxPodsPerNode: i64oP(200),
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{},
+			},
+			&model.KopsMetadata{
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					MaxPodsPerNode: 200,
 				},
 				RotatorRequest: &model.RotatorMetadata{},
 			},

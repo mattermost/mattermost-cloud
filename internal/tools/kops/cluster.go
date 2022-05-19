@@ -221,6 +221,32 @@ func (c *Cmd) GetClustersJSON() (string, error) {
 	return trimmed, nil
 }
 
+// GetClusterJSON invokes kops get instancegroup, using the context of the
+// created Cmd, and returns the unmarshaled response as *Cluster.
+func (c *Cmd) GetClusterJSON(clusterName string) (*Cluster, error) {
+	stdout, _, err := c.run(
+		"get",
+		"cluster",
+		arg("name", clusterName),
+		arg("state", "s3://", c.s3StateStore),
+		arg("output", "json"),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to invoke kops get cluster")
+	}
+
+	var cluster *Cluster
+	err = json.Unmarshal(stdout, &cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal JSON output from kops get cluster")
+	}
+	if len(cluster.Metadata.Name) == 0 {
+		return nil, errors.New("the cluster metadata name value was empty")
+	}
+
+	return cluster, nil
+}
+
 // GetClusterSpecInfoFromJSON invokes kops get cluster, using the context of the created Cmd, and
 // returns the stdout.
 func (c *Cmd) GetClusterSpecInfoFromJSON(name string, subData string) (string, error) {

@@ -30,6 +30,7 @@ type CreateClusterRequest struct {
 	NodeInstanceType       string                         `json:"node-instance-type,omitempty"`
 	NodeMinCount           int64                          `json:"node-min-count,omitempty"`
 	NodeMaxCount           int64                          `json:"node-max-count,omitempty"`
+	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
 	AllowInstallations     bool                           `json:"allow-installations,omitempty"`
 	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
@@ -84,6 +85,9 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if request.NodeMaxCount == 0 {
 		request.NodeMaxCount = request.NodeMinCount
 	}
+	if request.MaxPodsPerNode == 0 {
+		request.MaxPodsPerNode = 200
+	}
 	if len(request.Networking) == 0 {
 		request.Networking = NetworkingCalico
 	}
@@ -109,6 +113,9 @@ func (request *CreateClusterRequest) Validate() error {
 	}
 	if request.NodeMaxCount != request.NodeMinCount {
 		return errors.Errorf("node min (%d) and max (%d) counts must match", request.NodeMinCount, request.NodeMaxCount)
+	}
+	if request.MaxPodsPerNode < 10 {
+		return errors.Errorf("max pods per node (%d) must be 10 or greater", request.MaxPodsPerNode)
 	}
 	// TODO: check zones and instance types?
 
@@ -181,15 +188,19 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 
 // PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
-	Version       *string        `json:"version,omitempty"`
-	KopsAMI       *string        `json:"kops-ami,omitempty"`
-	RotatorConfig *RotatorConfig `json:"rotatorConfig,omitempty"`
+	Version        *string        `json:"version,omitempty"`
+	KopsAMI        *string        `json:"kops-ami,omitempty"`
+	MaxPodsPerNode *int64         `json:"max-pods-per-node,omitempty"`
+	RotatorConfig  *RotatorConfig `json:"rotatorConfig,omitempty"`
 }
 
 // Validate validates the values of a cluster upgrade request.
 func (p *PatchUpgradeClusterRequest) Validate() error {
 	if p.Version != nil && !ValidClusterVersion(*p.Version) {
 		return errors.Errorf("unsupported cluster version %s", *p.Version)
+	}
+	if p.MaxPodsPerNode != nil && *p.MaxPodsPerNode < 10 {
+		return errors.Errorf("max pods per node (%d) must be 10 or greater", *p.MaxPodsPerNode)
 	}
 
 	if p.RotatorConfig != nil {
@@ -234,6 +245,10 @@ func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
 	if p.KopsAMI != nil && *p.KopsAMI != metadata.AMI {
 		applied = true
 		changes.AMI = *p.KopsAMI
+	}
+	if p.MaxPodsPerNode != nil && *p.MaxPodsPerNode != metadata.MaxPodsPerNode {
+		applied = true
+		changes.MaxPodsPerNode = *p.MaxPodsPerNode
 	}
 
 	if metadata.RotatorRequest == nil {

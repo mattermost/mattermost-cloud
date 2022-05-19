@@ -13,18 +13,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-// InstanceGroup is a kops instance group.
-type InstanceGroup struct {
-	Metadata InstanceGroupMetadata `json:"metadata"`
-	Spec     InstanceGroupSpec     `json:"spec"`
-}
-
-// InstanceGroupMetadata is the metadata of a kops instance group.
-type InstanceGroupMetadata struct {
+// ResourceMetadata is the metadata of a kops resource.
+type ResourceMetadata struct {
 	Name string `json:"name"`
 }
 
-// InstanceGroupSpec is the spec of a kops instance group.
+// Cluster is the configuration of a kops cluster.
+type Cluster struct {
+	Metadata ResourceMetadata `json:"metadata"`
+	Spec     ClusterSpec      `json:"spec"`
+}
+
+// ClusterSpec is the spec configuration of a kops cluster.
+type ClusterSpec struct {
+	Kubelet   ClusterSpecKubelet `json:"kubelet"`
+	NetworkID string             `json:"networkID"`
+}
+
+// ClusterSpecKubelet is the kubelet configuration of a kops cluster.
+type ClusterSpecKubelet struct {
+	MaxPods int64 `json:"maxPods"`
+}
+
+// InstanceGroup is the configuration of a kops instance group.
+type InstanceGroup struct {
+	Metadata ResourceMetadata  `json:"metadata"`
+	Spec     InstanceGroupSpec `json:"spec"`
+}
+
+// InstanceGroupSpec is the spec configuration of a kops instance group.
 type InstanceGroupSpec struct {
 	Role        string `json:"role"`
 	Image       string `json:"image"`
@@ -126,22 +143,25 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 		c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 	}
 
+	cluster, err := c.GetClusterJSON(metadata.Name)
+	if err != nil {
+		return err
+	}
+
 	networking, err := c.GetClusterSpecInfoFromJSON(metadata.Name, "networking")
 	if err != nil {
 		return err
 	}
-	vpc, err := c.GetClusterSpecInfoFromJSON(metadata.Name, "networkID")
-	if err != nil {
-		return err
-	}
+
 	metadata.AMI = AMI
 	metadata.MasterInstanceType = masterMachineType
 	metadata.MasterCount = masterIGCount
 	metadata.NodeInstanceType = nodeMachineType
 	metadata.NodeMinCount = nodeMinCount
 	metadata.NodeMaxCount = nodeMaxCount
+	metadata.MaxPodsPerNode = cluster.Spec.Kubelet.MaxPods
+	metadata.VPC = cluster.Spec.NetworkID
 	metadata.Networking = GetCurrentCni(networking)
-	metadata.VPC = strings.Trim(vpc, "\"")
 
 	return nil
 }
