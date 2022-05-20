@@ -1932,4 +1932,20 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.35.0"), semver.MustParse("0.36.0"), func(e execer) error {
+		// Add GroupAnnotation table.
+
+		_, err := e.Exec(`
+			CREATE TABLE GroupAnnotation (
+				ID TEXT PRIMARY KEY,
+				GroupID TEXT NOT NULL,
+				AnnotationID TEXT NOT NULL
+			);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

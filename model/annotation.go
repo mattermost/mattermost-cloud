@@ -41,16 +41,24 @@ func AnnotationsFromStringSlice(names []string) ([]*Annotation, error) {
 
 	annotations := make([]*Annotation, 0, len(names))
 	for _, n := range names {
-		if len(n) < annotationMinLen || len(n) > annotationMaxLen {
-			return nil, fmt.Errorf("annotation '%s' is invalid: annotations must be between %d and %d characters long", n, annotationMinLen, annotationMaxLen)
-		}
-		if !annotationRegex.MatchString(n) {
-			return nil, fmt.Errorf("annotation '%s' is invalid: %s", n, annotationAllowedFormat)
+		err := validateAnnotationName(n)
+		if err != nil {
+			return nil, err
 		}
 		annotations = append(annotations, &Annotation{Name: n})
 	}
 
 	return annotations, nil
+}
+
+func validateAnnotationName(name string) error {
+	if len(name) < annotationMinLen || len(name) > annotationMaxLen {
+		return fmt.Errorf("annotation '%s' is invalid: annotations must be between %d and %d characters long", name, annotationMinLen, annotationMaxLen)
+	}
+	if !annotationRegex.MatchString(name) {
+		return fmt.Errorf("annotation '%s' is invalid: %s", name, annotationAllowedFormat)
+	}
+	return nil
 }
 
 // SortAnnotations sorts annotations by name alphabetically.
@@ -59,6 +67,15 @@ func SortAnnotations(annotations []*Annotation) []*Annotation {
 		return annotations[i].Name < annotations[j].Name
 	})
 	return annotations
+}
+
+// GetAnnotationsIDs gets IDs of annotations.
+func GetAnnotationsIDs(annotations []*Annotation) []string {
+	ids := make([]string, 0, len(annotations))
+	for _, ann := range annotations {
+		ids = append(ids, ann.ID)
+	}
+	return ids
 }
 
 // NewAddAnnotationsRequestFromReader will create a AddAnnotationsRequest from an

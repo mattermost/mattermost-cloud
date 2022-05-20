@@ -38,6 +38,7 @@ func init() {
 	installationCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationCreateCmd.Flags().StringArray("priority-env", []string{}, "Env vars to add to the Mattermost App that take priority over group config. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	installationCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+	installationCreateCmd.Flags().StringArray("group-selection-annotation", []string{}, "Annotations for automatic group selection. Accepts multiple values, for example: '... --group-selection-annotation abc --group-selection-annotation def'")
 	installationCreateCmd.Flags().String("rds-primary-instance", "", "The machine instance type used for primary replica of database cluster. Works only with single tenant RDS databases.")
 	installationCreateCmd.Flags().String("rds-replica-instance", "", "The machine instance type used for reader replicas of database cluster. Works only with single tenant RDS databases.")
 	installationCreateCmd.Flags().Int("rds-replicas-count", 0, "The number of reader replicas of database cluster. Min: 0, Max: 15. Works only with single tenant RDS databases.")
@@ -143,6 +144,7 @@ var installationCreateCmd = &cobra.Command{
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 		priorityEnv, _ := command.Flags().GetStringArray("priority-env")
 		annotations, _ := command.Flags().GetStringArray("annotation")
+		groupSelectionAnnotations, _ := command.Flags().GetStringArray("group-selection-annotation")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
 		if err != nil {
@@ -154,19 +156,20 @@ var installationCreateCmd = &cobra.Command{
 		}
 
 		request := &model.CreateInstallationRequest{
-			Name:          name,
-			OwnerID:       ownerID,
-			GroupID:       groupID,
-			Version:       version,
-			Image:         image,
-			Size:          size,
-			License:       license,
-			Affinity:      affinity,
-			Database:      database,
-			Filestore:     filestore,
-			MattermostEnv: envVarMap,
-			PriorityEnv:   priorityEnvVarMap,
-			Annotations:   annotations,
+			Name:                      name,
+			OwnerID:                   ownerID,
+			GroupID:                   groupID,
+			Version:                   version,
+			Image:                     image,
+			Size:                      size,
+			License:                   license,
+			Affinity:                  affinity,
+			Database:                  database,
+			Filestore:                 filestore,
+			MattermostEnv:             envVarMap,
+			PriorityEnv:               priorityEnvVarMap,
+			Annotations:               annotations,
+			GroupSelectionAnnotations: groupSelectionAnnotations,
 		}
 		// For CLI to be backward compatible, if only one DNS is passed we use
 		// the old field.

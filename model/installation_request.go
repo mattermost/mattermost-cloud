@@ -44,17 +44,18 @@ type CreateInstallationRequest struct {
 	Version string
 	Image   string
 	// Deprecated: Use DNSNames instead.
-	DNS             string
-	DNSNames        []string
-	License         string
-	Size            string
-	Affinity        string
-	Database        string
-	Filestore       string
-	APISecurityLock bool
-	MattermostEnv   EnvVarMap
-	PriorityEnv     EnvVarMap
-	Annotations     []string
+	DNS                       string
+	DNSNames                  []string
+	License                   string
+	Size                      string
+	Affinity                  string
+	Database                  string
+	Filestore                 string
+	APISecurityLock           bool
+	MattermostEnv             EnvVarMap
+	PriorityEnv               EnvVarMap
+	Annotations               []string
+	GroupSelectionAnnotations []string
 	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
 	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
 }
@@ -144,6 +145,13 @@ func (request *CreateInstallationRequest) Validate() error {
 	if requireAnnotatedInstallations {
 		if len(request.Annotations) == 0 {
 			return errors.Errorf("at least one annotation is required")
+		}
+	}
+
+	for _, ann := range request.GroupSelectionAnnotations {
+		err := validateAnnotationName(ann)
+		if err != nil {
+			return errors.Wrap(err, "invalid group selection annotation")
 		}
 	}
 

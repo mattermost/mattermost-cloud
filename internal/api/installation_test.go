@@ -553,6 +553,71 @@ func TestCreateInstallation(t *testing.T) {
 		})
 	})
 
+	t.Run("group selection based on annotations", func(t *testing.T) {
+		model.SetDeployOperators(true, true)
+
+		group, err := client.CreateGroup(&model.CreateGroupRequest{
+			Name:        "group-selection1",
+			Annotations: []string{"group-ann1", "group-ann2"},
+		})
+		require.NoError(t, err)
+
+		t.Run("ignore annotation when group set", func(t *testing.T) {
+			installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:                   "owner",
+				GroupID:                   group.ID,
+				DNS:                       "dns-g1.example.com",
+				GroupSelectionAnnotations: []string{"not-matching-annotation"},
+			})
+			require.NoError(t, err)
+			assert.Equal(t, group.ID, *installation.GroupID)
+		})
+
+		t.Run("error when annotation does not exist", func(t *testing.T) {
+			_, err = client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:                   "owner",
+				DNS:                       "dns-g2.example.com",
+				GroupSelectionAnnotations: []string{"not-matching-annotation"},
+			})
+			require.Error(t, err)
+			require.EqualError(t, err, "failed with status code 400")
+		})
+
+		t.Run("error when group with annotations not found", func(t *testing.T) {
+			err = sqlStore.CreateAnnotation(&model.Annotation{
+				Name: "group-annotation1",
+			})
+			require.NoError(t, err)
+
+			_, err = client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:                   "owner",
+				DNS:                       "dns-g3.example.com",
+				GroupSelectionAnnotations: []string{"group-annotation1"},
+			})
+			require.Error(t, err)
+			require.EqualError(t, err, "failed with status code 400")
+
+			_, err = client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:                   "owner",
+				DNS:                       "dns-g3.example.com",
+				GroupSelectionAnnotations: []string{"group-annotation1", "group-ann1"},
+			})
+			require.Error(t, err)
+			require.EqualError(t, err, "failed with status code 400")
+		})
+
+		t.Run("select group based on annotations", func(t *testing.T) {
+			installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:                   "owner",
+				DNS:                       "dns-g4.example.com",
+				GroupSelectionAnnotations: []string{"group-ann1", "group-ann2"},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, installation.GroupID)
+			require.Equal(t, group.ID, *installation.GroupID)
+		})
+	})
+
 	t.Run("handle annotations", func(t *testing.T) {
 		annotations := []*model.Annotation{
 			{ID: "", Name: "multi-tenant"},

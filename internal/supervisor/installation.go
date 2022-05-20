@@ -382,7 +382,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		return model.InstallationStateCreationRequested
 	}
 	if len(annotations) > 0 {
-		clusterFilter.Annotations = &model.AnnotationsFilter{MatchAllIDs: getAnnotationsIDs(annotations)}
+		clusterFilter.Annotations = &model.AnnotationsFilter{MatchAllIDs: model.GetAnnotationsIDs(annotations)}
 	}
 
 	// Proceed to requesting cluster installation creation on any available clusters.
@@ -1554,14 +1554,6 @@ func getInstallationDBMigrationOperationIDs(operations []*model.InstallationDBMi
 	ids := make([]string, 0, len(operations))
 	for _, op := range operations {
 		ids = append(ids, op.ID)
-	}
-	return ids
-}
-
-func getAnnotationsIDs(annotations []*model.Annotation) []string {
-	ids := make([]string, 0, len(annotations))
-	for _, ann := range annotations {
-		ids = append(ids, ann.ID)
 	}
 	return ids
 }

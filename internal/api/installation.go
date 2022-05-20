@@ -5,7 +5,10 @@
 package api
 
 import (
+	"math/rand"
 	"net/http"
+
+	"github.com/mattermost/mattermost-cloud/internal/common"
 
 	"github.com/pkg/errors"
 
@@ -160,10 +163,20 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var group *model.Group
-	var status int
+	if createInstallationRequest.GroupID == "" && len(createInstallationRequest.GroupSelectionAnnotations) > 0 {
+		groupID, err := selectGroupForAnnotation(c, createInstallationRequest.GroupSelectionAnnotations)
+		if err != nil {
+			c.Logger.WithError(err).Error("Failed to select group based on annotations")
+			w.WriteHeader(common.ErrToStatus(err))
+			return
+		}
+		createInstallationRequest.GroupID = groupID
+	}
+
+	var group *model.GroupDTO
 	groupUnlockOnce := func() {}
 	if len(createInstallationRequest.GroupID) != 0 {
+		var status int
 		group, status, groupUnlockOnce = lockGroup(c, createInstallationRequest.GroupID)
 		if status != 0 {
 			w.WriteHeader(status)
@@ -205,7 +218,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 
 	annotations, err := model.AnnotationsFromStringSlice(createInstallationRequest.Annotations)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to validate extra annotations")
+		c.Logger.WithError(err).Error("Failed to validate extra annotations")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -228,6 +241,34 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, installation.ToDTO(annotations, dnsRecords))
+}
+
+func selectGroupForAnnotation(c *Context, annotations []string) (string, error) {
+	groupAnnotations, err := c.Store.GetAnnotationsByName(annotations)
+	if err != nil {
+		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed get annotations by name")
+	}
+	if len(groupAnnotations) != len(annotations) {
+		return "", common.NewErr(http.StatusBadRequest, errors.New("some annotations for group selection do no exist"))
+	}
+
+	groups, err := c.Store.GetGroupDTOs(&model.GroupFilter{
+		Paging: model.AllPagesNotDeleted(),
+		Annotations: &model.AnnotationsFilter{
+			MatchAllIDs: model.GetAnnotationsIDs(groupAnnotations),
+		},
+	})
+	if err != nil {
+		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed to get groups with annotations")
+	}
+	if len(groups) == 0 {
+		return "", common.NewErr(http.StatusBadRequest, errors.New("no group matching all annotations found"))
+	}
+
+	// Pick randomly for now
+	selectedGroup := groups[rand.Intn(len(groups))]
+
+	return selectedGroup.ID, nil
 }
 
 // handleRetryCreateInstallation responds to POST /api/installation/{installation}, retrying a

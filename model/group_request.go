@@ -21,6 +21,7 @@ type CreateGroupRequest struct {
 	MaxRolling      int64
 	APISecurityLock bool
 	MattermostEnv   EnvVarMap
+	Annotations     []string
 }
 
 // Validate validates the values of a group create request.

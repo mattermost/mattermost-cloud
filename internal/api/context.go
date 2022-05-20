@@ -54,9 +54,11 @@ type Store interface {
 	LockClusterInstallationAPI(clusterInstallationID string) error
 	UnlockClusterInstallationAPI(clusterInstallationID string) error
 
-	CreateGroup(group *model.Group) error
+	CreateGroup(group *model.Group, annotations []*model.Annotation) error
 	GetGroup(groupID string) (*model.Group, error)
+	GetGroupDTO(groupID string) (*model.GroupDTO, error)
 	GetGroups(filter *model.GroupFilter) ([]*model.Group, error)
+	GetGroupDTOs(filter *model.GroupFilter) ([]*model.GroupDTO, error)
 	UpdateGroup(group *model.Group, forceSequenceUpdate bool) error
 	LockGroup(groupID, lockerID string) (bool, error)
 	UnlockGroup(groupID, lockerID string, force bool) (bool, error)
@@ -71,6 +73,7 @@ type Store interface {
 	DeleteWebhook(webhookID string) error
 
 	GetOrCreateAnnotations(annotations []*model.Annotation) ([]*model.Annotation, error)
+	GetAnnotationsByName(names []string) ([]*model.Annotation, error)
 
 	CreateClusterAnnotations(clusterID string, annotations []*model.Annotation) ([]*model.Annotation, error)
 	DeleteClusterAnnotation(clusterID string, annotationName string) error

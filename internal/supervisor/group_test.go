@@ -175,7 +175,7 @@ func TestGroupSupervisor(t *testing.T) {
 		)
 
 		group := standardGroup()
-		err := sqlStore.CreateGroup(group)
+		err := sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		supervisor.Supervise(group)
@@ -194,7 +194,7 @@ func TestGroupSupervisor(t *testing.T) {
 		)
 
 		group := standardGroup()
-		err := sqlStore.CreateGroup(group)
+		err := sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -229,7 +229,7 @@ func TestGroupSupervisor(t *testing.T) {
 
 		group := standardGroup()
 		group.MaxRolling = 10
-		err := sqlStore.CreateGroup(group)
+		err := sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -289,7 +289,7 @@ func TestGroupSupervisor(t *testing.T) {
 		)
 
 		group := standardGroup()
-		err := sqlStore.CreateGroup(group)
+		err := sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -324,7 +324,7 @@ func TestGroupSupervisor(t *testing.T) {
 			)
 
 			group := standardGroup()
-			err := sqlStore.CreateGroup(group)
+			err := sqlStore.CreateGroup(group, nil)
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Millisecond)
@@ -373,7 +373,7 @@ func TestGroupSupervisor(t *testing.T) {
 			)
 
 			group := standardGroup()
-			err := sqlStore.CreateGroup(group)
+			err := sqlStore.CreateGroup(group, nil)
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Millisecond)
