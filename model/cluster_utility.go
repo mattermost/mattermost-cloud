@@ -31,6 +31,8 @@ const (
 	KubecostCanonicalName = "kubecost"
 	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
 	NodeProblemDetectorCanonicalName = "node-problem-detector"
+	// MetricsServerCanonicalName is the canonical string representation of metrics server
+	MetricsServerCanonicalName = "metrics-server"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -53,26 +55,28 @@ func GetGitlabToken() string {
 
 // DefaultUtilityVersions holds the default values for all the HelmUtilityVersions
 var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtilityVersion{
-	// PrometheusOperatorDefaultVersion defines the default version for the Helm chart
+	// PrometheusOperatorCanonicalName defines the default version and values path for the Helm chart
 	PrometheusOperatorCanonicalName: {Chart: "34.6.0", ValuesPath: ""},
-	// ThanosDefaultVersion defines the default version for the Helm chart
+	// ThanosCanonicalName defines the default version and values path for the Helm chart
 	ThanosCanonicalName: {Chart: "10.3.1", ValuesPath: ""},
-	// NginxDefaultVersion defines the default version for the Helm chart
+	// NginxCanonicalName defines the default version and values path for the Helm chart
 	NginxCanonicalName: {Chart: "4.0.18", ValuesPath: ""},
-	// NginxInternalDefaultVersion defines the default version for the Helm chart
+	// NginxInternalCanonicalName defines the default version and values path for the Helm chart
 	NginxInternalCanonicalName: {Chart: "4.0.18", ValuesPath: ""},
-	// FluentbitDefaultVersion defines the default version for the Helm chart
+	// FluentbitCanonicalName defines the default version and values path for the Helm chart
 	FluentbitCanonicalName: {Chart: "0.17.0", ValuesPath: ""},
-	// TeleportDefaultVersion defines the default version for the Helm chart
+	// TeleportCanonicalName defines the default version and values path for the Helm chart
 	TeleportCanonicalName: {Chart: "6.2.8", ValuesPath: ""},
-	// PgbouncerDefaultVersion defines the default version for the Helm chart
+	// PgbouncerCanonicalName defines the default version and values path for the Helm chart
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
-	// PromtailDefaultVersion defines the default version for the Helm chart
+	// PromtailCanonicalName defines the default version and values path for the Helm chart
 	PromtailCanonicalName: {Chart: "4.2.0", ValuesPath: ""},
-	// KubecostDefaultVersion defines the default version for the Helm chart
+	// KubecostCanonicalName defines the default version and values path for the Helm chart
 	KubecostCanonicalName: {Chart: "1.88.1", ValuesPath: ""},
-	// NodeProblemDetectorDefaultVersion defines the default version for the Helm chart
+	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
 	NodeProblemDetectorCanonicalName: {Chart: "2.0.5", ValuesPath: ""},
+	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
+	MetricsServerCanonicalName: {Chart: "3.8.2", ValuesPath: ""},
 }
 
 var defaultUtilityValuesFileNames map[string]string = map[string]string{
@@ -86,6 +90,7 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	PromtailCanonicalName:            "promtail_values.yaml",
 	KubecostCanonicalName:            "kubecost_values.yaml",
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
+	MetricsServerCanonicalName:       "metrics_server_values.yaml",
 }
 
 var (
@@ -128,6 +133,7 @@ type UtilityGroupVersions struct {
 	Promtail            *HelmUtilityVersion
 	Kubecost            *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
+	MetricsServer       *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -145,6 +151,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		PromtailCanonicalName:            h.Promtail,
 		KubecostCanonicalName:            h.Kubecost,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
+		MetricsServerCanonicalName:       h.MetricsServer,
 	}
 }
 
@@ -275,6 +282,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Kubecost = desiredVersion
 	case NodeProblemDetectorCanonicalName:
 		versions.NodeProblemDetector = desiredVersion
+	case MetricsServerCanonicalName:
+		versions.MetricsServer = desiredVersion
 	}
 }
 

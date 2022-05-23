@@ -41,6 +41,7 @@ func init() {
 	clusterCreateCmd.Flags().String("promtail-version", "", "The version of Promtail to provision. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("metrics-server-version", "", "The version of Metrics Server. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", "", "The full Git URL of the desired chart value file's version for Fluent-Bit")
@@ -51,6 +52,7 @@ func init() {
 	clusterCreateCmd.Flags().String("promtail-values", "", "The full Git URL of the desired chart value file's version for Promtail")
 	clusterCreateCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired chart value file's version for Kubecost")
 	clusterCreateCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart value file's version for Node Problem Detector")
+	clusterCreateCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart value file's version for Metrics Server")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
@@ -68,6 +70,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("promtail-version", "", "The version of the Promtail Helm chart")
 	clusterProvisionCmd.Flags().String("kubecost-version", "", "The version of the Kubecost Helm chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-version", "", "The version of the Node Problem Detector Helm chart")
+	clusterProvisionCmd.Flags().String("metrics-server-version", "", "The version of the Metrics Server Helm chart")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
@@ -79,6 +82,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("promtail-values", "", "The full Git URL of the desired chart values for Promtail")
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired Kubecost chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for the Node Problem Detector")
+	clusterProvisionCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart values for the Metrics Server")
 	clusterProvisionCmd.Flags().Bool("reprovision-all-utilities", false, "Set to true if all utilities should be reprovisioned and not just ones with new versions")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
@@ -650,5 +654,8 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 		model.NodeProblemDetectorCanonicalName: {
 			Chart:      MustGetString("node-problem-detector-version", command),
 			ValuesPath: MustGetString("node-problem-detector-values", command)},
+		model.MetricsServerCanonicalName: {
+			Chart:      MustGetString("metrics-server-version", command),
+			ValuesPath: MustGetString("metrics-server-values", command)},
 	}
 }
