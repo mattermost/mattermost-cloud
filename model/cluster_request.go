@@ -30,13 +30,13 @@ type CreateClusterRequest struct {
 	NodeInstanceType       string                         `json:"node-instance-type,omitempty"`
 	NodeMinCount           int64                          `json:"node-min-count,omitempty"`
 	NodeMaxCount           int64                          `json:"node-max-count,omitempty"`
-	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
 	AllowInstallations     bool                           `json:"allow-installations,omitempty"`
 	APISecurityLock        bool                           `json:"api-security-lock,omitempty"`
 	DesiredUtilityVersions map[string]*HelmUtilityVersion `json:"utility-versions,omitempty"`
 	Annotations            []string                       `json:"annotations,omitempty"`
 	Networking             string                         `json:"networking,omitempty"`
 	VPC                    string                         `json:"vpc,omitempty"`
+	MaxPodsPerNode         int64
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -190,8 +190,8 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 type PatchUpgradeClusterRequest struct {
 	Version        *string        `json:"version,omitempty"`
 	KopsAMI        *string        `json:"kops-ami,omitempty"`
-	MaxPodsPerNode *int64         `json:"max-pods-per-node,omitempty"`
 	RotatorConfig  *RotatorConfig `json:"rotatorConfig,omitempty"`
+	MaxPodsPerNode *int64
 }
 
 // Validate validates the values of a cluster upgrade request.
