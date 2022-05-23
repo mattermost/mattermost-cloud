@@ -146,6 +146,8 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		cluster, provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
+	}
+
 	velero, err := newVeleroHandle(
 		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
 		provisioner, kops, logger)
