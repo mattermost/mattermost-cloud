@@ -198,7 +198,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Promtail:            &HelmUtilityVersion{Chart: "123456"},
 				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
-				MetricsServer:       &HelmUtilityVersion{Chart: "123456789"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
