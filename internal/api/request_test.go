@@ -23,6 +23,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeInstanceType:   "m5.large",
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
+			MaxPodsPerNode:     200,
 			Zones:              []string{"us-east-1a"},
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
@@ -89,6 +90,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeInstanceType:   "m5.large",
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
+			MaxPodsPerNode:     200,
 			Zones:              []string{"zone1", "zone2"},
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{

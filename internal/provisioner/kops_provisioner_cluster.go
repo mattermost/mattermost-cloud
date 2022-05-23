@@ -149,15 +149,24 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	// TODO: read from config file
 	logger.Info("Updating kubelet options")
+
 	setValue := "spec.kubelet.authenticationTokenWebhook=true"
 	err = kops.SetCluster(kopsMetadata.Name, setValue)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to set %s", setValue)
 	}
 	setValue = "spec.kubelet.authorizationMode=Webhook"
 	err = kops.SetCluster(kopsMetadata.Name, setValue)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	if kopsMetadata.ChangeRequest.MaxPodsPerNode != 0 {
+		logger.Infof("Updating max pods per node to %d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		setValue = fmt.Sprintf("spec.kubelet.maxPods=%d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
@@ -620,15 +629,24 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	// TODO: read from config file
 	// TODO: check if those configs are already or remove this when we update all clusters
 	logger.Info("Updating kubelet options")
+
 	setValue := "spec.kubelet.authenticationTokenWebhook=true"
 	err = kops.SetCluster(kopsMetadata.Name, setValue)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to set %s", setValue)
 	}
 	setValue = "spec.kubelet.authorizationMode=Webhook"
 	err = kops.SetCluster(kopsMetadata.Name, setValue)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	if kopsMetadata.ChangeRequest.MaxPodsPerNode != 0 {
+		logger.Infof("Updating max pods per node to %d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		setValue = fmt.Sprintf("spec.kubelet.maxPods=%d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
