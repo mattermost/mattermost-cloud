@@ -29,7 +29,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
-				"prometheus-operator":   {Chart: "34.6.0", ValuesPath: ""},
+				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
 				"thanos":                {Chart: "10.3.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "6.2.8", ValuesPath: ""},
 				"pgbouncer":             {Chart: "1.2.0", ValuesPath: ""},
@@ -37,6 +37,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"rtcd":                  {Chart: "1.0.0", ValuesPath: ""},
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
+				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
 			},
 		}
 	}
@@ -95,7 +96,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
-				"prometheus-operator":   {Chart: "34.6.0", ValuesPath: ""},
+				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
 				"thanos":                {Chart: "10.3.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "6.2.8", ValuesPath: ""},
 				"pgbouncer":             {Chart: "1.2.0", ValuesPath: ""},
@@ -103,6 +104,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"rtcd":                  {Chart: "1.0.0", ValuesPath: ""},
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
+				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
 			},
 		}, clusterRequest)
 	})

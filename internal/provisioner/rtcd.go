@@ -105,8 +105,8 @@ func (p *rtcd) Migrate() error {
 
 func (p *rtcd) NewHelmDeployment() *helmDeployment {
 	return &helmDeployment{
-		chartDeploymentName: "rtcd",
-		chartName:           "mattermost/rtcd",
+		chartDeploymentName: "mattermost-rtcd",
+		chartName:           "mattermost/mattermost-rtcd",
 		namespace:           "mattermost-rtcd",
 		kopsProvisioner:     p.provisioner,
 		kops:                p.kops,

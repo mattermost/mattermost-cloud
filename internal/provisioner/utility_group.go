@@ -68,6 +68,7 @@ var helmRepos = map[string]string{
 	"grafana":              "https://grafana.github.io/helm-charts",
 	"kubecost":             "https://kubecost.github.io/cost-analyzer/",
 	"deliveryhero":         "https://charts.deliveryhero.io/",
+	"metrics-server":       "https://kubernetes-sigs.github.io/metrics-server/",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
@@ -139,6 +140,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Kubecost")
 	}
+
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
 		cluster, provisioner, kops, logger)
@@ -146,10 +148,17 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
 
+	metricsServer, err := newMetricsServerHandle(
+		cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName),
+		cluster, provisioner, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
+	}
+
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, rtcd, kubecost, nodeProblemDetector},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,

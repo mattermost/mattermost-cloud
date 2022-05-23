@@ -34,6 +34,7 @@ func TestGetUtilityVersion(t *testing.T) {
 		Nginx:               &HelmUtilityVersion{Chart: "5"},
 		Fluentbit:           &HelmUtilityVersion{Chart: "6"},
 		NodeProblemDetector: &HelmUtilityVersion{Chart: "7"},
+		MetricsServer:       &HelmUtilityVersion{Chart: "8"},
 	}
 
 	assert.Equal(t, &HelmUtilityVersion{Chart: "3"}, getUtilityVersion(u, PrometheusOperatorCanonicalName))
@@ -41,6 +42,7 @@ func TestGetUtilityVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "5"}, getUtilityVersion(u, NginxCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "6"}, getUtilityVersion(u, FluentbitCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "7"}, getUtilityVersion(u, NodeProblemDetectorCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "8"}, getUtilityVersion(u, MetricsServerCanonicalName))
 	assert.Equal(t, nilHuv, getUtilityVersion(u, "anything else"))
 }
 
@@ -133,6 +135,7 @@ func TestGetActualVersion(t *testing.T) {
 				Rtcd:                &HelmUtilityVersion{Chart: "123456"},
 				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -145,6 +148,7 @@ func TestGetActualVersion(t *testing.T) {
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.0.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.2"},
 			},
 		},
 	}
@@ -179,6 +183,9 @@ func TestGetActualVersion(t *testing.T) {
 	version = c.ActualUtilityVersion(NodeProblemDetectorCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"}, version)
 
+	version = c.ActualUtilityVersion(MetricsServerCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "metrics-server-3.8.2"}, version)
+
 	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, version, nilHuv)
 }
@@ -197,6 +204,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Rtcd:                &HelmUtilityVersion{Chart: "123456"},
 				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -209,6 +217,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.0.0"},
 				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.88.1"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
+				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.2"},
 			},
 		},
 	}
@@ -242,6 +251,9 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion(NodeProblemDetectorCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "123456789"}, version)
+
+	version = c.DesiredUtilityVersion(MetricsServerCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "1234567899"}, version)
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, nilHuv, version)

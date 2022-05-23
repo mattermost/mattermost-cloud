@@ -364,9 +364,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			Path:            "manifests/bifrost/bifrost.yaml",
 			DeployNamespace: bifrostNamespace,
 		}, {
-			Path:            "manifests/metric-server/metric-server.yaml",
-			DeployNamespace: "kube-system",
-		}, {
 			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
 			DeployNamespace: "kube-system",
 		},
