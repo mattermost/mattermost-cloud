@@ -160,11 +160,13 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	if err != nil {
 		return errors.Wrapf(err, "failed to set %s", setValue)
 	}
-	logger.Infof("Updating max pods per node to %d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
-	setValue = fmt.Sprintf("spec.kubelet.maxPods=%d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
+	if kopsMetadata.ChangeRequest.MaxPodsPerNode != 0 {
+		logger.Infof("Updating max pods per node to %d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		setValue = fmt.Sprintf("spec.kubelet.maxPods=%d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
@@ -641,11 +643,13 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	if err != nil {
 		return errors.Wrapf(err, "failed to set %s", setValue)
 	}
-	logger.Infof("Updating max pods per node to %d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
-	setValue = fmt.Sprintf("spec.kubelet.maxPods=%d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
+	if kopsMetadata.ChangeRequest.MaxPodsPerNode != 0 {
+		logger.Infof("Updating max pods per node to %d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		setValue = fmt.Sprintf("spec.kubelet.maxPods=%d", kopsMetadata.ChangeRequest.MaxPodsPerNode)
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
