@@ -255,3 +255,37 @@ func TestAnnotations_Installation(t *testing.T) {
 		assert.Equal(t, len(annotations)+len(newAnnotations), len(annotationsForInstallation))
 	})
 }
+
+func TestAnnotations_GetAnnotationsByName(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	annotation1 := model.Annotation{Name: "annotation1"}
+	annotation2 := model.Annotation{Name: "annotation2"}
+
+	err := sqlStore.CreateAnnotation(&annotation1)
+	require.NoError(t, err)
+	err = sqlStore.CreateAnnotation(&annotation2)
+	require.NoError(t, err)
+
+	t.Run("get all existing annotations", func(t *testing.T) {
+		annotations, err := sqlStore.GetAnnotationsByName([]string{"annotation1", "annotation2"})
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []*model.Annotation{&annotation1, &annotation2}, annotations)
+	})
+
+	t.Run("try getting not existing annotations", func(t *testing.T) {
+		annotations, err := sqlStore.GetAnnotationsByName([]string{"none1", "none2"})
+		require.NoError(t, err)
+		assert.Empty(t, annotations)
+	})
+
+	t.Run("try getting existing and not existing annotations", func(t *testing.T) {
+		annotations, err := sqlStore.GetAnnotationsByName([]string{"annotation1", "annotation2", "none1", "none2"})
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(annotations))
+		assert.ElementsMatch(t, []*model.Annotation{&annotation1, &annotation2}, annotations)
+	})
+
+}

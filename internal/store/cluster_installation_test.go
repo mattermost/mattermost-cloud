@@ -655,7 +655,7 @@ func TestSwitchDNS(t *testing.T) {
 			"Key1": model.EnvVar{Value: "Value1"},
 		},
 	}
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 	groupID1 := group1.ID
 

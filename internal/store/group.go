@@ -6,10 +6,15 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
+)
+
+const (
+	groupTable = `"Group"`
 )
 
 var groupSelect sq.SelectBuilder
@@ -23,10 +28,10 @@ type rawGroups []*rawGroup
 
 func init() {
 	groupSelect = sq.
-		Select("ID", "Name", "Description", "Version", "Image", "Sequence",
+		Select(`"Group".ID`, `"Group".Name`, "Description", "Version", "Image", "Sequence",
 			"CreateAt", "DeleteAt", "MattermostEnvRaw", "MaxRolling",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt").
-		From(`"Group"`)
+		From(groupTable)
 }
 
 func (r *rawGroup) toGroup() (*model.Group, error) {
@@ -284,7 +289,7 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 	builder := groupSelect.
 		OrderBy("CreateAt ASC")
 
-	builder = applyPagingFilter(builder, filter.Paging)
+	builder = applyGroupsFilter(builder, filter)
 
 	var rawGroups rawGroups
 	err := sqlStore.selectBuilder(sqlStore.db, &rawGroups, builder)
@@ -295,8 +300,57 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 	return rawGroups.toGroups()
 }
 
+func applyGroupsFilter(builder sq.SelectBuilder, filter *model.GroupFilter) sq.SelectBuilder {
+	if filter == nil {
+		return builder
+	}
+
+	builder = applyPagingFilter(builder, filter.Paging)
+
+	if filter.Annotations != nil && len(filter.Annotations.MatchAllIDs) > 0 {
+		builder = builder.Join(fmt.Sprintf(`%s ON "Group".ID=%s.GroupID`, groupAnnotationTable, groupAnnotationTable)).
+			Where(sq.Eq{fmt.Sprintf("%s.AnnotationID", groupAnnotationTable): filter.Annotations.MatchAllIDs}).
+			GroupBy(`"Group".ID`).
+			Having(fmt.Sprintf("count(DISTINCT %s.AnnotationID) = ?", groupAnnotationTable), len(filter.Annotations.MatchAllIDs))
+	}
+
+	return builder
+}
+
 // CreateGroup records the given group to the database, assigning it a unique ID.
-func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
+func (sqlStore *SQLStore) CreateGroup(group *model.Group, annotations []*model.Annotation) error {
+	tx, err := sqlStore.beginTransaction(sqlStore.db)
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.RollbackUnlessCommitted()
+
+	err = sqlStore.createGroup(tx, group)
+	if err != nil {
+		return err
+	}
+
+	if len(annotations) > 0 {
+		annotations, err := sqlStore.getOrCreateAnnotations(tx, annotations)
+		if err != nil {
+			return errors.Wrap(err, "failed to get or create annotations")
+		}
+
+		annotations, err = sqlStore.createGroupAnnotations(tx, group.ID, annotations)
+		if err != nil {
+			return errors.Wrap(err, "failed to create group annotations")
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "failed to commit transaction creating group")
+	}
+
+	return nil
+}
+
+func (sqlStore *SQLStore) createGroup(db execer, group *model.Group) error {
 	group.ID = model.NewID()
 	group.CreateAt = model.GetMillis()
 	envVarMap, err := group.MattermostEnv.ToJSON()
@@ -304,8 +358,8 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 		return err
 	}
 
-	_, err = sqlStore.execBuilder(sqlStore.db, sq.
-		Insert(`"Group"`).
+	_, err = sqlStore.execBuilder(db, sq.
+		Insert(groupTable).
 		SetMap(map[string]interface{}{
 			"ID":               group.ID,
 			"Sequence":         0,
@@ -325,7 +379,6 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create group")
 	}
-
 	return nil
 }
 
@@ -359,7 +412,7 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bo
 	}
 
 	_, err = sqlStore.execBuilder(sqlStore.db, sq.
-		Update(`"Group"`).
+		Update(groupTable).
 		SetMap(map[string]interface{}{
 			"Sequence":         group.Sequence,
 			"Name":             group.Name,
@@ -382,7 +435,7 @@ func (sqlStore *SQLStore) UpdateGroup(group *model.Group, forceUpdateSequence bo
 // database.
 func (sqlStore *SQLStore) DeleteGroup(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
-		Update(`"Group"`).
+		Update(groupTable).
 		Set("DeleteAt", model.GetMillis()).
 		Where("ID = ?", id).
 		Where("DeleteAt = 0"),
@@ -396,12 +449,12 @@ func (sqlStore *SQLStore) DeleteGroup(id string) error {
 
 // LockGroup marks the group as locked for exclusive use by the caller.
 func (sqlStore *SQLStore) LockGroup(groupID, lockerID string) (bool, error) {
-	return sqlStore.lockRows(`"Group"`, []string{groupID}, lockerID)
+	return sqlStore.lockRows(groupTable, []string{groupID}, lockerID)
 }
 
 // UnlockGroup releases a lock previously acquired against a caller.
 func (sqlStore *SQLStore) UnlockGroup(groupID, lockerID string, force bool) (bool, error) {
-	return sqlStore.unlockRows(`"Group"`, []string{groupID}, lockerID, force)
+	return sqlStore.unlockRows(groupTable, []string{groupID}, lockerID, force)
 }
 
 // LockGroupAPI locks updates to the group from the API.
@@ -416,7 +469,7 @@ func (sqlStore *SQLStore) UnlockGroupAPI(id string) error {
 
 func (sqlStore *SQLStore) setGroupAPILock(id string, lock bool) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
-		Update(`"Group"`).
+		Update(groupTable).
 		Set("APISecurityLock", lock).
 		Where("ID = ?", id),
 	)

@@ -1111,7 +1111,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Image:    "gImage",
 		}
 
-		err = sqlStore.CreateGroup(group)
+		err = sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1388,7 +1388,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Image:   "gImage",
 		}
 
-		err = sqlStore.CreateGroup(group)
+		err = sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 		// Group Sequence always set to 0 when created so we need to update it.
 		err = sqlStore.UpdateGroup(group, true)
@@ -1758,7 +1758,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Image:    "gImage",
 		}
 
-		err = sqlStore.CreateGroup(group)
+		err = sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1877,7 +1877,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Image:    "gImage",
 		}
 
-		err = sqlStore.CreateGroup(group)
+		err = sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
 		owner := model.NewID()
@@ -1995,7 +1995,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			Image:   "gImage",
 		}
 
-		err = sqlStore.CreateGroup(group)
+		err = sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 		// Group Sequence always set to 0 when created so we need to update it
 		// by calling group update once.
