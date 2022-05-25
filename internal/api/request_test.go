@@ -27,7 +27,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Zones:              []string{"us-east-1a"},
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
+				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
@@ -94,7 +94,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Zones:              []string{"zone1", "zone2"},
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
+				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
