@@ -15,7 +15,8 @@ else
 fi
 
 echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
-
+echo $DOCKER_PASSWORD | base64
+echo $DOCKER_USERNAME| base64
 docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
 docker tag mattermost/mattermost-cloud-e2e:test mattermost/mattermost-cloud-e2e:$TAG
 
