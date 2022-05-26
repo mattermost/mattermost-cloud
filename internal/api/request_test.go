@@ -23,10 +23,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeInstanceType:   "m5.large",
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
+			MaxPodsPerNode:     200,
 			Zones:              []string{"us-east-1a"},
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
+				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
@@ -38,6 +39,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
+				"velero":                {Chart: "2.29.4", ValuesPath: ""},
 			},
 		}
 	}
@@ -90,10 +92,11 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			NodeInstanceType:   "m5.large",
 			NodeMinCount:       2,
 			NodeMaxCount:       2,
+			MaxPodsPerNode:     200,
 			Zones:              []string{"zone1", "zone2"},
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
-				"fluentbit":             {Chart: "0.17.0", ValuesPath: ""},
+				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
@@ -105,6 +108,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
+				"velero":                {Chart: "2.29.4", ValuesPath: ""},
 			},
 		}, clusterRequest)
 	})

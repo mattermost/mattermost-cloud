@@ -306,7 +306,7 @@ func (b *Blaster) serialBatchInstall(count int) (installations []*cloud.Installa
 // createGroup creates a group for all of the Installations in the
 // test to belong to
 func (b *Blaster) createGroup() error {
-	group, err := b.client.CreateGroup(
+	groupDTO, err := b.client.CreateGroup(
 		&cloud.CreateGroupRequest{
 			Name:            b.testID,
 			Description:     fmt.Sprintf("Load Test Group for Test %s", b.testID),
@@ -315,7 +315,7 @@ func (b *Blaster) createGroup() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create a group for test %s", b.testID)
 	}
-	b.group = group
+	b.group = groupDTO.Group
 	return nil
 }
 

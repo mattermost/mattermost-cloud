@@ -16,6 +16,7 @@ import (
 const (
 	clusterAnnotationTable      = "ClusterAnnotation"
 	installationAnnotationTable = "InstallationAnnotation"
+	groupAnnotationTable        = "GroupAnnotation"
 )
 
 var annotationSelect sq.SelectBuilder
@@ -42,6 +43,23 @@ func init() {
 // GetAnnotationByName fetches the given annotation by name.
 func (sqlStore *SQLStore) GetAnnotationByName(name string) (*model.Annotation, error) {
 	return sqlStore.getAnnotationByName(sqlStore.db, name)
+}
+
+// GetAnnotationsByName fetches multiple annotations by name.
+func (sqlStore *SQLStore) GetAnnotationsByName(names []string) ([]*model.Annotation, error) {
+	var annotations []*model.Annotation
+
+	builder := annotationSelect.
+		Where(sq.Eq{"Name": names})
+	err := sqlStore.selectBuilder(sqlStore.db, &annotations, builder)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, errors.Wrap(err, "failed to get annotation by name")
+	}
+
+	return annotations, nil
 }
 
 func (sqlStore *SQLStore) getAnnotationByName(db queryer, name string) (*model.Annotation, error) {
@@ -402,6 +420,68 @@ func (sqlStore *SQLStore) DeleteInstallationAnnotation(installationID string, an
 	}
 
 	return nil
+}
+
+type groupAnnotation struct {
+	*model.Annotation
+	GroupID string
+}
+
+func (sqlStore *SQLStore) getAnnotationsForGroup(db queryer, groupID string) ([]*model.Annotation, error) {
+	var annotations []*model.Annotation
+
+	builder := sq.Select(annotationColumns...).
+		From(groupAnnotationTable).
+		Where("GroupID = ?", groupID).
+		LeftJoin("Annotation ON Annotation.ID=AnnotationID")
+	err := sqlStore.selectBuilder(db, &annotations, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get annotations for Group")
+	}
+
+	return annotations, nil
+}
+
+func (sqlStore *SQLStore) getAnnotationsForGroups(ids []string) (map[string][]*model.Annotation, error) {
+	var groupAnnotations []*groupAnnotation
+	builder := sq.Select(
+		`"Group".ID as GroupID`,
+		"Annotation.ID",
+		"Annotation.Name").
+		From(groupTable).
+		LeftJoin(fmt.Sprintf(`%s ON %s.GroupID = "Group".ID`, groupAnnotationTable, groupAnnotationTable)).
+		Join("Annotation ON Annotation.ID=AnnotationID").
+		Where(sq.Eq{`"Group".ID`: ids}) // TODO: test
+
+	err := sqlStore.selectBuilder(sqlStore.db, &groupAnnotations, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get annotations for Group")
+	}
+
+	annotations := map[string][]*model.Annotation{}
+	for _, pAnn := range groupAnnotations {
+		annotations[pAnn.GroupID] = append(
+			annotations[pAnn.GroupID],
+			pAnn.Annotation,
+		)
+	}
+
+	return annotations, nil
+}
+
+func (sqlStore *SQLStore) createGroupAnnotations(db execer, groupID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
+	builder := sq.Insert(groupAnnotationTable).
+		Columns("ID", "GroupID", "AnnotationID")
+
+	for _, a := range annotations {
+		builder = builder.Values(model.NewID(), groupID, a.ID)
+	}
+	_, err := sqlStore.execBuilder(db, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create cluster annotations")
+	}
+
+	return annotations, nil
 }
 
 func containsAllAnnotations(base, new []*model.Annotation) bool {

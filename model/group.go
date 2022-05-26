@@ -29,6 +29,15 @@ type Group struct {
 // GroupFilter describes the parameters used to constrain a set of groups.
 type GroupFilter struct {
 	Paging
+	Annotations *AnnotationsFilter
+}
+
+// ToDTO returns Group joined with Annotations.
+func (g *Group) ToDTO(annotations []*Annotation) *GroupDTO {
+	return &GroupDTO{
+		Group:       g,
+		Annotations: annotations,
+	}
 }
 
 // Clone returns a deep copy the group.

@@ -64,14 +64,14 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 		Paging: paging,
 	}
 
-	groups, err := c.Store.GetGroups(filter)
+	groups, err := c.Store.GetGroupDTOs(filter)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query groups")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if groups == nil {
-		groups = []*model.Group{}
+		groups = []*model.GroupDTO{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -98,7 +98,14 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		MattermostEnv:   createGroupRequest.MattermostEnv,
 	}
 
-	err = c.Store.CreateGroup(&group)
+	annotations, err := model.AnnotationsFromStringSlice(createGroupRequest.Annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("invalid annotations")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = c.Store.CreateGroup(&group, annotations)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to create group")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -109,7 +116,7 @@ func handleCreateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, group)
+	outputJSON(c, w, group.ToDTO(annotations))
 }
 
 // handleUpdateGroup responds to PUT /api/group/{group}, updating the group.
@@ -125,21 +132,21 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	group, status, unlockOnce := lockGroup(c, groupID)
+	groupDTO, status, unlockOnce := lockGroup(c, groupID)
 	if status != 0 {
 		w.WriteHeader(status)
 		return
 	}
 	defer unlockOnce()
 
-	if group.APISecurityLock {
+	if groupDTO.APISecurityLock {
 		logSecurityLockConflict("group", c.Logger)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	if patchGroupRequest.Apply(group) {
-		err := c.Store.UpdateGroup(group, patchGroupRequest.ForceSequenceUpdate)
+	if patchGroupRequest.Apply(groupDTO.Group) {
+		err := c.Store.UpdateGroup(groupDTO.Group, patchGroupRequest.ForceSequenceUpdate)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to update group")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -151,7 +158,7 @@ func handleUpdateGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, group)
+	outputJSON(c, w, groupDTO)
 }
 
 // handleDeleteGroup responds to DELETE /api/group/{group}, marking the group as deleted.

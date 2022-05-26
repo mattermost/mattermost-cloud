@@ -24,6 +24,7 @@ func init() {
 	groupCreateCmd.Flags().String("image", "", "The Mattermost container image to use.")
 	groupCreateCmd.Flags().Int64("max-rolling", 1, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
+	groupCreateCmd.Flags().StringArray("annotation", []string{}, "Annotations for a group used for automatic group selection. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	groupCreateCmd.MarkFlagRequired("name")
 
 	groupUpdateCmd.Flags().String("group", "", "The id of the group to be updated.")
@@ -89,6 +90,7 @@ var groupCreateCmd = &cobra.Command{
 		version, _ := command.Flags().GetString("version")
 		maxRolling, _ := command.Flags().GetInt64("max-rolling")
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
+		annotations, _ := command.Flags().GetStringArray("annotation")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
 		if err != nil {
@@ -102,6 +104,7 @@ var groupCreateCmd = &cobra.Command{
 			Version:       version,
 			Image:         image,
 			MattermostEnv: envVarMap,
+			Annotations:   annotations,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")

@@ -48,8 +48,8 @@ func lockCluster(c *Context, clusterID string) (*model.ClusterDTO, int, func()) 
 
 // lockGroup synchronizes access to the given group across potentially multiple
 // provisioning servers.
-func lockGroup(c *Context, groupID string) (*model.Group, int, func()) {
-	group, err := c.Store.GetGroup(groupID)
+func lockGroup(c *Context, groupID string) (*model.GroupDTO, int, func()) {
+	group, err := c.Store.GetGroupDTO(groupID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query group")
 		return nil, http.StatusInternalServerError, nil

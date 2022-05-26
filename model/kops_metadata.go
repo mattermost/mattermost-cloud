@@ -22,6 +22,7 @@ type KopsMetadata struct {
 	NodeInstanceType     string
 	NodeMinCount         int64
 	NodeMaxCount         int64
+	MaxPodsPerNode       int64
 	VPC                  string
 	Networking           string
 	MasterInstanceGroups KopsInstanceGroupsMetadata
@@ -51,6 +52,7 @@ type KopsMetadataRequestedState struct {
 	NodeInstanceType   string `json:"NodeInstanceType,omitempty"`
 	NodeMinCount       int64  `json:"NodeMinCount,omitempty"`
 	NodeMaxCount       int64  `json:"NodeMaxCount,omitempty"`
+	MaxPodsPerNode     int64  `json:"MaxPodsPerNode,omitempty"`
 	Networking         string `json:"Networking,omitempty"`
 	VPC                string `json:"VPC,omitempty"`
 }

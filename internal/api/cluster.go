@@ -121,11 +121,11 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				NodeInstanceType:   createClusterRequest.NodeInstanceType,
 				NodeMinCount:       createClusterRequest.NodeMinCount,
 				NodeMaxCount:       createClusterRequest.NodeMaxCount,
+				MaxPodsPerNode:     createClusterRequest.MaxPodsPerNode,
 				Networking:         createClusterRequest.Networking,
 				VPC:                createClusterRequest.VPC,
 			},
 		},
-
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,

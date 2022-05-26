@@ -90,7 +90,7 @@ func TestGetGroups(t *testing.T) {
 			Description: "This is group 1",
 			Version:     "version1",
 		}
-		err := sqlStore.CreateGroup(group1)
+		err := sqlStore.CreateGroup(group1, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -100,7 +100,7 @@ func TestGetGroups(t *testing.T) {
 			Description: "This is group 2",
 			Version:     "version2",
 		}
-		err = sqlStore.CreateGroup(group2)
+		err = sqlStore.CreateGroup(group2, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -110,7 +110,7 @@ func TestGetGroups(t *testing.T) {
 			Description: "This is group 3",
 			Version:     "version3",
 		}
-		err = sqlStore.CreateGroup(group3)
+		err = sqlStore.CreateGroup(group3, nil)
 		require.NoError(t, err)
 
 		time.Sleep(1 * time.Millisecond)
@@ -120,24 +120,25 @@ func TestGetGroups(t *testing.T) {
 			Description: "This is group 4",
 			Version:     "version4",
 		}
-		err = sqlStore.CreateGroup(group4)
+		err = sqlStore.CreateGroup(group4, nil)
 		require.NoError(t, err)
 		err = sqlStore.DeleteGroup(group4.ID)
 		require.NoError(t, err)
-		group4, err = client.GetGroup(group4.ID)
+		group4DTO, err := client.GetGroup(group4.ID)
 		require.NoError(t, err)
+		group4 = group4DTO.Group
 
 		t.Run("get group", func(t *testing.T) {
 			t.Run("group 1", func(t *testing.T) {
-				group, err := client.GetGroup(group1.ID)
+				groupDTO, err := client.GetGroup(group1.ID)
 				require.NoError(t, err)
-				require.Equal(t, group1, group)
+				require.Equal(t, group1, groupDTO.Group)
 			})
 
 			t.Run("get deleted group", func(t *testing.T) {
-				group, err := client.GetGroup(group4.ID)
+				groupDTO, err := client.GetGroup(group4.ID)
 				require.NoError(t, err)
-				require.Equal(t, group4, group)
+				require.Equal(t, group4, groupDTO.Group)
 			})
 		})
 
@@ -145,7 +146,7 @@ func TestGetGroups(t *testing.T) {
 			testCases := []struct {
 				Description      string
 				GetGroupsRequest *model.GetGroupsRequest
-				Expected         []*model.Group
+				Expected         []*model.GroupDTO
 			}{
 				{
 					"page 0, perPage 2, exclude deleted",
@@ -156,9 +157,8 @@ func TestGetGroups(t *testing.T) {
 							IncludeDeleted: false,
 						},
 					},
-					[]*model.Group{group1, group2},
+					[]*model.GroupDTO{group1.ToDTO(nil), group2.ToDTO(nil)},
 				},
-
 				{
 					"page 1, perPage 2, exclude deleted",
 					&model.GetGroupsRequest{
@@ -168,9 +168,8 @@ func TestGetGroups(t *testing.T) {
 							IncludeDeleted: false,
 						},
 					},
-					[]*model.Group{group3},
+					[]*model.GroupDTO{group3.ToDTO(nil)},
 				},
-
 				{
 					"page 0, perPage 2, include deleted",
 					&model.GetGroupsRequest{
@@ -180,9 +179,8 @@ func TestGetGroups(t *testing.T) {
 							IncludeDeleted: true,
 						},
 					},
-					[]*model.Group{group1, group2},
+					[]*model.GroupDTO{group1.ToDTO(nil), group2.ToDTO(nil)},
 				},
-
 				{
 					"page 1, perPage 2, include deleted",
 					&model.GetGroupsRequest{
@@ -192,7 +190,7 @@ func TestGetGroups(t *testing.T) {
 							IncludeDeleted: true,
 						},
 					},
-					[]*model.Group{group3, group4},
+					[]*model.GroupDTO{group3.ToDTO(nil), group4.ToDTO(nil)},
 				},
 			}
 
@@ -251,6 +249,7 @@ func TestCreateGroup(t *testing.T) {
 			Image:         "sample/image",
 			MaxRolling:    2,
 			MattermostEnv: mattermostEnvFooBar,
+			Annotations:   []string{"group-ann", "group-ann2"},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "name", group.Name)
@@ -261,6 +260,7 @@ func TestCreateGroup(t *testing.T) {
 		require.EqualValues(t, group.MattermostEnv, mattermostEnvFooBar)
 		require.NotEqual(t, 0, group.CreateAt)
 		require.EqualValues(t, 0, group.DeleteAt)
+		require.Equal(t, 2, len(group.Annotations))
 	})
 }
 

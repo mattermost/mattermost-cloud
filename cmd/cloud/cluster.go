@@ -29,6 +29,7 @@ func init() {
 	clusterCreateCmd.Flags().Int64("size-master-count", 0, "The number of k8s master nodes. Overwrites value from 'size'.")
 	clusterCreateCmd.Flags().String("size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
 	clusterCreateCmd.Flags().Int64("size-node-count", 0, "The number of k8s worker nodes. Overwrites value from 'size'.")
+	clusterCreateCmd.Flags().Int64("max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
 	clusterCreateCmd.Flags().String("zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	clusterCreateCmd.Flags().Bool("allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 	clusterCreateCmd.Flags().String("prometheus-operator-version", "", "The version of Prometheus Operator to provision. Use 'stable' to provision the latest stable version published upstream.")
@@ -43,6 +44,7 @@ func init() {
 	clusterCreateCmd.Flags().String("kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("metrics-server-version", "", "The version of Metrics Server. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("velero-version", "", "The version of Velero. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", "", "The full Git URL of the desired chart value file's version for Fluent-Bit")
@@ -55,6 +57,7 @@ func init() {
 	clusterCreateCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired chart value file's version for Kubecost")
 	clusterCreateCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart value file's version for Node Problem Detector")
 	clusterCreateCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart value file's version for Metrics Server")
+	clusterCreateCmd.Flags().String("velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
@@ -74,6 +77,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("kubecost-version", "", "The version of the Kubecost Helm chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-version", "", "The version of the Node Problem Detector Helm chart")
 	clusterProvisionCmd.Flags().String("metrics-server-version", "", "The version of the Metrics Server Helm chart")
+	clusterProvisionCmd.Flags().String("velero-version", "", "The version of Velero. Use 'stable' to provision the latest stable version published upstream.")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
@@ -87,6 +91,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("kubecost-values", "", "The full Git URL of the desired Kubecost chart")
 	clusterProvisionCmd.Flags().String("node-problem-detector-values", "", "The full Git URL of the desired chart values for the Node Problem Detector")
 	clusterProvisionCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart values for the Metrics Server")
+	clusterProvisionCmd.Flags().String("velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	clusterProvisionCmd.Flags().Bool("reprovision-all-utilities", false, "Set to true if all utilities should be reprovisioned and not just ones with new versions")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
@@ -98,6 +103,7 @@ func init() {
 	clusterUpgradeCmd.Flags().String("cluster", "", "The id of the cluster to be upgraded.")
 	clusterUpgradeCmd.Flags().String("version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
+	clusterUpgradeCmd.Flags().Int64("max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
 	clusterUpgradeCmd.Flags().Bool("use-rotator", true, "Whether the cluster will be upgraded using the node rotator.")
 	clusterUpgradeCmd.Flags().Int("max-scaling", 5, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes, then the number of nodes will be the maximum number.")
 	clusterUpgradeCmd.Flags().Int("max-drain-retries", 10, "The number of times to retry a node drain.")
@@ -214,6 +220,10 @@ var clusterCreateCmd = &cobra.Command{
 			// with the kops create cluster flag.
 			request.NodeMinCount = nodeCount
 			request.NodeMaxCount = nodeCount
+		}
+		maxPodsPerNode, _ := command.Flags().GetInt64("max-pods-per-node")
+		if maxPodsPerNode != 0 {
+			request.MaxPodsPerNode = maxPodsPerNode
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -350,9 +360,10 @@ var clusterUpgradeCmd = &cobra.Command{
 		}
 
 		request := &model.PatchUpgradeClusterRequest{
-			Version:       getStringFlagPointer(command, "version"),
-			KopsAMI:       getStringFlagPointer(command, "kops-ami"),
-			RotatorConfig: &rotatorConfig,
+			Version:        getStringFlagPointer(command, "version"),
+			KopsAMI:        getStringFlagPointer(command, "kops-ami"),
+			MaxPodsPerNode: getInt64FlagPointer(command, "max-pods-per-node"),
+			RotatorConfig:  &rotatorConfig,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -664,5 +675,8 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 		model.MetricsServerCanonicalName: {
 			Chart:      MustGetString("metrics-server-version", command),
 			ValuesPath: MustGetString("metrics-server-values", command)},
+		model.VeleroCanonicalName: {
+			Chart:      MustGetString("velero-version", command),
+			ValuesPath: MustGetString("velero-values", command)},
 	}
 }

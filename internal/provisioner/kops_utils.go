@@ -174,6 +174,12 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 
 	var ami string
 	for _, ig := range instanceGroups {
+		// TODO: temporary skip logic for calls instance group.
+		if ig.Metadata.Name == "calls" {
+			logger.Debug("Skipping AMI update for calls instance group")
+			continue
+		}
+
 		if ig.Spec.Image != kopsMetadata.ChangeRequest.AMI {
 			if kopsMetadata.ChangeRequest.AMI == "latest" {
 				// Setting the image value to "" leads kops to autoreplace it with

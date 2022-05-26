@@ -918,7 +918,7 @@ func (c *Client) ExecClusterInstallationCLI(clusterInstallationID, command strin
 }
 
 // CreateGroup requests the creation of a group from the configured provisioning server.
-func (c *Client) CreateGroup(request *CreateGroupRequest) (*Group, error) {
+func (c *Client) CreateGroup(request *CreateGroupRequest) (*GroupDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/groups"), request)
 	if err != nil {
 		return nil, err
@@ -927,7 +927,7 @@ func (c *Client) CreateGroup(request *CreateGroupRequest) (*Group, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupFromReader(resp.Body)
+		return GroupDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -935,7 +935,7 @@ func (c *Client) CreateGroup(request *CreateGroupRequest) (*Group, error) {
 }
 
 // UpdateGroup updates the installation group.
-func (c *Client) UpdateGroup(request *PatchGroupRequest) (*Group, error) {
+func (c *Client) UpdateGroup(request *PatchGroupRequest) (*GroupDTO, error) {
 	resp, err := c.doPut(c.buildURL("/api/group/%s", request.ID), request)
 	if err != nil {
 		return nil, err
@@ -944,7 +944,7 @@ func (c *Client) UpdateGroup(request *PatchGroupRequest) (*Group, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupFromReader(resp.Body)
+		return GroupDTOFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -969,7 +969,7 @@ func (c *Client) DeleteGroup(groupID string) error {
 }
 
 // GetGroup fetches the specified group from the configured provisioning server.
-func (c *Client) GetGroup(groupID string) (*Group, error) {
+func (c *Client) GetGroup(groupID string) (*GroupDTO, error) {
 	resp, err := c.doGet(c.buildURL("/api/group/%s", groupID))
 	if err != nil {
 		return nil, err
@@ -978,7 +978,7 @@ func (c *Client) GetGroup(groupID string) (*Group, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupFromReader(resp.Body)
+		return GroupDTOFromReader(resp.Body)
 
 	case http.StatusNotFound:
 		return nil, nil
@@ -989,7 +989,7 @@ func (c *Client) GetGroup(groupID string) (*Group, error) {
 }
 
 // GetGroups fetches the list of groups from the configured provisioning server.
-func (c *Client) GetGroups(request *GetGroupsRequest) ([]*Group, error) {
+func (c *Client) GetGroups(request *GetGroupsRequest) ([]*GroupDTO, error) {
 	u, err := url.Parse(c.buildURL("/api/groups"))
 	if err != nil {
 		return nil, err
@@ -1005,7 +1005,7 @@ func (c *Client) GetGroups(request *GetGroupsRequest) ([]*Group, error) {
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return GroupsFromReader(resp.Body)
+		return GroupDTOsFromReader(resp.Body)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)

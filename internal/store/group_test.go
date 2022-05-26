@@ -69,8 +69,16 @@ func TestGroups(t *testing.T) {
 		Version:       "version1",
 		MattermostEnv: mattermostEnv,
 	}
+	annotations := []*model.Annotation{
+		{Name: "group-ann1"},
+		{Name: "group-ann2"},
+	}
+	for _, ann := range annotations {
+		err := sqlStore.CreateAnnotation(ann)
+		require.NoError(t, err)
+	}
 
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, annotations)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -81,7 +89,7 @@ func TestGroups(t *testing.T) {
 		Version:     "version2",
 	}
 
-	err = sqlStore.CreateGroup(group2)
+	err = sqlStore.CreateGroup(group2, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -92,7 +100,7 @@ func TestGroups(t *testing.T) {
 		Version:     "version3",
 	}
 
-	err = sqlStore.CreateGroup(group3)
+	err = sqlStore.CreateGroup(group3, []*model.Annotation{{Name: "not-existing"}})
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -102,8 +110,12 @@ func TestGroups(t *testing.T) {
 		Description: "description4",
 		Version:     "version4",
 	}
+	annotations4 := []*model.Annotation{
+		{Name: "group-ann1"},
+		{Name: "group-ann3"},
+	}
 
-	err = sqlStore.CreateGroup(group4)
+	err = sqlStore.CreateGroup(group4, annotations4)
 	require.NoError(t, err)
 	err = sqlStore.DeleteGroup(group4.ID)
 	require.NoError(t, err)
@@ -120,12 +132,20 @@ func TestGroups(t *testing.T) {
 		group, err := sqlStore.GetGroup(group1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, group1, group)
+
+		groupDTO, err := sqlStore.GetGroupDTO(group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, annotations, groupDTO.Annotations)
 	})
 
 	t.Run("get group 2", func(t *testing.T) {
 		group, err := sqlStore.GetGroup(group2.ID)
 		require.NoError(t, err)
 		assert.Equal(t, group2, group)
+
+		groupDTO, err := sqlStore.GetGroupDTO(group2.ID)
+		require.NoError(t, err)
+		assert.Empty(t, groupDTO.Annotations)
 	})
 
 	testCases := []struct {
@@ -177,6 +197,36 @@ func TestGroups(t *testing.T) {
 			},
 			[]*model.Group{group1, group2, group3, group4},
 		},
+		{
+			"with multiple annotations",
+			&model.GroupFilter{
+				Paging: model.AllPagesNotDeleted(),
+				Annotations: &model.AnnotationsFilter{
+					MatchAllIDs: []string{annotations[0].ID, annotations[1].ID},
+				},
+			},
+			[]*model.Group{group1},
+		},
+		{
+			"with single annotation (not deleted)",
+			&model.GroupFilter{
+				Paging: model.AllPagesNotDeleted(),
+				Annotations: &model.AnnotationsFilter{
+					MatchAllIDs: []string{annotations[0].ID},
+				},
+			},
+			[]*model.Group{group1},
+		},
+		{
+			"with single annotation (with deleted)",
+			&model.GroupFilter{
+				Paging: model.AllPagesWithDeleted(),
+				Annotations: &model.AnnotationsFilter{
+					MatchAllIDs: []string{annotations[0].ID},
+				},
+			},
+			[]*model.Group{group1, group4},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -198,7 +248,7 @@ func TestLockGroup(t *testing.T) {
 	group1 := &model.Group{
 		Name: "group1",
 	}
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -206,7 +256,7 @@ func TestLockGroup(t *testing.T) {
 	group2 := &model.Group{
 		Name: "group2",
 	}
-	err = sqlStore.CreateGroup(group2)
+	err = sqlStore.CreateGroup(group2, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -326,7 +376,7 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 		Version:     "version1",
 	}
 
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -337,7 +387,7 @@ func TestGetUnlockedGroupsPendingWork(t *testing.T) {
 		Version:     "version2",
 	}
 
-	err = sqlStore.CreateGroup(group2)
+	err = sqlStore.CreateGroup(group2, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -408,7 +458,7 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		Sequence:    2,
 	}
 
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -419,7 +469,7 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 		Version:     "version2",
 	}
 
-	err = sqlStore.CreateGroup(group2)
+	err = sqlStore.CreateGroup(group2, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -521,7 +571,7 @@ func TestUpdateGroup(t *testing.T) {
 		Version:     "version1",
 	}
 
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 
 	group2 := &model.Group{
@@ -530,7 +580,7 @@ func TestUpdateGroup(t *testing.T) {
 		Version:     "version2",
 	}
 
-	err = sqlStore.CreateGroup(group2)
+	err = sqlStore.CreateGroup(group2, nil)
 	require.NoError(t, err)
 
 	group1.Name = "name3"
@@ -586,7 +636,7 @@ func TestDeleteGroup(t *testing.T) {
 		Version:     "version1",
 	}
 
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
@@ -597,7 +647,7 @@ func TestDeleteGroup(t *testing.T) {
 		Version:     "version2",
 	}
 
-	err = sqlStore.CreateGroup(group2)
+	err = sqlStore.CreateGroup(group2, nil)
 	require.NoError(t, err)
 
 	err = sqlStore.DeleteGroup(group1.ID)
@@ -634,7 +684,7 @@ func TestGetGroupStatus(t *testing.T) {
 		Version:     "version1",
 	}
 
-	err := sqlStore.CreateGroup(group1)
+	err := sqlStore.CreateGroup(group1, nil)
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Millisecond)
