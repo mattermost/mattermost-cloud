@@ -38,6 +38,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
+				"velero":                {Chart: "2.29.4", ValuesPath: ""},
 			},
 		}
 	}
@@ -105,6 +106,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
+				"velero":                {Chart: "2.29.4", ValuesPath: ""},
 			},
 		}, clusterRequest)
 	})

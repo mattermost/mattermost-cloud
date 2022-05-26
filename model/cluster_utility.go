@@ -33,6 +33,8 @@ const (
 	NodeProblemDetectorCanonicalName = "node-problem-detector"
 	// MetricsServerCanonicalName is the canonical string representation of metrics server
 	MetricsServerCanonicalName = "metrics-server"
+	// VeleroCanonicalName is the canonical string representation of velero
+	VeleroCanonicalName = "velero"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -77,6 +79,8 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	NodeProblemDetectorCanonicalName: {Chart: "2.0.5", ValuesPath: ""},
 	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
 	MetricsServerCanonicalName: {Chart: "3.8.2", ValuesPath: ""},
+	// VeleroCanonicalName defines the default version for the Helm chart
+	VeleroCanonicalName: {Chart: "2.29.4", ValuesPath: ""},
 }
 
 var defaultUtilityValuesFileNames map[string]string = map[string]string{
@@ -91,6 +95,7 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	KubecostCanonicalName:            "kubecost_values.yaml",
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
+	VeleroCanonicalName:              "velero_values.yaml",
 }
 
 var (
@@ -134,6 +139,7 @@ type UtilityGroupVersions struct {
 	Kubecost            *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
 	MetricsServer       *HelmUtilityVersion
+	Velero              *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -152,6 +158,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		KubecostCanonicalName:            h.Kubecost,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 		MetricsServerCanonicalName:       h.MetricsServer,
+		VeleroCanonicalName:              h.Velero,
 	}
 }
 
@@ -284,6 +291,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.NodeProblemDetector = desiredVersion
 	case MetricsServerCanonicalName:
 		versions.MetricsServer = desiredVersion
+	case VeleroCanonicalName:
+		versions.Velero = desiredVersion
 	}
 }
 
