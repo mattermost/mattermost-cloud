@@ -69,6 +69,7 @@ var helmRepos = map[string]string{
 	"kubecost":             "https://kubecost.github.io/cost-analyzer/",
 	"deliveryhero":         "https://charts.deliveryhero.io/",
 	"metrics-server":       "https://kubernetes-sigs.github.io/metrics-server/",
+	"vmware-tanzu":         "https://vmware-tanzu.github.io/helm-charts/",
 }
 
 func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
