@@ -723,3 +723,97 @@ func TestGroupsStatus(t *testing.T) {
 		}
 	})
 }
+
+func TestGroups_Annotations(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
+	})
+
+	ts := httptest.NewServer(router)
+	client := model.NewClient(ts.URL)
+	group, err := client.CreateGroup(
+		&model.CreateGroupRequest{
+			Name: "group1",
+		})
+	require.NoError(t, err)
+
+	annotationsRequest := &model.AddAnnotationsRequest{
+		Annotations: []string{"my-annotation", "super-awesome123"},
+	}
+
+	group, err = client.AddGroupAnnotations(group.ID, annotationsRequest)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(group.Annotations))
+	assert.True(t, containsAnnotation("my-annotation", group.Annotations))
+	assert.True(t, containsAnnotation("super-awesome123", group.Annotations))
+
+	annotationsRequest = &model.AddAnnotationsRequest{
+		Annotations: []string{"my-annotation2"},
+	}
+	group, err = client.AddGroupAnnotations(group.ID, annotationsRequest)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(group.Annotations))
+
+	group, err = client.GetGroup(group.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, len(group.Annotations))
+	assert.True(t, containsAnnotation("my-annotation", group.Annotations))
+	assert.True(t, containsAnnotation("my-annotation2", group.Annotations))
+	assert.True(t, containsAnnotation("super-awesome123", group.Annotations))
+
+	t.Run("fail to add duplicated annotation", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"my-annotation"},
+		}
+		_, err = client.AddGroupAnnotations(group.ID, annotationsRequest)
+		require.Error(t, err)
+	})
+
+	t.Run("fail to add invalid annotation", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"_my-annotation"},
+		}
+		_, err = client.AddGroupAnnotations(group.ID, annotationsRequest)
+		require.Error(t, err)
+	})
+
+	t.Run("fail to add or delete while api-security-locked", func(t *testing.T) {
+		annotationsRequest = &model.AddAnnotationsRequest{
+			Annotations: []string{"is-locked"},
+		}
+		err = sqlStore.LockGroupAPI(group.ID)
+		require.NoError(t, err)
+
+		_, err = client.AddGroupAnnotations(group.ID, annotationsRequest)
+		require.Error(t, err)
+		err = client.DeleteGroupAnnotation(group.ID, "my-annotation2")
+		require.Error(t, err)
+
+		err = sqlStore.UnlockGroupAPI(group.ID)
+		require.NoError(t, err)
+	})
+
+	err = client.DeleteGroupAnnotation(group.ID, "my-annotation2")
+	require.NoError(t, err)
+
+	group, err = client.GetGroup(group.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(group.Annotations))
+
+	t.Run("delete unknown annotation", func(t *testing.T) {
+		err = client.DeleteGroupAnnotation(group.ID, "unknown")
+		require.NoError(t, err)
+
+		group, err = client.GetGroup(group.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(group.Annotations))
+	})
+}

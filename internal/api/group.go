@@ -27,6 +27,9 @@ func initGroup(apiRouter *mux.Router, context *Context) {
 	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
 	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
 	groupRouter.Handle("/status", addContext(handleGetGroupStatus)).Methods("GET")
+
+	groupRouter.Handle("/annotations", addContext(handleAddGroupAnnotations)).Methods("POST")
+	groupRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteGroupAnnotation)).Methods("DELETE")
 }
 
 // handleGetGroup responds to GET /api/group/{group}, returning the group in question.
@@ -35,7 +38,7 @@ func handleGetGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("group", groupID)
 
-	group, err := c.Store.GetGroup(groupID)
+	group, err := c.Store.GetGroupDTO(groupID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query group")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -273,4 +276,79 @@ func handleGetGroupsStatus(c *Context, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, groupsStatus)
+}
+
+// handleAddGroupAnnotations responds to POST /api/group/{group}/annotations,
+// adds the set of annotations to the Group.
+func handleAddGroupAnnotations(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	groupID := vars["group"]
+	c.Logger = c.Logger.WithField("group", groupID).WithField("action", "add-group-annotations")
+
+	groupDTO, status, unlockOnce := lockGroup(c, groupID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if groupDTO.APISecurityLock {
+		logSecurityLockConflict("group", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	annotations, err := annotationsFromRequest(r)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get annotations from request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	annotations, err = c.Store.CreateGroupAnnotations(groupID, annotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to create group annotations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	groupDTO.Annotations = append(groupDTO.Annotations, annotations...)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, groupDTO)
+}
+
+// handleDeleteGroupAnnotation responds to DELETE /api/group/{group}/annotation/{annotation-name},
+// removes annotation from the Group.
+func handleDeleteGroupAnnotation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	groupID := vars["group"]
+	annotationName := vars["annotation-name"]
+	c.Logger = c.Logger.
+		WithField("group", groupID).
+		WithField("action", "delete-group-annotation").
+		WithField("annotation-name", annotationName)
+
+	groupDTO, status, unlockOnce := lockGroup(c, groupID)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if groupDTO.APISecurityLock {
+		logSecurityLockConflict("group", c.Logger)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	err := c.Store.DeleteGroupAnnotation(groupID, annotationName)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed delete group annotation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -68,6 +68,7 @@ func init() {
 	groupCmd.AddCommand(groupGetGroupsStatusCmd)
 	groupCmd.AddCommand(groupJoinCmd)
 	groupCmd.AddCommand(groupLeaveCmd)
+	groupCmd.AddCommand(groupAnnotationCmd)
 }
 
 var groupCmd = &cobra.Command{

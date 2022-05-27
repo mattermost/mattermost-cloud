@@ -662,7 +662,7 @@ func handleDeleteInstallationAnnotation(c *Context, w http.ResponseWriter, r *ht
 
 	err := c.Store.DeleteInstallationAnnotation(installationID, annotationName)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed delete cluster annotation")
+		c.Logger.WithError(err).Error("failed delete installation annotation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
