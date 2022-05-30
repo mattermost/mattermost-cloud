@@ -123,7 +123,7 @@ func Test_GroupDTO(t *testing.T) {
 				for _, g := range actual {
 					model.SortAnnotations(g.Annotations)
 				}
-				assert.Equal(t, testCase.Expected, actual)
+				assert.ElementsMatch(t, testCase.Expected, actual)
 			})
 		}
 	})
