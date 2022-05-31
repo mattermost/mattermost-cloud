@@ -21,7 +21,7 @@ jobs:
     steps:
     - checkout
     - *restore_cache
-    - run: make check-style
+    - run: echo Test; make check-style
     - *save_cache
 
   check-modules:
