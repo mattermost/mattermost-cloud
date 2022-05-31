@@ -120,7 +120,10 @@ func Test_GroupDTO(t *testing.T) {
 			t.Run(testCase.Description, func(t *testing.T) {
 				actual, err := sqlStore.GetGroupDTOs(testCase.Filter)
 				require.NoError(t, err)
-				assert.Equal(t, testCase.Expected, actual)
+				for _, g := range actual {
+					model.SortAnnotations(g.Annotations)
+				}
+				assert.ElementsMatch(t, testCase.Expected, actual)
 			})
 		}
 	})

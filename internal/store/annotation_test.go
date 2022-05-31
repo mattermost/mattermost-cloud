@@ -289,3 +289,93 @@ func TestAnnotations_GetAnnotationsByName(t *testing.T) {
 	})
 
 }
+
+func TestAnnotations_Group(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	annotation1 := model.Annotation{Name: "annotation1"}
+	annotation2 := model.Annotation{Name: "annotation2"}
+
+	err := sqlStore.CreateAnnotation(&annotation1)
+	require.NoError(t, err)
+	err = sqlStore.CreateAnnotation(&annotation2)
+	require.NoError(t, err)
+
+	annotations := []*model.Annotation{&annotation1, &annotation2}
+
+	group1 := model.Group{Name: "test"}
+	err = sqlStore.CreateGroup(&group1, nil)
+	require.NoError(t, err)
+
+	_, err = sqlStore.CreateGroupAnnotations(group1.ID, annotations)
+	require.NoError(t, err)
+
+	t.Run("get annotations for group", func(t *testing.T) {
+		annotationsForGroup, err := sqlStore.getAnnotationsForGroup(sqlStore.db, group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, len(annotations), len(annotationsForGroup))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroup, &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroup, &annotation2))
+	})
+
+	t.Run("fail to assign the same annotation to the group twice", func(t *testing.T) {
+		_, err = sqlStore.CreateGroupAnnotations(group1.ID, annotations)
+		require.Error(t, err)
+		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint") // Make sure error comes from DB
+	})
+
+	group2 := model.Group{Name: "test2"}
+	err = sqlStore.CreateGroup(&group2, annotations)
+	require.NoError(t, err)
+
+	t.Run("get annotations for group2", func(t *testing.T) {
+		annotationsForGroup, err := sqlStore.getAnnotationsForGroup(sqlStore.db, group2.ID)
+		require.NoError(t, err)
+		assert.Equal(t, len(annotations), len(annotationsForGroup))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroup, &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroup, &annotation2))
+	})
+
+	t.Run("get annotations for groups", func(t *testing.T) {
+		annotationsForGroups, err := sqlStore.getAnnotationsForGroups([]string{group1.ID, group2.ID})
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(annotationsForGroups))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroups[group1.ID], &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroups[group1.ID], &annotation2))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroups[group2.ID], &annotation1))
+		assert.True(t, model.ContainsAnnotation(annotationsForGroups[group2.ID], &annotation2))
+	})
+
+	t.Run("delete Group annotation", func(t *testing.T) {
+		err = sqlStore.DeleteGroupAnnotation(group1.ID, annotation1.Name)
+		require.NoError(t, err)
+		annotationsForGroup, err := sqlStore.getAnnotationsForGroup(sqlStore.db, group1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(annotationsForGroup))
+
+		t.Run("do not fail when deleting Group annotation twice", func(t *testing.T) {
+			err = sqlStore.DeleteGroupAnnotation(group1.ID, annotation1.Name)
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("delete unknown annotation", func(t *testing.T) {
+		err = sqlStore.DeleteGroupAnnotation(group1.ID, "unknown-annotation")
+		require.NoError(t, err)
+	})
+
+	newAnnotations := []*model.Annotation{
+		{Name: "new-annotation1"},
+		{Name: "new-annotation2"},
+	}
+
+	t.Run("correctly create new group annotations", func(t *testing.T) {
+		_, err = sqlStore.CreateGroupAnnotations(group2.ID, newAnnotations)
+		require.NoError(t, err)
+		annotationsForGroup, err := sqlStore.getAnnotationsForGroup(sqlStore.db, group2.ID)
+		require.NoError(t, err)
+		assert.Equal(t, len(annotations)+len(newAnnotations), len(annotationsForGroup))
+	})
+}

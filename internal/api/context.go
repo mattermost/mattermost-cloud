@@ -65,6 +65,8 @@ type Store interface {
 	UnlockGroupAPI(groupID string) error
 	DeleteGroup(groupID string) error
 	GetGroupStatus(groupID string) (*model.GroupStatus, error)
+	CreateGroupAnnotations(groupID string, annotations []*model.Annotation) ([]*model.Annotation, error)
+	DeleteGroupAnnotation(groupID string, annotationName string) error
 
 	CreateWebhook(webhook *model.Webhook) error
 	GetWebhook(webhookID string) (*model.Webhook, error)

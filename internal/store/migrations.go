@@ -1948,4 +1948,16 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.36.0"), semver.MustParse("0.37.0"), func(e execer) error {
+		// Add unique constraint for GroupID and AnnotationID for GroupAnnotation.
+
+		_, err := e.Exec(`
+			CREATE UNIQUE INDEX GroupAnnotation_GroupID_AnnotationID ON GroupAnnotation (GroupID, AnnotationID);
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }

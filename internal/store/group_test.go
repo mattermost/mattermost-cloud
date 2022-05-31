@@ -135,7 +135,7 @@ func TestGroups(t *testing.T) {
 
 		groupDTO, err := sqlStore.GetGroupDTO(group1.ID)
 		require.NoError(t, err)
-		assert.Equal(t, annotations, groupDTO.Annotations)
+		assert.Equal(t, annotations, model.SortAnnotations(groupDTO.Annotations))
 	})
 
 	t.Run("get group 2", func(t *testing.T) {
