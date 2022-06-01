@@ -75,9 +75,8 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
 	PromtailCanonicalName: {Chart: "4.2.0", ValuesPath: ""},
-	// RtcdDefaultVersion defines the default version for the Helm chart
+	// RtcdDefaultVersion defines the default version and values path for the Helm chart
 	RtcdCanonicalName: {Chart: "1.0.0", ValuesPath: ""},
-	// KubecostDefaultVersion defines the default version for the Helm chart
 	// KubecostCanonicalName defines the default version and values path for the Helm chart
 	KubecostCanonicalName: {Chart: "1.88.1", ValuesPath: ""},
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart

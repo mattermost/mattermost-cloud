@@ -35,7 +35,11 @@ func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVers
 	}
 
 	if kops == nil {
-		return nil, errors.New("cannot create a connection to PgbRTCDouncer if the Kops command provided is nil")
+		return nil, errors.New("cannot create a connection to RTCD if the Kops command provided is nil")
+	}
+
+	if awsClient == nil {
+		return nil, errors.New("cannot create a connection to RTCD if the awsClient provided is nil")
 	}
 
 	return &rtcd{
@@ -51,70 +55,72 @@ func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVers
 
 }
 
-func (p *rtcd) updateVersion(h *helmDeployment) error {
+func (r *rtcd) updateVersion(h *helmDeployment) error {
 	actualVersion, err := h.Version()
 	if err != nil {
 		return err
 	}
 
-	p.actualVersion = actualVersion
+	r.actualVersion = actualVersion
 	return nil
 }
 
-func (p *rtcd) ValuesPath() string {
-	if p.desiredVersion == nil {
+func (r *rtcd) ValuesPath() string {
+	if r.desiredVersion == nil {
 		return ""
 	}
-	return p.desiredVersion.Values()
+	return r.desiredVersion.Values()
 }
 
-func (p *rtcd) CreateOrUpgrade() error {
+func (r *rtcd) CreateOrUpgrade() error {
 
-	h := p.NewHelmDeployment()
+	h := r.NewHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
 		return err
 	}
 
-	err = p.updateVersion(h)
+	err = r.updateVersion(h)
 	return err
 }
 
-func (p *rtcd) DesiredVersion() *model.HelmUtilityVersion {
-	return p.desiredVersion
+func (r *rtcd) DesiredVersion() *model.HelmUtilityVersion {
+	return r.desiredVersion
 }
 
-func (p *rtcd) ActualVersion() *model.HelmUtilityVersion {
-	if p.actualVersion == nil {
+func (r *rtcd) ActualVersion() *model.HelmUtilityVersion {
+	if r.actualVersion == nil {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(p.actualVersion.Version(), "rtcd-"),
-		ValuesPath: p.actualVersion.Values(),
+		Chart:      strings.TrimPrefix(r.actualVersion.Version(), "rtcd-"),
+		ValuesPath: r.actualVersion.Values(),
 	}
 }
 
-func (p *rtcd) Destroy() error {
+func (r *rtcd) Destroy() error {
+	// if anything needs to be deleted can be added here
 	return nil
 }
 
-func (p *rtcd) Migrate() error {
+func (r *rtcd) Migrate() error {
+	// if anything needs to be migrated can be added here
 	return nil
 }
 
-func (p *rtcd) NewHelmDeployment() *helmDeployment {
+func (r *rtcd) NewHelmDeployment() *helmDeployment {
 	return &helmDeployment{
 		chartDeploymentName: "mattermost-rtcd",
 		chartName:           "mattermost/mattermost-rtcd",
 		namespace:           "mattermost-rtcd",
-		kopsProvisioner:     p.provisioner,
-		kops:                p.kops,
-		logger:              p.logger,
-		desiredVersion:      p.desiredVersion,
+		kopsProvisioner:     r.provisioner,
+		kops:                r.kops,
+		logger:              r.logger,
+		desiredVersion:      r.desiredVersion,
 	}
 }
 
-func (p *rtcd) Name() string {
+func (r *rtcd) Name() string {
 	return model.RtcdCanonicalName
 }
