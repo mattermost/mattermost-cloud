@@ -27,6 +27,8 @@ const (
 	PgbouncerCanonicalName = "pgbouncer"
 	// PromtailCanonicalName is the canonical string representation of promtail
 	PromtailCanonicalName = "promtail"
+	// RtcdCanonicalName is the canonical string representation of RTCD
+	RtcdCanonicalName = "rtcd"
 	// KubecostCanonicalName is the canonical string representation of kubecost
 	KubecostCanonicalName = "kubecost"
 	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
@@ -73,6 +75,8 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	PgbouncerCanonicalName: {Chart: "1.2.0", ValuesPath: ""},
 	// PromtailCanonicalName defines the default version and values path for the Helm chart
 	PromtailCanonicalName: {Chart: "4.2.0", ValuesPath: ""},
+	// RtcdDefaultVersion defines the default version and values path for the Helm chart
+	RtcdCanonicalName: {Chart: "1.0.0", ValuesPath: ""},
 	// KubecostCanonicalName defines the default version and values path for the Helm chart
 	KubecostCanonicalName: {Chart: "1.88.1", ValuesPath: ""},
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
@@ -92,6 +96,7 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	TeleportCanonicalName:            "teleport_values.yaml",
 	PgbouncerCanonicalName:           "pgbouncer_values.yaml",
 	PromtailCanonicalName:            "promtail_values.yaml",
+	RtcdCanonicalName:                "rtcd_values.yaml",
 	KubecostCanonicalName:            "kubecost_values.yaml",
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
@@ -136,6 +141,7 @@ type UtilityGroupVersions struct {
 	Teleport            *HelmUtilityVersion
 	Pgbouncer           *HelmUtilityVersion
 	Promtail            *HelmUtilityVersion
+	Rtcd                *HelmUtilityVersion
 	Kubecost            *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
 	MetricsServer       *HelmUtilityVersion
@@ -155,6 +161,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		TeleportCanonicalName:            h.Teleport,
 		PgbouncerCanonicalName:           h.Pgbouncer,
 		PromtailCanonicalName:            h.Promtail,
+		RtcdCanonicalName:                h.Rtcd,
 		KubecostCanonicalName:            h.Kubecost,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 		MetricsServerCanonicalName:       h.MetricsServer,
@@ -285,6 +292,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Pgbouncer = desiredVersion
 	case PromtailCanonicalName:
 		versions.Promtail = desiredVersion
+	case RtcdCanonicalName:
+		versions.Rtcd = desiredVersion
 	case KubecostCanonicalName:
 		versions.Kubecost = desiredVersion
 	case NodeProblemDetectorCanonicalName:
