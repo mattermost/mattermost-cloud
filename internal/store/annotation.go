@@ -422,6 +422,46 @@ func (sqlStore *SQLStore) DeleteInstallationAnnotation(installationID string, an
 	return nil
 }
 
+// CreateGroupAnnotations maps selected annotations to group and stores it in the database.
+func (sqlStore *SQLStore) CreateGroupAnnotations(groupID string, annotations []*model.Annotation) ([]*model.Annotation, error) {
+	annotations, err := sqlStore.getOrCreateAnnotations(sqlStore.db, annotations)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get or create annotations")
+	}
+
+	return sqlStore.createGroupAnnotations(sqlStore.db, groupID, annotations)
+}
+
+// DeleteGroupAnnotation removes an annotation from a given group.
+func (sqlStore *SQLStore) DeleteGroupAnnotation(groupID string, annotationName string) error {
+	annotation, err := sqlStore.GetAnnotationByName(annotationName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get annotation '%s' by name", annotationName)
+	}
+	if annotation == nil {
+		return nil
+	}
+
+	builder := sq.Delete(groupAnnotationTable).
+		Where("GroupID = ?", groupID).
+		Where("AnnotationID = ?", annotation.ID)
+
+	result, err := sqlStore.execBuilder(sqlStore.db, builder)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete group annotation")
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err, "failed to check affected rows when deleting group annotation")
+	}
+	if rows > 1 { // Do not fail if annotation is not set.
+		return fmt.Errorf("error deleting group annotation, expected 0 or 1 rows to be affected was %d", rows)
+	}
+
+	return nil
+}
+
 type groupAnnotation struct {
 	*model.Annotation
 	GroupID string
@@ -451,7 +491,7 @@ func (sqlStore *SQLStore) getAnnotationsForGroups(ids []string) (map[string][]*m
 		From(groupTable).
 		LeftJoin(fmt.Sprintf(`%s ON %s.GroupID = "Group".ID`, groupAnnotationTable, groupAnnotationTable)).
 		Join("Annotation ON Annotation.ID=AnnotationID").
-		Where(sq.Eq{`"Group".ID`: ids}) // TODO: test
+		Where(sq.Eq{`"Group".ID`: ids})
 
 	err := sqlStore.selectBuilder(sqlStore.db, &groupAnnotations, builder)
 	if err != nil {

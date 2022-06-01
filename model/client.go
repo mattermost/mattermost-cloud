@@ -1093,6 +1093,40 @@ func (c *Client) LeaveGroup(installationID string, request *LeaveGroupRequest) e
 	}
 }
 
+// AddGroupAnnotations adds annotations to the given group.
+func (c *Client) AddGroupAnnotations(groupID string, annotationsRequest *AddAnnotationsRequest) (*GroupDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/group/%s/annotations", groupID), annotationsRequest)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return GroupDTOFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// DeleteGroupAnnotation deletes annotation from the given group.
+func (c *Client) DeleteGroupAnnotation(groupID string, annotationName string) error {
+	resp, err := c.doDelete(c.buildURL("/api/group/%s/annotation/%s", groupID, annotationName))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // GetMultitenantDatabases fetches the list of multitenant databases from the configured provisioning server.
 func (c *Client) GetMultitenantDatabases(request *GetMultitenantDatabasesRequest) ([]*MultitenantDatabase, error) {
 	u, err := url.Parse(c.buildURL("/api/databases"))
