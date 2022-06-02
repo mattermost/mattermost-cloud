@@ -140,6 +140,10 @@ const (
 	// attached in Kops Instance Profile.
 	CustomNodePolicyName = "cloud-provisioning-node-policy"
 
+	// VeleroNodePolicyName is the name of the velero IAM policy that will be
+	// attached in Kops Instance Profile.
+	VeleroNodePolicyName = "cloud-provisioning-node-policy-velero"
+
 	// cloudIDPrefix is the prefix value used when creating AWS resource names.
 	// Warning:
 	// changing this value will break the connection to AWS resources for
