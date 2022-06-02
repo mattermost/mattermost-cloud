@@ -210,6 +210,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
+	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach velero node policy")
+	}
+
 	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return err
@@ -552,6 +557,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
+	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach velero node policy")
+	}
+
 	ugh, err := newUtilityGroupHandle(kopsClient, provisioner, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
@@ -715,6 +725,11 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
+	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach velero node policy")
+	}
+
 	logger.Info("Successfully upgraded cluster")
 
 	return nil
@@ -869,6 +884,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy")
+	}
+
+	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
 	logger.Info("Successfully resized cluster")
