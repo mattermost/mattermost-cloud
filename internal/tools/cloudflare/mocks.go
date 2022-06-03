@@ -11,6 +11,7 @@ type MockCloudflare struct {
 	mockGetZoneID       func(zoneName string) (zoneID string, err error)
 	mockCreateDNSRecord func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
 	mockDeleteDNSRecord func(ctx context.Context, zoneID, recordID string) error
+	mockUpdateDNSRecord func(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error
 	mockDNSRecords      func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 }
 
@@ -37,6 +38,11 @@ func (c *MockCloudflare) DNSRecords(ctx context.Context, zoneID string, rr cf.DN
 // CreateDNSRecord mocks cloudflare package same method
 func (c *MockCloudflare) CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
 	return c.mockCreateDNSRecord(ctx, zoneID, rr)
+}
+
+// UpdateDNSRecord mocks cloudflare package same method
+func (c *MockCloudflare) UpdateDNSRecord(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error {
+	return c.mockUpdateDNSRecord(ctx, zoneID, recordID, rr)
 }
 
 // DeleteDNSRecord mocks cloudflare package same method
