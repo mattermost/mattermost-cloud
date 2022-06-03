@@ -6,6 +6,7 @@ package cloudflare
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"time"
 
@@ -16,6 +17,10 @@ import (
 )
 
 const defaultTimeout = 30 * time.Second
+
+const (
+	recordExistsErr = "A, AAAA, or CNAME record with that host already exists"
+)
 
 func (c *Client) getZoneID(zoneName string) (zoneID string, err error) {
 	zoneID, err = c.cfClient.ZoneIDByName(zoneName)
@@ -93,26 +98,61 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 			return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
 		}
 
+		log := logger.WithFields(logrus.Fields{
+			"cloudflare-dns-value":    dnsName,
+			"cloudflare-dns-endpoint": dnsEndpoint,
+			"cloudflare-zone-id":      zoneID,
+		})
+
 		proxied := true
 
-		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-		defer cancel()
-		recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, cf.DNSRecord{
+		record := cf.DNSRecord{
 			Name:    dnsName,
 			Type:    "CNAME",
 			Content: dnsEndpoint,
 			TTL:     1,
 			Proxied: &proxied,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 		}
 
-		logger.WithFields(logrus.Fields{
-			"cloudflare-dns-value":    dnsName,
-			"cloudflare-dns-endpoint": dnsEndpoint,
-			"cloudflare-zone-id":      zoneID,
-		}).Debugf("Cloudflare create DNS record response: %v", recordResp)
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+		defer cancel()
+		recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
+		if err != nil {
+			// We do not have a clear indication if the record already exists
+			// based only on the status code (400 may mean invalid input),
+			// therefore we also need to compare the error message.
+			cfAPIErr := &cf.APIRequestError{}
+			if !errors.As(err, &cfAPIErr) || cfAPIErr.StatusCode != http.StatusBadRequest || !strings.Contains(cfAPIErr.Error(), recordExistsErr) {
+				return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
+			}
+			log.Info("Record already exists, trying to update...")
+			err = c.updateDNSRecord(zoneID, record, log)
+			if err != nil {
+				return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
+			}
+			continue
+		}
+
+		log.Debugf("Cloudflare create DNS record response: %v", recordResp)
+	}
+
+	return nil
+}
+
+func (c *Client) updateDNSRecord(zoneID string, record cf.DNSRecord, logger logrus.FieldLogger) error {
+	ids, err := c.getRecordIDs(zoneID, record.Name, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to find record ID to update")
+	}
+	if len(ids) != 1 {
+		return errors.Errorf("erxpected one record id, found %d", len(ids))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	err = c.cfClient.UpdateDNSRecord(ctx, zoneID, ids[0], record)
+	if err != nil {
+		return errors.Wrap(err, "failed to update record")
 	}
 
 	return nil

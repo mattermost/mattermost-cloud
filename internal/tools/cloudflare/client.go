@@ -16,6 +16,7 @@ type Cloudflarer interface {
 	ZoneIDByName(zoneName string) (string, error)
 	DNSRecords(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error)
 	CreateDNSRecord(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error)
+	UpdateDNSRecord(ctx context.Context, zoneID, recordID string, rr cf.DNSRecord) error
 	DeleteDNSRecord(ctx context.Context, zoneID, recordID string) error
 }
 
