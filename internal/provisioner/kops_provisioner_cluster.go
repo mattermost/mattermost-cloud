@@ -956,7 +956,7 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 	}
 	err = awsClient.DetachPolicyFromRole(iamRole, aws.VeleroNodePolicyName, logger)
 	if err != nil {
-		return errors.Wrap(err, "unable to detach custom node policy")
+		return errors.Wrap(err, "unable to detach velero node policy")
 	}
 
 	_, err = kopsClient.GetCluster(kopsMetadata.Name)
