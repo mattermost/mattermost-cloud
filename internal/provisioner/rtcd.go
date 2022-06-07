@@ -94,7 +94,7 @@ func (r *rtcd) ActualVersion() *model.HelmUtilityVersion {
 		return nil
 	}
 	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(r.actualVersion.Version(), "rtcd-"),
+		Chart:      strings.TrimPrefix(r.actualVersion.Version(), "mattermost-rtcd-"),
 		ValuesPath: r.actualVersion.Values(),
 	}
 }
