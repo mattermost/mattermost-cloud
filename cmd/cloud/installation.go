@@ -114,6 +114,7 @@ func init() {
 	installationCmd.AddCommand(backupCmd)
 	installationCmd.AddCommand(installationOperationCmd)
 	installationCmd.AddCommand(installationDeploymentReportCmd)
+	installationCmd.AddCommand(installationDNSCmd)
 }
 
 var installationCmd = &cobra.Command{

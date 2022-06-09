@@ -45,6 +45,10 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
 	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations)).Methods("POST")
 	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation)).Methods("DELETE")
+
+	// DNS manipulation
+	installationRouter.Handle("/dns", addContext(handleAddDNSRecord)).Methods("POST")
+	installationRouter.Handle("/dns/{installationDNS}/set-primary", addContext(handleSetDomainNamePrimary)).Methods("POST")
 }
 
 // handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.

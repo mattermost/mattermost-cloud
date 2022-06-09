@@ -5,6 +5,7 @@
 package store
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -116,4 +117,75 @@ func Test_QueryInstallationsWithDNS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(fetched))
 	})
+}
+
+func TestInstallationDNS(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	installation := &model.Installation{
+		Name: "test",
+	}
+	dnsRecords := []*model.InstallationDNS{
+		{DomainName: "test.dns.com", IsPrimary: true},
+	}
+
+	err := sqlStore.CreateInstallation(installation, nil, dnsRecords)
+	require.NoError(t, err)
+	initialDNSRec := dnsRecords[0]
+
+	t.Run("fail to create second primary DNS", func(t *testing.T) {
+		dnsRecord := &model.InstallationDNS{DomainName: "test.dns-2.com", IsPrimary: true}
+		err := sqlStore.AddInstallationDomain(installation, dnsRecord)
+		require.Error(t, err)
+		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint") // Make sure error comes from DB
+	})
+
+	// Add DNS record
+	addedRecord := &model.InstallationDNS{DomainName: "test.dns2.com"}
+	err = sqlStore.AddInstallationDomain(installation, addedRecord)
+	require.NoError(t, err)
+
+	installationDTO, err := sqlStore.GetInstallationDTO(installation.ID, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(installationDTO.DNSRecords))
+
+	installations, err := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "test.dns.com", Paging: model.AllPagesNotDeleted()}, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, installationDTO.Installation, installations[0])
+
+	// Add new domain and ensure it is not primary.
+	thirdRecord := &model.InstallationDNS{DomainName: "test.dns3.com"}
+	err = sqlStore.AddInstallationDomain(installation, thirdRecord)
+	require.NoError(t, err)
+
+	records, err := sqlStore.GetDNSRecordsForInstallation(installation.ID)
+	require.NoError(t, err)
+	assert.Equal(t, true, records[0].IsPrimary)
+	assert.Equal(t, false, records[1].IsPrimary)
+	assert.Equal(t, false, records[2].IsPrimary)
+	assert.Equal(t, initialDNSRec.ID, records[0].ID) // Sanity check
+
+	// Switch primary domain name - IsPrimary should be set to false on others.
+	err = sqlStore.SwitchPrimaryInstallationDomain(installation.ID, thirdRecord.ID)
+	require.NoError(t, err)
+	records, err = sqlStore.GetDNSRecordsForInstallation(installation.ID)
+	require.NoError(t, err)
+	assert.Equal(t, false, records[0].IsPrimary)
+	assert.Equal(t, false, records[1].IsPrimary)
+	assert.Equal(t, true, records[2].IsPrimary)
+	assert.Equal(t, thirdRecord.ID, records[2].ID) // Sanity check
+
+	record, err := sqlStore.GetInstallationDNS(thirdRecord.ID)
+	require.NoError(t, err)
+	assert.True(t, record.IsPrimary)
+
+	// Delete InstallationDNS
+	err = sqlStore.DeleteInstallationDNS(installation.ID, "test.dns.com")
+	require.NoError(t, err)
+
+	installations, err = sqlStore.GetInstallations(&model.InstallationFilter{DNS: "test.dns.com", Paging: model.AllPagesNotDeleted()}, false, false)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(installations))
 }

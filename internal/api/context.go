@@ -118,6 +118,11 @@ type Store interface {
 	DeleteSubscription(subID string) error
 
 	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
+
+	AddInstallationDomain(installation *model.Installation, dnsRecord *model.InstallationDNS) error
+	GetInstallationDNS(id string) (*model.InstallationDNS, error)
+	SwitchPrimaryInstallationDomain(installationID string, installationDNSID string) error
+	GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error)
 }
 
 // Provisioner describes the interface required to communicate with the Kubernetes cluster.
