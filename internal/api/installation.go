@@ -39,6 +39,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
 	installationRouter.Handle("/mattermost", addContext(handleUpdateInstallation)).Methods("PUT")
 	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
+	installationRouter.Handle("/group/{group}", addContext(handleAssignGroup)).Methods("POST")
 	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
 	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation)).Methods("POST")
 	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation)).Methods("POST")
@@ -366,46 +367,55 @@ func handleJoinGroup(c *Context, w http.ResponseWriter, r *http.Request) {
 	groupID := vars["group"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
-	installationDTO, status, installationUnlockOnce := lockInstallation(c, installationID)
-	if status != 0 {
-		w.WriteHeader(status)
-		return
-	}
-	defer installationUnlockOnce()
-
-	if installationDTO.APISecurityLock {
-		logSecurityLockConflict("installation", c.Logger)
-		w.WriteHeader(http.StatusForbidden)
+	err := joinGroup(c, installationID, groupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to join installation to the group")
+		w.WriteHeader(common.ErrToStatus(err))
 		return
 	}
 
-	group, status, groupUnlockOnce := lockGroup(c, groupID)
-	if status != 0 {
-		w.WriteHeader(status)
+	c.Supervisor.Do()
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleAssignGroup responds to POST /api/installation/{installation}/group/assign,
+// removing installation from current group (if any) and joining new one based to annotations.
+func handleAssignGroup(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	assignRequest, err := model.NewAssignInstallationGroupRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("invalid assign group request")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	defer groupUnlockOnce()
-	if group.IsDeleted() {
-		c.Logger.Errorf("cannot join installation to deleted group %s", groupID)
+	defer r.Body.Close()
+
+	if len(assignRequest.GroupSelectionAnnotations) == 0 {
+		c.Logger.Error("no annotations provided")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Update the installation, but don't directly modify the configuration.
-	// The supervisor will manage this later.
-	if installationDTO.GroupID == nil || *installationDTO.GroupID != groupID {
-		installationDTO.GroupID = &groupID
+	groupID, err := selectGroupForAnnotation(c, assignRequest.GroupSelectionAnnotations)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to select group based on annotations")
+		w.WriteHeader(common.ErrToStatus(err))
+		return
+	}
+	c.Logger = c.Logger.WithField("group", groupID)
+	c.Logger.Info("Selected group for Installation based on annotations. Joining the group...")
 
-		err := c.Store.UpdateInstallation(installationDTO.Installation)
-		if err != nil {
-			c.Logger.WithError(err).Error("failed to update installation")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	err = joinGroup(c, installationID, groupID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to join installation to assigned group")
+		w.WriteHeader(common.ErrToStatus(err))
+		return
 	}
 
-	installationUnlockOnce()
-	groupUnlockOnce()
 	c.Supervisor.Do()
 
 	w.WriteHeader(http.StatusOK)
@@ -672,6 +682,43 @@ func handleDeleteInstallationAnnotation(c *Context, w http.ResponseWriter, r *ht
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func joinGroup(c *Context, installationID, groupID string) error {
+	installationDTO, status, installationUnlockOnce := lockInstallation(c, installationID)
+	if status != 0 {
+		return common.NewErr(status, errors.New("failed to lock installation"))
+	}
+	defer installationUnlockOnce()
+
+	if installationDTO.APISecurityLock {
+		logSecurityLockConflict("installation", c.Logger)
+		return common.NewErr(http.StatusForbidden, errors.New("installation API locked"))
+	}
+
+	group, status, groupUnlockOnce := lockGroup(c, groupID)
+	if status != 0 {
+		return common.NewErr(status, errors.New("failed to lock group"))
+	}
+	defer groupUnlockOnce()
+	if group.IsDeleted() {
+		return common.NewErr(http.StatusBadRequest, errors.Errorf("cannot join installation to deleted group %s", groupID))
+	}
+
+	// Update the installation, but don't directly modify the configuration.
+	// The supervisor will manage this later.
+	if installationDTO.GroupID == nil || *installationDTO.GroupID != groupID {
+		installationDTO.GroupID = &groupID
+
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
+		if err != nil {
+			return common.NewErr(http.StatusInternalServerError, errors.Wrap(err, "failed to update installation"))
+		}
+	}
+
+	installationUnlockOnce()
+	groupUnlockOnce()
+	return nil
 }
 
 // updateInstallationState updates installation state in database and sends appropriate webhook.

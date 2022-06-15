@@ -616,6 +616,36 @@ func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 	})
 }
 
+func TestNewAssignInstallationGroupFromReader(t *testing.T) {
+	t.Run("empty request", func(t *testing.T) {
+		request, err := model.NewAssignInstallationGroupRequestFromReader(bytes.NewReader([]byte(
+			``,
+		)))
+		require.NoError(t, err)
+		require.Equal(t, &model.AssignInstallationGroupRequest{}, request)
+	})
+
+	t.Run("invalid request", func(t *testing.T) {
+		request, err := model.NewAssignInstallationGroupRequestFromReader(bytes.NewReader([]byte(
+			`{test`,
+		)))
+		require.Error(t, err)
+		require.Nil(t, request)
+	})
+
+	t.Run("request", func(t *testing.T) {
+		request, err := model.NewAssignInstallationGroupRequestFromReader(bytes.NewReader([]byte(`{
+			"GroupSelectionAnnotations": ["test1", "test2"]
+		}`)))
+		require.NoError(t, err)
+
+		expected := &model.AssignInstallationGroupRequest{
+			GroupSelectionAnnotations: []string{"test1", "test2"},
+		}
+		require.Equal(t, expected, request)
+	})
+}
+
 func sToP(s string) *string {
 	return &s
 }

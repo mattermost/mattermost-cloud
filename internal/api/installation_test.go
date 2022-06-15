@@ -1187,6 +1187,112 @@ func TestJoinGroup(t *testing.T) {
 	})
 }
 
+func TestAssignGroup(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+	model.SetDeployOperators(true, true)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:         sqlStore,
+		Supervisor:    &mockSupervisor{},
+		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Logger:        logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	group1, err := client.CreateGroup(&model.CreateGroupRequest{
+		Name:    "name1",
+		Version: "version1",
+		Image:   "sample/image1",
+		Annotations: []string{"group-ann1", "group-ann2"},
+	})
+	require.NoError(t, err)
+
+	group2, err := client.CreateGroup(&model.CreateGroupRequest{
+		Name:    "name2",
+		Version: "version2",
+		Image:   "sample/image2",
+		Annotations: []string{"group-ann1", "group-ann3"},
+	})
+	require.NoError(t, err)
+
+	_, err = client.CreateGroup(&model.CreateGroupRequest{
+		Name:    "name3",
+		Version: "version3",
+		Image:   "sample/image3",
+	})
+	require.NoError(t, err)
+
+	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner",
+		Version:  "version",
+		DNS:      "dns.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	for _, testCase := range []struct{
+	    description string
+	    annotations []string
+		possibleGroups []string
+	}{
+	    {
+			description: "select specific group",
+			annotations: []string{"group-ann1", "group-ann2"},
+			possibleGroups: []string{group1.ID},
+	    },
+	    {
+			description: "select different specific group",
+			annotations: []string{"group-ann1", "group-ann3"},
+			possibleGroups: []string{group2.ID},
+	    },
+	    {
+			description: "select one of two groups",
+			annotations: []string{"group-ann1"},
+			possibleGroups: []string{group1.ID, group2.ID},
+	    },
+	} {
+	    t.Run(testCase.description, func(t *testing.T) {
+			err = client.AssignGroup(installation1.ID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: testCase.annotations})
+			require.NoError(t, err)
+
+			fetchedInstallation, err := client.GetInstallation(installation1.ID, nil)
+			require.NoError(t, err)
+			assert.NotEmpty(t, fetchedInstallation.GroupID)
+			assert.Contains(t, testCase.possibleGroups, *fetchedInstallation.GroupID)
+	    })
+	}
+
+	installation1, err = client.GetInstallation(installation1.ID, nil)
+	require.NoError(t, err)
+
+	t.Run("error when no annotations provided", func(t *testing.T) {
+		err = client.AssignGroup(installation1.ID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: []string{}})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "400")
+
+		// Make sure group did not change
+		fetchedInstallation, err := client.GetInstallation(installation1.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, installation1.GroupID, fetchedInstallation.GroupID)
+	})
+	t.Run("error when some annotations do not exist", func(t *testing.T) {
+		err = client.AssignGroup(installation1.ID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: []string{"group-ann1", "not-existing"}})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "400")
+
+		// Make sure group did not change
+		fetchedInstallation, err := client.GetInstallation(installation1.ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, installation1.GroupID, fetchedInstallation.GroupID)
+	})
+}
+
 func TestWakeUpInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := store.MakeTestSQLStore(t, logger)

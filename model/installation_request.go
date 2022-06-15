@@ -389,3 +389,19 @@ func NewPatchInstallationRequestFromReader(reader io.Reader) (*PatchInstallation
 
 	return &patchInstallationRequest, nil
 }
+
+// AssignInstallationGroupRequest specifies request body for installation group assignment.
+type AssignInstallationGroupRequest struct {
+	GroupSelectionAnnotations []string
+}
+
+// NewAssignInstallationGroupRequestFromReader will create a AssignInstallationGroupRequest from an io.Reader with JSON data.
+func NewAssignInstallationGroupRequestFromReader(reader io.Reader) (*AssignInstallationGroupRequest, error) {
+	var assignGroupRequest AssignInstallationGroupRequest
+	err := json.NewDecoder(reader).Decode(&assignGroupRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode assign group request")
+	}
+
+	return &assignGroupRequest, nil
+}

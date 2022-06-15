@@ -55,6 +55,11 @@ func init() {
 	groupJoinCmd.MarkFlagRequired("group")
 	groupJoinCmd.MarkFlagRequired("installation")
 
+	groupAssignCmd.Flags().String("installation", "", "The id of the installation to assign to the group.")
+	groupAssignCmd.Flags().StringArray("group-selection-annotation", []string{}, "Group annotations based on which the installation should be assigned.")
+	groupAssignCmd.MarkFlagRequired("installation")
+	groupAssignCmd.MarkFlagRequired("group-selection-annotation")
+
 	groupLeaveCmd.Flags().String("installation", "", "The id of the installation to leave its currently configured group.")
 	groupLeaveCmd.Flags().Bool("retain-config", true, "Whether to retain the group configuration values or not.")
 	groupLeaveCmd.MarkFlagRequired("installation")
@@ -67,6 +72,7 @@ func init() {
 	groupCmd.AddCommand(groupGetStatusCmd)
 	groupCmd.AddCommand(groupGetGroupsStatusCmd)
 	groupCmd.AddCommand(groupJoinCmd)
+	groupCmd.AddCommand(groupAssignCmd)
 	groupCmd.AddCommand(groupLeaveCmd)
 	groupCmd.AddCommand(groupAnnotationCmd)
 }
@@ -309,6 +315,27 @@ var groupJoinCmd = &cobra.Command{
 		err := client.JoinGroup(groupID, installationID)
 		if err != nil {
 			return errors.Wrap(err, "failed to join group")
+		}
+
+		return nil
+	},
+}
+
+var groupAssignCmd = &cobra.Command{
+	Use:   "assign",
+	Short: "Assign an installation to the group based on annotations, leaving any existing group.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationID, _ := command.Flags().GetString("installation")
+		annotations, _ := command.Flags().GetStringArray("group-selection-annotation")
+
+		err := client.AssignGroup(installationID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: annotations})
+		if err != nil {
+			return errors.Wrap(err, "failed to assign group")
 		}
 
 		return nil
