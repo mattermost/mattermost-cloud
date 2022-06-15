@@ -551,6 +551,38 @@ func (c *Client) DeleteInstallation(installationID string) error {
 	}
 }
 
+// AddInstallationDNS creates new DNS record for installation.
+func (c *Client) AddInstallationDNS(installationID string, request *AddDNSRecordRequest) (*InstallationDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/dns", installationID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return InstallationDTOFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// SetInstallationDomainPrimary sets Installation domain as primary.
+func (c *Client) SetInstallationDomainPrimary(installationID, installationDNSID string) (*InstallationDTO, error) {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/dns/%s/set-primary", installationID, installationDNSID), nil)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return InstallationDTOFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // RestoreInstallationDatabase requests installation db restoration from the configured provisioning server.
 func (c *Client) RestoreInstallationDatabase(installationID, backupID string) (*InstallationDBRestorationOperation, error) {
 	resp, err := c.doPost(c.buildURL("/api/installations/operations/database/restorations"),

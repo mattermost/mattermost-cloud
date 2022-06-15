@@ -879,6 +879,13 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 		logger.WithError(err).Warn("Failed to update the installation route53 records")
 		return installation.State
 	}
+	// Given that new DNS record can be added on update, we need to update
+	// Cloudflare as well.
+	err = s.cloudflareClient.CreateDNSRecords(dnsNames, endpoints, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to upsert DNS CNAME record in Cloudflare")
+		return installation.State
+	}
 
 	logger.Info("Finished updating installation")
 

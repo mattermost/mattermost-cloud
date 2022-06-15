@@ -37,6 +37,11 @@ func (sqlStore *SQLStore) GetInstallationDNS(id string) (*model.InstallationDNS,
 	return &installationDNS, nil
 }
 
+// AddInstallationDomain adds Installation domain name to the database.
+func (sqlStore *SQLStore) AddInstallationDomain(installation *model.Installation, dnsRecord *model.InstallationDNS) error {
+	return sqlStore.createInstallationDNS(sqlStore.db, installation.ID, dnsRecord)
+}
+
 func (sqlStore *SQLStore) createInstallationDNS(db execer, installationID string, dnsRecord *model.InstallationDNS) error {
 	dnsRecord.ID = model.NewID()
 	dnsRecord.InstallationID = installationID
@@ -77,6 +82,21 @@ func (sqlStore *SQLStore) getDNSRecordsForInstallation(db queryer, installationI
 	}
 
 	return records, nil
+}
+
+// SwitchPrimaryInstallationDomain sets given domain as primary reducing all others to non-primary.
+func (sqlStore *SQLStore) SwitchPrimaryInstallationDomain(installationID string, installationDNSID string) error {
+	query := sq.Update(installationDNSTable).
+		Set("IsPrimary",
+			sq.Case().When(sq.Expr("ID = ?", installationDNSID), "true").Else("false"),
+		).Where("InstallationID = ?", installationID)
+
+	_, err := sqlStore.execBuilder(sqlStore.db, query)
+	if err != nil {
+		return errors.Wrap(err, "failed to switch primary DNS")
+	}
+
+	return nil
 }
 
 // DeleteInstallationDNS marks Installation DNS record as deleted.

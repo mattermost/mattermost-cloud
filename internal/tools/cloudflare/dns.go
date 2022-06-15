@@ -169,7 +169,8 @@ func (c *Client) DeleteDNSRecords(dnsNames []string, logger logrus.FieldLogger) 
 		// Fetch the zone name for that customer DNS name
 		zoneName, found := c.getZoneName(zoneNameList, dnsName)
 		if !found {
-			return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+			logger.Warnf("Hosted zone for %q domain name not found. Assuming record does not exist", dnsName)
+			continue
 		}
 
 		// Fetch the zone ID
