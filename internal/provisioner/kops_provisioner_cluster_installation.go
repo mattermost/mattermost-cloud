@@ -87,6 +87,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
+	ndotsValue := "1"
 
 	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
@@ -105,6 +106,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Scheduling: mmv1beta1.Scheduling{
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
+			DNSConfig: setNdots(ndotsValue),
 		},
 	}
 
@@ -229,6 +231,8 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 
 	ctx := context.TODO()
 
+	ndotsValue := "1"
+
 	mattermost, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, installationName, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get mattermost installation %s", clusterInstallation.ID)
@@ -240,6 +244,8 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation)
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
+
+	mattermost.Spec.DNSConfig = setNdots(ndotsValue)
 
 	version := translateMattermostVersion(installation.Version)
 	if mattermost.Spec.Version == version {
@@ -1112,4 +1118,8 @@ func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
 	}
 
 	return false
+}
+
+func setNdots(ndotsValue string) *corev1.PodDNSConfig {
+	return &corev1.PodDNSConfig{Options: []corev1.PodDNSConfigOption{{Name: "ndots", Value: &ndotsValue}}}
 }
