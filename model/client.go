@@ -1101,6 +1101,23 @@ func (c *Client) JoinGroup(groupID, installationID string) error {
 	}
 }
 
+// AssignGroup joins an installation to the group selected by annotations, leaving any existing group.
+func (c *Client) AssignGroup(installationID string, assignRequest AssignInstallationGroupRequest) error {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/group/assign", installationID), assignRequest)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // LeaveGroup removes an installation from its group, if any.
 func (c *Client) LeaveGroup(installationID string, request *LeaveGroupRequest) error {
 	u, err := url.Parse(c.buildURL("/api/installation/%s/group", installationID))
