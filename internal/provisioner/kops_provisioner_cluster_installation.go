@@ -1066,6 +1066,8 @@ func getIngressAnnotations() map[string]string {
 				  proxy_cache_lock on;
 				  proxy_cache_key "$host$request_uri$cookie_user";`,
 		"nginx.org/server-snippets": "gzip on;",
+		// Used for CloudProber
+		"state": "running",
 	}
 }
 
@@ -1074,6 +1076,8 @@ func getIngressAnnotations() map[string]string {
 func getHibernatingIngressAnnotations() map[string]string {
 	annotations := getIngressAnnotations()
 	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
+	// Used for CloudProber
+	annotations["state"] = "hibernated"
 
 	return annotations
 }
