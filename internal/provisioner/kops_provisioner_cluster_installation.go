@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -87,7 +88,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
-	ndotsValue := "1"
+	ndotsValue := os.Getenv("ndots-value")
 
 	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
@@ -231,7 +232,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 
 	ctx := context.TODO()
 
-	ndotsValue := "1"
+	ndotsValue := os.Getenv("ndots-value")
 
 	mattermost, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, installationName, metav1.GetOptions{})
 	if err != nil {
