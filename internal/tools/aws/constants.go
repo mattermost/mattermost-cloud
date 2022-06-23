@@ -214,7 +214,7 @@ const (
 	// DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit is the maximum
 	// number of schemas allowed in a Postgres multitenant RDS database cluster
 	// with a PGBouncer proxy.
-	DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit = 1500
+	DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit = 2500
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
