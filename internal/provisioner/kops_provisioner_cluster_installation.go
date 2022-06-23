@@ -101,7 +101,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			MattermostEnv: mattermostEnv.ToEnvList(),
 			Ingress:       makeIngressSpec(installationDNS),
 			// Set `installation-id` and `cluster-installation-id` labels for all related resources.
-			ResourceLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+			ResourceLabels: clusterInstallationStableLabels(installation, clusterInstallation),
 			Scheduling: mmv1beta1.Scheduling{
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
@@ -110,7 +110,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 
 	if installation.State == model.InstallationStateHibernating {
 		logger.Info("creating hibernated cluster installation")
-		configureInstallationForHibernation(mattermost)
+		configureInstallationForHibernation(mattermost, installation, clusterInstallation)
 	}
 
 	if installation.License != "" {
@@ -171,7 +171,7 @@ func (provisioner *crProvisionerWrapper) HibernateClusterInstallation(cluster *m
 		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
 
-	configureInstallationForHibernation(cr)
+	configureInstallationForHibernation(cr, installation, clusterInstallation)
 
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
 	if err != nil {
@@ -186,7 +186,7 @@ func (provisioner *crProvisionerWrapper) HibernateClusterInstallation(cluster *m
 	return nil
 }
 
-func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
+func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, installation *model.Installation, clusterInstallation *model.ClusterInstallation) {
 	// Hibernation is currently considered changing the Mattermost app deployment
 	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
 	// The current way to do this is to set a negative replica count in the
@@ -199,6 +199,8 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost) {
 	} else {
 		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
 	}
+
+	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation)
 }
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
@@ -235,7 +237,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	logger.WithField("status", fmt.Sprintf("%+v", mattermost.Status)).Debug("Got mattermost installation")
 
 	mattermost.ObjectMeta.Labels = generateClusterInstallationResourceLabels(installation, clusterInstallation)
-	mattermost.Spec.ResourceLabels = clusterInstallationBaseLabels(installation, clusterInstallation)
+	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation)
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
@@ -1009,6 +1011,18 @@ func clusterInstallationBaseLabels(installation *model.Installation, clusterInst
 	}
 }
 
+func clusterInstallationStableLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+	labels["state"] = "running"
+	return labels
+}
+
+func clusterInstallationHibernatedLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+	labels["state"] = "hibernated"
+	return labels
+}
+
 // Set env overrides that are required from installations for function correctly
 // in the cloud environment.
 // NOTE: this should be called whenever the Mattermost custom resource is created
@@ -1066,8 +1080,6 @@ func getIngressAnnotations() map[string]string {
 				  proxy_cache_lock on;
 				  proxy_cache_key "$host$request_uri$cookie_user";`,
 		"nginx.org/server-snippets": "gzip on;",
-		// Used for CloudProber
-		"state": "running",
 	}
 }
 
@@ -1076,8 +1088,6 @@ func getIngressAnnotations() map[string]string {
 func getHibernatingIngressAnnotations() map[string]string {
 	annotations := getIngressAnnotations()
 	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
-	// Used for CloudProber
-	annotations["state"] = "hibernated"
 
 	return annotations
 }
