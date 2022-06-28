@@ -108,9 +108,9 @@ func init() {
 	clusterUpgradeCmd.Flags().Int("max-scaling", 5, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes, then the number of nodes will be the maximum number.")
 	clusterUpgradeCmd.Flags().Int("max-drain-retries", 10, "The number of times to retry a node drain.")
 	clusterUpgradeCmd.Flags().Int("evict-grace-period", 600, "The pod eviction grace period when draining in seconds.")
-	clusterUpgradeCmd.Flags().Int("wait-between-rotations", 60, "Τhe time to wait between each rotation of a group of nodes.")
-	clusterUpgradeCmd.Flags().Int("wait-between-drains", 60, "The time to wait between each node drain in a group of nodes.")
-	clusterUpgradeCmd.Flags().Int("wait-between-pod-evictions", 1, "The time to wait between each pod eviction in a node drain.")
+	clusterUpgradeCmd.Flags().Int("wait-between-rotations", 180, "Τhe time in seconds to wait between each rotation of a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-drains", 1800, "The time in seconds to wait between each node drain in a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-pod-evictions", 5, "The time in seconds to wait between each pod eviction in a node drain.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
