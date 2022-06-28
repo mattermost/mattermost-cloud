@@ -383,6 +383,29 @@ func TestUpdateGroup(t *testing.T) {
 		require.Equal(t, group1.MattermostEnv, mattermostEnvFooBar)
 		require.Equal(t, updateResponseGroup, group1)
 	})
+
+	t.Run("force restart", func(t *testing.T) {
+		group1, err = client.GetGroup(group1.ID)
+		require.NoError(t, err)
+		oldSequence := group1.Sequence
+
+		group1.MattermostEnv.Patch(model.EnvVarMap{
+			"CLOUD_PROVISIONER_ENFORCED_RESTART": model.EnvVar{Value: fmt.Sprintf("force-restart-at-sequence-%d", oldSequence)},
+		})
+		expectedEnv := group1.MattermostEnv
+
+		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
+			ID:                        group1.ID,
+			ForceInstallationsRestart: true,
+		})
+		require.NoError(t, err)
+
+		group1, err = client.GetGroup(group1.ID)
+		require.NoError(t, err)
+		require.EqualValues(t, expectedEnv, group1.MattermostEnv)
+		require.Equal(t, updateResponseGroup, group1)
+		require.Equal(t, oldSequence+1, group1.Sequence)
+	})
 }
 
 func TestDeleteGroup(t *testing.T) {

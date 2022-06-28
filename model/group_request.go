@@ -6,10 +6,15 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 
 	"github.com/pkg/errors"
+)
+
+const (
+	forceInstallationRestartEnvVar = "CLOUD_PROVISIONER_ENFORCED_RESTART"
 )
 
 // CreateGroupRequest specifies the parameters for a new group.
@@ -66,7 +71,8 @@ type PatchGroupRequest struct {
 	Image         *string
 	MattermostEnv EnvVarMap
 
-	ForceSequenceUpdate bool
+	ForceSequenceUpdate       bool
+	ForceInstallationsRestart bool
 }
 
 // Apply applies the patch to the given group.
@@ -102,6 +108,15 @@ func (p *PatchGroupRequest) Apply(group *Group) bool {
 	// This special value allows us to bump the group sequence number even when
 	// the patch contains no group modifications.
 	if p.ForceSequenceUpdate {
+		applied = true
+	}
+
+	// Force restart of pods even if nothing have changed. This is done by
+	// setting non-meaningful environment variable.
+	// We keep it separate from ForceSequenceUpdate in case we want to run force
+	// update that does not require restarting pods.
+	if p.ForceInstallationsRestart {
+		group.MattermostEnv[forceInstallationRestartEnvVar] = EnvVar{Value: fmt.Sprintf("force-restart-at-sequence-%d", group.Sequence)}
 		applied = true
 	}
 

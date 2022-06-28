@@ -297,6 +297,28 @@ func TestPatchGroupRequestApply(t *testing.T) {
 				},
 			},
 		},
+		{
+			"force restart",
+			true,
+			&model.PatchGroupRequest{
+				ForceInstallationsRestart: true,
+			},
+			&model.Group{
+				Image:    "image1",
+				Sequence: 1,
+				MattermostEnv: model.EnvVarMap{
+					"key1": {Value: "value1"},
+				},
+			},
+			&model.Group{
+				Image:    "image1",
+				Sequence: 1,
+				MattermostEnv: model.EnvVarMap{
+					"key1":                               {Value: "value1"},
+					"CLOUD_PROVISIONER_ENFORCED_RESTART": {Value: "force-restart-at-sequence-1"},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

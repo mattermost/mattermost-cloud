@@ -35,7 +35,8 @@ func init() {
 	groupUpdateCmd.Flags().Int64("max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
 	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	groupUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
-	groupUpdateCmd.Flags().Bool("force-sequence-update", false, "Forces the group version sequence to be increased by 1 even when no updates are present")
+	groupUpdateCmd.Flags().Bool("force-sequence-update", false, "Forces the group version sequence to be increased by 1 even when no updates are present.")
+	groupUpdateCmd.Flags().Bool("force-installation-restart", false, "Forces the restart of all installations in the group even if Mattermost CR does not change.")
 	groupUpdateCmd.MarkFlagRequired("group")
 
 	groupDeleteCmd.Flags().String("group", "", "The id of the group to be deleted.")
@@ -146,6 +147,7 @@ var groupUpdateCmd = &cobra.Command{
 		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
 		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
 		forceSequenceUpdate, _ := command.Flags().GetBool("force-sequence-update")
+		forceInstallationRestart, _ := command.Flags().GetBool("force-installation-restart")
 
 		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
 		if err != nil {
@@ -153,14 +155,15 @@ var groupUpdateCmd = &cobra.Command{
 		}
 
 		request := &model.PatchGroupRequest{
-			ID:                  groupID,
-			Name:                getStringFlagPointer(command, "name"),
-			Description:         getStringFlagPointer(command, "description"),
-			Version:             getStringFlagPointer(command, "version"),
-			Image:               getStringFlagPointer(command, "image"),
-			MaxRolling:          getInt64FlagPointer(command, "max-rolling"),
-			MattermostEnv:       envVarMap,
-			ForceSequenceUpdate: forceSequenceUpdate,
+			ID:                        groupID,
+			Name:                      getStringFlagPointer(command, "name"),
+			Description:               getStringFlagPointer(command, "description"),
+			Version:                   getStringFlagPointer(command, "version"),
+			Image:                     getStringFlagPointer(command, "image"),
+			MaxRolling:                getInt64FlagPointer(command, "max-rolling"),
+			MattermostEnv:             envVarMap,
+			ForceSequenceUpdate:       forceSequenceUpdate,
+			ForceInstallationsRestart: forceInstallationRestart,
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
