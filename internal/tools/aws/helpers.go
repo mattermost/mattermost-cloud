@@ -284,3 +284,10 @@ func ensureTagInTagset(key, value string, tags []*s3.Tag) bool {
 
 	return false
 }
+
+func valueOrDefault(val int, defVal int) int {
+	if val != 0 {
+		return val
+	}
+	return defVal
+}

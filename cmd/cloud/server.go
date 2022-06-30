@@ -97,6 +97,11 @@ func init() {
 	serverCmd.PersistentFlags().Int("default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
 	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 1, "The db proxy min pool size.")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
+
+	// DB clusters utilization configuration
+	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
+	serverCmd.PersistentFlags().Int("max-installations-rds-postgres", toolsAWS.DefaultRDSMultitenantDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres")
+	serverCmd.PersistentFlags().Int("max-installations-rds-mysql", toolsAWS.DefaultRDSMultitenantDatabaseMySQLCountLimit, "Max installations per DB cluster of type RDS MySQL")
 }
 
 var serverCmd = &cobra.Command{
@@ -326,7 +331,7 @@ var serverCmd = &cobra.Command{
 			return errors.Wrap(err, "failed health check")
 		}
 
-		resourceUtil := utils.NewResourceUtil(instanceID, awsClient)
+		resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(command))
 
 		provisioningParams := provisioner.ProvisioningParams{
 			S3StateStore:            s3StateStore,
@@ -491,6 +496,18 @@ var serverCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func dbClusterUtilizationSettingsFromFlags(command *cobra.Command) utils.DBClusterUtilizationSettings {
+	pgbouncer, _ := command.Flags().GetInt("max-installations-rds-postgres-pgbouncer")
+	postgres, _ := command.Flags().GetInt("max-installations-rds-postgres")
+	mysql, _ := command.Flags().GetInt("max-installations-rds-mysql")
+
+	return utils.DBClusterUtilizationSettings{
+		MaxInstallationsRDSPostgresPGBouncer: pgbouncer,
+		MaxInstallationsRDSPostgres:          postgres,
+		MaxInstallationsRDSMySQL:             mysql,
+	}
 }
 
 func checkRequirements(logger logrus.FieldLogger) error {

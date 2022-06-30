@@ -21,12 +21,13 @@ import (
 // data provisioner is running in multitenant database for the first time, so pretty much
 // the entire code will run here.
 func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
-	database := RDSMultitenantDatabase{
-		databaseType:   model.DatabaseEngineTypeMySQL,
-		installationID: a.InstallationA.ID,
-		instanceID:     a.InstanceID,
-		client:         a.Mocks.AWS,
-	}
+	database := NewRDSMultitenantDatabase(
+		model.DatabaseEngineTypeMySQL,
+		a.InstanceID,
+		a.InstallationA.ID,
+		a.Mocks.AWS,
+		0,
+	)
 
 	databaseType := database.DatabaseTypeTagValue()
 

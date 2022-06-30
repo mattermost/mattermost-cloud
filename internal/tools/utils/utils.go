@@ -83,15 +83,24 @@ func copyFile(source string, dest string) error {
 
 // ResourceUtil is used for calling any filestore type.
 type ResourceUtil struct {
-	awsClient  *aws.Client
-	instanceID string
+	awsClient                    *aws.Client
+	instanceID                   string
+	dbClusterUtilizationSettings DBClusterUtilizationSettings
+}
+
+// DBClusterUtilizationSettings define maximum utilization of database clusters.
+type DBClusterUtilizationSettings struct {
+	MaxInstallationsRDSPostgresPGBouncer int
+	MaxInstallationsRDSPostgres          int
+	MaxInstallationsRDSMySQL             int
 }
 
 // NewResourceUtil returns a new instance of ResourceUtil.
-func NewResourceUtil(instanceID string, awsClient *aws.Client) *ResourceUtil {
+func NewResourceUtil(instanceID string, awsClient *aws.Client, dbClusterUtilization DBClusterUtilizationSettings) *ResourceUtil {
 	return &ResourceUtil{
-		awsClient:  awsClient,
-		instanceID: instanceID,
+		awsClient:                    awsClient,
+		instanceID:                   instanceID,
+		dbClusterUtilizationSettings: dbClusterUtilization,
 	}
 }
 
@@ -128,11 +137,29 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 	case model.InstallationDatabaseSingleTenantRDSPostgres:
 		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installationID, r.awsClient)
 	case model.InstallationDatabaseMultiTenantRDSMySQL:
-		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypeMySQL, r.instanceID, installationID, r.awsClient)
+		return aws.NewRDSMultitenantDatabase(
+			model.DatabaseEngineTypeMySQL,
+			r.instanceID,
+			installationID,
+			r.awsClient,
+			r.dbClusterUtilizationSettings.MaxInstallationsRDSMySQL,
+		)
 	case model.InstallationDatabaseMultiTenantRDSPostgres:
-		return aws.NewRDSMultitenantDatabase(model.DatabaseEngineTypePostgres, r.instanceID, installationID, r.awsClient)
+		return aws.NewRDSMultitenantDatabase(
+			model.DatabaseEngineTypePostgres,
+			r.instanceID,
+			installationID,
+			r.awsClient,
+			r.dbClusterUtilizationSettings.MaxInstallationsRDSPostgres,
+		)
 	case model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
-		return aws.NewRDSMultitenantPGBouncerDatabase(model.DatabaseEngineTypePostgresProxy, r.instanceID, installationID, r.awsClient)
+		return aws.NewRDSMultitenantPGBouncerDatabase(
+			model.DatabaseEngineTypePostgresProxy,
+			r.instanceID,
+			installationID,
+			r.awsClient,
+			r.dbClusterUtilizationSettings.MaxInstallationsRDSPostgresPGBouncer,
+		)
 	}
 
 	// Warning: we should never get here as it would mean that we didn't match
