@@ -356,10 +356,12 @@ func (p *mockInstallationProvisioner) GetClusterResources(cluster *model.Cluster
 	}
 
 	return &k8s.ClusterResources{
-			MilliTotalCPU:    100000,
-			MilliUsedCPU:     100,
+			MilliTotalCPU:    1000,
+			MilliUsedCPU:     200,
 			MilliTotalMemory: 100000000000000,
-			MilliUsedMemory:  100,
+			MilliUsedMemory:  25000000000000,
+			TotalPodCount:    1000,
+			UsedPodCount:     100,
 		},
 		nil
 }
@@ -2826,6 +2828,8 @@ func TestInstallationSupervisor(t *testing.T) {
 					MilliUsedCPU:     100,
 					MilliTotalMemory: 200,
 					MilliUsedMemory:  100,
+					TotalPodCount:    200,
+					UsedPodCount:     100,
 				},
 			}
 			supervisor := supervisor.NewInstallationSupervisor(
@@ -2882,6 +2886,8 @@ func TestInstallationSupervisor(t *testing.T) {
 				MilliUsedCPU:     100,
 				MilliTotalMemory: 200,
 				MilliUsedMemory:  100,
+				TotalPodCount:    200,
+				UsedPodCount:     100,
 			},
 		}
 		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 2)

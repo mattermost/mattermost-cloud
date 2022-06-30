@@ -1022,7 +1022,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}
 
 	var allPods []v1.Pod
-	var totalCPU, totalMemory, workerNodeCount int64
+	var totalCPU, totalMemory, totalPodCount, workerNodeCount int64
 	for _, node := range nodes.Items {
 		var skipNode bool
 
@@ -1056,6 +1056,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 			allPods = append(allPods, nodePods.Items...)
 			totalCPU += node.Status.Allocatable.Cpu().MilliValue()
 			totalMemory += node.Status.Allocatable.Memory().MilliValue()
+			totalPodCount += node.Status.Allocatable.Pods().Value()
 			workerNodeCount++
 		}
 	}
@@ -1069,6 +1070,8 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 		MilliUsedCPU:     usedCPU,
 		MilliTotalMemory: totalMemory,
 		MilliUsedMemory:  usedMemory,
+		TotalPodCount:    totalPodCount,
+		UsedPodCount:     int64(len(allPods)),
 	}, nil
 }
 
