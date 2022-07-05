@@ -42,20 +42,29 @@ type SQLDatabaseManager interface {
 
 // RDSMultitenantDatabase is a database backed by RDS that supports multi-tenancy.
 type RDSMultitenantDatabase struct {
-	databaseType   string
-	installationID string
-	instanceID     string
-	db             SQLDatabaseManager
-	client         *Client
+	databaseType              string
+	installationID            string
+	instanceID                string
+	db                        SQLDatabaseManager
+	client                    *Client
+	maxSupportedInstallations int
 }
 
 // NewRDSMultitenantDatabase returns a new instance of RDSMultitenantDatabase that implements database interface.
-func NewRDSMultitenantDatabase(databaseType, instanceID, installationID string, client *Client) *RDSMultitenantDatabase {
+func NewRDSMultitenantDatabase(databaseType, instanceID, installationID string, client *Client, installationsLimit int) *RDSMultitenantDatabase {
+	var defaultSupportedInstallations int
+	if databaseType == model.DatabaseEngineTypeMySQL {
+		defaultSupportedInstallations = DefaultRDSMultitenantDatabaseMySQLCountLimit
+	} else {
+		defaultSupportedInstallations = DefaultRDSMultitenantDatabasePostgresCountLimit
+	}
+
 	return &RDSMultitenantDatabase{
-		databaseType:   databaseType,
-		instanceID:     instanceID,
-		installationID: installationID,
-		client:         client,
+		databaseType:              databaseType,
+		instanceID:                instanceID,
+		installationID:            installationID,
+		client:                    client,
+		maxSupportedInstallations: valueOrDefault(installationsLimit, defaultSupportedInstallations),
 	}
 }
 
@@ -88,11 +97,7 @@ func (d *RDSMultitenantDatabase) DatabaseTypeTagValue() string {
 // MaxSupportedDatabases returns the maximum number of databases supported on
 // one RDS cluster for this database type.
 func (d *RDSMultitenantDatabase) MaxSupportedDatabases() int {
-	if d.databaseType == model.DatabaseEngineTypeMySQL {
-		return DefaultRDSMultitenantDatabaseMySQLCountLimit
-	}
-
-	return DefaultRDSMultitenantDatabasePostgresCountLimit
+	return d.maxSupportedInstallations
 }
 
 // RefreshResourceMetadata ensures various multitenant database resource's

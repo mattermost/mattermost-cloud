@@ -31,21 +31,23 @@ import (
 // RDSMultitenantPGBouncerDatabase is a database backed by RDS that supports
 // multi-tenancy and pooled connections.
 type RDSMultitenantPGBouncerDatabase struct {
-	databaseType   string
-	installationID string
-	instanceID     string
-	db             SQLDatabaseManager
-	client         *Client
+	databaseType              string
+	installationID            string
+	instanceID                string
+	db                        SQLDatabaseManager
+	client                    *Client
+	maxSupportedInstallations int
 }
 
 // NewRDSMultitenantPGBouncerDatabase returns a new instance of
 // RDSMultitenantPGBouncerDatabase that implements database interface.
-func NewRDSMultitenantPGBouncerDatabase(databaseType, instanceID, installationID string, client *Client) *RDSMultitenantPGBouncerDatabase {
+func NewRDSMultitenantPGBouncerDatabase(databaseType, instanceID, installationID string, client *Client, installationsLimit int) *RDSMultitenantPGBouncerDatabase {
 	return &RDSMultitenantPGBouncerDatabase{
-		databaseType:   databaseType,
-		instanceID:     instanceID,
-		installationID: installationID,
-		client:         client,
+		databaseType:              databaseType,
+		instanceID:                instanceID,
+		installationID:            installationID,
+		client:                    client,
+		maxSupportedInstallations: valueOrDefault(installationsLimit, DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit),
 	}
 }
 
@@ -73,7 +75,7 @@ func (d *RDSMultitenantPGBouncerDatabase) DatabaseTypeTagValue() string {
 // MaxSupportedDatabases returns the maximum number of databases supported on
 // one RDS cluster for this database type.
 func (d *RDSMultitenantPGBouncerDatabase) MaxSupportedDatabases() int {
-	return DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit
+	return d.maxSupportedInstallations
 }
 
 // Provision claims a multitenant RDS cluster and creates a database schema for
