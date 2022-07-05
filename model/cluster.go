@@ -22,9 +22,6 @@ const (
 	// KubecostToken is the name of the Environment Variable which
 	// may contain a Kubecost token which kubecost helm chart needs
 	KubecostToken = "kubecost-token"
-	// NdotsValue is the name of the Environment Variable which
-	// may contain a Ndots value to be set on Mattermost Installations
-	NdotsValue = "ndots-value"
 )
 
 // Cluster represents a Kubernetes cluster.

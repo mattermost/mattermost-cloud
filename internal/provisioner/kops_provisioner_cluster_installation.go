@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -88,7 +87,6 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 	}
 
 	mattermostEnv := getMattermostEnvWithOverrides(installation)
-	ndotsValue := os.Getenv("ndots-value")
 
 	mattermost := &mmv1beta1.Mattermost{
 		ObjectMeta: metav1.ObjectMeta{
@@ -107,7 +105,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Scheduling: mmv1beta1.Scheduling{
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
-			DNSConfig: setNdots(ndotsValue),
+			DNSConfig: setNdots(provisioner.params.NdotsValue),
 		},
 	}
 
@@ -232,8 +230,6 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 
 	ctx := context.TODO()
 
-	ndotsValue := os.Getenv("ndots-value")
-
 	mattermost, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, installationName, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get mattermost installation %s", clusterInstallation.ID)
@@ -246,7 +242,7 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
-	mattermost.Spec.DNSConfig = setNdots(ndotsValue)
+	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
 	version := translateMattermostVersion(installation.Version)
 	if mattermost.Spec.Version == version {

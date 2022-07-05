@@ -26,6 +26,7 @@ type ProvisioningParams struct {
 	UseExistingAWSResources bool
 	DeployMysqlOperator     bool
 	DeployMinioOperator     bool
+	NdotsValue              string
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.

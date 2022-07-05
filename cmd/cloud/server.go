@@ -98,8 +98,8 @@ func init() {
 	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 1, "The db proxy min pool size.")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
-	
-// DB clusters utilization configuration
+
+	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres", toolsAWS.DefaultRDSMultitenantDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres")
 	serverCmd.PersistentFlags().Int("max-installations-rds-mysql", toolsAWS.DefaultRDSMultitenantDatabaseMySQLCountLimit, "Max installations per DB cluster of type RDS MySQL")
@@ -193,11 +193,6 @@ var serverCmd = &cobra.Command{
 			os.Setenv(model.KubecostToken, kubecostToken)
 		}
 
-		ndotsDefaultValue, _ := command.Flags().GetString("ndots-value")
-		if ndotsDefaultValue != "" {
-			os.Setenv(model.NdotsValue, ndotsDefaultValue)
-		}
-
 		logger := logger.WithField("instance", instanceID)
 
 		sqlStore, err := sqlStore(command)
@@ -259,6 +254,7 @@ var serverCmd = &cobra.Command{
 
 		deployMySQLOperator, _ := command.Flags().GetBool("deploy-mysql-operator")
 		deployMinioOperator, _ := command.Flags().GetBool("deploy-minio-operator")
+		ndotsDefaultValue, _ := command.Flags().GetString("ndots-value")
 		model.SetDeployOperators(deployMySQLOperator, deployMinioOperator)
 
 		wd, err := os.Getwd()
@@ -347,6 +343,7 @@ var serverCmd = &cobra.Command{
 			UseExistingAWSResources: useExistingResources,
 			DeployMysqlOperator:     deployMySQLOperator,
 			DeployMinioOperator:     deployMinioOperator,
+			NdotsValue:              ndotsDefaultValue,
 		}
 
 		// Setup the provisioner for actually effecting changes to clusters.
