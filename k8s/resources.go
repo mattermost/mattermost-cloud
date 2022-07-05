@@ -13,6 +13,8 @@ type ClusterResources struct {
 	MilliUsedCPU     int64
 	MilliTotalMemory int64
 	MilliUsedMemory  int64
+	TotalPodCount    int64
+	UsedPodCount     int64
 }
 
 // CalculateCPUPercentUsed calculates the CPU usage percentage of a cluster with
@@ -27,6 +29,13 @@ func (r *ClusterResources) CalculateCPUPercentUsed(additional int64) int {
 // memory usage of the cluster.
 func (r *ClusterResources) CalculateMemoryPercentUsed(additional int64) int {
 	return int((float64(r.MilliUsedMemory+additional) / float64(r.MilliTotalMemory)) * 100)
+}
+
+// CalculatePodCountPercentUsed calculates the pod count usage percentage of a
+// cluster with an optional additional load. Pass in 0 to calculate the current
+// pod count usage of the cluster.
+func (r *ClusterResources) CalculatePodCountPercentUsed(additional int64) int {
+	return int((float64(r.UsedPodCount+additional) / float64(r.TotalPodCount)) * 100)
 }
 
 // CalculateTotalPodMilliResourceRequests calculates the total CPU and memory

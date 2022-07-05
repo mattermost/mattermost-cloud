@@ -454,10 +454,16 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 			installation.InternalDatabase(),
 			installation.InternalFilestore(),
 		)
+		installationPodCountRequirement := int64(size.App.Replicas)
 		cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
 		memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
-		combinedPercent := (cpuPercent + memoryPercent) / 2
-		logger.Debugf("Cluster %s analyzed with %d%% expected resource usage", cluster.ID, combinedPercent)
+		podPercent := clusterResources.CalculatePodCountPercentUsed(installationPodCountRequirement)
+
+		combinedPercent := (cpuPercent + memoryPercent + podPercent) / 3
+		logger.WithField("cluster-scheduling-cpu", fmt.Sprintf("%d%%", cpuPercent)).
+			WithField("cluster-scheduling-memory", fmt.Sprintf("%d%%", memoryPercent)).
+			WithField("cluster-scheduling-pods", fmt.Sprintf("%d%% (%d/%d)", podPercent, clusterResources.UsedPodCount, clusterResources.TotalPodCount)).
+			Debugf("Cluster %s analyzed with %d%% expected resource usage", cluster.ID, combinedPercent)
 		if combinedPercent < lowestResourcePercent {
 			// This is the lowest utilized cluster so far so prepend.
 			filteredPrioritizedClusters = append([]*model.Cluster{cluster}, filteredPrioritizedClusters...)
@@ -476,7 +482,7 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 func (s *InstallationSupervisor) getClusterResources(cluster *model.Cluster, logger log.FieldLogger) (*k8s.ClusterResources, error) {
 	clusterResources := s.cache.getCachedClusterResources(cluster.ID)
 	if clusterResources != nil {
-		logger.Debug("Using cached cluster resources")
+		logger.WithField("cluster", cluster.ID).Debug("Using cached cluster resources")
 		return clusterResources, nil
 	}
 
@@ -522,18 +528,23 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		installation.InternalDatabase(),
 		installation.InternalFilestore(),
 	)
+	installationPodCountRequirement := int64(size.App.Replicas)
 	cpuPercent := clusterResources.CalculateCPUPercentUsed(installationCPURequirement)
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
+	podPercent := clusterResources.CalculatePodCountPercentUsed(installationPodCountRequirement)
 
-	if cpuPercent > s.scheduling.clusterResourceThreshold || memoryPercent > s.scheduling.clusterResourceThreshold {
+	if cpuPercent > s.scheduling.clusterResourceThreshold ||
+		memoryPercent > s.scheduling.clusterResourceThreshold ||
+		podPercent > s.scheduling.clusterResourceThreshold {
 		if s.scheduling.clusterResourceThresholdScaleValue == 0 ||
 			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
 			cluster.State != model.ClusterStateStable {
-			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%% (+%dm), Memory=%d%% (+%dMi)",
+			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%% (+%dm), Memory=%d%% (+%dMi), PodCount=%d%% (+%d)",
 				cluster.ID,
 				s.scheduling.clusterResourceThreshold,
 				cpuPercent, installationCPURequirement,
 				memoryPercent, installationMemRequirement/1048576000, // Have to convert to Mi
+				podPercent, installationPodCountRequirement,
 			)
 			return nil
 		}
@@ -590,7 +601,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		logger.WithError(err).Error("Failed to create cluster installation state change event")
 	}
 
-	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%", cluster.ID, cpuPercent, memoryPercent)
+	logger.Infof("Requested creation of cluster installation on cluster %s. Expected resource load: CPU=%d%%, Memory=%d%%, PodCount=%d%%", cluster.ID, cpuPercent, memoryPercent, podPercent)
 
 	return clusterInstallation
 }
