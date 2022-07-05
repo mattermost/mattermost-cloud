@@ -105,6 +105,7 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Scheduling: mmv1beta1.Scheduling{
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
+			DNSConfig: setNdots(provisioner.params.NdotsValue),
 		},
 	}
 
@@ -240,6 +241,8 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	mattermost.Spec.ResourceLabels = clusterInstallationStableLabels(installation, clusterInstallation)
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
+
+	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
 
 	version := translateMattermostVersion(installation.Version)
 	if mattermost.Spec.Version == version {
@@ -1112,4 +1115,8 @@ func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
 	}
 
 	return false
+}
+
+func setNdots(ndotsValue string) *corev1.PodDNSConfig {
+	return &corev1.PodDNSConfig{Options: []corev1.PodDNSConfigOption{{Name: "ndots", Value: &ndotsValue}}}
 }
