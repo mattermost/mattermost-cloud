@@ -326,23 +326,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
 	}
 
-	// Need to remove two items from the metrics-server because the fields after the creation are immutable so the
-	// create/update does not work. We might want to refactor this in the future to avoid this
-	logger.Info("Cleaning up some metrics-server resources to reapply")
-	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "metrics-server", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("Service metrics-server not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete service metrics-server")
-	}
-
-	err = k8sClient.KubeagClientSet.ApiregistrationV1beta1().APIServices().Delete(ctx, "v1beta1.metrics.k8s.io", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("APIService v1beta1.metrics.k8s.io not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete APIService v1beta1.metrics.k8s.io")
-	}
-
 	err = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(ctx, "k8s-spot-termination-handler", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("DaemonSet k8s-spot-termination-handler not found; skipping...")
