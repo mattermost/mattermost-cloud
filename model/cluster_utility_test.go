@@ -36,6 +36,7 @@ func TestGetUtilityVersion(t *testing.T) {
 		NodeProblemDetector: &HelmUtilityVersion{Chart: "7"},
 		MetricsServer:       &HelmUtilityVersion{Chart: "8"},
 		Velero:              &HelmUtilityVersion{Chart: "9"},
+		Cloudprober:         &HelmUtilityVersion{Chart: "10"},
 	}
 
 	assert.Equal(t, &HelmUtilityVersion{Chart: "3"}, getUtilityVersion(u, PrometheusOperatorCanonicalName))
@@ -45,6 +46,7 @@ func TestGetUtilityVersion(t *testing.T) {
 	assert.Equal(t, &HelmUtilityVersion{Chart: "7"}, getUtilityVersion(u, NodeProblemDetectorCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "8"}, getUtilityVersion(u, MetricsServerCanonicalName))
 	assert.Equal(t, &HelmUtilityVersion{Chart: "9"}, getUtilityVersion(u, VeleroCanonicalName))
+	assert.Equal(t, &HelmUtilityVersion{Chart: "10"}, getUtilityVersion(u, CloudproberCanonicalName))
 	assert.Equal(t, nilHuv, getUtilityVersion(u, "anything else"))
 }
 
@@ -139,6 +141,7 @@ func TestGetActualVersion(t *testing.T) {
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 				Velero:              &HelmUtilityVersion{Chart: "12345678910"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "123456789101"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -153,6 +156,7 @@ func TestGetActualVersion(t *testing.T) {
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.2"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-2.29.4"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.0"},
 			},
 		},
 	}
@@ -193,6 +197,9 @@ func TestGetActualVersion(t *testing.T) {
 	version = c.ActualUtilityVersion(VeleroCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "velero-2.29.4"}, version)
 
+	version = c.ActualUtilityVersion(CloudproberCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "cloudprober-0.1.0"}, version)
+
 	version = c.ActualUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, version, nilHuv)
 }
@@ -213,6 +220,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 				Velero:              &HelmUtilityVersion{Chart: "12345678910"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "123456789101"},
 			},
 			ActualVersions: UtilityGroupVersions{
 				PrometheusOperator:  &HelmUtilityVersion{Chart: "kube-prometheus-stack-9.4"},
@@ -227,6 +235,7 @@ func TestGetDesiredVersion(t *testing.T) {
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.2"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-2.29.4"},
+				Cloudprober:         &HelmUtilityVersion{Chart: "cloudprober-0.1.0"},
 			},
 		},
 	}
@@ -266,6 +275,9 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion(VeleroCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "12345678910"}, version)
+
+	version = c.DesiredUtilityVersion(CloudproberCanonicalName)
+	assert.Equal(t, &HelmUtilityVersion{Chart: "123456789101"}, version)
 
 	version = c.DesiredUtilityVersion("something else that doesn't exist")
 	assert.Equal(t, nilHuv, version)
