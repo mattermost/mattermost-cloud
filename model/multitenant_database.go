@@ -43,6 +43,9 @@ var defaultPoolSize int = 5
 // minPoolSize is the minimum pool size
 var minPoolSize int = 3
 
+// maxClientConnections is the maximum client connections
+var maxClientConnections int = 20000
+
 // SetMaxDatabaseConnectionsPerPool is used to define how many database
 // connections are created per logical database pool with proxy databases.
 func SetMaxDatabaseConnectionsPerPool(val int) error {
@@ -69,6 +72,11 @@ func SetMinPoolSize(val int) {
 	minPoolSize = val
 }
 
+// SetMaxClientConnections is used to define the max client connections of pgbouncer
+func SetMaxClientConnections(val int) {
+	maxClientConnections = val
+}
+
 // GetMaxDatabaseConnectionsPerPool returns the value of
 // maxDatabaseConnectionsPerPool.
 func GetMaxDatabaseConnectionsPerPool() int {
@@ -83,6 +91,11 @@ func GetDefaultPoolSize() int {
 // GetMinPoolSize returns the value of minPoolSize.
 func GetMinPoolSize() int {
 	return minPoolSize
+}
+
+// GetMaxClientConnections returns the value of maxClientConnections.
+func GetMaxClientConnections() int {
+	return maxClientConnections
 }
 
 // MultitenantDatabase represents database infrastructure that contains multiple
