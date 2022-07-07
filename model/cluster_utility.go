@@ -37,6 +37,8 @@ const (
 	MetricsServerCanonicalName = "metrics-server"
 	// VeleroCanonicalName is the canonical string representation of velero
 	VeleroCanonicalName = "velero"
+	// CloudproberCanonicalName is the canonical string representation of Cloudprber
+	CloudproberCanonicalName = "cloudprober"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -85,6 +87,8 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	MetricsServerCanonicalName: {Chart: "3.8.2", ValuesPath: ""},
 	// VeleroCanonicalName defines the default version for the Helm chart
 	VeleroCanonicalName: {Chart: "2.29.4", ValuesPath: ""},
+	// CloudproberCanonicalName defines the default version for the Helm chart
+	CloudproberCanonicalName: {Chart: "0.1.0", ValuesPath: ""},
 }
 
 var defaultUtilityValuesFileNames map[string]string = map[string]string{
@@ -101,6 +105,7 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
 	VeleroCanonicalName:              "velero_values.yaml",
+	CloudproberCanonicalName:         "cloudprober_values.yaml",
 }
 
 var (
@@ -146,6 +151,7 @@ type UtilityGroupVersions struct {
 	NodeProblemDetector *HelmUtilityVersion
 	MetricsServer       *HelmUtilityVersion
 	Velero              *HelmUtilityVersion
+	Cloudprober         *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -166,6 +172,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 		MetricsServerCanonicalName:       h.MetricsServer,
 		VeleroCanonicalName:              h.Velero,
+		CloudproberCanonicalName:         h.Cloudprober,
 	}
 }
 
@@ -302,6 +309,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.MetricsServer = desiredVersion
 	case VeleroCanonicalName:
 		versions.Velero = desiredVersion
+	case CloudproberCanonicalName:
+		versions.Cloudprober = desiredVersion
 	}
 }
 

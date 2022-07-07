@@ -164,10 +164,17 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
+	cloudprober, err := newCloudproberHandle(
+		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
+		provisioner, kops, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
+	}
+
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero},
+		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
 		kops:        kops,
 		provisioner: provisioner,
 		cluster:     cluster,
