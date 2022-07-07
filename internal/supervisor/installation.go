@@ -514,7 +514,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		logger.WithError(err).Error("Invalid cluster installation size")
 		return nil
 	}
-	clusterResources, err := s.provisioner.GetClusterResources(cluster, true, logger)
+	clusterResources, err := s.getClusterResources(cluster, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster resources")
 		return nil

@@ -9,6 +9,9 @@ import corev1 "k8s.io/api/core/v1"
 // ClusterResources is a snapshot of a cluster's total and currently-used
 // resources.
 type ClusterResources struct {
+	TotalNodeCount   int64
+	SkippedNodeCount int64
+	WorkerNodeCount  int64
 	MilliTotalCPU    int64
 	MilliUsedCPU     int64
 	MilliTotalMemory int64
