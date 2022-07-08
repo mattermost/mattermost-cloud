@@ -165,7 +165,7 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	}
 
 	cloudprober, err := newCloudproberHandle(
-		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
+		cluster.DesiredUtilityVersion(model.CloudproberCanonicalName), cluster,
 		provisioner, kops, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
