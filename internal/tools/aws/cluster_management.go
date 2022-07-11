@@ -293,7 +293,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 	}
 
 	for _, callsSecurityGroup := range clusterResources.CallsSecurityGroupIDs {
-		err = a.TagResource(callsSecurityGroup, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "owned", logger)
+		err = a.TagResource(callsSecurityGroup, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
@@ -381,6 +381,39 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 			return errors.Wrap(err, "failed to untag subnet")
 		}
 	}
+
+	callsSecurityGroupFilter := []*ec2.Filter{
+		{
+			Name:   aws.String("vpc-id"),
+			Values: []*string{vpcs[0].VpcId},
+		},
+		{
+			Name:   aws.String("tag:NodeType"),
+			Values: []*string{aws.String("calls")},
+		},
+	}
+
+	callsSecurityGroups, err := a.GetSecurityGroupsWithFilters(callsSecurityGroupFilter)
+	logger.Debugf("Security groups have been found: %v", callsSecurityGroups)
+
+	if err != nil {
+		return err
+	}
+
+	for _, callsSecurityGroup := range callsSecurityGroups {
+		logger.Debugf("Working on security group: %s", *callsSecurityGroup.GroupId)
+		err = a.UntagResource(*callsSecurityGroup.GroupId, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to tag security group")
+		}
+
+		err = a.UntagResource(*callsSecurityGroup.GroupId, "KubernetesCluster", fmt.Sprintf("%s-kops.k8s.local", clusterID), logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to tag security group")
+		}
+		logger.Debugf("Untagged security group: %s", *callsSecurityGroup.GroupId)
+	}
+
 	if isSecondaryCluster {
 		err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
 		if err != nil {
