@@ -96,6 +96,7 @@ func init() {
 	serverCmd.PersistentFlags().Int("max-proxy-db-connections-per-pool", 20, "The maximum number of proxy database connections per pool (logical database).")
 	serverCmd.PersistentFlags().Int("default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
 	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 1, "The db proxy min pool size.")
+	serverCmd.PersistentFlags().Int("max-client-connections", 20000, "The db proxy max client connections.")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
 
@@ -142,6 +143,9 @@ var serverCmd = &cobra.Command{
 
 		minPoolSize, _ := command.Flags().GetInt("min-proxy-db-pool-size")
 		model.SetMinPoolSize(minPoolSize)
+
+		maxClientConnections, _ := command.Flags().GetInt("max-client-connections")
+		model.SetMaxClientConnections(maxClientConnections)
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {
@@ -298,9 +302,11 @@ var serverCmd = &cobra.Command{
 			"dev-mode":                               devMode,
 			"deploy-mysql-operator":                  deployMySQLOperator,
 			"deploy-minio-operator":                  deployMinioOperator,
+			"ndots-value":                            ndotsDefaultValue,
 			"maxDatabaseConnectionsPerPool":          maxDatabaseConnectionsPerPool,
 			"defaultPoolSize":                        defaultPoolSize,
 			"minPoolSize":                            minPoolSize,
+			"maxClientConnections":                   maxClientConnections,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
