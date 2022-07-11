@@ -394,14 +394,11 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	}
 
 	callsSecurityGroups, err := a.GetSecurityGroupsWithFilters(callsSecurityGroupFilter)
-	logger.Debugf("Security groups have been found: %v", callsSecurityGroups)
-
 	if err != nil {
 		return err
 	}
 
 	for _, callsSecurityGroup := range callsSecurityGroups {
-		logger.Debugf("Working on security group: %s", *callsSecurityGroup.GroupId)
 		err = a.UntagResource(*callsSecurityGroup.GroupId, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag security group")
@@ -411,7 +408,6 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to tag security group")
 		}
-		logger.Debugf("Untagged security group: %s", *callsSecurityGroup.GroupId)
 	}
 
 	if isSecondaryCluster {
