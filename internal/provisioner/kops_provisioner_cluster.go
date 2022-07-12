@@ -1005,13 +1005,15 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}
 
 	var allPods []v1.Pod
-	var totalCPU, totalMemory, totalPodCount, workerNodeCount int64
+	var totalCPU, totalMemory, totalPodCount, totalNodeCount, workerNodeCount, skippedNodeCount int64
 	for _, node := range nodes.Items {
 		var skipNode bool
+		totalNodeCount++
 
 		if onlySchedulable {
 			if node.Spec.Unschedulable {
 				logger.Debugf("Ignoring unschedulable node %s", node.GetName())
+				skippedNodeCount++
 				skipNode = true
 			}
 
@@ -1022,6 +1024,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 			for _, taint := range node.Spec.Taints {
 				if taint.Effect == v1.TaintEffectNoSchedule || taint.Effect == v1.TaintEffectPreferNoSchedule {
 					logger.Debugf("Ignoring node %s with taint '%s'", node.GetName(), taint.ToString())
+					skippedNodeCount++
 					skipNode = true
 					break
 				}
@@ -1049,6 +1052,9 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	logger.Debugf("Resource usage calculated from %d pods on %d worker nodes", len(allPods), workerNodeCount)
 
 	return &k8s.ClusterResources{
+		TotalNodeCount:   totalNodeCount,
+		SkippedNodeCount: skippedNodeCount,
+		WorkerNodeCount:  workerNodeCount,
 		MilliTotalCPU:    totalCPU,
 		MilliUsedCPU:     usedCPU,
 		MilliTotalMemory: totalMemory,
