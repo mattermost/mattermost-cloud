@@ -444,7 +444,7 @@ func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsId
 	return nil
 }
 
-func (a *mockAWS) UpsertPublicCNAMEs(dnsNames, recordIDs, endpoints []string, logger log.FieldLogger) error {
+func (a *mockAWS) UpsertPublicCNAMEs(dnsNames, endpoints []string, logger log.FieldLogger) error {
 	return nil
 }
 
