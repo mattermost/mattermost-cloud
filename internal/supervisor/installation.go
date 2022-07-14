@@ -1618,6 +1618,18 @@ func (s *InstallationSupervisor) manageInstallationResourcesCache() {
 			cacheLogger.WithError(err).Warn("Failed to query clusters")
 		} else {
 			for _, cluster := range clusters {
+				if cluster.State != model.ClusterStateStable {
+					// The cluster is not stable. It's possible that the available
+					// resources for the cluster may be changing rapidly. As such,
+					// we clear the cache and wait for the cluster to become stable
+					// at which time the cache will be repopulated with current
+					// resource usage.
+					s.cache.mu.Lock()
+					delete(s.cache.installationMetrics, cluster.ID)
+					s.cache.mu.Unlock()
+					continue
+				}
+
 				clusterResources, err := s.provisioner.GetClusterResources(cluster, true, cacheLogger)
 				if err != nil {
 					cacheLogger.WithError(err).Error("Failed to get cluster resources")
