@@ -51,7 +51,20 @@ const (
 	// is complete but whose completion has not yet been noted by the
 	// AWAT. It is otherwise the same as a stable state.
 	InstallationStateImportComplete = "import-complete"
-	// InstallationStateDeletionRequested is an installation to be deleted.
+	// InstallationStateDeletionPendingRequested is an installation that is marked
+	// to be moved to the deletion-pending state.
+	InstallationStateDeletionPendingRequested = "deletion-pending-requested"
+	// InstallationStateDeletionPendingInProgress is an installation that is being
+	// placed into a deletion-pending state.
+	InstallationStateDeletionPendingInProgress = "deletion-pending-in-progress"
+	// InstallationStateDeletionPending is an installation that is pending
+	// deletion.
+	InstallationStateDeletionPending = "deletion-pending"
+	// InstallationStateDeletionCancellationRequested is an installation that is
+	// requested to have its pending deletion cancelled.
+	InstallationStateDeletionCancellationRequested = "deletion-cancellation-requested"
+	// InstallationStateDeletionRequested is an installation that deletion has
+	// been requested on.
 	InstallationStateDeletionRequested = "deletion-requested"
 	// InstallationStateDeletionInProgress is an installation being deleted.
 	InstallationStateDeletionInProgress = "deletion-in-progress"
@@ -101,6 +114,10 @@ var AllInstallationStates = []string{
 	InstallationStateUpdateFailed,
 	InstallationStateImportInProgress,
 	InstallationStateImportComplete,
+	InstallationStateDeletionPendingRequested,
+	InstallationStateDeletionPendingInProgress,
+	InstallationStateDeletionPending,
+	InstallationStateDeletionCancellationRequested,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
@@ -131,10 +148,13 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateWakeUpRequested,
 	InstallationStateUpdateRequested,
 	InstallationStateUpdateInProgress,
+	InstallationStateDNSMigrationHibernating,
+	InstallationStateDeletionPendingRequested,
+	InstallationStateDeletionPendingInProgress,
+	InstallationStateDeletionCancellationRequested,
 	InstallationStateDeletionRequested,
 	InstallationStateDeletionInProgress,
 	InstallationStateDeletionFinalCleanup,
-	InstallationStateDNSMigrationHibernating,
 }
 
 // AllInstallationRequestStates is a list of all states that an installation can
@@ -147,8 +167,10 @@ var AllInstallationRequestStates = []string{
 	InstallationStateHibernationRequested,
 	InstallationStateWakeUpRequested,
 	InstallationStateUpdateRequested,
-	InstallationStateDeletionRequested,
 	InstallationStateDNSMigrationHibernating,
+	InstallationStateDeletionPendingRequested,
+	InstallationStateDeletionCancellationRequested,
+	InstallationStateDeletionRequested,
 }
 
 // ValidTransitionState returns whether an installation can be transitioned into
@@ -180,8 +202,19 @@ var (
 			InstallationStateUpdateInProgress,
 			InstallationStateUpdateFailed,
 		},
-		InstallationStateDeletionRequested: {
+		InstallationStateDeletionPendingRequested: {
 			InstallationStateStable,
+			InstallationStateUpdateRequested,
+			InstallationStateUpdateInProgress,
+			InstallationStateUpdateFailed,
+			InstallationStateHibernating,
+			InstallationStateDeletionPendingRequested,
+			InstallationStateDeletionPendingInProgress,
+		},
+		InstallationStateDeletionCancellationRequested: {
+			InstallationStateDeletionPending,
+		},
+		InstallationStateDeletionRequested: {
 			InstallationStateCreationRequested,
 			InstallationStateCreationPreProvisioning,
 			InstallationStateCreationInProgress,
@@ -189,14 +222,7 @@ var (
 			InstallationStateCreationNoCompatibleClusters,
 			InstallationStateCreationFinalTasks,
 			InstallationStateCreationFailed,
-			InstallationStateUpdateRequested,
-			InstallationStateUpdateInProgress,
-			InstallationStateUpdateFailed,
-			InstallationStateImportInProgress,
-			InstallationStateImportComplete,
-			InstallationStateHibernationRequested,
-			InstallationStateHibernationInProgress,
-			InstallationStateHibernating,
+			InstallationStateDeletionPending,
 			InstallationStateDeletionRequested,
 			InstallationStateDeletionInProgress,
 			InstallationStateDeletionFinalCleanup,

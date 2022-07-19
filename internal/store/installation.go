@@ -250,7 +250,8 @@ func (sqlStore *SQLStore) getInstallationCountsByState(includeDeleted bool) (map
 	return result, nil
 }
 
-// GetUnlockedInstallationsPendingWork returns an unlocked installation in a pending state.
+// GetUnlockedInstallationsPendingWork returns unlocked installations in a
+// pending work state.
 func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Installation, error) {
 	builder := installationSelect.
 		Where(sq.Eq{
@@ -263,6 +264,42 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations pending work")
+	}
+
+	installations, err := rawInstallations.toInstallations()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, installation := range installations {
+		if !installation.IsInGroup() {
+			continue
+		}
+
+		group, err := sqlStore.GetGroup(*installation.GroupID)
+		if err != nil {
+			return nil, err
+		}
+		installation.MergeWithGroup(group, false)
+	}
+
+	return installations, nil
+}
+
+// GetUnlockedInstallationsPendingDeletion returns unlocked installations in a
+// pending deletion state.
+func (sqlStore *SQLStore) GetUnlockedInstallationsPendingDeletion() ([]*model.Installation, error) {
+	builder := installationSelect.
+		Where(sq.Eq{
+			"State": model.InstallationStateDeletionPending,
+		}).
+		Where("LockAcquiredAt = 0").
+		OrderBy("CreateAt ASC")
+
+	var rawInstallations rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get installations pending deletion")
 	}
 
 	installations, err := rawInstallations.toInstallations()

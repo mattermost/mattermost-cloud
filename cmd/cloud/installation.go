@@ -91,6 +91,9 @@ func init() {
 	installationDeleteCmd.Flags().String("installation", "", "The id of the installation to be deleted.")
 	installationDeleteCmd.MarkFlagRequired("installation")
 
+	installationCancelDeletionCmd.Flags().String("installation", "", "The id of the installation to cancel pending deletion for.")
+	installationCancelDeletionCmd.MarkFlagRequired("installation")
+
 	installationRecoveryCmd.Flags().String("installation", "", "The id of the installation to be recovered.")
 	installationRecoveryCmd.Flags().String("installation-database", "", "The original multitenant database id of the installation to be recovered.")
 	installationRecoveryCmd.Flags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
@@ -103,6 +106,7 @@ func init() {
 	installationCmd.AddCommand(installationCreateCmd)
 	installationCmd.AddCommand(installationUpdateCmd)
 	installationCmd.AddCommand(installationDeleteCmd)
+	installationCmd.AddCommand(installationCancelDeletionCmd)
 	installationCmd.AddCommand(installationHibernateCmd)
 	installationCmd.AddCommand(installationWakeupCmd)
 	installationCmd.AddCommand(installationGetCmd)
@@ -280,6 +284,26 @@ var installationDeleteCmd = &cobra.Command{
 		err := client.DeleteInstallation(installationID)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete installation")
+		}
+
+		return nil
+	},
+}
+
+var installationCancelDeletionCmd = &cobra.Command{
+	Use:   "cancel-deletion",
+	Short: "Cancels the pending deletion of an installation.",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		installationID, _ := command.Flags().GetString("installation")
+
+		err := client.CancelInstallationDeletion(installationID)
+		if err != nil {
+			return errors.Wrap(err, "failed to cancel installation deletion")
 		}
 
 		return nil

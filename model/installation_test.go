@@ -385,3 +385,35 @@ func TestInstallation_GetEnvVars(t *testing.T) {
 		})
 	}
 }
+
+func TestInstallationGetDatabaseWeight(t *testing.T) {
+	for _, testCase := range []struct {
+		installation   Installation
+		expectedWeight float64
+	}{
+		{
+			Installation{State: InstallationStateStable},
+			DefaultDatabaseWeight,
+		},
+		{
+			Installation{State: InstallationStateUpdateInProgress},
+			DefaultDatabaseWeight,
+		},
+		{
+			Installation{State: InstallationStateHibernating},
+			HibernatingDatabaseWeight,
+		},
+		{
+			Installation{State: InstallationStateDeletionPendingRequested},
+			HibernatingDatabaseWeight,
+		},
+		{
+			Installation{State: InstallationStateDeletionPending},
+			HibernatingDatabaseWeight,
+		},
+	} {
+		t.Run(testCase.installation.State, func(t *testing.T) {
+			assert.Equal(t, testCase.expectedWeight, testCase.installation.GetDatabaseWeight())
+		})
+	}
+}

@@ -44,6 +44,7 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation)).Methods("POST")
 	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation)).Methods("POST")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
+	installationRouter.Handle("/cancel_deletion", addContext(handleCancelDeletion)).Methods("POST")
 	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations)).Methods("POST")
 	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation)).Methods("DELETE")
 
@@ -560,14 +561,33 @@ func handleWakeupInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	outputJSON(c, w, installationDTO)
 }
 
-// handleDeleteInstallation responds to DELETE /api/installation/{installation}, beginning the process of
-// deleting the installation.
+// handleDeleteInstallation responds to DELETE /api/installation/{installation},
+// beginning the process of deleting the installation.
 func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)
 
+	// Some installation states, such as creation failures, allow for going
+	// directly to deletion-requested as they can't be properly put in the
+	// state for pending deletion and there should be no possibility for data
+	// loss. Check if that is the case before proceeding.
 	newState := model.InstallationStateDeletionRequested
+	installationDTO, err := c.Store.GetInstallationDTO(installationID, false, false)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to query installation")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if installationDTO == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if !installationDTO.ValidTransitionState(newState) {
+		// Fall back to the deletion pending state.
+		newState = model.InstallationStateDeletionPendingRequested
+	}
 
 	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
@@ -593,6 +613,35 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	err = updateInstallationState(c, installationDTO, newState)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	unlockOnce()
+	c.Supervisor.Do()
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// handleCancelDeletion responds to POST /api/installation/{installation}/cancel_deletion,
+// beginning the process of cancelling the pending deletion of the installation.
+func handleCancelDeletion(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	newState := model.InstallationStateDeletionCancellationRequested
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	err := updateInstallationState(c, installationDTO, newState)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
 		w.WriteHeader(http.StatusInternalServerError)

@@ -119,9 +119,13 @@ func (i *Installation) DeletionDateString() string {
 // GetDatabaseWeight returns a value corresponding to the
 // TODO: maybe consider installation size in the future as well?
 func (i *Installation) GetDatabaseWeight() float64 {
-	if i.State == InstallationStateHibernationRequested ||
-		i.State == InstallationStateHibernationInProgress ||
-		i.State == InstallationStateHibernating {
+	switch i.State {
+	case InstallationStateHibernationRequested,
+		InstallationStateHibernationInProgress,
+		InstallationStateHibernating,
+		InstallationStateDeletionPendingRequested,
+		InstallationStateDeletionPendingInProgress,
+		InstallationStateDeletionPending:
 		return HibernatingDatabaseWeight
 	}
 

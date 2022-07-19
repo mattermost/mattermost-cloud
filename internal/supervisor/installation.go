@@ -353,8 +353,15 @@ func (s *InstallationSupervisor) transitionInstallation(installation *model.Inst
 	case model.InstallationStateHibernationInProgress:
 		return s.waitForHibernationStable(installation, instanceID, logger)
 
-	case model.InstallationStateWakeUpRequested:
+	case model.InstallationStateWakeUpRequested,
+		model.InstallationStateDeletionCancellationRequested:
 		return s.wakeUpInstallation(installation, instanceID, logger)
+
+	case model.InstallationStateDeletionPendingRequested:
+		return s.queueInstallationDeletion(installation, instanceID, logger)
+
+	case model.InstallationStateDeletionPendingInProgress:
+		return s.waitForInstallationDeletionPendingStable(installation, instanceID, logger)
 
 	case model.InstallationStateDeletionRequested,
 		model.InstallationStateDeletionInProgress:
@@ -970,10 +977,21 @@ func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstalla
 }
 
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	success := s.performInstallationHibernation(installation, instanceID, logger)
+	if !success {
+		return installation.State
+	}
+
+	return s.waitForHibernationStable(installation, instanceID, logger)
+}
+
+// performInstallationHibernation begins hibernating an installation and returns
+// a boolean indicating success if all tasks were completed.
+func (s *InstallationSupervisor) performInstallationHibernation(installation *model.Installation, instanceID string, logger log.FieldLogger) bool {
 	err := s.resourceUtil.GetDatabaseForInstallation(installation).RefreshResourceMetadata(s.store, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update database resource metadata")
-		return installation.State
+		return false
 	}
 
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
@@ -982,12 +1000,12 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 	})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find cluster installations")
-		return installation.State
+		return false
 	}
 
 	if len(clusterInstallations) == 0 {
 		logger.Warn("Cluster installation list contained no results")
-		return installation.State
+		return false
 	}
 
 	clusterInstallationIDs := getClusterInstallationIDs(clusterInstallations)
@@ -995,7 +1013,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 	clusterInstallationLocks := newClusterInstallationLocks(clusterInstallationIDs, instanceID, s.store, logger)
 	if !clusterInstallationLocks.TryLock() {
 		logger.Debugf("Failed to lock %d cluster installations", len(clusterInstallations))
-		return installation.State
+		return false
 	}
 	defer clusterInstallationLocks.Unlock()
 
@@ -1006,7 +1024,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 	})
 	if err != nil {
 		logger.WithError(err).Warnf("Failed to fetch %d cluster installations by ids", len(clusterInstallations))
-		return installation.State
+		return false
 	}
 
 	if len(clusterInstallations) != len(clusterInstallationIDs) {
@@ -1017,18 +1035,18 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
 		if err != nil {
 			logger.WithError(err).Warnf("Failed to query cluster %s", clusterInstallation.ClusterID)
-			return clusterInstallation.State
+			return false
 		}
 		if cluster == nil {
 			logger.Errorf("Failed to find cluster %s", clusterInstallation.ClusterID)
-			return failedClusterInstallationState(clusterInstallation.State)
+			return false
 		}
 
 		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
 			HibernateClusterInstallation(cluster, installation, clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Error("Failed to update cluster installation")
-			return installation.State
+			return false
 		}
 
 		oldState := clusterInstallation.State
@@ -1036,7 +1054,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 		err = s.store.UpdateClusterInstallation(clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Errorf("Failed to change cluster installation state to %s", model.ClusterInstallationStateReconciling)
-			return installation.State
+			return false
 		}
 
 		err = s.eventsProducer.ProduceClusterInstallationStateChangeEvent(clusterInstallation, oldState)
@@ -1047,7 +1065,7 @@ func (s *InstallationSupervisor) hibernateInstallation(installation *model.Insta
 
 	logger.Info("Finished updating cluster installations")
 
-	return s.waitForHibernationStable(installation, instanceID, logger)
+	return true
 }
 
 func (s *InstallationSupervisor) waitForHibernationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
@@ -1075,6 +1093,30 @@ func (s *InstallationSupervisor) wakeUpInstallation(installation *model.Installa
 	}
 
 	return s.updateInstallation(installation, instanceID, logger)
+}
+
+func (s *InstallationSupervisor) queueInstallationDeletion(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	success := s.performInstallationHibernation(installation, instanceID, logger)
+	if !success {
+		return installation.State
+	}
+
+	return s.waitForInstallationDeletionPendingStable(installation, instanceID, logger)
+}
+
+func (s *InstallationSupervisor) waitForInstallationDeletionPendingStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	if err != nil {
+		logger.WithError(err).Warn("Installation hibernation failed")
+		return model.InstallationStateDeletionPendingInProgress
+	}
+	if !stable {
+		return model.InstallationStateDeletionPendingInProgress
+	}
+
+	logger.Info("Finished hibernating installation for pending deletion")
+
+	return model.InstallationStateDeletionPending
 }
 
 func (s *InstallationSupervisor) deleteInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
