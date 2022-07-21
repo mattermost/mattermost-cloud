@@ -543,7 +543,7 @@ func (provisioner *crProvisionerWrapper) IsResourceReady(cluster *model.Cluster,
 		return false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
 
-	if cr.Status.State != mmv1beta1.Stable {
+	if cr.Status.State != mmv1beta1.Stable && cr.Status.State != mmv1beta1.Ready {
 		return false, nil
 	}
 	if cr.Status.ObservedGeneration != 0 {
