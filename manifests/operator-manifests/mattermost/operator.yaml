@@ -24,7 +24,9 @@ spec:
           value: "20"
         - name: REQUEUE_ON_LIMIT_DELAY
           value: 20s
-        image: mattermost/mattermost-operator:v1.18.1
+        - name: MAX_RECONCILE_CONCURRENCY
+          value: "10"
+        image: mattermost/mattermost-operator:v1.19.0-rc.0
         imagePullPolicy: IfNotPresent
         name: mattermost-operator
         ports:
