@@ -80,10 +80,15 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-db-restoration-supervisor", false, "Whether this server will run an installation db restoration supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-db-migration-supervisor", false, "Whether this server will run an installation db migration supervisor or not.")
 
-	// Scheduling and installation options
+	// Scheduling options
 	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
-	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
 	serverCmd.PersistentFlags().Int("cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold-cpu-override", 0, "The cluster-resource-threshold override value for CPU resources only")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold-memory-override", 0, "The cluster-resource-threshold override value for memory resources only")
+	serverCmd.PersistentFlags().Int("cluster-resource-threshold-pod-count-override", 0, "The cluster-resource-threshold override value for pod count only")
+
+	// Installation options
 	serverCmd.PersistentFlags().Bool("use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	serverCmd.PersistentFlags().Bool("keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	serverCmd.PersistentFlags().Bool("keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
@@ -217,13 +222,16 @@ var serverCmd = &cobra.Command{
 		}
 
 		// TODO: move these cluster threshold values to cluster configuration.
+		balancedInstallationScheduling, _ := command.Flags().GetBool("balanced-installation-scheduling")
 		clusterResourceThreshold, _ := command.Flags().GetInt("cluster-resource-threshold")
-		if clusterResourceThreshold < 10 || clusterResourceThreshold > 100 {
-			return errors.Errorf("cluster-resource-threshold (%d) must be set between 10 and 100", clusterResourceThreshold)
-		}
+		thresholdCPUOverride, _ := command.Flags().GetInt("cluster-resource-threshold-cpu-override")
+		thresholdMemoryOverride, _ := command.Flags().GetInt("cluster-resource-threshold-memory-override")
+		thresholdPodCountOverride, _ := command.Flags().GetInt("cluster-resource-threshold-pod-count-override")
 		clusterResourceThresholdScaleValue, _ := command.Flags().GetInt("cluster-resource-threshold-scale-value")
-		if clusterResourceThresholdScaleValue < 0 || clusterResourceThresholdScaleValue > 10 {
-			return errors.Errorf("cluster-resource-threshold-scale-value (%d) must be set between 0 and 10", clusterResourceThresholdScaleValue)
+		installationScheduling := supervisor.NewInstallationSupervisorSchedulingOptions(balancedInstallationScheduling, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue)
+		err = installationScheduling.Validate()
+		if err != nil {
+			return errors.Wrap(err, "invalid installation scheduling options")
 		}
 
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
@@ -252,7 +260,6 @@ var serverCmd = &cobra.Command{
 		keepDatabaseData, _ := command.Flags().GetBool("keep-database-data")
 		keepFilestoreData, _ := command.Flags().GetBool("keep-filestore-data")
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
-		balancedInstallationScheduling, _ := command.Flags().GetBool("balanced-installation-scheduling")
 		backupRestoreToolImage, _ := command.Flags().GetString("backup-restore-tool-image")
 		backupJobTTL, _ := command.Flags().GetInt32("backup-job-ttl-seconds")
 
@@ -277,36 +284,39 @@ var serverCmd = &cobra.Command{
 		}
 
 		logger.WithFields(logrus.Fields{
-			"build-hash":                             model.BuildHash,
-			"cluster-supervisor":                     clusterSupervisor,
-			"group-supervisor":                       groupSupervisor,
-			"installation-supervisor":                installationSupervisor,
-			"cluster-installation-supervisor":        clusterInstallationSupervisor,
-			"backup-supervisor":                      backupSupervisor,
-			"import-supervisor":                      importSupervisor,
-			"installation-db-restoration-supervisor": installationDBRestorationSupervisor,
-			"installation-db-migration-supervisor":   installationDBMigrationSupervisor,
-			"store-version":                          currentVersion,
-			"state-store":                            s3StateStore,
-			"working-directory":                      wd,
-			"balanced-installation-scheduling":       balancedInstallationScheduling,
-			"cluster-resource-threshold":             clusterResourceThreshold,
-			"cluster-resource-threshold-scale-value": clusterResourceThresholdScaleValue,
-			"use-existing-aws-resources":             useExistingResources,
-			"keep-database-data":                     keepDatabaseData,
-			"keep-filestore-data":                    keepFilestoreData,
-			"force-cr-upgrade":                       forceCRUpgrade,
-			"backup-restore-tool-image":              backupRestoreToolImage,
-			"backup-job-ttl-seconds":                 backupJobTTL,
-			"debug":                                  debugMode,
-			"dev-mode":                               devMode,
-			"deploy-mysql-operator":                  deployMySQLOperator,
-			"deploy-minio-operator":                  deployMinioOperator,
-			"ndots-value":                            ndotsDefaultValue,
-			"maxDatabaseConnectionsPerPool":          maxDatabaseConnectionsPerPool,
-			"defaultPoolSize":                        defaultPoolSize,
-			"minPoolSize":                            minPoolSize,
-			"maxClientConnections":                   maxClientConnections,
+			"build-hash":                                    model.BuildHash,
+			"cluster-supervisor":                            clusterSupervisor,
+			"group-supervisor":                              groupSupervisor,
+			"installation-supervisor":                       installationSupervisor,
+			"cluster-installation-supervisor":               clusterInstallationSupervisor,
+			"backup-supervisor":                             backupSupervisor,
+			"import-supervisor":                             importSupervisor,
+			"installation-db-restoration-supervisor":        installationDBRestorationSupervisor,
+			"installation-db-migration-supervisor":          installationDBMigrationSupervisor,
+			"store-version":                                 currentVersion,
+			"state-store":                                   s3StateStore,
+			"working-directory":                             wd,
+			"balanced-installation-scheduling":              balancedInstallationScheduling,
+			"cluster-resource-threshold":                    clusterResourceThreshold,
+			"cluster-resource-threshold-cpu-override":       thresholdCPUOverride,
+			"cluster-resource-threshold-memory-override":    thresholdMemoryOverride,
+			"cluster-resource-threshold-pod-count-override": thresholdPodCountOverride,
+			"cluster-resource-threshold-scale-value":        clusterResourceThresholdScaleValue,
+			"use-existing-aws-resources":                    useExistingResources,
+			"keep-database-data":                            keepDatabaseData,
+			"keep-filestore-data":                           keepFilestoreData,
+			"force-cr-upgrade":                              forceCRUpgrade,
+			"backup-restore-tool-image":                     backupRestoreToolImage,
+			"backup-job-ttl-seconds":                        backupJobTTL,
+			"debug":                                         debugMode,
+			"dev-mode":                                      devMode,
+			"deploy-mysql-operator":                         deployMySQLOperator,
+			"deploy-minio-operator":                         deployMinioOperator,
+			"ndots-value":                                   ndotsDefaultValue,
+			"maxDatabaseConnectionsPerPool":                 maxDatabaseConnectionsPerPool,
+			"defaultPoolSize":                               defaultPoolSize,
+			"minPoolSize":                                   minPoolSize,
+			"maxClientConnections":                          maxClientConnections,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -395,8 +405,7 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 		}
 		if installationSupervisor {
-			scheduling := supervisor.NewInstallationSupervisorSchedulingOptions(balancedInstallationScheduling, clusterResourceThreshold, clusterResourceThresholdScaleValue)
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, scheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, cloudflareClient))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, cloudflareClient))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))

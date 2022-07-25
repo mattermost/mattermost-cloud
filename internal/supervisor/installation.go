@@ -134,7 +134,9 @@ type InstallationSupervisorCache struct {
 // how installation scheduling occurs.
 type InstallationSupervisorSchedulingOptions struct {
 	balanceInstallations               bool
-	clusterResourceThreshold           int
+	clusterResourceThresholdCPU        int
+	clusterResourceThresholdMemory     int
+	clusterResourceThresholdPodCount   int
 	clusterResourceThresholdScaleValue int
 }
 
@@ -172,12 +174,43 @@ func NewInstallationSupervisor(
 }
 
 // NewInstallationSupervisorSchedulingOptions creates a new InstallationSupervisorSchedulingOptions.
-func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clusterResourceThreshold, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
-	return InstallationSupervisorSchedulingOptions{
+func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
+	schedulingOptions := InstallationSupervisorSchedulingOptions{
 		balanceInstallations:               balanceInstallations,
-		clusterResourceThreshold:           clusterResourceThreshold,
+		clusterResourceThresholdCPU:        clusterResourceThreshold,
+		clusterResourceThresholdMemory:     clusterResourceThreshold,
+		clusterResourceThresholdPodCount:   clusterResourceThreshold,
 		clusterResourceThresholdScaleValue: clusterResourceThresholdScaleValue,
 	}
+	if thresholdCPUOverride != 0 {
+		schedulingOptions.clusterResourceThresholdCPU = thresholdCPUOverride
+	}
+	if thresholdMemoryOverride != 0 {
+		schedulingOptions.clusterResourceThresholdMemory = thresholdMemoryOverride
+	}
+	if thresholdPodCountOverride != 0 {
+		schedulingOptions.clusterResourceThresholdPodCount = thresholdPodCountOverride
+	}
+
+	return schedulingOptions
+}
+
+// Validate validates InstallationSupervisorSchedulingOptions.
+func (so *InstallationSupervisorSchedulingOptions) Validate() error {
+	if so.clusterResourceThresholdCPU < 10 || so.clusterResourceThresholdCPU > 100 {
+		return errors.Errorf("cluster CPU resource threshold (%d) must be set between 10 and 100", so.clusterResourceThresholdCPU)
+	}
+	if so.clusterResourceThresholdMemory < 10 || so.clusterResourceThresholdMemory > 100 {
+		return errors.Errorf("cluster memory resource threshold (%d) must be set between 10 and 100", so.clusterResourceThresholdMemory)
+	}
+	if so.clusterResourceThresholdPodCount < 10 || so.clusterResourceThresholdPodCount > 100 {
+		return errors.Errorf("cluster pod count resource threshold (%d) must be set between 10 and 100", so.clusterResourceThresholdPodCount)
+	}
+	if so.clusterResourceThresholdScaleValue < 0 || so.clusterResourceThresholdScaleValue > 10 {
+		return errors.Errorf("cluster resource threshold scale value (%d) must be set between 0 and 10", so.clusterResourceThresholdScaleValue)
+	}
+
+	return nil
 }
 
 // Shutdown performs graceful shutdown tasks for the installation supervisor.
@@ -533,15 +566,18 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
 	podPercent := clusterResources.CalculatePodCountPercentUsed(installationPodCountRequirement)
 
-	if cpuPercent > s.scheduling.clusterResourceThreshold ||
-		memoryPercent > s.scheduling.clusterResourceThreshold ||
-		podPercent > s.scheduling.clusterResourceThreshold {
+	if cpuPercent > s.scheduling.clusterResourceThresholdCPU ||
+		memoryPercent > s.scheduling.clusterResourceThresholdMemory ||
+		podPercent > s.scheduling.clusterResourceThresholdPodCount {
 		if s.scheduling.clusterResourceThresholdScaleValue == 0 ||
 			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
 			cluster.State != model.ClusterStateStable {
-			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%% (+%dm), Memory=%d%% (+%dMi), PodCount=%d%% (+%d)",
+			logger.WithFields(log.Fields{
+				"scheduling-cpu-threshold":       s.scheduling.clusterResourceThresholdCPU,
+				"scheduling-memory-threshold":    s.scheduling.clusterResourceThresholdMemory,
+				"scheduling-pod-count-threshold": s.scheduling.clusterResourceThresholdPodCount,
+			}).Debugf("Cluster %s would exceed the cluster load threshold: CPU=%d%% (+%dm), Memory=%d%% (+%dMi), PodCount=%d%% (+%d)",
 				cluster.ID,
-				s.scheduling.clusterResourceThreshold,
 				cpuPercent, installationCPURequirement,
 				memoryPercent, installationMemRequirement/1048576000, // Have to convert to Mi
 				podPercent, installationPodCountRequirement,

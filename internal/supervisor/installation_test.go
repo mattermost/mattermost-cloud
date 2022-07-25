@@ -543,7 +543,8 @@ func (m *mockCloudflareClient) DeleteDNSRecords(customerDNSName []string, logger
 }
 
 func TestInstallationSupervisorDo(t *testing.T) {
-	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
+	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0, 0, 0, 0)
+	require.NoError(t, standardSchedulingOptions.Validate())
 
 	t.Run("no installations pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
@@ -577,7 +578,8 @@ func TestInstallationSupervisorDo(t *testing.T) {
 }
 
 func TestInstallationSupervisor(t *testing.T) {
-	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0)
+	standardSchedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0, 0, 0, 0)
+	require.NoError(t, standardSchedulingOptions.Validate())
 
 	expectInstallationState := func(t *testing.T, sqlStore *store.SQLStore, installation *model.Installation, expectedState string) {
 		t.Helper()
@@ -2890,7 +2892,8 @@ func TestInstallationSupervisor(t *testing.T) {
 				UsedPodCount:     100,
 			},
 		}
-		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 2)
+		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(false, 80, 0, 0, 0, 2)
+		require.NoError(t, schedulingOptions.Validate())
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			mockInstallationProvisioner,
@@ -2937,7 +2940,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0)
+		schedulingOptions := supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 0, 0, 0)
+		require.NoError(t, schedulingOptions.Validate())
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
