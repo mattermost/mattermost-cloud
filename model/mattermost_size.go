@@ -49,8 +49,14 @@ func ParseProvisionerSize(size string) (v1alpha1.ClusterInstallationSize, error)
 		return v1alpha1.ClusterInstallationSize{}, errors.Errorf("unrecognized installation size %q", parts[0])
 	}
 
-	if len(parts) < 2 || strings.TrimSpace(parts[1]) == "" {
+	if len(parts) == 1 {
 		return resources, nil
+	}
+	if len(parts) > 2 {
+		return v1alpha1.ClusterInstallationSize{}, errors.Errorf("expected at most 2 size segments found %d", len(parts))
+	}
+	if strings.TrimSpace(parts[1]) == "" {
+		return v1alpha1.ClusterInstallationSize{}, errors.Errorf("replicas segment cannot be empty")
 	}
 
 	replicas, err := strconv.Atoi(parts[1])

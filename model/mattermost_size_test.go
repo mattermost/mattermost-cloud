@@ -36,9 +36,14 @@ func TestParseProvisionerSize(t *testing.T) {
 			expectedSize: provisionerXL6Replicas,
 		},
 		{
-			description:  "correct size, ignore other vals",
-			size:         "provisionerXL-1-6",
-			expectedSize: provisionerXL1Replica,
+			description: "do not allow more than 2 segments",
+			size:        "provisionerXL-1-6",
+			error:       "expected at most 2 size segments",
+		},
+		{
+			description: "do not allow dash without replicas",
+			size:        "provisionerXL-",
+			error:       "replicas segment cannot be empty",
 		},
 		{
 			description: "unknown size",
