@@ -36,7 +36,7 @@ func GetInstallationSize(size string) (v1alpha1.ClusterInstallationSize, error) 
 // configurable replicas count.
 // The size should be specified in form:
 // [SIZE_NAME]-[NUMBER_OF_REPLICAS]
-// If number of replicas is not specified the default value for the size wil
+// If number of replicas is not specified the default value for the size will
 // be used.
 func ParseProvisionerSize(size string) (v1alpha1.ClusterInstallationSize, error) {
 	parts := strings.Split(size, "-")
