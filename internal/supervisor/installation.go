@@ -23,7 +23,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 const (
@@ -440,7 +439,7 @@ func (s *InstallationSupervisor) prioritizeLowerUtilizedClusters(clusters []*mod
 			logger.WithError(err).Error("Failed to get cluster resources")
 			continue
 		}
-		size, err := mmv1alpha1.GetClusterSize(installation.Size)
+		size, err := model.GetInstallationSize(installation.Size)
 		if err != nil {
 			logger.WithError(err).Error("Invalid cluster installation size")
 			continue
@@ -509,7 +508,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 
 	// Begin final resource check.
 
-	size, err := mmv1alpha1.GetClusterSize(installation.Size)
+	size, err := model.GetInstallationSize(installation.Size)
 	if err != nil {
 		logger.WithError(err).Error("Invalid cluster installation size")
 		return nil
