@@ -11,6 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
+	"github.com/mattermost/mattermost-operator/pkg/utils"
+
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 
 	"github.com/mattermost/mattermost-operator/pkg/resources"
@@ -95,7 +98,6 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			Labels:    generateClusterInstallationResourceLabels(installation, clusterInstallation),
 		},
 		Spec: mmv1beta1.MattermostSpec{
-			Size:          installation.Size,
 			Version:       translateMattermostVersion(installation.Version),
 			Image:         installation.Image,
 			MattermostEnv: mattermostEnv.ToEnvList(),
@@ -107,6 +109,11 @@ func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *mode
 			},
 			DNSConfig: setNdots(provisioner.params.NdotsValue),
 		},
+	}
+
+	err = setMMInstanceSize(installation, mattermost)
+	if err != nil {
+		return errors.Wrap(err, "failed to set Mattermost instance size")
 	}
 
 	if installation.State == model.InstallationStateHibernating {
@@ -266,7 +273,10 @@ func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *mode
 	//    when the size request change comes in on the API, but would require
 	//    new scheduling logic. For now, take care when resizing.
 	//    TODO: address these issue.
-	mattermost.Spec.Size = installation.Size // Appropriate replicas and resources will be set by Operator.
+	err = setMMInstanceSize(installation, mattermost)
+	if err != nil {
+		return errors.Wrap(err, "failed to set Mattermost instance size")
+	}
 
 	mattermost.Spec.LicenseSecret = ""
 	var secretName string
@@ -624,6 +634,30 @@ func generateAffinityConfig(installation *model.Installation, clusterInstallatio
 			},
 		},
 	}
+}
+
+func setMMInstanceSize(installation *model.Installation, mattermost *mmv1beta1.Mattermost) error {
+	if strings.HasPrefix(installation.Size, model.ProvisionerSizePrefix) {
+		resSize, err := model.ParseProvisionerSize(installation.Size)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse custom installation size")
+		}
+		overrideReplicasAndResourcesFromSize(resSize, mattermost)
+		return nil
+	}
+	mattermost.Spec.Size = installation.Size
+	return nil
+}
+
+// This function is adapted from Mattermost Operator, we can make it public
+// there to avoid copying.
+func overrideReplicasAndResourcesFromSize(size v1alpha1.ClusterInstallationSize, mm *mmv1beta1.Mattermost) {
+	mm.Spec.Size = ""
+
+	mm.Spec.Replicas = utils.NewInt32(size.App.Replicas)
+	mm.Spec.Scheduling.Resources = size.App.Resources
+	mm.Spec.FileStore.OverrideReplicasAndResourcesFromSize(size)
+	mm.Spec.Database.OverrideReplicasAndResourcesFromSize(size)
 }
 
 // getMattermostCustomResource gets the cluster installation resource from
