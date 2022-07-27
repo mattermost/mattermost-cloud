@@ -132,9 +132,11 @@ type InstallationSupervisorCache struct {
 // InstallationSupervisorSchedulingOptions are the various options that control
 // how installation scheduling occurs.
 type InstallationSupervisorSchedulingOptions struct {
-	balanceInstallations               bool
-	clusterResourceThreshold           int
-	clusterResourceThresholdScaleValue int
+	BalanceInstallations               bool
+	ClusterResourceThresholdCPU        int
+	ClusterResourceThresholdMemory     int
+	ClusterResourceThresholdPodCount   int
+	ClusterResourceThresholdScaleValue int
 }
 
 // NewInstallationSupervisor creates a new InstallationSupervisor.
@@ -171,12 +173,43 @@ func NewInstallationSupervisor(
 }
 
 // NewInstallationSupervisorSchedulingOptions creates a new InstallationSupervisorSchedulingOptions.
-func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clusterResourceThreshold, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
-	return InstallationSupervisorSchedulingOptions{
-		balanceInstallations:               balanceInstallations,
-		clusterResourceThreshold:           clusterResourceThreshold,
-		clusterResourceThresholdScaleValue: clusterResourceThresholdScaleValue,
+func NewInstallationSupervisorSchedulingOptions(balanceInstallations bool, clusterResourceThreshold, thresholdCPUOverride, thresholdMemoryOverride, thresholdPodCountOverride, clusterResourceThresholdScaleValue int) InstallationSupervisorSchedulingOptions {
+	schedulingOptions := InstallationSupervisorSchedulingOptions{
+		BalanceInstallations:               balanceInstallations,
+		ClusterResourceThresholdCPU:        clusterResourceThreshold,
+		ClusterResourceThresholdMemory:     clusterResourceThreshold,
+		ClusterResourceThresholdPodCount:   clusterResourceThreshold,
+		ClusterResourceThresholdScaleValue: clusterResourceThresholdScaleValue,
 	}
+	if thresholdCPUOverride != 0 {
+		schedulingOptions.ClusterResourceThresholdCPU = thresholdCPUOverride
+	}
+	if thresholdMemoryOverride != 0 {
+		schedulingOptions.ClusterResourceThresholdMemory = thresholdMemoryOverride
+	}
+	if thresholdPodCountOverride != 0 {
+		schedulingOptions.ClusterResourceThresholdPodCount = thresholdPodCountOverride
+	}
+
+	return schedulingOptions
+}
+
+// Validate validates InstallationSupervisorSchedulingOptions.
+func (so *InstallationSupervisorSchedulingOptions) Validate() error {
+	if so.ClusterResourceThresholdCPU < 10 || so.ClusterResourceThresholdCPU > 100 {
+		return errors.Errorf("cluster CPU resource threshold (%d) must be set between 10 and 100", so.ClusterResourceThresholdCPU)
+	}
+	if so.ClusterResourceThresholdMemory < 10 || so.ClusterResourceThresholdMemory > 100 {
+		return errors.Errorf("cluster memory resource threshold (%d) must be set between 10 and 100", so.ClusterResourceThresholdMemory)
+	}
+	if so.ClusterResourceThresholdPodCount < 10 || so.ClusterResourceThresholdPodCount > 100 {
+		return errors.Errorf("cluster pod count resource threshold (%d) must be set between 10 and 100", so.ClusterResourceThresholdPodCount)
+	}
+	if so.ClusterResourceThresholdScaleValue < 0 || so.ClusterResourceThresholdScaleValue > 10 {
+		return errors.Errorf("cluster resource threshold scale value (%d) must be set between 0 and 10", so.ClusterResourceThresholdScaleValue)
+	}
+
+	return nil
 }
 
 // Shutdown performs graceful shutdown tasks for the installation supervisor.
@@ -394,7 +427,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		logger.Warnf("No clusters found matching the filter, installation annotations are: [%s]", strings.Join(getAnnotationsNames(annotations), ", "))
 	}
 
-	if s.scheduling.balanceInstallations {
+	if s.scheduling.BalanceInstallations {
 		logger.Info("Attempting to schedule installation on the lowest-utilized cluster")
 		clusters = s.prioritizeLowerUtilizedClusters(clusters, installation, instanceID, logger)
 	}
@@ -532,15 +565,18 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	memoryPercent := clusterResources.CalculateMemoryPercentUsed(installationMemRequirement)
 	podPercent := clusterResources.CalculatePodCountPercentUsed(installationPodCountRequirement)
 
-	if cpuPercent > s.scheduling.clusterResourceThreshold ||
-		memoryPercent > s.scheduling.clusterResourceThreshold ||
-		podPercent > s.scheduling.clusterResourceThreshold {
-		if s.scheduling.clusterResourceThresholdScaleValue == 0 ||
+	if cpuPercent > s.scheduling.ClusterResourceThresholdCPU ||
+		memoryPercent > s.scheduling.ClusterResourceThresholdMemory ||
+		podPercent > s.scheduling.ClusterResourceThresholdPodCount {
+		if s.scheduling.ClusterResourceThresholdScaleValue == 0 ||
 			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
 			cluster.State != model.ClusterStateStable {
-			logger.Debugf("Cluster %s would exceed the cluster load threshold (%d%%): CPU=%d%% (+%dm), Memory=%d%% (+%dMi), PodCount=%d%% (+%d)",
+			logger.WithFields(log.Fields{
+				"scheduling-cpu-threshold":       s.scheduling.ClusterResourceThresholdCPU,
+				"scheduling-memory-threshold":    s.scheduling.ClusterResourceThresholdMemory,
+				"scheduling-pod-count-threshold": s.scheduling.ClusterResourceThresholdPodCount,
+			}).Debugf("Cluster %s would exceed the cluster load threshold: CPU=%d%% (+%dm), Memory=%d%% (+%dMi), PodCount=%d%% (+%d)",
 				cluster.ID,
-				s.scheduling.clusterResourceThreshold,
 				cpuPercent, installationCPURequirement,
 				memoryPercent, installationMemRequirement/1048576000, // Have to convert to Mi
 				podPercent, installationPodCountRequirement,
@@ -553,7 +589,7 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		// updating the cluster. We should try to reuse some of the API flow
 		// that already does this.
 
-		newWorkerCount := cluster.ProvisionerMetadataKops.NodeMinCount + int64(s.scheduling.clusterResourceThresholdScaleValue)
+		newWorkerCount := cluster.ProvisionerMetadataKops.NodeMinCount + int64(s.scheduling.ClusterResourceThresholdScaleValue)
 		if newWorkerCount > cluster.ProvisionerMetadataKops.NodeMaxCount {
 			newWorkerCount = cluster.ProvisionerMetadataKops.NodeMaxCount
 		}
@@ -1594,7 +1630,7 @@ func (c *InstallationSupervisorCache) getCachedClusterResources(clusterID string
 
 func (s *InstallationSupervisor) initializeInstallationResourcesCacheManager() {
 	s.cache.initialized = true
-	if !s.scheduling.balanceInstallations {
+	if !s.scheduling.BalanceInstallations {
 		return
 	}
 	s.cache.running = true
