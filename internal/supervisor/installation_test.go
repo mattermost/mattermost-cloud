@@ -3155,3 +3155,131 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.Equal(t, model.V1betaCRVersion, updatedInstallation.CRVersion)
 	})
 }
+
+func TestInstallationSupervisorSchedulingOptions(t *testing.T) {
+	for _, testCase := range []struct {
+		name            string
+		inputOptions    supervisor.InstallationSupervisorSchedulingOptions
+		expectedOptions supervisor.InstallationSupervisorSchedulingOptions
+		expectError     bool
+	}{
+		{
+			name:         "valid, no overrides",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 0, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: false,
+		},
+		{
+			name:         "valid, cpu override",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 40, 0, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        40,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: false,
+		},
+		{
+			name:         "valid, memory override",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 40, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     40,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: false,
+		},
+		{
+			name:         "valid, pod count override",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 0, 40, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   40,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: false,
+		},
+		{
+			name:         "invalid, no overrides",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, -1, 0, 0, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        -1,
+				ClusterResourceThresholdMemory:     -1,
+				ClusterResourceThresholdPodCount:   -1,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: true,
+		},
+		{
+			name:         "invalid, cpu override",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 2, 0, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        2,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: true,
+		},
+		{
+			name:         "invalid, memory override",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 2, 0, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     2,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: true,
+		},
+		{
+			name:         "invalid, pod count override",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 0, 2, 2),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   2,
+				ClusterResourceThresholdScaleValue: 2,
+			},
+			expectError: true,
+		},
+		{
+			name:         "invalid, scale value out of bounds",
+			inputOptions: supervisor.NewInstallationSupervisorSchedulingOptions(true, 80, 0, 0, 0, -1),
+			expectedOptions: supervisor.InstallationSupervisorSchedulingOptions{
+				BalanceInstallations:               true,
+				ClusterResourceThresholdCPU:        80,
+				ClusterResourceThresholdMemory:     80,
+				ClusterResourceThresholdPodCount:   80,
+				ClusterResourceThresholdScaleValue: -1,
+			},
+			expectError: true,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.inputOptions, testCase.expectedOptions)
+			err := testCase.expectedOptions.Validate()
+			if testCase.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
