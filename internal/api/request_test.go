@@ -28,7 +28,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
-				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
+				"nginx":                 {Chart: "4.2.0", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.2.0", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "40.5.0", ValuesPath: ""},
 				"thanos":                {Chart: "10.5.4", ValuesPath: ""},
@@ -98,7 +98,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			Networking:         model.NetworkingCalico,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
-				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
+				"nginx":                 {Chart: "4.2.0", ValuesPath: ""},
 				"nginx-internal":        {Chart: "4.2.0", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "40.5.0", ValuesPath: ""},
 				"thanos":                {Chart: "10.5.4", ValuesPath: ""},
