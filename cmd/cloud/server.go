@@ -104,6 +104,7 @@ func init() {
 	serverCmd.PersistentFlags().Int("max-client-connections", 20000, "The db proxy max client connections.")
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
+	serverCmd.PersistentFlags().Bool("disable-db-init-check", false, "Whether to disable init container with database check.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
@@ -265,8 +266,10 @@ var serverCmd = &cobra.Command{
 
 		deployMySQLOperator, _ := command.Flags().GetBool("deploy-mysql-operator")
 		deployMinioOperator, _ := command.Flags().GetBool("deploy-minio-operator")
-		ndotsDefaultValue, _ := command.Flags().GetString("ndots-value")
 		model.SetDeployOperators(deployMySQLOperator, deployMinioOperator)
+
+		ndotsDefaultValue, _ := command.Flags().GetString("ndots-value")
+		disableDBInitCheck, _ := command.Flags().GetBool("disable-db-init-check")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -317,6 +320,7 @@ var serverCmd = &cobra.Command{
 			"defaultPoolSize":                               defaultPoolSize,
 			"minPoolSize":                                   minPoolSize,
 			"maxClientConnections":                          maxClientConnections,
+			"disable-db-init-check":                         disableDBInitCheck,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -349,7 +353,7 @@ var serverCmd = &cobra.Command{
 			return errors.Wrap(err, "failed health check")
 		}
 
-		resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(command))
+		resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(command), disableDBInitCheck)
 
 		provisioningParams := provisioner.ProvisioningParams{
 			S3StateStore:            s3StateStore,

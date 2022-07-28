@@ -13,12 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // RDSDatabase is a database backed by AWS RDS.
@@ -26,14 +24,16 @@ type RDSDatabase struct {
 	databaseType   string
 	installationID string
 	client         *Client
+	disableDBCheck bool
 }
 
 // NewRDSDatabase returns a new RDSDatabase interface.
-func NewRDSDatabase(databaseType, installationID string, client *Client) *RDSDatabase {
+func NewRDSDatabase(databaseType, installationID string, client *Client, disableDBCheck bool) *RDSDatabase {
 	return &RDSDatabase{
 		databaseType:   databaseType,
 		installationID: installationID,
 		client:         client,
+		disableDBCheck: disableDBCheck,
 	}
 }
 
@@ -186,24 +186,17 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 	}
 
 	databaseSecretName := fmt.Sprintf("%s-rds", d.installationID)
-	secretStringData := map[string]string{
-		"DB_CONNECTION_STRING":              databaseConnectionString,
-		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
-	}
-	if len(databaseConnectionCheck) != 0 {
-		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
-	}
 
-	databaseSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: databaseSecretName,
-		},
-		StringData: secretStringData,
+	secret := InstallationDBSecret{
+		InstallationSecretName: databaseSecretName,
+		ConnectionString:       databaseConnectionString,
+		DBCheckURL:             databaseConnectionCheck,
+		ReadReplicasURL:        databaseReadReplicasString,
 	}
 
 	logger.Debug("AWS multitenant database configuration generated for cluster installation")
 
-	return databaseSecret, nil
+	return secret.ToK8sSecret(d.disableDBCheck), nil
 }
 
 // MigrateOut migration is not supported for single tenant RDS.
