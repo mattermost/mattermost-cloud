@@ -29,7 +29,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
-				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
+				"nginx-internal":        {Chart: "4.2.0", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
 				"thanos":                {Chart: "10.3.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "6.2.8", ValuesPath: ""},
@@ -99,7 +99,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.0.18", ValuesPath: ""},
-				"nginx-internal":        {Chart: "4.0.18", ValuesPath: ""},
+				"nginx-internal":        {Chart: "4.2.0", ValuesPath: ""},
 				"prometheus-operator":   {Chart: "35.3.1", ValuesPath: ""},
 				"thanos":                {Chart: "10.3.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "6.2.8", ValuesPath: ""},
