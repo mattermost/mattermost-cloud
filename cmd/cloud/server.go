@@ -105,6 +105,7 @@ func init() {
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
 	serverCmd.PersistentFlags().Bool("disable-db-init-check", false, "Whether to disable init container with database check.")
+	serverCmd.PersistentFlags().Bool("installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
@@ -270,6 +271,7 @@ var serverCmd = &cobra.Command{
 
 		ndotsDefaultValue, _ := command.Flags().GetString("ndots-value")
 		disableDBInitCheck, _ := command.Flags().GetBool("disable-db-init-check")
+		enableRoute53, _ := command.Flags().GetBool("installation-enable-route53")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -321,6 +323,7 @@ var serverCmd = &cobra.Command{
 			"minPoolSize":                                   minPoolSize,
 			"maxClientConnections":                          maxClientConnections,
 			"disable-db-init-check":                         disableDBInitCheck,
+			"enable-route53":                                enableRoute53,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -389,16 +392,27 @@ var serverCmd = &cobra.Command{
 
 		eventsProducer := events.NewProducer(sqlStore, eventsDeliverer, awsClient.GetCloudEnvironmentName(), logger)
 
-		var cloudflareClient supervisor.Cloudflarer
+		// DNS configuration
+		dnsManager := supervisor.NewDNSManager()
+		if enableRoute53 {
+			dnsManager.AddProvider(supervisor.NewRoute53DNSProvider(awsClient))
+		} else {
+			logger.Warn("Route53 disabled for Installation, Route53 CNAME records will not be created")
+		}
+
 		if cloudflareToken := os.Getenv("CLOUDFLARE_API_TOKEN"); cloudflareToken != "" {
 			cfClient, err := cf.NewWithAPIToken(cloudflareToken)
 			if err != nil {
 				return errors.Wrap(err, "failed to initialize cloudflare client using API token")
 			}
-			cloudflareClient = cloudflare.NewClientWithToken(cfClient, awsClient)
+			dnsManager.AddProvider(cloudflare.NewClientWithToken(cfClient, awsClient))
 		} else {
-			logger.Warn("Cloudflare token not provided, using noop client")
-			cloudflareClient = cloudflare.NoopClient()
+			logger.Warn("Cloudflare token not provided, Cloudflare records registration will be skipped")
+		}
+
+		err = dnsManager.IsValid()
+		if err != nil {
+			return errors.Wrap(err, "invalid DNS providers configuration")
 		}
 
 		var multiDoer supervisor.MultiDoer
@@ -409,7 +423,7 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, cloudflareClient))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, dnsManager))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))

@@ -283,6 +283,20 @@ func (mr *MockAWSMockRecorder) DeletePublicCNAME(dnsName, logger interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePublicCNAME", reflect.TypeOf((*MockAWS)(nil).DeletePublicCNAME), dnsName, logger)
 }
 
+// DeletePublicCNAMEs mocks base method
+func (m *MockAWS) DeletePublicCNAMEs(dnsName []string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePublicCNAMEs", dnsName, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePublicCNAMEs indicates an expected call of DeletePublicCNAMEs
+func (mr *MockAWSMockRecorder) DeletePublicCNAMEs(dnsName, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePublicCNAMEs", reflect.TypeOf((*MockAWS)(nil).DeletePublicCNAMEs), dnsName, logger)
+}
+
 // UpsertPublicCNAMEs mocks base method
 func (m *MockAWS) UpsertPublicCNAMEs(dnsNames, endpoints []string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
