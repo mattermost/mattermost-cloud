@@ -132,6 +132,22 @@ func (a *Client) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
 	return a.deleteCNAME(zoneID, dnsName, logger)
 }
 
+// DeletePublicCNAMEs deletes AWS route53 records for a public domain name.
+func (a *Client) DeletePublicCNAMEs(dnsNames []string, logger log.FieldLogger) error {
+	for _, dns := range dnsNames {
+		zoneID, found := a.getDNSZoneID(dns)
+		if !found {
+			logger.Warnf("hosted zone for %q domain name not found, skipping CNAME deletion", dns)
+			continue
+		}
+		err := a.deleteCNAME(zoneID, dns, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete CNAME")
+		}
+	}
+	return nil
+}
+
 // GetPrivateHostedZoneID returns the private R53 hosted zone ID for the AWS
 // account.
 func (a *Client) GetPrivateHostedZoneID() string {

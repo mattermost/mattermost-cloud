@@ -464,6 +464,10 @@ func (a *mockAWS) DeletePublicCNAME(dnsName string, logger log.FieldLogger) erro
 	return nil
 }
 
+func (a *mockAWS) DeletePublicCNAMEs(dnsNames []string, logger log.FieldLogger) error {
+	return nil
+}
+
 func (a *mockAWS) GetPublicHostedZoneNames() []string {
 	return []string{"public.host.name.example.com"}
 }

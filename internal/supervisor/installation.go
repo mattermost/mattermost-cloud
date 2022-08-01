@@ -15,7 +15,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
@@ -79,10 +78,10 @@ type installationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
-// Cloudflarer interface that holds Cloudflare functions
-type Cloudflarer interface {
-	CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger logrus.FieldLogger) error
-	DeleteDNSRecords(customerDNSName []string, logger logrus.FieldLogger) error
+// InstallationDNSProvider is an interface over DNS provider.
+type InstallationDNSProvider interface {
+	CreateDNSRecords(customerDNSName []string, dnsEndpoints []string, logger log.FieldLogger) error
+	DeleteDNSRecords(customerDNSName []string, logger log.FieldLogger) error
 }
 
 type eventProducer interface {
@@ -116,7 +115,7 @@ type InstallationSupervisor struct {
 	eventsProducer    eventProducer
 	forceCRUpgrade    bool
 	cache             InstallationSupervisorCache
-	cloudflareClient  Cloudflarer
+	dnsProvider       InstallationDNSProvider
 }
 
 // InstallationSupervisorCache contains configuration and cached data for
@@ -153,7 +152,7 @@ func NewInstallationSupervisor(
 	metrics *metrics.CloudMetrics,
 	eventsProducer eventProducer,
 	forceCRUpgrade bool,
-	cloudflareClient Cloudflarer) *InstallationSupervisor {
+	dnsProvider InstallationDNSProvider) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -168,7 +167,7 @@ func NewInstallationSupervisor(
 		eventsProducer:    eventsProducer,
 		forceCRUpgrade:    forceCRUpgrade,
 		cache:             InstallationSupervisorCache{false, false, make(chan bool), sync.Mutex{}, make(map[string]*k8s.ClusterResources)},
-		cloudflareClient:  cloudflareClient,
+		dnsProvider:       dnsProvider,
 	}
 }
 
@@ -919,17 +918,11 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 		return model.InstallationStateUpdateFailed
 	}
 
-	// This state can happen from update, therefore new DNS could have been added.
-	err = s.aws.UpsertPublicCNAMEs(dnsNames, endpoints, logger)
-	if err != nil {
-		logger.WithError(err).Warn("Failed to update the installation route53 records")
-		return installation.State
-	}
 	// Given that new DNS record can be added on update, we need to update
 	// Cloudflare as well.
-	err = s.cloudflareClient.CreateDNSRecords(dnsNames, endpoints, logger)
+	err = s.dnsProvider.CreateDNSRecords(dnsNames, endpoints, logger)
 	if err != nil {
-		logger.WithError(err).Error("Failed to upsert DNS CNAME record in Cloudflare")
+		logger.WithError(err).Error("Failed to upsert DNS CNAME record")
 		return installation.State
 	}
 
@@ -1200,12 +1193,7 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		if record.DeleteAt > 0 {
 			continue
 		}
-		err = s.aws.DeletePublicCNAME(record.DomainName, logger)
-		if err != nil {
-			logger.WithError(err).Error("Failed to delete installation DNS")
-			return model.InstallationStateDeletionFinalCleanup
-		}
-		err = s.cloudflareClient.DeleteDNSRecords([]string{record.DomainName}, logger)
+		err = s.dnsProvider.DeleteDNSRecords([]string{record.DomainName}, logger)
 		if err != nil {
 			logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
 			return model.InstallationStateDeletionFinalCleanup
@@ -1510,12 +1498,7 @@ func (s *InstallationSupervisor) configureDNS(installation *model.Installation, 
 	}
 	domainNames := model.DNSNamesFromRecords(dnsRecords)
 
-	err = s.aws.UpsertPublicCNAMEs(domainNames, endpoints, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create DNS CNAME records")
-	}
-
-	err = s.cloudflareClient.CreateDNSRecords(domainNames, endpoints, logger)
+	err = s.dnsProvider.CreateDNSRecords(domainNames, endpoints, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create DNS CNAME record in Cloudflare")
 		return errors.Wrap(err, "failed to create Cloudflare DNS records")
