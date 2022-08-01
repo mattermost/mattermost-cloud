@@ -34,13 +34,8 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"thanos":                {Chart: "10.3.1", ValuesPath: ""},
 				"teleport-kube-agent":   {Chart: "6.2.8", ValuesPath: ""},
 				"pgbouncer":             {Chart: "1.2.0", ValuesPath: ""},
-<<<<<<< HEAD
 				"promtail":              {Chart: "6.2.2", ValuesPath: ""},
-				"rtcd":                  {Chart: "1.0.0", ValuesPath: ""},
-=======
-				"promtail":              {Chart: "4.2.0", ValuesPath: ""},
 				"rtcd":                  {Chart: "1.1.0", ValuesPath: ""},
->>>>>>> 975fca4238484ae285fc68b618a77edf0310ac6a
 				"kubecost":              {Chart: "1.88.1", ValuesPath: ""},
 				"node-problem-detector": {Chart: "2.0.5", ValuesPath: ""},
 				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
