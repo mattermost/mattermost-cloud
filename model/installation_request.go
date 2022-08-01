@@ -12,8 +12,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
-	mmv1alpha1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 )
 
 // requireAnnotatedInstallations if set, installations need to be annotated with at least one annotation.
@@ -116,9 +114,9 @@ func (request *CreateInstallationRequest) Validate() error {
 		return err
 	}
 
-	_, err = mmv1alpha1.GetClusterSize(request.Size)
+	_, err = GetInstallationSize(request.Size)
 	if err != nil {
-		return errors.Wrap(err, "invalid size")
+		return errors.Wrap(err, "invalid Installation size")
 	}
 	_, err = url.Parse(request.DNS)
 	if err != nil {
@@ -325,7 +323,7 @@ func (p *PatchInstallationRequest) Validate() error {
 		return errors.New("provided image update value was blank")
 	}
 	if p.Size != nil {
-		_, err := mmv1alpha1.GetClusterSize(*p.Size)
+		_, err := GetInstallationSize(*p.Size)
 		if err != nil {
 			return errors.Wrap(err, "invalid size")
 		}

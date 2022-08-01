@@ -23,6 +23,8 @@ spec:
           name: prometheus
     ports:
     - protocol: TCP
+      port: 8065 # MM
+    - protocol: TCP
       port: 8067 # MM
     - protocol: TCP
       port: 9125 # MySQL

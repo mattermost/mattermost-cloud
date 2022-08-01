@@ -343,7 +343,7 @@ func TestDatabaseProvision(t *testing.T) {
 	logger := log.New()
 	database := NewRDSDatabase(model.DatabaseEngineTypeMySQL, id, &Client{
 		mux: &sync.Mutex{},
-	})
+	}, false)
 
 	err := database.Provision(nil, logger)
 	require.NoError(t, err)
@@ -358,7 +358,7 @@ func TestDatabaseTeardown(t *testing.T) {
 	logger := log.New()
 	database := NewRDSDatabase(model.DatabaseEngineTypeMySQL, id, &Client{
 		mux: &sync.Mutex{},
-	})
+	}, false)
 
 	err := database.Teardown(nil, false, logger)
 	require.NoError(t, err)

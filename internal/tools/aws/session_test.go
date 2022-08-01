@@ -28,10 +28,10 @@ func TestSanitizeParams(t *testing.T) {
 		{
 			description: "redact not allowed keys",
 			params: map[string]interface{}{
-				"Name":         "Awesome Name",
-				"Description":  "test",
+				"Name":               "Awesome Name",
+				"Description":        "test",
 				"MasterUserPassword": "password",
-				"SecretString": map[string]string{"user": "test", "password": "pass"},
+				"SecretString":       map[string]string{"user": "test", "password": "pass"},
 				"Tags": []map[string]interface{}{
 					{"some_name": "some value"},
 					{"tag": "tag"},
@@ -42,9 +42,9 @@ func TestSanitizeParams(t *testing.T) {
 		{
 			description: "redact custom type",
 			params: secretsmanager.CreateSecretInput{
-				Name:                        aws.String("name"),
-				SecretBinary:                []byte("secret bytes"),
-				SecretString:                aws.String("super secret"),
+				Name:         aws.String("name"),
+				SecretBinary: []byte("secret bytes"),
+				SecretString: aws.String("super secret"),
 			},
 			expected: `{"AddReplicaRegions":null,"ClientRequestToken":null,"Description":null,"ForceOverwriteReplicaSecret":null,"KmsKeyId":null,"Name":"name","SecretBinary":"*****","SecretString":"*****","Tags":null}`,
 		},

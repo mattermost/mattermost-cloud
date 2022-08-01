@@ -6,7 +6,10 @@ package model_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
+
+	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/assert"
@@ -138,6 +141,33 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 				PriorityEnv: model.EnvVarMap{
 					"key1": {Value: ""},
 				},
+			},
+		},
+		{
+			"invalid size",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "domain4321.com",
+				Size:    "some-size",
+			},
+		},
+		{
+			"valid Operator size",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "domain4321.com",
+				Size:    v1alpha1.Size5000String,
+			},
+		},
+		{
+			"valid Provisioner size",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID: "owner1",
+				DNS:     "domain4321.com",
+				Size:    fmt.Sprintf("%s-10", model.SizeProvisionerXL),
 			},
 		},
 		{
@@ -376,6 +406,27 @@ func TestPatchInstallationRequestValid(t *testing.T) {
 			true,
 			&model.PatchInstallationRequest{
 				Image: sToP(""),
+			},
+		},
+		{
+			"invalid size",
+			true,
+			&model.PatchInstallationRequest{
+				Size: sToP("some-size"),
+			},
+		},
+		{
+			"valid Operator size",
+			false,
+			&model.PatchInstallationRequest{
+				Size: sToP(v1alpha1.Size5000String),
+			},
+		},
+		{
+			"valid Provisioner size",
+			false,
+			&model.PatchInstallationRequest{
+				Size: sToP(fmt.Sprintf("%s-10", model.SizeProvisionerXL)),
 			},
 		},
 	}
