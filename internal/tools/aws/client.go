@@ -64,7 +64,7 @@ type AWS interface {
 	IsProvisionedPrivateCNAME(dnsName string, logger log.FieldLogger) bool
 	DeletePrivateCNAME(dnsName string, logger log.FieldLogger) error
 	DeletePublicCNAME(dnsName string, logger log.FieldLogger) error
-	UpsertPublicCNAMEs(dnsNames, recordIDs []string, endpoints []string, logger log.FieldLogger) error
+	UpsertPublicCNAMEs(dnsNames []string, endpoints []string, logger log.FieldLogger) error
 
 	TagResource(resourceID, key, value string, logger log.FieldLogger) error
 	UntagResource(resourceID, key, value string, logger log.FieldLogger) error

@@ -104,22 +104,18 @@ func (a *Client) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.
 
 // UpsertPublicCNAMEs updates or creates specified dnsNames.
 // The record ID will be set to DNS name with idSuffix appended after '-'.
-func (a *Client) UpsertPublicCNAMEs(dnsNames, recordIDs []string, endpoints []string, logger log.FieldLogger) error {
-	if len(dnsNames) != len(recordIDs) {
-		return errors.New("expected the same number of DNS names and record IDs")
-	}
-
+func (a *Client) UpsertPublicCNAMEs(dnsNames []string, endpoints []string, logger log.FieldLogger) error {
 	// TODO: for now we do not expect having multiple domains for the same hosted zone
 	// therefore we just do updates in a loop instead of trying to batch.
 	// If this ever changes, we can optimize by updating all records in same zone at once
 
-	for i, dns := range dnsNames {
+	for _, dns := range dnsNames {
 		zoneID, found := a.getDNSZoneID(dns)
 		if !found {
 			return errors.Errorf("hosted zone for %q domain name not found", dns)
 		}
 
-		err := a.upsertCNAMERecord(zoneID, dns, recordIDs[i], endpoints, logger)
+		err := a.upsertCNAMERecord(zoneID, dns, dns, endpoints, logger)
 		if err != nil {
 			return errors.Wrapf(err, "failed to update CNAME for DNS %q", dns)
 		}

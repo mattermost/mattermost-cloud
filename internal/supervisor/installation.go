@@ -920,7 +920,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 	}
 
 	// This state can happen from update, therefore new DNS could have been added.
-	err = s.upsertPublicCNAMEs(dnsNames, "", endpoints, logger)
+	err = s.aws.UpsertPublicCNAMEs(dnsNames, endpoints, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update the installation route53 records")
 		return installation.State
@@ -977,19 +977,7 @@ func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstalla
 }
 
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
-	if err != nil {
-		logger.WithError(err).Error("Failed to get DNS records for Installation")
-		return installation.State
-	}
-
-	err = s.updatePublicRecordsIDForCNAME(model.DNSNamesFromRecords(dnsRecords), aws.HibernatingInstallationResourceRecordIDPrefix, logger)
-	if err != nil {
-		logger.WithError(err).Warn("Failed to update the installation route53 record with hibernation prefix")
-		return installation.State
-	}
-
-	err = s.resourceUtil.GetDatabaseForInstallation(installation).RefreshResourceMetadata(s.store, logger)
+	err := s.resourceUtil.GetDatabaseForInstallation(installation).RefreshResourceMetadata(s.store, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update database resource metadata")
 		return installation.State
@@ -1522,7 +1510,7 @@ func (s *InstallationSupervisor) configureDNS(installation *model.Installation, 
 	}
 	domainNames := model.DNSNamesFromRecords(dnsRecords)
 
-	err = s.upsertPublicCNAMEs(domainNames, "", endpoints, logger)
+	err = s.aws.UpsertPublicCNAMEs(domainNames, endpoints, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create DNS CNAME records")
 	}
@@ -1717,21 +1705,6 @@ func (s *InstallationSupervisor) updatePublicRecordsIDForCNAME(dnsNames []string
 			return err
 		}
 	}
-	return nil
-}
-
-// The record ID will be set to DNS name with idSuffix appended after '-'.
-func (s *InstallationSupervisor) upsertPublicCNAMEs(dnsNames []string, idSuffix string, endpoints []string, logger log.FieldLogger) error {
-	recordIDs := make([]string, 0, len(dnsNames))
-	for _, d := range dnsNames {
-		recordIDs = append(recordIDs, determineRecordID(d, idSuffix))
-	}
-
-	err := s.aws.UpsertPublicCNAMEs(dnsNames, recordIDs, endpoints, logger)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
