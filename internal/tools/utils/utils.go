@@ -86,6 +86,7 @@ type ResourceUtil struct {
 	awsClient                    *aws.Client
 	instanceID                   string
 	dbClusterUtilizationSettings DBClusterUtilizationSettings
+	disableDBCheck               bool
 }
 
 // DBClusterUtilizationSettings define maximum utilization of database clusters.
@@ -96,11 +97,16 @@ type DBClusterUtilizationSettings struct {
 }
 
 // NewResourceUtil returns a new instance of ResourceUtil.
-func NewResourceUtil(instanceID string, awsClient *aws.Client, dbClusterUtilization DBClusterUtilizationSettings) *ResourceUtil {
+func NewResourceUtil(
+	instanceID string,
+	awsClient *aws.Client,
+	dbClusterUtilization DBClusterUtilizationSettings,
+	disableDBCheck bool) *ResourceUtil {
 	return &ResourceUtil{
 		awsClient:                    awsClient,
 		instanceID:                   instanceID,
 		dbClusterUtilizationSettings: dbClusterUtilization,
+		disableDBCheck:               disableDBCheck,
 	}
 }
 
@@ -133,9 +139,9 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 	case model.InstallationDatabaseMysqlOperator:
 		return model.NewMysqlOperatorDatabase()
 	case model.InstallationDatabaseSingleTenantRDSMySQL:
-		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installationID, r.awsClient)
+		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installationID, r.awsClient, r.disableDBCheck)
 	case model.InstallationDatabaseSingleTenantRDSPostgres:
-		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installationID, r.awsClient)
+		return aws.NewRDSDatabase(model.DatabaseEngineTypePostgres, installationID, r.awsClient, r.disableDBCheck)
 	case model.InstallationDatabaseMultiTenantRDSMySQL:
 		return aws.NewRDSMultitenantDatabase(
 			model.DatabaseEngineTypeMySQL,
@@ -143,6 +149,7 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 			installationID,
 			r.awsClient,
 			r.dbClusterUtilizationSettings.MaxInstallationsRDSMySQL,
+			r.disableDBCheck,
 		)
 	case model.InstallationDatabaseMultiTenantRDSPostgres:
 		return aws.NewRDSMultitenantDatabase(
@@ -151,6 +158,7 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 			installationID,
 			r.awsClient,
 			r.dbClusterUtilizationSettings.MaxInstallationsRDSPostgres,
+			r.disableDBCheck,
 		)
 	case model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
 		return aws.NewRDSMultitenantPGBouncerDatabase(
@@ -159,6 +167,7 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 			installationID,
 			r.awsClient,
 			r.dbClusterUtilizationSettings.MaxInstallationsRDSPostgresPGBouncer,
+			r.disableDBCheck,
 		)
 	}
 

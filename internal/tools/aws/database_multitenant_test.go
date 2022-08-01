@@ -27,6 +27,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 		a.InstallationA.ID,
 		a.Mocks.AWS,
 		0,
+		false,
 	)
 
 	databaseType := database.DatabaseTypeTagValue()

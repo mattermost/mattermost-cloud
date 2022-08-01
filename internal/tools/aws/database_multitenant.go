@@ -21,12 +21,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/mattermost/mattermost-cloud/model"
 	// Database drivers
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -48,10 +47,11 @@ type RDSMultitenantDatabase struct {
 	db                        SQLDatabaseManager
 	client                    *Client
 	maxSupportedInstallations int
+	disableDBCheck            bool
 }
 
 // NewRDSMultitenantDatabase returns a new instance of RDSMultitenantDatabase that implements database interface.
-func NewRDSMultitenantDatabase(databaseType, instanceID, installationID string, client *Client, installationsLimit int) *RDSMultitenantDatabase {
+func NewRDSMultitenantDatabase(databaseType, instanceID, installationID string, client *Client, installationsLimit int, diableDBCheck bool) *RDSMultitenantDatabase {
 	var defaultSupportedInstallations int
 	if databaseType == model.DatabaseEngineTypeMySQL {
 		defaultSupportedInstallations = DefaultRDSMultitenantDatabaseMySQLCountLimit
@@ -65,6 +65,7 @@ func NewRDSMultitenantDatabase(databaseType, instanceID, installationID string, 
 		installationID:            installationID,
 		client:                    client,
 		maxSupportedInstallations: valueOrDefault(installationsLimit, defaultSupportedInstallations),
+		disableDBCheck:            diableDBCheck,
 	}
 }
 
@@ -277,24 +278,17 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 			)
 		databaseConnectionCheck = databaseConnectionString
 	}
-	secretStringData := map[string]string{
-		"DB_CONNECTION_STRING":              databaseConnectionString,
-		"MM_SQLSETTINGS_DATASOURCEREPLICAS": databaseReadReplicasString,
-	}
-	if len(databaseConnectionCheck) != 0 {
-		secretStringData["DB_CONNECTION_CHECK_URL"] = databaseConnectionCheck
-	}
 
-	databaseSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: installationSecretName,
-		},
-		StringData: secretStringData,
+	secret := InstallationDBSecret{
+		InstallationSecretName: installationSecretName,
+		ConnectionString:       databaseConnectionString,
+		DBCheckURL:             databaseConnectionCheck,
+		ReadReplicasURL:        databaseReadReplicasString,
 	}
 
 	logger.Debug("AWS RDS multitenant database configuration generated for cluster installation")
 
-	return databaseSecret, nil
+	return secret.ToK8sSecret(d.disableDBCheck), nil
 }
 
 // Teardown removes all AWS resources related to a RDS multitenant database.
