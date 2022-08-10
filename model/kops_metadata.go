@@ -97,22 +97,41 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 // GetWorkerNodesResizeChanges calculates instance group resizing based on the
 // current ChangeRequest.
 func (km *KopsMetadata) GetWorkerNodesResizeChanges() KopsInstanceGroupsMetadata {
+	// Build a new change map.
+	changes := make(KopsInstanceGroupsMetadata, len(km.NodeInstanceGroups))
+	for k, v := range km.NodeInstanceGroups {
+		changes[k] = v
+	}
+
+	// Update the AMI if specified.
+	if len(km.ChangeRequest.NodeInstanceType) != 0 {
+		for k, ig := range changes {
+			ig.NodeInstanceType = km.ChangeRequest.NodeInstanceType
+			changes[k] = ig
+		}
+	}
+
+	if km.ChangeRequest.NodeMinCount == 0 {
+		return changes
+	}
+
+	// Calculate new instance group sizes.
 	difference := km.ChangeRequest.NodeMinCount - km.NodeMinCount
 
 	if difference < 0 {
-		return km.getDecreasedWorkerNodesResizeChanges(difference)
+		getDecreasedWorkerNodesResizeChanges(changes, difference)
 	}
 	if difference > 0 {
-		return km.getIncreasedWorkerNodesResizeChanges(difference)
+		getIncreasedWorkerNodesResizeChanges(changes, difference)
 	}
 
-	return km.NodeInstanceGroups
+	return changes
 }
 
-func (km *KopsMetadata) getIncreasedWorkerNodesResizeChanges(count int64) KopsInstanceGroupsMetadata {
-	changes := km.NodeInstanceGroups
+func getIncreasedWorkerNodesResizeChanges(changes KopsInstanceGroupsMetadata, count int64) {
 	orderedKeys := changes.getStableIterationOrder()
 	currentBalanceCount := int64(1)
+
 	for {
 		for _, key := range orderedKeys {
 			ig := changes[key]
@@ -121,21 +140,21 @@ func (km *KopsMetadata) getIncreasedWorkerNodesResizeChanges(count int64) KopsIn
 			}
 
 			changes[key] = KopsInstanceGroupMetadata{
-				NodeMinCount: ig.NodeMinCount + 1,
-				NodeMaxCount: ig.NodeMinCount + 1,
+				NodeInstanceType: ig.NodeInstanceType,
+				NodeMinCount:     ig.NodeMinCount + 1,
+				NodeMaxCount:     ig.NodeMinCount + 1,
 			}
 
 			count--
 			if count == 0 {
-				return changes
+				return
 			}
 		}
 		currentBalanceCount++
 	}
 }
 
-func (km *KopsMetadata) getDecreasedWorkerNodesResizeChanges(count int64) KopsInstanceGroupsMetadata {
-	changes := km.NodeInstanceGroups
+func getDecreasedWorkerNodesResizeChanges(changes KopsInstanceGroupsMetadata, count int64) {
 	orderedKeys := changes.getStableIterationOrder()
 
 	// For removing nodes, we want to work our way down starting with the end of
@@ -158,16 +177,27 @@ func (km *KopsMetadata) getDecreasedWorkerNodesResizeChanges(count int64) KopsIn
 			}
 
 			changes[key] = KopsInstanceGroupMetadata{
-				NodeMinCount: ig.NodeMinCount - 1,
-				NodeMaxCount: ig.NodeMinCount - 1,
+				NodeInstanceType: ig.NodeInstanceType,
+				NodeMinCount:     ig.NodeMinCount - 1,
+				NodeMaxCount:     ig.NodeMinCount - 1,
 			}
 
 			count++
 			if count == 0 {
-				return changes
+				return
 			}
 		}
 		currentBalanceCount--
+	}
+}
+
+// ApplyChangeRequest applies change request values to the KopsMetadata that are
+// not reflected by calling RefreshKopsMetadata().
+func (km *KopsMetadata) ApplyChangeRequest() {
+	if km.ChangeRequest != nil {
+		if km.ChangeRequest.NodeMaxCount != 0 {
+			km.NodeMaxCount = km.ChangeRequest.NodeMaxCount
+		}
 	}
 }
 

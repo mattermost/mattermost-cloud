@@ -365,6 +365,73 @@ func TestGetWorkerNodesResizeChanges(t *testing.T) {
 				},
 			},
 		},
+		{
+			"instance type only",
+			model.KopsMetadata{
+				NodeMinCount: 1,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     1,
+						NodeMaxCount:     1,
+					},
+				},
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					NodeInstanceType: "t2",
+				},
+			},
+			model.KopsInstanceGroupsMetadata{
+				"node-ig1": model.KopsInstanceGroupMetadata{
+					NodeInstanceType: "t2",
+					NodeMinCount:     1,
+					NodeMaxCount:     1,
+				},
+			},
+		},
+		{
+			"remove five, three node groups, change instance type",
+			model.KopsMetadata{
+				NodeMinCount: 16,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     6,
+						NodeMaxCount:     6,
+					},
+					"node-ig2": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     5,
+						NodeMaxCount:     5,
+					},
+					"node-ig3": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     5,
+						NodeMaxCount:     5,
+					},
+				},
+				ChangeRequest: &model.KopsMetadataRequestedState{
+					NodeInstanceType: "t3",
+					NodeMinCount:     11,
+				},
+			},
+			model.KopsInstanceGroupsMetadata{
+				"node-ig1": model.KopsInstanceGroupMetadata{
+					NodeInstanceType: "t3",
+					NodeMinCount:     4,
+					NodeMaxCount:     4,
+				},
+				"node-ig2": model.KopsInstanceGroupMetadata{
+					NodeInstanceType: "t3",
+					NodeMinCount:     4,
+					NodeMaxCount:     4,
+				},
+				"node-ig3": model.KopsInstanceGroupMetadata{
+					NodeInstanceType: "t3",
+					NodeMinCount:     3,
+					NodeMaxCount:     3,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

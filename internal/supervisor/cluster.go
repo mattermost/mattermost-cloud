@@ -219,6 +219,7 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 
 func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logger log.FieldLogger) string {
 	if cluster.ProvisionerMetadataKops != nil {
+		cluster.ProvisionerMetadataKops.ApplyChangeRequest()
 		cluster.ProvisionerMetadataKops.ClearChangeRequest()
 		cluster.ProvisionerMetadataKops.ClearRotatorRequest()
 		cluster.ProvisionerMetadataKops.ClearWarnings()

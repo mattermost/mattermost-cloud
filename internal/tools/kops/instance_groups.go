@@ -72,7 +72,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.NodeInstanceGroups = make(model.KopsInstanceGroupsMetadata)
 	metadata.CustomInstanceGroups = make(model.KopsInstanceGroupsMetadata)
 
-	var masterIGCount, nodeIGCount, nodeMinCount, nodeMaxCount int64
+	var masterIGCount, nodeIGCount, nodeMinCount int64
 	var masterMachineType, nodeMachineType, AMI string
 	for _, ig := range instanceGroups {
 		switch ig.Spec.Role {
@@ -112,7 +112,6 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 				nodeIGCount++
 				nodeMachineType = ig.Spec.MachineType
 				nodeMinCount += ig.Spec.MinSize
-				nodeMaxCount += ig.Spec.MaxSize
 				metadata.NodeInstanceGroups[ig.Metadata.Name] = model.KopsInstanceGroupMetadata{
 					NodeInstanceType: ig.Spec.MachineType,
 					NodeMinCount:     ig.Spec.MinSize,
@@ -158,7 +157,6 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 	metadata.MasterCount = masterIGCount
 	metadata.NodeInstanceType = nodeMachineType
 	metadata.NodeMinCount = nodeMinCount
-	metadata.NodeMaxCount = nodeMaxCount
 	metadata.MaxPodsPerNode = cluster.Spec.Kubelet.MaxPods
 	metadata.VPC = cluster.Spec.NetworkID
 	metadata.Networking = GetCurrentCni(networking)
@@ -217,4 +215,21 @@ func (c *Cmd) GetInstanceGroupYAML(clusterName, igName string) (string, error) {
 	}
 
 	return trimmed, nil
+}
+
+// SetInstanceGroup invokes kops set instancegroup, using the context of the created Cmd.
+func (c *Cmd) SetInstanceGroup(clusterName, instanceGroupName, setValue string) error {
+	_, _, err := c.run(
+		"set",
+		"instancegroup",
+		arg("name", clusterName),
+		arg("state", "s3://", c.s3StateStore),
+		instanceGroupName,
+		setValue,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to invoke kops set instancegroup")
+	}
+
+	return nil
 }
