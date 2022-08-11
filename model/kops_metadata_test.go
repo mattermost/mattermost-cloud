@@ -440,3 +440,114 @@ func TestGetWorkerNodesResizeChanges(t *testing.T) {
 		})
 	}
 }
+
+func TestGetKopsResizeSetActionsFromChanges(t *testing.T) {
+	var testCases = []struct {
+		testName string
+		metadata model.KopsMetadata
+		changes  model.KopsInstanceGroupMetadata
+		expected []string
+	}{
+		{
+			"no change",
+			model.KopsMetadata{
+				NodeMinCount: 1,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     1,
+						NodeMaxCount:     1,
+					},
+				},
+			},
+			model.KopsInstanceGroupMetadata{
+				NodeInstanceType: "t1",
+				NodeMinCount:     1,
+				NodeMaxCount:     1,
+			},
+			[]string{},
+		},
+		{
+			"scale up",
+			model.KopsMetadata{
+				NodeMinCount: 1,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     1,
+						NodeMaxCount:     1,
+					},
+				},
+			},
+			model.KopsInstanceGroupMetadata{
+				NodeInstanceType: "t1",
+				NodeMinCount:     2,
+				NodeMaxCount:     2,
+			},
+			[]string{"spec.maxSize=2", "spec.minSize=2"},
+		},
+		{
+			"scale down",
+			model.KopsMetadata{
+				NodeMinCount: 1,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     2,
+						NodeMaxCount:     2,
+					},
+				},
+			},
+			model.KopsInstanceGroupMetadata{
+				NodeInstanceType: "t1",
+				NodeMinCount:     1,
+				NodeMaxCount:     1,
+			},
+			[]string{"spec.minSize=1", "spec.maxSize=1"},
+		},
+		{
+			"new instance type",
+			model.KopsMetadata{
+				NodeMinCount: 1,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     1,
+						NodeMaxCount:     1,
+					},
+				},
+			},
+			model.KopsInstanceGroupMetadata{
+				NodeInstanceType: "t2",
+				NodeMinCount:     1,
+				NodeMaxCount:     1,
+			},
+			[]string{"spec.machineType=t2"},
+		},
+		{
+			"scale up, new instance type",
+			model.KopsMetadata{
+				NodeMinCount: 1,
+				NodeInstanceGroups: model.KopsInstanceGroupsMetadata{
+					"node-ig1": model.KopsInstanceGroupMetadata{
+						NodeInstanceType: "t1",
+						NodeMinCount:     1,
+						NodeMaxCount:     1,
+					},
+				},
+			},
+			model.KopsInstanceGroupMetadata{
+				NodeInstanceType: "t2",
+				NodeMinCount:     5,
+				NodeMaxCount:     5,
+			},
+			[]string{"spec.maxSize=5", "spec.minSize=5", "spec.machineType=t2"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.metadata.GetKopsResizeSetActionsFromChanges(tc.changes, "node-ig1"))
+		})
+	}
+}

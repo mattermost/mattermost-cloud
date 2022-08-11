@@ -802,47 +802,12 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 	logger.Info("Resizing cluster")
 
 	for igName, changeMetadata := range kopsMetadata.GetWorkerNodesResizeChanges() {
-		// There is a bit of complexity with updating min and max instancegroup
-		// sizes. The maxSize always needs to be equal or larger than minSize
-		// which means we need to apply the changes in a different order
-		// depending on if the instance group is scaling up or down.
-		if changeMetadata.NodeMaxCount >= kopsMetadata.NodeInstanceGroups[igName].NodeMaxCount {
-			if changeMetadata.NodeMaxCount != kopsMetadata.NodeInstanceGroups[igName].NodeMaxCount {
-				logger.Debugf("Updating instance group %s max size to %d", igName, changeMetadata.NodeMaxCount)
-				err = kops.SetInstanceGroup(kopsMetadata.Name, igName, fmt.Sprintf("spec.maxSize=%d", changeMetadata.NodeMaxCount))
-				if err != nil {
-					return errors.Wrap(err, "failed to update instance group node max size")
-				}
-			}
-			if changeMetadata.NodeMinCount != kopsMetadata.NodeInstanceGroups[igName].NodeMinCount {
-				logger.Debugf("Updating instance group %s min size to %d", igName, changeMetadata.NodeMinCount)
-				err = kops.SetInstanceGroup(kopsMetadata.Name, igName, fmt.Sprintf("spec.minSize=%d", changeMetadata.NodeMinCount))
-				if err != nil {
-					return errors.Wrap(err, "failed to update instance group node min size")
-				}
-			}
-		} else {
-			if changeMetadata.NodeMinCount != kopsMetadata.NodeInstanceGroups[igName].NodeMinCount {
-				logger.Debugf("Updating instance group %s min size to %d", igName, changeMetadata.NodeMinCount)
-				err = kops.SetInstanceGroup(kopsMetadata.Name, igName, fmt.Sprintf("spec.minSize=%d", changeMetadata.NodeMinCount))
-				if err != nil {
-					return errors.Wrap(err, "failed to update instance group node min size")
-				}
-			}
-			if changeMetadata.NodeMaxCount != kopsMetadata.NodeInstanceGroups[igName].NodeMaxCount {
-				logger.Debugf("Updating instance group %s max size to %d", igName, changeMetadata.NodeMaxCount)
-				err = kops.SetInstanceGroup(kopsMetadata.Name, igName, fmt.Sprintf("spec.maxSize=%d", changeMetadata.NodeMaxCount))
-				if err != nil {
-					return errors.Wrap(err, "failed to update instance group node max size")
-				}
-			}
-		}
-
-		if changeMetadata.NodeInstanceType != kopsMetadata.NodeInstanceGroups[igName].NodeInstanceType {
-			logger.Debugf("Updating instance group %s to instance type %s", igName, changeMetadata.NodeInstanceType)
-			err = kops.SetInstanceGroup(kopsMetadata.Name, igName, fmt.Sprintf("spec.machineType=%s", changeMetadata.NodeInstanceType))
+		kopsSetActions := kopsMetadata.GetKopsResizeSetActionsFromChanges(changeMetadata, igName)
+		for _, action := range kopsSetActions {
+			logger.Debugf("Updating instance group %s with kops set %s", igName, action)
+			err = kops.SetInstanceGroup(kopsMetadata.Name, igName, action)
 			if err != nil {
-				return errors.Wrap(err, "failed to update instance group node machineType")
+				return errors.Wrapf(err, "failed to update instance group with %s", action)
 			}
 		}
 	}

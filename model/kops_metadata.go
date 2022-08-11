@@ -6,6 +6,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 
 	"github.com/mattermost/rotator/rotator"
@@ -92,6 +93,38 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 	}
 
 	return nil
+}
+
+// GetKopsResizeSetActionsFromChanges produces a set of kops set actions that
+// should be applied to the instance groups from the provided change data.
+func (km *KopsMetadata) GetKopsResizeSetActionsFromChanges(changes KopsInstanceGroupMetadata, igName string) []string {
+	kopsSetActions := []string{}
+
+	// There is a bit of complexity with updating min and max instancegroup
+	// sizes. The maxSize always needs to be equal or larger than minSize
+	// which means we need to apply the changes in a different order
+	// depending on if the instance group is scaling up or down.
+	if changes.NodeMaxCount >= km.NodeInstanceGroups[igName].NodeMaxCount {
+		if changes.NodeMaxCount != km.NodeInstanceGroups[igName].NodeMaxCount {
+			kopsSetActions = append(kopsSetActions, fmt.Sprintf("spec.maxSize=%d", changes.NodeMaxCount))
+		}
+		if changes.NodeMinCount != km.NodeInstanceGroups[igName].NodeMinCount {
+			kopsSetActions = append(kopsSetActions, fmt.Sprintf("spec.minSize=%d", changes.NodeMinCount))
+		}
+	} else {
+		if changes.NodeMinCount != km.NodeInstanceGroups[igName].NodeMinCount {
+			kopsSetActions = append(kopsSetActions, fmt.Sprintf("spec.minSize=%d", changes.NodeMinCount))
+		}
+		if changes.NodeMaxCount != km.NodeInstanceGroups[igName].NodeMaxCount {
+			kopsSetActions = append(kopsSetActions, fmt.Sprintf("spec.maxSize=%d", changes.NodeMaxCount))
+		}
+	}
+
+	if changes.NodeInstanceType != km.NodeInstanceGroups[igName].NodeInstanceType {
+		kopsSetActions = append(kopsSetActions, fmt.Sprintf("spec.machineType=%s", changes.NodeInstanceType))
+	}
+
+	return kopsSetActions
 }
 
 // GetWorkerNodesResizeChanges calculates instance group resizing based on the
