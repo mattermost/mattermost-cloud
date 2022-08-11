@@ -49,7 +49,7 @@ func (dm *DNSManager) AddProvider(provider InstallationDNSProvider) {
 // IsValid verifies if DNS providers are registered with DNSManager.
 func (dm *DNSManager) IsValid() error {
 	if len(dm.providers) == 0 {
-		return errors.Errorf("error: no Installation DNS providers registerd")
+		return errors.Errorf("no Installation DNS providers registered")
 	}
 	return nil
 }

@@ -7,9 +7,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -804,30 +802,13 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 	logger.Info("Resizing cluster")
 
 	for igName, changeMetadata := range kopsMetadata.GetWorkerNodesResizeChanges() {
-		logger.Infof("Resizing instance group %s to %d nodes", igName, changeMetadata.NodeMinCount)
-
-		igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, igName)
-		if err != nil {
-			return err
-		}
-
-		igManifest, err = grossKopsReplaceSize(
-			igManifest,
-			kopsMetadata.ChangeRequest.NodeInstanceType,
-			fmt.Sprintf("%d", changeMetadata.NodeMinCount),
-			fmt.Sprintf("%d", changeMetadata.NodeMaxCount),
-		)
-		if err != nil {
-			return errors.Wrap(err, "failed to update instance group yaml file")
-		}
-
-		err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
-		if err != nil {
-			return errors.Wrap(err, "failed to write instance group yaml file")
-		}
-		_, err = kops.Replace(igFilename)
-		if err != nil {
-			return errors.Wrap(err, "failed to replace instance group resources")
+		kopsSetActions := kopsMetadata.GetKopsResizeSetActionsFromChanges(changeMetadata, igName)
+		for _, action := range kopsSetActions {
+			logger.Debugf("Updating instance group %s with kops set %s", igName, action)
+			err = kops.SetInstanceGroup(kopsMetadata.Name, igName, action)
+			if err != nil {
+				return errors.Wrapf(err, "failed to update instance group with %s", action)
+			}
 		}
 	}
 

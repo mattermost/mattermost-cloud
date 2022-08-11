@@ -7,9 +7,6 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"path"
-	"regexp"
 	"strings"
 	"time"
 
@@ -185,90 +182,12 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 				ami = kopsMetadata.ChangeRequest.AMI
 			}
 
-			igManifest, err := kops.GetInstanceGroupYAML(kopsMetadata.Name, ig.Metadata.Name)
+			err = kops.SetInstanceGroup(kopsMetadata.Name, ig.Metadata.Name, fmt.Sprintf("spec.image=%s", ami))
 			if err != nil {
-				return errors.Wrap(err, "failed to get YAML output for instance group")
-			}
-			igManifest, err = grossKopsReplaceImage(igManifest, ami)
-			if err != nil {
-				return errors.Wrap(err, "failed to replace image value in YAML")
-			}
-
-			igFilename := fmt.Sprintf("%s-ig.yaml", ig.Metadata.Name)
-			err = ioutil.WriteFile(path.Join(kops.GetTempDir(), igFilename), []byte(igManifest), 0600)
-			if err != nil {
-				return errors.Wrap(err, "failed to write new YAML file")
-			}
-			_, err = kops.Replace(igFilename)
-			if err != nil {
-				return errors.Wrap(err, "failed to update instance group")
+				return errors.Wrap(err, "failed to update instance group ami")
 			}
 		}
 	}
 
 	return nil
-}
-
-// grossKopsReplaceSize is a manual find-and-replace flow for updating a raw
-// kops instance group YAML manifest with new sizing values.
-// TODO: remove once new `kops set instancegroup` functionality is available.
-//
-// Example Manifest:
-//
-// apiVersion: kops.k8s.io/v1alpha2
-// kind: InstanceGroup
-// spec:
-//   machineType: m5.large
-//   maxSize: 2
-//   minSize: 2
-func grossKopsReplaceSize(input, machineType, min, max string) (string, error) {
-	if len(machineType) != 0 {
-		machineTypeRE := regexp.MustCompile(`  machineType: .*\n`)
-		machineTypeMatches := len(machineTypeRE.FindAllStringIndex(input, -1))
-		if machineTypeMatches != 1 {
-			return "", errors.Errorf("expected to find one machineType match, but found %d", machineTypeMatches)
-		}
-		input = machineTypeRE.ReplaceAllString(input, fmt.Sprintf("  machineType: %s\n", machineType))
-	}
-
-	if len(min) != 0 && min != "0" {
-		minRE := regexp.MustCompile(`  minSize: ?\d+\n`)
-		minMatches := len(minRE.FindAllStringIndex(input, -1))
-		if minMatches != 1 {
-			return "", errors.Errorf("expected to find one minSize match, but found %d", minMatches)
-		}
-		input = minRE.ReplaceAllString(input, fmt.Sprintf("  minSize: %s\n", min))
-	}
-
-	if len(max) != 0 && max != "0" {
-		maxRE := regexp.MustCompile(`  maxSize: ?\d+\n`)
-		maxMatches := len(maxRE.FindAllStringIndex(input, -1))
-		if maxMatches != 1 {
-			return "", errors.Errorf("expected to find one maxSize match, but found %d", maxMatches)
-		}
-		input = maxRE.ReplaceAllString(input, fmt.Sprintf("  maxSize: %s\n", max))
-	}
-
-	return input, nil
-}
-
-// grossKopsReplaceImage is a manual find-and-replace flow for updating a raw
-// kops instance group YAML manifest with a new image value.
-// TODO: remove once new `kops set instancegroup` functionality is available.
-//
-// Example Manifest:
-//
-// apiVersion: kops.k8s.io/v1alpha2
-// kind: InstanceGroup
-// spec:
-//   image: kope.io/k8s-1.15-debian-stretch-amd64-hvm-ebs-2020-01-17
-func grossKopsReplaceImage(input, image string) (string, error) {
-	imageRE := regexp.MustCompile(`  image: .*\n`)
-	imageMatches := len(imageRE.FindAllStringIndex(input, -1))
-	if imageMatches != 1 {
-		return "", errors.Errorf("expected to find one image match, but found %d", imageMatches)
-	}
-	input = imageRE.ReplaceAllString(input, fmt.Sprintf("  image: %s\n", image))
-
-	return input, nil
 }
