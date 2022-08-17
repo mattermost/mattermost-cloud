@@ -76,7 +76,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-db-restoration-supervisor", false, "Whether this server will run an installation db restoration supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-db-migration-supervisor", false, "Whether this server will run an installation db migration supervisor or not.")
-	serverCmd.PersistentFlags().Bool("installation-deletion-supervisor", false, "Whether this server will run a installation deletion supervisor or not. (slow-poll supervisor)")
+	serverCmd.PersistentFlags().Bool("installation-deletion-supervisor", true, "Whether this server will run a installation deletion supervisor or not. (slow-poll supervisor)")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("backup-supervisor", false, "Whether this server will run a backup supervisor or not.")
 	serverCmd.PersistentFlags().Bool("import-supervisor", false, "Whether this server will run a workspace import supervisor or not.")
