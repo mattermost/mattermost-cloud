@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -29,17 +28,15 @@ type helmDeployment struct {
 	setArgument         string
 	desiredVersion      *model.HelmUtilityVersion
 
-	cluster         *model.Cluster
-	kopsProvisioner *KopsProvisioner
-	kops            *kops.Cmd
-	logger          log.FieldLogger
+	kubeconfigPath string
+	logger         log.FieldLogger
 }
 
 func (d *helmDeployment) Update() error {
 	logger := d.logger.WithField("helm-update", d.chartName)
 
 	logger.Infof("Refreshing helm chart %s -- may trigger service upgrade", d.chartName)
-	err := upgradeHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
+	err := upgradeHelmChart(*d, d.kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("got an error trying to upgrade the helm chart %s", d.chartName))
 	}
@@ -50,7 +47,7 @@ func (d *helmDeployment) Delete() error {
 	logger := d.logger.WithField("helm-delete", d.chartDeploymentName)
 
 	logger.Infof("Deleting helm chart %s", d.chartDeploymentName)
-	err := deleteHelmChart(*d, d.kops.GetKubeConfigPath(), logger)
+	err := deleteHelmChart(*d, d.kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("got an error trying to delete the helm chart %s", d.chartDeploymentName))
 	}
@@ -214,7 +211,7 @@ func (l HelmListOutput) asListOutput() *HelmListOutput {
 func (d *helmDeployment) List() (*HelmListOutput, error) {
 	arguments := []string{
 		"list",
-		"--kubeconfig", d.kops.GetKubeConfigPath(),
+		"--kubeconfig", d.kubeconfigPath,
 		"--output", "json",
 		"--all-namespaces",
 	}

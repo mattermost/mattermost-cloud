@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -213,7 +214,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
-	ugh, err := newUtilityGroupHandle(kops, provisioner, cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(provisioner.params, kops.GetKubeConfigPath(), cluster, awsClient, logger)
 	if err != nil {
 		return err
 	}
@@ -543,7 +544,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
-	ugh, err := newUtilityGroupHandle(kopsClient, provisioner, cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
@@ -556,7 +557,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	prom, _ := k8sClient.GetNamespace("prometheus")
 
 	if prom != nil {
-		err = provisioner.prepareSloth(cluster, k8sClient)
+		err = prepareSloth(k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare Sloth")
 		}
@@ -903,7 +904,7 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, kopsMetadata.Name, logger)
 
-	ugh, err := newUtilityGroupHandle(kopsClient, provisioner, cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}
@@ -1081,8 +1082,7 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 }
 
 // prepareSloth prepares sloth resources after prometheus utility is installed.
-func (provisioner *KopsProvisioner) prepareSloth(cluster *model.Cluster, k8sClient *k8s.KubeClient) error {
-	logger := provisioner.logger.WithField("cluster", cluster.ID)
+func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 	files := []k8s.ManifestFile{
 		{
 			Path:            "manifests/sloth/crd_sloth.slok.dev_prometheusservicelevels.yaml",

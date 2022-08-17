@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -17,15 +16,14 @@ import (
 
 type nginxInternal struct {
 	awsClient      aws.AWS
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
 	cluster        *model.Cluster
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginxInternal, error) {
+func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginxInternal, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX INTERNAL handle with nil logger")
 	}
@@ -33,23 +31,16 @@ func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cl
 	if cluster == nil {
 		return nil, errors.New("cannot create a connection to Nginx internal if the cluster provided is nil")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Nginx internal if the provisioner provided is nil")
-	}
-
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to Nginx internal if the awsClient provided is nil")
 	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Nginx internal if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &nginxInternal{
 		awsClient:      awsClient,
-		provisioner:    provisioner,
-		kops:           kops,
+		kubeconfigPath: kubeconfigPath,
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.NginxInternalCanonicalName),
 		desiredVersion: version,
@@ -125,11 +116,9 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 		namespace:           "nginx-internal",
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *awsACMPrivateCert.CertificateArn),
 		desiredVersion:      n.desiredVersion,
+		kubeconfigPath:      n.kubeconfigPath,
 
-		cluster:         n.cluster,
-		kopsProvisioner: n.provisioner,
-		kops:            n.kops,
-		logger:          n.logger,
+		logger: n.logger,
 	}, nil
 }
 

@@ -8,42 +8,31 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type fluentbit struct {
-	provisioner    *KopsProvisioner
 	awsClient      aws.AWS
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*fluentbit, error) {
+func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*fluentbit, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
-	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Fluentbit if the provisioner provided is nil")
 	}
 
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to Fluentbit if the awsClient provided is nil")
 	}
 
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Fluentbit if the Kops command provided is nil")
-	}
-
 	return &fluentbit{
-		provisioner:    provisioner,
 		awsClient:      awsClient,
-		kops:           kops,
+		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.FluentbitCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Fluentbit,
@@ -59,8 +48,7 @@ func (f *fluentbit) Migrate() error {
 }
 
 func (f *fluentbit) CreateOrUpgrade() error {
-	logger := f.logger.WithField("fluentbit-action", "upgrade")
-	h := f.NewHelmDeployment(logger)
+	h := f.NewHelmDeployment()
 
 	err := h.Update()
 	if err != nil {
@@ -89,13 +77,12 @@ func (f *fluentbit) Name() string {
 	return model.FluentbitCanonicalName
 }
 
-func (f *fluentbit) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+func (f *fluentbit) NewHelmDeployment() *helmDeployment {
 	return &helmDeployment{
+		kubeconfigPath:      f.kubeconfigPath,
 		chartDeploymentName: "fluent-bit",
 		chartName:           "fluent/fluent-bit",
 		namespace:           "fluent-bit",
-		kopsProvisioner:     f.provisioner,
-		kops:                f.kops,
 		logger:              f.logger,
 		desiredVersion:      f.desiredVersion,
 	}

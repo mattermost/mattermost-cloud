@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -16,14 +15,13 @@ import (
 
 type cloudprober struct {
 	cluster        *model.Cluster
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
-	provisioner    *KopsProvisioner
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*cloudprober, error) {
+func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*cloudprober, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Cloudprober handle with nil logger")
 	}
@@ -31,19 +29,14 @@ func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *mod
 	if cluster == nil {
 		return nil, errors.New("cannot create a connection to Cloudprober if the cluster provided is nil")
 	}
-
-	if provisioner == nil {
-
-		return nil, errors.New("cannot create a connection to Cloudprober if the provisioner provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Cloudprober if the Kops command provided is nil")
-	}
+
 	return &cloudprober{
 		cluster:        cluster,
-		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.CloudproberCanonicalName),
-		provisioner:    provisioner,
+		kubeconfigPath: kubeconfigPath,
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Cloudprober,
 	}, nil
@@ -93,8 +86,7 @@ func (f *cloudprober) NewHelmDeployment(logger log.FieldLogger) *helmDeployment 
 		chartDeploymentName: "cloudprober",
 		chartName:           "chartmuseum/cloudprober",
 		namespace:           "cloudprober",
-		kopsProvisioner:     f.provisioner,
-		kops:                f.kops,
+		kubeconfigPath:      f.kubeconfigPath,
 		logger:              logger,
 		desiredVersion:      f.desiredVersion,
 	}

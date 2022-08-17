@@ -8,45 +8,34 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type rtcd struct {
-	awsClient      aws.AWS
 	environment    string
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*rtcd, error) {
+func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*rtcd, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate RTCD handle with nil logger")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to RTCD if the provisioner provided is nil")
-	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to RTCD if the Kops command provided is nil")
-	}
-
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to RTCD if the awsClient provided is nil")
 	}
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
+	}
 
 	return &rtcd{
-		awsClient:      awsClient,
 		environment:    awsClient.GetCloudEnvironmentName(),
-		provisioner:    provisioner,
-		kops:           kops,
+		kubeconfigPath: kubeconfigPath,
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.RtcdCanonicalName),
 		desiredVersion: desiredVersion,
@@ -114,8 +103,7 @@ func (r *rtcd) NewHelmDeployment() *helmDeployment {
 		chartDeploymentName: "mattermost-rtcd",
 		chartName:           "mattermost/mattermost-rtcd",
 		namespace:           "mattermost-rtcd",
-		kopsProvisioner:     r.provisioner,
-		kops:                r.kops,
+		kubeconfigPath:      r.kubeconfigPath,
 		logger:              r.logger,
 		desiredVersion:      r.desiredVersion,
 	}

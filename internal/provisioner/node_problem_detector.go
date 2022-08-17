@@ -7,36 +7,27 @@ package provisioner
 import (
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type nodeProblemDetector struct {
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*nodeProblemDetector, error) {
+func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*nodeProblemDetector, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NodeProblemDetector handle with nil logger")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to NodeProblemDetector if the provisioner provided is nil")
-	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to NodeProblemDetector if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &nodeProblemDetector{
-		provisioner:    provisioner,
-		kops:           kops,
 		logger:         logger.WithField("cluster-utility", model.NodeProblemDetectorCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.NodeProblemDetector,
@@ -87,8 +78,7 @@ func (f *nodeProblemDetector) NewHelmDeployment(logger log.FieldLogger) *helmDep
 		chartDeploymentName: "node-problem-detector",
 		chartName:           "deliveryhero/node-problem-detector",
 		namespace:           "node-problem-detector",
-		kopsProvisioner:     f.provisioner,
-		kops:                f.kops,
+		kubeconfigPath:      f.kubeconfigPath,
 		logger:              logger,
 		desiredVersion:      f.desiredVersion,
 	}

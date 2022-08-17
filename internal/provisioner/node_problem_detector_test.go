@@ -7,7 +7,6 @@ package provisioner
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 
 	"github.com/golang/mock/gomock"
@@ -19,14 +18,12 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	provisioner := &KopsProvisioner{}
 	logger := log.New()
-	kops := &kops.Cmd{}
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.0.5"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
-	}, provisioner, kops, logger)
+	}, "kubeconfig", logger)
 	require.NoError(t, err, "should not error when creating new node-problem-detector handler")
 	require.NotNil(t, nodeProblemDetector, "node-problem-detector should not be nil")
 

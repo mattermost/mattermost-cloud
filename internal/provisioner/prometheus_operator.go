@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -23,16 +22,16 @@ import (
 )
 
 type prometheusOperator struct {
-	awsClient      aws.AWS
-	cluster        *model.Cluster
-	kops           *kops.Cmd
-	logger         log.FieldLogger
-	provisioner    *KopsProvisioner
-	desiredVersion *model.HelmUtilityVersion
-	actualVersion  *model.HelmUtilityVersion
+	awsClient          aws.AWS
+	cluster            *model.Cluster
+	allowCIDRRangeList []string
+	kubeconfigPath     string
+	logger             log.FieldLogger
+	desiredVersion     *model.HelmUtilityVersion
+	actualVersion      *model.HelmUtilityVersion
 }
 
-func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*prometheusOperator, error) {
+func newPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*prometheusOperator, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Prometheus Operator handle with nil logger")
 	}
@@ -41,28 +40,23 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, provisioner *KopsProvis
 		return nil, errors.New("cannot create a connection to Prometheus Operator if the cluster provided is nil")
 	}
 
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Prometheus Operator if the provisioner provided is nil")
-	}
-
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to Prometheus Operator if the awsClient provided is nil")
 	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Prometheus Operator if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	chartVersion := cluster.DesiredUtilityVersion(model.PrometheusOperatorCanonicalName)
 
 	return &prometheusOperator{
-		awsClient:      awsClient,
-		cluster:        cluster,
-		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.PrometheusOperatorCanonicalName),
-		provisioner:    provisioner,
-		desiredVersion: chartVersion,
-		actualVersion:  cluster.UtilityMetadata.ActualVersions.PrometheusOperator,
+		awsClient:          awsClient,
+		cluster:            cluster,
+		allowCIDRRangeList: allowCIDRRangeList,
+		kubeconfigPath:     kubeconfigPath,
+		logger:             logger.WithField("cluster-utility", model.PrometheusOperatorCanonicalName),
+		desiredVersion:     chartVersion,
+		actualVersion:      cluster.UtilityMetadata.ActualVersions.PrometheusOperator,
 	}, nil
 }
 
@@ -96,7 +90,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		},
 	}
 
-	k8sClient, err := k8s.NewFromFile(p.kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(p.kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
@@ -140,7 +134,7 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
 	defer cancel()
 
-	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger.WithField("prometheus-action", "create"), p.kops.GetKubeConfigPath())
+	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger.WithField("prometheus-action", "create"), p.kubeconfigPath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Prometheus")
 	}
@@ -186,13 +180,12 @@ func (p *prometheusOperator) Migrate() error {
 }
 
 func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeployment {
-	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.provisioner.params.AllowCIDRRangeList, "\\,"))
+	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
 		chartDeploymentName: "prometheus-operator",
 		chartName:           "prometheus-community/kube-prometheus-stack",
-		kops:                p.kops,
-		kopsProvisioner:     p.provisioner,
+		kubeconfigPath:      p.kubeconfigPath,
 		logger:              p.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,
