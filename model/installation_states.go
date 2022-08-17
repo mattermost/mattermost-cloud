@@ -222,7 +222,6 @@ var (
 			InstallationStateCreationNoCompatibleClusters,
 			InstallationStateCreationFinalTasks,
 			InstallationStateCreationFailed,
-			InstallationStateDeletionPending,
 			InstallationStateDeletionRequested,
 			InstallationStateDeletionInProgress,
 			InstallationStateDeletionFinalCleanup,

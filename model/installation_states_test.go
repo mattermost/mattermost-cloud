@@ -66,7 +66,7 @@ func TestInstallation_ValidTransitionState(t *testing.T) {
 		{
 			oldState: InstallationStateDeletionPending,
 			newState: InstallationStateDeletionRequested,
-			isValid:  true,
+			isValid:  false,
 		},
 		{
 			oldState: InstallationStateCreationNoCompatibleClusters,
