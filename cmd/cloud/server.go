@@ -109,6 +109,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("disable-db-init-check", false, "Whether to disable init container with database check.")
 	serverCmd.PersistentFlags().Bool("installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
 	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", time.Hour, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
+	serverCmd.PersistentFlags().Bool("disable-dns-updates", false, "If set to true DNS updates will be disabled when updating Installations.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
@@ -277,6 +278,7 @@ var serverCmd = &cobra.Command{
 		ndotsDefaultValue, _ := command.Flags().GetString("ndots-value")
 		disableDBInitCheck, _ := command.Flags().GetBool("disable-db-init-check")
 		enableRoute53, _ := command.Flags().GetBool("installation-enable-route53")
+		disableDNSUpdates, _ := command.Flags().GetBool("disable-dns-updates")
 
 		wd, err := os.Getwd()
 		if err != nil {
@@ -331,6 +333,7 @@ var serverCmd = &cobra.Command{
 			"maxClientConnections":                          maxClientConnections,
 			"disable-db-init-check":                         disableDBInitCheck,
 			"enable-route53":                                enableRoute53,
+			"disable-dns-updates":                           disableDNSUpdates,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -430,7 +433,8 @@ var serverCmd = &cobra.Command{
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, dnsManager))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, dnsManager, disableDNSUpdates
+			))
 		}
 		if clusterInstallationSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
