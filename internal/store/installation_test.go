@@ -434,6 +434,57 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 	require.Empty(t, installations)
 }
 
+func TestGetUnlockedInstallationPendingDeletion(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	ownerID := model.NewID()
+	groupID := model.NewID()
+
+	updateRequestedInstallation := &model.Installation{
+		Name:     "test2",
+		OwnerID:  ownerID,
+		Version:  "version",
+		Affinity: model.InstallationAffinityIsolated,
+		GroupID:  &groupID,
+		State:    model.InstallationStateUpdateRequested,
+	}
+	err := sqlStore.CreateInstallation(updateRequestedInstallation, nil, fixDNSRecords(2))
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	deletionPendingInstallation := &model.Installation{
+		Name:      "test",
+		OwnerID:   ownerID,
+		Version:   "version",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Affinity:  model.InstallationAffinityIsolated,
+		GroupID:   &groupID,
+		State:     model.InstallationStateDeletionPending,
+	}
+	err = sqlStore.CreateInstallation(deletionPendingInstallation, nil, fixDNSRecords(1))
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installations, err := sqlStore.GetUnlockedInstallationsPendingDeletion()
+	require.NoError(t, err)
+	require.Equal(t, []*model.Installation{deletionPendingInstallation}, installations)
+
+	lockerID := model.NewID()
+
+	locked, err := sqlStore.LockInstallation(deletionPendingInstallation.ID, lockerID)
+	require.NoError(t, err)
+	require.True(t, locked)
+
+	installations, err = sqlStore.GetUnlockedInstallationsPendingDeletion()
+	require.NoError(t, err)
+	require.Empty(t, installations)
+}
+
 func TestGetSingleTenantDatabaseConfigForInstallation(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)

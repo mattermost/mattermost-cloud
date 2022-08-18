@@ -551,6 +551,24 @@ func (c *Client) DeleteInstallation(installationID string) error {
 	}
 }
 
+// CancelInstallationDeletion cancels the deletion of an installation that is
+// still pending deletion
+func (c *Client) CancelInstallationDeletion(installationID string) error {
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/cancel_deletion", installationID), nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // AddInstallationDNS creates new DNS record for installation.
 func (c *Client) AddInstallationDNS(installationID string, request *AddDNSRecordRequest) (*InstallationDTO, error) {
 	resp, err := c.doPost(c.buildURL("/api/installation/%s/dns", installationID), request)

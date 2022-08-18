@@ -43,6 +43,41 @@ func TestInstallation_ValidTransitionState(t *testing.T) {
 			newState: InstallationStateUpdateRequested,
 			isValid:  false,
 		},
+		{
+			oldState: InstallationStateStable,
+			newState: InstallationStateDeletionRequested,
+			isValid:  false,
+		},
+		{
+			oldState: InstallationStateStable,
+			newState: InstallationStateDeletionPendingRequested,
+			isValid:  true,
+		},
+		{
+			oldState: InstallationStateHibernating,
+			newState: InstallationStateDeletionRequested,
+			isValid:  false,
+		},
+		{
+			oldState: InstallationStateHibernating,
+			newState: InstallationStateDeletionPendingRequested,
+			isValid:  true,
+		},
+		{
+			oldState: InstallationStateDeletionPending,
+			newState: InstallationStateDeletionRequested,
+			isValid:  false,
+		},
+		{
+			oldState: InstallationStateCreationNoCompatibleClusters,
+			newState: InstallationStateDeletionRequested,
+			isValid:  true,
+		},
+		{
+			oldState: InstallationStateCreationInProgress,
+			newState: InstallationStateDeletionRequested,
+			isValid:  true,
+		},
 	} {
 		t.Run(testCase.oldState+" to "+testCase.newState, func(t *testing.T) {
 			installation := Installation{State: testCase.oldState}

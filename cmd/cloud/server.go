@@ -70,15 +70,17 @@ func init() {
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
+	serverCmd.PersistentFlags().Int("slow-poll", 60, "The interval in seconds to poll for background work for supervisors that are not time sensitive (slow-poll supervisors).")
 	serverCmd.PersistentFlags().Bool("cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
 	serverCmd.PersistentFlags().Bool("group-supervisor", false, "Whether this server will run an installation group supervisor or not.")
 	serverCmd.PersistentFlags().Bool("installation-supervisor", true, "Whether this server will run an installation supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-db-restoration-supervisor", false, "Whether this server will run an installation db restoration supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-db-migration-supervisor", false, "Whether this server will run an installation db migration supervisor or not.")
+	serverCmd.PersistentFlags().Bool("installation-deletion-supervisor", true, "Whether this server will run a installation deletion supervisor or not. (slow-poll supervisor)")
 	serverCmd.PersistentFlags().Bool("cluster-installation-supervisor", true, "Whether this server will run a cluster installation supervisor or not.")
 	serverCmd.PersistentFlags().Bool("backup-supervisor", false, "Whether this server will run a backup supervisor or not.")
 	serverCmd.PersistentFlags().Bool("import-supervisor", false, "Whether this server will run a workspace import supervisor or not.")
 	serverCmd.PersistentFlags().String("awat", "http://localhost:8077", "The location of the Automatic Workspace Archive Translator if the import supervisor is being used.")
-	serverCmd.PersistentFlags().Bool("installation-db-restoration-supervisor", false, "Whether this server will run an installation db restoration supervisor or not.")
-	serverCmd.PersistentFlags().Bool("installation-db-migration-supervisor", false, "Whether this server will run an installation db migration supervisor or not.")
 
 	// Scheduling options
 	serverCmd.PersistentFlags().Bool("balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
@@ -106,6 +108,7 @@ func init() {
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
 	serverCmd.PersistentFlags().Bool("disable-db-init-check", false, "Whether to disable init container with database check.")
 	serverCmd.PersistentFlags().Bool("installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
+	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", time.Hour, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
@@ -239,6 +242,7 @@ var serverCmd = &cobra.Command{
 		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
 		groupSupervisor, _ := command.Flags().GetBool("group-supervisor")
 		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
+		installationDeletionSupervisor, _ := command.Flags().GetBool("installation-deletion-supervisor")
 		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
 		backupSupervisor, _ := command.Flags().GetBool("backup-supervisor")
 		importSupervisor, _ := command.Flags().GetBool("import-supervisor")
@@ -264,6 +268,7 @@ var serverCmd = &cobra.Command{
 		useExistingResources, _ := command.Flags().GetBool("use-existing-aws-resources")
 		backupRestoreToolImage, _ := command.Flags().GetString("backup-restore-tool-image")
 		backupJobTTL, _ := command.Flags().GetInt32("backup-job-ttl-seconds")
+		installationDeletionPendingTime, _ := command.Flags().GetDuration("installation-deletion-pending-time")
 
 		deployMySQLOperator, _ := command.Flags().GetBool("deploy-mysql-operator")
 		deployMinioOperator, _ := command.Flags().GetBool("deploy-minio-operator")
@@ -293,6 +298,7 @@ var serverCmd = &cobra.Command{
 			"cluster-supervisor":                            clusterSupervisor,
 			"group-supervisor":                              groupSupervisor,
 			"installation-supervisor":                       installationSupervisor,
+			"installation-deletion-supervisor":              installationDeletionSupervisor,
 			"cluster-installation-supervisor":               clusterInstallationSupervisor,
 			"backup-supervisor":                             backupSupervisor,
 			"import-supervisor":                             importSupervisor,
@@ -301,6 +307,7 @@ var serverCmd = &cobra.Command{
 			"store-version":                                 currentVersion,
 			"state-store":                                   s3StateStore,
 			"working-directory":                             wd,
+			"installation-deletion-pending-time":            installationDeletionPendingTime,
 			"balanced-installation-scheduling":              balancedInstallationScheduling,
 			"cluster-resource-threshold":                    clusterResourceThreshold,
 			"cluster-resource-threshold-cpu-override":       thresholdCPUOverride,
@@ -453,8 +460,19 @@ var serverCmd = &cobra.Command{
 			logger.WithField("poll", poll).Info("Scheduler is disabled")
 		}
 
-		supervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
-		defer supervisor.Close()
+		standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
+		defer standardSupervisor.Close()
+
+		slowPoll, _ := command.Flags().GetInt("slow-poll")
+		if slowPoll == 0 {
+			logger.WithField("slow-poll", slowPoll).Info("Slow scheduler is disabled")
+		}
+		if installationDeletionSupervisor {
+			var slowMultiDoer supervisor.MultiDoer
+			slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, installationDeletionPendingTime, sqlStore, eventsProducer, logger))
+			slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(slowPoll)*time.Second)
+			defer slowSupervisor.Close()
+		}
 
 		metricsPort, _ := command.Flags().GetInt("metrics-port")
 		metricsRouter := mux.NewRouter()
@@ -482,7 +500,7 @@ var serverCmd = &cobra.Command{
 
 		api.Register(router, &api.Context{
 			Store:         sqlStore,
-			Supervisor:    supervisor,
+			Supervisor:    standardSupervisor,
 			Provisioner:   kopsProvisioner,
 			DBProvider:    resourceUtil,
 			EventProducer: eventsProducer,

@@ -1206,17 +1206,17 @@ func TestAssignGroup(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	group1, err := client.CreateGroup(&model.CreateGroupRequest{
-		Name:    "name1",
-		Version: "version1",
-		Image:   "sample/image1",
+		Name:        "name1",
+		Version:     "version1",
+		Image:       "sample/image1",
 		Annotations: []string{"group-ann1", "group-ann2"},
 	})
 	require.NoError(t, err)
 
 	group2, err := client.CreateGroup(&model.CreateGroupRequest{
-		Name:    "name2",
-		Version: "version2",
-		Image:   "sample/image2",
+		Name:        "name2",
+		Version:     "version2",
+		Image:       "sample/image2",
 		Annotations: []string{"group-ann1", "group-ann3"},
 	})
 	require.NoError(t, err)
@@ -1236,28 +1236,28 @@ func TestAssignGroup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	for _, testCase := range []struct{
-	    description string
-	    annotations []string
+	for _, testCase := range []struct {
+		description    string
+		annotations    []string
 		possibleGroups []string
 	}{
-	    {
-			description: "select specific group",
-			annotations: []string{"group-ann1", "group-ann2"},
+		{
+			description:    "select specific group",
+			annotations:    []string{"group-ann1", "group-ann2"},
 			possibleGroups: []string{group1.ID},
-	    },
-	    {
-			description: "select different specific group",
-			annotations: []string{"group-ann1", "group-ann3"},
+		},
+		{
+			description:    "select different specific group",
+			annotations:    []string{"group-ann1", "group-ann3"},
 			possibleGroups: []string{group2.ID},
-	    },
-	    {
-			description: "select one of two groups",
-			annotations: []string{"group-ann1"},
+		},
+		{
+			description:    "select one of two groups",
+			annotations:    []string{"group-ann1"},
 			possibleGroups: []string{group1.ID, group2.ID},
-	    },
+		},
 	} {
-	    t.Run(testCase.description, func(t *testing.T) {
+		t.Run(testCase.description, func(t *testing.T) {
 			err = client.AssignGroup(installation1.ID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: testCase.annotations})
 			require.NoError(t, err)
 
@@ -1265,7 +1265,7 @@ func TestAssignGroup(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotEmpty(t, fetchedInstallation.GroupID)
 			assert.Contains(t, testCase.possibleGroups, *fetchedInstallation.GroupID)
-	    })
+		})
 	}
 
 	installation1, err = client.GetInstallation(installation1.ID, nil)
@@ -1708,24 +1708,20 @@ func TestDeleteInstallation(t *testing.T) {
 	})
 
 	t.Run("while", func(t *testing.T) {
-		validDeletingStates := []string{
-			model.InstallationStateStable,
+		validDeletionRequestedStates := []string{
 			model.InstallationStateCreationRequested,
 			model.InstallationStateCreationPreProvisioning,
 			model.InstallationStateCreationInProgress,
 			model.InstallationStateCreationDNS,
 			model.InstallationStateCreationNoCompatibleClusters,
 			model.InstallationStateCreationFailed,
-			model.InstallationStateUpdateRequested,
-			model.InstallationStateUpdateInProgress,
-			model.InstallationStateUpdateFailed,
 			model.InstallationStateDeletionRequested,
 			model.InstallationStateDeletionInProgress,
 			model.InstallationStateDeletionFinalCleanup,
 			model.InstallationStateDeletionFailed,
 		}
 
-		for _, validDeletingState := range validDeletingStates {
+		for _, validDeletingState := range validDeletionRequestedStates {
 			t.Run(validDeletingState, func(t *testing.T) {
 				installation1.State = validDeletingState
 				err = sqlStore.UpdateInstallation(installation1.Installation)
@@ -1737,6 +1733,29 @@ func TestDeleteInstallation(t *testing.T) {
 				installation1, err = client.GetInstallation(installation1.ID, nil)
 				require.NoError(t, err)
 				require.Equal(t, model.InstallationStateDeletionRequested, installation1.State)
+			})
+		}
+
+		validDeletionPendingRequestedStates := []string{
+			model.InstallationStateStable,
+			model.InstallationStateUpdateRequested,
+			model.InstallationStateUpdateInProgress,
+			model.InstallationStateUpdateFailed,
+			model.InstallationStateHibernating,
+		}
+
+		for _, validDeletingState := range validDeletionPendingRequestedStates {
+			t.Run(validDeletingState, func(t *testing.T) {
+				installation1.State = validDeletingState
+				err = sqlStore.UpdateInstallation(installation1.Installation)
+				require.NoError(t, err)
+
+				err := client.DeleteInstallation(installation1.ID)
+				require.NoError(t, err)
+
+				installation1, err = client.GetInstallation(installation1.ID, nil)
+				require.NoError(t, err)
+				require.Equal(t, model.InstallationStateDeletionPendingRequested, installation1.State)
 			})
 		}
 	})
