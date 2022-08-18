@@ -166,9 +166,10 @@ func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(inst
 	// Check to see if enough time has passed that the installation should be
 	// deleted.
 	timeSincePending := time.Since(model.TimeFromMillis(deletionQueuedEvent.Event.Timestamp))
-	logger = logger.WithField("time-spent-pending-deletion", timeSincePending)
+	logger = logger.WithField("time-spent-pending-deletion", timeSincePending.String())
 	if timeSincePending < s.deletionPendingTime {
-		logger.WithField("time-until-deletion", s.deletionPendingTime-timeSincePending).Debug("Installation is not ready for deletion")
+		timeUntilDeletion := s.deletionPendingTime - timeSincePending
+		logger.WithField("time-until-deletion", timeUntilDeletion.String()).Debug("Installation is not ready for deletion")
 		return model.InstallationStateDeletionPending
 	}
 

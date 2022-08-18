@@ -907,6 +907,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 	assert.Equal(t, int64(1), status.InstallationsTotal)
 	assert.Equal(t, int64(0), status.InstallationsStable)
 	assert.Equal(t, int64(0), status.InstallationsHibernating)
+	assert.Equal(t, int64(0), status.InstallationsPendingDeletion)
 	assert.Equal(t, int64(1), status.InstallationsUpdating)
 
 	time.Sleep(1 * time.Millisecond)
@@ -931,6 +932,7 @@ func TestGetInstallationsStatus(t *testing.T) {
 	assert.Equal(t, int64(2), status.InstallationsTotal)
 	assert.Equal(t, int64(1), status.InstallationsStable)
 	assert.Equal(t, int64(0), status.InstallationsHibernating)
+	assert.Equal(t, int64(0), status.InstallationsPendingDeletion)
 	assert.Equal(t, int64(1), status.InstallationsUpdating)
 
 	time.Sleep(1 * time.Millisecond)
@@ -955,6 +957,32 @@ func TestGetInstallationsStatus(t *testing.T) {
 	assert.Equal(t, int64(3), status.InstallationsTotal)
 	assert.Equal(t, int64(1), status.InstallationsStable)
 	assert.Equal(t, int64(1), status.InstallationsHibernating)
+	assert.Equal(t, int64(0), status.InstallationsPendingDeletion)
+	assert.Equal(t, int64(1), status.InstallationsUpdating)
+
+	time.Sleep(1 * time.Millisecond)
+
+	installation4 := &model.Installation{
+		Name:      "test4",
+		OwnerID:   model.NewID(),
+		Version:   "version",
+		License:   "this-is-a-license",
+		Database:  model.InstallationDatabaseMysqlOperator,
+		Filestore: model.InstallationFilestoreMinioOperator,
+		Size:      mmv1alpha1.Size100String,
+		Affinity:  model.InstallationAffinityIsolated,
+		State:     model.InstallationStateDeletionPending,
+	}
+
+	err = sqlStore.CreateInstallation(installation4, nil, fixDNSRecords(4))
+	require.NoError(t, err)
+
+	status, err = sqlStore.GetInstallationsStatus()
+	require.NoError(t, err)
+	assert.Equal(t, int64(4), status.InstallationsTotal)
+	assert.Equal(t, int64(1), status.InstallationsStable)
+	assert.Equal(t, int64(1), status.InstallationsHibernating)
+	assert.Equal(t, int64(1), status.InstallationsPendingDeletion)
 	assert.Equal(t, int64(1), status.InstallationsUpdating)
 
 	time.Sleep(1 * time.Millisecond)
@@ -964,9 +992,10 @@ func TestGetInstallationsStatus(t *testing.T) {
 
 	status, err = sqlStore.GetInstallationsStatus()
 	require.NoError(t, err)
-	assert.Equal(t, int64(2), status.InstallationsTotal)
+	assert.Equal(t, int64(3), status.InstallationsTotal)
 	assert.Equal(t, int64(1), status.InstallationsStable)
 	assert.Equal(t, int64(1), status.InstallationsHibernating)
+	assert.Equal(t, int64(1), status.InstallationsPendingDeletion)
 	assert.Equal(t, int64(0), status.InstallationsUpdating)
 }
 

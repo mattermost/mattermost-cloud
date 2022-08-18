@@ -11,10 +11,11 @@ import (
 
 // InstallationsStatus represents the status of all installations.
 type InstallationsStatus struct {
-	InstallationsTotal       int64
-	InstallationsStable      int64
-	InstallationsHibernating int64
-	InstallationsUpdating    int64
+	InstallationsTotal           int64
+	InstallationsStable          int64
+	InstallationsHibernating     int64
+	InstallationsPendingDeletion int64
+	InstallationsUpdating        int64
 }
 
 // InstallationsStatusFromReader decodes a json-encoded InstallationsStatus from the given io.Reader.
