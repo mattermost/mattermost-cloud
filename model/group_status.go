@@ -11,11 +11,12 @@ import (
 
 // GroupStatus represents the status of a group.
 type GroupStatus struct {
-	InstallationsTotal          int64
-	InstallationsUpdated        int64
-	InstallationsUpdating       int64
-	InstallationsHibernating    int64
-	InstallationsAwaitingUpdate int64
+	InstallationsTotal           int64
+	InstallationsUpdated         int64
+	InstallationsUpdating        int64
+	InstallationsHibernating     int64
+	InstallationsPendingDeletion int64
+	InstallationsAwaitingUpdate  int64
 }
 
 // GroupsStatus represents the status of a groups.

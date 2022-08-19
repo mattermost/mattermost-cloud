@@ -212,12 +212,14 @@ func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, 
 	}
 	stableCount := stateCounts[model.InstallationStateStable]
 	hibernatingCount := stateCounts[model.InstallationStateHibernating]
+	pendingDeletionCount := stateCounts[model.InstallationStateDeletionPending]
 
 	return &model.InstallationsStatus{
-		InstallationsTotal:       totalCount,
-		InstallationsStable:      stableCount,
-		InstallationsHibernating: hibernatingCount,
-		InstallationsUpdating:    totalCount - stableCount - hibernatingCount,
+		InstallationsTotal:           totalCount,
+		InstallationsStable:          stableCount,
+		InstallationsHibernating:     hibernatingCount,
+		InstallationsPendingDeletion: pendingDeletionCount,
+		InstallationsUpdating:        totalCount - stableCount - hibernatingCount - pendingDeletionCount,
 	}, nil
 }
 

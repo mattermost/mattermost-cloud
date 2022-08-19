@@ -147,7 +147,7 @@ func (sqlStore *SQLStore) GetGroupRollingMetadata(groupID string) (*GroupRolling
 		Select("Count (*)").
 		From("Installation").
 		Where("GroupID = ?", group.ID).
-		Where("(State = ? OR State = ?)", model.InstallationStateStable, model.InstallationStateHibernating).
+		Where("(State = ? OR State = ? OR State = ?)", model.InstallationStateStable, model.InstallationStateHibernating, model.InstallationStateDeletionPending).
 		Where("DeleteAt = 0")
 	err = sqlStore.selectBuilder(sqlStore.db, &stableOrHibernateResult, installationBuilder)
 	if err != nil {
@@ -227,19 +227,36 @@ func (sqlStore *SQLStore) GetGroupStatus(groupID string) (*model.GroupStatus, er
 		return nil, errors.Wrap(err, "failed to get count result of hibernating installations")
 	}
 
+	var pendingDeletionResult countResult
+	installationBuilder = sq.
+		Select("Count (*)").
+		From("Installation").
+		Where("GroupID = ?", group.ID).
+		Where("State = ?", model.InstallationStateDeletionPending).
+		Where("DeleteAt = 0")
+	err = sqlStore.selectBuilder(sqlStore.db, &pendingDeletionResult, installationBuilder)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query for deletion pending installations")
+	}
+	deletionPendingCount, err := pendingDeletionResult.value()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get count result of deletion pending installations")
+	}
+
 	totalCount, err := sqlStore.countInstallationsInGroup(group)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for total installations count in a group")
 	}
 
-	updatingCount := totalCount - updatedCount - awaitingUpdateCount - hibernatingCount
+	updatingCount := totalCount - updatedCount - awaitingUpdateCount - hibernatingCount - deletionPendingCount
 
 	return &model.GroupStatus{
-		InstallationsTotal:          totalCount,
-		InstallationsUpdated:        updatedCount,
-		InstallationsUpdating:       updatingCount,
-		InstallationsHibernating:    hibernatingCount,
-		InstallationsAwaitingUpdate: awaitingUpdateCount,
+		InstallationsTotal:           totalCount,
+		InstallationsUpdated:         updatedCount,
+		InstallationsUpdating:        updatingCount,
+		InstallationsHibernating:     hibernatingCount,
+		InstallationsPendingDeletion: deletionPendingCount,
+		InstallationsAwaitingUpdate:  awaitingUpdateCount,
 	}, nil
 }
 

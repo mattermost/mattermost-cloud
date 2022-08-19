@@ -83,13 +83,15 @@ var dashboardCmd = &cobra.Command{
 			}
 
 			installationCount := len(installations)
-			var installationStableCount, installationsHibernatingCount int
+			var installationStableCount, installationsHibernatingCount, installationsPendingDeletionCount int
 			for _, installation := range installations {
 				switch installation.State {
 				case model.ClusterInstallationStateStable:
 					installationStableCount++
 				case model.InstallationStateHibernating:
 					installationsHibernatingCount++
+				case model.InstallationStateDeletionPending:
+					installationsPendingDeletionCount++
 				default:
 					unstableList = append(unstableList, fmt.Sprintf("Installation: %s | %s (%s)", installation.ID, installation.DNS, installation.State))
 				}
@@ -98,7 +100,7 @@ var dashboardCmd = &cobra.Command{
 			table.Append([]string{
 				"Installation",
 				toStr(installationCount),
-				fmt.Sprintf("%d (H=%d)", installationStableCount+installationsHibernatingCount, installationsHibernatingCount),
+				fmt.Sprintf("%d (H=%d, DP=%d)", installationStableCount+installationsHibernatingCount, installationsHibernatingCount, installationsPendingDeletionCount),
 				toStr(installationCount - (installationStableCount + installationsHibernatingCount)),
 			})
 
