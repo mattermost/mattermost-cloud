@@ -108,9 +108,8 @@ func init() {
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
 	serverCmd.PersistentFlags().Bool("disable-db-init-check", false, "Whether to disable init container with database check.")
 	serverCmd.PersistentFlags().Bool("installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
-	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", 3*time.Minute, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
-	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", time.Hour, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
 	serverCmd.PersistentFlags().Bool("disable-dns-updates", false, "If set to true DNS updates will be disabled when updating Installations.")
+	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", 3*time.Minute, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
