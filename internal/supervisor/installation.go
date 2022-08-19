@@ -116,6 +116,7 @@ type InstallationSupervisor struct {
 	forceCRUpgrade    bool
 	cache             InstallationSupervisorCache
 	dnsProvider       InstallationDNSProvider
+	disableDNSUpdates bool
 }
 
 // InstallationSupervisorCache contains configuration and cached data for
@@ -152,7 +153,8 @@ func NewInstallationSupervisor(
 	metrics *metrics.CloudMetrics,
 	eventsProducer eventProducer,
 	forceCRUpgrade bool,
-	dnsProvider InstallationDNSProvider) *InstallationSupervisor {
+	dnsProvider InstallationDNSProvider,
+	disableDNSUpdates bool) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       installationProvisioner,
@@ -168,6 +170,7 @@ func NewInstallationSupervisor(
 		forceCRUpgrade:    forceCRUpgrade,
 		cache:             InstallationSupervisorCache{false, false, make(chan bool), sync.Mutex{}, make(map[string]*k8s.ClusterResources)},
 		dnsProvider:       dnsProvider,
+		disableDNSUpdates: disableDNSUpdates,
 	}
 }
 
@@ -911,6 +914,13 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 		return model.InstallationStateUpdateInProgress
 	}
 
+	if s.disableDNSUpdates {
+		logger.Debug("Updating DNS on Installation update is disabled, skipping update...")
+		logger.Info("Finished updating installation")
+		return model.InstallationStateStable
+	}
+
+	logger.Debug("Updating DNS on Installation update is enabled, updating...")
 	dnsRecords, err := s.store.GetDNSRecordsForInstallation(installation.ID)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get DNS records for Installation")
@@ -918,7 +928,6 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 	}
 
 	dnsNames := model.DNSNamesFromRecords(dnsRecords)
-
 	endpoints, err := s.getPublicLBEndpoint(installation)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to find load balancer endpoint (nginx) for Cluster Installation")
