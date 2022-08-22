@@ -22,6 +22,7 @@ type mockInstallationDeletionStore struct {
 	Installation                         *model.Installation
 	UnlockedInstallationsPendingDeletion []*model.Installation
 	Events                               []*model.StateChangeEventData
+	CurrentlyUpdatingCounter             int64
 
 	UnlockChan              chan interface{}
 	UpdateInstallationCalls int
@@ -35,6 +36,10 @@ func (s *mockInstallationDeletionStore) GetInstallation(installationID string, i
 
 func (s *mockInstallationDeletionStore) GetUnlockedInstallationsPendingDeletion() ([]*model.Installation, error) {
 	return s.UnlockedInstallationsPendingDeletion, nil
+}
+
+func (s *mockInstallationDeletionStore) GetInstallationsStatus() (*model.InstallationsStatus, error) {
+	return &model.InstallationsStatus{InstallationsUpdating: s.CurrentlyUpdatingCounter}, nil
 }
 
 func (s *mockInstallationDeletionStore) UpdateInstallationState(installation *model.Installation) error {
@@ -80,7 +85,7 @@ func TestInstallationDeletionSupervisor_Do(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationDeletionStore{}
 
-		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, mockStore, &mockEventsProducer{}, logger)
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, mockStore, &mockEventsProducer{}, logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -99,7 +104,7 @@ func TestInstallationDeletionSupervisor_Do(t *testing.T) {
 		mockStore.Events = []*model.StateChangeEventData{{Event: model.Event{Timestamp: 1646160276464}}}
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, mockStore, &mockEventsProducer{}, logger)
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, mockStore, &mockEventsProducer{}, logger)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -114,7 +119,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, sqlStore, &mockEventsProducer{}, logger)
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, sqlStore, &mockEventsProducer{}, logger)
 
 		installation := &model.Installation{
 			OwnerID:  "blah",
@@ -139,7 +144,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, sqlStore, &mockEventsProducer{}, logger)
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Hour, 10, sqlStore, &mockEventsProducer{}, logger)
 
 		installation := &model.Installation{
 			OwnerID:  "blah",
@@ -184,7 +189,7 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, sqlStore, &mockEventsProducer{}, logger)
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, 10, sqlStore, &mockEventsProducer{}, logger)
 
 		installation := &model.Installation{
 			OwnerID:  "blah",
@@ -222,5 +227,69 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateDeletionRequested, installation.State)
+	})
+
+	t.Run("deletion pending, ready for deletion, but max reached", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, 1, sqlStore, &mockEventsProducer{}, logger)
+
+		installation1 := &model.Installation{
+			OwnerID:  "blah",
+			Version:  "version",
+			Name:     "i1",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateUpdateInProgress,
+		}
+
+		err := sqlStore.CreateInstallation(installation1, nil, testutil.DNSForInstallation("i1.example.com"))
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		installation2 := &model.Installation{
+			OwnerID:  "blah",
+			Version:  "version",
+			Name:     "i2",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateDeletionPending,
+		}
+
+		err = sqlStore.CreateInstallation(installation2, nil, testutil.DNSForInstallation("i2.example.com"))
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		status, err := sqlStore.GetInstallationsStatus()
+		require.NoError(t, err)
+		require.Equal(t, int64(2), status.InstallationsTotal)
+		require.Equal(t, int64(1), status.InstallationsUpdating)
+
+		event := &model.StateChangeEventData{
+			Event: model.Event{
+				EventType: model.ResourceStateChangeEventType,
+				Timestamp: model.GetMillis(),
+			},
+			StateChange: model.StateChangeEvent{
+				OldState:     "old",
+				NewState:     model.InstallationStateDeletionPending,
+				ResourceID:   installation2.ID,
+				ResourceType: "installation",
+			},
+		}
+
+		err = sqlStore.CreateStateChangeEvent(event)
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		supervisor.Do()
+		installation2, err = sqlStore.GetInstallation(installation2.ID, false, false)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateDeletionPending, installation2.State)
 	})
 }
