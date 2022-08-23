@@ -32,6 +32,7 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 
@@ -167,6 +168,7 @@ func TestGetInstallationDBMigrationOperations(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 
@@ -263,6 +265,7 @@ func TestGetInstallationDBMigrationOperation(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 
@@ -307,6 +310,7 @@ func TestCommitInstallationDBMigrationOperation(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 		DBProvider: dbProviderMock,
 	})
@@ -353,6 +357,7 @@ func TestRollbackInstallationDBMigrationOperation(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 

@@ -28,6 +28,7 @@ func Test_AddInstallationDNS(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -136,6 +137,7 @@ func Test_SetDomainNamePrimary(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)

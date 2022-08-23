@@ -511,8 +511,9 @@ var serverCmd = &cobra.Command{
 			DBProvider:    resourceUtil,
 			EventProducer: eventsProducer,
 			Environment:   awsClient.GetCloudEnvironmentName(),
-			Logger:        logger,
 			AwsClient:     awsClient,
+			Metrics:       cloudMetrics,
+			Logger:        logger,
 		})
 
 		listen, _ := command.Flags().GetString("listen")

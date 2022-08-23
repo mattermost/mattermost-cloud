@@ -13,17 +13,17 @@ import (
 
 // initWebhook registers webhook endpoints on the given router.
 func initWebhook(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	webhooksRouter := apiRouter.PathPrefix("/webhooks").Subrouter()
-	webhooksRouter.Handle("", addContext(handleGetWebhooks)).Methods("GET")
-	webhooksRouter.Handle("", addContext(handleCreateWebhook)).Methods("POST")
+	webhooksRouter.Handle("", addContext(handleGetWebhooks, "handleGetWebhooks")).Methods("GET")
+	webhooksRouter.Handle("", addContext(handleCreateWebhook, "handleCreateWebhook")).Methods("POST")
 
 	webhookRouter := apiRouter.PathPrefix("/webhook/{webhook:[A-Za-z0-9]{26}}").Subrouter()
-	webhookRouter.Handle("", addContext(handleGetWebhook)).Methods("GET")
-	webhookRouter.Handle("", addContext(handleDeleteWebhook)).Methods("DELETE")
+	webhookRouter.Handle("", addContext(handleGetWebhook, "handleGetWebhook")).Methods("GET")
+	webhookRouter.Handle("", addContext(handleDeleteWebhook, "handleDeleteWebhook")).Methods("DELETE")
 }
 
 // handleCreateWebhook responds to POST /api/webhooks, creating a new webhook.

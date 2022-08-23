@@ -28,6 +28,7 @@ func TestCreateWebhook(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -91,6 +92,7 @@ func TestGetWebhooks(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -278,6 +280,7 @@ func TestDeleteWebhook(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)

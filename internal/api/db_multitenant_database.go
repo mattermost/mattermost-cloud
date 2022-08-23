@@ -14,17 +14,17 @@ import (
 
 // initMultitenantDatabases registers multitenant database endpoints on the given router.
 func initMultitenantDatabases(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	MultitenantDatabasesRouter := apiRouter.PathPrefix("/multitenant_databases").Subrouter()
-	MultitenantDatabasesRouter.Handle("", addContext(handleGetMultitenantDatabases)).Methods("GET")
+	MultitenantDatabasesRouter.Handle("", addContext(handleGetMultitenantDatabases, "handleGetMultitenantDatabases")).Methods("GET")
 
 	MultitenantDatabaseRouter := apiRouter.PathPrefix("/multitenant_database/{multitenant_database:[A-Za-z0-9]{26}}").Subrouter()
-	MultitenantDatabaseRouter.Handle("", addContext(handleGetMultitenantDatabase)).Methods("GET")
-	MultitenantDatabaseRouter.Handle("", addContext(handleUpdateMultitenantDatabase)).Methods("PUT")
-	MultitenantDatabaseRouter.Handle("", addContext(handleDeleteMultitenantDatabase)).Methods("DELETE")
+	MultitenantDatabaseRouter.Handle("", addContext(handleGetMultitenantDatabase, "handleGetMultitenantDatabase")).Methods("GET")
+	MultitenantDatabaseRouter.Handle("", addContext(handleUpdateMultitenantDatabase, "handleUpdateMultitenantDatabase")).Methods("PUT")
+	MultitenantDatabaseRouter.Handle("", addContext(handleDeleteMultitenantDatabase, "handleDeleteMultitenantDatabase")).Methods("DELETE")
 }
 
 // handleGetMultitenantDatabases responds to GET /api/databases/multitenant_databases,

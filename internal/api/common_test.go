@@ -10,11 +10,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type mockSupervisor struct {
-}
+type mockSupervisor struct{}
 
 func (s *mockSupervisor) Do() error {
 	return nil
+}
+
+type mockMetrics struct{}
+
+func (m *mockMetrics) IncrementAPIRequest() {}
+
+func (m *mockMetrics) ObserveAPIEndpointDuration(handler, method string, statusCode int, elapsed float64) {
 }
 
 type mockProvisioner struct {

@@ -5,18 +5,25 @@
 package metrics
 
 import (
+	"strconv"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 const (
 	provisionerNamespace    = "provisioner"
+	provisionerSubsystemAPI = "api"
 	provisionerSubsystemApp = "app"
 )
 
 // CloudMetrics holds all of the metrics needed to properly instrument
 // the Provisioning server
 type CloudMetrics struct {
+	// API
+	APIRequestsCounter prometheus.Counter
+	APITimesHistograms *prometheus.HistogramVec
+
 	// Installation
 	InstallationCreationDurationHist    *prometheus.HistogramVec
 	InstallationUpdateDurationHist      *prometheus.HistogramVec
@@ -34,6 +41,23 @@ type CloudMetrics struct {
 // metrics
 func New() *CloudMetrics {
 	return &CloudMetrics{
+		APIRequestsCounter: promauto.NewCounter(prometheus.CounterOpts{
+			Namespace: provisionerNamespace,
+			Subsystem: provisionerSubsystemAPI,
+			Name:      "requests_total",
+			Help:      "The total number of http API requests",
+		}),
+
+		APITimesHistograms: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: provisionerNamespace,
+				Subsystem: provisionerSubsystemAPI,
+				Name:      "requests_duration",
+				Help:      "The duration of http API requests",
+			},
+			[]string{"handler", "method", "status_code"},
+		),
+
 		InstallationCreationDurationHist: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Namespace: provisionerNamespace,
@@ -111,6 +135,16 @@ func New() *CloudMetrics {
 			[]string{"cluster"},
 		),
 	}
+}
+
+// IncrementAPIRequest increases APIRequestsCounter by one.
+func (cm *CloudMetrics) IncrementAPIRequest() {
+	cm.APIRequestsCounter.Inc()
+}
+
+// ObserveAPIEndpointDuration observes the duration of an API request.
+func (cm *CloudMetrics) ObserveAPIEndpointDuration(handler, method string, statusCode int, elapsed float64) {
+	cm.APITimesHistograms.With(prometheus.Labels{"handler": handler, "method": method, "status_code": strconv.Itoa(statusCode)}).Observe(elapsed)
 }
 
 // 15 second buckets up to 5 minutes.

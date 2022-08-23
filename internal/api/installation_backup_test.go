@@ -29,6 +29,7 @@ func TestRequestInstallationBackup(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 
@@ -97,6 +98,7 @@ func TestGetInstallationBackups(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 
@@ -213,6 +215,7 @@ func TestGetInstallationBackup(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 
@@ -244,6 +247,7 @@ func TestDeleteInstallationBackup(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 
@@ -328,6 +332,7 @@ func TestBackupAPILock(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 

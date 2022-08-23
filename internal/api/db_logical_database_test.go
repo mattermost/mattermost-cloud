@@ -28,6 +28,7 @@ func TestGetLogicalDatabases(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -175,6 +176,7 @@ func TestGetLogicalDatabase(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 

@@ -13,15 +13,15 @@ import (
 
 // initEvent registers events endpoints on the given router.
 func initEvent(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	eventRouter := apiRouter.PathPrefix("/events").Subrouter()
 
 	stateChangeRouter := eventRouter.PathPrefix("/state_change").Subrouter()
 
-	stateChangeRouter.Handle("", addContext(handleListStateChangeEvents)).Methods("GET")
+	stateChangeRouter.Handle("", addContext(handleListStateChangeEvents, "handleListStateChangeEvents")).Methods("GET")
 }
 
 // handleListEvents responds to GET /api/events/state_change, returning the specified page of subscriptions.

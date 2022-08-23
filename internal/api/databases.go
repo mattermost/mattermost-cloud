@@ -10,16 +10,16 @@ import (
 
 // initDatabases registers database endpoints on the given router.
 func initDatabases(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	// TODO: retire these endpoints
 	databasesRouter := apiRouter.PathPrefix("/databases").Subrouter()
-	databasesRouter.Handle("", addContext(handleGetMultitenantDatabases)).Methods("GET")
+	databasesRouter.Handle("", addContext(handleGetMultitenantDatabases, "handleGetMultitenantDatabases")).Methods("GET")
 
 	databaseRouter := apiRouter.PathPrefix("/database/{multitenant_database:[A-Za-z0-9]{26}}").Subrouter()
-	databaseRouter.Handle("", addContext(handleUpdateMultitenantDatabase)).Methods("PUT")
+	databaseRouter.Handle("", addContext(handleUpdateMultitenantDatabase, "handleUpdateMultitenantDatabase")).Methods("PUT")
 
 	// Begin new endpoints
 	initMultitenantDatabases(databasesRouter, context)

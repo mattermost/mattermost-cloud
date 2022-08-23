@@ -150,6 +150,12 @@ type EventProducer interface {
 	ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error
 }
 
+// Metrics exposes metrics from API usage.
+type Metrics interface {
+	IncrementAPIRequest()
+	ObserveAPIEndpointDuration(handler, method string, statusCode int, elapsed float64)
+}
+
 // Context provides the API with all necessary data and interfaces for responding to requests.
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
@@ -159,10 +165,11 @@ type Context struct {
 	Provisioner   Provisioner
 	DBProvider    DBProvider
 	EventProducer EventProducer
+	AwsClient     AwsClient
+	Metrics       Metrics
+	Logger        log.FieldLogger
 	RequestID     string
 	Environment   string
-	Logger        log.FieldLogger
-	AwsClient     AwsClient
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
@@ -173,7 +180,8 @@ func (c *Context) Clone() *Context {
 		Provisioner:   c.Provisioner,
 		DBProvider:    c.DBProvider,
 		EventProducer: c.EventProducer,
-		Logger:        c.Logger,
 		AwsClient:     c.AwsClient,
+		Metrics:       c.Metrics,
+		Logger:        c.Logger,
 	}
 }

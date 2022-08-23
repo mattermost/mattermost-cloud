@@ -30,6 +30,7 @@ func TestGetGroups(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -213,6 +214,7 @@ func TestCreateGroup(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -272,6 +274,7 @@ func TestUpdateGroup(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -419,6 +422,7 @@ func TestDeleteGroup(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -509,6 +513,7 @@ func TestGroupStatus(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -626,6 +631,7 @@ func TestGroupsStatus(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -757,6 +763,7 @@ func TestGroups_Annotations(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 

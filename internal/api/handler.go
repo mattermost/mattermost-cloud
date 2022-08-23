@@ -6,6 +6,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -14,24 +15,34 @@ import (
 type contextHandlerFunc func(c *Context, w http.ResponseWriter, r *http.Request)
 
 type contextHandler struct {
-	context *Context
-	handler contextHandlerFunc
+	context     *Context
+	handler     contextHandlerFunc
+	handlerName string
 }
 
 func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	ww := NewWrappedWriter(w)
 	context := h.context.Clone()
 	context.RequestID = model.NewID()
 	context.Logger = context.Logger.WithFields(log.Fields{
+		"handler": h.handlerName,
+		"method":  r.Method,
 		"path":    r.URL.Path,
 		"request": context.RequestID,
 	})
 
-	h.handler(context, w, r)
+	h.handler(context, ww, r)
+
+	elapsed := float64(time.Since(start)) / float64(time.Second)
+	context.Metrics.ObserveAPIEndpointDuration(h.handlerName, r.Method, ww.StatusCode(), elapsed)
+	context.Metrics.IncrementAPIRequest()
 }
 
-func newContextHandler(context *Context, handler contextHandlerFunc) *contextHandler {
+func newContextHandler(context *Context, handler contextHandlerFunc, handlerName string) *contextHandler {
 	return &contextHandler{
-		context: context,
-		handler: handler,
+		context:     context,
+		handler:     handler,
+		handlerName: handlerName,
 	}
 }

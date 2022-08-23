@@ -20,8 +20,8 @@ import (
 
 // initInstallation registers installation endpoints on the given router.
 func initInstallation(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	installationsRouter := apiRouter.PathPrefix("/installations").Subrouter()
@@ -29,28 +29,28 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	initInstallationRestoration(installationsRouter, context)
 	initInstallationDBMigration(installationsRouter, context)
 
-	installationsRouter.Handle("", addContext(handleGetInstallations)).Methods("GET")
-	installationsRouter.Handle("", addContext(handleCreateInstallation)).Methods("POST")
-	installationsRouter.Handle("/count", addContext(handleGetNumberOfInstallations)).Methods("GET")
-	installationsRouter.Handle("/status", addContext(handleGetInstallationsStatus)).Methods("GET")
+	installationsRouter.Handle("", addContext(handleGetInstallations, "handleGetInstallations")).Methods("GET")
+	installationsRouter.Handle("", addContext(handleCreateInstallation, "handleCreateInstallation")).Methods("POST")
+	installationsRouter.Handle("/count", addContext(handleGetNumberOfInstallations, "handleGetNumberOfInstallations")).Methods("GET")
+	installationsRouter.Handle("/status", addContext(handleGetInstallationsStatus, "handleGetInstallationsStatus")).Methods("GET")
 
 	installationRouter := apiRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
-	installationRouter.Handle("", addContext(handleGetInstallation)).Methods("GET")
-	installationRouter.Handle("", addContext(handleRetryCreateInstallation)).Methods("POST")
-	installationRouter.Handle("/mattermost", addContext(handleUpdateInstallation)).Methods("PUT")
-	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup)).Methods("PUT")
-	installationRouter.Handle("/group/{group}", addContext(handleAssignGroup)).Methods("POST")
-	installationRouter.Handle("/group", addContext(handleLeaveGroup)).Methods("DELETE")
-	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation)).Methods("POST")
-	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation)).Methods("POST")
-	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
-	installationRouter.Handle("/cancel_deletion", addContext(handleCancelDeletion)).Methods("POST")
-	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations)).Methods("POST")
-	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation)).Methods("DELETE")
+	installationRouter.Handle("", addContext(handleGetInstallation, "handleGetInstallation")).Methods("GET")
+	installationRouter.Handle("", addContext(handleRetryCreateInstallation, "handleRetryCreateInstallation")).Methods("POST")
+	installationRouter.Handle("/mattermost", addContext(handleUpdateInstallation, "handleUpdateInstallation")).Methods("PUT")
+	installationRouter.Handle("/group/{group}", addContext(handleJoinGroup, "handleJoinGroup")).Methods("PUT")
+	installationRouter.Handle("/group/{group}", addContext(handleAssignGroup, "handleAssignGroup")).Methods("POST")
+	installationRouter.Handle("/group", addContext(handleLeaveGroup, "handleLeaveGroup")).Methods("DELETE")
+	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation, "handleHibernateInstallation")).Methods("POST")
+	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation, "handleWakeupInstallation")).Methods("POST")
+	installationRouter.Handle("", addContext(handleDeleteInstallation, "handleDeleteInstallation")).Methods("DELETE")
+	installationRouter.Handle("/cancel_deletion", addContext(handleCancelDeletion, "handleCancelDeletion")).Methods("POST")
+	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations, "handleAddInstallationAnnotations")).Methods("POST")
+	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation, "handleDeleteInstallationAnnotation")).Methods("DELETE")
 
 	// DNS manipulation
-	installationRouter.Handle("/dns", addContext(handleAddDNSRecord)).Methods("POST")
-	installationRouter.Handle("/dns/{installationDNS}/set-primary", addContext(handleSetDomainNamePrimary)).Methods("POST")
+	installationRouter.Handle("/dns", addContext(handleAddDNSRecord, "handleAddDNSRecord")).Methods("POST")
+	installationRouter.Handle("/dns/{installationDNS}/set-primary", addContext(handleSetDomainNamePrimary, "handleSetDomainNamePrimary")).Methods("POST")
 }
 
 // handleGetInstallation responds to GET /api/installation/{installation}, returning the installation in question.

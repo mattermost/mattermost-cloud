@@ -17,24 +17,24 @@ import (
 
 // initClusterInstallation registers cluster installation endpoints on the given router.
 func initClusterInstallation(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	clusterInstallationsRouter := apiRouter.PathPrefix("/cluster_installations").Subrouter()
-	clusterInstallationsRouter.Handle("", addContext(handleGetClusterInstallations)).Methods("GET")
-	clusterInstallationsRouter.Handle("/migrate", addContext(handleMigrateClusterInstallations)).Methods("POST")
-	clusterInstallationsRouter.Handle("/migrate/dns", addContext(handleMigrateDNS)).Methods("POST")
-	clusterInstallationsRouter.Handle("/migrate/delete_inactive/{clusterID}", addContext(handleDeleteInActiveClusterInstallationsByCluster)).Methods("DELETE")
-	clusterInstallationsRouter.Handle("/migrate/delete_inactive/cluster_installation/{ClusterInstallationID}", addContext(handleDeleteInActiveClusterInstallationByID)).Methods("DELETE")
-	clusterInstallationsRouter.Handle("/migrate/switch_cluster_roles", addContext(handleSwitchClusterRoles)).Methods("POST")
+	clusterInstallationsRouter.Handle("", addContext(handleGetClusterInstallations, "handleGetClusterInstallations")).Methods("GET")
+	clusterInstallationsRouter.Handle("/migrate", addContext(handleMigrateClusterInstallations, "handleMigrateClusterInstallations")).Methods("POST")
+	clusterInstallationsRouter.Handle("/migrate/dns", addContext(handleMigrateDNS, "handleMigrateDNS")).Methods("POST")
+	clusterInstallationsRouter.Handle("/migrate/delete_inactive/{clusterID}", addContext(handleDeleteInActiveClusterInstallationsByCluster, "handleDeleteInActiveClusterInstallationsByCluster")).Methods("DELETE")
+	clusterInstallationsRouter.Handle("/migrate/delete_inactive/cluster_installation/{ClusterInstallationID}", addContext(handleDeleteInActiveClusterInstallationByID, "handleDeleteInActiveClusterInstallationByID")).Methods("DELETE")
+	clusterInstallationsRouter.Handle("/migrate/switch_cluster_roles", addContext(handleSwitchClusterRoles, "handleSwitchClusterRoles")).Methods("POST")
 
 	clusterInstallationRouter := apiRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
-	clusterInstallationRouter.Handle("", addContext(handleGetClusterInstallation)).Methods("GET")
-	clusterInstallationRouter.Handle("/config", addContext(handleGetClusterInstallationConfig)).Methods("GET")
-	clusterInstallationRouter.Handle("/config", addContext(handleSetClusterInstallationConfig)).Methods("PUT")
-	clusterInstallationRouter.Handle("/exec/{command}", addContext(handleRunClusterInstallationExecCommand)).Methods("POST")
-	clusterInstallationRouter.Handle("/mattermost_cli", addContext(handleRunClusterInstallationMattermostCLI)).Methods("POST")
+	clusterInstallationRouter.Handle("", addContext(handleGetClusterInstallation, "handleGetClusterInstallation")).Methods("GET")
+	clusterInstallationRouter.Handle("/config", addContext(handleGetClusterInstallationConfig, "handleGetClusterInstallationConfig")).Methods("GET")
+	clusterInstallationRouter.Handle("/config", addContext(handleSetClusterInstallationConfig, "handleSetClusterInstallationConfig")).Methods("PUT")
+	clusterInstallationRouter.Handle("/exec/{command}", addContext(handleRunClusterInstallationExecCommand, "handleRunClusterInstallationExecCommand")).Methods("POST")
+	clusterInstallationRouter.Handle("/mattermost_cli", addContext(handleRunClusterInstallationMattermostCLI, "handleRunClusterInstallationMattermostCLI")).Methods("POST")
 }
 
 // handleGetClusterInstallations responds to GET /api/cluster_installations, returning the specified page of cluster installations.

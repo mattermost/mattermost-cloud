@@ -13,15 +13,15 @@ import (
 
 // initDatabaseSchemas registers database schema endpoints on the given router.
 func initDatabaseSchemas(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	DatabaseSchemasRouter := apiRouter.PathPrefix("/database_schemas").Subrouter()
-	DatabaseSchemasRouter.Handle("", addContext(handleGetDatabaseSchemas)).Methods("GET")
+	DatabaseSchemasRouter.Handle("", addContext(handleGetDatabaseSchemas, "handleGetDatabaseSchemas")).Methods("GET")
 
 	DatabaseSchemaRouter := apiRouter.PathPrefix("/database_schema/{database_schema:[A-Za-z0-9]{26}}").Subrouter()
-	DatabaseSchemaRouter.Handle("", addContext(handleGetDatabaseSchema)).Methods("GET")
+	DatabaseSchemaRouter.Handle("", addContext(handleGetDatabaseSchema, "handleGetDatabaseSchema")).Methods("GET")
 }
 
 // handleGetDatabaseSchemas responds to GET /api/databases/database_schemas,

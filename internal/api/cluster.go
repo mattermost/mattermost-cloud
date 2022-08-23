@@ -16,25 +16,25 @@ import (
 
 // initCluster registers cluster endpoints on the given router.
 func initCluster(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc) *contextHandler {
-		return newContextHandler(context, handler)
+	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
+		return newContextHandler(context, handler, name)
 	}
 
 	clustersRouter := apiRouter.PathPrefix("/clusters").Subrouter()
-	clustersRouter.Handle("", addContext(handleGetClusters)).Methods("GET")
-	clustersRouter.Handle("", addContext(handleCreateCluster)).Methods("POST")
+	clustersRouter.Handle("", addContext(handleGetClusters, "handleGetClusters")).Methods("GET")
+	clustersRouter.Handle("", addContext(handleCreateCluster, "handleCreateCluster")).Methods("POST")
 
 	clusterRouter := apiRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
-	clusterRouter.Handle("", addContext(handleGetCluster)).Methods("GET")
-	clusterRouter.Handle("", addContext(handleRetryCreateCluster)).Methods("POST")
-	clusterRouter.Handle("", addContext(handleUpdateClusterConfiguration)).Methods("PUT")
-	clusterRouter.Handle("/provision", addContext(handleProvisionCluster)).Methods("POST")
-	clusterRouter.Handle("/kubernetes", addContext(handleUpgradeKubernetes)).Methods("PUT")
-	clusterRouter.Handle("/size", addContext(handleResizeCluster)).Methods("PUT")
-	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata)).Methods("GET")
-	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations)).Methods("POST")
-	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation)).Methods("DELETE")
-	clusterRouter.Handle("", addContext(handleDeleteCluster)).Methods("DELETE")
+	clusterRouter.Handle("", addContext(handleGetCluster, "handleGetCluster")).Methods("GET")
+	clusterRouter.Handle("", addContext(handleRetryCreateCluster, "handleRetryCreateCluster")).Methods("POST")
+	clusterRouter.Handle("", addContext(handleUpdateClusterConfiguration, "handleUpdateClusterConfiguration")).Methods("PUT")
+	clusterRouter.Handle("/provision", addContext(handleProvisionCluster, "handleProvisionCluster")).Methods("POST")
+	clusterRouter.Handle("/kubernetes", addContext(handleUpgradeKubernetes, "handleUpgradeKubernetes")).Methods("PUT")
+	clusterRouter.Handle("/size", addContext(handleResizeCluster, "handleResizeCluster")).Methods("PUT")
+	clusterRouter.Handle("/utilities", addContext(handleGetAllUtilityMetadata, "handleGetAllUtilityMetadata")).Methods("GET")
+	clusterRouter.Handle("/annotations", addContext(handleAddClusterAnnotations, "handleAddClusterAnnotations")).Methods("POST")
+	clusterRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteClusterAnnotation, "handleDeleteClusterAnnotation")).Methods("DELETE")
+	clusterRouter.Handle("", addContext(handleDeleteCluster, "handleDeleteCluster")).Methods("DELETE")
 }
 
 // handleGetCluster responds to GET /api/cluster/{cluster}, returning the cluster in question.
