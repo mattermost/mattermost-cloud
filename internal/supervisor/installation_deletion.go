@@ -17,6 +17,7 @@ import (
 type installationDeletionStore interface {
 	GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error)
 	GetUnlockedInstallationsPendingDeletion() ([]*model.Installation, error)
+	GetInstallationsStatus() (*model.InstallationsStatus, error)
 	UpdateInstallationState(*model.Installation) error
 	installationLockStore
 
@@ -30,26 +31,31 @@ type installationDeletionStore interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type InstallationDeletionSupervisor struct {
-	instanceID          string
-	deletionPendingTime time.Duration
-	store               installationDeletionStore
-	logger              log.FieldLogger
-	eventsProducer      eventProducer
+	instanceID               string
+	deletionPendingTime      time.Duration
+	currentlyUpdatingLimit   int64
+	currentlyUpdatingCounter int64
+	store                    installationDeletionStore
+	logger                   log.FieldLogger
+	eventsProducer           eventProducer
 }
 
 // NewInstallationDeletionSupervisor creates a new InstallationDeletionSupervisor.
 func NewInstallationDeletionSupervisor(
 	instanceID string,
 	deletionPendingTime time.Duration,
+	currentlyUpdatingLimit int64,
 	store installationDeletionStore,
 	eventsProducer eventProducer,
 	logger log.FieldLogger) *InstallationDeletionSupervisor {
 	return &InstallationDeletionSupervisor{
-		instanceID:          instanceID,
-		deletionPendingTime: deletionPendingTime,
-		store:               store,
-		eventsProducer:      eventsProducer,
-		logger:              logger,
+		instanceID:               instanceID,
+		deletionPendingTime:      deletionPendingTime,
+		currentlyUpdatingLimit:   currentlyUpdatingLimit,
+		currentlyUpdatingCounter: 0,
+		store:                    store,
+		eventsProducer:           eventsProducer,
+		logger:                   logger,
 	}
 }
 
@@ -66,7 +72,23 @@ func (s *InstallationDeletionSupervisor) Do() error {
 		return nil
 	}
 
+	// Limit the number of installations that can be deleted at one time.
+	// NOTE: this is a bit of a soft limit. Multiple provisioners running at the
+	// same time could lead to a situation where the limit is exceeded. This
+	// was done initially to balance complexity while still having control over
+	// deletion spikes. A hard limit could be added in the future if required.
+	status, err := s.store.GetInstallationsStatus()
+	if err != nil {
+		s.logger.WithError(err).Warn("Failed to query for installation status")
+		return nil
+	}
+	s.currentlyUpdatingCounter = status.InstallationsUpdating
+
 	for _, installation := range installations {
+		if s.currentlyUpdatingCounter >= s.currentlyUpdatingLimit {
+			s.logger.Infof("Max installation updating counter (%d) reached for pending deletions", s.currentlyUpdatingLimit)
+			return nil
+		}
 		s.Supervise(installation)
 	}
 
@@ -174,6 +196,7 @@ func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(inst
 	}
 
 	logger.Info("Installation is ready for deletion")
+	s.currentlyUpdatingCounter++
 
 	return model.InstallationStateDeletionRequested
 }

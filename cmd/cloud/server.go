@@ -110,6 +110,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
 	serverCmd.PersistentFlags().Bool("disable-dns-updates", false, "If set to true DNS updates will be disabled when updating Installations.")
 	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", 3*time.Minute, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
+	serverCmd.PersistentFlags().Int64("installation-deletion-max-updating", 25, "A soft limit on the number of installations that the provisioner will delete at one time from the group of deletion-pending installations.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
@@ -270,6 +271,7 @@ var serverCmd = &cobra.Command{
 		backupRestoreToolImage, _ := command.Flags().GetString("backup-restore-tool-image")
 		backupJobTTL, _ := command.Flags().GetInt32("backup-job-ttl-seconds")
 		installationDeletionPendingTime, _ := command.Flags().GetDuration("installation-deletion-pending-time")
+		installationDeletionMaxUpdating, _ := command.Flags().GetInt64("installation-deletion-max-updating")
 
 		deployMySQLOperator, _ := command.Flags().GetBool("deploy-mysql-operator")
 		deployMinioOperator, _ := command.Flags().GetBool("deploy-minio-operator")
@@ -310,6 +312,7 @@ var serverCmd = &cobra.Command{
 			"state-store":                                   s3StateStore,
 			"working-directory":                             wd,
 			"installation-deletion-pending-time":            installationDeletionPendingTime,
+			"installation-deletion-max-updating":            installationDeletionMaxUpdating,
 			"balanced-installation-scheduling":              balancedInstallationScheduling,
 			"cluster-resource-threshold":                    clusterResourceThreshold,
 			"cluster-resource-threshold-cpu-override":       thresholdCPUOverride,
@@ -472,7 +475,7 @@ var serverCmd = &cobra.Command{
 		}
 		if installationDeletionSupervisor {
 			var slowMultiDoer supervisor.MultiDoer
-			slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, installationDeletionPendingTime, sqlStore, eventsProducer, logger))
+			slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, installationDeletionPendingTime, installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
 			slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(slowPoll)*time.Second)
 			defer slowSupervisor.Close()
 		}
