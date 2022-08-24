@@ -72,6 +72,11 @@ func (s *InstallationDeletionSupervisor) Do() error {
 		return nil
 	}
 
+	// Limit the number of installations that can be deleted at one time.
+	// NOTE: this is a bit of a soft limit. Multiple provisioners running at the
+	// same time could lead to a situation where the limit is exceeded. This
+	// was done initially to balance complexity while still having control over
+	// deletion spikes. A hard limit could be added in the future if required.
 	status, err := s.store.GetInstallationsStatus()
 	if err != nil {
 		s.logger.WithError(err).Warn("Failed to query for installation status")

@@ -110,7 +110,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
 	serverCmd.PersistentFlags().Bool("disable-dns-updates", false, "If set to true DNS updates will be disabled when updating Installations.")
 	serverCmd.PersistentFlags().Duration("installation-deletion-pending-time", 3*time.Minute, "The amount of time that installations will stay in the deletion queue before they are actually deleted. Set to 0 for immediate deletion.")
-	serverCmd.PersistentFlags().Int64("installation-deletion-max-updating", 25, "The maximum number of installations that can be updating when finalizing deletion of deletion-pending installations (similar to group max rolling).")
+	serverCmd.PersistentFlags().Int64("installation-deletion-max-updating", 25, "A soft limit on the number of installations that the provisioner will delete at one time from the group of deletion-pending installations.")
 
 	// DB clusters utilization configuration
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
