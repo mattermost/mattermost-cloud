@@ -32,6 +32,7 @@ func TestGetClusterInstallations(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -264,6 +265,7 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 		Store:       sqlStore,
 		Supervisor:  &mockSupervisor{},
 		Provisioner: &mockProvisioner{},
+		Metrics:     &mockMetrics{},
 		Logger:      logger,
 	})
 	ts := httptest.NewServer(router)
@@ -313,6 +315,7 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 		Store:       sqlStore,
 		Supervisor:  &mockSupervisor{},
 		Provisioner: &mockProvisioner{},
+		Metrics:     &mockMetrics{},
 		Logger:      logger,
 	})
 	ts := httptest.NewServer(router)
@@ -392,6 +395,7 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		Store:       sqlStore,
 		Supervisor:  &mockSupervisor{},
 		Provisioner: mProvisioner,
+		Metrics:     &mockMetrics{},
 		Logger:      logger,
 	})
 	ts := httptest.NewServer(router)
@@ -502,6 +506,7 @@ func TestRunClusterInstallationMattermostCLI(t *testing.T) {
 		Store:       sqlStore,
 		Supervisor:  &mockSupervisor{},
 		Provisioner: mProvisioner,
+		Metrics:     &mockMetrics{},
 		Logger:      logger,
 	})
 	ts := httptest.NewServer(router)
@@ -585,6 +590,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	}
 	api.Register(router, context)
@@ -732,6 +738,7 @@ func TestMigrateDNS(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -891,6 +898,7 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -1039,6 +1047,7 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		Store:         sqlStore,
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:       &mockMetrics{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -1186,6 +1195,7 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -1251,6 +1261,7 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)

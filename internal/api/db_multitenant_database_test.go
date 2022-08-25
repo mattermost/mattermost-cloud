@@ -30,6 +30,7 @@ func TestGetMultitenantDatabases(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -177,6 +178,7 @@ func TestGetMultitenantDatabase(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 
@@ -212,6 +214,7 @@ func TestUpdateMultitenantDatabase(t *testing.T) {
 	api.Register(router, &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 	})
 	ts := httptest.NewServer(router)
@@ -289,6 +292,7 @@ func TestDeleteMultitenantDatabase(t *testing.T) {
 	context := &api.Context{
 		Store:      sqlStore,
 		Supervisor: &mockSupervisor{},
+		Metrics:    &mockMetrics{},
 		Logger:     logger,
 		AwsClient:  mockAWSClient{clusterExists: false, expectedRDSID: "rds-id"},
 	}
@@ -336,6 +340,8 @@ func TestDeleteMultitenantDatabase(t *testing.T) {
 	err = client.DeleteMultitenantDatabase(db2.ID, false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "400")
+
+	time.Sleep(1 * time.Millisecond)
 
 	// Succeed with force even if cluster exists.
 	err = client.DeleteMultitenantDatabase(db2.ID, true)
