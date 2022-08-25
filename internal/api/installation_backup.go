@@ -18,18 +18,18 @@ import (
 
 // initInstallationBackup registers installation backups endpoints on the given router.
 func initInstallationBackup(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	backupsRouter := apiRouter.PathPrefix("/backups").Subrouter()
 
-	backupsRouter.Handle("", addContext(handleRequestInstallationBackup, "handleRequestInstallationBackup")).Methods("POST")
-	backupsRouter.Handle("", addContext(handleGetInstallationBackups, "handleGetInstallationBackups")).Methods("GET")
+	backupsRouter.Handle("", addContext(handleRequestInstallationBackup)).Methods("POST")
+	backupsRouter.Handle("", addContext(handleGetInstallationBackups)).Methods("GET")
 
 	backupRouter := apiRouter.PathPrefix("/backup/{backup:[A-Za-z0-9]{26}}").Subrouter()
-	backupRouter.Handle("", addContext(handleGetInstallationBackup, "handleGetInstallationBackup")).Methods("GET")
-	backupRouter.Handle("", addContext(handleDeleteInstallationBackup, "handleDeleteInstallationBackup")).Methods("DELETE")
+	backupRouter.Handle("", addContext(handleGetInstallationBackup)).Methods("GET")
+	backupRouter.Handle("", addContext(handleDeleteInstallationBackup)).Methods("DELETE")
 }
 
 // handleRequestInstallationBackup responds to POST /api/installations/backups,

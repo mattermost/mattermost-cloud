@@ -12,31 +12,31 @@ import (
 
 // initSecurity registers security endpoints on the given router.
 func initSecurity(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	securityRouter := apiRouter.PathPrefix("/security").Subrouter()
 
 	securityClusterRouter := securityRouter.PathPrefix("/cluster/{cluster:[A-Za-z0-9]{26}}").Subrouter()
-	securityClusterRouter.Handle("/api/lock", addContext(handleClusterLockAPI, "handleClusterLockAPI")).Methods("POST")
-	securityClusterRouter.Handle("/api/unlock", addContext(handleClusterUnlockAPI, "handleClusterUnlockAPI")).Methods("POST")
+	securityClusterRouter.Handle("/api/lock", addContext(handleClusterLockAPI)).Methods("POST")
+	securityClusterRouter.Handle("/api/unlock", addContext(handleClusterUnlockAPI)).Methods("POST")
 
 	securityInstallationRouter := securityRouter.PathPrefix("/installation/{installation:[A-Za-z0-9]{26}}").Subrouter()
-	securityInstallationRouter.Handle("/api/lock", addContext(handleInstallationLockAPI, "handleInstallationLockAPI")).Methods("POST")
-	securityInstallationRouter.Handle("/api/unlock", addContext(handleInstallationUnlockAPI, "handleInstallationUnlockAPI")).Methods("POST")
+	securityInstallationRouter.Handle("/api/lock", addContext(handleInstallationLockAPI)).Methods("POST")
+	securityInstallationRouter.Handle("/api/unlock", addContext(handleInstallationUnlockAPI)).Methods("POST")
 
 	securityClusterInstallationRouter := securityRouter.PathPrefix("/cluster_installation/{cluster_installation:[A-Za-z0-9]{26}}").Subrouter()
-	securityClusterInstallationRouter.Handle("/api/lock", addContext(handleClusterInstallationLockAPI, "handleClusterInstallationLockAPI")).Methods("POST")
-	securityClusterInstallationRouter.Handle("/api/unlock", addContext(handleClusterInstallationUnlockAPI, "handleClusterInstallationUnlockAPI")).Methods("POST")
+	securityClusterInstallationRouter.Handle("/api/lock", addContext(handleClusterInstallationLockAPI)).Methods("POST")
+	securityClusterInstallationRouter.Handle("/api/unlock", addContext(handleClusterInstallationUnlockAPI)).Methods("POST")
 
 	securityGroupRouter := securityRouter.PathPrefix("/group/{group:[A-Za-z0-9]{26}}").Subrouter()
-	securityGroupRouter.Handle("/api/lock", addContext(handleGroupLockAPI, "handleGroupLockAPI")).Methods("POST")
-	securityGroupRouter.Handle("/api/unlock", addContext(handleGroupUnlockAPI, "handleGroupUnlockAPI")).Methods("POST")
+	securityGroupRouter.Handle("/api/lock", addContext(handleGroupLockAPI)).Methods("POST")
+	securityGroupRouter.Handle("/api/unlock", addContext(handleGroupUnlockAPI)).Methods("POST")
 
 	securityBackupRouter := securityRouter.PathPrefix("/installation/backup/{backup:[A-Za-z0-9]{26}}").Subrouter()
-	securityBackupRouter.Handle("/api/lock", addContext(handleBackupLockAPI, "handleBackupLockAPI")).Methods("POST")
-	securityBackupRouter.Handle("/api/unlock", addContext(handleBackupUnlockAPI, "handleBackupUnlockAPI")).Methods("POST")
+	securityBackupRouter.Handle("/api/lock", addContext(handleBackupLockAPI)).Methods("POST")
+	securityBackupRouter.Handle("/api/unlock", addContext(handleBackupUnlockAPI)).Methods("POST")
 }
 
 // handleClusterLockAPI responds to POST /api/security/cluster/{cluster}/api/lock,

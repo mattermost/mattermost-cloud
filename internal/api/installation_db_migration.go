@@ -18,19 +18,19 @@ import (
 
 // initInstallationDBMigration registers installation migration operation endpoints on the given router.
 func initInstallationDBMigration(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	migrationsRouter := apiRouter.PathPrefix("/operations/database/migrations").Subrouter()
 
-	migrationsRouter.Handle("", addContext(handleTriggerInstallationDatabaseMigration, "handleTriggerInstallationDatabaseMigration")).Methods("POST")
-	migrationsRouter.Handle("", addContext(handleGetInstallationDBMigrationOperations, "handleGetInstallationDBMigrationOperations")).Methods("GET")
+	migrationsRouter.Handle("", addContext(handleTriggerInstallationDatabaseMigration)).Methods("POST")
+	migrationsRouter.Handle("", addContext(handleGetInstallationDBMigrationOperations)).Methods("GET")
 
 	migrationRouter := apiRouter.PathPrefix("/operations/database/migration/{migration:[A-Za-z0-9]{26}}").Subrouter()
-	migrationRouter.Handle("", addContext(handleGetInstallationDBMigrationOperation, "handleGetInstallationDBMigrationOperation")).Methods("GET")
-	migrationRouter.Handle("/commit", addContext(handleCommitInstallationDatabaseMigration, "handleCommitInstallationDatabaseMigration")).Methods("POST")
-	migrationRouter.Handle("/rollback", addContext(handleRollbackInstallationDatabaseMigration, "handleRollbackInstallationDatabaseMigration")).Methods("POST")
+	migrationRouter.Handle("", addContext(handleGetInstallationDBMigrationOperation)).Methods("GET")
+	migrationRouter.Handle("/commit", addContext(handleCommitInstallationDatabaseMigration)).Methods("POST")
+	migrationRouter.Handle("/rollback", addContext(handleRollbackInstallationDatabaseMigration)).Methods("POST")
 }
 
 // handleTriggerInstallationDatabaseMigration responds to POST /api/installations/operations/database/migrations,

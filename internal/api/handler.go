@@ -6,6 +6,9 @@ package api
 
 import (
 	"net/http"
+	"reflect"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -39,10 +42,13 @@ func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context.Metrics.IncrementAPIRequest()
 }
 
-func newContextHandler(context *Context, handler contextHandlerFunc, handlerName string) *contextHandler {
+func newContextHandler(context *Context, handler contextHandlerFunc) *contextHandler {
+	// Obtain the handler function name to be used for API metrics.
+	splitFuncName := strings.Split((runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()), ".")
+
 	return &contextHandler{
 		context:     context,
 		handler:     handler,
-		handlerName: handlerName,
+		handlerName: splitFuncName[len(splitFuncName)-1],
 	}
 }

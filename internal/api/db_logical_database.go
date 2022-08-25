@@ -13,15 +13,15 @@ import (
 
 // initLogicalDatabases registers logical database endpoints on the given router.
 func initLogicalDatabases(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	LogicalDatabasesRouter := apiRouter.PathPrefix("/logical_databases").Subrouter()
-	LogicalDatabasesRouter.Handle("", addContext(handleGetLogicalDatabases, "handleGetLogicalDatabases")).Methods("GET")
+	LogicalDatabasesRouter.Handle("", addContext(handleGetLogicalDatabases)).Methods("GET")
 
 	LogicalDatabaseRouter := apiRouter.PathPrefix("/logical_database/{logical_database:[A-Za-z0-9]{26}}").Subrouter()
-	LogicalDatabaseRouter.Handle("", addContext(handleGetLogicalDatabase, "handleGetLogicalDatabase")).Methods("GET")
+	LogicalDatabaseRouter.Handle("", addContext(handleGetLogicalDatabase)).Methods("GET")
 }
 
 // handleGetLogicalDatabases responds to GET /api/databases/logical_databases,

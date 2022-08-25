@@ -14,17 +14,17 @@ import (
 
 // initInstallationRestoration registers installation restoration operation endpoints on the given router.
 func initInstallationRestoration(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	restorationsRouter := apiRouter.PathPrefix("/operations/database/restorations").Subrouter()
 
-	restorationsRouter.Handle("", addContext(handleTriggerInstallationDBRestoration, "handleTriggerInstallationDBRestoration")).Methods("POST")
-	restorationsRouter.Handle("", addContext(handleGetInstallationDBRestorationOperations, "handleGetInstallationDBRestorationOperations")).Methods("GET")
+	restorationsRouter.Handle("", addContext(handleTriggerInstallationDBRestoration)).Methods("POST")
+	restorationsRouter.Handle("", addContext(handleGetInstallationDBRestorationOperations)).Methods("GET")
 
 	restorationRouter := apiRouter.PathPrefix("/operations/database/restoration/{restoration:[A-Za-z0-9]{26}}").Subrouter()
-	restorationRouter.Handle("", addContext(handleGetInstallationDBRestorationOperation, "handleGetInstallationDBRestorationOperation")).Methods("GET")
+	restorationRouter.Handle("", addContext(handleGetInstallationDBRestorationOperation)).Methods("GET")
 }
 
 // handleTriggerInstallationDBRestoration responds to POST /api/installations/operations/database/restorations,

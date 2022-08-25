@@ -13,18 +13,18 @@ import (
 
 // initSubscription registers subscription endpoints on the given router.
 func initSubscription(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	subscriptionsRouter := apiRouter.PathPrefix("/subscriptions").Subrouter()
 
-	subscriptionsRouter.Handle("", addContext(handleListSubscriptions, "handleListSubscriptions")).Methods("GET")
-	subscriptionsRouter.Handle("", addContext(handleRegisterSubscription, "handleRegisterSubscription")).Methods("POST")
+	subscriptionsRouter.Handle("", addContext(handleListSubscriptions)).Methods("GET")
+	subscriptionsRouter.Handle("", addContext(handleRegisterSubscription)).Methods("POST")
 
 	subscriptionRouter := apiRouter.PathPrefix("/subscription/{subscription:[A-Za-z0-9]{26}}").Subrouter()
-	subscriptionRouter.Handle("", addContext(handleGetSubscription, "handleGetSubscription")).Methods("GET")
-	subscriptionRouter.Handle("", addContext(handleDeleteSubscription, "handleDeleteSubscription")).Methods("DELETE")
+	subscriptionRouter.Handle("", addContext(handleGetSubscription)).Methods("GET")
+	subscriptionRouter.Handle("", addContext(handleDeleteSubscription)).Methods("DELETE")
 }
 
 // handleRegisterSubscription responds to POST /api/subscriptions, registering new subscription.

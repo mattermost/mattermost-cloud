@@ -13,23 +13,23 @@ import (
 
 // initGroup registers group endpoints on the given router.
 func initGroup(apiRouter *mux.Router, context *Context) {
-	addContext := func(handler contextHandlerFunc, name string) *contextHandler {
-		return newContextHandler(context, handler, name)
+	addContext := func(handler contextHandlerFunc) *contextHandler {
+		return newContextHandler(context, handler)
 	}
 
 	groupsRouter := apiRouter.PathPrefix("/groups").Subrouter()
-	groupsRouter.Handle("", addContext(handleGetGroups, "handleGetGroups")).Methods("GET")
-	groupsRouter.Handle("", addContext(handleCreateGroup, "handleCreateGroup")).Methods("POST")
-	groupsRouter.Handle("/status", addContext(handleGetGroupsStatus, "handleGetGroupsStatus")).Methods("GET")
+	groupsRouter.Handle("", addContext(handleGetGroups)).Methods("GET")
+	groupsRouter.Handle("", addContext(handleCreateGroup)).Methods("POST")
+	groupsRouter.Handle("/status", addContext(handleGetGroupsStatus)).Methods("GET")
 
 	groupRouter := apiRouter.PathPrefix("/group/{group:[A-Za-z0-9]{26}}").Subrouter()
-	groupRouter.Handle("", addContext(handleGetGroup, "handleGetGroup")).Methods("GET")
-	groupRouter.Handle("", addContext(handleUpdateGroup, "handleUpdateGroup")).Methods("PUT")
-	groupRouter.Handle("", addContext(handleDeleteGroup, "handleDeleteGroup")).Methods("DELETE")
-	groupRouter.Handle("/status", addContext(handleGetGroupStatus, "handleGetGroupStatus")).Methods("GET")
+	groupRouter.Handle("", addContext(handleGetGroup)).Methods("GET")
+	groupRouter.Handle("", addContext(handleUpdateGroup)).Methods("PUT")
+	groupRouter.Handle("", addContext(handleDeleteGroup)).Methods("DELETE")
+	groupRouter.Handle("/status", addContext(handleGetGroupStatus)).Methods("GET")
 
-	groupRouter.Handle("/annotations", addContext(handleAddGroupAnnotations, "handleAddGroupAnnotations")).Methods("POST")
-	groupRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteGroupAnnotation, "handleDeleteGroupAnnotation")).Methods("DELETE")
+	groupRouter.Handle("/annotations", addContext(handleAddGroupAnnotations)).Methods("POST")
+	groupRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteGroupAnnotation)).Methods("DELETE")
 }
 
 // handleGetGroup responds to GET /api/group/{group}, returning the group in question.
