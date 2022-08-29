@@ -33,7 +33,7 @@ function clean {
 }
 trap clean EXIT
 
-#rm "${GOBIN}/${2}" || true
+rm "${GOBIN}/${2}"* || true
 
 cd "${tmp_dir}"
 

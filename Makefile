@@ -6,7 +6,7 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.18
+DOCKER_BUILD_IMAGE = golang:1.17
 DOCKER_BASE_IMAGE = alpine:3.16
 
 ## Tool Versions
