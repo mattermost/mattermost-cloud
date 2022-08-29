@@ -50,12 +50,14 @@ var dashboardCmd = &cobra.Command{
 			var unstableList []string
 
 			// Clusters
+			start := time.Now()
 			clusters, err := client.GetClusters(&model.GetClustersRequest{
 				Paging: model.AllPagesNotDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query clusters")
 			}
+			clusterQueryTime := time.Since(start)
 
 			clusterCount := len(clusters)
 			var clusterStableCount int
@@ -75,12 +77,14 @@ var dashboardCmd = &cobra.Command{
 			})
 
 			// Installations
+			start = time.Now()
 			installations, err := client.GetInstallations(&model.GetInstallationsRequest{
 				Paging: model.AllPagesNotDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query installations")
 			}
+			installationQueryTime := time.Since(start)
 
 			installationCount := len(installations)
 			var installationStableCount, installationsHibernatingCount, installationsPendingDeletionCount int
@@ -104,14 +108,16 @@ var dashboardCmd = &cobra.Command{
 				toStr(installationCount - (installationStableCount + installationsHibernatingCount)),
 			})
 
+			// Cluster Installations
+			start = time.Now()
 			clusterInstallations, err := client.GetClusterInstallations(&model.GetClusterInstallationsRequest{
 				Paging: model.AllPagesNotDeleted(),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to query clusters")
 			}
+			ciQueryTime := time.Since(start)
 
-			// Cluster Installations
 			clusterInstallationCount := len(clusterInstallations)
 			var clusterInstallationStableCount int
 			for _, clusterInstallation := range clusterInstallations {
@@ -130,7 +136,11 @@ var dashboardCmd = &cobra.Command{
 			})
 
 			table.Render()
-			renderedDashboard := "\n### CLOUD DASHBOARD\n\n"
+			renderedDashboard := "\n### CLOUD DASHBOARD\n"
+			renderedDashboard += fmt.Sprintf("[ Query Time Stats: CLSR=%s, INST=%s, CLIN=%s ]\n\n",
+				clusterQueryTime.Round(time.Millisecond).String(),
+				installationQueryTime.Round(time.Millisecond).String(),
+				ciQueryTime.Round(time.Millisecond).String())
 			renderedDashboard += tableString.String()
 			for _, entry := range unstableList {
 				renderedDashboard += fmt.Sprintf("%s\n", entry)
