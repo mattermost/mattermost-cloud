@@ -7,36 +7,28 @@ package provisioner
 import (
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type metricsServer struct {
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*metricsServer, error) {
+func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate MetricsServer handle with nil logger")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to MetricsServer if the provisioner provided is nil")
-	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to MetricsServer if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &metricsServer{
-		provisioner:    provisioner,
-		kops:           kops,
+		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.MetricsServerCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.MetricsServer,
@@ -87,8 +79,7 @@ func (m *metricsServer) NewHelmDeployment(logger log.FieldLogger) *helmDeploymen
 		chartDeploymentName: "metrics-server",
 		chartName:           "metrics-server/metrics-server",
 		namespace:           "kube-system",
-		kopsProvisioner:     m.provisioner,
-		kops:                m.kops,
+		kubeconfigPath:      m.kubeconfigPath,
 		logger:              logger,
 		desiredVersion:      m.desiredVersion,
 	}

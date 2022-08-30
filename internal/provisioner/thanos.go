@@ -12,23 +12,22 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type thanos struct {
-	awsClient      aws.AWS
-	cluster        *model.Cluster
-	kops           *kops.Cmd
-	logger         log.FieldLogger
-	provisioner    *KopsProvisioner
-	actualVersion  *model.HelmUtilityVersion
-	desiredVersion *model.HelmUtilityVersion
+	awsClient          aws.AWS
+	kubeconfigPath     string
+	allowCIDRRangeList []string
+	cluster            *model.Cluster
+	logger             log.FieldLogger
+	actualVersion      *model.HelmUtilityVersion
+	desiredVersion     *model.HelmUtilityVersion
 }
 
-func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*thanos, error) {
+func newThanosHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*thanos, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Thanos handle with nil logger")
 	}
@@ -36,29 +35,23 @@ func newThanosHandle(cluster *model.Cluster, provisioner *KopsProvisioner, awsCl
 	if cluster == nil {
 		return nil, errors.New("cannot create a connection to Thanos if the cluster provided is nil")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Thanos if the provisioner provided is nil")
-	}
-
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to Thanos if the awsClient provided is nil")
 	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Thanos if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	version := cluster.DesiredUtilityVersion(model.ThanosCanonicalName)
 
 	return &thanos{
-		awsClient:      awsClient,
-		cluster:        cluster,
-		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.ThanosCanonicalName),
-		provisioner:    provisioner,
-		desiredVersion: version,
-		actualVersion:  cluster.UtilityMetadata.ActualVersions.Thanos,
+		awsClient:          awsClient,
+		kubeconfigPath:     kubeconfigPath,
+		allowCIDRRangeList: allowCIDRRangeList,
+		cluster:            cluster,
+		logger:             logger.WithField("cluster-utility", model.ThanosCanonicalName),
+		desiredVersion:     version,
+		actualVersion:      cluster.UtilityMetadata.ActualVersions.Thanos,
 	}, nil
 }
 
@@ -105,7 +98,7 @@ func (t *thanos) CreateOrUpgrade() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 		defer cancel()
 
-		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger.WithField("thanos-action", "create"), t.kops.GetKubeConfigPath())
+		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger.WithField("thanos-action", "create"), t.kubeconfigPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Thanos")
 		}
@@ -124,7 +117,7 @@ func (t *thanos) CreateOrUpgrade() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 		defer cancel()
 
-		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "prometheus", logger.WithField("thanos-action", "create"), t.kops.GetKubeConfigPath())
+		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "prometheus", logger.WithField("thanos-action", "create"), t.kubeconfigPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get the load balancer endpoint for Thanos")
 		}
@@ -170,13 +163,12 @@ func (t *thanos) Migrate() error {
 }
 
 func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
-	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.provisioner.params.AllowCIDRRangeList, "\\,"))
+	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
 		chartDeploymentName: "thanos",
 		chartName:           "bitnami/thanos",
-		kops:                t.kops,
-		kopsProvisioner:     t.provisioner,
+		kubeconfigPath:      t.kubeconfigPath,
 		logger:              t.logger,
 		namespace:           "prometheus",
 		setArgument:         helmValueArguments,

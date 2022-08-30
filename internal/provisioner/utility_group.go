@@ -6,7 +6,6 @@ package provisioner
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -52,10 +51,9 @@ type Utility interface {
 // thought  of as  a handle  to the  real group  of utilities  running
 // inside of the cluster
 type utilityGroup struct {
-	utilities   []Utility
-	kops        *kops.Cmd
-	provisioner *KopsProvisioner
-	cluster     *model.Cluster
+	utilities []Utility
+	logger    log.FieldLogger
+	cluster   *model.Cluster
 }
 
 // List of repos to add during helm setup
@@ -73,29 +71,35 @@ var helmRepos = map[string]string{
 	"mattermost":           "https://helm.mattermost.com",
 }
 
-func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster *model.Cluster, awsClient aws.AWS, parentLogger log.FieldLogger) (*utilityGroup, error) {
+func newUtilityGroupHandle(
+	params ProvisioningParams,
+	kubeconfigPath string,
+	cluster *model.Cluster,
+	awsClient aws.AWS,
+	parentLogger log.FieldLogger,
+) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
 	nginx, err := newNginxHandle(
 		cluster.DesiredUtilityVersion(model.NginxCanonicalName),
-		cluster, provisioner, awsClient, kops, logger)
+		cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
 
 	nginxInternal, err := newNginxInternalHandle(
 		cluster.DesiredUtilityVersion(model.NginxInternalCanonicalName),
-		cluster, provisioner, awsClient, kops, logger)
+		cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
 	}
 
-	prometheusOperator, err := newPrometheusOperatorHandle(cluster, provisioner, awsClient, kops, logger)
+	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
-	thanos, err := newThanosHandle(cluster, provisioner, awsClient, kops, logger)
+	thanos, err := newThanosHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
@@ -103,70 +107,70 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	fluentbit, err := newFluentbitHandle(
 		cluster,
 		cluster.DesiredUtilityVersion(model.FluentbitCanonicalName),
-		provisioner, awsClient, kops, logger)
+		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
 	teleport, err := newTeleportHandle(
 		cluster, cluster.DesiredUtilityVersion(model.TeleportCanonicalName),
-		provisioner, awsClient, kops, logger)
+		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
 
 	pgbouncer, err := newPgbouncerHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName),
-		provisioner, awsClient, kops, logger)
+		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
 	promtail, err := newPromtailHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PromtailCanonicalName),
-		provisioner, awsClient, kops, logger)
+		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
 	rtcd, err := newRtcdHandle(
 		cluster, cluster.DesiredUtilityVersion(model.RtcdCanonicalName),
-		provisioner, awsClient, kops, logger)
+		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for RTCD")
 	}
 
 	kubecost, err := newKubecostHandle(cluster,
 		cluster.DesiredUtilityVersion(model.KubecostCanonicalName),
-		provisioner, awsClient, kops, logger)
+		kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Kubecost")
 	}
 
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
-		cluster, provisioner, kops, logger)
+		cluster, kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
 
 	metricsServer, err := newMetricsServerHandle(
 		cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName),
-		cluster, provisioner, kops, logger)
+		cluster, kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
 	}
 
 	velero, err := newVeleroHandle(
 		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
-		provisioner, kops, logger)
+		kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
 	cloudprober, err := newCloudproberHandle(
 		cluster.DesiredUtilityVersion(model.CloudproberCanonicalName), cluster,
-		provisioner, kops, logger)
+		kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
 	}
@@ -174,10 +178,9 @@ func newUtilityGroupHandle(kops *kops.Cmd, provisioner *KopsProvisioner, cluster
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities:   []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
-		kops:        kops,
-		provisioner: provisioner,
-		cluster:     cluster,
+		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
+		logger:    logger,
+		cluster:   cluster,
 	}, nil
 
 }
@@ -208,7 +211,7 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 
 // ProvisionUtilityGroup reapplies the chart for the UtilityGroup. This will cause services to upgrade to a new version, if one is available.
 func (group utilityGroup) ProvisionUtilityGroup() error {
-	logger := group.provisioner.logger.WithField("utility-group", "UpgradeManifests")
+	logger := group.logger.WithField("utility-group", "UpgradeManifests")
 
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {

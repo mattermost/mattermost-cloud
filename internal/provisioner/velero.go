@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -16,14 +15,13 @@ import (
 
 type velero struct {
 	cluster        *model.Cluster
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
-	provisioner    *KopsProvisioner
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, kops *kops.Cmd, logger log.FieldLogger) (*velero, error) {
+func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*velero, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Velero handle with nil logger")
 	}
@@ -31,18 +29,14 @@ func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cl
 	if cluster == nil {
 		return nil, errors.New("cannot create a connection to Velero if the cluster provided is nil")
 	}
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
+	}
 
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Velero if the provisioner provided is nil")
-	}
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Velero if the Kops command provided is nil")
-	}
 	return &velero{
 		cluster:        cluster,
-		kops:           kops,
+		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.VeleroCanonicalName),
-		provisioner:    provisioner,
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Velero,
 	}, nil
@@ -94,8 +88,7 @@ func (f *velero) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 		chartDeploymentName: "velero",
 		chartName:           "vmware-tanzu/velero",
 		namespace:           "velero",
-		kopsProvisioner:     f.provisioner,
-		kops:                f.kops,
+		kubeconfigPath:      f.kubeconfigPath,
 		logger:              logger,
 		setArgument:         helmValueArguments,
 		desiredVersion:      f.desiredVersion,

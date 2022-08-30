@@ -15,23 +15,22 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/k8s"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type kubecost struct {
-	awsClient      aws.AWS
-	cluster        *model.Cluster
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
-	logger         log.FieldLogger
-	desiredVersion *model.HelmUtilityVersion
-	actualVersion  *model.HelmUtilityVersion
+	awsClient          aws.AWS
+	cluster            *model.Cluster
+	kubeconfigPath     string
+	allowCIDRRangeList []string
+	logger             log.FieldLogger
+	desiredVersion     *model.HelmUtilityVersion
+	actualVersion      *model.HelmUtilityVersion
 }
 
-func newKubecostHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*kubecost, error) {
+func newKubecostHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*kubecost, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Kubecost handle with nil logger")
 	}
@@ -39,27 +38,21 @@ func newKubecostHandle(cluster *model.Cluster, desiredVersion *model.HelmUtility
 	if cluster == nil {
 		return nil, errors.New("cannot create a connection to Kubecost if the cluster provided is nil")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Kubecost if the provisioner provided is nil")
-	}
-
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to Kubecost if the awsClient provided is nil")
 	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Kubecost if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &kubecost{
-		awsClient:      awsClient,
-		cluster:        cluster,
-		provisioner:    provisioner,
-		kops:           kops,
-		logger:         logger.WithField("cluster-utility", model.KubecostCanonicalName),
-		desiredVersion: desiredVersion,
-		actualVersion:  cluster.UtilityMetadata.ActualVersions.Kubecost,
+		awsClient:          awsClient,
+		cluster:            cluster,
+		kubeconfigPath:     kubeconfigPath,
+		allowCIDRRangeList: allowCIDRRangeList,
+		logger:             logger.WithField("cluster-utility", model.KubecostCanonicalName),
+		desiredVersion:     desiredVersion,
+		actualVersion:      cluster.UtilityMetadata.ActualVersions.Kubecost,
 	}, nil
 
 }
@@ -84,7 +77,7 @@ func (k *kubecost) ValuesPath() string {
 func (k *kubecost) CreateOrUpgrade() error {
 	logger := k.logger.WithField("kubecost-action", "create")
 
-	k8sClient, err := k8s.NewFromFile(k.kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(k.kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
@@ -121,7 +114,7 @@ func (k *kubecost) CreateOrUpgrade() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
 	defer cancel()
 
-	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger, k.kops.GetKubeConfigPath())
+	endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger, k.kubeconfigPath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Prometheus")
 	}
@@ -178,14 +171,13 @@ func (k *kubecost) NewHelmDeployment(kubecostDNS string) *helmDeployment {
 	if len(os.Getenv(model.KubecostToken)) > 0 {
 		kubecostToken = os.Getenv(model.KubecostToken)
 	}
-	helmValueArguments := fmt.Sprintf("kubecostToken=%s,ingress.hosts={%s},ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", kubecostToken, kubecostDNS, strings.Join(k.provisioner.params.AllowCIDRRangeList, "\\,"))
+	helmValueArguments := fmt.Sprintf("kubecostToken=%s,ingress.hosts={%s},ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", kubecostToken, kubecostDNS, strings.Join(k.allowCIDRRangeList, "\\,"))
 
 	return &helmDeployment{
 		chartDeploymentName: "cost-analyzer",
 		chartName:           "kubecost/cost-analyzer",
 		namespace:           "kubecost",
-		kopsProvisioner:     k.provisioner,
-		kops:                k.kops,
+		kubeconfigPath:      k.kubeconfigPath,
 		setArgument:         helmValueArguments,
 		logger:              k.logger,
 		desiredVersion:      k.desiredVersion,

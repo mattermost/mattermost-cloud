@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -17,39 +16,30 @@ import (
 
 type nginx struct {
 	awsClient      aws.AWS
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	logger         log.FieldLogger
 	cluster        *model.Cluster
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*nginx, error) {
+func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginx, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NGINX handle with nil logger")
 	}
-
 	if cluster == nil {
 		return nil, errors.New("cannot create a connection to Nginx if the cluster provided is nil")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Nginx if the provisioner provided is nil")
-	}
-
 	if awsClient == nil {
 		return nil, errors.New("cannot create a connection to Nginx if the awsClient provided is nil")
 	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Nginx if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &nginx{
 		awsClient:      awsClient,
-		provisioner:    provisioner,
-		kops:           kops,
+		kubeconfigPath: kubeconfigPath,
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
 		desiredVersion: version,
@@ -131,10 +121,8 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *awsACMCert.CertificateArn, clusterResources.VpcCIDR),
 		desiredVersion:      n.desiredVersion,
 
-		cluster:         n.cluster,
-		kopsProvisioner: n.provisioner,
-		kops:            n.kops,
-		logger:          n.logger,
+		kubeconfigPath: n.kubeconfigPath,
+		logger:         n.logger,
 	}, nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -18,33 +17,26 @@ import (
 
 type teleport struct {
 	awsClient      aws.AWS
+	kubeconfigPath string
 	environment    string
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
 	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*teleport, error) {
+func newTeleportHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*teleport, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Teleport handle with nil logger")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Teleport if the provisioner provided is nil")
-	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Teleport if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &teleport{
 		awsClient:      awsClient,
+		kubeconfigPath: kubeconfigPath,
 		environment:    awsClient.GetCloudEnvironmentName(),
-		provisioner:    provisioner,
-		kops:           kops,
 		cluster:        cluster,
 		logger:         logger.WithField("cluster-utility", model.TeleportCanonicalName),
 		desiredVersion: desiredVersion,
@@ -121,8 +113,7 @@ func (n *teleport) NewHelmDeployment() *helmDeployment {
 		chartName:           "chartmuseum/teleport-kube-agent",
 		namespace:           "teleport",
 		setArgument:         fmt.Sprintf("kubeClusterName=%s", teleportClusterName),
-		kopsProvisioner:     n.provisioner,
-		kops:                n.kops,
+		kubeconfigPath:      n.kubeconfigPath,
 		logger:              n.logger,
 		desiredVersion:      n.desiredVersion,
 	}

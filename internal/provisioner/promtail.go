@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -17,32 +16,25 @@ import (
 
 type promtail struct {
 	environment    string
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*promtail, error) {
+func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*promtail, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Promtail handle with nil logger")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Promtail if the provisioner provided is nil")
-	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Promtail if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &promtail{
 		environment:    awsClient.GetCloudEnvironmentName(),
-		provisioner:    provisioner,
-		kops:           kops,
 		cluster:        cluster,
+		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.PromtailCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Promtail,
@@ -106,9 +98,8 @@ func (p *promtail) NewHelmDeployment() *helmDeployment {
 		chartDeploymentName: "promtail",
 		chartName:           "grafana/promtail",
 		namespace:           "promtail",
-		kopsProvisioner:     p.provisioner,
-		kops:                p.kops,
 		logger:              p.logger,
+		kubeconfigPath:      p.kubeconfigPath,
 		setArgument:         fmt.Sprintf("extraArgs={-client.external-labels=cluster=%s}", p.cluster.ID),
 		desiredVersion:      p.desiredVersion,
 	}

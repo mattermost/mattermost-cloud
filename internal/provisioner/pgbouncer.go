@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -24,33 +23,26 @@ import (
 type pgbouncer struct {
 	awsClient      aws.AWS
 	environment    string
-	provisioner    *KopsProvisioner
-	kops           *kops.Cmd
+	kubeconfigPath string
 	cluster        *model.Cluster
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, provisioner *KopsProvisioner, awsClient aws.AWS, kops *kops.Cmd, logger log.FieldLogger) (*pgbouncer, error) {
+func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*pgbouncer, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Pgbouncer handle with nil logger")
 	}
-
-	if provisioner == nil {
-		return nil, errors.New("cannot create a connection to Pgbouncer if the provisioner provided is nil")
-	}
-
-	if kops == nil {
-		return nil, errors.New("cannot create a connection to Pgbouncer if the Kops command provided is nil")
+	if kubeconfigPath == "" {
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &pgbouncer{
 		awsClient:      awsClient,
 		environment:    awsClient.GetCloudEnvironmentName(),
-		provisioner:    provisioner,
-		kops:           kops,
 		cluster:        cluster,
+		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.PgbouncerCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Pgbouncer,
@@ -119,8 +111,7 @@ func (p *pgbouncer) NewHelmDeployment() *helmDeployment {
 		chartDeploymentName: "pgbouncer",
 		chartName:           "chartmuseum/pgbouncer",
 		namespace:           "pgbouncer",
-		kopsProvisioner:     p.provisioner,
-		kops:                p.kops,
+		kubeconfigPath:      p.kubeconfigPath,
 		logger:              p.logger,
 		desiredVersion:      p.desiredVersion,
 	}
@@ -133,7 +124,7 @@ func (p *pgbouncer) DeployManifests() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
 	defer cancel()
 
-	k8sClient, err := k8s.NewFromFile(p.kops.GetKubeConfigPath(), logger)
+	k8sClient, err := k8s.NewFromFile(p.kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
