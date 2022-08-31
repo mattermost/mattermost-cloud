@@ -544,7 +544,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 
 	prom, _ := k8sClient.GetNamespace("prometheus")
 
-	if prom != nil {
+	if prom != nil && prom.Name != "" {
 		err = prepareSloth(k8sClient, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare Sloth")
