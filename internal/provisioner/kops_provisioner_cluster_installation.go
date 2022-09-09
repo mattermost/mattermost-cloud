@@ -776,7 +776,11 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 	now := time.Now()
 	output, execErr := k8sClient.RemoteCommand("POST", execRequest.URL())
 
-	logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+	if execErr != nil {
+		logger.WithError(execErr).Warnf("Command `%s` on pod %s finished in %.0f seconds, but encountered an error", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+	} else {
+		logger.Debugf("Command `%s` on pod %s finished in %.0f seconds", strings.Join(args, " "), pod.Name, time.Since(now).Seconds())
+	}
 
 	return output, execErr, nil
 }
