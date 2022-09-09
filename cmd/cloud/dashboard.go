@@ -105,7 +105,7 @@ var dashboardCmd = &cobra.Command{
 				"Installation",
 				toStr(installationCount),
 				fmt.Sprintf("%d (H=%d, DP=%d)", installationStableCount+installationsHibernatingCount, installationsHibernatingCount, installationsPendingDeletionCount),
-				toStr(installationCount - (installationStableCount + installationsHibernatingCount)),
+				toStr(installationCount - (installationStableCount + installationsHibernatingCount + installationsPendingDeletionCount)),
 			})
 
 			// Cluster Installations
