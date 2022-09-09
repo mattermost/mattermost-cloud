@@ -752,6 +752,16 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 	}
 
 	pod := podList.Items[0]
+	// TODO: REMOVE
+	// Temporary logging and logic
+	for i, poditem := range podList.Items {
+		logger.Debugf("EXEC POD DEBUGGING: pod %d: %s - %s", i, poditem.Name, poditem.CreationTimestamp.UTC().Format(time.RFC3339))
+		if poditem.CreationTimestamp.UnixNano() > pod.CreationTimestamp.UnixNano() {
+			logger.Debugf("USING NEWER POD FOR EXEC: pod %d: %s", i, poditem.Name)
+			pod = poditem
+		}
+	}
+
 	if len(pod.Spec.Containers) == 0 {
 		return nil, nil, errors.Errorf("failed to find containers in pod %s", pod.Name)
 	}
