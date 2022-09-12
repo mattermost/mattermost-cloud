@@ -736,9 +736,18 @@ var installationDeploymentReportCmd = &cobra.Command{
 			output += fmt.Sprintf(" │ └ Deleted: %s\n", installation.DeletionDateString())
 		}
 		output += fmt.Sprintf(" ├ DNS: %s\n", installation.DNS)
+		output += fmt.Sprintf(" ├ Version: %s:%s\n", installation.Image, installation.Version)
 		output += fmt.Sprintf(" ├ Size: %s\n", installation.Size)
 		output += fmt.Sprintf(" ├ Affinity: %s\n", installation.Affinity)
 		output += fmt.Sprintf(" ├ Environment Variables: %d\n", len(installation.MattermostEnv))
+		if len(installation.PriorityEnv) != 0 {
+			var envKeys []string
+			for key := range installation.PriorityEnv {
+				envKeys = append(envKeys, key)
+			}
+			output += fmt.Sprintf(" ├ Priority Environment Variables: %d\n", len(installation.PriorityEnv))
+			output += fmt.Sprintf(" │ └ Env Keys Set: %s\n", strings.Join(envKeys, ", "))
+		}
 		output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
 		if model.IsMultiTenantRDS(installation.Database) {
 			databases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
