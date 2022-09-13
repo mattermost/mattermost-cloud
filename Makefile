@@ -6,12 +6,12 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.17
-DOCKER_BASE_IMAGE = alpine:3.16
+DOCKER_BUILD_IMAGE = golang:1.17.4
+DOCKER_BASE_IMAGE = alpine:3.14
 
 ## Tool Versions
 TERRAFORM_VERSION=0.15.5
-KOPS_VERSION=v1.22.6
+KOPS_VERSION=v1.21.4
 HELM_VERSION=v3.5.3
 KUBECTL_VERSION=v1.21.2
 
