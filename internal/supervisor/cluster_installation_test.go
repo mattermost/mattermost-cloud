@@ -290,10 +290,11 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 			InitialState  string
 			ExpectedState string
 		}{
-			{"unexpected state", model.ClusterInstallationStateStable, model.ClusterInstallationStateStable},
-			{"creation requested", model.ClusterInstallationStateCreationRequested, model.ClusterInstallationStateReconciling},
-			{"creation reconciling", model.ClusterInstallationStateReconciling, model.ClusterInstallationStateStable},
-			{"deletion requested", model.ClusterInstallationStateDeletionRequested, model.ClusterInstallationStateDeleted},
+			{"unexpected state", "invalid-state", "invalid-state"},
+			{"creation-requested", model.ClusterInstallationStateCreationRequested, model.ClusterInstallationStateReconciling},
+			{"reconciling", model.ClusterInstallationStateReconciling, model.ClusterInstallationStateStable},
+			{"ready", model.ClusterInstallationStateReady, model.ClusterInstallationStateStable},
+			{"deletion-requested", model.ClusterInstallationStateDeletionRequested, model.ClusterInstallationStateDeleted},
 		}
 
 		for _, tc := range testCases {

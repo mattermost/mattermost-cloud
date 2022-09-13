@@ -45,7 +45,7 @@ type ClusterInstallationProvisioner interface {
 	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
 	DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
+	IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error)
 	RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error
 }
@@ -541,37 +541,31 @@ func (provisioner *crProvisionerWrapper) DeleteClusterInstallation(cluster *mode
 	return nil
 }
 
-// IsResourceReady checks if the ClusterInstallation Custom Resource is ready on the cluster.
-func (provisioner *crProvisionerWrapper) IsResourceReady(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+// IsResourceReadyAndStable checks if the ClusterInstallation Custom Resource is
+// both ready and stable on the cluster.
+func (provisioner *crProvisionerWrapper) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
+		"cluster":              clusterInstallation.ClusterID,
+		"installation":         clusterInstallation.InstallationID,
+		"cluster_installation": clusterInstallation.ID,
 	})
 
 	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
+		return false, false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
 
-	if cr.Status.State != mmv1beta1.Stable && cr.Status.State != mmv1beta1.Ready {
-		return false, nil
+	if cr.Generation != cr.Status.ObservedGeneration {
+		return false, false, nil
 	}
-	if cr.Status.ObservedGeneration != 0 {
-		if cr.Generation != cr.Status.ObservedGeneration {
-			return false, nil
-		}
-	} else {
-		// The new ObservedGeneration check is not supported because the operator
-		// has not yet been updated. Log this and fall back to original check.
-		// TODO: remove once all clusters have been reprovisioned.
-		logger.Warn("ObservedGeneration status value missing during reconciliation check; update mattermost operator on this cluster")
-		if unwrapInt32(cr.Spec.Replicas) != cr.Status.Replicas ||
-			cr.Spec.Version != cr.Status.Version {
-			return false, nil
-		}
+	if cr.Status.State == mmv1beta1.Stable {
+		return true, true, nil
+	}
+	if cr.Status.State == mmv1beta1.Ready {
+		return true, false, nil
 	}
 
-	return true, nil
+	return false, false, nil
 }
 
 func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {

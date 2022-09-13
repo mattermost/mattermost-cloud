@@ -193,7 +193,8 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 		return s.createClusterInstallation(clusterInstallation, logger, installation, cluster)
 	case model.ClusterInstallationStateDeletionRequested:
 		return s.deleteClusterInstallation(clusterInstallation, logger, installation, cluster)
-	case model.ClusterInstallationStateReconciling:
+	case model.ClusterInstallationStateReconciling,
+		model.ClusterInstallationStateReady:
 		return s.checkReconcilingClusterInstallation(clusterInstallation, installation, cluster, logger)
 	default:
 		logger.Warnf("Found cluster installation pending work in unexpected state %s", clusterInstallation.State)
@@ -265,8 +266,8 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 }
 
 func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, cluster *model.Cluster, logger log.FieldLogger) string {
-	isReady, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
-		IsResourceReady(cluster, clusterInstallation)
+	isReady, isStable, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		IsResourceReadyAndStable(cluster, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster installation resource")
 		return model.ClusterInstallationStateReconciling
@@ -275,6 +276,11 @@ func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clus
 	if !isReady {
 		logger.Info("Cluster installation is still reconciling")
 		return model.ClusterInstallationStateReconciling
+	}
+
+	if !isStable {
+		logger.Info("Cluster installation is still reconciling (ready)")
+		return model.ClusterInstallationStateReady
 	}
 
 	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).

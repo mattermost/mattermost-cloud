@@ -725,7 +725,7 @@ func (s *InstallationSupervisor) preProvisionInstallation(installation *model.In
 func (s *InstallationSupervisor) waitForCreationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	// TODO: Check group config for changes.
 
-	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, true, logger)
 	if err != nil {
 		logger.WithError(err).Error("Installation creation failed")
 		return model.InstallationStateCreationFailed
@@ -905,7 +905,7 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 		return model.InstallationStateUpdateRequested
 	}
 
-	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, false, logger)
 	if err != nil {
 		logger.WithError(err).Error("Installation update failed")
 		return model.InstallationStateUpdateFailed
@@ -1078,7 +1078,7 @@ func (s *InstallationSupervisor) performInstallationHibernation(installation *mo
 }
 
 func (s *InstallationSupervisor) waitForHibernationStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, false, logger)
 	if err != nil {
 		// TODO: there is no real failure state for hibernating so handle this
 		// better in the future.
@@ -1114,7 +1114,7 @@ func (s *InstallationSupervisor) queueInstallationDeletion(installation *model.I
 }
 
 func (s *InstallationSupervisor) waitForInstallationDeletionPendingStable(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	stable, err := s.checkIfClusterInstallationsAreStable(installation, logger)
+	stable, err := s.checkIfClusterInstallationsAreStable(installation, false, logger)
 	if err != nil {
 		logger.WithError(err).Warn("Installation hibernation failed")
 		return model.InstallationStateDeletionPendingInProgress
@@ -1565,7 +1565,7 @@ func (s *InstallationSupervisor) configureDNS(installation *model.Installation, 
 // not succeed on future retries will also be returned. Otherwise, the error will
 // be logged and a nil error is returned. This will allow the caller to confidently
 // retry until everything is stable.
-func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installation *model.Installation, logger log.FieldLogger) (bool, error) {
+func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installation *model.Installation, allowReady bool, logger log.FieldLogger) (bool, error) {
 	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		InstallationID: installation.ID,
 		Paging:         model.AllPagesNotDeleted(),
@@ -1575,11 +1575,13 @@ func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installati
 		return false, nil
 	}
 
-	var stable, reconciling, failed, other int
+	var stable, ready, reconciling, failed, other int
 	for _, clusterInstallation := range clusterInstallations {
 		switch clusterInstallation.State {
 		case model.ClusterInstallationStateStable:
 			stable++
+		case model.ClusterInstallationStateReady:
+			ready++
 		case model.ClusterInstallationStateReconciling:
 			reconciling++
 		case model.ClusterInstallationStateCreationFailed:
@@ -1589,10 +1591,15 @@ func (s *InstallationSupervisor) checkIfClusterInstallationsAreStable(installati
 		}
 	}
 
-	logger.Debugf("Found %d cluster installations: %d stable, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, reconciling, failed, other)
+	logger.Debugf("Found %d cluster installations: %d stable, %d ready, %d reconciling, %d failed, %d other", len(clusterInstallations), stable, ready, reconciling, failed, other)
 
 	if len(clusterInstallations) == stable {
 		return true, nil
+	}
+	if allowReady {
+		if len(clusterInstallations) == ready {
+			return true, nil
+		}
 	}
 	if failed > 0 {
 		return false, errors.Errorf("found %d failed cluster installations", failed)
