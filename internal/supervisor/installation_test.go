@@ -616,6 +616,25 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.Len(t, clusterInstallations, expectedCount)
 	}
 
+	standardTestInstallationSupervisor := func(sqlStore *store.SQLStore, logger log.FieldLogger) *supervisor.InstallationSupervisor {
+		return supervisor.NewInstallationSupervisor(
+			sqlStore,
+			&mockInstallationProvisioner{},
+			&mockAWS{},
+			model.NewID(),
+			false,
+			false,
+			standardSchedulingOptions,
+			&utils.ResourceUtil{},
+			logger,
+			cloudMetrics,
+			testutil.SetupTestEventsProducer(sqlStore, logger),
+			false,
+			&mockCloudflareClient{},
+			false,
+		)
+	}
+
 	standardStableTestCluster := func() *model.Cluster {
 		return &model.Cluster{
 			State:              model.ClusterStateStable,
@@ -628,42 +647,34 @@ func TestInstallationSupervisor(t *testing.T) {
 		}
 	}
 
+	standardStableTestInstallation := func() *model.Installation {
+		groupID := model.NewID()
+
+		return &model.Installation{
+			OwnerID:  model.NewID(),
+			GroupID:  &groupID,
+			Image:    "mattermost/mattermost-enterprise-edition",
+			Version:  "v1.0.0",
+			Name:     "domain1",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateStable,
+		}
+	}
+
 	t.Run("unexpected state", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateStable,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateStable
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -687,37 +698,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -736,33 +724,10 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
 
 		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -777,38 +742,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		cluster.AllowInstallations = false
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -823,21 +765,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -852,17 +780,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -877,37 +796,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -931,37 +827,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -985,37 +858,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1038,21 +888,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1068,16 +905,9 @@ func TestInstallationSupervisor(t *testing.T) {
 		err = sqlStore.CreateGroup(group, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &group.ID,
-			State:    model.InstallationStateCreationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationRequested
+		installation.GroupID = &group.ID
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1104,37 +934,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationPreProvisioning,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationPreProvisioning
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1157,37 +965,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationPreProvisioning,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationPreProvisioning
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1211,37 +996,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationDNS,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationDNS
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1264,37 +1026,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1317,37 +1056,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1370,37 +1086,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1423,21 +1116,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1496,37 +1175,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1549,37 +1205,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationFinalTasks,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationFinalTasks
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1602,33 +1235,10 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationNoCompatibleClusters,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationNoCompatibleClusters
 
 		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1642,21 +1252,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1671,17 +1267,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		err = sqlStore.CreateClusterInstallation(clusterInstallation)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationNoCompatibleClusters,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationNoCompatibleClusters
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1695,37 +1282,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateCreationNoCompatibleClusters,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateCreationNoCompatibleClusters
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1739,37 +1303,14 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateUpdateRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateUpdateRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1792,21 +1333,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1858,37 +1386,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateUpdateInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateUpdateInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -1911,21 +1417,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -1977,37 +1470,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateUpdateInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateUpdateInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2030,37 +1501,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateUpdateInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateUpdateInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2083,21 +1532,8 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
@@ -2159,37 +1595,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateHibernationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateHibernationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2212,37 +1626,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateHibernationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateHibernationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2265,37 +1657,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateHibernationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateHibernationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2318,37 +1688,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateHibernationInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateHibernationInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2371,37 +1719,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateWakeUpRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateWakeUpRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2424,38 +1750,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{},
-			false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionPendingRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionPendingRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2478,38 +1781,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{},
-			false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionPendingInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionPendingInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2532,38 +1812,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{},
-			false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionPendingInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionPendingInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2586,38 +1843,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{},
-			false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionPendingInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionPendingInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2640,38 +1874,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{},
-			false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionCancellationRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionCancellationRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2694,37 +1905,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2747,37 +1936,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2800,37 +1967,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionInProgress,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionInProgress
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2853,37 +1998,15 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -2906,37 +2029,16 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionRequested
+
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
@@ -2969,37 +2071,16 @@ func TestInstallationSupervisor(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionRequested
+
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
 
@@ -3038,41 +2119,19 @@ func TestInstallationSupervisor(t *testing.T) {
 		assert.Equal(t, model.InstallationDBMigrationStateDeletionRequested, fetchedMigration.State)
 	})
 
-	t.Run("creation requested, cluster installations deleted", func(t *testing.T) {
+	t.Run("deletion requested, cluster installations deleted", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		supervisor := supervisor.NewInstallationSupervisor(
-			sqlStore,
-			&mockInstallationProvisioner{},
-			&mockAWS{},
-			"instanceID",
-			false,
-			false,
-			standardSchedulingOptions,
-			&utils.ResourceUtil{},
-			logger,
-			cloudMetrics,
-			testutil.SetupTestEventsProducer(sqlStore, logger),
-			false,
-			&mockCloudflareClient{}, false,
-		)
+
+		supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 		cluster := standardStableTestCluster()
 		err := sqlStore.CreateCluster(cluster, nil)
 		require.NoError(t, err)
 
-		owner := model.NewID()
-		groupID := model.NewID()
-		installation := &model.Installation{
-			OwnerID:  owner,
-			Version:  "version",
-			Name:     "dns",
-			Size:     mmv1alpha1.Size100String,
-			Affinity: model.InstallationAffinityIsolated,
-			GroupID:  &groupID,
-			State:    model.InstallationStateDeletionRequested,
-		}
+		installation := standardStableTestInstallation()
+		installation.State = model.InstallationStateDeletionRequested
 
 		err = sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
 		require.NoError(t, err)
@@ -3096,21 +2155,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(
-				sqlStore,
-				&mockInstallationProvisioner{},
-				&mockAWS{},
-				"instanceID",
-				false,
-				false,
-				standardSchedulingOptions,
-				&utils.ResourceUtil{},
-				logger,
-				cloudMetrics,
-				testutil.SetupTestEventsProducer(sqlStore, logger),
-				false,
-				&mockCloudflareClient{}, false,
-			)
+
+			supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -3141,21 +2187,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(
-				sqlStore,
-				&mockInstallationProvisioner{},
-				&mockAWS{},
-				"instanceID",
-				false,
-				false,
-				standardSchedulingOptions,
-				&utils.ResourceUtil{},
-				logger,
-				cloudMetrics,
-				testutil.SetupTestEventsProducer(sqlStore, logger),
-				false,
-				&mockCloudflareClient{}, false,
-			)
+
+			supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -3190,21 +2223,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(
-				sqlStore,
-				&mockInstallationProvisioner{},
-				&mockAWS{},
-				"instanceID",
-				false,
-				false,
-				standardSchedulingOptions,
-				&utils.ResourceUtil{},
-				logger,
-				cloudMetrics,
-				testutil.SetupTestEventsProducer(sqlStore, logger),
-				false,
-				&mockCloudflareClient{}, false,
-			)
+
+			supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -3443,21 +2463,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(
-				sqlStore,
-				&mockInstallationProvisioner{},
-				&mockAWS{},
-				"instanceID",
-				false,
-				false,
-				standardSchedulingOptions,
-				&utils.ResourceUtil{},
-				logger,
-				cloudMetrics,
-				testutil.SetupTestEventsProducer(sqlStore, logger),
-				false,
-				&mockCloudflareClient{}, false,
-			)
+
+			supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, annotations)
@@ -3478,21 +2485,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(
-				sqlStore,
-				&mockInstallationProvisioner{},
-				&mockAWS{},
-				"instanceID",
-				false,
-				false,
-				standardSchedulingOptions,
-				&utils.ResourceUtil{},
-				logger,
-				cloudMetrics,
-				testutil.SetupTestEventsProducer(sqlStore, logger),
-				false,
-				&mockCloudflareClient{}, false,
-			)
+
+			supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, nil)
@@ -3513,21 +2507,8 @@ func TestInstallationSupervisor(t *testing.T) {
 			logger := testlib.MakeLogger(t)
 			sqlStore := store.MakeTestSQLStore(t, logger)
 			defer store.CloseConnection(t, sqlStore)
-			supervisor := supervisor.NewInstallationSupervisor(
-				sqlStore,
-				&mockInstallationProvisioner{},
-				&mockAWS{},
-				"instanceID",
-				false,
-				false,
-				standardSchedulingOptions,
-				&utils.ResourceUtil{},
-				logger,
-				cloudMetrics,
-				testutil.SetupTestEventsProducer(sqlStore, logger),
-				false,
-				&mockCloudflareClient{}, false,
-			)
+
+			supervisor := standardTestInstallationSupervisor(sqlStore, logger)
 
 			cluster := standardStableTestCluster()
 			err := sqlStore.CreateCluster(cluster, annotations)
