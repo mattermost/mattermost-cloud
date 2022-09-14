@@ -132,8 +132,8 @@ type kopsCluster struct {
 
 // unmarshalKopsListClustersResponse unmarshals response from `kops get clusters -o json`.
 // Kops output from this command is not consistent, and it behaves in the following ways:
-//   - If there are multiple clusters an array of clusters is returned.
-//   - If there is only one cluster a single cluster object is returned (not as an array).
+//  * If there are multiple clusters an array of clusters is returned.
+//  * If there is only one cluster a single cluster object is returned (not as an array).
 func unmarshalKopsListClustersResponse(output string) ([]kopsCluster, error) {
 	trimmedOut := strings.TrimSpace(output)
 	if strings.HasPrefix(trimmedOut, "[") {

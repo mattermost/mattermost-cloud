@@ -79,11 +79,11 @@ func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataR
 // Example setValue: spec.kubernetesVersion=1.10.0
 func (c *Cmd) SetCluster(name, setValue string) error {
 	_, _, err := c.run(
-		"edit",
+		"set",
 		"cluster",
 		arg("name", name),
 		arg("state", "s3://", c.s3StateStore),
-		arg("set", setValue),
+		setValue,
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops set cluster")

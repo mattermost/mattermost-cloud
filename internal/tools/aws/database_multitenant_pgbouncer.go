@@ -163,9 +163,9 @@ func (d *RDSMultitenantPGBouncerDatabase) Provision(store model.InstallationData
 
 // This helper method finds a multitenant RDS cluster that is ready for receiving a database installation. The lookup
 // for multitenant databases will happen in order:
-//  1. fetch a multitenant database by installation ID.
-//  2. fetch all multitenant databases in the store which are under the max number of installations limit.
-//  3. fetch all multitenant databases in the RDS cluster that are under the max number of installations limit.
+//	1. fetch a multitenant database by installation ID.
+//	2. fetch all multitenant databases in the store which are under the max number of installations limit.
+//	3. fetch all multitenant databases in the RDS cluster that are under the max number of installations limit.
 func (d *RDSMultitenantPGBouncerDatabase) assignInstallationToProxiedDatabaseAndLock(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (*model.DatabaseResourceGrouping, func(), error) {
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          d.databaseType,
