@@ -40,6 +40,9 @@ var maxDatabaseConnectionsPerPool int = 20
 // defaultPoolSize is the default pool size per user
 var defaultPoolSize int = 5
 
+// reservePoolSize is the default pool size per user
+var reservePoolSize int = 20
+
 // minPoolSize is the minimum pool size
 var minPoolSize int = 3
 
@@ -67,6 +70,11 @@ func SetDefaultPoolSize(val int) error {
 	return nil
 }
 
+// SetReservePoolSize is used to define the reserve pool size per user
+func SetReservePoolSize(val int) {
+	reservePoolSize = val
+}
+
 // SetMinPoolSize is used to define the min pool size per user
 func SetMinPoolSize(val int) {
 	minPoolSize = val
@@ -86,6 +94,11 @@ func GetMaxDatabaseConnectionsPerPool() int {
 // GetDefaultPoolSize returns the value of defaultPoolSize.
 func GetDefaultPoolSize() int {
 	return defaultPoolSize
+}
+
+// GetReservePoolSize returns the value of reservePoolSize.
+func GetReservePoolSize() int {
+	return reservePoolSize
 }
 
 // GetMinPoolSize returns the value of minPoolSize.
