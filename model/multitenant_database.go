@@ -130,6 +130,12 @@ type MultitenantDatabase struct {
 	LockAcquiredAt                     int64
 }
 
+// CreationDateString returns a standardized date string for a multitenant
+// database string.
+func (d *MultitenantDatabase) CreationDateString() string {
+	return GetDateString(d.CreateAt)
+}
+
 // LogicalDatabase represents a logical database inside a MultitenantDatabase.
 type LogicalDatabase struct {
 	ID                    string
@@ -153,7 +159,7 @@ type DatabaseSchema struct {
 	LockAcquiredAt    int64
 }
 
-// DatabaseResourceGrouping represents the complete set of database resoureces
+// DatabaseResourceGrouping represents the complete set of database resources
 // that comprise proxy database information.
 type DatabaseResourceGrouping struct {
 	MultitenantDatabase *MultitenantDatabase
