@@ -90,15 +90,14 @@ func handleGetClusters(c *Context, w http.ResponseWriter, r *http.Request) {
 // handleCreateCluster responds to POST /api/clusters, beginning the process of creating a new
 // cluster.
 // sample body:
-//
-//	{
-//			"provider": "aws",
-//			"version": "1.15.0",
-//			"kops-ami": "ami-xoxoxo",
-//			"size": "SizeAlef1000",
-//			"zones": "",
-//			"allow-installations": true
-//	}
+// {
+//		"provider": "aws",
+//		"version": "1.15.0",
+//		"kops-ami": "ami-xoxoxo",
+//		"size": "SizeAlef1000",
+//		"zones": "",
+//		"allow-installations": true
+// }
 func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	createClusterRequest, err := model.NewCreateClusterRequestFromReader(r.Body)
 	if err != nil {
