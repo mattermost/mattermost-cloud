@@ -119,8 +119,8 @@ type MultitenantDatabase struct {
 
 // CreationDateString returns a standardized date string for a multitenant
 // database string.
-func (m *MultitenantDatabase) CreationDateString() string {
-	return GetDateString(m.CreateAt)
+func (d *MultitenantDatabase) CreationDateString() string {
+	return GetDateString(d.CreateAt)
 }
 
 // LogicalDatabase represents a logical database inside a MultitenantDatabase.
