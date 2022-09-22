@@ -103,7 +103,7 @@ func (i *Installation) ToDTO(annotations []*Annotation, dnsRecords []*Installati
 // CreationDateString returns a standardized date string for an installation's
 // creation.
 func (i *Installation) CreationDateString() string {
-	return TimeFromMillis(i.CreateAt).Format("Jan 2 2006")
+	return GetDateString(i.CreateAt)
 }
 
 // DeletionDateString returns a standardized date string for an installation's

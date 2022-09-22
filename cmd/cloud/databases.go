@@ -36,10 +36,14 @@ func init() {
 	multitenantDatabaseDeleteCmd.Flags().Bool("force", false, "Specifies whether to delete record even if database cluster exists.")
 	multitenantDatabaseDeleteCmd.MarkFlagRequired("multitenant-database")
 
+	multitenantDatabaseReportCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to be fetched.")
+	multitenantDatabaseReportCmd.MarkFlagRequired("multitenant-database")
+
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseListCmd)
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseGetCmd)
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseUpdateCmd)
 	multitenantDatabaseCmd.AddCommand(multitenantDatabaseDeleteCmd)
+	multitenantDatabaseCmd.AddCommand(multitenantDatabaseReportCmd)
 
 	// Logical Databases
 	logicalDatabaseListCmd.Flags().String("multitenant-database-id", "", "The multitenant database ID by which to filter logical databases.")
@@ -395,6 +399,52 @@ var databaseSchemaGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		return nil
+	},
+}
+
+var multitenantDatabaseReportCmd = &cobra.Command{
+	Use:   "report",
+	Short: "Get a report of deployment details for a given multitenant database",
+	RunE: func(command *cobra.Command, args []string) error {
+		command.SilenceUsage = true
+
+		serverAddress, _ := command.Flags().GetString("server")
+		client := model.NewClient(serverAddress)
+
+		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database")
+		multitenantDatabase, err := client.GetMultitenantDatabase(multitenantDatabaseID)
+		if err != nil {
+			return errors.Wrap(err, "failed to query multitenant database")
+		}
+		if multitenantDatabase == nil {
+			return nil
+		}
+
+		output := fmt.Sprintf("Multitenant Database: %s\n", multitenantDatabase.ID)
+		output += fmt.Sprintf(" ├ Created: %s\n", multitenantDatabase.CreationDateString())
+		output += fmt.Sprintf(" ├ State: %s\n", multitenantDatabase.State)
+		output += fmt.Sprintf(" ├ Type: %s\n", multitenantDatabase.DatabaseType)
+		output += fmt.Sprintf(" ├ VPC: %s\n", multitenantDatabase.VpcID)
+		output += fmt.Sprintf(" ├ Installations: %d\n", multitenantDatabase.Installations.Count())
+		output += fmt.Sprintf(" ├ Writer Endpoint: %s\n", multitenantDatabase.WriterEndpoint)
+		output += fmt.Sprintf(" ├ Reader Endpoint: %s\n", multitenantDatabase.ReaderEndpoint)
+
+		if multitenantDatabase.DatabaseType == model.DatabaseEngineTypePostgresProxy {
+			logicalDatabases, err := client.GetLogicalDatabases(&model.GetLogicalDatabasesRequest{
+				MultitenantDatabaseID: multitenantDatabase.ID,
+				Paging:                model.AllPagesNotDeleted(),
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to query installation logical databases")
+			}
+
+			output += fmt.Sprintf(" └ Logical Databases: %d\n", len(logicalDatabases))
+			output += fmt.Sprintf("   └ Average Installations Per Logical Database: %.2f\n", float64(multitenantDatabase.Installations.Count())/float64(len(logicalDatabases)))
+		}
+
+		fmt.Println(output)
 
 		return nil
 	},

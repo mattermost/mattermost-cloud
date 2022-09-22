@@ -16,6 +16,11 @@ func TimeFromMillis(millis int64) time.Time {
 	return time.Unix(0, millis*int64(time.Millisecond))
 }
 
+// GetDateString returns a standard date string from millis.
+func GetDateString(millis int64) string {
+	return TimeFromMillis(millis).Format("Jan 2 2006")
+}
+
 // ElapsedTimeInSeconds returns time in seconds since the provided millis.
 func ElapsedTimeInSeconds(millis int64) float64 {
 	return float64(GetMillis()-millis) / 1000
