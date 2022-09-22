@@ -126,10 +126,10 @@ var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 
 // relaxedJSONPathExpression attempts to be flexible with JSONPath expressions,
 // it accepts following formats:
-//   - {.ID}
-//   - {ID}
-//   - .ID
-//   - ID
+//	* {.ID}
+//	* {ID}
+//	* .ID
+//	* ID
 func relaxedJSONPathExpression(pathExpression string) (string, error) {
 	if len(pathExpression) == 0 {
 		return pathExpression, nil

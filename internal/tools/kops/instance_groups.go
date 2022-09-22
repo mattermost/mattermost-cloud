@@ -220,12 +220,12 @@ func (c *Cmd) GetInstanceGroupYAML(clusterName, igName string) (string, error) {
 // SetInstanceGroup invokes kops set instancegroup, using the context of the created Cmd.
 func (c *Cmd) SetInstanceGroup(clusterName, instanceGroupName, setValue string) error {
 	_, _, err := c.run(
-		"edit",
+		"set",
 		"instancegroup",
 		arg("name", clusterName),
 		arg("state", "s3://", c.s3StateStore),
 		instanceGroupName,
-		arg("set", setValue),
+		setValue,
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops set instancegroup")
