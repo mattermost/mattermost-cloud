@@ -191,18 +191,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
-	logger.WithField("name", kopsMetadata.Name).Info("Updating VolumeBindingMode in default storage class")
-	k8sClient, err := k8s.NewFromFile(kops.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
-	}
-
-	_, err = k8sClient.UpdateStorageClassVolumeBindingMode("gp2")
-	if err != nil {
-		return err
-	}
-	logger.WithField("name", kopsMetadata.Name).Info("Successfully updated storage class")
-
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
 	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
@@ -517,7 +505,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		if err != nil {
 			return err
 		}
-		// Pods for k8s-spot-termination-handler do not ment to be schedule in every cluster so doesn't need to fail provision in this case/
+		// Pods for k8s-spot-termination-handler do not mean to be schedule in every cluster so doesn't need to fail provision in this case
 		if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
 			return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
 		}
