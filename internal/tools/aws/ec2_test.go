@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/model"
+
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -122,11 +124,11 @@ func TestVPCReal(t *testing.T) {
 		mux: &sync.Mutex{},
 	}
 
-	clusterID := "testclusterID1"
+	cluster := &model.Cluster{ID: "testclusterID1"}
 
-	_, err := client.GetAndClaimVpcResources(clusterID, "testowner", logger)
+	_, err := client.GetAndClaimVpcResources(cluster, "testowner", logger)
 	require.NoError(t, err)
 
-	err = client.releaseVpc(clusterID, logger)
+	err = client.releaseVpc(cluster, logger)
 	require.NoError(t, err)
 }

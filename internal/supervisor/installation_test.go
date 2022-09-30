@@ -6,6 +6,7 @@ package supervisor_test
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/eks"
 	"testing"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
@@ -382,6 +383,34 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // can be tested.
 type mockAWS struct{}
 
+func (a *mockAWS) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
+	return aws.ClusterResources{}, nil
+}
+
+func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
+	return &eks.Cluster{}, nil
+}
+
+func (a *mockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
+	return nil, nil
+}
+
+func (a *mockAWS) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
+	return &eks.Cluster{}, nil
+}
+
+func (a *mockAWS) IsClusterReady(clusterName string) (bool, error) {
+	return true, nil
+}
+
+func (a *mockAWS) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
+	return true, nil
+}
+
+func (a *mockAWS) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
+	return true, nil
+}
+
 func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error) {
 	return nil, nil
 }
@@ -402,7 +431,7 @@ func (a *mockAWS) S3EnsureObjectDeleted(bucketName, path string) error {
 	return nil
 }
 
-func (a *mockAWS) GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
+func (a *mockAWS) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }
 
@@ -410,7 +439,7 @@ func (a *mockAWS) GetVpcResources(clusterID string, logger log.FieldLogger) (aws
 	return aws.ClusterResources{}, nil
 }
 
-func (a *mockAWS) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
+func (a *mockAWS) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
 	return nil
 }
 
@@ -513,7 +542,7 @@ func (a *mockAWS) GetMultitenantBucketNameForInstallation(installationID string,
 func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }
-func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
+func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
 	return nil
 }
 func (a *mockAWS) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {

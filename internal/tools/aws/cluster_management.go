@@ -6,6 +6,7 @@ package aws
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -140,6 +141,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 	return clusterResources, nil
 }
 
+// ClaimVPC claims specified VPC for specified cluster.
 func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
 	vpcOut, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{VpcIds: stringsToPtr([]string{vpcID})})
 	if err != nil {

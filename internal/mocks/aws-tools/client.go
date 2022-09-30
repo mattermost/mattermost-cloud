@@ -9,6 +9,7 @@ package mockawstools
 
 import (
 	acm "github.com/aws/aws-sdk-go/service/acm"
+	eks "github.com/aws/aws-sdk-go/service/eks"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	model "github.com/mattermost/mattermost-cloud/model"
@@ -70,18 +71,33 @@ func (mr *MockAWSMockRecorder) GetCloudEnvironmentName() *gomock.Call {
 }
 
 // GetAndClaimVpcResources mocks base method
-func (m *MockAWS) GetAndClaimVpcResources(clusterID, owner string, logger logrus.FieldLogger) (aws.ClusterResources, error) {
+func (m *MockAWS) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger logrus.FieldLogger) (aws.ClusterResources, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAndClaimVpcResources", clusterID, owner, logger)
+	ret := m.ctrl.Call(m, "GetAndClaimVpcResources", cluster, owner, logger)
 	ret0, _ := ret[0].(aws.ClusterResources)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAndClaimVpcResources indicates an expected call of GetAndClaimVpcResources
-func (mr *MockAWSMockRecorder) GetAndClaimVpcResources(clusterID, owner, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) GetAndClaimVpcResources(cluster, owner, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAndClaimVpcResources", reflect.TypeOf((*MockAWS)(nil).GetAndClaimVpcResources), clusterID, owner, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAndClaimVpcResources", reflect.TypeOf((*MockAWS)(nil).GetAndClaimVpcResources), cluster, owner, logger)
+}
+
+// ClaimVPC mocks base method
+func (m *MockAWS) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger logrus.FieldLogger) (aws.ClusterResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimVPC", vpcID, cluster, owner, logger)
+	ret0, _ := ret[0].(aws.ClusterResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClaimVPC indicates an expected call of ClaimVPC
+func (mr *MockAWSMockRecorder) ClaimVPC(vpcID, cluster, owner, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimVPC", reflect.TypeOf((*MockAWS)(nil).ClaimVPC), vpcID, cluster, owner, logger)
 }
 
 // GetVpcResources mocks base method
@@ -100,17 +116,17 @@ func (mr *MockAWSMockRecorder) GetVpcResources(clusterID, logger interface{}) *g
 }
 
 // ReleaseVpc mocks base method
-func (m *MockAWS) ReleaseVpc(clusterID string, logger logrus.FieldLogger) error {
+func (m *MockAWS) ReleaseVpc(cluster *model.Cluster, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReleaseVpc", clusterID, logger)
+	ret := m.ctrl.Call(m, "ReleaseVpc", cluster, logger)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReleaseVpc indicates an expected call of ReleaseVpc
-func (mr *MockAWSMockRecorder) ReleaseVpc(clusterID, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) ReleaseVpc(cluster, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseVpc", reflect.TypeOf((*MockAWS)(nil).ReleaseVpc), clusterID, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseVpc", reflect.TypeOf((*MockAWS)(nil).ReleaseVpc), cluster, logger)
 }
 
 // AttachPolicyToRole mocks base method
@@ -471,17 +487,17 @@ func (mr *MockAWSMockRecorder) GetVpcResourcesByVpcID(vpcID, logger interface{})
 }
 
 // TagResourcesByCluster mocks base method
-func (m *MockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, clusterID, owner string, logger logrus.FieldLogger) error {
+func (m *MockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, cluster *model.Cluster, owner string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TagResourcesByCluster", clusterResources, clusterID, owner, logger)
+	ret := m.ctrl.Call(m, "TagResourcesByCluster", clusterResources, cluster, owner, logger)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // TagResourcesByCluster indicates an expected call of TagResourcesByCluster
-func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, clusterID, owner, logger interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) TagResourcesByCluster(clusterResources, cluster, owner, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, clusterID, owner, logger)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResourcesByCluster", reflect.TypeOf((*MockAWS)(nil).TagResourcesByCluster), clusterResources, cluster, owner, logger)
 }
 
 // SecretsManagerGetPGBouncerAuthUserPassword mocks base method
@@ -511,4 +527,94 @@ func (m *MockAWS) SwitchClusterTags(clusterID, targetClusterID string, logger lo
 func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, logger interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SwitchClusterTags", reflect.TypeOf((*MockAWS)(nil).SwitchClusterTags), clusterID, targetClusterID, logger)
+}
+
+// EnsureEKSCluster mocks base method
+func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureEKSCluster", cluster, resources, eksMetadata)
+	ret0, _ := ret[0].(*eks.Cluster)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureEKSCluster indicates an expected call of EnsureEKSCluster
+func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources, eksMetadata interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSCluster", reflect.TypeOf((*MockAWS)(nil).EnsureEKSCluster), cluster, resources, eksMetadata)
+}
+
+// EnsureEKSClusterNodeGroups mocks base method
+func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureEKSClusterNodeGroups", cluster, resources, eksMetadata)
+	ret0, _ := ret[0].([]*eks.Nodegroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureEKSClusterNodeGroups indicates an expected call of EnsureEKSClusterNodeGroups
+func (mr *MockAWSMockRecorder) EnsureEKSClusterNodeGroups(cluster, resources, eksMetadata interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterNodeGroups", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterNodeGroups), cluster, resources, eksMetadata)
+}
+
+// GetEKSCluster mocks base method
+func (m *MockAWS) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEKSCluster", clusterName)
+	ret0, _ := ret[0].(*eks.Cluster)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEKSCluster indicates an expected call of GetEKSCluster
+func (mr *MockAWSMockRecorder) GetEKSCluster(clusterName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEKSCluster", reflect.TypeOf((*MockAWS)(nil).GetEKSCluster), clusterName)
+}
+
+// IsClusterReady mocks base method
+func (m *MockAWS) IsClusterReady(clusterName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsClusterReady", clusterName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsClusterReady indicates an expected call of IsClusterReady
+func (mr *MockAWSMockRecorder) IsClusterReady(clusterName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterReady", reflect.TypeOf((*MockAWS)(nil).IsClusterReady), clusterName)
+}
+
+// EnsureNodeGroupsDeleted mocks base method
+func (m *MockAWS) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureNodeGroupsDeleted", cluster)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureNodeGroupsDeleted indicates an expected call of EnsureNodeGroupsDeleted
+func (mr *MockAWSMockRecorder) EnsureNodeGroupsDeleted(cluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureNodeGroupsDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureNodeGroupsDeleted), cluster)
+}
+
+// EnsureEKSClusterDeleted mocks base method
+func (m *MockAWS) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureEKSClusterDeleted", cluster)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureEKSClusterDeleted indicates an expected call of EnsureEKSClusterDeleted
+func (mr *MockAWSMockRecorder) EnsureEKSClusterDeleted(cluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterDeleted), cluster)
 }

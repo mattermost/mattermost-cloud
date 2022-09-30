@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// CreateEKSCluster creates EKS cluster.
 func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
 	// TODO: we do not expect to query that many subnets but for safety
 	// we can check the NextToken.
@@ -54,6 +55,7 @@ func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResou
 	return out.Cluster, nil
 }
 
+// EnsureEKSCluster ensures EKS cluster is created.
 func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
 	input := eks.DescribeClusterInput{
 		Name: aws.String(cluster.ID),
@@ -70,10 +72,12 @@ func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResou
 	return out.Cluster, nil
 }
 
+// EnsureEKSClusterNodeGroups ensures EKS cluster node groups are created.
 func (a *Client) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
 	return a.CreateNodeGroups(cluster.ID, resources, eksMetadata)
 }
 
+// CreateNodeGroups creates node groups for EKS cluster.
 func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
 	// If more node groups exist than we expect, this function will not
 	// delete them, nor return them.
@@ -126,6 +130,7 @@ func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources
 	return allNodeGroups, nil
 }
 
+// IsClusterReady checks if EKS cluster is ready.
 func (a *Client) IsClusterReady(clusterName string) (bool, error) {
 	cluster, err := a.GetEKSCluster(clusterName)
 	if err != nil {
@@ -145,6 +150,7 @@ func (a *Client) IsClusterReady(clusterName string) (bool, error) {
 	return true, nil
 }
 
+// GetEKSCluster returns EKS cluster with given name.
 func (a *Client) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
 	input := eks.DescribeClusterInput{
 		Name: aws.String(clusterName),
@@ -158,6 +164,7 @@ func (a *Client) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
 	return out.Cluster, nil
 }
 
+// EnsureNodeGroupsDeleted ensures EKS node groups are deleted.
 func (a *Client) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
 	nodeGroups, err := a.listNodeGroups(cluster.ID)
 	if err != nil {
@@ -193,6 +200,7 @@ func (a *Client) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
 	return false, nil
 }
 
+// EnsureEKSClusterDeleted ensures EKS cluster is deleted.
 func (a *Client) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
 	input := eks.DescribeClusterInput{
 		Name: aws.String(cluster.ID),

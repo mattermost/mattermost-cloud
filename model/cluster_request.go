@@ -45,6 +45,7 @@ type CreateClusterRequest struct {
 	EKSConfig              *EKSConfig `json:"EKSConfig,omitempty"`
 }
 
+// EKSConfig is EKS cluster configuration.
 type EKSConfig struct {
 	ClusterRoleARN *string                 `json:"clusterRoleARN,omitempty"`
 	NodeGroups     map[string]EKSNodeGroup `json:"nodeGroups,omitempty"`
