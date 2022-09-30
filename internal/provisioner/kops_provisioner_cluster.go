@@ -92,7 +92,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			return err
 		}
 	} else if provisioner.params.UseExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster.ID, provisioner.params.Owner, logger)
+		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	)
 	// release VPC resources
 	if err != nil {
-		releaseErr := awsClient.ReleaseVpc(cluster.ID, logger)
+		releaseErr := awsClient.ReleaseVpc(cluster, logger)
 		if releaseErr != nil {
 			logger.WithError(releaseErr).Error("Unable to release VPC")
 		}
@@ -120,7 +120,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	}
 	// Tag Public subnets & respective VPC for the secondary cluster if there is no error.
 	if kopsMetadata.ChangeRequest.VPC != "" {
-		err = awsClient.TagResourcesByCluster(clusterResources, cluster.ID, provisioner.params.Owner, logger)
+		err = awsClient.TagResourcesByCluster(clusterResources, cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
@@ -870,7 +870,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		logger.Infof("Kops cluster %s does not exist, assuming already deleted", kopsMetadata.Name)
 	}
 
-	err = awsClient.ReleaseVpc(cluster.ID, logger)
+	err = awsClient.ReleaseVpc(cluster, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to release cluster VPC")
 	}
