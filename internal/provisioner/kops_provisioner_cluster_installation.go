@@ -806,7 +806,7 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 	}
 
 	jobName := fmt.Sprintf("command-%s", uuid.New()[:6])
-	job := resources.PrepareMattermostJobTemplate(jobName, clusterInstallation.Namespace, &deploymentList.Items[0])
+	job := resources.PrepareMattermostJobTemplate(jobName, clusterInstallation.Namespace, &deploymentList.Items[0], nil)
 	// TODO: refactor above method in Mattermost Operator to take command and handle this logic inside.
 	for i := range job.Spec.Template.Spec.Containers {
 		job.Spec.Template.Spec.Containers[i].Command = args
