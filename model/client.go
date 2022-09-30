@@ -1196,7 +1196,7 @@ func (c *Client) DeleteGroupAnnotation(groupID string, annotationName string) er
 
 // GetMultitenantDatabases fetches the list of multitenant databases from the configured provisioning server.
 func (c *Client) GetMultitenantDatabases(request *GetMultitenantDatabasesRequest) ([]*MultitenantDatabase, error) {
-	u, err := url.Parse(c.buildURL("/api/databases"))
+	u, err := url.Parse(c.buildURL("/api/databases/multitenant_databases"))
 	if err != nil {
 		return nil, err
 	}
@@ -1240,7 +1240,7 @@ func (c *Client) GetMultitenantDatabase(multitenantDatabaseID string) (*Multiten
 
 // UpdateMultitenantDatabase updates a multitenant database.
 func (c *Client) UpdateMultitenantDatabase(databaseID string, request *PatchMultitenantDatabaseRequest) (*MultitenantDatabase, error) {
-	resp, err := c.doPut(c.buildURL("/api/database/%s", databaseID), request)
+	resp, err := c.doPut(c.buildURL("/api/databases/multitenant_database/%s", databaseID), request)
 	if err != nil {
 		return nil, err
 	}
