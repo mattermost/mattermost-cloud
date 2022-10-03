@@ -145,7 +145,7 @@ func (request *CreateClusterRequest) Validate() error {
 
 	if request.EKSConfig != nil {
 		if len(request.EKSConfig.NodeGroups) == 0 {
-			return errors.Errorf("at least 1 node group is required when using EKS")
+			return errors.New("at least 1 node group is required when using EKS")
 		}
 	}
 
