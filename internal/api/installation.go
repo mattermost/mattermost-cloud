@@ -196,6 +196,15 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	if createInstallationRequest.Database == model.InstallationDatabaseExternal {
+		err = c.AwsClient.SecretsManagerValidateExternalDatabaseSecret(createInstallationRequest.ExternalDatabaseConfig.SecretName)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to validate external secret")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
 	installation := model.Installation{
 		Name:                       createInstallationRequest.Name,
 		OwnerID:                    createInstallationRequest.OwnerID,
@@ -211,6 +220,7 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		MattermostEnv:              createInstallationRequest.MattermostEnv,
 		PriorityEnv:                createInstallationRequest.PriorityEnv,
 		SingleTenantDatabaseConfig: createInstallationRequest.SingleTenantDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
+		ExternalDatabaseConfig:     createInstallationRequest.ExternalDatabaseConfig.ToDBConfig(createInstallationRequest.Database),
 		CRVersion:                  model.DefaultCRVersion,
 		State:                      model.InstallationStateCreationRequested,
 	}

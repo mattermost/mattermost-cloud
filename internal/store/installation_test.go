@@ -143,6 +143,23 @@ func TestInstallations(t *testing.T) {
 	err = sqlStore.CreateInstallation(installation4, nil, fixDNSRecords(4))
 	require.NoError(t, err)
 
+	time.Sleep(1 * time.Millisecond)
+
+	installation5 := &model.Installation{
+		Name:                   "test5",
+		OwnerID:                ownerID2,
+		Version:                "version",
+		Database:               model.InstallationDatabaseMysqlOperator,
+		Filestore:              model.InstallationFilestoreMinioOperator,
+		Size:                   mmv1alpha1.Size100String,
+		Affinity:               model.InstallationAffinityIsolated,
+		State:                  model.InstallationStateCreationRequested,
+		ExternalDatabaseConfig: &model.ExternalDatabaseConfig{SecretName: "test-secret"},
+	}
+
+	err = sqlStore.CreateInstallation(installation5, nil, fixDNSRecords(5))
+	require.NoError(t, err)
+
 	t.Run("get unknown installation", func(t *testing.T) {
 		installation, err := sqlStore.GetInstallation("unknown", false, false)
 		require.NoError(t, err)
@@ -175,6 +192,17 @@ func TestInstallations(t *testing.T) {
 		err = sqlStore.DeleteInstallation(installation4.ID)
 		require.NoError(t, err)
 		installation4, err = sqlStore.GetInstallation(installation4.ID, false, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("get and delete installation 5", func(t *testing.T) {
+		installation, err := sqlStore.GetInstallation(installation5.ID, false, false)
+		require.NoError(t, err)
+		require.Equal(t, installation5, installation)
+
+		err = sqlStore.DeleteInstallation(installation5.ID)
+		require.NoError(t, err)
+		installation5, err = sqlStore.GetInstallation(installation5.ID, false, false)
 		require.NoError(t, err)
 	})
 
@@ -247,7 +275,7 @@ func TestInstallations(t *testing.T) {
 					IncludeDeleted: true,
 				},
 			},
-			[]*model.Installation{installation1, installation2, installation3, installation4},
+			[]*model.Installation{installation1, installation2, installation3, installation4, installation5},
 		},
 		{
 			"owner 1",
@@ -279,7 +307,7 @@ func TestInstallations(t *testing.T) {
 				OwnerID: ownerID2,
 				Paging:  model.AllPagesWithDeleted(),
 			},
-			[]*model.Installation{installation3, installation4},
+			[]*model.Installation{installation3, installation4, installation5},
 		},
 		{
 			"group 1",

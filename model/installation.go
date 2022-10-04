@@ -34,6 +34,8 @@ type Installation struct {
 	Image                      string
 	Name                       string
 	Database                   string
+	SingleTenantDatabaseConfig *SingleTenantDatabaseConfig `json:"SingleTenantDatabaseConfig,omitempty"`
+	ExternalDatabaseConfig     *ExternalDatabaseConfig     `json:"ExternalDatabaseConfig,omitempty"`
 	Filestore                  string
 	License                    string
 	MattermostEnv              EnvVarMap
@@ -47,8 +49,7 @@ type Installation struct {
 	APISecurityLock            bool
 	LockAcquiredBy             *string
 	LockAcquiredAt             int64
-	GroupOverrides             map[string]string           `json:"GroupOverrides,omitempty"`
-	SingleTenantDatabaseConfig *SingleTenantDatabaseConfig `json:"SingleTenantDatabaseConfig,omitempty"`
+	GroupOverrides             map[string]string `json:"GroupOverrides,omitempty"`
 
 	// configconfigMergedWithGroup is set when the installation configuration
 	// has been overridden with group configuration. This value can then be

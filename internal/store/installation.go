@@ -21,7 +21,8 @@ func init() {
 		Select(
 			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
-			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "Installation.CreateAt", "Installation.DeleteAt",
+			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
+			"Installation.CreateAt", "Installation.DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
 		From("Installation")
@@ -32,6 +33,7 @@ type rawInstallation struct {
 	MattermostEnvRaw              []byte
 	PriorityEnvRaw                []byte
 	SingleTenantDatabaseConfigRaw []byte
+	ExternalDatabaseConfigRaw     []byte
 }
 
 type rawInstallations []*rawInstallation
@@ -64,6 +66,15 @@ func (r *rawInstallation) toInstallation() (*model.Installation, error) {
 			return nil, err
 		}
 		r.Installation.SingleTenantDatabaseConfig = singleTenantDBConfig
+	}
+
+	if r.ExternalDatabaseConfigRaw != nil {
+		externalDBConfig := &model.ExternalDatabaseConfig{}
+		err = json.Unmarshal(r.ExternalDatabaseConfigRaw, externalDBConfig)
+		if err != nil {
+			return nil, err
+		}
+		r.Installation.ExternalDatabaseConfig = externalDBConfig
 	}
 
 	return r.Installation, nil
@@ -440,6 +451,16 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 	// For Postgres we cannot set typed nil as it is not mapped to NULL value.
 	if singleTenantDBConfJSON != nil {
 		insertsMap["SingleTenantDatabaseConfigRaw"] = singleTenantDBConfJSON
+	}
+
+	externalDBConfJSON, err := installation.ExternalDatabaseConfig.ToJSON()
+	if err != nil {
+		return errors.Wrap(err, "unable to marshal ExternalDatabaseConfig")
+	}
+
+	// For Postgres we cannot set typed nil as it is not mapped to NULL value.
+	if externalDBConfJSON != nil {
+		insertsMap["ExternalDatabaseConfigRaw"] = externalDBConfJSON
 	}
 
 	_, err = sqlStore.execBuilder(db, sq.

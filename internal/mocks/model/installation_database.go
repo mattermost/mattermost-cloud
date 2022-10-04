@@ -188,6 +188,21 @@ func (m *MockInstallationDatabaseStoreInterface) EXPECT() *MockInstallationDatab
 	return m.recorder
 }
 
+// GetInstallation mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetInstallation(id string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstallation", id, includeGroupConfig, includeGroupConfigOverrides)
+	ret0, _ := ret[0].(*model.Installation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstallation indicates an expected call of GetInstallation
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetInstallation(id, includeGroupConfig, includeGroupConfigOverrides interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstallation", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetInstallation), id, includeGroupConfig, includeGroupConfigOverrides)
+}
+
 // GetClusterInstallations mocks base method
 func (m *MockInstallationDatabaseStoreInterface) GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
 	m.ctrl.T.Helper()

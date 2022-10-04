@@ -264,6 +264,30 @@ func TestCreateInstallationRequestValid(t *testing.T) {
 				DNSNames: []string{"my invalid-dns.com"},
 			},
 		},
+		{
+			"valid external database",
+			false,
+			&model.CreateInstallationRequest{
+				OwnerID:  "owner1",
+				Name:     "my-installation",
+				DNSNames: []string{"my-installation.example.com"},
+				Database: model.InstallationDatabaseExternal,
+				ExternalDatabaseConfig: model.ExternalDatabaseRequest{
+					SecretName: "test-secret",
+				},
+			},
+		},
+		{
+			"invalid external database",
+			true,
+			&model.CreateInstallationRequest{
+				OwnerID:                "owner1",
+				Name:                   "my-installation",
+				DNSNames:               []string{"my-installation.example.com"},
+				Database:               model.InstallationDatabaseExternal,
+				ExternalDatabaseConfig: model.ExternalDatabaseRequest{},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

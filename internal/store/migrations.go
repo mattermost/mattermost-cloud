@@ -1960,4 +1960,17 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.37.0"), semver.MustParse("0.38.0"), func(e execer) error {
+		// Add ExternalDatabaseConfigRaw column for installations.
+
+		_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN ExternalDatabaseConfigRaw BYTEA NULL;
+				`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
