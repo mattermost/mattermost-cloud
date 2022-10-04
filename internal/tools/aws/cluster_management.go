@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -140,9 +141,29 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 	return clusterResources, nil
 }
 
+// ClaimVPC claims specified VPC for specified cluster.
+func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
+	vpcOut, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{VpcIds: stringsToPtr([]string{vpcID})})
+	if err != nil {
+		return ClusterResources{}, errors.Wrap(err, "failed to describe vpc")
+	}
+
+	clusterResources, err := a.getClusterResourcesForVPC(vpcID, *vpcOut.Vpcs[0].CidrBlock, logger)
+	if err != nil {
+		return ClusterResources{}, errors.Wrap(err, "failed to get cluster resources for VPC")
+	}
+
+	err = a.claimVpc(clusterResources, cluster, owner, logger)
+	if err != nil {
+		return ClusterResources{}, errors.Wrap(err, "failed to claim VPC")
+	}
+
+	return clusterResources, nil
+}
+
 // GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
-func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error) {
+func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
 	// First, check if a VPC has been claimed by this cluster. If only one has
 	// already been claimed, then return that with no error.
 	clusterAlreadyClaimedFilter := []*ec2.Filter{
@@ -155,7 +176,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		{
 			Name: aws.String(VpcClusterIDTagKey),
 			Values: []*string{
-				aws.String(clusterID),
+				aws.String(cluster.ID),
 			},
 		},
 	}
@@ -164,7 +185,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 		return ClusterResources{}, err
 	}
 	if len(clusterAlreadyClaimedVpcs) > 1 {
-		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), clusterID)
+		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), cluster.ID)
 	}
 	if len(clusterAlreadyClaimedVpcs) == 1 {
 		return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, *clusterAlreadyClaimedVpcs[0].CidrBlock, logger)
@@ -211,7 +232,7 @@ func (a *Client) GetAndClaimVpcResources(clusterID, owner string, logger log.Fie
 			continue
 		}
 
-		err = a.claimVpc(clusterResources, clusterID, owner, logger)
+		err = a.claimVpc(clusterResources, cluster, owner, logger)
 		if err != nil {
 			return clusterResources, err
 		}
@@ -233,8 +254,8 @@ func (a *Client) GetVpcResources(clusterID string, logger log.FieldLogger) (Clus
 }
 
 // ReleaseVpc changes the tags on a VPC to mark it as "available" again.
-func (a *Client) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
-	return a.releaseVpc(clusterID, logger)
+func (a *Client) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
+	return a.releaseVpc(cluster, logger)
 }
 
 // claimVpc will claim the given VPC for a cluster if a final race-check passes.
@@ -242,7 +263,7 @@ func (a *Client) ReleaseVpc(clusterID string, logger log.FieldLogger) error {
 //   - Requires the VPC to exist. #mindblown
 //   - VPC availabiltiy tag must be "true"
 //   - VPC cluster ID tag must by "none"
-func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
+func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
 	vpcFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("vpc-id"),
@@ -275,7 +296,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
 	}
 
-	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), clusterID, logger)
+	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), cluster.ID, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
 	}
@@ -286,19 +307,19 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 	}
 
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
-		err = a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		err = a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
 	}
 
 	for _, callsSecurityGroup := range clusterResources.CallsSecurityGroupIDs {
-		err = a.TagResource(callsSecurityGroup, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		err = a.TagResource(callsSecurityGroup, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
 
-		err = a.TagResource(callsSecurityGroup, "KubernetesCluster", fmt.Sprintf("%s-kops.k8s.local", clusterID), logger)
+		err = a.TagResource(callsSecurityGroup, "KubernetesCluster", getClusterTag(cluster), logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
@@ -309,7 +330,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, clusterID string, o
 	return nil
 }
 
-func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
+func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
 	var isSecondaryCluster bool = false
 	secondaryVpcFilters := []*ec2.Filter{
 		{
@@ -318,7 +339,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		},
 		{
 			Name:   aws.String(VpcSecondaryClusterIDTagKey),
-			Values: []*string{aws.String(clusterID)},
+			Values: []*string{aws.String(cluster.ID)},
 		},
 	}
 	vpcs, err := a.GetVpcsWithFilters(secondaryVpcFilters)
@@ -337,7 +358,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 			},
 			{
 				Name:   aws.String(VpcClusterIDTagKey),
-				Values: []*string{aws.String(clusterID)},
+				Values: []*string{aws.String(cluster.ID)},
 			},
 		}
 
@@ -348,7 +369,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	}
 	numVPCs := len(vpcs)
 	if numVPCs == 0 {
-		logger.Warnf("No VPCs are currently claimed by cluster %s, assuming already released", clusterID)
+		logger.Warnf("No VPCs are currently claimed by cluster %s, assuming already released", cluster.ID)
 		return nil
 	}
 	if numVPCs != 1 {
@@ -356,7 +377,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		for i, vpc := range vpcs {
 			logger.WithField("tags", vpc.Tags).Warnf("VPC %d: %s", i+1, *vpc.VpcId)
 		}
-		return fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting release process", numVPCs, clusterID)
+		return fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting release process", numVPCs, cluster.ID)
 	}
 
 	publicSubnetFilter := []*ec2.Filter{
@@ -376,7 +397,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	}
 
 	for _, subnet := range publicSubnets {
-		err = a.UntagResource(*subnet.SubnetId, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		err = a.UntagResource(*subnet.SubnetId, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to untag subnet")
 		}
@@ -399,12 +420,12 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 	}
 
 	for _, callsSecurityGroup := range callsSecurityGroups {
-		err = a.UntagResource(*callsSecurityGroup.GroupId, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		err = a.UntagResource(*callsSecurityGroup.GroupId, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag security group")
 		}
 
-		err = a.UntagResource(*callsSecurityGroup.GroupId, "KubernetesCluster", fmt.Sprintf("%s-kops.k8s.local", clusterID), logger)
+		err = a.UntagResource(*callsSecurityGroup.GroupId, "KubernetesCluster", getClusterTag(cluster), logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag security group")
 		}
@@ -415,7 +436,7 @@ func (a *Client) releaseVpc(clusterID string, logger log.FieldLogger) error {
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
 		}
-		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", clusterID, *vpcs[0].VpcId)
+		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", cluster.ID, *vpcs[0].VpcId)
 		return nil
 	}
 	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcClusterIDTagKey), VpcClusterIDTagValueNone, logger)
@@ -445,6 +466,7 @@ func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (C
 			aws.String(vpcID),
 		},
 	}
+
 	vpcCidr, err := a.Service().ec2.DescribeVpcs(input)
 	if err != nil {
 		return ClusterResources{}, errors.Wrapf(err, "failed to fetch the VPC information using VPC ID %s", vpcID)
@@ -453,16 +475,16 @@ func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (C
 }
 
 // TagResourcesByCluster for secondary cluster.
-func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error {
+func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
 
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
-		err := a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", fmt.Sprintf("%s-kops.k8s.local", clusterID)), "shared", logger)
+		err := a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
 	}
 
-	err := a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcSecondaryClusterIDTagKey), clusterID, logger)
+	err := a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcSecondaryClusterIDTagKey), cluster.ID, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
 	}
@@ -488,4 +510,18 @@ func (a *Client) SwitchClusterTags(clusterID string, targetClusterID string, log
 	}
 
 	return nil
+}
+
+func getClusterTag(cluster *model.Cluster) string {
+	if cluster.ProvisionerMetadataEKS != nil {
+		return eksClusterTag(cluster.ID)
+	}
+	return kopsClusterTag(cluster.ID)
+}
+
+func kopsClusterTag(clusterID string) string {
+	return fmt.Sprintf("%s-kops.k8s.local", clusterID)
+}
+func eksClusterTag(clusterID string) string {
+	return clusterID
 }

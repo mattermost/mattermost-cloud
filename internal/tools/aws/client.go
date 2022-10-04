@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
+
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
 
@@ -47,9 +50,10 @@ type AWS interface {
 
 	GetCloudEnvironmentName() string
 
-	GetAndClaimVpcResources(clusterID, owner string, logger log.FieldLogger) (ClusterResources, error)
+	GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
+	ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
 	GetVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
-	ReleaseVpc(clusterID string, logger log.FieldLogger) error
+	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
 
@@ -81,10 +85,17 @@ type AWS interface {
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 
 	GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error)
-	TagResourcesByCluster(clusterResources ClusterResources, clusterID string, owner string, logger log.FieldLogger) error
+	TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error
 
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
+
+	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error)
+	EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error)
+	GetEKSCluster(clusterName string) (*eks.Cluster, error)
+	IsClusterReady(clusterName string) (bool, error)
+	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
+	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
@@ -136,6 +147,7 @@ type Service struct {
 	dynamodb              dynamodbiface.DynamoDBAPI
 	sts                   stsiface.STSAPI
 	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
+	eks                   eksiface.EKSAPI
 }
 
 // NewService creates a new instance of Service.
@@ -153,6 +165,7 @@ func NewService(sess *session.Session) *Service {
 		dynamodb:              dynamodb.New(sess),
 		sts:                   sts.New(sess),
 		appAutoscaling:        applicationautoscaling.New(sess),
+		eks:                   eks.New(sess),
 	}
 }
 

@@ -24,6 +24,7 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		{"negative master count", &model.CreateClusterRequest{MasterCount: -1}, true},
 		{"mismatched node count", &model.CreateClusterRequest{NodeMinCount: 2, NodeMaxCount: 3}, true},
 		{"max pods too low", &model.CreateClusterRequest{MaxPodsPerNode: 1}, true},
+		{"eks no node group", &model.CreateClusterRequest{EKSConfig: &model.EKSConfig{}}, true},
 	}
 
 	for _, tc := range testCases {

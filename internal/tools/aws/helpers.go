@@ -98,6 +98,30 @@ func IsErrorCode(err error, code string) bool {
 	return false
 }
 
+// IsErrorResourceNotFound asserts that an AWS error is
+// ResourceNotFoundException.
+func IsErrorResourceNotFound(err error) bool {
+	if err != nil {
+		awsErr, ok := err.(awserr.Error)
+		if ok {
+			return awsErr.Code() == "ResourceNotFoundException"
+		}
+	}
+	return false
+}
+
+// IsErrorResourceInUseException asserts that an AWS error is
+// ResourceInUseException.
+func IsErrorResourceInUseException(err error) bool {
+	if err != nil {
+		awsErr, ok := err.(awserr.Error)
+		if ok {
+			return awsErr.Code() == "ResourceInUseException"
+		}
+	}
+	return false
+}
+
 // RDSMultitenantSecretName formats the name of a secret used in a multitenant RDS database.
 func RDSMultitenantSecretName(id string) string {
 	return fmt.Sprintf("rds-multitenant-%s", id)

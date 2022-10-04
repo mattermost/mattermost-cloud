@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-// GetCIDRByVPCTag creates a record in Route53 for a public domain name.
+// GetCIDRByVPCTag fetches VPC CIDR block by 'Name' tag.
 func (a *Client) GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error) {
 	vpcInput := ec2.DescribeVpcsInput{
 		Filters: []*ec2.Filter{

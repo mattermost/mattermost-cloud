@@ -19,6 +19,11 @@ const (
 	NetworkingAmazon = "amazon-vpc-routed-eni"
 )
 
+var (
+	defaultEKSRoleARN       string
+	defaultNodeGroupRoleARN string
+)
+
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
 	Provider               string                         `json:"provider,omitempty"`
@@ -37,6 +42,13 @@ type CreateClusterRequest struct {
 	Networking             string                         `json:"networking,omitempty"`
 	VPC                    string                         `json:"vpc,omitempty"`
 	MaxPodsPerNode         int64
+	EKSConfig              *EKSConfig `json:"EKSConfig,omitempty"`
+}
+
+// EKSConfig is EKS cluster configuration.
+type EKSConfig struct {
+	ClusterRoleARN *string                 `json:"clusterRoleARN,omitempty"`
+	NodeGroups     map[string]EKSNodeGroup `json:"nodeGroups,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -91,6 +103,18 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Networking) == 0 {
 		request.Networking = NetworkingCalico
 	}
+	if request.EKSConfig != nil {
+		if request.EKSConfig.ClusterRoleARN == nil {
+			request.EKSConfig.ClusterRoleARN = &defaultEKSRoleARN
+		}
+
+		for _, ng := range request.EKSConfig.NodeGroups {
+			if ng.RoleARN == nil {
+				ng.RoleARN = &defaultNodeGroupRoleARN
+			}
+		}
+	}
+
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
 	}
@@ -118,6 +142,12 @@ func (request *CreateClusterRequest) Validate() error {
 		return errors.Errorf("max pods per node (%d) must be 10 or greater", request.MaxPodsPerNode)
 	}
 	// TODO: check zones and instance types?
+
+	if request.EKSConfig != nil {
+		if len(request.EKSConfig.NodeGroups) == 0 {
+			return errors.New("at least 1 node group is required when using EKS")
+		}
+	}
 
 	if !contains(GetSupportedCniList(), request.Networking) {
 		return errors.Errorf("unsupported cluster networking option %s", request.Networking)
