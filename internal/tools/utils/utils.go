@@ -138,6 +138,8 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 	switch dbType {
 	case model.InstallationDatabaseMysqlOperator:
 		return model.NewMysqlOperatorDatabase()
+	case model.InstallationDatabaseExternal:
+		return aws.NewExternalDatabase(installationID, r.awsClient)
 	case model.InstallationDatabaseSingleTenantRDSMySQL:
 		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installationID, r.awsClient, r.disableDBCheck)
 	case model.InstallationDatabaseSingleTenantRDSPostgres:

@@ -56,6 +56,8 @@ type CreateInstallationRequest struct {
 	GroupSelectionAnnotations []string
 	// SingleTenantDatabaseConfig is ignored if Database is not single tenant mysql or postgres.
 	SingleTenantDatabaseConfig SingleTenantDatabaseRequest
+	// ExternalDatabaseConfig is ignored if Database is not single external.
+	ExternalDatabaseConfig ExternalDatabaseRequest
 }
 
 // https://man7.org/linux/man-pages/man7/hostname.7.html
@@ -160,10 +162,17 @@ func (request *CreateInstallationRequest) Validate() error {
 		}
 	}
 
-	if !deployMinioOperator && request.Filestore == "minio-operator" {
+	if request.Database == InstallationDatabaseExternal {
+		err = request.ExternalDatabaseConfig.Validate()
+		if err != nil {
+			return errors.Wrap(err, "external database config is invalid")
+		}
+	}
+
+	if !deployMinioOperator && request.Filestore == InstallationFilestoreMinioOperator {
 		return errors.Errorf("minio filestore cannot be used when minio operator is not deployed")
 	}
-	if !deployMySQLOperator && request.Database == "mysql-operator" {
+	if !deployMySQLOperator && request.Database == InstallationDatabaseMysqlOperator {
 		return errors.Errorf("mysql operator database cannot be used when mysql operator is not deployed")
 	}
 	return checkSpaces(request)

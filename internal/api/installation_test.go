@@ -365,6 +365,7 @@ func TestCreateInstallation(t *testing.T) {
 		Supervisor:    &mockSupervisor{},
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
+		AwsClient:     &mockAWSClient{},
 		Logger:        logger,
 	})
 	ts := httptest.NewServer(router)
@@ -704,6 +705,42 @@ func TestCreateInstallation(t *testing.T) {
 		assert.NotNil(t, installation.SingleTenantDatabaseConfig)
 		assert.NotEmpty(t, installation.SingleTenantDatabaseConfig.PrimaryInstanceType)
 		assert.NotEmpty(t, installation.SingleTenantDatabaseConfig.ReplicaInstanceType)
+	})
+
+	t.Run("valid external database", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                "owner1",
+			Version:                "version",
+			DNS:                    "external1.test.com",
+			ExternalDatabaseConfig: model.ExternalDatabaseRequest{SecretName: "test-secret"},
+			Database:               model.InstallationDatabaseExternal,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, installation.ExternalDatabaseConfig)
+		assert.NotEmpty(t, installation.ExternalDatabaseConfig.SecretName)
+	})
+
+	t.Run("invalid external database", func(t *testing.T) {
+		_, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                "owner1",
+			Version:                "version",
+			DNS:                    "external2.test.com",
+			ExternalDatabaseConfig: model.ExternalDatabaseRequest{},
+			Database:               model.InstallationDatabaseExternal,
+		})
+		require.Error(t, err)
+	})
+
+	t.Run("ignore external database request", func(t *testing.T) {
+		installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+			OwnerID:                "owner1",
+			Version:                "version",
+			DNS:                    "external3.test.com",
+			ExternalDatabaseConfig: model.ExternalDatabaseRequest{SecretName: "test-secret"},
+			Database:               model.InstallationDatabaseMultiTenantRDSPostgres,
+		})
+		require.NoError(t, err)
+		assert.Empty(t, installation.ExternalDatabaseConfig)
 	})
 }
 

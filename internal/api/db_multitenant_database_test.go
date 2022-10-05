@@ -277,6 +277,10 @@ func (m mockAWSClient) SwitchClusterTags(clusterID string, targetClusterID strin
 	return nil
 }
 
+func (m mockAWSClient) SecretsManagerValidateExternalDatabaseSecret(name string) error {
+	return nil
+}
+
 func (m mockAWSClient) RDSDBCLusterExists(awsID string) (bool, error) {
 	if awsID != m.expectedRDSID {
 		panic("expected different RDS ID")

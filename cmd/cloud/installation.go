@@ -42,6 +42,7 @@ func init() {
 	installationCreateCmd.Flags().String("rds-primary-instance", "", "The machine instance type used for primary replica of database cluster. Works only with single tenant RDS databases.")
 	installationCreateCmd.Flags().String("rds-replica-instance", "", "The machine instance type used for reader replicas of database cluster. Works only with single tenant RDS databases.")
 	installationCreateCmd.Flags().Int("rds-replicas-count", 0, "The number of reader replicas of database cluster. Min: 0, Max: 15. Works only with single tenant RDS databases.")
+	installationCreateCmd.Flags().String("external-database-secret-name", "", "The AWS secret name where the external database DSN is stored. Works only with external databases.")
 	installationCreateCmd.MarkFlagRequired("owner")
 	installationCreateCmd.MarkFlagRequired("dns")
 
@@ -196,6 +197,14 @@ var installationCreateCmd = &cobra.Command{
 			}
 
 			request.SingleTenantDatabaseConfig = dbConfig
+		}
+
+		if database == model.InstallationDatabaseExternal {
+			externalDatabaseSecretName, _ := command.Flags().GetString("external-database-secret-name")
+
+			request.ExternalDatabaseConfig = model.ExternalDatabaseRequest{
+				SecretName: externalDatabaseSecretName,
+			}
 		}
 
 		dryRun, _ := command.Flags().GetBool("dry-run")
@@ -783,6 +792,16 @@ var installationDeploymentReportCmd = &cobra.Command{
 					output += fmt.Sprintf(" │     ├ Database Schema: %s\n", schema.ID)
 					output += fmt.Sprintf(" │     └ Name: %s\n", schema.Name)
 				}
+			}
+		} else {
+			switch installation.Database {
+			case model.InstallationDatabaseSingleTenantRDSMySQL,
+				model.InstallationDatabaseSingleTenantRDSPostgres:
+				output += fmt.Sprintf(" │ ├ Primary Instance Type: %s\n", installation.SingleTenantDatabaseConfig.PrimaryInstanceType)
+				output += fmt.Sprintf(" │ ├ Replica Instance Type: %s\n", installation.SingleTenantDatabaseConfig.ReplicaInstanceType)
+				output += fmt.Sprintf(" │ └ Replica Count: %d\n", installation.SingleTenantDatabaseConfig.ReplicasCount)
+			case model.InstallationDatabaseExternal:
+				output += fmt.Sprintf(" │ └ Database Secret Name: %s\n", installation.ExternalDatabaseConfig.SecretName)
 			}
 		}
 		output += fmt.Sprintf(" ├ Filestore Type: %s\n", installation.Filestore)

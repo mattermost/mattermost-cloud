@@ -30,6 +30,12 @@ const (
 	// InstallationDatabaseMultiTenantRDSPostgresPGBouncer is a PostgreSQL
 	// multitenant database hosted via Amazon RDS that has pooled connections.
 	InstallationDatabaseMultiTenantRDSPostgresPGBouncer = "aws-multitenant-rds-postgres-pgbouncer"
+	// InstallationDatabaseExternal is a database that is created and managed
+	// outside of the cloud provisioner. No provisioning or teardown is performed
+	// on this database type. An AWS secret with connection strings and
+	// credentials must be specified on installation creation when using this
+	// database type.
+	InstallationDatabaseExternal = "external"
 
 	// DatabaseEngineTypeMySQL is a MySQL database.
 	DatabaseEngineTypeMySQL = "mysql"
@@ -58,6 +64,7 @@ type Database interface {
 // TODO(gsagula): Consider renaming this interface to InstallationDatabaseInterface. For reference,
 // https://github.com/mattermost/mattermost-cloud/pull/209#discussion_r424597373
 type InstallationDatabaseStoreInterface interface {
+	GetInstallation(id string, includeGroupConfig, includeGroupConfigOverrides bool) (*Installation, error)
 	GetClusterInstallations(filter *ClusterInstallationFilter) ([]*ClusterInstallation, error)
 	GetMultitenantDatabases(filter *MultitenantDatabaseFilter) ([]*MultitenantDatabase, error)
 	GetMultitenantDatabase(multitenantdatabaseID string) (*MultitenantDatabase, error)
@@ -159,6 +166,7 @@ func IsSupportedDatabase(database string) bool {
 	case InstallationDatabaseMultiTenantRDSPostgres:
 	case InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
 	case InstallationDatabaseMysqlOperator:
+	case InstallationDatabaseExternal:
 	default:
 		return false
 	}

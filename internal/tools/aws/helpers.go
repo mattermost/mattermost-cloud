@@ -162,6 +162,11 @@ func MattermostRDSDatabaseName(installationID string) string {
 	return fmt.Sprintf("%s%s", rdsDatabaseNamePrefix, installationID)
 }
 
+// ExternalDatabaseName formats the name of an externally managed database.
+func ExternalDatabaseName(installationID string) string {
+	return fmt.Sprintf("external-database-%s", installationID)
+}
+
 // RDSMultitenantClusterSecretDescription formats the text used for describing a
 // multitenant database's secret key.
 func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string) string {

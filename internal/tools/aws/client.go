@@ -88,6 +88,7 @@ type AWS interface {
 	TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error
 
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
+	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error)

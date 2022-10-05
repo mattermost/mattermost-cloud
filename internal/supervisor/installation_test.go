@@ -553,6 +553,10 @@ func (a *mockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (stri
 	return "password", nil
 }
 
+func (a *mockAWS) SecretsManagerValidateExternalDatabaseSecret(name string) error {
+	return nil
+}
+
 type mockEventProducer struct{}
 
 func (m *mockEventProducer) ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error {

@@ -515,6 +515,20 @@ func (mr *MockAWSMockRecorder) SecretsManagerGetPGBouncerAuthUserPassword(vpcID 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerGetPGBouncerAuthUserPassword", reflect.TypeOf((*MockAWS)(nil).SecretsManagerGetPGBouncerAuthUserPassword), vpcID)
 }
 
+// SecretsManagerValidateExternalDatabaseSecret mocks base method
+func (m *MockAWS) SecretsManagerValidateExternalDatabaseSecret(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SecretsManagerValidateExternalDatabaseSecret", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SecretsManagerValidateExternalDatabaseSecret indicates an expected call of SecretsManagerValidateExternalDatabaseSecret
+func (mr *MockAWSMockRecorder) SecretsManagerValidateExternalDatabaseSecret(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SecretsManagerValidateExternalDatabaseSecret", reflect.TypeOf((*MockAWS)(nil).SecretsManagerValidateExternalDatabaseSecret), name)
+}
+
 // SwitchClusterTags mocks base method
 func (m *MockAWS) SwitchClusterTags(clusterID, targetClusterID string, logger logrus.FieldLogger) error {
 	m.ctrl.T.Helper()
