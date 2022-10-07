@@ -66,12 +66,17 @@ func (sqlStore *SQLStore) createInstallationDNS(db execer, installationID string
 
 // GetDNSRecordsForInstallation lists DNS Records for specified installation.
 func (sqlStore *SQLStore) GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error) {
-	return sqlStore.getDNSRecordsForInstallation(sqlStore.db, installationID)
+	return sqlStore.getDNSRecordsForInstallations(sqlStore.db, installationID)
 }
 
-func (sqlStore *SQLStore) getDNSRecordsForInstallation(db queryer, installationID string) ([]*model.InstallationDNS, error) {
+// GetDNSRecordsForInstallations lists DNS Records for specified installations.
+func (sqlStore *SQLStore) GetDNSRecordsForInstallations(installationIDs []string) ([]*model.InstallationDNS, error) {
+	return sqlStore.getDNSRecordsForInstallations(sqlStore.db, installationIDs...)
+}
+
+func (sqlStore *SQLStore) getDNSRecordsForInstallations(db queryer, installationIDs ...string) ([]*model.InstallationDNS, error) {
 	query := sq.Select(installationDNSColumns...).From(installationDNSTable).
-		Where("InstallationID = ?", installationID).
+		Where(sq.Eq{"InstallationID": installationIDs}).
 		Where("DeleteAt = 0").
 		OrderBy("CreateAt ASC")
 
