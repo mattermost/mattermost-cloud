@@ -44,16 +44,22 @@ func (sqlStore *SQLStore) GetInstallationDTOs(filter *model.InstallationFilter, 
 		return nil, errors.Wrap(err, "failed to get annotations for installations")
 	}
 
+	installationIDs := make([]string, 0, len(installations))
+	for _, inst := range installations {
+		installationIDs = append(installationIDs, inst.ID)
+	}
+	dnsRecords, err := sqlStore.GetDNSRecordsForInstallations(installationIDs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch DNS records for installations")
+	}
+	mapping := make(map[string][]*model.InstallationDNS, len(installations))
+	for _, record := range dnsRecords {
+		mapping[record.InstallationID] = append(mapping[record.InstallationID], record)
+	}
+
 	dtos := make([]*model.InstallationDTO, 0, len(installations))
 	for _, inst := range installations {
-
-		// TODO: we could try to make it a single query as for annotations.
-		dnsRecords, err := sqlStore.GetDNSRecordsForInstallation(inst.ID)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch DNS records for installations")
-		}
-
-		dtos = append(dtos, inst.ToDTO(annotations[inst.ID], dnsRecords))
+		dtos = append(dtos, inst.ToDTO(annotations[inst.ID], mapping[inst.ID]))
 	}
 
 	return dtos, nil

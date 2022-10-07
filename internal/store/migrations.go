@@ -1973,4 +1973,17 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.38.0"), semver.MustParse("0.39.0"), func(e execer) error {
+		// Add index on InstallationDNS(InstallationID) to avoid full table scan
+		// for fetching all DNS records for single Installation.
+
+		_, err := e.Exec(`
+			CREATE INDEX ix_InstallationDNS_InstallationID on InstallationDNS(InstallationID)
+		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
 }
