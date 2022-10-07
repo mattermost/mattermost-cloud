@@ -751,7 +751,7 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 	}
 
 	container := pod.Spec.Containers[0]
-	logger.Debugf("Executing `%s` on pod %s, container %s, running image %s", strings.Join(args, " "), pod.Name, container.Name, container.Image)
+	logger.Debugf("Executing `%s` on pod %s: container=%s, image=%s, phase=%s", strings.Join(args, " "), pod.Name, container.Name, container.Image, pod.Status.Phase)
 
 	execRequest := k8sClient.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
