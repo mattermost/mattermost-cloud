@@ -506,9 +506,10 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 			return err
 		}
 		// Pods for k8s-spot-termination-handler do not mean to be schedule in every cluster so doesn't need to fail provision in this case
-		if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
-			return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
-		}
+		//TODO: Temporary disable this check due to a bug described in detail in CLD-4227
+		//if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
+		//	return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
+		//}
 
 		for _, pod := range pods.Items {
 			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
