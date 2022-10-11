@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
 )
@@ -118,6 +120,26 @@ type installationDeleteFlags struct {
 
 func (flags *installationDeleteFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be deleted.")
+	_ = command.MarkFlagRequired("installation")
+}
+
+type installationDeletionPatchRequestOptions struct {
+	futureDeletionTime time.Duration
+}
+
+func (flags *installationDeletionPatchRequestOptions) addFlags(command *cobra.Command) {
+	command.Flags().DurationVar(&flags.futureDeletionTime, "future-expiry", 0, "The amount of time from now when the installation can be deleted (0s for immediate deletion)")
+}
+
+type installationUpdateDeletionFlags struct {
+	clusterFlags
+	installationDeletionPatchRequestOptions
+	installationID string
+}
+
+func (flags *installationUpdateDeletionFlags) addFlags(command *cobra.Command) {
+	flags.installationDeletionPatchRequestOptions.addFlags(command)
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to update pending deletion parameters for.")
 	_ = command.MarkFlagRequired("installation")
 }
 

@@ -551,10 +551,28 @@ func (c *Client) DeleteInstallation(installationID string) error {
 	}
 }
 
+// UpdateInstallationDeletion updates the deletion parameters of an installation
+// that is still pending deletion.
+func (c *Client) UpdateInstallationDeletion(installationID string, request *PatchInstallationDeletionRequest) (*InstallationDTO, error) {
+	resp, err := c.doPut(c.buildURL("/api/installation/%s/deletion", installationID), request)
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return InstallationDTOFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // CancelInstallationDeletion cancels the deletion of an installation that is
-// still pending deletion
+// still pending deletion.
 func (c *Client) CancelInstallationDeletion(installationID string) error {
-	resp, err := c.doPost(c.buildURL("/api/installation/%s/cancel_deletion", installationID), nil)
+	resp, err := c.doPost(c.buildURL("/api/installation/%s/deletion/cancel", installationID), nil)
 	if err != nil {
 		return err
 	}
