@@ -28,6 +28,7 @@ func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, clus
 	}
 
 	return &nodeProblemDetector{
+		kubeconfigPath: kubeconfigPath,
 		logger:         logger.WithField("cluster-utility", model.NodeProblemDetectorCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.NodeProblemDetector,
