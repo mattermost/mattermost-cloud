@@ -5,6 +5,8 @@
 package aws
 
 import (
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
@@ -70,6 +72,117 @@ func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResou
 	}
 
 	return out.Cluster, nil
+}
+
+// AllowEKSPostgresTraffic allows traffic to Postgres from EKS Security
+// Group.
+func (a *Client) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+	input := eks.DescribeClusterInput{
+		Name: aws.String(cluster.ID),
+	}
+	out, err := a.Service().eks.DescribeCluster(&input)
+	if err != nil {
+		return errors.Wrap(err, "failed to describe EKS cluster")
+	}
+
+	postgresSG, err := a.getPostgresSecurityGroup(eksMetadata.VPC)
+	if err != nil {
+		return errors.Wrap(err, "failed to get Postgres security group for VPC")
+	}
+
+	ipPermissions, err := a.getEKSPostgresIPPermissions(out.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get EKS Postgres IP permissions")
+	}
+
+	_, err = a.Service().ec2.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
+		GroupId:       postgresSG.GroupId,
+		IpPermissions: ipPermissions,
+	})
+	if err != nil {
+		if IsErrorPermissionDuplicate(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to authorize rule")
+	}
+
+	return nil
+}
+
+// RevokeEKSPostgresTraffic revokes Postgres traffic permission from EKS
+// Security Group.
+func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+	postgresSG, err := a.getPostgresSecurityGroup(eksMetadata.VPC)
+	if err != nil {
+		return errors.Wrap(err, "failed to get Postgres security group for VPC")
+	}
+
+	input := eks.DescribeClusterInput{
+		Name: aws.String(cluster.ID),
+	}
+	out, err := a.Service().eks.DescribeCluster(&input)
+	if err != nil {
+		if IsErrorResourceNotFound(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to describe EKS cluster")
+	}
+
+	ipPermissions, err := a.getEKSPostgresIPPermissions(out.Cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get EKS Postgres IP permissions")
+	}
+
+	_, err = a.Service().ec2.RevokeSecurityGroupIngress(&ec2.RevokeSecurityGroupIngressInput{
+		GroupId:       postgresSG.GroupId,
+		IpPermissions: ipPermissions,
+	})
+	if err != nil {
+		if IsErrorPermissionNotFound(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to revoke security group ingress")
+	}
+	return nil
+}
+
+func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2.SecurityGroup, error) {
+	securityGroupsResp, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+		DryRun: nil,
+		Filters: []*ec2.Filter{
+			{Name: aws.String("vpc-id"), Values: []*string{&vpcID}},
+		},
+		// TODO: make sure to list all
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to describe security groups for VPC")
+	}
+
+	var postgresSG *ec2.SecurityGroup
+	for _, sg := range securityGroupsResp.SecurityGroups {
+		if strings.HasSuffix(*sg.GroupName, "-db-postgresql-sg") {
+			postgresSG = sg
+			break
+		}
+	}
+	if postgresSG == nil {
+		return nil, errors.New("postgres db security group not found")
+	}
+
+	return postgresSG, nil
+}
+
+func (a *Client) getEKSPostgresIPPermissions(cluster *eks.Cluster) ([]*ec2.IpPermission, error) {
+	eksSecurityGroup := cluster.ResourcesVpcConfig.ClusterSecurityGroupId
+
+	return []*ec2.IpPermission{{
+		FromPort:   aws.Int64(5432),
+		IpProtocol: aws.String("tcp"),
+		ToPort:     aws.Int64(5432),
+		UserIdGroupPairs: []*ec2.UserIdGroupPair{
+			{GroupId: eksSecurityGroup, Description: aws.String("EKS permission")},
+		},
+	}}, nil
 }
 
 // EnsureEKSClusterNodeGroups ensures EKS cluster node groups are created.

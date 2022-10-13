@@ -7,17 +7,11 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -210,6 +204,14 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	return ugh.CreateUtilityGroup()
 }
 
+// CheckClusterCreated is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	// TODO: this is currently not implemented for kops.
+	// Entire waiting logic happens as part of cluster creation therefore we
+	// just skip this step and report cluster as created.
+	return true, nil
+}
+
 // ProvisionCluster installs all the baseline kubernetes resources needed for
 // managing installations. This can be called on an already-provisioned cluster
 // to re-provision with the newest version of the resources.
@@ -223,338 +225,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	// Start by gathering resources that will be needed later. If any of this
-	// fails then no cluster changes have been made which reduces risk.
-	bifrostSecret, err := awsClient.GenerateBifrostUtilitySecret(cluster.ID, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate bifrost secret")
-	}
-
-	// Begin deploying the mattermost operator.
-	k8sClient, err := k8s.NewFromFile(kopsClient.GetKubeConfigPath(), logger)
-	if err != nil {
-		return err
-	}
-
-	mysqlOperatorNamespace := "mysql-operator"
-	minioOperatorNamespace := "minio-operator"
-	mattermostOperatorNamespace := "mattermost-operator"
-
-	namespaces := []string{
-		mattermostOperatorNamespace,
-	}
-
-	if provisioner.params.DeployMysqlOperator {
-		namespaces = append(namespaces, mysqlOperatorNamespace)
-	}
-
-	if provisioner.params.DeployMinioOperator {
-		namespaces = append(namespaces, minioOperatorNamespace)
-	}
-
-	// Remove all previously-installed operator namespaces and resources.
-	ctx := context.TODO()
-	for _, namespace := range namespaces {
-		logger.Infof("Cleaning up namespace %s", namespace)
-		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Namespace %s not found; skipping...", namespace)
-		} else if err != nil {
-			return errors.Wrapf(err, "failed to delete namespace %s", namespace)
-		}
-	}
-
-	wait := 60
-	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-	defer cancel()
-	err = waitForNamespacesDeleted(ctx, namespaces, k8sClient)
-	if err != nil {
-		return err
-	}
-
-	// The bifrost utility cannot have downtime so it is not part of the namespace
-	// cleanup and recreation flow. We always only update bifrost.
-	bifrostNamespace := "bifrost"
-	namespaces = append(namespaces, bifrostNamespace)
-	logger.Info("Creating utility namespaces")
-	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
-	if err != nil {
-		return errors.Wrap(err, "failed to create bifrost namespace")
-	}
-
-	logger.Info("Creating or updating bifrost secret")
-	_, err = k8sClient.CreateOrUpdateSecret(bifrostNamespace, bifrostSecret)
-	if err != nil {
-		return errors.Wrap(err, "failed to create bifrost secret")
-	}
-
-	// Need to remove two items from the calico because the fields after the creation are immutable so
-	// create/update does not work. We might want to refactor this in the future to avoid this
-	logger.Info("Cleaning up some calico resources to reapply")
-	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("Service calico-typha not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete service calico-typha")
-	}
-
-	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-kube-controllers", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("PodDisruptionBudget calico-kube-controllers not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-kube-controllers")
-	}
-
-	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("PodDisruptionBudget calico-typha not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
-	}
-
-	err = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(ctx, "k8s-spot-termination-handler", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("DaemonSet k8s-spot-termination-handler not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete DaemonSet k8s-spot-termination-handler")
-	}
-
-	// TODO: determine if we want to hard-code the k8s resource objects in code.
-	// For now, we will ingest manifest files to deploy the mattermost operator.
-	files := []k8s.ManifestFile{
-		{
-			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermostrestoredb_crd.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/crds/mm_mattermost_crd.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/service_account.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/role.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/role_binding.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/operator-manifests/mattermost/operator.yaml",
-			DeployNamespace: mattermostOperatorNamespace,
-		}, {
-			Path:            "manifests/bifrost/bifrost.yaml",
-			DeployNamespace: bifrostNamespace,
-		}, {
-			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
-			DeployNamespace: "kube-system",
-		},
-	}
-
-	// Only deploy calico CNI at cluster creation time if networking option is calico
-	if cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
-		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico" {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/calico-cni.yaml",
-			DeployNamespace: "kube-system",
-		})
-	}
-
-	// Only deploy or reprovision calico netpol if current networking option is other then calico
-	if (cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
-		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking != "calico") ||
-		(len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking != "calico") {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/calico-network-policy-only.yaml",
-			DeployNamespace: "kube-system",
-		})
-	}
-
-	if provisioner.params.DeployMysqlOperator {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
-			DeployNamespace: mysqlOperatorNamespace,
-		})
-	}
-
-	if provisioner.params.DeployMinioOperator {
-		files = append(files, k8s.ManifestFile{
-			Path:            "manifests/operator-manifests/minio/minio-operator.yaml",
-			DeployNamespace: minioOperatorNamespace,
-		})
-	}
-
-	err = k8sClient.CreateFromFiles(files)
-	if err != nil {
-		return err
-	}
-
-	// change the waiting time because creation can take more time
-	// due container download / init / container creation / volume allocation
-	wait = 240
-	appsWithDeployment := map[string]string{
-		"mattermost-operator":                mattermostOperatorNamespace,
-		"bifrost":                            bifrostNamespace,
-		"calico-typha-horizontal-autoscaler": "kube-system",
-		"calico-typha":                       "kube-system",
-	}
-
-	if provisioner.params.DeployMinioOperator {
-		appsWithDeployment["minio-operator"] = minioOperatorNamespace
-	}
-
-	for deployment, namespace := range appsWithDeployment {
-		pods, err := k8sClient.GetPodsFromDeployment(namespace, deployment)
-		if err != nil {
-			return err
-		}
-		if len(pods.Items) == 0 {
-			return fmt.Errorf("no pods found from %q deployment", deployment)
-		}
-
-		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, deployment, pod.GetName())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			_, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
-			if err != nil {
-				return err
-			}
-			logger.Infof("Successfully deployed service pod %q", pod.GetName())
-		}
-	}
-
-	var operatorsWithStatefulSet []string
-	if provisioner.params.DeployMysqlOperator {
-		operatorsWithStatefulSet = append(operatorsWithStatefulSet, "mysql-operator")
-	}
-
-	for _, operator := range operatorsWithStatefulSet {
-		pods, err := k8sClient.GetPodsFromStatefulset(operator, operator)
-		if err != nil {
-			return err
-		}
-		if len(pods.Items) == 0 {
-			return fmt.Errorf("no pods found from %q statefulSet", operator)
-		}
-
-		for _, pod := range pods.Items {
-
-			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
-			if err != nil {
-				return err
-			}
-			logger.Infof("Successfully deployed service pod %q", pod.GetName())
-		}
-	}
-
-	wait = 240
-	supportAppsWithDaemonSets := map[string]string{
-		"calico-node":                  "kube-system",
-		"k8s-spot-termination-handler": "kube-system",
-	}
-	for daemonSet, namespace := range supportAppsWithDaemonSets {
-		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
-			logger.Infof("Waiting up to %d seconds for %q daemonset to get it...", wait, daemonSet)
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
-			if err != nil {
-				return errors.Wrapf(err, " failed to get daemonSet %s", daemonSet)
-			}
-			var payload []k8s.PatchStringValue
-			if daemonSetObj.Spec.Selector != nil {
-				for i, envVar := range daemonSetObj.Spec.Template.Spec.Containers[0].Env {
-					if envVar.Name == "CLUSTER" {
-						payload = []k8s.PatchStringValue{{
-							Op:    "replace",
-							Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-							Value: cluster.ID,
-						}}
-					}
-					if envVar.Name == "MATTERMOST_CHANNEL" && len(os.Getenv(model.MattermostChannel)) > 0 {
-						payload = append(payload,
-							k8s.PatchStringValue{
-								Op:    "replace",
-								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-								Value: os.Getenv(model.MattermostChannel),
-							})
-					}
-					if envVar.Name == "MATTERMOST_WEBHOOK" && len(os.Getenv(model.MattermostWebhook)) > 0 {
-						payload = append(payload,
-							k8s.PatchStringValue{
-								Op:    "replace",
-								Path:  "/spec/template/spec/containers/0/env/" + strconv.Itoa(i) + "/value",
-								Value: os.Getenv(model.MattermostWebhook),
-							})
-					}
-				}
-
-				err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
-		if err != nil {
-			return err
-		}
-		// Pods for k8s-spot-termination-handler do not mean to be schedule in every cluster so doesn't need to fail provision in this case
-		//TODO: Temporary disable this check due to a bug described in detail in CLD-4227
-		//if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
-		//	return fmt.Errorf("no pods found from %s/%s daemonSet", namespace, daemonSet)
-		//}
-
-		for _, pod := range pods.Items {
-			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
-			if err != nil {
-				return err
-			}
-			logger.Infof("Successfully deployed support apps pod %q", pod.GetName())
-		}
-	}
-	iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
-	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach custom node policy")
-	}
-
-	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to attach velero node policy")
-	}
-
-	ugh, err := newUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, awsClient, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create new cluster utility group handle")
-	}
-
-	err = ugh.ProvisionUtilityGroup()
-	if err != nil {
-		return errors.Wrap(err, "failed to upgrade all services in utility group")
-	}
-
-	prom, _ := k8sClient.GetNamespace("prometheus")
-
-	if prom != nil && prom.Name != "" {
-		err = prepareSloth(k8sClient, logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to prepare Sloth")
-		}
-	}
-
-	logger.WithField("name", cluster.ProvisionerMetadataKops.Name).Info("Successfully provisioned cluster")
-
-	return nil
+	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), awsClient, provisioner.params, logger)
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
@@ -851,7 +522,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -860,12 +531,12 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	exists, err := provisioner.kopsClusterExists(kopsMetadata.Name, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to check if kops cluster exists")
+		return false, errors.Wrap(err, "failed to check if kops cluster exists")
 	}
 	if exists {
 		err = provisioner.cleanupKopsCluster(cluster, awsClient, logger)
 		if err != nil {
-			return errors.Wrap(err, "failed to delete kops cluster")
+			return false, errors.Wrap(err, "failed to delete kops cluster")
 		}
 	} else {
 		logger.Infof("Kops cluster %s does not exist, assuming already deleted", kopsMetadata.Name)
@@ -873,14 +544,14 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 
 	err = awsClient.ReleaseVpc(cluster, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to release cluster VPC")
+		return false, errors.Wrap(err, "failed to release cluster VPC")
 	}
 
 	provisioner.invalidateCachedKopsClient(kopsMetadata.Name, logger)
 
-	logger.Info("Successfully deleted cluster")
+	logger.Info("Successfully deleted Kops cluster")
 
-	return nil
+	return true, nil
 }
 
 // cleanupKopsCluster cleans up Kops cluster. Make sure cluster exists before calling this method.
@@ -964,75 +635,7 @@ func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, 
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create k8s client from file")
-	}
-
-	ctx := context.TODO()
-	nodes, err := k8sClient.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list nodes")
-	}
-
-	var allPods []v1.Pod
-	var totalCPU, totalMemory, totalPodCount, totalNodeCount, workerNodeCount, skippedNodeCount int64
-	for _, node := range nodes.Items {
-		var skipNode bool
-		totalNodeCount++
-
-		if onlySchedulable {
-			if node.Spec.Unschedulable {
-				logger.Debugf("Ignoring unschedulable node %s", node.GetName())
-				skippedNodeCount++
-				skipNode = true
-			}
-
-			// TODO: handle scheduling taints in a more robust way.
-			// This is a quick and dirty check for scheduling issues that could
-			// lead to false positives. In the future, we should use a scheduling
-			// library to perform the check instead.
-			for _, taint := range node.Spec.Taints {
-				if taint.Effect == v1.TaintEffectNoSchedule || taint.Effect == v1.TaintEffectPreferNoSchedule {
-					logger.Debugf("Ignoring node %s with taint '%s'", node.GetName(), taint.ToString())
-					skippedNodeCount++
-					skipNode = true
-					break
-				}
-			}
-		}
-
-		if !skipNode {
-			nodePods, err := k8sClient.Clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("spec.nodeName=%s", node.GetName()),
-			})
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to list pods for node %s", node.GetName())
-			}
-
-			allPods = append(allPods, nodePods.Items...)
-			totalCPU += node.Status.Allocatable.Cpu().MilliValue()
-			totalMemory += node.Status.Allocatable.Memory().MilliValue()
-			totalPodCount += node.Status.Allocatable.Pods().Value()
-			workerNodeCount++
-		}
-	}
-
-	usedCPU, usedMemory := k8s.CalculateTotalPodMilliResourceRequests(allPods)
-
-	logger.Debugf("Resource usage calculated from %d pods on %d worker nodes", len(allPods), workerNodeCount)
-
-	return &k8s.ClusterResources{
-		TotalNodeCount:   totalNodeCount,
-		SkippedNodeCount: skippedNodeCount,
-		WorkerNodeCount:  workerNodeCount,
-		MilliTotalCPU:    totalCPU,
-		MilliUsedCPU:     usedCPU,
-		MilliTotalMemory: totalMemory,
-		MilliUsedMemory:  usedMemory,
-		TotalPodCount:    totalPodCount,
-		UsedPodCount:     int64(len(allPods)),
-	}, nil
+	return getClusterResources(configLocation, onlySchedulable, logger)
 }
 
 // RefreshKopsMetadata updates the kops metadata of a cluster with the current

@@ -110,6 +110,30 @@ func IsErrorResourceNotFound(err error) bool {
 	return false
 }
 
+// IsErrorPermissionNotFound asserts that an AWS error is
+// InvalidPermission.NotFound.
+func IsErrorPermissionNotFound(err error) bool {
+	if err != nil {
+		awsErr, ok := err.(awserr.Error)
+		if ok {
+			return awsErr.Code() == "InvalidPermission.NotFound"
+		}
+	}
+	return false
+}
+
+// IsErrorPermissionDuplicate asserts that an AWS error is
+// InvalidPermission.Duplicate.
+func IsErrorPermissionDuplicate(err error) bool {
+	if err != nil {
+		awsErr, ok := err.(awserr.Error)
+		if ok {
+			return awsErr.Code() == "InvalidPermission.Duplicate"
+		}
+	}
+	return false
+}
+
 // IsErrorResourceInUseException asserts that an AWS error is
 // ResourceInUseException.
 func IsErrorResourceInUseException(err error) bool {
