@@ -127,15 +127,17 @@ func handleSetDomainNamePrimary(c *Context, w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
-	// Refresh DNS records after switch
-	installationDTO.DNSRecords, err = c.Store.GetDNSRecordsForInstallation(installationDTO.ID)
+
+	unlockOnce()
+
+	// Refresh whole Installation after switch.
+	installationDTO, err = c.Store.GetInstallationDTO(installationDTO.ID, false, false)
 	if err != nil {
-		c.Logger.WithError(err).Error("Failed to get DNS records after primary switch")
+		c.Logger.WithError(err).Error("Failed to get Installation DTO after primary switch")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	unlockOnce()
 	c.Supervisor.Do()
 
 	w.Header().Set("Content-Type", "application/json")
