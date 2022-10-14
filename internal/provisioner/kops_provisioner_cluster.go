@@ -194,6 +194,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	if err != nil {
 		return errors.Wrapf(err, "failed to set %s", setValue)
 	}
+	err = updateKopsInstanceGroupValue(kops, kopsMetadata, "spec.instanceMetadata.httpTokens=optional")
+	if err != nil {
+		return errors.Wrap(err, "failed to update kops instance group instance Metadata")
+	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {

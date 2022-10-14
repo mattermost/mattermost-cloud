@@ -191,3 +191,21 @@ func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadat
 
 	return nil
 }
+
+func updateKopsInstanceGroupValue(kops *kops.Cmd, kopsMetadata *model.KopsMetadata, value string) error {
+
+	instanceGroups, err := kops.GetInstanceGroupsJSON(kopsMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to get instance groups")
+	}
+
+	for _, ig := range instanceGroups {
+
+		err = kops.SetInstanceGroup(kopsMetadata.Name, ig.Metadata.Name, value)
+		if err != nil {
+			return errors.Wrapf(err, "failed to update value %s", value)
+		}
+	}
+
+	return nil
+}
