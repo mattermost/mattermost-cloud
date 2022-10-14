@@ -6,6 +6,7 @@ package api_test
 
 import (
 	"net/http/httptest"
+	"sort"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -174,8 +175,16 @@ func Test_SetDomainNamePrimary(t *testing.T) {
 	installation, err = client.SetInstallationDomainPrimary(installation.ID, installation.DNSRecords[2].ID)
 	require.NoError(t, err)
 	assert.Equal(t, true, installation.DNSRecords[2].IsPrimary)
+	// Sort to ensure the order matches.
+	sort.Slice(installation.DNSRecords, func(i, j int) bool {
+		return installation.DNSRecords[i].DomainName < installation.DNSRecords[j].DomainName
+	})
 
 	installationFetched, err := client.GetInstallation(installation.ID, nil)
 	require.NoError(t, err)
+	// Sort to ensure the order matches.
+	sort.Slice(installationFetched.DNSRecords, func(i, j int) bool {
+		return installationFetched.DNSRecords[i].DomainName < installationFetched.DNSRecords[j].DomainName
+	})
 	assert.Equal(t, installationFetched, installation)
 }
