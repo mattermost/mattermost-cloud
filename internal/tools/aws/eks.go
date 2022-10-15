@@ -57,6 +57,24 @@ func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResou
 	return out.Cluster, nil
 }
 
+// InstallEKSEBSAddon installs EKS EBS addon to the existing cluster.
+func (a *Client) InstallEKSEBSAddon(cluster *model.Cluster) error {
+	input := eks.CreateAddonInput{
+		AddonName:   aws.String("aws-ebs-csi-driver"),
+		ClusterName: aws.String(cluster.ID),
+	}
+	_, err := a.Service().eks.CreateAddon(&input)
+	if err != nil {
+		// In case addon already configured we do not want to fail.
+		if IsErrorResourceInUseException(err) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to create ebs-csi addon")
+	}
+
+	return nil
+}
+
 // EnsureEKSCluster ensures EKS cluster is created.
 func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
 	input := eks.DescribeClusterInput{

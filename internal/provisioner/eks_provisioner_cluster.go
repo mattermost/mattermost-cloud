@@ -178,7 +178,14 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 		return errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
 	}
 
-	err := awsClient.AllowEKSPostgresTraffic(cluster, *eksMetadata)
+	// TODO: ideally we would do it as part of cluster creation as this
+	// also is async operation.
+	err := awsClient.InstallEKSEBSAddon(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to install EKS EBS Addon")
+	}
+
+	err = awsClient.AllowEKSPostgresTraffic(cluster, *eksMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to create ingress rule to allow Postgres traffic")
 	}

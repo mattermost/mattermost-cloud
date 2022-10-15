@@ -97,6 +97,7 @@ type AWS interface {
 	IsClusterReady(clusterName string) (bool, error)
 	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
 	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
+	InstallEKSEBSAddon(cluster *model.Cluster) error
 
 	AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
 	RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error

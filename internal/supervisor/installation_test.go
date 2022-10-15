@@ -383,6 +383,10 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // can be tested.
 type mockAWS struct{}
 
+func (a *mockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
+	return nil
+}
+
 func (a *mockAWS) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
 	return nil
 }

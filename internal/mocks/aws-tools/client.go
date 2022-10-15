@@ -633,6 +633,20 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterDeleted(cluster interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterDeleted), cluster)
 }
 
+// InstallEKSEBSAddon mocks base method
+func (m *MockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallEKSEBSAddon", cluster)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallEKSEBSAddon indicates an expected call of InstallEKSEBSAddon
+func (mr *MockAWSMockRecorder) InstallEKSEBSAddon(cluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallEKSEBSAddon", reflect.TypeOf((*MockAWS)(nil).InstallEKSEBSAddon), cluster)
+}
+
 // AllowEKSPostgresTraffic mocks base method
 func (m *MockAWS) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
 	m.ctrl.T.Helper()
