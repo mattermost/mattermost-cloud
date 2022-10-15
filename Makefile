@@ -10,10 +10,10 @@ DOCKER_BUILD_IMAGE = golang:1.17
 DOCKER_BASE_IMAGE = alpine:3.16
 
 ## Tool Versions
-TERRAFORM_VERSION=0.15.5
-KOPS_VERSION=v1.22.6
+TERRAFORM_VERSION=1.0.7
+KOPS_VERSION=v1.23.4
 HELM_VERSION=v3.5.3
-KUBECTL_VERSION=v1.21.2
+KUBECTL_VERSION=v1.24.4
 
 ################################################################################
 
