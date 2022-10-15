@@ -168,6 +168,33 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		}
 	}
 
+	logger.Info("Updating calico options")
+	setValue = "spec.networking.calico.prometheusMetricsEnabled=true"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.prometheusMetricsPort=9091"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.typhaPrometheusMetricsEnabled=true"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.typhaPrometheusMetricsPort=9093"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.typhaReplicas=2"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
@@ -289,30 +316,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		return errors.Wrap(err, "failed to create bifrost secret")
 	}
 
-	// Need to remove two items from the calico because the fields after the creation are immutable so
-	// create/update does not work. We might want to refactor this in the future to avoid this
-	logger.Info("Cleaning up some calico resources to reapply")
-	err = k8sClient.Clientset.CoreV1().Services("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("Service calico-typha not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete service calico-typha")
-	}
-
-	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-kube-controllers", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("PodDisruptionBudget calico-kube-controllers not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-kube-controllers")
-	}
-
-	err = k8sClient.Clientset.PolicyV1beta1().PodDisruptionBudgets("kube-system").Delete(ctx, "calico-typha", metav1.DeleteOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("PodDisruptionBudget calico-typha not found; skipping...")
-	} else if err != nil {
-		return errors.Wrap(err, "failed to delete PodDisruptionBudget calico-typha")
-	}
-
 	err = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(ctx, "k8s-spot-termination-handler", metav1.DeleteOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("DaemonSet k8s-spot-termination-handler not found; skipping...")
@@ -362,7 +365,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		})
 	}
 
-	// Only deploy or reprovision calico netpol if current networking option is other then calico
+	// Only deploy or re-provision calico netpol if current networking option is other than calico
 	if (cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
 		len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 && cluster.ProvisionerMetadataKops.ChangeRequest.Networking != "calico") ||
 		(len(cluster.ProvisionerMetadataKops.Networking) > 0 && cluster.ProvisionerMetadataKops.Networking != "calico") {
@@ -398,7 +401,6 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 		"mattermost-operator":                mattermostOperatorNamespace,
 		"bifrost":                            bifrostNamespace,
 		"calico-typha-horizontal-autoscaler": "kube-system",
-		"calico-typha":                       "kube-system",
 	}
 
 	if provisioner.params.DeployMinioOperator {
