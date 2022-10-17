@@ -426,10 +426,19 @@ func prepareClusterUtilities(
 		return errors.Wrap(err, "failed to create k8s client from file")
 	}
 
+	var vpc string
+	if cluster.ProvisionerMetadataKops != nil {
+		vpc = cluster.ProvisionerMetadataKops.VPC
+	} else if cluster.ProvisionerMetadataEKS != nil {
+		vpc = cluster.ProvisionerMetadataEKS.VPC
+	} else {
+		return errors.New("cluster metadata is nil cannot determine VPC")
+	}
+
 	// TODO: Yeah, so this is definitely a bit of a race condition. We would
 	// need to lock a bunch of stuff to do this completely properly, but that
 	// isn't really feasible right now.
-	ini, err := generatePGBouncerIni(cluster.ProvisionerMetadataKops.VPC, store)
+	ini, err := generatePGBouncerIni(vpc, store)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
 	}
@@ -459,7 +468,7 @@ func prepareClusterUtilities(
 	if !strings.Contains(string(userlistSecret.Data["userlist.txt"]), aws.DefaultPGBouncerAuthUsername) {
 		logger.Debug("Updating pgbouncer userlist.txt with auth_user credentials")
 
-		userlist, err := generatePGBouncerUserlist(cluster.ProvisionerMetadataKops.VPC, awsClient)
+		userlist, err := generatePGBouncerUserlist(vpc, awsClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to generate pgbouncer userlist")
 		}

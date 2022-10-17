@@ -162,6 +162,33 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		}
 	}
 
+	logger.Info("Updating calico options")
+	setValue = "spec.networking.calico.prometheusMetricsEnabled=true"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.prometheusMetricsPort=9091"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.typhaPrometheusMetricsEnabled=true"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.typhaPrometheusMetricsPort=9093"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+	setValue = "spec.networking.calico.typhaReplicas=2"
+	err = kops.SetCluster(kopsMetadata.Name, setValue)
+	if err != nil {
+		return errors.Wrapf(err, "failed to set %s", setValue)
+	}
+
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
 	if err != nil {
 		return err
