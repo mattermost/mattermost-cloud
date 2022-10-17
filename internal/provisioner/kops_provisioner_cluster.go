@@ -229,6 +229,12 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
+	iamRole = fmt.Sprintf("master.%s", kopsMetadata.Name)
+	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to attach custom node policy to master")
+	}
+
 	ugh, err := newUtilityGroupHandle(provisioner.params, kops.GetKubeConfigPath(), cluster, awsClient, logger)
 	if err != nil {
 		return err
