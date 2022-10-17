@@ -27,10 +27,11 @@ type clusterStore interface {
 type clusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
+	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
 	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
-	DeleteCluster(cluster *model.Cluster, aws aws.AWS) error
+	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
 	RefreshKopsMetadata(cluster *model.Cluster) error
 }
 
@@ -141,6 +142,8 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 	switch cluster.State {
 	case model.ClusterStateCreationRequested:
 		return s.createCluster(cluster, logger)
+	case model.ClusterStateCreationInProgress:
+		return s.checkClusterCreated(cluster, logger)
 	case model.ClusterStateProvisioningRequested:
 		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateUpgradeRequested:
@@ -175,7 +178,7 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 	}
 
 	logger.Info("Finished creating cluster")
-	return s.provisionCluster(cluster, logger)
+	return s.checkClusterCreated(cluster, logger)
 }
 
 func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
@@ -240,10 +243,14 @@ func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logge
 }
 
 func (s *ClusterSupervisor) deleteCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.DeleteCluster(cluster, s.aws)
+	deleted, err := s.provisioner.DeleteCluster(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete cluster")
 		return model.ClusterStateDeletionFailed
+	}
+	if !deleted {
+		logger.Info("Cluster still deleting")
+		return model.ClusterInstallationStateDeletionRequested
 	}
 
 	err = s.store.DeleteCluster(cluster.ID)
@@ -254,4 +261,18 @@ func (s *ClusterSupervisor) deleteCluster(cluster *model.Cluster, logger log.Fie
 
 	logger.Info("Finished deleting cluster")
 	return model.ClusterStateDeleted
+}
+
+func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger log.FieldLogger) string {
+	ready, err := s.provisioner.CheckClusterCreated(cluster, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to check if cluster creation finished")
+		return model.ClusterStateCreationFailed
+	}
+	if !ready {
+		logger.Info("Cluster not yet ready")
+		return model.ClusterStateCreationInProgress
+	}
+
+	return s.provisionCluster(cluster, logger)
 }

@@ -17,6 +17,9 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
+// KopsProvisionerType is provisioner type for Kops clusters.
+const KopsProvisionerType = "kops"
+
 // ProvisioningParams represent configuration used during various provisioning operations.
 type ProvisioningParams struct {
 	S3StateStore            string
@@ -31,12 +34,13 @@ type ProvisioningParams struct {
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	params         ProvisioningParams
-	resourceUtil   *utils.ResourceUtil
-	logger         log.FieldLogger
-	store          model.InstallationDatabaseStoreInterface
-	backupOperator *BackupOperator
-	kopsCache      map[string]*kops.Cmd
+	params            ProvisioningParams
+	resourceUtil      *utils.ResourceUtil
+	logger            log.FieldLogger
+	store             model.InstallationDatabaseStoreInterface
+	backupOperator    *BackupOperator
+	kopsCache         map[string]*kops.Cmd
+	commonProvisioner *CommonProvisioner
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
@@ -55,7 +59,17 @@ func NewKopsProvisioner(
 		store:          store,
 		backupOperator: backupOperator,
 		kopsCache:      make(map[string]*kops.Cmd),
+		commonProvisioner: &CommonProvisioner{
+			resourceUtil: resourceUtil,
+			store:        store,
+			params:       provisioningParams,
+		},
 	}
+}
+
+// ProvisionerType returns type of the provisioner.
+func (provisioner *KopsProvisioner) ProvisionerType() string {
+	return KopsProvisionerType
 }
 
 // Teardown cleans up cached kops provisioner data.

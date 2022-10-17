@@ -132,30 +132,7 @@ func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return "", err
-	}
-
-	ctx := context.TODO()
-	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return "", err
-	}
-	for _, service := range services.Items {
-		if !strings.HasSuffix(service.Name, "internal") {
-			if service.Status.LoadBalancer.Ingress != nil {
-				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-				if endpoint == "" {
-					return "", errors.New("loadbalancer endpoint value is empty")
-				}
-
-				return endpoint, nil
-			}
-		}
-	}
-
-	return "", errors.New("failed to get NGINX load balancer endpoint")
+	return getPublicLoadBalancerEndpoint(configLocation, namespace, logger)
 }
 
 func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadata, logger log.FieldLogger) error {

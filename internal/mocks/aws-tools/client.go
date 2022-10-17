@@ -632,3 +632,74 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterDeleted(cluster interface{}) *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterDeleted), cluster)
 }
+
+// InstallEKSEBSAddon mocks base method
+func (m *MockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallEKSEBSAddon", cluster)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallEKSEBSAddon indicates an expected call of InstallEKSEBSAddon
+func (mr *MockAWSMockRecorder) InstallEKSEBSAddon(cluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallEKSEBSAddon", reflect.TypeOf((*MockAWS)(nil).InstallEKSEBSAddon), cluster)
+}
+
+// AllowEKSPostgresTraffic mocks base method
+func (m *MockAWS) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AllowEKSPostgresTraffic", cluster, eksMetadata)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AllowEKSPostgresTraffic indicates an expected call of AllowEKSPostgresTraffic
+func (mr *MockAWSMockRecorder) AllowEKSPostgresTraffic(cluster, eksMetadata interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowEKSPostgresTraffic", reflect.TypeOf((*MockAWS)(nil).AllowEKSPostgresTraffic), cluster, eksMetadata)
+}
+
+// RevokeEKSPostgresTraffic mocks base method
+func (m *MockAWS) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeEKSPostgresTraffic", cluster, eksMetadata)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeEKSPostgresTraffic indicates an expected call of RevokeEKSPostgresTraffic
+func (mr *MockAWSMockRecorder) RevokeEKSPostgresTraffic(cluster, eksMetadata interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeEKSPostgresTraffic", reflect.TypeOf((*MockAWS)(nil).RevokeEKSPostgresTraffic), cluster, eksMetadata)
+}
+
+// GetRegion mocks base method
+func (m *MockAWS) GetRegion() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRegion")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetRegion indicates an expected call of GetRegion
+func (mr *MockAWSMockRecorder) GetRegion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockAWS)(nil).GetRegion))
+}
+
+// GetAccountID mocks base method
+func (m *MockAWS) GetAccountID() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountID")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountID indicates an expected call of GetAccountID
+func (mr *MockAWSMockRecorder) GetAccountID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountID", reflect.TypeOf((*MockAWS)(nil).GetAccountID))
+}
