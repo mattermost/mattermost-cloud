@@ -1,0 +1,10 @@
+{
+  "nodes1": {
+    "roleARN": "TODO: fill this before making a request",
+    "instanceTypes": [],
+    "amiVersion": null,
+    "desiredSize": 4,
+    "minSize": 2,
+    "maxSize": 5
+  }
+}

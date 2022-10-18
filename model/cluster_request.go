@@ -144,6 +144,9 @@ func (request *CreateClusterRequest) Validate() error {
 	// TODO: check zones and instance types?
 
 	if request.EKSConfig != nil {
+		if request.EKSConfig.ClusterRoleARN == nil || *request.EKSConfig.ClusterRoleARN == "" {
+			return errors.New("cluster role ARN for EKS cluster cannot be empty")
+		}
 		if len(request.EKSConfig.NodeGroups) == 0 {
 			return errors.New("at least 1 node group is required when using EKS")
 		}
