@@ -7,6 +7,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/pkg/errors"
 
@@ -107,13 +109,46 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if createClusterRequest.EKSConfig != nil && c.Provisioner.ProvisionerType() != provisioner.EKSProvisionerType {
+		c.Logger.Error("invalid request: specified EKSConfig when provisioner type is not 'eks")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if c.Provisioner.ProvisionerType() == provisioner.EKSProvisionerType && createClusterRequest.EKSConfig == nil {
+		c.Logger.Error("invalid request: EKSConfig is required when provisioner type is not 'eks")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	cluster := model.Cluster{
 		Provider: createClusterRequest.Provider,
 		ProviderMetadataAWS: &model.AWSMetadata{
 			Zones: createClusterRequest.Zones,
 		},
-		Provisioner: "kops",
-		ProvisionerMetadataKops: &model.KopsMetadata{
+		Provisioner:        c.Provisioner.ProvisionerType(),
+		AllowInstallations: createClusterRequest.AllowInstallations,
+		APISecurityLock:    createClusterRequest.APISecurityLock,
+		State:              model.ClusterStateCreationRequested,
+	}
+
+	if createClusterRequest.EKSConfig != nil {
+		var version *string
+		// We cannot pass empty string or "latest" as version it needs
+		// to be either correct version or nil.
+		// TODO: handle better the "latest" version which is set as a default for Kops clusters
+		if createClusterRequest.Version != "" && createClusterRequest.Version != "latest" {
+			version = &createClusterRequest.Version
+		}
+
+		cluster.ProvisionerMetadataEKS = &model.EKSMetadata{
+			KubernetesVersion: version,
+			VPC:               createClusterRequest.VPC,
+			Networking:        "",
+			ClusterRoleARN:    createClusterRequest.EKSConfig.ClusterRoleARN,
+			EKSNodeGroups:     createClusterRequest.EKSConfig.NodeGroups,
+		}
+	} else {
+		cluster.ProvisionerMetadataKops = &model.KopsMetadata{
 			ChangeRequest: &model.KopsMetadataRequestedState{
 				Version:            createClusterRequest.Version,
 				AMI:                createClusterRequest.KopsAMI,
@@ -126,10 +161,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 				Networking:         createClusterRequest.Networking,
 				VPC:                createClusterRequest.VPC,
 			},
-		},
-		AllowInstallations: createClusterRequest.AllowInstallations,
-		APISecurityLock:    createClusterRequest.APISecurityLock,
-		State:              model.ClusterStateCreationRequested,
+		}
 	}
 
 	cluster.SetUtilityDesiredVersions(createClusterRequest.DesiredUtilityVersions)

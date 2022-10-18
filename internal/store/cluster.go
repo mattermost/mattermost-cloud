@@ -43,10 +43,20 @@ func buildRawMetadata(cluster *model.Cluster) (*RawClusterMetadata, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to marshal ProviderMetadataAWS")
 	}
-	provisionerMetadataJSON, err := json.Marshal(cluster.ProvisionerMetadataKops)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
+
+	var provisionerMetadataJSON []byte
+	if cluster.ProvisionerMetadataKops != nil {
+		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataKops)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
+		}
+	} else {
+		provisionerMetadataJSON, err = json.Marshal(cluster.ProvisionerMetadataEKS)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to marshal ProvisionerMetadataKops")
+		}
 	}
+
 	utilityMetadataJSON, err := json.Marshal(cluster.UtilityMetadata)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to marshal UtilityMetadata")
@@ -65,10 +75,19 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
-	if err != nil {
-		return nil, err
+
+	if r.Provisioner == "eks" {
+		r.Cluster.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		r.Cluster.ProvisionerMetadataKops, err = model.NewKopsMetadata(r.ProvisionerMetadataRaw)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	r.Cluster.UtilityMetadata, err = model.NewUtilityMetadata(r.UtilityMetadataRaw)
 	if err != nil {
 		return nil, err

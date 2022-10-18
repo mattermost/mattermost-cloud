@@ -31,6 +31,7 @@ func TestListStateChangeEvents(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 
 	ts := httptest.NewServer(router)
