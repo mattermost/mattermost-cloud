@@ -787,8 +787,16 @@ var installationDeploymentReportCmd = &cobra.Command{
 					if err != nil {
 						return errors.Wrap(err, "failed to query installation logical database")
 					}
+					schemasInLogicalDatabase, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+						LogicalDatabaseID: logicalDatabase.ID,
+						Paging:            model.AllPagesNotDeleted(),
+					})
+					if err != nil {
+						return errors.Wrap(err, "failed to query schemas in logical database")
+					}
 					output += fmt.Sprintf(" │   ├ Logical Database: %s\n", logicalDatabase.ID)
-					output += fmt.Sprintf(" │   └ Name: %s\n", logicalDatabase.Name)
+					output += fmt.Sprintf(" │   ├ Name: %s\n", logicalDatabase.Name)
+					output += fmt.Sprintf(" │   └ Schemas: %d\n", len(schemasInLogicalDatabase))
 					output += fmt.Sprintf(" │     ├ Database Schema: %s\n", schema.ID)
 					output += fmt.Sprintf(" │     └ Name: %s\n", schema.Name)
 				}
