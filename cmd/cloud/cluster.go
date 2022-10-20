@@ -60,7 +60,7 @@ func init() {
 	clusterCreateCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart value file's version for Metrics Server")
 	clusterCreateCmd.Flags().String("velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	clusterCreateCmd.Flags().String("cloudprober-values", "", "The full Git URL of the desired chart value file's version for Cloudprober")
-	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
+	clusterCreateCmd.Flags().String("networking", "calico", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
 

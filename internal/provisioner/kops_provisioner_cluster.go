@@ -161,32 +161,33 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			return errors.Wrapf(err, "failed to set %s", setValue)
 		}
 	}
-
-	logger.Info("Updating calico options")
-	setValue = "spec.networking.calico.prometheusMetricsEnabled=true"
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
-	}
-	setValue = "spec.networking.calico.prometheusMetricsPort=9091"
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
-	}
-	setValue = "spec.networking.calico.typhaPrometheusMetricsEnabled=true"
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
-	}
-	setValue = "spec.networking.calico.typhaPrometheusMetricsPort=9093"
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
-	}
-	setValue = "spec.networking.calico.typhaReplicas=2"
-	err = kops.SetCluster(kopsMetadata.Name, setValue)
-	if err != nil {
-		return errors.Wrapf(err, "failed to set %s", setValue)
+	if cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico" {
+		logger.Info("Updating calico options")
+		setValue = "spec.networking.calico.prometheusMetricsEnabled=true"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
+		setValue = "spec.networking.calico.prometheusMetricsPort=9091"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
+		setValue = "spec.networking.calico.typhaPrometheusMetricsEnabled=true"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
+		setValue = "spec.networking.calico.typhaPrometheusMetricsPort=9093"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
+		setValue = "spec.networking.calico.typhaReplicas=2"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
 	}
 	err = updateKopsInstanceGroupValue(kops, kopsMetadata, "spec.instanceMetadata.httpTokens=optional")
 	if err != nil {
@@ -227,7 +228,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
-	iamRole = fmt.Sprintf("master.%s", kopsMetadata.Name)
+	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
 	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy to master")
