@@ -45,7 +45,14 @@ func (sqlStore *SQLStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.Grou
 
 	dtos := make([]*model.GroupDTO, 0, len(groups))
 	for _, g := range groups {
-		dtos = append(dtos, g.ToDTO(annotations[g.ID]))
+		gDTO := g.ToDTO(annotations[g.ID])
+		if filter.WithStatus {
+			gDTO.Status, err = sqlStore.GetGroupStatus(gDTO.ID)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get status from group")
+			}
+		}
+		dtos = append(dtos, gDTO)
 	}
 
 	return dtos, nil

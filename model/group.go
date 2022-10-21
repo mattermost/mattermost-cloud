@@ -30,6 +30,9 @@ type Group struct {
 type GroupFilter struct {
 	Paging
 	Annotations *AnnotationsFilter
+
+	// WithStatus if the store should also retrieve the status for each group
+	WithStatus bool
 }
 
 // ToDTO returns Group joined with Annotations.

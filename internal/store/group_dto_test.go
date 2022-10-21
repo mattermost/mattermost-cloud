@@ -67,6 +67,18 @@ func Test_GroupDTO(t *testing.T) {
 		assert.Equal(t, group3.ToDTO(nil), group3DTO)
 	})
 
+	t.Run("get group DTOs with status", func(t *testing.T) {
+		groups, err := sqlStore.GetGroupDTOs(&model.GroupFilter{
+			Paging:     model.AllPagesNotDeleted(),
+			WithStatus: true,
+		})
+		assert.NoError(t, err)
+		assert.NotZero(t, len(groups))
+		for _, g := range groups {
+			assert.NotNil(t, g.Status)
+		}
+	})
+
 	t.Run("get group DTOs", func(t *testing.T) {
 		testCases := []struct {
 			Description string
