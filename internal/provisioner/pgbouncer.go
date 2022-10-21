@@ -196,6 +196,8 @@ reserve_pool_size = %d
 reserve_pool_timeout = 1
 max_client_conn = %d
 max_db_connections = %d
+server_idle_timeout = %d
+server_lifetime = %d
 server_reset_query_always = 1
 
 [databases]
@@ -246,7 +248,7 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 }
 
 func generatePGBouncerBaseIni() string {
-	return fmt.Sprintf(baseIni, model.GetMinPoolSize(), model.GetDefaultPoolSize(), model.GetReservePoolSize(), model.GetMaxClientConnections(), model.GetMaxDatabaseConnectionsPerPool())
+	return fmt.Sprintf(baseIni, model.GetMinPoolSize(), model.GetDefaultPoolSize(), model.GetReservePoolSize(), model.GetMaxClientConnections(), model.GetMaxDatabaseConnectionsPerPool(), model.GetServerIdleTimeout(), model.GetServerLifetime())
 }
 
 func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {
