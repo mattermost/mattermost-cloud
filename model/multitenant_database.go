@@ -41,13 +41,19 @@ var maxDatabaseConnectionsPerPool int = 20
 var defaultPoolSize int = 5
 
 // reservePoolSize is the default pool size per user
-var reservePoolSize int = 20
+var reservePoolSize int = 10
 
 // minPoolSize is the minimum pool size
 var minPoolSize int = 3
 
 // maxClientConnections is the maximum client connections
 var maxClientConnections int = 20000
+
+// serverIdleTimeout is the server idle timeout
+var serverIdleTimeout int = 30
+
+// serverLifetime is the server lifetime
+var serverLifetime int = 300
 
 // SetMaxDatabaseConnectionsPerPool is used to define how many database
 // connections are created per logical database pool with proxy databases.
@@ -85,6 +91,16 @@ func SetMaxClientConnections(val int) {
 	maxClientConnections = val
 }
 
+// SetServerIdleTimeout is used to define the server idle timeout of pgbouncer
+func SetServerIdleTimeout(val int) {
+	serverIdleTimeout = val
+}
+
+// SetServerLifetime is used to define the server lifetime of pgbouncer
+func SetServerLifetime(val int) {
+	serverLifetime = val
+}
+
 // GetMaxDatabaseConnectionsPerPool returns the value of
 // maxDatabaseConnectionsPerPool.
 func GetMaxDatabaseConnectionsPerPool() int {
@@ -109,6 +125,16 @@ func GetMinPoolSize() int {
 // GetMaxClientConnections returns the value of maxClientConnections.
 func GetMaxClientConnections() int {
 	return maxClientConnections
+}
+
+// GetServerIdleTimeout returns the value of serverIdleTimeout.
+func GetServerIdleTimeout() int {
+	return serverIdleTimeout
+}
+
+// GetServerLifetime returns the value of serverLifetime.
+func GetServerLifetime() int {
+	return serverLifetime
 }
 
 // MultitenantDatabase represents database infrastructure that contains multiple
