@@ -60,11 +60,16 @@ func init() {
 	clusterCreateCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart value file's version for Metrics Server")
 	clusterCreateCmd.Flags().String("velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	clusterCreateCmd.Flags().String("cloudprober-values", "", "The full Git URL of the desired chart value file's version for Cloudprober")
-	clusterCreateCmd.Flags().String("networking", "amazon-vpc-routed-eni", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
+	clusterCreateCmd.Flags().String("networking", "calico", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
 
 	clusterCreateCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+
+	// EKS flags
+	clusterCreateCmd.Flags().Bool("eks", false, "Create EKS cluster.")
+	clusterCreateCmd.Flags().String("eks-role-arn", "", "EKS role ARN.")
+	clusterCreateCmd.Flags().String("eks-node-groups-config", "", "Path to node groups configuration in JSON format.")
 
 	clusterProvisionCmd.Flags().String("cluster", "", "The id of the cluster to be provisioned.")
 	clusterProvisionCmd.Flags().String("prometheus-operator-version", "", "The version of the Prometheus Operator Helm chart")
@@ -189,6 +194,10 @@ var clusterCreateCmd = &cobra.Command{
 		networking, _ := command.Flags().GetString("networking")
 		vpc, _ := command.Flags().GetString("vpc")
 
+		useEKS, _ := command.Flags().GetBool("eks")
+		eksRoleArn, _ := command.Flags().GetString("eks-role-arn")
+		eksNodeGroupsConfig, _ := command.Flags().GetString("eks-node-groups-config")
+
 		request := &model.CreateClusterRequest{
 			Provider:               provider,
 			Version:                version,
@@ -199,6 +208,22 @@ var clusterCreateCmd = &cobra.Command{
 			Annotations:            annotations,
 			Networking:             networking,
 			VPC:                    vpc,
+		}
+
+		if useEKS {
+			nodeGroupsConfigRaw, err := os.ReadFile(eksNodeGroupsConfig)
+			if err != nil {
+				return errors.Wrap(err, "failed to read node groups config")
+			}
+			var nodeGroupsConfig model.EKSNodeGroups
+			err = json.Unmarshal(nodeGroupsConfigRaw, &nodeGroupsConfig)
+			if err != nil {
+				return errors.Wrap(err, "failed to unmarshal node groups config")
+			}
+			request.EKSConfig = &model.EKSConfig{
+				ClusterRoleARN: &eksRoleArn,
+				NodeGroups:     nodeGroupsConfig,
+			}
 		}
 
 		size, _ := command.Flags().GetString("size")

@@ -34,6 +34,7 @@ func TestClusters(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -303,6 +304,7 @@ func TestCreateCluster(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -397,6 +399,7 @@ func TestRetryCreateCluster(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -484,6 +487,7 @@ func TestProvisionCluster(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -630,6 +634,7 @@ func TestUpgradeCluster(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -806,6 +811,7 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -892,6 +898,7 @@ func TestResizeCluster(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1050,6 +1057,7 @@ func TestDeleteCluster(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1174,6 +1182,7 @@ func TestGetAllUtilityMetadata(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 
 	ts := httptest.NewServer(router)
@@ -1212,6 +1221,7 @@ func TestClusterAnnotations(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 
 	ts := httptest.NewServer(router)

@@ -97,6 +97,13 @@ type AWS interface {
 	IsClusterReady(clusterName string) (bool, error)
 	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
 	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
+	InstallEKSEBSAddon(cluster *model.Cluster) error
+
+	AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
+	RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
+
+	GetRegion() string
+	GetAccountID() (string, error)
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
@@ -170,7 +177,12 @@ func NewService(sess *session.Session) *Service {
 	}
 }
 
-// Service contructs an AWS session if not yet successfully done and returns AWS clients.
+// GetRegion returns current AWS region.
+func (c *Client) GetRegion() string {
+	return *c.config.Region
+}
+
+// Service constructs an AWS session if not yet successfully done and returns AWS clients.
 func (c *Client) Service() *Service {
 	if c.service == nil {
 		sess, err := NewAWSSessionWithLogger(c.config, c.logger.WithField("tools-aws", "client"))

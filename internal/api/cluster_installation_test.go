@@ -592,6 +592,7 @@ func TestMigrateClusterInstallations(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	}
 	api.Register(router, context)
 	ts := httptest.NewServer(router)
@@ -740,6 +741,7 @@ func TestMigrateDNS(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -900,6 +902,7 @@ func TestMigrateDNSForHibernatingInstallation(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1049,6 +1052,7 @@ func TestMigrateDNSForNonHibernatingInstallation(t *testing.T) {
 		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
 		Metrics:       &mockMetrics{},
 		Logger:        logger,
+		Provisioner:   &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1193,10 +1197,11 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Metrics:    &mockMetrics{},
-		Logger:     logger,
+		Store:       sqlStore,
+		Supervisor:  &mockSupervisor{},
+		Metrics:     &mockMetrics{},
+		Logger:      logger,
+		Provisioner: &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -1259,10 +1264,11 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:      sqlStore,
-		Supervisor: &mockSupervisor{},
-		Metrics:    &mockMetrics{},
-		Logger:     logger,
+		Store:       sqlStore,
+		Supervisor:  &mockSupervisor{},
+		Metrics:     &mockMetrics{},
+		Logger:      logger,
+		Provisioner: &mockProvisioner{},
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()

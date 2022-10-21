@@ -67,6 +67,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
 	serverCmd.PersistentFlags().Bool("deploy-minio-operator", true, "Whether to deploy the minio operator.")
 	serverCmd.PersistentFlags().Int64("default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
+	serverCmd.PersistentFlags().String("provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -117,6 +118,12 @@ func init() {
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres", toolsAWS.DefaultRDSMultitenantDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres")
 	serverCmd.PersistentFlags().Int("max-installations-rds-mysql", toolsAWS.DefaultRDSMultitenantDatabaseMySQLCountLimit, "Max installations per DB cluster of type RDS MySQL")
+}
+
+// Provisioner is an interface for different types of provisioners.
+type Provisioner interface {
+	api.Provisioner
+	supervisor.Provisioner
 }
 
 var serverCmd = &cobra.Command{
@@ -301,6 +308,8 @@ var serverCmd = &cobra.Command{
 			}
 		}
 
+		provisionerFlag, _ := command.Flags().GetString("provisioner")
+
 		logger.WithFields(logrus.Fields{
 			"build-hash":                                    model.BuildHash,
 			"cluster-supervisor":                            clusterSupervisor,
@@ -341,6 +350,7 @@ var serverCmd = &cobra.Command{
 			"disable-db-init-check":                         disableDBInitCheck,
 			"enable-route53":                                enableRoute53,
 			"disable-dns-updates":                           disableDNSUpdates,
+			"provisioner":                                   provisionerFlag,
 		}).Info("Starting Mattermost Provisioning Server")
 
 		deprecationWarnings(logger, command)
@@ -386,15 +396,34 @@ var serverCmd = &cobra.Command{
 			NdotsValue:              ndotsDefaultValue,
 		}
 
-		// Setup the provisioner for actually effecting changes to clusters.
-		kopsProvisioner := provisioner.NewKopsProvisioner(
-			provisioningParams,
-			resourceUtil,
-			logger,
-			sqlStore,
-			provisioner.NewBackupOperator(backupRestoreToolImage, awsRegion, backupJobTTL),
-		)
-		defer kopsProvisioner.Teardown()
+		// TODO: In the future we can support both provisioners running
+		// at the same time, and the correct one should be chosen based
+		// on request. For now for simplicity we configure it with a
+		// flag.
+		var clusterProvisioner Provisioner
+		switch provisionerFlag {
+		case provisioner.KopsProvisionerType:
+			kopsProvisioner := provisioner.NewKopsProvisioner(
+				provisioningParams,
+				resourceUtil,
+				logger,
+				sqlStore,
+				provisioner.NewBackupOperator(backupRestoreToolImage, awsRegion, backupJobTTL),
+			)
+			defer kopsProvisioner.Teardown()
+			clusterProvisioner = kopsProvisioner
+		case provisioner.EKSProvisionerType:
+			eksProvisioner := provisioner.NewEKSProvisioner(sqlStore,
+				sqlStore,
+				provisioningParams,
+				resourceUtil,
+				awsClient,
+				logger)
+
+			clusterProvisioner = eksProvisioner
+		default:
+			return errors.Errorf("invalid value for provisioner flag %q, expected one of: kops, eks", provisionerFlag)
+		}
 
 		cloudMetrics := metrics.New()
 
@@ -434,32 +463,32 @@ var serverCmd = &cobra.Command{
 
 		var multiDoer supervisor.MultiDoer
 		if clusterSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger))
 		}
 		if groupSupervisor {
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 		}
 		if installationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, dnsManager, disableDNSUpdates))
+			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, dnsManager, disableDNSUpdates))
 		}
 		if clusterInstallationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, kopsProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 		}
 		if backupSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, kopsProvisioner, awsClient, instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, logger))
 		}
 		if importSupervisor {
 			awatAddress, _ := command.Flags().GetString("awat")
 			if awatAddress == "" {
 				return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 			}
-			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, kopsProvisioner, eventsProducer, logger))
+			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, clusterProvisioner, eventsProducer, logger))
 		}
 		if installationDBRestorationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, kopsProvisioner, eventsProducer, instanceID, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, clusterProvisioner, eventsProducer, instanceID, logger))
 		}
 		if installationDBMigrationSupervisor {
-			multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, kopsProvisioner, eventsProducer, logger))
+			multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, clusterProvisioner, eventsProducer, logger))
 		}
 
 		// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -511,7 +540,7 @@ var serverCmd = &cobra.Command{
 		api.Register(router, &api.Context{
 			Store:         sqlStore,
 			Supervisor:    standardSupervisor,
-			Provisioner:   kopsProvisioner,
+			Provisioner:   clusterProvisioner,
 			DBProvider:    resourceUtil,
 			EventProducer: eventsProducer,
 			Environment:   awsClient.GetCloudEnvironmentName(),
