@@ -13,6 +13,7 @@ import (
 type GroupDTO struct {
 	*Group
 	Annotations []*Annotation `json:"annotations"`
+	Status      *GroupStatus  `json:"status,omitempty"`
 }
 
 // GroupDTOFromReader decodes a json-encoded group DTO from the given io.Reader.
