@@ -36,6 +36,7 @@ func TestCreateInstallation(t *testing.T) {
 			description: "dns validation error",
 			request: &model.CreateInstallationRequest{
 				OwnerID: "testwicker",
+				Name:    "test",
 			},
 			setup: func(wicker *TestWicker) {},
 			expected: func(wicker *TestWicker, err error) {
@@ -46,24 +47,26 @@ func TestCreateInstallation(t *testing.T) {
 		{
 			description: "cluster size error",
 			request: &model.CreateInstallationRequest{
-				DNS:     "test.cloud.com",
-				OwnerID: "testwicker",
+				DNSNames: []string{"test.cloud.com"},
+				OwnerID:  "testwicker",
+				Name:     "test",
 			},
 			setup: func(wicker *TestWicker) {},
 			expected: func(wicker *TestWicker, err error) {
 				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), "invalid cluster size")
+				assert.Contains(t, err.Error(), "invalid Installation size")
 			},
 		},
 		{
 			description: "provisioner api error",
 			request: &model.CreateInstallationRequest{
-				DNS:       "test.cloud.com",
+				DNSNames:  []string{"test.cloud.com"},
 				Size:      "100users",
 				Affinity:  cmodel.InstallationAffinityMultiTenant,
 				Database:  cmodel.InstallationDatabaseMultiTenantRDSPostgresPGBouncer,
 				Filestore: cmodel.InstallationFilestoreBifrost,
 				OwnerID:   "testwicker",
+				Name:      "test",
 			},
 			setup: func(wicker *TestWicker) {
 
@@ -79,7 +82,8 @@ func TestCreateInstallation(t *testing.T) {
 		{
 			description: "create installation success",
 			request: &model.CreateInstallationRequest{
-				DNS:       "test.cloud.com",
+				DNSNames:  []string{"test.cloud.com"},
+				Name:      "test",
 				Size:      "100users",
 				Affinity:  cmodel.InstallationAffinityMultiTenant,
 				Database:  cmodel.InstallationDatabaseMultiTenantRDSPostgresPGBouncer,
@@ -91,15 +95,15 @@ func TestCreateInstallation(t *testing.T) {
 					CreateInstallation(gomock.Any()).
 					Return(&model.InstallationDTO{
 						Installation: &cmodel.Installation{
-							ID:  "123",
-							DNS: "test.cloud.com",
+							ID:   "123",
+							Name: "test",
 						},
 					}, nil)
 			},
 			expected: func(wicker *TestWicker, err error) {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, wicker.installation.ID)
-				assert.NotEmpty(t, wicker.installation.DNS)
+				assert.NotEmpty(t, wicker.installation.Name)
 			},
 		},
 	}
