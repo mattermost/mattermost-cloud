@@ -102,9 +102,12 @@ func init() {
 	serverCmd.PersistentFlags().String("utilities-git-url", "", "The private git domain to use for utilities. For example https://gitlab.com")
 	serverCmd.PersistentFlags().Int("max-proxy-db-connections-per-pool", 20, "The maximum number of proxy database connections per pool (logical database).")
 	serverCmd.PersistentFlags().Int("default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
-	serverCmd.PersistentFlags().Int("reserve-proxy-db-pool-size", 20, "The db proxy reserve pool size per logical database.")
+	serverCmd.PersistentFlags().Int("reserve-proxy-db-pool-size", 10, "The db proxy reserve pool size per logical database.")
 	serverCmd.PersistentFlags().Int("min-proxy-db-pool-size", 1, "The db proxy min pool size.")
 	serverCmd.PersistentFlags().Int("max-client-connections", 20000, "The db proxy max client connections.")
+	serverCmd.PersistentFlags().Int("server-idle-timeout", 30, "The server idle timeout.")
+	serverCmd.PersistentFlags().Int("server-lifetime", 300, "The server lifetime.")
+
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
 	serverCmd.PersistentFlags().Bool("disable-db-init-check", false, "Whether to disable init container with database check.")
@@ -162,6 +165,12 @@ var serverCmd = &cobra.Command{
 
 		maxClientConnections, _ := command.Flags().GetInt("max-client-connections")
 		model.SetMaxClientConnections(maxClientConnections)
+
+		serverIdleTimeout, _ := command.Flags().GetInt("server-idle-timeout")
+		model.SetServerIdleTimeout(serverIdleTimeout)
+
+		serverLifetime, _ := command.Flags().GetInt("server-lifetime")
+		model.SetServerLifetime(serverLifetime)
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {
