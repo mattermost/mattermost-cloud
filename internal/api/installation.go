@@ -5,7 +5,6 @@
 package api
 
 import (
-	"math/rand"
 	"net/http"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
@@ -273,6 +272,7 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		Annotations: &model.AnnotationsFilter{
 			MatchAllIDs: model.GetAnnotationsIDs(groupAnnotations),
 		},
+		WithStatus: true,
 	})
 	if err != nil {
 		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed to get groups with annotations")
@@ -281,8 +281,11 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		return "", common.NewErr(http.StatusBadRequest, errors.New("no group matching all annotations found"))
 	}
 
-	// Pick randomly for now
-	selectedGroup := groups[rand.Intn(len(groups))]
+	installationGroupAllocator := model.NewLowestCountInstallationGroupAllocator("total")
+	selectedGroup, err := installationGroupAllocator.Choose(groups)
+	if err != nil {
+		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed to allocate a group")
+	}
 
 	return selectedGroup.ID, nil
 }
