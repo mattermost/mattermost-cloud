@@ -75,6 +75,35 @@ type RotatorConfig struct {
 	WaitBetweenPodEvictions *int  `json:"wait-between-pod-evictions,omitempty"`
 }
 
+// Validate validates that the provided attributes for the rotator are set
+func (r RotatorConfig) Validate() error {
+	if r.UseRotator == nil {
+		return errors.Errorf("rotator config use rotator should be set")
+	}
+
+	if *r.UseRotator {
+		if r.EvictGracePeriod == nil {
+			return errors.Errorf("rotator config evict grace period should be set")
+		}
+		if r.MaxDrainRetries == nil {
+			return errors.Errorf("rotator config max drain retries should be set")
+		}
+		if r.MaxScaling == nil {
+			return errors.Errorf("rotator config max scaling should be set")
+		}
+		if r.WaitBetweenRotations == nil {
+			return errors.Errorf("rotator config wait between rotations should be set")
+		}
+		if r.WaitBetweenDrains == nil {
+			return errors.Errorf("rotator config wait between drains should be set")
+		}
+		if r.WaitBetweenPodEvictions == nil {
+			return errors.Errorf("rotator config wait between pod evictions should be set")
+		}
+	}
+	return nil
+}
+
 // ValidateChangeRequest ensures that the ChangeRequest has at least one
 // actionable value.
 func (km *KopsMetadata) ValidateChangeRequest() error {
