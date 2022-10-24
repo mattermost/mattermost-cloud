@@ -551,3 +551,97 @@ func TestGetKopsResizeSetActionsFromChanges(t *testing.T) {
 		})
 	}
 }
+
+func TestRotatorConfigValidation(t *testing.T) {
+	boolValue := true
+	intValue := 10
+
+	t.Run("UseRotator can't be nil", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("EvictGracePeriod must be set", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator: &boolValue,
+			// EvictGracePeriod: &intValue,
+			MaxDrainRetries:         &intValue,
+			MaxScaling:              &intValue,
+			WaitBetweenRotations:    &intValue,
+			WaitBetweenDrains:       &intValue,
+			WaitBetweenPodEvictions: &intValue,
+		}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("MaxDrainRetries must be set", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:       &boolValue,
+			EvictGracePeriod: &intValue,
+			// MaxDrainRetries:         &intValue,
+			MaxScaling:              &intValue,
+			WaitBetweenRotations:    &intValue,
+			WaitBetweenDrains:       &intValue,
+			WaitBetweenPodEvictions: &intValue,
+		}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("MaxScaling must be set", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:       &boolValue,
+			EvictGracePeriod: &intValue,
+			MaxDrainRetries:  &intValue,
+			// MaxScaling:              &intValue,
+			WaitBetweenRotations:    &intValue,
+			WaitBetweenDrains:       &intValue,
+			WaitBetweenPodEvictions: &intValue,
+		}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("WaitBetweenRotations must be set", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:       &boolValue,
+			EvictGracePeriod: &intValue,
+			MaxDrainRetries:  &intValue,
+			MaxScaling:       &intValue,
+			// WaitBetweenRotations:    &intValue,
+			WaitBetweenDrains:       &intValue,
+			WaitBetweenPodEvictions: &intValue,
+		}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("WaitBetweenDrains must be set", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:           &boolValue,
+			EvictGracePeriod:     &intValue,
+			MaxDrainRetries:      &intValue,
+			MaxScaling:           &intValue,
+			WaitBetweenRotations: &intValue,
+			// WaitBetweenDrains:       &intValue,
+			WaitBetweenPodEvictions: &intValue,
+		}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("WaitBetweenPodEvictions must be set", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:           &boolValue,
+			EvictGracePeriod:     &intValue,
+			MaxDrainRetries:      &intValue,
+			MaxScaling:           &intValue,
+			WaitBetweenRotations: &intValue,
+			WaitBetweenDrains:    &intValue,
+			// WaitBetweenPodEvictions: &intValue,
+		}
+		require.Error(t, rotatorConfig.Validate())
+	})
+	t.Run("valid RotatorConfig", func(t *testing.T) {
+		rotatorConfig := model.RotatorConfig{
+			UseRotator:              &boolValue,
+			EvictGracePeriod:        &intValue,
+			MaxDrainRetries:         &intValue,
+			MaxScaling:              &intValue,
+			WaitBetweenRotations:    &intValue,
+			WaitBetweenDrains:       &intValue,
+			WaitBetweenPodEvictions: &intValue,
+		}
+		require.NoError(t, rotatorConfig.Validate())
+	})
+}
