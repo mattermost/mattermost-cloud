@@ -293,9 +293,10 @@ func NewUpgradeClusterRequestFromReader(reader io.Reader) (*PatchUpgradeClusterR
 
 // PatchClusterSizeRequest specifies the parameters for resizing a cluster.
 type PatchClusterSizeRequest struct {
-	NodeInstanceType *string `json:"node-instance-type,omitempty"`
-	NodeMinCount     *int64  `json:"node-min-count,omitempty"`
-	NodeMaxCount     *int64  `json:"node-max-count,omitempty"`
+	NodeInstanceType *string        `json:"node-instance-type,omitempty"`
+	NodeMinCount     *int64         `json:"node-min-count,omitempty"`
+	NodeMaxCount     *int64         `json:"node-max-count,omitempty"`
+	RotatorConfig    *RotatorConfig `json:"rotatorConfig,omitempty"`
 }
 
 // Validate validates the values of a PatchClusterSizeRequest.
@@ -309,6 +310,12 @@ func (p *PatchClusterSizeRequest) Validate() error {
 	if p.NodeMinCount != nil && p.NodeMaxCount != nil &&
 		*p.NodeMaxCount < *p.NodeMinCount {
 		return errors.Errorf("node max count (%d) can't be less than min count (%d)", *p.NodeMaxCount, *p.NodeMinCount)
+	}
+
+	if p.RotatorConfig != nil {
+		if err := p.RotatorConfig.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -332,8 +339,13 @@ func (p *PatchClusterSizeRequest) Apply(metadata *KopsMetadata) bool {
 		changes.NodeMaxCount = *p.NodeMaxCount
 	}
 
+	if metadata.RotatorRequest == nil {
+		metadata.RotatorRequest = &RotatorMetadata{}
+	}
+
 	if applied {
 		metadata.ChangeRequest = changes
+		metadata.RotatorRequest.Config = p.RotatorConfig
 	}
 
 	return applied
