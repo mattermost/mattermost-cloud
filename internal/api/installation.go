@@ -281,10 +281,12 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		return "", common.NewErr(http.StatusBadRequest, errors.New("no group matching all annotations found"))
 	}
 
-	installationGroupAllocator := model.NewLowestCountInstallationGroupAllocator("total")
-	selectedGroup, err := installationGroupAllocator.Choose(groups)
-	if err != nil {
-		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed to allocate a group")
+	// Select the group with less total installations
+	var selectedGroup *model.GroupDTO
+	for _, g := range groups {
+		if selectedGroup == nil || g.Status.InstallationsTotal < selectedGroup.Status.InstallationsTotal {
+			selectedGroup = g
+		}
 	}
 
 	return selectedGroup.ID, nil
