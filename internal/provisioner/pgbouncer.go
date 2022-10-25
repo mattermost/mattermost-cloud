@@ -179,7 +179,7 @@ const baseIni = `
 listen_addr = *
 listen_port = 5432
 auth_file = /etc/userlist/userlist.txt
-auth_query = SELECT usename, passwd FROM pgbouncer.get_auth($1)
+auth_query = %s
 admin_users = admin
 ignore_startup_parameters = extra_float_digits
 tcp_keepalive = 1
@@ -203,8 +203,8 @@ server_reset_query_always = %d
 [databases]
 `
 
-func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface) (string, error) {
-	ini := generatePGBouncerBaseIni()
+func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *PGBouncerConfig) (string, error) {
+	ini := config.generatePGBouncerBaseIni()
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
@@ -247,10 +247,6 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 	return ini, nil
 }
 
-func generatePGBouncerBaseIni() string {
-	return fmt.Sprintf(baseIni, model.GetMinPoolSize(), model.GetDefaultPoolSize(), model.GetReservePoolSize(), model.GetMaxClientConnections(), model.GetMaxDatabaseConnectionsPerPool(), model.GetServerIdleTimeout(), model.GetServerLifetime(), model.GetServerResetQueryAlways())
-}
-
 func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {
 	password, err := awsClient.SecretsManagerGetPGBouncerAuthUserPassword(vpcID)
 	if err != nil {
@@ -266,4 +262,74 @@ func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) 
 	)
 
 	return userlist, nil
+}
+
+// PGBouncerConfig contains the configuration for the PGBouncer utility.
+////////////////////////////////////////////////////////////////////////////////
+// - AuthQuery is the query used by PGBouncer to authenticate database
+//   connections.
+// - MaxDatabaseConnectionsPerPool is the maximum number of connections per
+//   logical database pool when using proxy databases.
+// - MinPoolSize is the minimum pool size.
+// - DefaultPoolSize is the default pool size per user.
+// - ReservePoolSize is the default pool size per user.
+// - MaxClientConnections is the maximum client connections.
+// - ServerIdleTimeout is the server idle timeout.
+// - ServerLifetime is the server lifetime.
+// - ServerResetQueryAlways is boolean 0 or 1 whether server_reset_query should
+//   be run in all pooling modes.
+////////////////////////////////////////////////////////////////////////////////
+type PGBouncerConfig struct {
+	AuthQuery                     string
+	MinPoolSize                   int
+	DefaultPoolSize               int
+	ReservePoolSize               int
+	MaxClientConnections          int
+	MaxDatabaseConnectionsPerPool int
+	ServerIdleTimeout             int
+	ServerLifetime                int
+	ServerResetQueryAlways        int
+}
+
+// Validate validates a PGBouncerConfig.
+func (c *PGBouncerConfig) Validate() error {
+	if len(c.AuthQuery) == 0 {
+		return errors.New("AuthQuery cannot be empty")
+	}
+	if c.MaxDatabaseConnectionsPerPool < 1 {
+		return errors.New("MaxDatabaseConnectionsPerPool must be 1 or greater")
+	}
+	if c.DefaultPoolSize < 1 {
+		return errors.New("DefaultPoolSize must be 1 or greater")
+	}
+	if c.ServerResetQueryAlways != 0 && c.ServerResetQueryAlways != 1 {
+		return errors.New("ServerResetQueryAlways must be 0 or 1")
+	}
+
+	return nil
+}
+
+func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
+	return fmt.Sprintf(
+		baseIni,
+		c.AuthQuery,
+		c.MinPoolSize, c.DefaultPoolSize, c.ReservePoolSize,
+		c.MaxClientConnections, c.MaxDatabaseConnectionsPerPool,
+		c.ServerIdleTimeout, c.ServerLifetime, c.ServerResetQueryAlways,
+	)
+}
+
+// NewPGBouncerConfig returns a new PGBouncerConfig with the provided configuration.
+func NewPGBouncerConfig(authQuery string, minPoolSize, defaultPoolSize, reservePoolSize, maxClientConnections, maxDatabaseConnectionsPerPool, serverIdleTimeout, serverLifetime, serverResetQueryAlways int) *PGBouncerConfig {
+	return &PGBouncerConfig{
+		AuthQuery:                     authQuery,
+		MinPoolSize:                   minPoolSize,
+		DefaultPoolSize:               defaultPoolSize,
+		ReservePoolSize:               reservePoolSize,
+		MaxClientConnections:          maxClientConnections,
+		MaxDatabaseConnectionsPerPool: maxDatabaseConnectionsPerPool,
+		ServerIdleTimeout:             serverIdleTimeout,
+		ServerLifetime:                serverLifetime,
+		ServerResetQueryAlways:        serverResetQueryAlways,
+	}
 }

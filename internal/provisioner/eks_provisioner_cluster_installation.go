@@ -145,7 +145,7 @@ func (provisioner *EKSProvisioner) PrepareClusterUtilities(cluster *model.Cluste
 		return errors.Wrap(err, "failed to prepare kubeconfig")
 	}
 
-	return prepareClusterUtilities(cluster, configLocation, store, awsClient, logger)
+	return prepareClusterUtilities(cluster, configLocation, store, awsClient, provisioner.params.PGBouncerConfig, logger)
 }
 
 // ExecClusterInstallationCLI executes command on ClusterInstallation.

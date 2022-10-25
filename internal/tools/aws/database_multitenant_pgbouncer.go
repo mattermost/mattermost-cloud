@@ -574,6 +574,12 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerDatabasePrep(ctx contex
 		return errors.Wrap(err, "failed to run pgbouncer user table creation SQL command")
 	}
 
+	query = fmt.Sprintf("GRANT SELECT ON ALL TABLES IN SCHEMA %s TO %s;", pgbouncerUsername, pgbouncerUsername)
+	_, err = d.db.QueryContext(ctx, query)
+	if err != nil {
+		return errors.Wrap(err, "failed to run pgbouncer select grant SQL command")
+	}
+
 	query = fmt.Sprintf(`
 	CREATE OR REPLACE FUNCTION %s.get_auth(uname TEXT) RETURNS TABLE (usename name, passwd text) as
 	$$

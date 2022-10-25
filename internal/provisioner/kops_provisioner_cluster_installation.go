@@ -535,7 +535,7 @@ func (provisioner *KopsProvisioner) PrepareClusterUtilities(cluster *model.Clust
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return prepareClusterUtilities(cluster, configLocation, store, awsClient, logger)
+	return prepareClusterUtilities(cluster, configLocation, store, awsClient, provisioner.params.PGBouncerConfig, logger)
 }
 
 func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {

@@ -420,6 +420,7 @@ func prepareClusterUtilities(
 	configLocation string,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	awsClient aws.AWS,
+	pgbouncerConfig *PGBouncerConfig,
 	logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
@@ -438,7 +439,7 @@ func prepareClusterUtilities(
 	// TODO: Yeah, so this is definitely a bit of a race condition. We would
 	// need to lock a bunch of stuff to do this completely properly, but that
 	// isn't really feasible right now.
-	ini, err := generatePGBouncerIni(vpc, store)
+	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
 	}
