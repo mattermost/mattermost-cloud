@@ -31,8 +31,9 @@ type GroupFilter struct {
 	Paging
 	Annotations *AnnotationsFilter
 
-	// WithStatus if the store should also retrieve the status for each group
-	WithStatus bool
+	// WithInstallationCount if the store should retrieve the count of non-deleted installations
+	// for this group
+	WithInstallationCount bool
 }
 
 // ToDTO returns Group joined with Annotations.

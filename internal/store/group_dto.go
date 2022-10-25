@@ -46,11 +46,15 @@ func (sqlStore *SQLStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.Grou
 	dtos := make([]*model.GroupDTO, 0, len(groups))
 	for _, g := range groups {
 		gDTO := g.ToDTO(annotations[g.ID])
-		if filter.WithStatus {
-			gDTO.Status, err = sqlStore.GetGroupStatus(gDTO.ID)
+		if filter.WithInstallationCount {
+			count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+				Paging:  model.AllPagesNotDeleted(),
+				GroupID: gDTO.ID,
+			})
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to get status from group")
+				return nil, errors.Wrapf(err, "failed to get installation count for group %s", gDTO.ID)
 			}
+			gDTO.InstallationCount = count
 		}
 		dtos = append(dtos, gDTO)
 	}

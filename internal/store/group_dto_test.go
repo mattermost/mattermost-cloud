@@ -67,15 +67,24 @@ func Test_GroupDTO(t *testing.T) {
 		assert.Equal(t, group3.ToDTO(nil), group3DTO)
 	})
 
-	t.Run("get group DTOs with status", func(t *testing.T) {
+	t.Run("get group DTOs with installation count", func(t *testing.T) {
+		err := sqlStore.CreateInstallation(&model.Installation{
+			Name:    "Dummy installation",
+			GroupID: &group1.ID,
+		}, []*model.Annotation{}, []*model.InstallationDNS{})
+		assert.NoError(t, err)
+
 		groups, err := sqlStore.GetGroupDTOs(&model.GroupFilter{
-			Paging:     model.AllPagesNotDeleted(),
-			WithStatus: true,
+			Paging:                model.AllPagesNotDeleted(),
+			WithInstallationCount: true,
 		})
+
 		assert.NoError(t, err)
 		assert.NotZero(t, len(groups))
 		for _, g := range groups {
-			assert.NotNil(t, g.Status)
+			if g.ID == group1.ID {
+				assert.NotZero(t, g.InstallationCount)
+			}
 		}
 	})
 

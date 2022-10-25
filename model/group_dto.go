@@ -12,8 +12,12 @@ import (
 // GroupDTO is a group with Annotations.
 type GroupDTO struct {
 	*Group
-	Annotations []*Annotation `json:"annotations"`
-	Status      *GroupStatus  `json:"status,omitempty"`
+	Annotations       []*Annotation `json:"annotations"`
+	InstallationCount int64         `json:"installation_count,omitempty"`
+}
+
+func (g GroupDTO) GetInstallationCount() int64 {
+	return g.InstallationCount
 }
 
 // GroupDTOFromReader decodes a json-encoded group DTO from the given io.Reader.
