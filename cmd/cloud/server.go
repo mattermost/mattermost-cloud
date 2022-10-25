@@ -108,6 +108,7 @@ func init() {
 	serverCmd.PersistentFlags().Int("max-client-connections", 20000, "The db proxy max client connections.")
 	serverCmd.PersistentFlags().Int("server-idle-timeout", 30, "The server idle timeout.")
 	serverCmd.PersistentFlags().Int("server-lifetime", 300, "The server lifetime.")
+	serverCmd.PersistentFlags().Int("server-reset-query-always", 0, "Whether server_reset_query should be run in all pooling modes.")
 
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
@@ -178,6 +179,9 @@ var serverCmd = &cobra.Command{
 
 		serverLifetime, _ := command.Flags().GetInt("server-lifetime")
 		model.SetServerLifetime(serverLifetime)
+
+		serverResetQueryAlways, _ := command.Flags().GetInt("server-reset-query-always")
+		model.SetServerResetQueryAlways(serverResetQueryAlways)
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {
