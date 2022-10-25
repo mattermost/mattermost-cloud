@@ -47,6 +47,7 @@ func (sqlStore *SQLStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.Grou
 	for _, g := range groups {
 		gDTO := g.ToDTO(annotations[g.ID])
 		if filter.WithInstallationCount {
+			// TODO: Refactor with a LEFT JOIN if this count gets used a lot in the future.
 			count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
 				Paging:  model.AllPagesNotDeleted(),
 				GroupID: gDTO.ID,
