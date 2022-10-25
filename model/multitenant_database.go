@@ -55,6 +55,9 @@ var serverIdleTimeout int = 30
 // serverLifetime is the server lifetime
 var serverLifetime int = 300
 
+// serverResetQueryAlways is boolean 0 or 1 whether server_reset_query should be run in all pooling modes.
+var serverResetQueryAlways int = 0
+
 // SetMaxDatabaseConnectionsPerPool is used to define how many database
 // connections are created per logical database pool with proxy databases.
 func SetMaxDatabaseConnectionsPerPool(val int) error {
@@ -101,6 +104,11 @@ func SetServerLifetime(val int) {
 	serverLifetime = val
 }
 
+// SetServerResetQueryAlways is used to define 0 or 1 whether server_reset_query should be run in all pooling modes.
+func SetServerResetQueryAlways(val int) {
+	serverResetQueryAlways = val
+}
+
 // GetMaxDatabaseConnectionsPerPool returns the value of
 // maxDatabaseConnectionsPerPool.
 func GetMaxDatabaseConnectionsPerPool() int {
@@ -135,6 +143,11 @@ func GetServerIdleTimeout() int {
 // GetServerLifetime returns the value of serverLifetime.
 func GetServerLifetime() int {
 	return serverLifetime
+}
+
+// GetServerResetQueryAlways returns the value of serverResetQueryAlways.
+func GetServerResetQueryAlways() int {
+	return serverResetQueryAlways
 }
 
 // MultitenantDatabase represents database infrastructure that contains multiple
