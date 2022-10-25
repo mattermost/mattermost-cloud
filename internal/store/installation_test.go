@@ -1027,6 +1027,75 @@ func TestGetInstallationsStatus(t *testing.T) {
 	assert.Equal(t, int64(0), status.InstallationsUpdating)
 }
 
+func TestGetInstallationCount(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := MakeTestSQLStore(t, logger)
+	defer CloseConnection(t, sqlStore)
+
+	groupID := "g1"
+
+	err := sqlStore.CreateGroup(&model.Group{
+		ID:   groupID,
+		Name: "group 1",
+	}, []*model.Annotation{})
+	assert.NoError(t, err)
+
+	installation1 := &model.Installation{
+		OwnerID: model.NewID(),
+		Name:    "installation 1",
+		GroupID: &groupID,
+	}
+
+	err = sqlStore.CreateInstallation(installation1, nil, fixDNSRecords(1))
+	assert.NoError(t, err)
+
+	installation2 := &model.Installation{
+		OwnerID: model.NewID(),
+		Name:    "installation 2",
+	}
+
+	err = sqlStore.CreateInstallation(installation2, nil, fixDNSRecords(2))
+	assert.NoError(t, err)
+
+	t.Run("test count all", func(t *testing.T) {
+		count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+			Paging: model.AllPagesWithDeleted(),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), count)
+	})
+
+	t.Run("test count filter group", func(t *testing.T) {
+		count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+			Paging:  model.AllPagesWithDeleted(),
+			GroupID: groupID,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), count)
+	})
+
+	// Delete one installation for the following tests
+	err = sqlStore.DeleteInstallation(installation2.ID)
+	assert.NoError(t, err)
+	time.Sleep(1 * time.Millisecond)
+
+	t.Run("test count all with deleted", func(t *testing.T) {
+		count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+			Paging: model.AllPagesWithDeleted(),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), count)
+	})
+
+	t.Run("test count all without deleted", func(t *testing.T) {
+		count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+			Paging: model.AllPagesNotDeleted(),
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), count)
+	})
+}
+
 func TestUpdateInstallationCRVersion(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	sqlStore := MakeTestSQLStore(t, logger)
