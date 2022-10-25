@@ -283,10 +283,6 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		return "", common.NewErr(http.StatusBadRequest, errors.New("no group matching all annotations found"))
 	}
 
-	for _, g := range groups {
-		c.Logger.Infof("--------------- %v ( %d )", g.ID, g.InstallationCount)
-	}
-
 	// Select the group with less total installations
 	var selectedGroup *model.GroupDTO
 	for _, g := range groups {
