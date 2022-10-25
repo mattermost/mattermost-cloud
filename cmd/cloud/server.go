@@ -68,6 +68,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("deploy-minio-operator", true, "Whether to deploy the minio operator.")
 	serverCmd.PersistentFlags().Int64("default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
 	serverCmd.PersistentFlags().String("provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
+	serverCmd.PersistentFlags().Bool("disable-all-supervisors", false, "disable all provisioners and enable API only funcionality")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
@@ -254,26 +255,32 @@ var serverCmd = &cobra.Command{
 			return errors.Wrap(err, "invalid installation scheduling options")
 		}
 
-		clusterSupervisor, _ := command.Flags().GetBool("cluster-supervisor")
-		groupSupervisor, _ := command.Flags().GetBool("group-supervisor")
-		installationSupervisor, _ := command.Flags().GetBool("installation-supervisor")
-		installationDeletionSupervisor, _ := command.Flags().GetBool("installation-deletion-supervisor")
-		clusterInstallationSupervisor, _ := command.Flags().GetBool("cluster-installation-supervisor")
-		backupSupervisor, _ := command.Flags().GetBool("backup-supervisor")
-		importSupervisor, _ := command.Flags().GetBool("import-supervisor")
-		installationDBRestorationSupervisor, _ := command.Flags().GetBool("installation-db-restoration-supervisor")
-		installationDBMigrationSupervisor, _ := command.Flags().GetBool("installation-db-migration-supervisor")
-		supervisorsEnabled := []bool{
-			clusterSupervisor,
-			installationSupervisor,
-			clusterInstallationSupervisor,
-			groupSupervisor,
-			backupSupervisor,
-			importSupervisor,
-			installationDBRestorationSupervisor,
-			installationDBMigrationSupervisor,
+		disableAllSupervisors, _ := command.Flags().GetBool("disable-all-supervisors")
+		supervisorsEnabled := map[string]bool{
+			"clusterSupervisor":                   false,
+			"groupSupervisor":                     false,
+			"installationSupervisor":              false,
+			"installationDeletionSupervisor":      false,
+			"clusterInstallationSupervisor":       false,
+			"backupSupervisor":                    false,
+			"importSupervisor":                    false,
+			"installationDBRestorationSupervisor": false,
+			"installationDBMigrationSupervisor":   false,
 		}
-		if !isAny(supervisorsEnabled) {
+
+		if !disableAllSupervisors {
+			supervisorsEnabled["clusterSupervisor"], _ = command.Flags().GetBool("cluster-supervisor")
+			supervisorsEnabled["groupSupervisor"], _ = command.Flags().GetBool("group-supervisor")
+			supervisorsEnabled["installationSupervisor"], _ = command.Flags().GetBool("installation-supervisor")
+			supervisorsEnabled["installationDeletionSupervisor"], _ = command.Flags().GetBool("installation-deletion-supervisor")
+			supervisorsEnabled["clusterInstallationSupervisor"], _ = command.Flags().GetBool("cluster-installation-supervisor")
+			supervisorsEnabled["backupSupervisor"], _ = command.Flags().GetBool("backup-supervisor")
+			supervisorsEnabled["importSupervisor"], _ = command.Flags().GetBool("import-supervisor")
+			supervisorsEnabled["installationDBRestorationSupervisor"], _ = command.Flags().GetBool("installation-db-restoration-supervisor")
+			supervisorsEnabled["installationDBMigrationSupervisor"], _ = command.Flags().GetBool("installation-db-migration-supervisor")
+		}
+
+		if !isAnyMapValue(supervisorsEnabled) {
 			logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 		}
 
@@ -314,15 +321,15 @@ var serverCmd = &cobra.Command{
 
 		logger.WithFields(logrus.Fields{
 			"build-hash":                                    model.BuildHash,
-			"cluster-supervisor":                            clusterSupervisor,
-			"group-supervisor":                              groupSupervisor,
-			"installation-supervisor":                       installationSupervisor,
-			"installation-deletion-supervisor":              installationDeletionSupervisor,
-			"cluster-installation-supervisor":               clusterInstallationSupervisor,
-			"backup-supervisor":                             backupSupervisor,
-			"import-supervisor":                             importSupervisor,
-			"installation-db-restoration-supervisor":        installationDBRestorationSupervisor,
-			"installation-db-migration-supervisor":          installationDBMigrationSupervisor,
+			"cluster-supervisor":                            supervisorsEnabled["clusterSupervisor"],
+			"group-supervisor":                              supervisorsEnabled["groupSupervisor"],
+			"installation-supervisor":                       supervisorsEnabled["installationSupervisor"],
+			"installation-deletion-supervisor":              supervisorsEnabled["installationDeletionSupervisor"],
+			"cluster-installation-supervisor":               supervisorsEnabled["clusterInstallationSupervisor"],
+			"backup-supervisor":                             supervisorsEnabled["backupSupervisor"],
+			"import-supervisor":                             supervisorsEnabled["importSupervisor"],
+			"installation-db-restoration-supervisor":        supervisorsEnabled["installationDBRestorationSupervisor"],
+			"installation-db-migration-supervisor":          supervisorsEnabled["installationDBMigrationSupervisor"],
 			"store-version":                                 currentVersion,
 			"state-store":                                   s3StateStore,
 			"working-directory":                             wd,
@@ -465,32 +472,32 @@ var serverCmd = &cobra.Command{
 		}
 
 		var multiDoer supervisor.MultiDoer
-		if clusterSupervisor {
+		if supervisorsEnabled["clusterSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger))
 		}
-		if groupSupervisor {
+		if supervisorsEnabled["groupSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 		}
-		if installationSupervisor {
+		if supervisorsEnabled["installationSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, forceCRUpgrade, dnsManager, disableDNSUpdates))
 		}
-		if clusterInstallationSupervisor {
+		if supervisorsEnabled["clusterInstallationSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 		}
-		if backupSupervisor {
+		if supervisorsEnabled["backupSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, logger))
 		}
-		if importSupervisor {
+		if supervisorsEnabled["importSupervisor"] {
 			awatAddress, _ := command.Flags().GetString("awat")
 			if awatAddress == "" {
 				return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 			}
 			multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, clusterProvisioner, eventsProducer, logger))
 		}
-		if installationDBRestorationSupervisor {
+		if supervisorsEnabled["installationDBRestorationSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, clusterProvisioner, eventsProducer, instanceID, logger))
 		}
-		if installationDBMigrationSupervisor {
+		if supervisorsEnabled["installationDBMigrationSupervisor"] {
 			multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, clusterProvisioner, eventsProducer, logger))
 		}
 
@@ -509,7 +516,7 @@ var serverCmd = &cobra.Command{
 		if slowPoll == 0 {
 			logger.WithField("slow-poll", slowPoll).Info("Slow scheduler is disabled")
 		}
-		if installationDeletionSupervisor {
+		if supervisorsEnabled["installationDeletionSupervisor"] {
 			var slowMultiDoer supervisor.MultiDoer
 			slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, installationDeletionPendingTime, installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
 			slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(slowPoll)*time.Second)
@@ -727,6 +734,15 @@ func flagIsUnset(cmd *cobra.Command, flagName string) bool {
 }
 
 func isAny(conditions []bool) bool {
+	for _, b := range conditions {
+		if b {
+			return true
+		}
+	}
+	return false
+}
+
+func isAnyMapValue(conditions map[string]bool) bool {
 	for _, b := range conditions {
 		if b {
 			return true
