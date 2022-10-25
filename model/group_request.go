@@ -156,13 +156,16 @@ func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error
 // GetGroupsRequest describes the parameters to request a list of groups.
 type GetGroupsRequest struct {
 	Paging
+	WithInstallationCount bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
+	if request.WithInstallationCount {
+		q.Add("with_installation_count", "true")
+	}
 	request.Paging.AddToQuery(q)
-
 	u.RawQuery = q.Encode()
 }
 
