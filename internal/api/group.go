@@ -63,7 +63,7 @@ func handleGetGroups(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	withInstallationCount, err := parseBool(r.URL, "show_installation_count", false)
+	withInstallationCount, err := parseBool(r.URL, model.ShowInstallationCountQueryParameter, false)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to parse request parameters")
 		w.WriteHeader(http.StatusBadRequest)

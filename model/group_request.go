@@ -15,6 +15,8 @@ import (
 
 const (
 	forceInstallationRestartEnvVar = "CLOUD_PROVISIONER_ENFORCED_RESTART"
+
+	ShowInstallationCountQueryParameter = "show_installation_count"
 )
 
 // CreateGroupRequest specifies the parameters for a new group.
@@ -163,7 +165,7 @@ type GetGroupsRequest struct {
 func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
 	if request.WithInstallationCount {
-		q.Add("with_installation_count", "true")
+		q.Add(ShowInstallationCountQueryParameter, "true")
 	}
 	request.Paging.AddToQuery(q)
 	u.RawQuery = q.Encode()
