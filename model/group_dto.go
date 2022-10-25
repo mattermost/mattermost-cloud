@@ -13,11 +13,11 @@ import (
 type GroupDTO struct {
 	*Group
 	Annotations       []*Annotation `json:"annotations"`
-	InstallationCount int64         `json:"installation_count,omitempty"`
+	InstallationCount *int64        `json:"installation_count,omitempty"`
 }
 
 func (g GroupDTO) GetInstallationCount() int64 {
-	return g.InstallationCount
+	return *g.InstallationCount
 }
 
 // GroupDTOFromReader decodes a json-encoded group DTO from the given io.Reader.

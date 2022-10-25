@@ -55,7 +55,7 @@ func (sqlStore *SQLStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.Grou
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get installation count for group %s", gDTO.ID)
 			}
-			gDTO.InstallationCount = count
+			gDTO.InstallationCount = &count
 		}
 		dtos = append(dtos, gDTO)
 	}
