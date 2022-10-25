@@ -46,6 +46,7 @@ func init() {
 	clusterCreateCmd.Flags().String("metrics-server-version", "", "The version of Metrics Server. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("velero-version", "", "The version of Velero. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("cloudprober-version", "", "The version of Cloudprober. Use 'stable' to provision the latest stable version published upstream.")
+	clusterCreateCmd.Flags().String("haproxy-version", "", "The version of Haproxy. Use 'stable' to provision the latest stable version published upstream.")
 	clusterCreateCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart value file's version for Prometheus Operator")
 	clusterCreateCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart value file's version for Thanos")
 	clusterCreateCmd.Flags().String("fluentbit-values", "", "The full Git URL of the desired chart value file's version for Fluent-Bit")
@@ -60,6 +61,7 @@ func init() {
 	clusterCreateCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart value file's version for Metrics Server")
 	clusterCreateCmd.Flags().String("velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	clusterCreateCmd.Flags().String("cloudprober-values", "", "The full Git URL of the desired chart value file's version for Cloudprober")
+	clusterCreateCmd.Flags().String("haproxy-values", "", "The full Git URL of the desired chart value file's version for Haproxy")
 	clusterCreateCmd.Flags().String("networking", "calico", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	clusterCreateCmd.Flags().String("vpc", "", "Set to use a shared VPC")
 	clusterCreateCmd.Flags().String("cluster", "", "The id of the cluster. If provided and the cluster exists the creation will be retried ignoring other parameters.")
@@ -86,6 +88,7 @@ func init() {
 	clusterProvisionCmd.Flags().String("metrics-server-version", "", "The version of the Metrics Server Helm chart")
 	clusterProvisionCmd.Flags().String("velero-version", "", "The version of Velero. Use 'stable' to provision the latest stable version published upstream.")
 	clusterProvisionCmd.Flags().String("cloudprober-version", "", "The version of Cloudprober. Use 'stable' to provision the latest stable version published upstream.")
+	clusterProvisionCmd.Flags().String("haproxy-version", "", "The version of Haproxy. Use 'stable' to provision the latest stable version published upstream.")
 
 	clusterProvisionCmd.Flags().String("prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	clusterProvisionCmd.Flags().String("thanos-values", "", "The full Git URL of the desired chart values for Thanos")
@@ -101,6 +104,8 @@ func init() {
 	clusterProvisionCmd.Flags().String("metrics-server-values", "", "The full Git URL of the desired chart values for the Metrics Server")
 	clusterProvisionCmd.Flags().String("velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	clusterProvisionCmd.Flags().String("cloudprober-values", "", "The full Git URL of the desired chart value file's version for Cloudprober")
+	clusterProvisionCmd.Flags().String("haproxy-values", "", "The full Git URL of the desired chart value file's version for Haproxy")
+
 	clusterProvisionCmd.Flags().Bool("reprovision-all-utilities", false, "Set to true if all utilities should be reprovisioned and not just ones with new versions")
 
 	clusterProvisionCmd.MarkFlagRequired("cluster")
@@ -664,7 +669,7 @@ func MustGetString(key string, command *cobra.Command) string {
 }
 
 // processUtilityFlags handles processing the arguments passed for all
-// of the utilities, for cloud cluster create & cloud cluster
+// the utilities, for cloud cluster create & cloud cluster
 // provision.
 func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVersion {
 	return map[string]*model.HelmUtilityVersion{
@@ -710,5 +715,9 @@ func processUtilityFlags(command *cobra.Command) map[string]*model.HelmUtilityVe
 		model.CloudproberCanonicalName: {
 			Chart:      MustGetString("cloudprober-version", command),
 			ValuesPath: MustGetString("cloudprober-values", command)},
+		model.HaproxyCanonicalName: {
+			Chart:      MustGetString("haproxy-version", command),
+			ValuesPath: MustGetString("haproxy-values", command),
+		},
 	}
 }

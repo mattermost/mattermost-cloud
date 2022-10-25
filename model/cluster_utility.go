@@ -37,8 +37,10 @@ const (
 	MetricsServerCanonicalName = "metrics-server"
 	// VeleroCanonicalName is the canonical string representation of velero
 	VeleroCanonicalName = "velero"
-	// CloudproberCanonicalName is the canonical string representation of Cloudprber
+	// CloudproberCanonicalName is the canonical string representation of Cloudprober
 	CloudproberCanonicalName = "cloudprober"
+	// HaproxyCanonicalName is the canonical string representation of Haproxy
+	HaproxyCanonicalName = "haproxy"
 	// GitlabOAuthTokenKey is the name of the Environment Variable which
 	// may contain an OAuth token for accessing GitLab repositories over
 	// HTTPS, used for fetching values files
@@ -89,6 +91,8 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	VeleroCanonicalName: {Chart: "2.31.3", ValuesPath: ""},
 	// CloudproberCanonicalName defines the default version for the Helm chart
 	CloudproberCanonicalName: {Chart: "0.1.0", ValuesPath: ""},
+	// HaproxyCanonicalName defines the default version for the Helm chart
+	HaproxyCanonicalName: {Chart: "1.24.0", ValuesPath: ""},
 }
 
 var defaultUtilityValuesFileNames map[string]string = map[string]string{
@@ -106,6 +110,7 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
 	VeleroCanonicalName:              "velero_values.yaml",
 	CloudproberCanonicalName:         "cloudprober_values.yaml",
+	HaproxyCanonicalName:             "haproxy_values.yaml",
 }
 
 var (
@@ -152,6 +157,7 @@ type UtilityGroupVersions struct {
 	MetricsServer       *HelmUtilityVersion
 	Velero              *HelmUtilityVersion
 	Cloudprober         *HelmUtilityVersion
+	Haproxy             *HelmUtilityVersion
 }
 
 // AsMap returns the UtilityGroupVersion represented as a map with the
@@ -173,6 +179,7 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		MetricsServerCanonicalName:       h.MetricsServer,
 		VeleroCanonicalName:              h.Velero,
 		CloudproberCanonicalName:         h.Cloudprober,
+		HaproxyCanonicalName:             h.Haproxy,
 	}
 }
 
@@ -311,6 +318,8 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Velero = desiredVersion
 	case CloudproberCanonicalName:
 		versions.Cloudprober = desiredVersion
+	case HaproxyCanonicalName:
+		versions.Haproxy = desiredVersion
 	}
 }
 

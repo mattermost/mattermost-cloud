@@ -111,6 +111,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 				"metrics-server":        {Chart: "3.8.2", ValuesPath: ""},
 				"velero":                {Chart: "2.31.3", ValuesPath: ""},
 				"cloudprober":           {Chart: "0.1.0", ValuesPath: ""},
+				"haproxy":               {Chart: "1.24.0", ValuesPath: ""},
 			},
 		}, clusterRequest)
 	})

@@ -69,6 +69,7 @@ var helmRepos = map[string]string{
 	"metrics-server":       "https://kubernetes-sigs.github.io/metrics-server/",
 	"vmware-tanzu":         "https://vmware-tanzu.github.io/helm-charts/",
 	"mattermost":           "https://helm.mattermost.com",
+	"haproxytech":          "https://haproxytech.github.io/helm-charts",
 }
 
 func newUtilityGroupHandle(
@@ -175,10 +176,17 @@ func newUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
 	}
 
+	haproxy, err := newHaproxyHandle(
+		cluster.DesiredUtilityVersion(model.HaproxyCanonicalName), cluster,
+		kubeconfigPath, awsClient, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get handle for haproxy")
+	}
+
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
+		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober, haproxy},
 		logger:    logger,
 		cluster:   cluster,
 	}, nil
