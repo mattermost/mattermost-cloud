@@ -16,6 +16,10 @@ import (
 
 var installationSelect sq.SelectBuilder
 
+const (
+	installationTable = `"Installation"`
+)
+
 func init() {
 	installationSelect = sq.
 		Select(
@@ -25,7 +29,7 @@ func init() {
 			"Installation.CreateAt", "Installation.DeleteAt",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
-		From("Installation")
+		From(installationTable)
 }
 
 type rawInstallation struct {
@@ -196,8 +200,8 @@ func (sqlStore *SQLStore) applyInstallationFilter(builder sq.SelectBuilder, filt
 
 // GetInstallationsCount returns the number of installations filtered by the
 // deleteAt field.
-func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, error) {
-	stateCounts, err := sqlStore.getInstallationCountsByState(includeDeleted)
+func (sqlStore *SQLStore) GetInstallationsCount(filter *model.InstallationFilter) (int64, error) {
+	stateCounts, err := sqlStore.getInstallationCount(filter)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to query installation state counts")
 	}
@@ -212,7 +216,9 @@ func (sqlStore *SQLStore) GetInstallationsCount(includeDeleted bool) (int64, err
 // GetInstallationsStatus returns status of all installations which aren't
 // deleted.
 func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, error) {
-	stateCounts, err := sqlStore.getInstallationCountsByState(false)
+	stateCounts, err := sqlStore.getInstallationCount(&model.InstallationFilter{
+		Paging: model.AllPagesNotDeleted(),
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query installation state counts")
 	}
@@ -234,9 +240,9 @@ func (sqlStore *SQLStore) GetInstallationsStatus() (*model.InstallationsStatus, 
 	}, nil
 }
 
-// getInstallationCountsByState returns the number of installations in each
+// getInstallationCount returns the number of installations in each
 // state.
-func (sqlStore *SQLStore) getInstallationCountsByState(includeDeleted bool) (map[string]int64, error) {
+func (sqlStore *SQLStore) getInstallationCount(filter *model.InstallationFilter) (map[string]int64, error) {
 	type Count struct {
 		Count int64
 		State string
@@ -247,9 +253,9 @@ func (sqlStore *SQLStore) getInstallationCountsByState(includeDeleted bool) (map
 		Select("Count (*) as Count, State").
 		From("Installation").
 		GroupBy("State")
-	if !includeDeleted {
-		installationBuilder = installationBuilder.Where("DeleteAt = 0")
-	}
+
+	installationBuilder = sqlStore.applyInstallationFilter(installationBuilder, filter)
+
 	err := sqlStore.selectBuilder(sqlStore.db, &counts, installationBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for installations by state")

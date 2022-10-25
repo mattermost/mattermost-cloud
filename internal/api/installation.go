@@ -130,7 +130,9 @@ func handleGetNumberOfInstallations(c *Context, w http.ResponseWriter, r *http.R
 	if err != nil {
 		includeDeleted = false
 	}
-	installationsCount, err := c.Store.GetInstallationsCount(includeDeleted)
+	installationsCount, err := c.Store.GetInstallationsCount(&model.InstallationFilter{
+		Paging: model.AllPages(includeDeleted),
+	})
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query the number of installations")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -272,7 +274,7 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		Annotations: &model.AnnotationsFilter{
 			MatchAllIDs: model.GetAnnotationsIDs(groupAnnotations),
 		},
-		WithStatus: true,
+		WithInstallationCount: true,
 	})
 	if err != nil {
 		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed to get groups with annotations")
@@ -281,10 +283,14 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		return "", common.NewErr(http.StatusBadRequest, errors.New("no group matching all annotations found"))
 	}
 
+	for _, g := range groups {
+		c.Logger.Infof("--------------- %v ( %d )", g.ID, g.InstallationCount)
+	}
+
 	// Select the group with less total installations
 	var selectedGroup *model.GroupDTO
 	for _, g := range groups {
-		if selectedGroup == nil || g.Status.InstallationsTotal < selectedGroup.Status.InstallationsTotal {
+		if selectedGroup == nil || g.GetInstallationCount() < selectedGroup.GetInstallationCount() {
 			selectedGroup = g
 		}
 	}
