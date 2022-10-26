@@ -16,6 +16,7 @@ type GroupDTO struct {
 	InstallationCount *int64        `json:"installation_count,omitempty"`
 }
 
+// GetInstallationCount retrieves the installation count dereferenced value
 func (g GroupDTO) GetInstallationCount() int64 {
 	return *g.InstallationCount
 }

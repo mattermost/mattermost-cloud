@@ -16,6 +16,8 @@ import (
 const (
 	forceInstallationRestartEnvVar = "CLOUD_PROVISIONER_ENFORCED_RESTART"
 
+	// ShowInstallationCountQueryParameter the query parameter name for GET /groups in order to enable
+	// or disable the installation count on the output.
 	ShowInstallationCountQueryParameter = "show_installation_count"
 )
 
