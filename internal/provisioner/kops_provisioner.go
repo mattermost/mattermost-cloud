@@ -30,6 +30,7 @@ type ProvisioningParams struct {
 	DeployMysqlOperator     bool
 	DeployMinioOperator     bool
 	NdotsValue              string
+	PGBouncerConfig         *PGBouncerConfig
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.

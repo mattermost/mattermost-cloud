@@ -109,6 +109,7 @@ func init() {
 	serverCmd.PersistentFlags().Int("server-idle-timeout", 30, "The server idle timeout.")
 	serverCmd.PersistentFlags().Int("server-lifetime", 300, "The server lifetime.")
 	serverCmd.PersistentFlags().Int("server-reset-query-always", 0, "Whether server_reset_query should be run in all pooling modes.")
+	serverCmd.PersistentFlags().String("pgbouncer-auth-query", "SELECT usename, passwd FROM pgbouncer.get_auth($1)", "The auth query used by PGBouncer to authenticate database connections.")
 
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
@@ -153,35 +154,26 @@ var serverCmd = &cobra.Command{
 			return err
 		}
 
-		maxDatabaseConnectionsPerPool, _ := command.Flags().GetInt("max-proxy-db-connections-per-pool")
-		err = model.SetMaxDatabaseConnectionsPerPool(maxDatabaseConnectionsPerPool)
-		if err != nil {
-			return errors.Wrap(err, "failed to set max-proxy-db-connections-per-pool")
-		}
-
-		defaultPoolSize, _ := command.Flags().GetInt("default-proxy-db-pool-size")
-		err = model.SetDefaultPoolSize(defaultPoolSize)
-		if err != nil {
-			return errors.Wrap(err, "failed to set default-proxy-db-pool-size")
-		}
-
-		reservePoolSize, _ := command.Flags().GetInt("reserve-proxy-db-pool-size")
-		model.SetReservePoolSize(reservePoolSize)
-
+		// Generate PGBouncer Config
+		authQuery, _ := command.Flags().GetString("pgbouncer-auth-query")
 		minPoolSize, _ := command.Flags().GetInt("min-proxy-db-pool-size")
-		model.SetMinPoolSize(minPoolSize)
-
+		defaultPoolSize, _ := command.Flags().GetInt("default-proxy-db-pool-size")
+		reservePoolSize, _ := command.Flags().GetInt("reserve-proxy-db-pool-size")
 		maxClientConnections, _ := command.Flags().GetInt("max-client-connections")
-		model.SetMaxClientConnections(maxClientConnections)
-
+		maxDatabaseConnectionsPerPool, _ := command.Flags().GetInt("max-proxy-db-connections-per-pool")
 		serverIdleTimeout, _ := command.Flags().GetInt("server-idle-timeout")
-		model.SetServerIdleTimeout(serverIdleTimeout)
-
 		serverLifetime, _ := command.Flags().GetInt("server-lifetime")
-		model.SetServerLifetime(serverLifetime)
-
 		serverResetQueryAlways, _ := command.Flags().GetInt("server-reset-query-always")
-		model.SetServerResetQueryAlways(serverResetQueryAlways)
+		pgbouncerConfig := provisioner.NewPGBouncerConfig(
+			authQuery,
+			minPoolSize, defaultPoolSize, reservePoolSize,
+			maxClientConnections, maxDatabaseConnectionsPerPool,
+			serverIdleTimeout, serverLifetime, serverResetQueryAlways,
+		)
+		err = pgbouncerConfig.Validate()
+		if err != nil {
+			return errors.Wrap(err, "pgbouncer config failed validation")
+		}
 
 		gitlabOAuthToken, _ := command.Flags().GetString("gitlab-oauth")
 		if len(gitlabOAuthToken) == 0 {
@@ -407,6 +399,7 @@ var serverCmd = &cobra.Command{
 			DeployMysqlOperator:     deployMySQLOperator,
 			DeployMinioOperator:     deployMinioOperator,
 			NdotsValue:              ndotsDefaultValue,
+			PGBouncerConfig:         pgbouncerConfig,
 		}
 
 		// TODO: In the future we can support both provisioners running
