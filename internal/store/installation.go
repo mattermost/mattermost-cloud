@@ -17,7 +17,7 @@ import (
 var installationSelect sq.SelectBuilder
 
 const (
-	installationTable = `"Installation"`
+	installationTable = "Installation"
 )
 
 func init() {
