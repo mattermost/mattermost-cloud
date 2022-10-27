@@ -58,7 +58,6 @@ func TestGeneratePGBouncerBaseIni(t *testing.T) {
 
 	ini := config.generatePGBouncerBaseIni()
 	assert.Contains(t, ini, "[pgbouncer]")
-	assert.Contains(t, ini, config.AuthQuery)
 
 	// Most of the other values are integers so just spot check a few
 	assert.Contains(t, ini, fmt.Sprintf("%d", config.MaxDatabaseConnectionsPerPool))
