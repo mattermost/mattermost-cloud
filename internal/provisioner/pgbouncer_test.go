@@ -16,27 +16,22 @@ func TestValidatePGBouncerConfig(t *testing.T) {
 	}{
 		{
 			"valid",
-			NewPGBouncerConfig("SELECT usename, passwd FROM tablename", 5, 10, 5, 2000, 20, 10, 20, 0),
+			NewPGBouncerConfig(5, 10, 5, 2000, 20, 10, 20, 0),
 			true,
 		},
 		{
-			"no auth query",
-			NewPGBouncerConfig("", 5, 10, 5, 2000, 20, 10, 20, 0),
-			false,
-		},
-		{
 			"MaxDatabaseConnectionsPerPool is too low",
-			NewPGBouncerConfig("SELECT usename, passwd FROM tablename", 5, 10, 5, 2000, 0, 10, 20, 0),
+			NewPGBouncerConfig(5, 10, 5, 2000, 0, 10, 20, 0),
 			false,
 		},
 		{
 			"DefaultPoolSize is too low",
-			NewPGBouncerConfig("SELECT usename, passwd FROM tablename", 5, 0, 5, 2000, 20, 10, 20, 0),
+			NewPGBouncerConfig(5, 0, 5, 2000, 20, 10, 20, 0),
 			false,
 		},
 		{
 			"ServerResetQueryAlways is invalid",
-			NewPGBouncerConfig("SELECT usename, passwd FROM tablename", 5, 10, 5, 2000, 20, 10, 20, 2),
+			NewPGBouncerConfig(5, 10, 5, 2000, 20, 10, 20, 2),
 			false,
 		},
 	}
