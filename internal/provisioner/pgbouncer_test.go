@@ -53,7 +53,7 @@ func TestValidatePGBouncerConfig(t *testing.T) {
 }
 
 func TestGeneratePGBouncerBaseIni(t *testing.T) {
-	config := NewPGBouncerConfig("SELECT usename, passwd FROM tablename", 5, 10, 54, 2000, 63, 11, 44, 0)
+	config := NewPGBouncerConfig(5, 10, 54, 2000, 63, 11, 44, 0)
 	require.NoError(t, config.Validate())
 
 	ini := config.generatePGBouncerBaseIni()
