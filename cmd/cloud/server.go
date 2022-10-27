@@ -109,7 +109,6 @@ func init() {
 	serverCmd.PersistentFlags().Int("server-idle-timeout", 30, "The server idle timeout.")
 	serverCmd.PersistentFlags().Int("server-lifetime", 300, "The server lifetime.")
 	serverCmd.PersistentFlags().Int("server-reset-query-always", 0, "Whether server_reset_query should be run in all pooling modes.")
-	serverCmd.PersistentFlags().String("pgbouncer-auth-query", "SELECT usename, passwd FROM pgbouncer.get_auth($1)", "The auth query used by PGBouncer to authenticate database connections.")
 
 	serverCmd.PersistentFlags().String("kubecost-token", "", "Set a kubecost token")
 	serverCmd.PersistentFlags().String("ndots-value", "5", "The default ndots value for installations.")
@@ -155,7 +154,6 @@ var serverCmd = &cobra.Command{
 		}
 
 		// Generate PGBouncer Config
-		authQuery, _ := command.Flags().GetString("pgbouncer-auth-query")
 		minPoolSize, _ := command.Flags().GetInt("min-proxy-db-pool-size")
 		defaultPoolSize, _ := command.Flags().GetInt("default-proxy-db-pool-size")
 		reservePoolSize, _ := command.Flags().GetInt("reserve-proxy-db-pool-size")
@@ -165,7 +163,6 @@ var serverCmd = &cobra.Command{
 		serverLifetime, _ := command.Flags().GetInt("server-lifetime")
 		serverResetQueryAlways, _ := command.Flags().GetInt("server-reset-query-always")
 		pgbouncerConfig := provisioner.NewPGBouncerConfig(
-			authQuery,
 			minPoolSize, defaultPoolSize, reservePoolSize,
 			maxClientConnections, maxDatabaseConnectionsPerPool,
 			serverIdleTimeout, serverLifetime, serverResetQueryAlways,

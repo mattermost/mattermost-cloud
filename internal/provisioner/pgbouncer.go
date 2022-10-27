@@ -179,7 +179,7 @@ const baseIni = `
 listen_addr = *
 listen_port = 5432
 auth_file = /etc/userlist/userlist.txt
-auth_query = %s
+auth_query = SELECT usename, passwd FROM pgbouncer.get_auth($1)
 admin_users = admin
 ignore_startup_parameters = extra_float_digits
 tcp_keepalive = 1
@@ -266,8 +266,6 @@ func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) 
 
 // PGBouncerConfig contains the configuration for the PGBouncer utility.
 ////////////////////////////////////////////////////////////////////////////////
-// - AuthQuery is the query used by PGBouncer to authenticate database
-//   connections.
 // - MaxDatabaseConnectionsPerPool is the maximum number of connections per
 //   logical database pool when using proxy databases.
 // - MinPoolSize is the minimum pool size.
@@ -280,7 +278,6 @@ func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) 
 //   be run in all pooling modes.
 ////////////////////////////////////////////////////////////////////////////////
 type PGBouncerConfig struct {
-	AuthQuery                     string
 	MinPoolSize                   int
 	DefaultPoolSize               int
 	ReservePoolSize               int
@@ -293,9 +290,6 @@ type PGBouncerConfig struct {
 
 // Validate validates a PGBouncerConfig.
 func (c *PGBouncerConfig) Validate() error {
-	if len(c.AuthQuery) == 0 {
-		return errors.New("AuthQuery cannot be empty")
-	}
 	if c.MaxDatabaseConnectionsPerPool < 1 {
 		return errors.New("MaxDatabaseConnectionsPerPool must be 1 or greater")
 	}
@@ -312,7 +306,6 @@ func (c *PGBouncerConfig) Validate() error {
 func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
 	return fmt.Sprintf(
 		baseIni,
-		c.AuthQuery,
 		c.MinPoolSize, c.DefaultPoolSize, c.ReservePoolSize,
 		c.MaxClientConnections, c.MaxDatabaseConnectionsPerPool,
 		c.ServerIdleTimeout, c.ServerLifetime, c.ServerResetQueryAlways,
@@ -320,9 +313,8 @@ func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
 }
 
 // NewPGBouncerConfig returns a new PGBouncerConfig with the provided configuration.
-func NewPGBouncerConfig(authQuery string, minPoolSize, defaultPoolSize, reservePoolSize, maxClientConnections, maxDatabaseConnectionsPerPool, serverIdleTimeout, serverLifetime, serverResetQueryAlways int) *PGBouncerConfig {
+func NewPGBouncerConfig(minPoolSize, defaultPoolSize, reservePoolSize, maxClientConnections, maxDatabaseConnectionsPerPool, serverIdleTimeout, serverLifetime, serverResetQueryAlways int) *PGBouncerConfig {
 	return &PGBouncerConfig{
-		AuthQuery:                     authQuery,
 		MinPoolSize:                   minPoolSize,
 		DefaultPoolSize:               defaultPoolSize,
 		ReservePoolSize:               reservePoolSize,
