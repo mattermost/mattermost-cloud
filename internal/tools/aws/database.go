@@ -318,20 +318,25 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return errors.Wrapf(err, "failed to convert database type to database engine")
 	}
 
-	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, d.databaseType, logger)
+	tags, err := NewTags(VpcClusterIDTagKey, clusterID)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate AWS Tags")
+	}
+
+	err = d.client.rdsEnsureDBClusterCreated(awsID, *vpcs[0].VpcId, rdsSecret.MasterUsername, rdsSecret.MasterPassword, *keyMetadata.KeyId, d.databaseType, tags, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure DB cluster was created")
 	}
 
 	// Create primary
-	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), dbEngine, dbConfig.PrimaryInstanceType, logger)
+	err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-master", awsID), dbEngine, dbConfig.PrimaryInstanceType, tags, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure DB primary instance was created")
 	}
 
 	// Create replicas
 	for i := 0; i < dbConfig.ReplicasCount; i++ {
-		err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-replica-%d", awsID, i), dbEngine, dbConfig.ReplicaInstanceType, logger)
+		err = d.client.rdsEnsureDBClusterInstanceCreated(awsID, fmt.Sprintf("%s-replica-%d", awsID, i), dbEngine, dbConfig.ReplicaInstanceType, tags, logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to ensure DB replica instance was created")
 		}

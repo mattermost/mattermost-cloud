@@ -14,6 +14,9 @@ import (
 )
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
+	tags, err := NewTags("tag1", "value1", "tag2", "value2")
+	a.Assert().NoError(err)
+
 	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
 
 	a.Mocks.Log.Logger.EXPECT().
@@ -52,6 +55,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 			a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 			a.Assert().Equal(*input.DatabaseName, a.DBName)
 			a.Assert().Equal(*input.VpcSecurityGroupIds[0], a.GroupID)
+			a.Assert().Len(input.Tags, tags.Len())
 		}).
 		Times(1)
 
@@ -60,7 +64,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)
+	err = a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, tags, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -74,7 +78,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedAlreadyCreated() {
 			Return(nil, nil).
 			Times(1))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -88,7 +92,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedWithSGError() {
 		DescribeSecurityGroups(gomock.Any()).
 		Return(nil, errors.New("invalid group id"))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "invalid group id")
 }
@@ -111,7 +115,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
 			DBSubnetGroups: []*rds.DBSubnetGroup{},
 		}, errors.New("invalid cluster id"))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "invalid cluster id")
@@ -153,7 +157,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "invalid cluster name")
 }
@@ -177,7 +181,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreated() {
 			}).
 			Times(1))
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", &Tags{}, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -193,7 +197,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceAlreadyExistError() {
 		Return(testlib.NewLoggerEntry()).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", &Tags{}, a.Mocks.Log.Logger)
 	a.Assert().NoError(err)
 }
 
@@ -213,7 +217,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreateError() {
 		}).
 		Times(1)
 
-	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", a.Mocks.Log.Logger)
+	err := a.Mocks.AWS.rdsEnsureDBClusterInstanceCreated(CloudID(a.InstallationA.ID), RDSMasterInstanceID(a.InstallationA.ID), a.RDSEngineType, "db.r5.large", &Tags{}, a.Mocks.Log.Logger)
 
 	a.Assert().Error(err)
 	a.Assert().Equal(err.Error(), "instance creation failure")
