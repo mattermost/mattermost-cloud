@@ -17,6 +17,17 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
+// Defaults
+const (
+	useRotatorDefault              = true
+	maxScalingDefault              = 5
+	maxDrainRetriesDefault         = 10
+	evictGracePeriodDefault        = 600  // seconds
+	waitBetweenRotationsDefault    = 180  // seconds
+	waitBetweenDrainsDefault       = 1800 // seconds
+	waitBetweenPodEvictionsDefault = 5    // seconds
+)
+
 func init() {
 	clusterCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 	clusterCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
@@ -113,13 +124,13 @@ func init() {
 	clusterUpgradeCmd.Flags().String("version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
 	clusterUpgradeCmd.Flags().String("kops-ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
 	clusterUpgradeCmd.Flags().Int64("max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
-	clusterUpgradeCmd.Flags().Bool("use-rotator", true, "Whether the cluster will be upgraded using the node rotator.")
-	clusterUpgradeCmd.Flags().Int("max-scaling", 5, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes, then the number of nodes will be the maximum number.")
-	clusterUpgradeCmd.Flags().Int("max-drain-retries", 10, "The number of times to retry a node drain.")
-	clusterUpgradeCmd.Flags().Int("evict-grace-period", 600, "The pod eviction grace period when draining in seconds.")
-	clusterUpgradeCmd.Flags().Int("wait-between-rotations", 180, "Τhe time in seconds to wait between each rotation of a group of nodes.")
-	clusterUpgradeCmd.Flags().Int("wait-between-drains", 1800, "The time in seconds to wait between each node drain in a group of nodes.")
-	clusterUpgradeCmd.Flags().Int("wait-between-pod-evictions", 5, "The time in seconds to wait between each pod eviction in a node drain.")
+	clusterUpgradeCmd.Flags().Bool("use-rotator", useRotatorDefault, "Whether the cluster will be upgraded using the node rotator.")
+	clusterUpgradeCmd.Flags().Int("max-scaling", maxScalingDefault, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes, then the number of nodes will be the maximum number.")
+	clusterUpgradeCmd.Flags().Int("max-drain-retries", maxDrainRetriesDefault, "The number of times to retry a node drain.")
+	clusterUpgradeCmd.Flags().Int("evict-grace-period", evictGracePeriodDefault, "The pod eviction grace period when draining in seconds.")
+	clusterUpgradeCmd.Flags().Int("wait-between-rotations", waitBetweenRotationsDefault, "Τhe time in seconds to wait between each rotation of a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-drains", waitBetweenDrainsDefault, "The time in seconds to wait between each node drain in a group of nodes.")
+	clusterUpgradeCmd.Flags().Int("wait-between-pod-evictions", waitBetweenPodEvictionsDefault, "The time in seconds to wait between each pod eviction in a node drain.")
 	clusterUpgradeCmd.MarkFlagRequired("cluster")
 
 	clusterResizeCmd.Flags().String("cluster", "", "The id of the cluster to be resized.")
@@ -127,6 +138,13 @@ func init() {
 	clusterResizeCmd.Flags().String("size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
 	clusterResizeCmd.Flags().Int64("size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")
 	clusterResizeCmd.Flags().Int64("size-node-max-count", 0, "The maximum number of k8s worker nodes. Overwrites value from 'size'.")
+	clusterResizeCmd.Flags().Bool("use-rotator", useRotatorDefault, "Whether the cluster will be upgraded using the node rotator.")
+	clusterResizeCmd.Flags().Int("max-scaling", maxScalingDefault, "The maximum number of nodes to rotate every time. If the number is bigger than the number of nodes, then the number of nodes will be the maximum number.")
+	clusterResizeCmd.Flags().Int("max-drain-retries", maxDrainRetriesDefault, "The number of times to retry a node drain.")
+	clusterResizeCmd.Flags().Int("evict-grace-period", evictGracePeriodDefault, "The pod eviction grace period when draining in seconds.")
+	clusterResizeCmd.Flags().Int("wait-between-rotations", waitBetweenRotationsDefault, "Τhe time in seconds to wait between each rotation of a group of nodes.")
+	clusterResizeCmd.Flags().Int("wait-between-drains", waitBetweenDrainsDefault, "The time in seconds to wait between each node drain in a group of nodes.")
+	clusterResizeCmd.Flags().Int("wait-between-pod-evictions", waitBetweenPodEvictionsDefault, "The time in seconds to wait between each pod eviction in a node drain.")
 	clusterResizeCmd.MarkFlagRequired("cluster")
 
 	clusterDeleteCmd.Flags().String("cluster", "", "The id of the cluster to be deleted.")
@@ -165,6 +183,27 @@ func printJSON(data interface{}) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "    ")
 	return encoder.Encode(data)
+}
+
+// getRotatorConfigFromFlags creates a new RotatorConfig with the flags provided to the command
+func getRotatorConfigFromFlags(command *cobra.Command) model.RotatorConfig {
+	useRotator, _ := command.Flags().GetBool("use-rotator")
+	maxScaling, _ := command.Flags().GetInt("max-scaling")
+	maxDrainRetries, _ := command.Flags().GetInt("max-drain-retries")
+	evictGracePeriod, _ := command.Flags().GetInt("evict-grace-period")
+	waitBetweenRotations, _ := command.Flags().GetInt("wait-between-rotations")
+	waitBetweenDrains, _ := command.Flags().GetInt("wait-between-drains")
+	waitBetweenPodEvictions, _ := command.Flags().GetInt("wait-between-pod-evictions")
+
+	return model.RotatorConfig{
+		UseRotator:              &useRotator,
+		MaxScaling:              &maxScaling,
+		MaxDrainRetries:         &maxDrainRetries,
+		EvictGracePeriod:        &evictGracePeriod,
+		WaitBetweenRotations:    &waitBetweenRotations,
+		WaitBetweenDrains:       &waitBetweenDrains,
+		WaitBetweenPodEvictions: &waitBetweenPodEvictions,
+	}
 }
 
 var clusterCreateCmd = &cobra.Command{
@@ -370,23 +409,7 @@ var clusterUpgradeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
-		useRotator, _ := command.Flags().GetBool("use-rotator")
-		maxScaling, _ := command.Flags().GetInt("max-scaling")
-		maxDrainRetries, _ := command.Flags().GetInt("max-drain-retries")
-		evictGracePeriod, _ := command.Flags().GetInt("evict-grace-period")
-		waitBetweenRotations, _ := command.Flags().GetInt("wait-between-rotations")
-		waitBetweenDrains, _ := command.Flags().GetInt("wait-between-drains")
-		waitBetweenPodEvictions, _ := command.Flags().GetInt("wait-between-pod-evictions")
-
-		rotatorConfig := model.RotatorConfig{
-			UseRotator:              &useRotator,
-			MaxScaling:              &maxScaling,
-			MaxDrainRetries:         &maxDrainRetries,
-			EvictGracePeriod:        &evictGracePeriod,
-			WaitBetweenRotations:    &waitBetweenRotations,
-			WaitBetweenDrains:       &waitBetweenDrains,
-			WaitBetweenPodEvictions: &waitBetweenPodEvictions,
-		}
+		rotatorConfig := getRotatorConfigFromFlags(command)
 
 		request := &model.PatchUpgradeClusterRequest{
 			Version:        getStringFlagPointer(command, "version"),
@@ -429,9 +452,13 @@ var clusterResizeCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		clusterID, _ := command.Flags().GetString("cluster")
+		rotatorConfig := getRotatorConfigFromFlags(command)
+
+		request := &model.PatchClusterSizeRequest{
+			RotatorConfig: &rotatorConfig,
+		}
 
 		// Apply values from 'size' constant and then apply overrides.
-		request := &model.PatchClusterSizeRequest{}
 		size, _ := command.Flags().GetString("size")
 		err := clusterdictionary.ApplyToPatchClusterSizeRequest(size, request)
 		if err != nil {
