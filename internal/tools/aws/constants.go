@@ -11,6 +11,10 @@ const (
 	// DefaultAWSRegion is the default AWS region for AWS resources.
 	DefaultAWSRegion = "us-east-1"
 
+	// ClusterIDTagKey is the tag key used to tag resources with the cluster ID that
+	// it belongs to
+	ClusterIDTagKey = "CloudClusterID"
+
 	// VpcAvailableTagKey is the tag key to determine if a VPC is currently in
 	// use by a cluster or not.
 	VpcAvailableTagKey = "tag:Available"
@@ -25,7 +29,7 @@ const (
 
 	// VpcClusterIDTagKey is the tag key used to store the cluster ID of the
 	// cluster running in that VPC.
-	VpcClusterIDTagKey = "tag:CloudClusterID"
+	VpcClusterIDTagKey = "tag:" + ClusterIDTagKey
 
 	// VpcClusterOwnerKey is the tag key  used to store the owner of the
 	// cluster's human name so that the VPC's owner can be identified

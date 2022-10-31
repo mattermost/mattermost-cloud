@@ -318,7 +318,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return errors.Wrapf(err, "failed to convert database type to database engine")
 	}
 
-	tags, err := NewTags(VpcClusterIDTagKey, clusterID)
+	tags, err := NewTags(ClusterIDTagKey, clusterID)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate AWS Tags")
 	}
