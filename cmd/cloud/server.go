@@ -68,7 +68,7 @@ func init() {
 	serverCmd.PersistentFlags().Bool("deploy-minio-operator", true, "Whether to deploy the minio operator.")
 	serverCmd.PersistentFlags().Int64("default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
 	serverCmd.PersistentFlags().String("provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
-	serverCmd.PersistentFlags().Bool("disable-all-supervisors", false, "disable all provisioners and enable API only funcionality")
+	serverCmd.PersistentFlags().Bool("disable-all-supervisors", false, "disable all supervisors (API-only functionality)")
 
 	// Supervisors
 	serverCmd.PersistentFlags().Int("poll", 30, "The interval in seconds to poll for background work.")
