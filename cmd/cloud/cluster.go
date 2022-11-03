@@ -22,7 +22,7 @@ const (
 	useRotatorDefault              = true
 	maxScalingDefault              = 5
 	maxDrainRetriesDefault         = 10
-	evictGracePeriodDefault        = 600  // seconds
+	evictGracePeriodDefault        = 3600 // seconds
 	waitBetweenRotationsDefault    = 180  // seconds
 	waitBetweenDrainsDefault       = 1800 // seconds
 	waitBetweenPodEvictionsDefault = 5    // seconds
