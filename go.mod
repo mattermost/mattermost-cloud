@@ -5,7 +5,7 @@ go 1.17
 require (
 	emperror.dev/errors v0.8.0
 	github.com/0xAX/notificator v0.0.0-20210731104411-c42e3d4a43ee
-	github.com/Masterminds/squirrel v1.4.0
+	github.com/Masterminds/squirrel v1.5.3
 	github.com/aws/aws-sdk-go v1.42.16
 	github.com/aws/aws-sdk-go-v2 v1.17.1
 	github.com/aws/aws-sdk-go-v2/config v1.17.10
