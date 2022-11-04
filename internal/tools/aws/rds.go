@@ -99,6 +99,7 @@ func (a *Client) rdsEnsureDBClusterCreated(
 	password,
 	kmsKeyID,
 	databaseType string,
+	tags *Tags,
 	logger log.FieldLogger) error {
 
 	var engine, engineVersion, sgTagValue string
@@ -165,6 +166,7 @@ func (a *Client) rdsEnsureDBClusterCreated(
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
 		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
 		KmsKeyId:              aws.String(kmsKeyID),
+		Tags:                  tags.ToRDSTags(),
 	}
 
 	_, err = a.Service().rds.CreateDBCluster(input)
@@ -182,6 +184,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(
 	instanceName,
 	engine string,
 	instanceClass string,
+	tags *Tags,
 	logger log.FieldLogger) error {
 
 	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
@@ -199,6 +202,7 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(
 		DBInstanceClass:      aws.String(instanceClass),
 		Engine:               aws.String(engine),
 		PubliclyAccessible:   aws.Bool(false),
+		Tags:                 tags.ToRDSTags(),
 	})
 	if err != nil {
 		return err
