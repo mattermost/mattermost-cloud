@@ -3,9 +3,16 @@ module github.com/mattermost/mattermost-cloud
 go 1.17
 
 require (
+	emperror.dev/errors v0.8.0
 	github.com/0xAX/notificator v0.0.0-20210731104411-c42e3d4a43ee
 	github.com/Masterminds/squirrel v1.4.0
 	github.com/aws/aws-sdk-go v1.42.16
+	github.com/aws/aws-sdk-go-v2 v1.17.1
+	github.com/aws/aws-sdk-go-v2/config v1.17.10
+	github.com/aws/aws-sdk-go-v2/service/acm v1.15.2
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.65.0
+	github.com/aws/aws-sdk-go-v2/service/kms v1.18.15
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.16.4
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cloudflare/cloudflare-go v0.31.0
 	github.com/go-sql-driver/mysql v1.6.0
@@ -40,18 +47,13 @@ require (
 )
 
 require (
-	emperror.dev/errors v0.8.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.17.1 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.17.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.23 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.26 // indirect
-	github.com/aws/aws-sdk-go-v2/service/acm v1.15.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.65.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.8 // indirect

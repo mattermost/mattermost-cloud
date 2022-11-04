@@ -1244,11 +1244,11 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 		if record.DeleteAt > 0 {
 			continue
 		}
-		err = s.dnsProvider.DeleteDNSRecords([]string{record.DomainName}, logger)
-		if err != nil {
-			logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
-			return model.InstallationStateDeletionFinalCleanup
-		}
+		// err = s.dnsProvider.DeleteDNSRecords([]string{record.DomainName}, logger)
+		// if err != nil {
+		// 	logger.WithError(err).Error("Failed to delete DNS record from Cloudflare")
+		// 	return model.InstallationStateDeletionFinalCleanup
+		// }
 		err = s.store.DeleteInstallationDNS(installation.ID, record.DomainName)
 		if err != nil {
 			logger.WithError(err).Error("Failed to delete installation DNS record from database")

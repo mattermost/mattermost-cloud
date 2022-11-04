@@ -6,9 +6,7 @@ package aws
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -41,19 +39,6 @@ func RDSSecretName(cloudID string) string {
 
 func trimTagPrefix(tag string) string {
 	return strings.TrimLeft(tag, "tag:")
-}
-
-const passwordBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-
-func newRandomPassword(length int) string {
-	rand.Seed(time.Now().UnixNano())
-
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = passwordBytes[rand.Intn(len(passwordBytes))]
-	}
-
-	return string(b)
 }
 
 // DBSubnetGroupName formats the subnet group name used for RDS databases.

@@ -1,6 +1,6 @@
 // Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
-// 
+//
 
 package awsv2
 
@@ -16,7 +16,7 @@ import (
 func (c *Client) GetCertificateByTag(ctx context.Context, key, value string) (*model.Certificate, error) {
 	var next *string
 	for {
-		out, err := c.aws.ACM.ListCertificates(ctx, &acm.ListCertificatesInput{
+		out, err := c.aws.acm.ListCertificates(ctx, &acm.ListCertificatesInput{
 			NextToken: next,
 		})
 		if err != nil {
@@ -24,7 +24,7 @@ func (c *Client) GetCertificateByTag(ctx context.Context, key, value string) (*m
 		}
 
 		for _, cert := range out.CertificateSummaryList {
-			list, err := c.aws.ACM.ListTagsForCertificate(ctx, &acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
+			list, err := c.aws.acm.ListTagsForCertificate(ctx, &acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
 			if err != nil {
 				return nil, errors.Wrapf(err, "error listing tags for certificate %s", *cert.CertificateArn)
 			}

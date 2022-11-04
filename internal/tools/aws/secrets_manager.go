@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -48,8 +49,8 @@ func (s *RDSSecret) Validate() error {
 	if s.MasterPassword == "" {
 		return errors.New("RDS master password value is empty")
 	}
-	if len(s.MasterPassword) != 40 {
-		return errors.New("RDS master password length should be equal to 40")
+	if len(s.MasterPassword) != model.DefaultPasswordLength {
+		return errors.New(fmt.Sprintf("RDS master password length should be equal to %d", model.DefaultPasswordLength))
 	}
 
 	return nil
@@ -148,8 +149,8 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 
 	// There is no existing secret, so we will create a new one with a strong
 	// random username and password.
-	rdsSecretPayload.MasterUsername = DefaultMattermostDatabaseUsername
-	rdsSecretPayload.MasterPassword = newRandomPassword(40)
+	rdsSecretPayload.MasterUsername = model.DefaultMattermostDatabaseUsername
+	rdsSecretPayload.MasterPassword = model.NewRandomPassword(40)
 	err = rdsSecretPayload.Validate()
 	if err != nil {
 		return nil, err

@@ -28,8 +28,8 @@ func (t *Tag) toEC2() ec2Types.Tag {
 	}
 }
 
-func NewTag(key, value string) *Tag {
-	return &Tag{
+func NewTag(key, value string) Tag {
+	return Tag{
 		Key:   key,
 		Value: value,
 	}

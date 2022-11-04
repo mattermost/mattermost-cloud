@@ -84,6 +84,7 @@ func copyFile(source string, dest string) error {
 // ResourceUtil is used for calling any filestore type.
 type ResourceUtil struct {
 	awsClient                    *aws.Client
+	awsClientV2                  model.AWS
 	instanceID                   string
 	dbClusterUtilizationSettings DBClusterUtilizationSettings
 	disableDBCheck               bool
@@ -140,6 +141,12 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 		return model.NewMysqlOperatorDatabase()
 	case model.InstallationDatabaseExternal:
 		return aws.NewExternalDatabase(installationID, r.awsClient)
+	case "v2" + model.InstallationDatabaseSingleTenantRDSPostgres:
+		db, _ := r.awsClientV2.CreateDatabase(
+			model.InstallationDatabaseTypeSingleTenantRDSPostgres,
+			installationID,
+		)
+		return db
 	case model.InstallationDatabaseSingleTenantRDSMySQL:
 		return aws.NewRDSDatabase(model.DatabaseEngineTypeMySQL, installationID, r.awsClient, r.disableDBCheck)
 	case model.InstallationDatabaseSingleTenantRDSPostgres:
