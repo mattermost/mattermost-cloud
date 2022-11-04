@@ -3,7 +3,7 @@ module github.com/mattermost/mattermost-cloud
 go 1.17
 
 require (
-	github.com/0xAX/notificator v0.0.0-20210731104411-c42e3d4a43ee
+	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/aws/aws-sdk-go v1.42.16
 	github.com/blang/semver v3.5.1+incompatible
