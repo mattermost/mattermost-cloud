@@ -481,6 +481,11 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 		return errors.Wrap(err, "failed to perform pgbouncer setup")
 	}
 
+	err = d.ensureDefaultTextSearchConfig(ctx, databaseName)
+	if err != nil {
+		return errors.Wrap(err, "failed to ensure default text search config")
+	}
+
 	installationSecret, err := d.ensureMultitenantDatabaseSecretIsCreated(rdsCluster.DBClusterIdentifier, &vpcID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get a secret for installation")
@@ -590,6 +595,16 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerDatabasePrep(ctx contex
 	_, err = d.db.QueryContext(ctx, query)
 	if err != nil {
 		return errors.Wrap(err, "failed to run auth user lookup query SQL command")
+	}
+
+	return nil
+}
+
+func (d *RDSMultitenantPGBouncerDatabase) ensureDefaultTextSearchConfig(ctx context.Context, databaseName string) error {
+	query := fmt.Sprintf(`ALTER DATABASE %s SET default_text_search_config TO "pg_catalog.english";`, databaseName)
+	_, err := d.db.QueryContext(ctx, query)
+	if err != nil {
+		return errors.Wrap(err, "failed to run SQL command to set default_text_search_config to pg_catalog.english")
 	}
 
 	return nil
