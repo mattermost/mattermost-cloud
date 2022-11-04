@@ -6,7 +6,6 @@ package cloudflare
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
@@ -19,7 +18,7 @@ import (
 const defaultTimeout = 30 * time.Second
 
 const (
-	recordExistsErr = "A, AAAA, or CNAME record with that host already exists"
+	recordExistsErrorCode = 81053 // A, AAAA, or CNAME record with that host already exists
 )
 
 func (c *Client) getZoneID(zoneName string) (zoneID string, err error) {
@@ -61,7 +60,6 @@ func (c *Client) getRecordIDs(zoneID, customerDNSName string, logger logrus.Fiel
 	}
 
 	return ids, nil
-
 }
 
 // CreateDNSRecords creates a DNS records in the first given Cloudflare zone name of the list
@@ -120,9 +118,10 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 		if err != nil {
 			// We do not have a clear indication if the record already exists
 			// based only on the status code (400 may mean invalid input),
-			// therefore we also need to compare the error message.
-			cfAPIErr := &cf.APIRequestError{}
-			if !errors.As(err, &cfAPIErr) || cfAPIErr.StatusCode != http.StatusBadRequest || !strings.Contains(cfAPIErr.Error(), recordExistsErr) {
+			// therefore we also need to compare the error code with the UNDOCUMMENTED
+			// error code that refers to a record already existing.
+			cloudflareRequestError := &cf.RequestError{}
+			if !errors.As(err, &cloudflareRequestError) || !cloudflareRequestError.InternalErrorCodeIs(recordExistsErrorCode) {
 				return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 			}
 			log.Info("Record already exists, trying to update...")
