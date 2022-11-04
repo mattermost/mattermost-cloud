@@ -19,7 +19,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gosuri/uilive v0.0.4
-	github.com/jmoiron/sqlx v1.2.0
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.4
 	github.com/mattermost/awat v0.0.0-20210616202500-f0bdd4f43f90
 	github.com/mattermost/mattermost-operator v1.19.0-rc.2
