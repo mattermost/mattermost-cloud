@@ -3,16 +3,12 @@ module github.com/mattermost/mattermost-cloud
 go 1.17
 
 require (
-	emperror.dev/errors v0.8.0
 	github.com/0xAX/notificator v0.0.0-20210731104411-c42e3d4a43ee
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/aws/aws-sdk-go v1.42.16
 	github.com/aws/aws-sdk-go-v2 v1.17.1
 	github.com/aws/aws-sdk-go-v2/config v1.17.10
 	github.com/aws/aws-sdk-go-v2/service/acm v1.15.2
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.65.0
-	github.com/aws/aws-sdk-go-v2/service/kms v1.18.15
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.16.4
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cloudflare/cloudflare-go v0.31.0
 	github.com/go-sql-driver/mysql v1.6.0
@@ -21,7 +17,7 @@ require (
 	github.com/gosuri/uilive v0.0.4
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.7
-	github.com/mattermost/awat v0.0.0-20210616202500-f0bdd4f43f90
+	github.com/mattermost/awat v0.2.0
 	github.com/mattermost/mattermost-operator v1.19.0-rc.2
 	github.com/mattermost/rotator v0.2.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
@@ -47,6 +43,7 @@ require (
 )
 
 require (
+	emperror.dev/errors v0.8.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.23 // indirect
@@ -120,7 +117,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
