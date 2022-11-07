@@ -97,8 +97,8 @@ jobs:
     - *save_cache
 
   push-docker-pr:
-    executor:
-      name: default
+    docker:
+      - image: cimg/base:2022.11
     steps:
     - checkout
     - setup_remote_docker
@@ -113,8 +113,8 @@ jobs:
         when: on_fail
 
   push-docker:
-    executor:
-      name: default
+    docker:
+      - image: cimg/base:2022.11
     steps:
     - checkout
     - setup_remote_docker
