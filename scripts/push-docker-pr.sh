@@ -8,7 +8,7 @@ set -u
 
 export TAG="${CIRCLE_SHA1:0:7}"
 
-echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
+echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
 
 docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
 docker tag mattermost/mattermost-cloud-e2e:test mattermost/mattermost-cloud-e2e:$TAG
