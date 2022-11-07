@@ -15,6 +15,10 @@ import (
 
 const (
 	forceInstallationRestartEnvVar = "CLOUD_PROVISIONER_ENFORCED_RESTART"
+
+	// ShowInstallationCountQueryParameter the query parameter name for GET /groups in order to enable
+	// or disable the installation count on the output.
+	ShowInstallationCountQueryParameter = "show_installation_count"
 )
 
 // CreateGroupRequest specifies the parameters for a new group.
@@ -156,13 +160,16 @@ func NewPatchGroupRequestFromReader(reader io.Reader) (*PatchGroupRequest, error
 // GetGroupsRequest describes the parameters to request a list of groups.
 type GetGroupsRequest struct {
 	Paging
+	WithInstallationCount bool
 }
 
 // ApplyToURL modifies the given url to include query string parameters for the request.
 func (request *GetGroupsRequest) ApplyToURL(u *url.URL) {
 	q := u.Query()
+	if request.WithInstallationCount {
+		q.Add(ShowInstallationCountQueryParameter, "true")
+	}
 	request.Paging.AddToQuery(q)
-
 	u.RawQuery = q.Encode()
 }
 

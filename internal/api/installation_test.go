@@ -619,6 +619,25 @@ func TestCreateInstallation(t *testing.T) {
 			require.NotNil(t, installation.GroupID)
 			require.Equal(t, group.ID, *installation.GroupID)
 		})
+
+		t.Run("select group with less installations", func(t *testing.T) {
+			// Prepare a second group with no installations, which should be chosen
+			dummyGroup, err := client.CreateGroup(&model.CreateGroupRequest{
+				Name:        "group-selection2",
+				Annotations: []string{"group-ann1", "group-ann2"},
+			})
+			require.NoError(t, err)
+
+			// Create an annotation based installation
+			installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+				OwnerID:                   "owner",
+				DNS:                       "dns-g5.example.com",
+				GroupSelectionAnnotations: []string{"group-ann1", "group-ann2"},
+			})
+
+			assert.NoError(t, err)
+			assert.Equal(t, dummyGroup.ID, *installation.GroupID)
+		})
 	})
 
 	t.Run("handle annotations", func(t *testing.T) {

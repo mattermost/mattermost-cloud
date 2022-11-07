@@ -5,7 +5,6 @@
 package api
 
 import (
-	"math/rand"
 	"net/http"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
@@ -131,7 +130,9 @@ func handleGetNumberOfInstallations(c *Context, w http.ResponseWriter, r *http.R
 	if err != nil {
 		includeDeleted = false
 	}
-	installationsCount, err := c.Store.GetInstallationsCount(includeDeleted)
+	installationsCount, err := c.Store.GetInstallationsCount(&model.InstallationFilter{
+		Paging: model.AllPages(includeDeleted),
+	})
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to query the number of installations")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -273,6 +274,7 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		Annotations: &model.AnnotationsFilter{
 			MatchAllIDs: model.GetAnnotationsIDs(groupAnnotations),
 		},
+		WithInstallationCount: true,
 	})
 	if err != nil {
 		return "", common.ErrWrap(http.StatusInternalServerError, err, "failed to get groups with annotations")
@@ -281,8 +283,13 @@ func selectGroupForAnnotation(c *Context, annotations []string) (string, error) 
 		return "", common.NewErr(http.StatusBadRequest, errors.New("no group matching all annotations found"))
 	}
 
-	// Pick randomly for now
-	selectedGroup := groups[rand.Intn(len(groups))]
+	// Select the group with less total installations
+	var selectedGroup *model.GroupDTO
+	for _, g := range groups {
+		if selectedGroup == nil || g.GetInstallationCount() < selectedGroup.GetInstallationCount() {
+			selectedGroup = g
+		}
+	}
 
 	return selectedGroup.ID, nil
 }

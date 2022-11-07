@@ -36,9 +36,13 @@ func TestGroupDTOFromReader(t *testing.T) {
 			"Version": "12",
 			"Annotations": [
 				{"ID": "abc", "Name": "efg"}
-			]
+			],
+			"installation_count": 2
 		}`)))
 		require.NoError(t, err)
+
+		expectedInstallations := int64(2)
+		require.Equal(t, groupDTO.GetInstallationCount(), expectedInstallations)
 		require.Equal(t, &GroupDTO{
 			Group: &Group{
 				ID:              "id",
@@ -49,7 +53,8 @@ func TestGroupDTOFromReader(t *testing.T) {
 				LockAcquiredBy:  nil,
 				LockAcquiredAt:  int64(0),
 			},
-			Annotations: []*Annotation{{ID: "abc", Name: "efg"}},
+			Annotations:       []*Annotation{{ID: "abc", Name: "efg"}},
+			InstallationCount: &expectedInstallations,
 		}, groupDTO)
 	})
 }

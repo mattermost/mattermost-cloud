@@ -47,6 +47,7 @@ func init() {
 
 	registerPagingFlags(groupListCmd)
 	groupListCmd.Flags().Bool("table", false, "Whether to display the returned group list in a table or not")
+	groupListCmd.Flags().Bool("include-installation-count", false, "Whether to retrieve the installation count for the groups")
 
 	groupGetStatusCmd.Flags().String("group", "", "The id of the group of which the status should be fetched.")
 	groupGetStatusCmd.MarkFlagRequired("group")
@@ -241,9 +242,12 @@ var groupListCmd = &cobra.Command{
 		serverAddress, _ := command.Flags().GetString("server")
 		client := model.NewClient(serverAddress)
 
+		withInstallationCount, _ := command.Flags().GetBool("include-installation-count")
+
 		paging := parsePagingFlags(command)
 		groups, err := client.GetGroups(&model.GetGroupsRequest{
-			Paging: paging,
+			Paging:                paging,
+			WithInstallationCount: withInstallationCount,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to query groups")

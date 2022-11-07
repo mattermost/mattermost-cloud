@@ -27,18 +27,19 @@ func (p *Paging) AddToQuery(q url.Values) {
 
 // AllPagesNotDeleted if paging filter returning all not deleted elements.
 func AllPagesNotDeleted() Paging {
-	return Paging{
-		Page:           0,
-		PerPage:        AllPerPage,
-		IncludeDeleted: false,
-	}
+	return AllPages(false)
 }
 
 // AllPagesWithDeleted if paging filter returning all elements including deleted ones.
 func AllPagesWithDeleted() Paging {
+	return AllPages(true)
+}
+
+// AllPages Paging filter returning all elements with a customizable deleted flag.
+func AllPages(includeDeleted bool) Paging {
 	return Paging{
 		Page:           0,
 		PerPage:        AllPerPage,
-		IncludeDeleted: true,
+		IncludeDeleted: includeDeleted,
 	}
 }
