@@ -102,6 +102,7 @@ func init() {
 	installationRecoveryCmd.MarkFlagRequired("installation-database")
 
 	installationDeploymentReportCmd.Flags().String("installation", "", "The id of the installation to report on.")
+	installationDeploymentReportCmd.Flags().Int("event-count", 10, "The number of recent installation events to include in the report.")
 	installationDeploymentReportCmd.MarkFlagRequired("installation")
 
 	installationCmd.AddCommand(installationCreateCmd)
@@ -726,6 +727,7 @@ var installationDeploymentReportCmd = &cobra.Command{
 		client := model.NewClient(serverAddress)
 
 		installationID, _ := command.Flags().GetString("installation")
+		eventCount, _ := command.Flags().GetInt("event-count")
 
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{
 			IncludeGroupConfig:          true,
@@ -844,6 +846,28 @@ var installationDeploymentReportCmd = &cobra.Command{
 			output += fmt.Sprintf("     ├ VPC: %s\n", cluster.ProvisionerMetadataKops.VPC)
 			output += fmt.Sprintf("     ├ Nodes: Masters %d, Workers %d\n", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.NodeMaxCount)
 			output += fmt.Sprintf("     └ Version: %s\n", cluster.ProvisionerMetadataKops.Version)
+		}
+
+		if eventCount > 0 {
+			output += fmt.Sprintf("\nRecent Events:\n")
+
+			req := model.ListStateChangeEventsRequest{
+				Paging: model.Paging{
+					Page:           0,
+					PerPage:        eventCount,
+					IncludeDeleted: false,
+				},
+				ResourceType: model.ResourceType("installation"),
+				ResourceID:   installationID,
+			}
+
+			events, err := client.ListStateChangeEvents(&req)
+			if err != nil {
+				return err
+			}
+			for _, event := range events {
+				output += fmt.Sprintf("%s - %s > %s\n", model.TimeFromMillis(event.Event.Timestamp).Format("2006-01-02 15:04:05 MST"), event.StateChange.OldState, event.StateChange.NewState)
+			}
 		}
 
 		fmt.Println(output)
