@@ -110,6 +110,10 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.Wrap(err, "failed to retrive the AWS Private ACM")
 	}
 
+	if certificate.ARN == nil {
+		return nil, fmt.Errorf("retrieved certificate does not have ARN")
+	}
+
 	return &helmDeployment{
 		chartDeploymentName: "nginx-internal",
 		chartName:           "ingress-nginx/ingress-nginx",

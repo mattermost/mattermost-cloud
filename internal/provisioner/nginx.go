@@ -109,6 +109,10 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.Wrap(err, "failed to retrive the AWS ACM")
 	}
 
+	if certificate.ARN == nil {
+		return nil, fmt.Errorf("retrieved certificate does not have ARN")
+	}
+
 	clusterResources, err := n.awsClient.GetVpcResources(n.cluster.ID, n.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrive the VPC information")
