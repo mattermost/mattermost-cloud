@@ -265,18 +265,19 @@ func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) 
 }
 
 // PGBouncerConfig contains the configuration for the PGBouncer utility.
-////////////////////////////////////////////////////////////////////////////////
-// - MaxDatabaseConnectionsPerPool is the maximum number of connections per
-//   logical database pool when using proxy databases.
-// - MinPoolSize is the minimum pool size.
-// - DefaultPoolSize is the default pool size per user.
-// - ReservePoolSize is the default pool size per user.
-// - MaxClientConnections is the maximum client connections.
-// - ServerIdleTimeout is the server idle timeout.
-// - ServerLifetime is the server lifetime.
-// - ServerResetQueryAlways is boolean 0 or 1 whether server_reset_query should
-//   be run in all pooling modes.
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
+//   - MaxDatabaseConnectionsPerPool is the maximum number of connections per
+//     logical database pool when using proxy databases.
+//   - MinPoolSize is the minimum pool size.
+//   - DefaultPoolSize is the default pool size per user.
+//   - ReservePoolSize is the default pool size per user.
+//   - MaxClientConnections is the maximum client connections.
+//   - ServerIdleTimeout is the server idle timeout.
+//   - ServerLifetime is the server lifetime.
+//   - ServerResetQueryAlways is boolean 0 or 1 whether server_reset_query should
+//     be run in all pooling modes.
+//
+// //////////////////////////////////////////////////////////////////////////////
 type PGBouncerConfig struct {
 	MinPoolSize                   int
 	DefaultPoolSize               int
