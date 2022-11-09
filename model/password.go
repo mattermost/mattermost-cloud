@@ -10,7 +10,10 @@ import (
 )
 
 const (
-	passwordBytes         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	passwordBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+
+	// DefaultPasswordLength the default password length used when calling the below function,
+	// mainly used on database creation.
 	DefaultPasswordLength = 40
 )
 
