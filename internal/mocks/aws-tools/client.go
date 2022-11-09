@@ -8,7 +8,6 @@
 package mockawstools
 
 import (
-	acm "github.com/aws/aws-sdk-go/service/acm"
 	eks "github.com/aws/aws-sdk-go/service/eks"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -42,10 +41,10 @@ func (m *MockAWS) EXPECT() *MockAWSMockRecorder {
 }
 
 // GetCertificateSummaryByTag mocks base method
-func (m *MockAWS) GetCertificateSummaryByTag(key, value string, logger logrus.FieldLogger) (*acm.CertificateSummary, error) {
+func (m *MockAWS) GetCertificateSummaryByTag(key, value string, logger logrus.FieldLogger) (*model.Certificate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCertificateSummaryByTag", key, value, logger)
-	ret0, _ := ret[0].(*acm.CertificateSummary)
+	ret0, _ := ret[0].(*model.Certificate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
