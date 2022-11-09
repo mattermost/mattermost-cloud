@@ -5,19 +5,24 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/service/acm"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/acm"
+	acmTypes "github.com/aws/aws-sdk-go-v2/service/acm/types"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 // GetCertificateSummaryByTag returns the certificate summary associated with a valid tag key and value in AWS.
-func (a *Client) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error) {
+func (a *Client) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*model.Certificate, error) {
+	ctx := context.TODO()
 	key = trimTagPrefix(key)
-	tag := acm.Tag{Key: &key, Value: &value}
+	tag := acmTypes.Tag{Key: &key, Value: &value}
 
 	var next *string
 	for {
-		out, err := a.Service().acm.ListCertificates(&acm.ListCertificatesInput{
+		out, err := a.Service().acm.ListCertificates(ctx, &acm.ListCertificatesInput{
 			NextToken: next,
 		})
 		if err != nil {
@@ -25,7 +30,7 @@ func (a *Client) GetCertificateSummaryByTag(key, value string, logger log.FieldL
 		}
 
 		for _, cert := range out.CertificateSummaryList {
-			list, err := a.Service().acm.ListTagsForCertificate(&acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
+			list, err := a.Service().acm.ListTagsForCertificate(ctx, &acm.ListTagsForCertificateInput{CertificateArn: cert.CertificateArn})
 			if err != nil {
 				return nil, errors.Wrapf(err, "error listing tags for certificate %s", *cert.CertificateArn)
 			}
@@ -33,11 +38,11 @@ func (a *Client) GetCertificateSummaryByTag(key, value string, logger log.FieldL
 				if v.Key != nil && *v.Key == *tag.Key {
 					if v.Value != nil {
 						if *v.Value == *tag.Value {
-							return cert, nil
+							return newCertificateFromACMCertificateSummary(cert), nil
 						}
 						continue
 					}
-					return cert, nil
+					return newCertificateFromACMCertificateSummary(cert), nil
 				}
 			}
 		}

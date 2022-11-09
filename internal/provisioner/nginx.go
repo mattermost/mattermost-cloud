@@ -104,7 +104,7 @@ func (n *nginx) Migrate() error {
 }
 
 func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
-	awsACMCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
+	certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallCertificatesTagKey, aws.DefaultInstallCertificatesTagValue, n.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrive the AWS ACM")
 	}
@@ -118,7 +118,7 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		chartDeploymentName: "nginx",
 		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "nginx",
-		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *awsACMCert.CertificateArn, clusterResources.VpcCIDR),
+		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *certificate.ARN, clusterResources.VpcCIDR),
 		desiredVersion:      n.desiredVersion,
 
 		kubeconfigPath: n.kubeconfigPath,
