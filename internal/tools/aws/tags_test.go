@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package aws
 
 import (
@@ -54,7 +58,7 @@ func TestTagsASRDSTags(t *testing.T) {
 	value2 := "value2"
 	tags, err := NewTags(key, value, key2, value2)
 	assert.NoError(t, err)
-	assert.Equal(t, []*rds.Tag{
+	assert.Subset(t, []*rds.Tag{
 		{
 			Key:   &key,
 			Value: &value,
@@ -73,7 +77,7 @@ func TestTagsASEC2Tags(t *testing.T) {
 	value2 := "value2"
 	tags, err := NewTags(key, value, key2, value2)
 	assert.NoError(t, err)
-	assert.Equal(t, []*ec2.Tag{
+	assert.Subset(t, []*ec2.Tag{
 		{
 			Key:   &key,
 			Value: &value,
