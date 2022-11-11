@@ -57,8 +57,8 @@ func TestTagsASRDSTags(t *testing.T) {
 	key2 := "key2"
 	value2 := "value2"
 	tags, err := NewTags(key, value, key2, value2)
-	result := tags.ToRDSTags()
 	assert.NoError(t, err)
+	result := tags.ToRDSTags()
 	assert.Subset(t, []*rds.Tag{
 		{
 			Key:   &key,
@@ -78,8 +78,8 @@ func TestTagsASEC2Tags(t *testing.T) {
 	key2 := "key2"
 	value2 := "value2"
 	tags, err := NewTags(key, value, key2, value2)
-	result := tags.ToEC2Tags()
 	assert.NoError(t, err)
+	result := tags.ToEC2Tags()
 	assert.Subset(t, []*ec2.Tag{
 		{
 			Key:   &key,
