@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package aws
 
 import (
@@ -8,7 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 )
 
-// Tags an abstract represtation of tags that can be converted to different AWS resource tags
+// Tags an abstract represtation of tags that can be converted to different AWS resource tags.
+// Output order is not guaranteed.
 type Tags struct {
 	tags map[string]string
 }
@@ -45,7 +50,7 @@ func (t *Tags) ToRDSTags() []*rds.Tag {
 	return result
 }
 
-// ToEC2Tags convert the tags into an RDS tags format
+// ToEC2Tags convert the tags into an EC2 tags format
 func (t *Tags) ToEC2Tags() []*ec2.Tag {
 	result := make([]*ec2.Tag, 0, t.Len())
 
