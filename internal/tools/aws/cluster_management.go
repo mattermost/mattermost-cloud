@@ -232,11 +232,6 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 			continue
 		}
 
-		err = a.claimVpc(clusterResources, cluster, owner, logger)
-		if err != nil {
-			return clusterResources, err
-		}
-
 		return clusterResources, nil
 	}
 
@@ -476,7 +471,6 @@ func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (C
 
 // TagResourcesByCluster for secondary cluster.
 func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
-
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
 		err := a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
@@ -493,7 +487,6 @@ func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, cluste
 
 // SwitchClusterTags after migration.
 func (a *Client) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
-
 	clusterResources, err := a.GetVpcResources(clusterID, logger)
 	if err != nil {
 		return errors.Wrapf(err, "unable to get vpc resources for %s", clusterID)

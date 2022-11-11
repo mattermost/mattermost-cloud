@@ -92,6 +92,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		}
 	}
 
+	clusterResources, err = awsClient.ClaimVPC(clusterResources.VpcID, cluster, provisioner.params.Owner, logger)
+	if err != nil {
+		return errors.Wrap(err, "Couldn't claim VPC")
+	}
+
 	err = kops.CreateCluster(
 		kopsMetadata.Name,
 		cluster.Provider,
