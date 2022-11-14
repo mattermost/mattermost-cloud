@@ -81,20 +81,15 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	var clusterResources aws.ClusterResources
 	if kopsMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
-		clusterResources, err = awsClient.GetVpcResourcesByVpcID(kopsMetadata.ChangeRequest.VPC, logger)
+		clusterResources, err = awsClient.ClaimVPC(kopsMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Couldn't claim VPC")
 		}
 	} else if provisioner.params.UseExistingAWSResources {
 		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
-	}
-
-	clusterResources, err = awsClient.ClaimVPC(clusterResources.VpcID, cluster, provisioner.params.Owner, logger)
-	if err != nil {
-		return errors.Wrap(err, "Couldn't claim VPC")
 	}
 
 	err = kops.CreateCluster(

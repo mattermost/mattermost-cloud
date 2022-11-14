@@ -232,6 +232,11 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 			continue
 		}
 
+		err = a.claimVpc(clusterResources, cluster, owner, logger)
+		if err != nil {
+			return clusterResources, err
+		}
+
 		return clusterResources, nil
 	}
 

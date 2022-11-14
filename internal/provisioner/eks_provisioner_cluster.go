@@ -109,11 +109,6 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		}
 	}
 
-	clusterResources, err = awsClient.ClaimVPC(clusterResources.VpcID, cluster, provisioner.params.Owner, logger)
-	if err != nil {
-		return errors.Wrap(err, "Couldn't claim VPC")
-	}
-
 	// Update cluster to set VPC ID that is needed later.
 	cluster.ProvisionerMetadataEKS.VPC = clusterResources.VpcID
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
