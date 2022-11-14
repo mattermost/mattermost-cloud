@@ -5,19 +5,20 @@
 package aws
 
 import (
+	"context"
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
 
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/acm"
-	"github.com/aws/aws-sdk-go/service/acm/acmiface"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -46,7 +47,7 @@ import (
 
 // AWS interface for use by other packages.
 type AWS interface {
-	GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error)
+	GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*model.Certificate, error)
 
 	GetCloudEnvironmentName() string
 
@@ -143,7 +144,7 @@ type cache struct {
 
 // Service hold AWS clients for each service.
 type Service struct {
-	acm                   acmiface.ACMAPI
+	acm                   ACMAPI
 	ec2                   ec2iface.EC2API
 	iam                   iamiface.IAMAPI
 	rds                   rdsiface.RDSAPI
@@ -159,9 +160,9 @@ type Service struct {
 }
 
 // NewService creates a new instance of Service.
-func NewService(sess *session.Session) *Service {
+func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
-		acm:                   acm.New(sess),
+		acm:                   acm.NewFromConfig(cfg), // v2
 		iam:                   iam.New(sess),
 		rds:                   rds.New(sess),
 		s3:                    s3.New(sess),
@@ -182,18 +183,28 @@ func (c *Client) GetRegion() string {
 	return *c.config.Region
 }
 
-// Service constructs an AWS session if not yet successfully done and returns AWS clients.
+// Service constructs an AWS session and configuration if not yet successfully done and returns AWS
+// clients set up.
 func (c *Client) Service() *Service {
+	ctx := context.TODO()
+
 	if c.service == nil {
+		// Load configuration for the V2 SDK
+		cfg, err := NewAWSConfig(ctx)
+		if err != nil {
+			c.logger.WithError(err).Error("Can't load AWS Configuration")
+		}
+
+		// Load session for the V1 SDK
 		sess, err := NewAWSSessionWithLogger(c.config, c.logger.WithField("tools-aws", "client"))
 		if err != nil {
 			c.logger.WithError(err).Error("failed to initialize AWS session")
 			// Calls to AWS will fail until a healthy session is acquired.
-			return NewService(&session.Session{})
+			return NewService(&session.Session{}, cfg)
 		}
 
 		c.mux.Lock()
-		c.service = NewService(sess)
+		c.service = NewService(sess, cfg)
 		c.mux.Unlock()
 	}
 

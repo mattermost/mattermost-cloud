@@ -10,6 +10,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// DefaultMattermostDatabaseUsername the default database username for an installation
+const DefaultMattermostDatabaseUsername = "mmcloud"
+
 const (
 	// InstallationDatabaseMysqlOperator is a database hosted in kubernetes via the operator.
 	InstallationDatabaseMysqlOperator = "mysql-operator"

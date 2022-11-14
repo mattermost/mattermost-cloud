@@ -814,7 +814,7 @@ func updateCounterTag(resourceARN *string, counter int, client *Client) error {
 func createDatabaseUserSecret(secretName, username, description string, tags []*secretsmanager.Tag, client *Client) (*RDSSecret, error) {
 	rdsSecretPayload := RDSSecret{
 		MasterUsername: username,
-		MasterPassword: newRandomPassword(40),
+		MasterPassword: model.NewRandomPassword(model.DefaultPasswordLength),
 	}
 	err := rdsSecretPayload.Validate()
 	if err != nil {

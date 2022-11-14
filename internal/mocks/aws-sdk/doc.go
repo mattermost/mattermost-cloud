@@ -3,10 +3,11 @@
 //
 
 // Package mockawssdk to create the mocks run go generate to regenerate this package.
+//
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./ec2.go github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./rds.go github.com/aws/aws-sdk-go/service/rds/rdsiface RDSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./s3.go github.com/aws/aws-sdk-go/service/s3/s3iface S3API
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./acm.go github.com/aws/aws-sdk-go/service/acm/acmiface ACMAPI
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./acm.go github.com/mattermost/mattermost-cloud/internal/tools/aws ACMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./iam.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./route53.go github.com/aws/aws-sdk-go/service/route53/route53iface Route53API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./kms.go github.com/aws/aws-sdk-go/service/kms/kmsiface KMSAPI

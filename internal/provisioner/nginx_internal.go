@@ -105,16 +105,20 @@ func (n *nginxInternal) Migrate() error {
 
 func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 
-	awsACMPrivateCert, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
+	certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrive the AWS Private ACM")
+	}
+
+	if certificate.ARN == nil {
+		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
 	return &helmDeployment{
 		chartDeploymentName: "nginx-internal",
 		chartName:           "ingress-nginx/ingress-nginx",
 		namespace:           "nginx-internal",
-		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *awsACMPrivateCert.CertificateArn),
+		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
 		desiredVersion:      n.desiredVersion,
 		kubeconfigPath:      n.kubeconfigPath,
 

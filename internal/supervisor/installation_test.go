@@ -6,15 +6,15 @@ package supervisor_test
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/eks"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/service/eks"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
 
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 
-	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
@@ -431,7 +431,7 @@ func (a *mockAWS) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) 
 	return true, nil
 }
 
-func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*acm.CertificateSummary, error) {
+func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*model.Certificate, error) {
 	return nil, nil
 }
 
