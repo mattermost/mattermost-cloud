@@ -110,7 +110,7 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	}
 
 	if certificate.ARN == nil {
-		return nil, fmt.Errorf("retrieved certificate does not have ARN")
+		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
 	clusterResources, err := n.awsClient.GetVpcResources(n.cluster.ID, n.logger)
