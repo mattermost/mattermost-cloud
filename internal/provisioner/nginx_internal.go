@@ -111,7 +111,7 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 	}
 
 	if certificate.ARN == nil {
-		return nil, fmt.Errorf("retrieved certificate does not have ARN")
+		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
 	return &helmDeployment{
