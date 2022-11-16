@@ -307,11 +307,11 @@ var serverCmd = &cobra.Command{
 		disableDNSUpdates, _ := command.Flags().GetBool("disable-dns-updates")
 
 		etcdQuotaBackendBytes, _ := command.Flags().GetInt("etcd-quota-backend-bytes")
-		etcdListenMetricsUrl, _ := command.Flags().GetString("etcd-listen-metrics-url")
+		etcdListenMetricsURL, _ := command.Flags().GetString("etcd-listen-metrics-url")
 
 		etcdManagerEnv := map[string]interface{}{
 			"ETCD_QUOTA_BACKEND_BYTES": etcdQuotaBackendBytes,
-			"ETCD_LISTEN_METRICS_URLS": etcdListenMetricsUrl,
+			"ETCD_LISTEN_METRICS_URLS": etcdListenMetricsURL,
 		}
 
 		wd, err := os.Getwd()
