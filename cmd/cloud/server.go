@@ -123,6 +123,10 @@ func init() {
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
 	serverCmd.PersistentFlags().Int("max-installations-rds-postgres", toolsAWS.DefaultRDSMultitenantDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres")
 	serverCmd.PersistentFlags().Int("max-installations-rds-mysql", toolsAWS.DefaultRDSMultitenantDatabaseMySQLCountLimit, "Max installations per DB cluster of type RDS MySQL")
+
+	// Etcd Manager
+	serverCmd.PersistentFlags().Int("etcd-quota-backend-bytes", 4294967296, "Raise alarms by cluster when backend size exceeds the given quota")
+	serverCmd.PersistentFlags().String("etcd-listen-metrics-urls", "http://0.0.0.0:8081", "List of additional URL to listen for metrics")
 }
 
 // Provisioner is an interface for different types of provisioners.
@@ -302,6 +306,14 @@ var serverCmd = &cobra.Command{
 		enableRoute53, _ := command.Flags().GetBool("installation-enable-route53")
 		disableDNSUpdates, _ := command.Flags().GetBool("disable-dns-updates")
 
+		etcdQuotaBackendBytes, _ := command.Flags().GetInt("etcd-quota-backend-bytes")
+		etcdListenMetricsUrl, _ := command.Flags().GetString("etcd-listen-metrics-url")
+
+		etcdManagerEnv := map[string]interface{}{
+			"ETCD_QUOTA_BACKEND_BYTES": etcdQuotaBackendBytes,
+			"ETCD_LISTEN_METRICS_URLS": etcdListenMetricsUrl,
+		}
+
 		wd, err := os.Getwd()
 		if err != nil {
 			wd = "error getting working directory"
@@ -404,6 +416,7 @@ var serverCmd = &cobra.Command{
 			DeployMinioOperator:     deployMinioOperator,
 			NdotsValue:              ndotsDefaultValue,
 			PGBouncerConfig:         pgbouncerConfig,
+			EtcdManagerEnv:          etcdManagerEnv,
 		}
 
 		// TODO: In the future we can support both provisioners running

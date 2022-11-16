@@ -102,6 +102,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		clusterResources.MasterSecurityGroupIDs,
 		clusterResources.WorkerSecurityGroupIDs,
 		allowSSHCIDRS,
+		provisioner.params.EtcdManagerEnv,
 	)
 	// release VPC resources
 	if err != nil {
