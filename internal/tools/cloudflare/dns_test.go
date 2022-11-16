@@ -6,9 +6,10 @@ package cloudflare
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"net/http"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 
@@ -50,7 +51,6 @@ func TestGetZoneID(t *testing.T) {
 			assert.Equal(t, s.expected, id)
 		})
 	}
-
 }
 
 func TestGetZoneName(t *testing.T) {
@@ -111,7 +111,6 @@ func TestGetZoneName(t *testing.T) {
 			assert.Equal(t, s.expected, result)
 		})
 	}
-
 }
 
 func TestGetRecordIDs(t *testing.T) {
@@ -186,7 +185,6 @@ func TestGetRecordIDs(t *testing.T) {
 			assert.Equal(t, s.expected, result)
 		})
 	}
-
 }
 
 func TestCreateDNSRecord(t *testing.T) {
@@ -251,10 +249,12 @@ func TestCreateDNSRecord(t *testing.T) {
 				return "CLOUDFLAREZONEID", nil
 			},
 			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				return nil, &cf.APIRequestError{
+				err := cf.NewRequestError(&cf.Error{
+					Type:       cf.ErrorTypeRequest,
 					StatusCode: http.StatusBadRequest,
-					Errors:     []cf.ResponseInfo{{Code: 400, Message: recordExistsErr}},
-				}
+					ErrorCodes: []int{recordExistsErrorCode},
+				})
+				return nil, &err
 			},
 			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
 				return []cf.DNSRecord{

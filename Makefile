@@ -5,15 +5,17 @@
 ##                             VERSION PARAMS                                 ##
 ################################################################################
 
-## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.17
-DOCKER_BASE_IMAGE = alpine:3.16
-
 ## Tool Versions
+GOLANG_VERSION := $(shell cat go.mod | grep "^go " | cut -d " " -f 2)
+ALPINE_VERSION = 3.16
 TERRAFORM_VERSION=1.0.7
 KOPS_VERSION=v1.23.4
 HELM_VERSION=v3.5.3
 KUBECTL_VERSION=v1.24.4
+
+## Docker Build Versions
+DOCKER_BUILD_IMAGE := golang:$(GOLANG_VERSION)
+DOCKER_BASE_IMAGE = alpine:$(ALPINE_VERSION)
 
 ################################################################################
 
@@ -188,7 +190,7 @@ goverall: $(GOVERALLS_GEN) ## Runs goveralls
 
 .PHONY: unittest
 unittest:
-	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+	$(GO) test ./... -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks:  $(MOCKGEN) mocks
