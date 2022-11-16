@@ -126,7 +126,7 @@ func init() {
 
 	// Etcd Manager
 	serverCmd.PersistentFlags().Int("etcd-quota-backend-bytes", 4294967296, "Raise alarms by cluster when backend size exceeds the given quota")
-	serverCmd.PersistentFlags().String("etcd-listen-metrics-urls", "http://0.0.0.0:8081", "List of additional URL to listen for metrics")
+	serverCmd.PersistentFlags().String("etcd-listen-metrics-url", "http://0.0.0.0:8081", "An additional URL to listen for metrics")
 }
 
 // Provisioner is an interface for different types of provisioners.
