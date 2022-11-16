@@ -455,28 +455,30 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		return nil
 	}
 
-	// If VPC contains a secondary cluster, promote that to primary and stop here, since VPC is not
-	// available.
-	var secondaryClusterID string
-	for _, tag := range vpc.Tags {
-		if *tag.Key == trimTagPrefix(VpcSecondaryClusterIDTagKey) {
-			secondaryClusterID = *tag.Value
-			break
-		}
-	}
-
-	if secondaryClusterID != VpcClusterIDTagValueNone {
-		err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), secondaryClusterID, logger)
-		if err != nil {
-			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+	if !isSecondaryCluster {
+		// If VPC contains a secondary cluster, promote that to primary and stop here, since VPC is not
+		// available.
+		var secondaryClusterID string
+		for _, tag := range vpc.Tags {
+			if *tag.Key == trimTagPrefix(VpcSecondaryClusterIDTagKey) {
+				secondaryClusterID = *tag.Value
+				break
+			}
 		}
 
-		err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
-		if err != nil {
-			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
-		}
+		if secondaryClusterID != VpcClusterIDTagValueNone {
+			err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), secondaryClusterID, logger)
+			if err != nil {
+				return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+			}
 
-		return nil
+			err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
+			if err != nil {
+				return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+			}
+
+			return nil
+		}
 	}
 
 	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), VpcClusterIDTagValueNone, logger)
