@@ -465,7 +465,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		}
 	}
 
-	if secondaryClusterID != "" {
+	if secondaryClusterID != VpcClusterIDTagValueNone {
 		err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), secondaryClusterID, logger)
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
@@ -481,17 +481,17 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 
 	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), VpcClusterIDTagValueNone, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+		return errors.Wrapf(err, "unable to update %s for %s", VpcClusterIDTagKey, *vpc.VpcId)
 	}
 
 	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueTrue, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
+		return errors.Wrapf(err, "unable to update %s for %s", VpcAvailableTagKey, *vpc.VpcId)
 	}
 
 	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterOwnerKey), VpcClusterOwnerValueNone, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to untag owner from %s", vpc.VpcId)
+		return errors.Wrapf(err, "unable to untag %s from %s", VpcClusterOwnerKey, *vpc.VpcId)
 	}
 
 	logger.Debugf("Released VPC %s", vpc.VpcId)
