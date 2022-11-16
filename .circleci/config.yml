@@ -2,7 +2,7 @@ version: 2.1
 executors:
   default:
     docker:
-    - image: cimg/go:1.17
+    - image: cimg/go:1.19
 
 aliases:
 - &restore_cache
@@ -71,7 +71,7 @@ jobs:
 
   test-postgres:
     docker:
-    - image: cimg/go:1.17
+    - image: cimg/go:1.19
       environment:
         CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
     - image: cimg/postgres:12.11
@@ -97,8 +97,8 @@ jobs:
     - *save_cache
 
   push-docker-pr:
-    executor:
-      name: default
+    docker:
+      - image: cimg/base:2022.11
     steps:
     - checkout
     - setup_remote_docker
@@ -113,8 +113,8 @@ jobs:
         when: on_fail
 
   push-docker:
-    executor:
-      name: default
+    docker:
+      - image: cimg/base:2022.11
     steps:
     - checkout
     - setup_remote_docker
