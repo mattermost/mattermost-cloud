@@ -309,8 +309,8 @@ var serverCmd = &cobra.Command{
 		etcdQuotaBackendBytes, _ := command.Flags().GetInt("etcd-quota-backend-bytes")
 		etcdListenMetricsURL, _ := command.Flags().GetString("etcd-listen-metrics-url")
 
-		etcdManagerEnv := map[string]interface{}{
-			"ETCD_QUOTA_BACKEND_BYTES": etcdQuotaBackendBytes,
+		etcdManagerEnv := map[string]string{
+			"ETCD_QUOTA_BACKEND_BYTES": fmt.Sprintf("%v", etcdQuotaBackendBytes),
 			"ETCD_LISTEN_METRICS_URLS": etcdListenMetricsURL,
 		}
 

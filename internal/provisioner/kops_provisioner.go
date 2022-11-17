@@ -31,7 +31,7 @@ type ProvisioningParams struct {
 	DeployMinioOperator     bool
 	NdotsValue              string
 	PGBouncerConfig         *PGBouncerConfig
-	EtcdManagerEnv          map[string]interface{}
+	EtcdManagerEnv          map[string]string
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.

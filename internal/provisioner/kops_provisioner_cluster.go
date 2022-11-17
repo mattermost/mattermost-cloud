@@ -196,7 +196,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		for key, val := range provisioner.params.EtcdManagerEnv {
 			override = append(override, "spec.etcdClusters[*].manager.env=")
 			envName := fmt.Sprintf("spec.etcdClusters[*].manager.env[%d].name=%s", overrideIndex, key)
-			envValue := fmt.Sprintf("spec.etcdClusters[*].manager.env[%d].value=%v", overrideIndex, val)
+			envValue := fmt.Sprintf("spec.etcdClusters[*].manager.env[%d].value=%s", overrideIndex, val)
 			override = append(override, envName, envValue)
 			overrideIndex++
 		}
