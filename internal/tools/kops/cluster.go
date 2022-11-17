@@ -15,15 +15,7 @@ import (
 )
 
 // CreateCluster invokes kops create cluster, using the context of the created Cmd.
-func (c *Cmd) CreateCluster(
-	name, cloud string,
-	kopsRequest *model.KopsMetadataRequestedState,
-	zones []string,
-	privateSubnetIds, publicSubnetIds []string,
-	masterSecurityGroups, workerSecurityGroups []string,
-	allowSSHCIDRS []string,
-	etcdManagerEnv map[string]interface{},
-) error {
+func (c *Cmd) CreateCluster(name, cloud string, kopsRequest *model.KopsMetadataRequestedState, zones, privateSubnetIds, publicSubnetIds, masterSecurityGroups, workerSecurityGroups, allowSSHCIDRS []string) error {
 	if len(zones) == 0 {
 		return fmt.Errorf("must supply at least one zone")
 	}
@@ -73,20 +65,6 @@ func (c *Cmd) CreateCluster(
 	}
 	if len(workerSecurityGroups) != 0 {
 		args = append(args, commaArg("node-security-groups", workerSecurityGroups))
-	}
-
-	var override []string
-	var overrideIndex int
-	for key, val := range etcdManagerEnv {
-		override = append(override, "cluster.spec.etcdClusters[*].manager.env=")
-		envName := fmt.Sprintf("cluster.spec.etcdClusters[*].manager.env[%d].name=%s", overrideIndex, key)
-		envValue := fmt.Sprintf("cluster.spec.etcdClusters[*].manager.env[%d].value=%v", overrideIndex, val)
-		override = append(override, envName, envValue)
-		overrideIndex++
-	}
-
-	if len(override) > 0 {
-		args = append(args, commaArg("set", override))
 	}
 
 	_, _, err := c.run(args...)
