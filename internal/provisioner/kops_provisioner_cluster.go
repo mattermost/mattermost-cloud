@@ -201,7 +201,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			overrideIndex++
 		}
 
-		logger.Infof("Adding environment variables in etcd cluster manager")
+		logger.Infof("Adding environment variables to etcd cluster manager")
 		err = kops.SetCluster(kopsMetadata.Name, strings.Join(override, ","))
 		if err != nil {
 			return errors.Wrapf(err, "failed to set %s", setValue)
