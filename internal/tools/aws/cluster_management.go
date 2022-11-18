@@ -260,9 +260,11 @@ func (a *Client) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 
 // claimVpc will claim the given VPC for a cluster if a final race-check passes.
 // The final race check does the following:
-//   - Requires the VPC to exist. #mindblown
-//   - VPC availabiltiy tag must be "true"
-//   - VPC cluster ID tag must by "none"
+// - Requires the VPC to exist. #mindblown
+// - VPC availabiltiy tag must be "true"
+// - VPC cluster ID tag must by "none"
+// If that conditions are not met, we will try to set this cluster as secondary in the VPC only if
+// the `CloudSecondaryClusterID` is set to `none`.
 func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
 	var claimSecondaryCluster bool
 	vpcFilter := []*ec2.Filter{
@@ -307,6 +309,10 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 		vpcs, err = a.GetVpcsWithFilters(vpcFilter)
 		if err != nil {
 			return err
+		}
+
+		if len(vpcs) > 1 {
+			return fmt.Errorf("query for secondary VPC %s somehow returned multiple results", clusterResources.VpcID)
 		}
 
 		if len(vpcs) == 1 {
