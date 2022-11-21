@@ -17,12 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
@@ -144,8 +143,9 @@ type cache struct {
 
 // Service hold AWS clients for each service.
 type Service struct {
-	acm                   ACMAPI
-	ec2                   ec2iface.EC2API
+	acm ACMAPI
+	ec2 EC2API
+	// ec2                   ec2iface.EC2API
 	iam                   iamiface.IAMAPI
 	rds                   rdsiface.RDSAPI
 	s3                    s3iface.S3API
@@ -169,7 +169,7 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		route53:               route53.New(sess),
 		secretsManager:        secretsmanager.New(sess),
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
-		ec2:                   ec2.New(sess),
+		ec2:                   ec2.NewFromConfig(cfg), // v2
 		kms:                   kms.New(sess),
 		dynamodb:              dynamodb.New(sess),
 		sts:                   sts.New(sess),

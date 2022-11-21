@@ -5,8 +5,11 @@
 package aws
 
 import (
+	"context"
+
+	ec2V2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -42,14 +45,15 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 		return "", d.toSetupError(err)
 	}
 
-	_, err = d.awsClient.Service().ec2.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
+	ctx := context.TODO()
+	_, err = d.awsClient.Service().ec2.AuthorizeSecurityGroupIngress(ctx, &ec2V2.AuthorizeSecurityGroupIngressInput{
 		GroupId: masterInstanceSG.GroupId,
-		IpPermissions: []*ec2.IpPermission{
+		IpPermissions: []ec2Types.IpPermission{
 			{
-				FromPort:   aws.Int64(3306),
+				FromPort:   aws.Int32(3306),
 				IpProtocol: aws.String("tcp"),
-				ToPort:     aws.Int64(3306),
-				UserIdGroupPairs: []*ec2.UserIdGroupPair{
+				ToPort:     aws.Int32(3306),
+				UserIdGroupPairs: []ec2Types.UserIdGroupPair{
 					{
 						Description: aws.String("Ingress Traffic from other RDS instance"),
 						GroupId:     slaveInstanceSG.GroupId,
@@ -83,14 +87,16 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 		return "", d.toTeardownError(err)
 	}
 
-	_, err = d.awsClient.Service().ec2.RevokeSecurityGroupIngress(&ec2.RevokeSecurityGroupIngressInput{
+	ctx := context.TODO()
+
+	_, err = d.awsClient.Service().ec2.RevokeSecurityGroupIngress(ctx, &ec2V2.RevokeSecurityGroupIngressInput{
 		GroupId: masterInstanceSG.GroupId,
-		IpPermissions: []*ec2.IpPermission{
+		IpPermissions: []ec2Types.IpPermission{
 			{
-				FromPort:   aws.Int64(3306),
+				FromPort:   aws.Int32(3306),
 				IpProtocol: aws.String("tcp"),
-				ToPort:     aws.Int64(3306),
-				UserIdGroupPairs: []*ec2.UserIdGroupPair{
+				ToPort:     aws.Int32(3306),
+				UserIdGroupPairs: []ec2Types.UserIdGroupPair{
 					{
 						GroupId: slaveInstanceSG.GroupId,
 					},
@@ -117,7 +123,7 @@ func (d *RDSDatabaseMigration) Replicate(logger log.FieldLogger) (string, error)
 	return "", errors.New("not implemented")
 }
 
-func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string) (*ec2.SecurityGroup, error) {
+func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string) (*ec2Types.SecurityGroup, error) {
 	output, err := d.awsClient.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceID),
 	})
@@ -125,16 +131,18 @@ func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string
 		return nil, err
 	}
 
+	ctx := context.TODO()
+
 	for _, instance := range output.DBInstances {
 		for _, vpcSG := range instance.VpcSecurityGroups {
-			sgOutput, err := d.awsClient.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				GroupIds: []*string{vpcSG.VpcSecurityGroupId},
+			sgOutput, err := d.awsClient.Service().ec2.DescribeSecurityGroups(ctx, &ec2V2.DescribeSecurityGroupsInput{
+				GroupIds: []string{*vpcSG.VpcSecurityGroupId},
 			})
 			if err != nil {
 				return nil, err
 			}
 			if len(sgOutput.SecurityGroups) == 1 && isRDSInstanceSecurityGroup(sgOutput.SecurityGroups[0]) {
-				return sgOutput.SecurityGroups[0], nil
+				return &sgOutput.SecurityGroups[0], nil
 			}
 		}
 	}
@@ -152,7 +160,7 @@ func (d *RDSDatabaseMigration) toTeardownError(err error) error {
 		d.masterInstallationID, d.masterInstallationID)
 }
 
-func isRDSInstanceSecurityGroup(securityGroup *ec2.SecurityGroup) bool {
+func isRDSInstanceSecurityGroup(securityGroup ec2Types.SecurityGroup) bool {
 	for _, tag := range securityGroup.Tags {
 		if *tag.Key == trimTagPrefix(DefaultDBSecurityGroupTagKey) && *tag.Value == DefaultDBSecurityGroupTagMySQLValue {
 			return true
