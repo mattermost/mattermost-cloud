@@ -341,7 +341,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 
 		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterOwnerKey), owner, logger)
 		if err != nil {
-			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+			return errors.Wrapf(err, "unable to update %s", VpcClusterOwnerKey)
 		}
 	}
 
