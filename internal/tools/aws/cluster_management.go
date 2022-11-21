@@ -318,7 +318,7 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 		if len(vpcs) == 1 {
 			claimSecondaryCluster = true
 		} else {
-			return fmt.Errorf("Couldn't claim VPC %s as primary nor secondary cluster", clusterResources.VpcID)
+			return fmt.Errorf("couldn't claim VPC %s as primary nor secondary cluster", clusterResources.VpcID)
 		}
 	}
 
