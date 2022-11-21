@@ -513,7 +513,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 
 			err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
 			if err != nil {
-				return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+				return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
 			}
 
 			return nil
