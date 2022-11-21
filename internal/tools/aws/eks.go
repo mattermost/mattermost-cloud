@@ -261,7 +261,6 @@ func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources
 
 		out, err := a.Service().eks.CreateNodegroup(&nodeGroupReq)
 		if err != nil {
-
 			return nil, errors.Wrap(err, "failed to create one of the node groups")
 		}
 

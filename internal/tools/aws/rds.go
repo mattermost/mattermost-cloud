@@ -104,7 +104,6 @@ func (a *Client) rdsEnsureDBClusterCreated(
 	databaseType string,
 	tags *Tags,
 	logger log.FieldLogger) error {
-
 	var engine, engineVersion, sgTagValue string
 	var port int64
 	switch databaseType {
@@ -189,7 +188,6 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(
 	instanceClass string,
 	tags *Tags,
 	logger log.FieldLogger) error {
-
 	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
 		DBInstanceIdentifier: aws.String(instanceName),
 	})
