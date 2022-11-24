@@ -181,7 +181,7 @@ type serverFlags struct {
 	database      string
 	maxSchemas    int64
 	enableRoute53 bool
-	kubeCostToken string
+	kubecostToken string
 
 	poll     int
 	slowPoll int
@@ -194,7 +194,6 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	flags.pgBouncerConfig.addFlags(command)
 	flags.installationOption.addFlags(command)
 	flags.dbUtilizationSettings.addFlags(command)
-	flags.serverFlagChanged.addFlags(command)
 
 	command.PersistentFlags().StringVar(&flags.listen, "listen", ":8075", "The interface and port on which to listen.")
 	command.PersistentFlags().IntVar(&flags.metricsPort, "metrics-port", 8076, "Port on which the metrics server should be listening.")
@@ -207,7 +206,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	command.PersistentFlags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
 	command.PersistentFlags().BoolVar(&flags.enableRoute53, "installation-enable-route53", false, "Specifies whether CNAME records for Installation should be created in Route53 as well.")
-	command.PersistentFlags().StringVar(&flags.kubeCostToken, "kubecost-token", "", "Set a kubecost token")
+	command.PersistentFlags().StringVar(&flags.kubecostToken, "kubecost-token", "", "Set a kubecost token")
 
 	command.PersistentFlags().IntVar(&flags.poll, "poll", 30, "The interval in seconds to poll for background work.")
 	command.PersistentFlags().IntVar(&flags.slowPoll, "slow-poll", 60, "The interval in seconds to poll for background work for supervisors that are not time sensitive (slow-poll supervisors).")

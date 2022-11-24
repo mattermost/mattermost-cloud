@@ -50,51 +50,51 @@ type Provisioner interface {
 }
 
 func newCmdServer() *cobra.Command {
-	var serverFlags serverFlags
+	var sf serverFlags
 
 	cmd := &cobra.Command{
 		Use:   "server",
 		Short: "Run the provisioning server.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeServerCmd(serverFlags)
+			return executeServerCmd(sf)
 		},
 		PreRun: func(command *cobra.Command, args []string) {
 			command.SilenceUsage = true
-			serverFlags.serverFlagChanged.addFlags(command)
+			sf.serverFlagChanged.addFlags(command) // To populate flag change variables.
 			deprecationWarnings(logger, command)
 		},
 	}
-	serverFlags.addFlags(cmd)
+	sf.addFlags(cmd)
 
 	return cmd
 }
 
-func executeServerCmd(serverFlags serverFlags) error {
+func executeServerCmd(sf serverFlags) error {
 
-	devMode := serverFlags.devMode
-	debugMode := serverFlags.debug || (devMode && !serverFlags.isDebugChanged)
+	devMode := sf.devMode
+	debugMode := sf.debug || (devMode && !sf.isDebugChanged)
 	if debugMode {
 		logger.SetLevel(logrus.DebugLevel)
 	}
 
-	helm.SetVerboseHelmLogging(serverFlags.debugHelm)
+	helm.SetVerboseHelmLogging(sf.debugHelm)
 
-	err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(serverFlags.maxSchemas)
+	err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(sf.maxSchemas)
 	if err != nil {
 		return err
 	}
 
 	pgbouncerConfig := provisioner.NewPGBouncerConfig(
-		serverFlags.minPoolSize, serverFlags.defaultPoolSize, serverFlags.reservePoolSize,
-		serverFlags.maxClientConnections, serverFlags.maxDatabaseConnectionsPerPool,
-		serverFlags.serverIdleTimeout, serverFlags.serverLifetime, serverFlags.serverResetQueryAlways,
+		sf.minPoolSize, sf.defaultPoolSize, sf.reservePoolSize,
+		sf.maxClientConnections, sf.maxDatabaseConnectionsPerPool,
+		sf.serverIdleTimeout, sf.serverLifetime, sf.serverResetQueryAlways,
 	)
 	err = pgbouncerConfig.Validate()
 	if err != nil {
 		return errors.Wrap(err, "pgbouncer config failed validation")
 	}
 
-	gitlabOAuthToken := serverFlags.gitlabOAuthToken
+	gitlabOAuthToken := sf.gitlabOAuthToken
 	if len(gitlabOAuthToken) == 0 {
 		gitlabOAuthToken = os.Getenv(model.GitlabOAuthTokenKey)
 	}
@@ -103,40 +103,40 @@ func executeServerCmd(serverFlags serverFlags) error {
 		logger.Warnf("The gitlab-oauth flag and %s were empty; using local helm charts", model.GitlabOAuthTokenKey)
 	}
 
-	if serverFlags.machineLogs {
+	if sf.machineLogs {
 		logger.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	model.SetRequireAnnotatedInstallations(serverFlags.requireAnnotatedInstallations)
+	model.SetRequireAnnotatedInstallations(sf.requireAnnotatedInstallations)
 
-	if len(serverFlags.allowListCIDRRange) == 0 {
+	if len(sf.allowListCIDRRange) == 0 {
 		return errors.New("allow-list-cidr-range must have at least one value")
 	}
 
-	if len(serverFlags.vpnListCIDR) == 0 {
+	if len(sf.vpnListCIDR) == 0 {
 		return errors.New("vpn-list-cidr must have at least one value")
 	}
 
-	if serverFlags.mattermostWebHook != "" {
-		_ = os.Setenv(model.MattermostWebhook, serverFlags.mattermostWebHook)
+	if sf.mattermostWebHook != "" {
+		_ = os.Setenv(model.MattermostWebhook, sf.mattermostWebHook)
 	}
 
-	if serverFlags.mattermostChannel != "" {
-		_ = os.Setenv(model.MattermostChannel, serverFlags.mattermostChannel)
+	if sf.mattermostChannel != "" {
+		_ = os.Setenv(model.MattermostChannel, sf.mattermostChannel)
 	}
 
-	if serverFlags.utilitiesGitURL == "" {
+	if sf.utilitiesGitURL == "" {
 		return errors.New("utilities-git-url must be set")
 	}
-	model.SetUtilityDefaults(serverFlags.utilitiesGitURL)
+	model.SetUtilityDefaults(sf.utilitiesGitURL)
 
-	if serverFlags.kubeCostToken != "" {
-		_ = os.Setenv(model.KubecostToken, serverFlags.kubeCostToken)
+	if sf.kubecostToken != "" {
+		_ = os.Setenv(model.KubecostToken, sf.kubecostToken)
 	}
 
 	logger := logger.WithField("instance", instanceID)
 
-	sqlStore, err := sqlStore(serverFlags.database)
+	sqlStore, err := sqlStore(sf.database)
 	if err != nil {
 		return err
 	}
@@ -155,20 +155,20 @@ func executeServerCmd(serverFlags serverFlags) error {
 
 	// TODO: move these cluster threshold values to cluster configuration.
 	installationScheduling := supervisor.NewInstallationSupervisorSchedulingOptions(
-		serverFlags.balancedInstallationScheduling,
-		serverFlags.clusterResourceThreshold,
-		serverFlags.thresholdCPUOverride,
-		serverFlags.thresholdMemoryOverride,
-		serverFlags.thresholdPodCountOverride,
-		serverFlags.clusterResourceThresholdScaleValue,
+		sf.balancedInstallationScheduling,
+		sf.clusterResourceThreshold,
+		sf.thresholdCPUOverride,
+		sf.thresholdMemoryOverride,
+		sf.thresholdPodCountOverride,
+		sf.clusterResourceThresholdScaleValue,
 	)
 	err = installationScheduling.Validate()
 	if err != nil {
 		return errors.Wrap(err, "invalid installation scheduling options")
 	}
 
-	supervisorsEnabled := serverFlags.supervisorOption
-	if serverFlags.disableAllSupervisors {
+	supervisorsEnabled := sf.supervisorOption
+	if sf.disableAllSupervisors {
 		supervisorsEnabled = supervisorOption{} // reset to zero
 	}
 
@@ -176,7 +176,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 		logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 	}
 
-	model.SetDeployOperators(serverFlags.deployMySQLOperator, serverFlags.deployMinioOperator)
+	model.SetDeployOperators(sf.deployMySQLOperator, sf.deployMinioOperator)
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -184,18 +184,19 @@ func executeServerCmd(serverFlags serverFlags) error {
 		logger.WithError(err).Error("Unable to get current working directory")
 	}
 
-	keepDatabaseData := serverFlags.keepDatabaseData
-	keepFileStoreData := serverFlags.keepFileStoreData
+	keepDatabaseData := sf.keepDatabaseData
+	keepFilestoreData := sf.keepFileStoreData
 	if devMode {
-		if !serverFlags.isKeepDatabaseDataChanged {
+		if !sf.isKeepDatabaseDataChanged {
 			keepDatabaseData = false
 		}
-		if !serverFlags.isKeepFileStoreDataChanged {
-			keepFileStoreData = false
+		if !sf.isKeepFileStoreDataChanged {
+			keepFilestoreData = false
 		}
 	}
 
-	provisionerFlag := serverFlags.provisioner
+	provisionerFlag := sf.provisioner
+
 	logger.WithFields(logrus.Fields{
 		"build-hash":                                    model.BuildHash,
 		"cluster-supervisor":                            supervisorsEnabled.clusterSupervisor,
@@ -208,39 +209,39 @@ func executeServerCmd(serverFlags serverFlags) error {
 		"installation-db-restoration-supervisor":        supervisorsEnabled.installationDBRestorationSupervisor,
 		"installation-db-migration-supervisor":          supervisorsEnabled.installationDBMigrationSupervisor,
 		"store-version":                                 currentVersion,
-		"state-store":                                   serverFlags.s3StateStore,
+		"state-store":                                   sf.s3StateStore,
 		"working-directory":                             wd,
-		"installation-deletion-pending-time":            serverFlags.installationDeletionPendingTime,
-		"installation-deletion-max-updating":            serverFlags.installationDeletionMaxUpdating,
-		"balanced-installation-scheduling":              serverFlags.balancedInstallationScheduling,
-		"cluster-resource-threshold":                    serverFlags.clusterResourceThreshold,
-		"cluster-resource-threshold-cpu-override":       serverFlags.thresholdCPUOverride,
-		"cluster-resource-threshold-memory-override":    serverFlags.thresholdMemoryOverride,
-		"cluster-resource-threshold-pod-count-override": serverFlags.thresholdPodCountOverride,
-		"cluster-resource-threshold-scale-value":        serverFlags.clusterResourceThresholdScaleValue,
-		"use-existing-aws-resources":                    serverFlags.useExistingResources,
+		"installation-deletion-pending-time":            sf.installationDeletionPendingTime,
+		"installation-deletion-max-updating":            sf.installationDeletionMaxUpdating,
+		"balanced-installation-scheduling":              sf.balancedInstallationScheduling,
+		"cluster-resource-threshold":                    sf.clusterResourceThreshold,
+		"cluster-resource-threshold-cpu-override":       sf.thresholdCPUOverride,
+		"cluster-resource-threshold-memory-override":    sf.thresholdMemoryOverride,
+		"cluster-resource-threshold-pod-count-override": sf.thresholdPodCountOverride,
+		"cluster-resource-threshold-scale-value":        sf.clusterResourceThresholdScaleValue,
+		"use-existing-aws-resources":                    sf.useExistingResources,
 		"keep-database-data":                            keepDatabaseData,
-		"keep-filestore-data":                           keepFileStoreData,
-		"force-cr-upgrade":                              serverFlags.forceCRUpgrade,
-		"backup-restore-tool-image":                     serverFlags.backupRestoreToolImage,
-		"backup-job-ttl-seconds":                        serverFlags.backupJobTTL,
+		"keep-filestore-data":                           keepFilestoreData,
+		"force-cr-upgrade":                              sf.forceCRUpgrade,
+		"backup-restore-tool-image":                     sf.backupRestoreToolImage,
+		"backup-job-ttl-seconds":                        sf.backupJobTTL,
 		"debug":                                         debugMode,
-		"dev-mode":                                      serverFlags.devMode,
-		"deploy-mysql-operator":                         serverFlags.deployMySQLOperator,
-		"deploy-minio-operator":                         serverFlags.deployMinioOperator,
-		"ndots-value":                                   serverFlags.ndotsDefaultValue,
-		"maxDatabaseConnectionsPerPool":                 serverFlags.maxDatabaseConnectionsPerPool,
-		"defaultPoolSize":                               serverFlags.defaultPoolSize,
-		"minPoolSize":                                   serverFlags.minPoolSize,
-		"maxClientConnections":                          serverFlags.maxClientConnections,
-		"disable-db-init-check":                         serverFlags.disableDBInitCheck,
-		"enable-route53":                                serverFlags.enableRoute53,
-		"disable-dns-updates":                           serverFlags.disableDNSUpdates,
+		"dev-mode":                                      sf.devMode,
+		"deploy-mysql-operator":                         sf.deployMySQLOperator,
+		"deploy-minio-operator":                         sf.deployMinioOperator,
+		"ndots-value":                                   sf.ndotsDefaultValue,
+		"maxDatabaseConnectionsPerPool":                 sf.maxDatabaseConnectionsPerPool,
+		"defaultPoolSize":                               sf.defaultPoolSize,
+		"minPoolSize":                                   sf.minPoolSize,
+		"maxClientConnections":                          sf.maxClientConnections,
+		"disable-db-init-check":                         sf.disableDBInitCheck,
+		"enable-route53":                                sf.enableRoute53,
+		"disable-dns-updates":                           sf.disableDNSUpdates,
 		"provisioner":                                   provisionerFlag,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
-	if !serverFlags.useExistingResources {
+	if !sf.useExistingResources {
 		logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
 	}
 
@@ -267,17 +268,17 @@ func executeServerCmd(serverFlags serverFlags) error {
 		return errors.Wrap(err, "failed health check")
 	}
 
-	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(serverFlags), serverFlags.disableDBInitCheck)
+	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(sf), sf.disableDBInitCheck)
 
 	provisioningParams := provisioner.ProvisioningParams{
-		S3StateStore:            serverFlags.s3StateStore,
-		AllowCIDRRangeList:      serverFlags.allowListCIDRRange,
-		VpnCIDRList:             serverFlags.vpnListCIDR,
+		S3StateStore:            sf.s3StateStore,
+		AllowCIDRRangeList:      sf.allowListCIDRRange,
+		VpnCIDRList:             sf.vpnListCIDR,
 		Owner:                   owner,
-		UseExistingAWSResources: serverFlags.useExistingResources,
-		DeployMysqlOperator:     serverFlags.deployMySQLOperator,
-		DeployMinioOperator:     serverFlags.deployMinioOperator,
-		NdotsValue:              serverFlags.ndotsDefaultValue,
+		UseExistingAWSResources: sf.useExistingResources,
+		DeployMysqlOperator:     sf.deployMySQLOperator,
+		DeployMinioOperator:     sf.deployMinioOperator,
+		NdotsValue:              sf.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
 	}
 
@@ -293,7 +294,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 			resourceUtil,
 			logger,
 			sqlStore,
-			provisioner.NewBackupOperator(serverFlags.backupRestoreToolImage, awsRegion, serverFlags.backupJobTTL),
+			provisioner.NewBackupOperator(sf.backupRestoreToolImage, awsRegion, sf.backupJobTTL),
 		)
 		defer kopsProvisioner.Teardown()
 		clusterProvisioner = kopsProvisioner
@@ -325,7 +326,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 
 	// DNS configuration
 	dnsManager := supervisor.NewDNSManager()
-	if serverFlags.enableRoute53 {
+	if sf.enableRoute53 {
 		dnsManager.AddProvider(supervisor.NewRoute53DNSProvider(awsClient))
 	} else {
 		logger.Warn("Route53 disabled for Installation, Route53 CNAME records will not be created")
@@ -354,7 +355,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, serverFlags.forceCRUpgrade, dnsManager, serverFlags.disableDNSUpdates))
+		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, sf.forceCRUpgrade, dnsManager, sf.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
@@ -363,7 +364,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, logger))
 	}
 	if supervisorsEnabled.importSupervisor {
-		awatAddress := serverFlags.awatAddress
+		awatAddress := sf.awatAddress
 		if awatAddress == "" {
 			return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 		}
@@ -379,7 +380,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
 	// scheduler to trigger it periodically in addition to being poked by the API
 	// layer.
-	poll := serverFlags.poll
+	poll := sf.poll
 	if poll == 0 {
 		logger.WithField("poll", poll).Info("Scheduler is disabled")
 	}
@@ -387,13 +388,13 @@ func executeServerCmd(serverFlags serverFlags) error {
 	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
 	defer standardSupervisor.Close()
 
-	slowPoll := serverFlags.slowPoll
+	slowPoll := sf.slowPoll
 	if slowPoll == 0 {
 		logger.WithField("slow-poll", slowPoll).Info("Slow scheduler is disabled")
 	}
 	if supervisorsEnabled.installationDeletionSupervisor {
 		var slowMultiDoer supervisor.MultiDoer
-		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, serverFlags.installationDeletionPendingTime, serverFlags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
+		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, sf.installationDeletionPendingTime, sf.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
 		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(slowPoll)*time.Second)
 		defer slowSupervisor.Close()
 	}
@@ -402,7 +403,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 	metricsRouter.Handle("/metrics", promhttp.Handler())
 
 	metricsServer := &http.Server{
-		Addr:           fmt.Sprintf(":%d", serverFlags.metricsPort),
+		Addr:           fmt.Sprintf(":%d", sf.metricsPort),
 		Handler:        metricsRouter,
 		ReadTimeout:    180 * time.Second,
 		WriteTimeout:   180 * time.Second,
@@ -434,7 +435,7 @@ func executeServerCmd(serverFlags serverFlags) error {
 	})
 
 	srv := &http.Server{
-		Addr:           serverFlags.listen,
+		Addr:           sf.listen,
 		Handler:        router,
 		ReadTimeout:    180 * time.Second,
 		WriteTimeout:   180 * time.Second,
@@ -474,11 +475,11 @@ func executeServerCmd(serverFlags serverFlags) error {
 	return nil
 }
 
-func dbClusterUtilizationSettingsFromFlags(serverFlags serverFlags) utils.DBClusterUtilizationSettings {
+func dbClusterUtilizationSettingsFromFlags(sf serverFlags) utils.DBClusterUtilizationSettings {
 	return utils.DBClusterUtilizationSettings{
-		MaxInstallationsRDSPostgresPGBouncer: serverFlags.pgbouncer,
-		MaxInstallationsRDSPostgres:          serverFlags.postgres,
-		MaxInstallationsRDSMySQL:             serverFlags.mysql,
+		MaxInstallationsRDSPostgresPGBouncer: sf.pgbouncer,
+		MaxInstallationsRDSPostgres:          sf.postgres,
+		MaxInstallationsRDSMySQL:             sf.mysql,
 	}
 }
 
