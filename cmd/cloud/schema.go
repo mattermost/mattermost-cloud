@@ -20,8 +20,7 @@ var schemaCmd = &cobra.Command{
 	Short: "Manipulate the schema used by the provisioning server.",
 }
 
-func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
-	database, _ := command.Flags().GetString("database")
+func sqlStore(database string) (*store.SQLStore, error) {
 	sqlStore, err := store.New(database, logger)
 	if err != nil {
 		return nil, err
@@ -35,8 +34,8 @@ var schemaMigrateCmd = &cobra.Command{
 	Short: "Migrate the schema to the latest supported version.",
 	RunE: func(command *cobra.Command, args []string) error {
 		command.SilenceUsage = true
-
-		sqlStore, err := sqlStore(command)
+		database, _ := command.Flags().GetString("database")
+		sqlStore, err := sqlStore(database)
 		if err != nil {
 			return err
 		}

@@ -578,7 +578,8 @@ var installationRecoveryCmd = &cobra.Command{
 
 		logger.Info("Starting installation recovery from deleted state")
 
-		sqlStore, err := sqlStore(command)
+		database, _ := command.Flags().GetString("database")
+		sqlStore, err := sqlStore(database)
 		if err != nil {
 			return errors.Wrap(err, "failed to create datastore")
 		}
