@@ -26,7 +26,7 @@ type supervisorOption struct {
 	awatAddress       string
 }
 
-func (flags *supervisorOption) AddFlags(command *cobra.Command) {
+func (flags *supervisorOption) addFlags(command *cobra.Command) {
 	command.PersistentFlags().BoolVar(&flags.disableAllSupervisors, "disable-all-supervisors", false, "disable all supervisorOption (API-only functionality)")
 
 	command.PersistentFlags().BoolVar(&flags.clusterSupervisor, "cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
@@ -54,7 +54,7 @@ type schedulingOption struct {
 	thresholdPodCountOverride          int
 }
 
-func (flags *schedulingOption) AddFlags(command *cobra.Command) {
+func (flags *schedulingOption) addFlags(command *cobra.Command) {
 	command.PersistentFlags().BoolVar(&flags.balancedInstallationScheduling, "balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
 	command.PersistentFlags().IntVar(&flags.clusterResourceThresholdScaleValue, "cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
 	command.PersistentFlags().IntVar(&flags.clusterResourceThreshold, "cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
@@ -77,7 +77,7 @@ type provisioningParam struct {
 	backupRestoreToolImage string
 }
 
-func (flags *provisioningParam) AddFlags(command *cobra.Command) {
+func (flags *provisioningParam) addFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVar(&flags.provisioner, "provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
 	command.PersistentFlags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.PersistentFlags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
@@ -102,7 +102,7 @@ type pgBouncerConfig struct {
 	serverResetQueryAlways        int
 }
 
-func (flags *pgBouncerConfig) AddFlags(command *cobra.Command) {
+func (flags *pgBouncerConfig) addFlags(command *cobra.Command) {
 	command.PersistentFlags().IntVar(&flags.minPoolSize, "min-proxy-db-pool-size", 1, "The db proxy min pool size.")
 	command.PersistentFlags().IntVar(&flags.defaultPoolSize, "default-proxy-db-pool-size", 5, "The db proxy default pool size per user.")
 	command.PersistentFlags().IntVar(&flags.reservePoolSize, "reserve-proxy-db-pool-size", 10, "The db proxy reserve pool size per logical database.")
@@ -124,7 +124,7 @@ type installationOption struct {
 	utilitiesGitURL               string
 }
 
-func (flags *installationOption) AddFlags(command *cobra.Command) {
+func (flags *installationOption) addFlags(command *cobra.Command) {
 	command.PersistentFlags().BoolVar(&flags.keepDatabaseData, "keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	command.PersistentFlags().BoolVar(&flags.keepFileStoreData, "keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	command.PersistentFlags().BoolVar(&flags.requireAnnotatedInstallations, "require-annotated-installations", false, "Require new installations to have at least one annotation.")
@@ -142,7 +142,7 @@ type dbUtilizationSettings struct {
 	disableDBInitCheck bool
 }
 
-func (flags *dbUtilizationSettings) AddFlags(command *cobra.Command) {
+func (flags *dbUtilizationSettings) addFlags(command *cobra.Command) {
 	command.PersistentFlags().IntVar(&flags.pgbouncer, "max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
 	command.PersistentFlags().IntVar(&flags.postgres, "max-installations-rds-postgres", toolsAWS.DefaultRDSMultitenantDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres")
 	command.PersistentFlags().IntVar(&flags.mysql, "max-installations-rds-mysql", toolsAWS.DefaultRDSMultitenantDatabaseMySQLCountLimit, "Max installations per DB cluster of type RDS MySQL")
@@ -155,13 +155,13 @@ type serverFlagChanged struct {
 	isKeepFileStoreDataChanged bool
 }
 
-func (flags *serverFlagChanged) AddFlags(command *cobra.Command) {
+func (flags *serverFlagChanged) addFlags(command *cobra.Command) {
 	flags.isDebugChanged = command.Flags().Changed("debug")
 	flags.isKeepDatabaseDataChanged = command.PersistentFlags().Changed("keep-database-data")
 	flags.isKeepFileStoreDataChanged = command.PersistentFlags().Changed("keep-filestore-data")
 }
 
-type ServerFlags struct {
+type serverFlags struct {
 	supervisorOption
 	schedulingOption
 	provisioningParam
@@ -187,14 +187,14 @@ type ServerFlags struct {
 	slowPoll int
 }
 
-func (flags *ServerFlags) AddFlags(command *cobra.Command) {
-	flags.supervisorOption.AddFlags(command)
-	flags.schedulingOption.AddFlags(command)
-	flags.provisioningParam.AddFlags(command)
-	flags.pgBouncerConfig.AddFlags(command)
-	flags.installationOption.AddFlags(command)
-	flags.dbUtilizationSettings.AddFlags(command)
-	flags.serverFlagChanged.AddFlags(command)
+func (flags *serverFlags) addFlags(command *cobra.Command) {
+	flags.supervisorOption.addFlags(command)
+	flags.schedulingOption.addFlags(command)
+	flags.provisioningParam.addFlags(command)
+	flags.pgBouncerConfig.addFlags(command)
+	flags.installationOption.addFlags(command)
+	flags.dbUtilizationSettings.addFlags(command)
+	flags.serverFlagChanged.addFlags(command)
 
 	command.PersistentFlags().StringVar(&flags.listen, "listen", ":8075", "The interface and port on which to listen.")
 	command.PersistentFlags().IntVar(&flags.metricsPort, "metrics-port", 8076, "Port on which the metrics server should be listening.")

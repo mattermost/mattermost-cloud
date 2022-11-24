@@ -50,7 +50,7 @@ type Provisioner interface {
 }
 
 func newCmdServer() *cobra.Command {
-	var serverFlags ServerFlags
+	var serverFlags serverFlags
 
 	cmd := &cobra.Command{
 		Use:   "server",
@@ -60,16 +60,16 @@ func newCmdServer() *cobra.Command {
 		},
 		PreRun: func(command *cobra.Command, args []string) {
 			command.SilenceUsage = true
-			serverFlags.serverFlagChanged.AddFlags(command)
+			serverFlags.serverFlagChanged.addFlags(command)
 			deprecationWarnings(logger, command)
 		},
 	}
-	serverFlags.AddFlags(cmd)
+	serverFlags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeServerCmd(serverFlags ServerFlags) error {
+func executeServerCmd(serverFlags serverFlags) error {
 
 	devMode := serverFlags.devMode
 	debugMode := serverFlags.debug || (devMode && !serverFlags.isDebugChanged)
@@ -474,7 +474,7 @@ func executeServerCmd(serverFlags ServerFlags) error {
 	return nil
 }
 
-func dbClusterUtilizationSettingsFromFlags(serverFlags ServerFlags) utils.DBClusterUtilizationSettings {
+func dbClusterUtilizationSettingsFromFlags(serverFlags serverFlags) utils.DBClusterUtilizationSettings {
 	return utils.DBClusterUtilizationSettings{
 		MaxInstallationsRDSPostgresPGBouncer: serverFlags.pgbouncer,
 		MaxInstallationsRDSPostgres:          serverFlags.postgres,
@@ -595,26 +595,4 @@ func getHumanReadableID() string {
 	}
 
 	return strings.TrimSpace(string(output))
-}
-
-func flagIsUnset(cmd *cobra.Command, flagName string) bool {
-	return !cmd.Flags().Changed(flagName)
-}
-
-func isAny(conditions []bool) bool {
-	for _, b := range conditions {
-		if b {
-			return true
-		}
-	}
-	return false
-}
-
-func isAnyMapValue(conditions map[string]bool) bool {
-	for _, b := range conditions {
-		if b {
-			return true
-		}
-	}
-	return false
 }
