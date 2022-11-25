@@ -324,7 +324,7 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		logger.Debug("Removing Mattermost installation SLI as installation group not in the approved list")
 		err = deleteInstallationSLI(clusterInstallation, k8sClient, logger)
 		if err != nil {
-			return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
+			return errors.Wrapf(err, "failed to delete cluster installation SLI %s", clusterInstallation.ID)
 		}
 	}
 
