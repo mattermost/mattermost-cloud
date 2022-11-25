@@ -87,11 +87,13 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
-	err = createInstallationSLI(clusterInstallation, k8sClient, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create installation SLI")
+	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+		logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
+		err = createInstallationSLI(clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrap(err, "failed to create installation SLI")
+		}
 	}
-
 	ctx := context.TODO()
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Create(ctx, mattermost, metav1.CreateOptions{})
 	if err != nil {
@@ -312,9 +314,18 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	err = createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
+	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+		logger.Debug("Creating or updating Mattermost installation SLI")
+		err = createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
+		}
+	} else {
+		logger.Debug("Removing Mattermost installation SLI as installation group not in the approved list")
+		err = deleteInstallationSLI(clusterInstallation, k8sClient, logger)
+		if err != nil {
+			return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
+		}
 	}
 
 	logger.Info("Updated cluster installation")
@@ -537,4 +548,13 @@ func getMattermostCustomResource(clusterInstallation *model.ClusterInstallation,
 	logger.WithField("status", fmt.Sprintf("%+v", cr.Status)).Debug("Got cluster installation")
 
 	return cr, nil
+}
+
+func containsInstallationGroup(installationGroup string, installationGroups []string) bool {
+	for _, ig := range installationGroups {
+		if ig == installationGroup {
+			return true
+		}
+	}
+	return false
 }
