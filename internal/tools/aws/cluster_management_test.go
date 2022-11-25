@@ -203,8 +203,7 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 
 		logger := logrus.New()
 
-		clusterResources, err := a.Mocks.AWS.GetAndClaimVpcResources(cluster, owner, logger)
-		// clusterResources, err := a.Mocks.AWS.ClaimVPC(vpcID, cluster, owner, logger)
+		clusterResources, err := a.Mocks.AWS.ClaimVPC(vpcID, cluster, owner, logger)
 		a.Assert().NoError(err)
 		a.Assert().Equal(clusterResources.VpcID, vpcID)
 		a.Assert().Contains(clusterResources.PrivateSubnetIDs, privateSubnetID)
