@@ -27,7 +27,7 @@ type supervisorOption struct {
 }
 
 func (flags *supervisorOption) addFlags(command *cobra.Command) {
-	command.PersistentFlags().BoolVar(&flags.disableAllSupervisors, "disable-all-supervisors", false, "disable all supervisorOption (API-only functionality)")
+	command.PersistentFlags().BoolVar(&flags.disableAllSupervisors, "disable-all-supervisors", false, "disable all supervisors (API-only functionality)")
 
 	command.PersistentFlags().BoolVar(&flags.clusterSupervisor, "cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
 	command.PersistentFlags().BoolVar(&flags.groupSupervisor, "group-supervisor", false, "Whether this server will run an installation group supervisor or not.")
