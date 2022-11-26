@@ -470,7 +470,9 @@ func executeServerCmd(sf serverFlags) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	_ = srv.Shutdown(ctx)
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.WithField("err", err.Error()).Error("error shutting down server")
+	}
 
 	return nil
 }
