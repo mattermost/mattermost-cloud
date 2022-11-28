@@ -7,7 +7,7 @@ package aws
 import (
 	"context"
 
-	ec2V2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/rds"
@@ -46,7 +46,7 @@ func (d *RDSDatabaseMigration) Setup(logger log.FieldLogger) (string, error) {
 	}
 
 	ctx := context.TODO()
-	_, err = d.awsClient.Service().ec2.AuthorizeSecurityGroupIngress(ctx, &ec2V2.AuthorizeSecurityGroupIngressInput{
+	_, err = d.awsClient.Service().ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId: masterInstanceSG.GroupId,
 		IpPermissions: []ec2Types.IpPermission{
 			{
@@ -89,7 +89,7 @@ func (d *RDSDatabaseMigration) Teardown(logger log.FieldLogger) (string, error) 
 
 	ctx := context.TODO()
 
-	_, err = d.awsClient.Service().ec2.RevokeSecurityGroupIngress(ctx, &ec2V2.RevokeSecurityGroupIngressInput{
+	_, err = d.awsClient.Service().ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
 		GroupId: masterInstanceSG.GroupId,
 		IpPermissions: []ec2Types.IpPermission{
 			{
@@ -135,7 +135,7 @@ func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string
 
 	for _, instance := range output.DBInstances {
 		for _, vpcSG := range instance.VpcSecurityGroups {
-			sgOutput, err := d.awsClient.Service().ec2.DescribeSecurityGroups(ctx, &ec2V2.DescribeSecurityGroupsInput{
+			sgOutput, err := d.awsClient.Service().ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 				GroupIds: []string{*vpcSG.VpcSecurityGroupId},
 			})
 			if err != nil {
