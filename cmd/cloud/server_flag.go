@@ -64,14 +64,15 @@ func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 }
 
 type provisioningParams struct {
-	provisioner          string
-	s3StateStore         string
-	allowListCIDRRange   []string
-	vpnListCIDR          []string
-	useExistingResources bool
-	deployMySQLOperator  bool
-	deployMinioOperator  bool
-	ndotsDefaultValue    string
+	provisioner           string
+	s3StateStore          string
+	allowListCIDRRange    []string
+	sloInstallationGroups []string
+	vpnListCIDR           []string
+	useExistingResources  bool
+	deployMySQLOperator   bool
+	deployMinioOperator   bool
+	ndotsDefaultValue     string
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
@@ -81,6 +82,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVar(&flags.provisioner, "provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
 	command.PersistentFlags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.PersistentFlags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
+	command.PersistentFlags().StringSliceVar(&flags.sloInstallationGroups, "slo-installation-groups", []string{}, "The list of installation group ids to create dedicated SLOs for.")
 	command.PersistentFlags().StringSliceVar(&flags.vpnListCIDR, "vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	command.PersistentFlags().BoolVar(&flags.useExistingResources, "use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	command.PersistentFlags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
