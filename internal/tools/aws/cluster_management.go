@@ -260,10 +260,13 @@ func (a *Client) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 
 // claimVpc will claim the given VPC for a cluster if a final race-check passes.
 // The final race check does the following:
-//   - Requires the VPC to exist. #mindblown
-//   - VPC availabiltiy tag must be "true"
-//   - VPC cluster ID tag must by "none"
+// - Requires the VPC to exist. #mindblown
+// - VPC availabiltiy tag must be "true"
+// - VPC cluster ID tag must by "none"
+// If that conditions are not met, we will try to set this cluster as secondary in the VPC only if
+// the `CloudSecondaryClusterID` is set to `none`.
 func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
+	var claimSecondaryCluster bool
 	vpcFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("vpc-id"),
@@ -284,26 +287,62 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 	}
 
 	numVPCs := len(vpcs)
-	if numVPCs == 0 {
-		return fmt.Errorf("query didn't return VPC %s; it either doesn't exist or another cluster claimed it", clusterResources.VpcID)
-	}
-	if numVPCs != 1 {
+	if numVPCs > 1 {
 		return fmt.Errorf("query for VPC %s somehow returned multiple results", clusterResources.VpcID)
 	}
+	if numVPCs == 0 {
+		vpcFilter = []*ec2.Filter{
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []*string{aws.String(clusterResources.VpcID)},
+			},
+			{
+				Name:   aws.String(VpcAvailableTagKey),
+				Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			},
+			{
+				Name:   aws.String(VpcSecondaryClusterIDTagKey),
+				Values: []*string{aws.String(VpcClusterIDTagValueNone)},
+			},
+		}
 
-	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueFalse, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
+		vpcs, err = a.GetVpcsWithFilters(vpcFilter)
+		if err != nil {
+			return err
+		}
+
+		if len(vpcs) > 1 {
+			return fmt.Errorf("query for secondary VPC %s somehow returned multiple results", clusterResources.VpcID)
+		}
+
+		if len(vpcs) == 1 {
+			claimSecondaryCluster = true
+		} else {
+			return fmt.Errorf("couldn't claim VPC %s as primary nor secondary cluster", clusterResources.VpcID)
+		}
 	}
 
-	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), cluster.ID, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
-	}
+	if claimSecondaryCluster {
+		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcSecondaryClusterIDTagKey), cluster.ID, logger)
+		if err != nil {
+			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+		}
+		// TODO: what about ownership when dealing with secondary clusters?
+	} else {
+		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueFalse, logger)
+		if err != nil {
+			return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
+		}
 
-	err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterOwnerKey), owner, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), cluster.ID, logger)
+		if err != nil {
+			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+		}
+
+		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterOwnerKey), owner, logger)
+		if err != nil {
+			return errors.Wrapf(err, "unable to update %s", VpcClusterOwnerKey)
+		}
 	}
 
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
@@ -330,6 +369,18 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 	return nil
 }
 
+// releaseVpc
+// performs the required tagging to release a VPC from the provided cluster.
+// It checks if the cluster is primary or secondary cluster in the VPC, if it is secondary it means
+// that a cluster migration is in progress (cluster to cluster on the same VPC).
+// If we're removing the secondary cluster, we just cleanup it's tags and we're done.
+// If we're removing the primary cluster
+//   - and a secondary one is present in the VPC, we remove the references to the primary and
+//     promote the secondary to primary.
+//   - and there's no secondary cluster, we remove references from the cluster and mark the VPC as
+//     available.
+//
+// If any of the VPC checks either returns no VPCs or more than one VPC this method will fail.
 func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
 	var isSecondaryCluster bool = false
 	secondaryVpcFilters := []*ec2.Filter{
@@ -347,9 +398,10 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		return err
 	}
 	if len(vpcs) != 0 {
-		//untag keys for secondary cluster
+		// if this is a secondary cluster in the VPC we need to know to update appropriate tags
 		isSecondaryCluster = true
 	}
+
 	if !isSecondaryCluster {
 		vpcFilters := []*ec2.Filter{
 			{
@@ -367,6 +419,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 			return err
 		}
 	}
+
 	numVPCs := len(vpcs)
 	if numVPCs == 0 {
 		logger.Warnf("No VPCs are currently claimed by cluster %s, assuming already released", cluster.ID)
@@ -380,10 +433,11 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		return fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting release process", numVPCs, cluster.ID)
 	}
 
+	vpc := vpcs[0]
 	publicSubnetFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{vpcs[0].VpcId},
+			Values: []*string{vpc.VpcId},
 		},
 		{
 			Name:   aws.String("tag:SubnetType"),
@@ -406,7 +460,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 	callsSecurityGroupFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{vpcs[0].VpcId},
+			Values: []*string{vpc.VpcId},
 		},
 		{
 			Name:   aws.String("tag:NodeType"),
@@ -432,29 +486,56 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 	}
 
 	if isSecondaryCluster {
-		err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
+		err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
 		}
-		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", cluster.ID, *vpcs[0].VpcId)
+		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", cluster.ID, vpc.VpcId)
 		return nil
 	}
-	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcClusterIDTagKey), VpcClusterIDTagValueNone, logger)
-	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+
+	if !isSecondaryCluster {
+		// If VPC contains a secondary cluster, promote that to primary and stop here, since VPC is not
+		// available.
+		var secondaryClusterID string
+		for _, tag := range vpc.Tags {
+			if *tag.Key == trimTagPrefix(VpcSecondaryClusterIDTagKey) {
+				secondaryClusterID = *tag.Value
+				break
+			}
+		}
+
+		if secondaryClusterID != VpcClusterIDTagValueNone {
+			err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), secondaryClusterID, logger)
+			if err != nil {
+				return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
+			}
+
+			err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcSecondaryClusterIDTagKey), VpcClusterIDTagValueNone, logger)
+			if err != nil {
+				return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
+			}
+
+			return nil
+		}
 	}
 
-	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueTrue, logger)
+	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterIDTagKey), VpcClusterIDTagValueNone, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
+		return errors.Wrapf(err, "unable to update %s for %s", VpcClusterIDTagKey, *vpc.VpcId)
 	}
 
-	err = a.TagResource(*vpcs[0].VpcId, trimTagPrefix(VpcClusterOwnerKey), VpcClusterOwnerValueNone, logger)
+	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueTrue, logger)
 	if err != nil {
-		return errors.Wrapf(err, "unable to untag owner from %s", *vpcs[0].VpcId)
+		return errors.Wrapf(err, "unable to update %s for %s", VpcAvailableTagKey, *vpc.VpcId)
 	}
 
-	logger.Debugf("Released VPC %s", *vpcs[0].VpcId)
+	err = a.TagResource(*vpc.VpcId, trimTagPrefix(VpcClusterOwnerKey), VpcClusterOwnerValueNone, logger)
+	if err != nil {
+		return errors.Wrapf(err, "unable to untag %s from %s", VpcClusterOwnerKey, *vpc.VpcId)
+	}
+
+	logger.Debugf("Released VPC %s", vpc.VpcId)
 
 	return nil
 }

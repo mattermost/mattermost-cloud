@@ -112,13 +112,6 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 		return errors.Wrap(err, "unable to create kops cluster")
 	}
-	// Tag Public subnets & respective VPC for the secondary cluster if there is no error.
-	if kopsMetadata.ChangeRequest.VPC != "" {
-		err = awsClient.TagResourcesByCluster(clusterResources, cluster, provisioner.params.Owner, logger)
-		if err != nil {
-			return err
-		}
-	}
 	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err

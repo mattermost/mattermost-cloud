@@ -31,6 +31,7 @@ type ProvisioningParams struct {
 	DeployMinioOperator     bool
 	NdotsValue              string
 	PGBouncerConfig         *PGBouncerConfig
+	SLOInstallationGroups   []string
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.
