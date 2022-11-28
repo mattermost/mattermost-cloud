@@ -25,7 +25,7 @@ var (
 
 	stateChangeEventSelect = sq.Select("sc.ID, sc.ResourceID, sc.ResourceType, sc.OldState, sc.NewState, sc.EventID, e.Timestamp, e.EventType, e.ExtraData").
 				From("StateChangeEvent as sc").
-				Join("Event as e on sc.EventID = e.ID")
+				LeftJoin("Event as e on sc.EventID = e.ID")
 )
 
 // CreateStateChangeEvent creates new StateChangeEvent and initializes EventDeliveries.
