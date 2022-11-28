@@ -284,7 +284,6 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 
 	oldState := installation.State
 	installation.State = newState
-
 	if installation.ConfigMergedWithGroup() && installation.State == model.InstallationStateStable {
 		// Perform a final group configuration check. This time, it is vital to
 		// check the installation while the group is locked.

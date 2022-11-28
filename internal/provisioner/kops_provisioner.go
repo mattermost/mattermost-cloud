@@ -32,6 +32,7 @@ type ProvisioningParams struct {
 	NdotsValue              string
 	PGBouncerConfig         *PGBouncerConfig
 	EtcdManagerEnv          map[string]string
+	SLOInstallationGroups   []string
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.
