@@ -176,19 +176,16 @@ func executeServerCmd(sf serverFlags) error {
 
 	model.SetDeployOperators(sf.deployMySQLOperator, sf.deployMinioOperator)
 
-		etcdQuotaBackendBytes, _ := command.Flags().GetInt("etcd-quota-backend-bytes")
-		etcdListenMetricsURL, _ := command.Flags().GetString("etcd-listen-metrics-url")
+	etcdManagerEnv := map[string]string{
+		"ETCD_QUOTA_BACKEND_BYTES": fmt.Sprintf("%v", sf.etcdQuotaBackendBytes),
+		"ETCD_LISTEN_METRICS_URLS": sf.etcdListenMetricsURL,
+	}
 
-		etcdManagerEnv := map[string]string{
-			"ETCD_QUOTA_BACKEND_BYTES": fmt.Sprintf("%v", etcdQuotaBackendBytes),
-			"ETCD_LISTEN_METRICS_URLS": etcdListenMetricsURL,
-		}
-
-		wd, err := os.Getwd()
-		if err != nil {
-			wd = "error getting working directory"
-			logger.WithError(err).Error("Unable to get current working directory")
-		}
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "error getting working directory"
+		logger.WithError(err).Error("Unable to get current working directory")
+	}
 
 	keepDatabaseData := sf.keepDatabaseData
 	keepFileStoreData := sf.keepFileStoreData
