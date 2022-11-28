@@ -275,6 +275,7 @@ func executeServerCmd(sf serverFlags) error {
 		DeployMinioOperator:     sf.deployMinioOperator,
 		NdotsValue:              sf.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
+		SLOInstallationGroups:   sf.sloInstallationGroups,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(sf), sf.disableDBInitCheck)
