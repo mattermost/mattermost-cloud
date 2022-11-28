@@ -57,6 +57,7 @@ func init() {
 	serverCmd.PersistentFlags().Int("metrics-port", 8076, "Port on which the metrics server should be listening.")
 	serverCmd.PersistentFlags().String("state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	serverCmd.PersistentFlags().StringSlice("allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
+	serverCmd.PersistentFlags().StringSlice("slo-installation-groups", []string{}, "The list of installation group ids to create dedicated SLOs for.")
 	serverCmd.PersistentFlags().StringSlice("vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	serverCmd.PersistentFlags().Bool("debug", false, "Whether to output debug logs.")
 	serverCmd.PersistentFlags().Bool("debug-helm", false, "Whether to include Helm output in debug logs.")
@@ -196,6 +197,8 @@ var serverCmd = &cobra.Command{
 		if len(allowListCIDRRange) == 0 {
 			return errors.New("allow-list-cidr-range must have at least one value")
 		}
+
+		sloInstallationGroups, _ := command.Flags().GetStringSlice("slo-installation-groups")
 
 		vpnListCIDR, _ := command.Flags().GetStringSlice("vpn-list-cidr")
 		if len(vpnListCIDR) == 0 {
@@ -404,6 +407,7 @@ var serverCmd = &cobra.Command{
 			DeployMinioOperator:     deployMinioOperator,
 			NdotsValue:              ndotsDefaultValue,
 			PGBouncerConfig:         pgbouncerConfig,
+			SLOInstallationGroups:   sloInstallationGroups,
 		}
 
 		// TODO: In the future we can support both provisioners running
