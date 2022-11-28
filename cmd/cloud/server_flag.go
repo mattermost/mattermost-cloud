@@ -76,6 +76,9 @@ type provisioningParams struct {
 
 	backupJobTTL           int32
 	backupRestoreToolImage string
+
+	etcdQuotaBackendBytes int
+	etcdListenMetricsURL  string
 }
 
 func (flags *provisioningParams) addFlags(command *cobra.Command) {
@@ -91,6 +94,10 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 
 	command.PersistentFlags().Int32Var(&flags.backupJobTTL, "backup-job-ttl-seconds", 3600, "Number of seconds after which finished backup jobs will be cleaned up. Set to negative value to not cleanup or 0 to cleanup immediately.")
 	command.PersistentFlags().StringVar(&flags.backupRestoreToolImage, "backup-restore-tool-image", "mattermost/backup-restore-tool:latest", "Image of Backup Restore Tool to use.")
+
+	command.PersistentFlags().IntVar(&flags.etcdQuotaBackendBytes, "etcd-quota-backend-bytes", 4294967296, "Raise alarms by cluster when backend size exceeds the given quota")
+	command.PersistentFlags().StringVar(&flags.etcdListenMetricsURL, "etcd-listen-metrics-urls", "http://0.0.0.0:8081", "List of additional URL to listen for metrics")
+
 }
 
 type pgBouncerConfig struct {

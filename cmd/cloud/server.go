@@ -265,6 +265,11 @@ func executeServerCmd(sf serverFlags) error {
 	// best-effort attempt to tag the VPC with a human's identity for dev purposes
 	owner := getHumanReadableID()
 
+	etcdManagerEnv := map[string]string{
+		"ETCD_QUOTA_BACKEND_BYTES": fmt.Sprintf("%v", sf.etcdQuotaBackendBytes),
+		"ETCD_LISTEN_METRICS_URLS": sf.etcdListenMetricsURL,
+	}
+
 	provisioningParams := provisioner.ProvisioningParams{
 		S3StateStore:            sf.s3StateStore,
 		AllowCIDRRangeList:      sf.allowListCIDRRange,
@@ -276,6 +281,7 @@ func executeServerCmd(sf serverFlags) error {
 		NdotsValue:              sf.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   sf.sloInstallationGroups,
+		EtcdManagerEnv:          etcdManagerEnv,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(sf), sf.disableDBInitCheck)
