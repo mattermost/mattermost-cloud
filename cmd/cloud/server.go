@@ -71,16 +71,14 @@ func newCmdServer() *cobra.Command {
 
 func executeServerCmd(sf serverFlags) error {
 
-	devMode := sf.devMode
-	debugMode := sf.debug || (devMode && !sf.isDebugChanged)
+	debugMode := sf.debug || (sf.devMode && !sf.isDebugChanged)
 	if debugMode {
 		logger.SetLevel(logrus.DebugLevel)
 	}
 
 	helm.SetVerboseHelmLogging(sf.debugHelm)
 
-	err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(sf.maxSchemas)
-	if err != nil {
+	if err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(sf.maxSchemas); err != nil {
 		return err
 	}
 
@@ -89,8 +87,8 @@ func executeServerCmd(sf serverFlags) error {
 		sf.maxClientConnections, sf.maxDatabaseConnectionsPerPool,
 		sf.serverIdleTimeout, sf.serverLifetime, sf.serverResetQueryAlways,
 	)
-	err = pgbouncerConfig.Validate()
-	if err != nil {
+
+	if err := pgbouncerConfig.Validate(); err != nil {
 		return errors.Wrap(err, "pgbouncer config failed validation")
 	}
 
@@ -162,17 +160,17 @@ func executeServerCmd(sf serverFlags) error {
 		sf.thresholdPodCountOverride,
 		sf.clusterResourceThresholdScaleValue,
 	)
-	err = installationScheduling.Validate()
-	if err != nil {
+
+	if err := installationScheduling.Validate(); err != nil {
 		return errors.Wrap(err, "invalid installation scheduling options")
 	}
 
-	supervisorsEnabled := sf.supervisorOption
+	supervisorsEnabled := sf.supervisorOptions
 	if sf.disableAllSupervisors {
-		supervisorsEnabled = supervisorOption{} // reset to zero
+		supervisorsEnabled = supervisorOptions{} // reset to zero
 	}
 
-	if supervisorsEnabled == (supervisorOption{}) {
+	if supervisorsEnabled == (supervisorOptions{}) {
 		logger.Warn("Server will be running with no supervisors. Only API functionality will work.")
 	}
 
@@ -185,13 +183,13 @@ func executeServerCmd(sf serverFlags) error {
 	}
 
 	keepDatabaseData := sf.keepDatabaseData
-	keepFilestoreData := sf.keepFileStoreData
-	if devMode {
+	keepFileStoreData := sf.keepFileStoreData
+	if sf.devMode {
 		if !sf.isKeepDatabaseDataChanged {
 			keepDatabaseData = false
 		}
 		if !sf.isKeepFileStoreDataChanged {
-			keepFilestoreData = false
+			keepFileStoreData = false
 		}
 	}
 
@@ -221,7 +219,7 @@ func executeServerCmd(sf serverFlags) error {
 		"cluster-resource-threshold-scale-value":        sf.clusterResourceThresholdScaleValue,
 		"use-existing-aws-resources":                    sf.useExistingResources,
 		"keep-database-data":                            keepDatabaseData,
-		"keep-filestore-data":                           keepFilestoreData,
+		"keep-filestore-data":                           keepFileStoreData,
 		"force-cr-upgrade":                              sf.forceCRUpgrade,
 		"backup-restore-tool-image":                     sf.backupRestoreToolImage,
 		"backup-job-ttl-seconds":                        sf.backupJobTTL,
@@ -245,9 +243,6 @@ func executeServerCmd(sf serverFlags) error {
 		logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
 	}
 
-	// best-effort attempt to tag the VPC with a human's identity for dev purposes
-	owner := getHumanReadableID()
-
 	awsRegion := os.Getenv("AWS_REGION")
 	if awsRegion == "" {
 		awsRegion = toolsAWS.DefaultAWSRegion
@@ -263,12 +258,12 @@ func executeServerCmd(sf serverFlags) error {
 		return errors.Wrap(err, "failed to build AWS client")
 	}
 
-	err = checkRequirements(logger)
-	if err != nil {
+	if err := checkRequirements(logger); err != nil {
 		return errors.Wrap(err, "failed health check")
 	}
 
-	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(sf), sf.disableDBInitCheck)
+	// best-effort attempt to tag the VPC with a human's identity for dev purposes
+	owner := getHumanReadableID()
 
 	provisioningParams := provisioner.ProvisioningParams{
 		S3StateStore:            sf.s3StateStore,
@@ -281,6 +276,8 @@ func executeServerCmd(sf serverFlags) error {
 		NdotsValue:              sf.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
 	}
+
+	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(sf), sf.disableDBInitCheck)
 
 	// TODO: In the future we can support both provisioners running
 	// at the same time, and the correct one should be chosen based
@@ -342,8 +339,7 @@ func executeServerCmd(sf serverFlags) error {
 		logger.Warn("Cloudflare token not provided, Cloudflare records registration will be skipped")
 	}
 
-	err = dnsManager.IsValid()
-	if err != nil {
+	if err := dnsManager.IsValid(); err != nil {
 		return errors.Wrap(err, "invalid DNS providers configuration")
 	}
 
@@ -355,7 +351,7 @@ func executeServerCmd(sf serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFilestoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, sf.forceCRUpgrade, dnsManager, sf.disableDNSUpdates))
+		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, sf.forceCRUpgrade, dnsManager, sf.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
@@ -364,11 +360,10 @@ func executeServerCmd(sf serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, logger))
 	}
 	if supervisorsEnabled.importSupervisor {
-		awatAddress := sf.awatAddress
-		if awatAddress == "" {
+		if sf.awatAddress == "" {
 			return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 		}
-		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(awatAddress), sqlStore, clusterProvisioner, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(sf.awatAddress), sqlStore, clusterProvisioner, eventsProducer, logger))
 	}
 	if supervisorsEnabled.installationDBRestorationSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, clusterProvisioner, eventsProducer, instanceID, logger))
@@ -380,22 +375,20 @@ func executeServerCmd(sf serverFlags) error {
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
 	// scheduler to trigger it periodically in addition to being poked by the API
 	// layer.
-	poll := sf.poll
-	if poll == 0 {
-		logger.WithField("poll", poll).Info("Scheduler is disabled")
+	if sf.poll == 0 {
+		logger.WithField("poll", sf.poll).Info("Scheduler is disabled")
 	}
 
-	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(poll)*time.Second)
+	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(sf.poll)*time.Second)
 	defer standardSupervisor.Close()
 
-	slowPoll := sf.slowPoll
-	if slowPoll == 0 {
-		logger.WithField("slow-poll", slowPoll).Info("Slow scheduler is disabled")
+	if sf.slowPoll == 0 {
+		logger.WithField("slow-poll", sf.slowPoll).Info("Slow scheduler is disabled")
 	}
 	if supervisorsEnabled.installationDeletionSupervisor {
 		var slowMultiDoer supervisor.MultiDoer
 		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, sf.installationDeletionPendingTime, sf.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
-		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(slowPoll)*time.Second)
+		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(sf.slowPoll)*time.Second)
 		defer slowSupervisor.Close()
 	}
 
@@ -414,8 +407,7 @@ func executeServerCmd(sf serverFlags) error {
 
 	go func() {
 		logger.WithField("addr", metricsServer.Addr).Info("Metrics server listening")
-		err := metricsServer.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.WithError(err).Error("Failed to listen and serve metrics")
 		}
 	}()
@@ -446,8 +438,7 @@ func executeServerCmd(sf serverFlags) error {
 
 	go func() {
 		logger.WithField("addr", srv.Addr).Info("API server listening")
-		err := srv.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.WithError(err).Error("Failed to listen and serve")
 		}
 	}()

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type supervisorOption struct {
+type supervisorOptions struct {
 	disableAllSupervisors               bool
 	clusterSupervisor                   bool
 	groupSupervisor                     bool
@@ -26,7 +26,7 @@ type supervisorOption struct {
 	awatAddress       string
 }
 
-func (flags *supervisorOption) addFlags(command *cobra.Command) {
+func (flags *supervisorOptions) addFlags(command *cobra.Command) {
 	command.PersistentFlags().BoolVar(&flags.disableAllSupervisors, "disable-all-supervisors", false, "disable all supervisors (API-only functionality)")
 
 	command.PersistentFlags().BoolVar(&flags.clusterSupervisor, "cluster-supervisor", true, "Whether this server will run a cluster supervisor or not.")
@@ -45,7 +45,7 @@ func (flags *supervisorOption) addFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVar(&flags.awatAddress, "awat", "http://localhost:8077", "The location of the Automatic Workspace Archive Translator if the import supervisor is being used.")
 }
 
-type schedulingOption struct {
+type schedulingOptions struct {
 	balancedInstallationScheduling     bool
 	clusterResourceThresholdScaleValue int
 	clusterResourceThreshold           int
@@ -54,7 +54,7 @@ type schedulingOption struct {
 	thresholdPodCountOverride          int
 }
 
-func (flags *schedulingOption) addFlags(command *cobra.Command) {
+func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 	command.PersistentFlags().BoolVar(&flags.balancedInstallationScheduling, "balanced-installation-scheduling", false, "Whether to schedule installations on the cluster with the greatest percentage of available resources or not. (slows down scheduling speed as cluster count increases)")
 	command.PersistentFlags().IntVar(&flags.clusterResourceThresholdScaleValue, "cluster-resource-threshold-scale-value", 0, "The number of worker nodes to scale up by when the threshold is passed. Set to 0 for no scaling. Scaling will never exceed the cluster max worker configuration value.")
 	command.PersistentFlags().IntVar(&flags.clusterResourceThreshold, "cluster-resource-threshold", 80, "The percent threshold where new installations won't be scheduled on a multi-tenant cluster.")
@@ -63,7 +63,7 @@ func (flags *schedulingOption) addFlags(command *cobra.Command) {
 	command.PersistentFlags().IntVar(&flags.thresholdPodCountOverride, "cluster-resource-threshold-pod-count-override", 0, "The cluster-resource-threshold override value for pod count only")
 }
 
-type provisioningParam struct {
+type provisioningParams struct {
 	provisioner          string
 	s3StateStore         string
 	allowListCIDRRange   []string
@@ -77,7 +77,7 @@ type provisioningParam struct {
 	backupRestoreToolImage string
 }
 
-func (flags *provisioningParam) addFlags(command *cobra.Command) {
+func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVar(&flags.provisioner, "provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
 	command.PersistentFlags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.PersistentFlags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
@@ -113,7 +113,7 @@ func (flags *pgBouncerConfig) addFlags(command *cobra.Command) {
 	command.PersistentFlags().IntVar(&flags.serverResetQueryAlways, "server-reset-query-always", 0, "Whether server_reset_query should be run in all pooling modes.")
 }
 
-type installationOption struct {
+type installationOptions struct {
 	keepDatabaseData              bool
 	keepFileStoreData             bool
 	requireAnnotatedInstallations bool
@@ -124,7 +124,7 @@ type installationOption struct {
 	utilitiesGitURL               string
 }
 
-func (flags *installationOption) addFlags(command *cobra.Command) {
+func (flags *installationOptions) addFlags(command *cobra.Command) {
 	command.PersistentFlags().BoolVar(&flags.keepDatabaseData, "keep-database-data", true, "Whether to preserve database data after installation deletion or not.")
 	command.PersistentFlags().BoolVar(&flags.keepFileStoreData, "keep-filestore-data", true, "Whether to preserve filestore data after installation deletion or not.")
 	command.PersistentFlags().BoolVar(&flags.requireAnnotatedInstallations, "require-annotated-installations", false, "Require new installations to have at least one annotation.")
@@ -162,11 +162,11 @@ func (flags *serverFlagChanged) addFlags(command *cobra.Command) {
 }
 
 type serverFlags struct {
-	supervisorOption
-	schedulingOption
-	provisioningParam
+	supervisorOptions
+	schedulingOptions
+	provisioningParams
 	pgBouncerConfig
-	installationOption
+	installationOptions
 	dbUtilizationSettings
 	serverFlagChanged
 
@@ -188,11 +188,11 @@ type serverFlags struct {
 }
 
 func (flags *serverFlags) addFlags(command *cobra.Command) {
-	flags.supervisorOption.addFlags(command)
-	flags.schedulingOption.addFlags(command)
-	flags.provisioningParam.addFlags(command)
+	flags.supervisorOptions.addFlags(command)
+	flags.schedulingOptions.addFlags(command)
+	flags.provisioningParams.addFlags(command)
 	flags.pgBouncerConfig.addFlags(command)
-	flags.installationOption.addFlags(command)
+	flags.installationOptions.addFlags(command)
 	flags.dbUtilizationSettings.addFlags(command)
 
 	command.PersistentFlags().StringVar(&flags.listen, "listen", ":8075", "The interface and port on which to listen.")
