@@ -71,7 +71,7 @@ check-style: govet lint goformat goimports
 .PHONY: lint
 lint: $(GOLINT_GEN)
 	@echo Running lint
-	$(GOLINT_GEN) -set_exit_status ./...
+	$(GOLINT_GEN) -set_exit_status $(PACKAGES)
 	@echo lint success
 
 ## Runs govet against all packages.
