@@ -51,6 +51,14 @@ func registerPagingFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("include-deleted", false, "Whether to include deleted objects.")
 }
 
+func getPagingModel(pf pagingFlags) model.Paging {
+	return model.Paging{
+		Page:           pf.page,
+		PerPage:        pf.perPage,
+		IncludeDeleted: pf.includeDeleted,
+	}
+}
+
 func parsePagingFlags(cmd *cobra.Command) model.Paging {
 	page, _ := cmd.Flags().GetInt("page")
 	perPage, _ := cmd.Flags().GetInt("per-page")
