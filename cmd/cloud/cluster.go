@@ -28,23 +28,20 @@ const (
 )
 
 func newCmdCluster() *cobra.Command {
-	var cf clusterFlags
-
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Manipulate clusters managed by the provisioning server.",
 	}
-	cf.addFlags(cmd)
 
-	cmd.AddCommand(newCmdClusterCreate(cf))
-	cmd.AddCommand(newCmdClusterProvision(cf))
-	cmd.AddCommand(newCmdClusterUpdate(cf))
-	cmd.AddCommand(newCmdClusterUpgrade(cf))
-	cmd.AddCommand(newCmdClusterResize(cf))
-	cmd.AddCommand(newCmdClusterDelete(cf))
-	cmd.AddCommand(newCmdClusterGet(cf))
-	cmd.AddCommand(newCmdClusterList(cf))
-	cmd.AddCommand(newCmdClusterUtilities(cf))
+	cmd.AddCommand(newCmdClusterCreate())
+	cmd.AddCommand(newCmdClusterProvision())
+	cmd.AddCommand(newCmdClusterUpdate())
+	cmd.AddCommand(newCmdClusterUpgrade())
+	cmd.AddCommand(newCmdClusterResize())
+	cmd.AddCommand(newCmdClusterDelete())
+	cmd.AddCommand(newCmdClusterGet())
+	cmd.AddCommand(newCmdClusterList())
+	cmd.AddCommand(newCmdClusterUtilities())
 
 	cmd.AddCommand(newCmdClusterSizeDictionary())
 	cmd.AddCommand(newCmdClusterShowStateReport())
@@ -74,8 +71,8 @@ func getRotatorConfigFromFlags(rc rotatorConfig) model.RotatorConfig {
 	}
 }
 
-func newCmdClusterCreate(globalFlags clusterFlags) *cobra.Command {
-	cf := newClusterCreateFlags(globalFlags)
+func newCmdClusterCreate() *cobra.Command {
+	var cf clusterCreateFlags
 
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -183,8 +180,8 @@ func executeClusterCreateCmd(cf clusterCreateFlags) error {
 
 }
 
-func newCmdClusterProvision(globalFlags clusterFlags) *cobra.Command {
-	pf := newClusterProvisionFlags(globalFlags)
+func newCmdClusterProvision() *cobra.Command {
+	var pf clusterProvisionFlags
 
 	cmd := &cobra.Command{
 		Use:   "provision",
@@ -233,8 +230,8 @@ func executeClusterProvisionCmd(pf clusterProvisionFlags) error {
 
 }
 
-func newCmdClusterUpdate(globalFlags clusterFlags) *cobra.Command {
-	uf := newClusterUpdateFlags(globalFlags)
+func newCmdClusterUpdate() *cobra.Command {
+	var uf clusterUpdateFlags
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -283,8 +280,8 @@ func executeClusterUpdateCmd(uf clusterUpdateFlags) error {
 
 }
 
-func newCmdClusterUpgrade(globalFlags clusterFlags) *cobra.Command {
-	uf := newClusterUpgradeFlags(globalFlags)
+func newCmdClusterUpgrade() *cobra.Command {
+	var uf clusterUpgradeFlags
 
 	cmd := &cobra.Command{
 		Use:   "upgrade",
@@ -344,8 +341,8 @@ func executeClusterUpgradeCmd(uf clusterUpgradeFlags) error {
 
 }
 
-func newCmdClusterResize(globalFlags clusterFlags) *cobra.Command {
-	rf := newClusterResizeFlags(globalFlags)
+func newCmdClusterResize() *cobra.Command {
+	var rf clusterResizeFlags
 
 	cmd := &cobra.Command{
 		Use:   "resize",
@@ -413,8 +410,8 @@ func executeClusterResizeCmd(rf clusterResizeFlags) error {
 
 }
 
-func newCmdClusterDelete(globalFlags clusterFlags) *cobra.Command {
-	df := newClusterDeleteFlags(globalFlags)
+func newCmdClusterDelete() *cobra.Command {
+	var df clusterDeleteFlags
 
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -443,8 +440,8 @@ func executeClusterDeleteCmd(df clusterDeleteFlags) error {
 	return nil
 }
 
-func newCmdClusterGet(globalFlags clusterFlags) *cobra.Command {
-	gf := newClusterGetFlags(globalFlags)
+func newCmdClusterGet() *cobra.Command {
+	var gf clusterGetFlags
 
 	cmd := &cobra.Command{
 		Use:   "get",
@@ -480,8 +477,8 @@ func executeClusterGetCmd(gf clusterGetFlags) error {
 	return nil
 }
 
-func newCmdClusterList(globalFlags clusterFlags) *cobra.Command {
-	lf := newClusterListFlags(globalFlags)
+func newCmdClusterList() *cobra.Command {
+	var lf clusterListFlags
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -564,8 +561,8 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 	return keys, values
 }
 
-func newCmdClusterUtilities(globalFlags clusterFlags) *cobra.Command {
-	uf := newClusterUtilitiesFlags(globalFlags)
+func newCmdClusterUtilities() *cobra.Command {
+	var uf clusterUtilitiesFlags
 
 	cmd := &cobra.Command{
 		Use:   "utilities",
