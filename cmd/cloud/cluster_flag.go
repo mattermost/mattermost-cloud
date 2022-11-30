@@ -79,29 +79,29 @@ type utilityFlags struct {
 
 func (flags *utilityFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.prometheusOperatorVersion, "prometheus-operator-version", "", "The version of Prometheus Operator to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.prometheusOperatorValues, "prometheus-operator-values", "", "The full Git URL of the desired chart value file's version for Prometheus Operator")
+	command.Flags().StringVar(&flags.prometheusOperatorValues, "prometheus-operator-values", "", "The full Git URL of the desired chart values for Prometheus Operator")
 	command.Flags().StringVar(&flags.thanosVersion, "thanos-version", "", "The version of Thanos to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.thanosValues, "thanos-values", "", "The full Git URL of the desired chart value file's version for Thanos")
+	command.Flags().StringVar(&flags.thanosValues, "thanos-values", "", "The full Git URL of the desired chart values for Thanos")
 	command.Flags().StringVar(&flags.fluentbitVersion, "fluentbit-version", "", "The version of Fluentbit to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.fluentbitValues, "fluentbit-values", "", "The full Git URL of the desired chart value file's version for Fluent-Bit")
+	command.Flags().StringVar(&flags.fluentbitValues, "fluentbit-values", "", "The full Git URL of the desired chart values for FluentBit")
 	command.Flags().StringVar(&flags.nginxVersion, "nginx-version", "", "The version of Nginx Internal to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.nginxValues, "nginx-values", "", "The full Git URL of the desired chart value file's version for NGINX")
+	command.Flags().StringVar(&flags.nginxValues, "nginx-values", "", "The full Git URL of the desired chart values for Nginx")
 	command.Flags().StringVar(&flags.nginxInternalVersion, "nginx-internal-version", "", "The version of Nginx to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.nginxInternalValues, "nginx-internal-values", "", "The full Git URL of the desired chart value file's version for NGINX Internal")
+	command.Flags().StringVar(&flags.nginxInternalValues, "nginx-internal-values", "", "The full Git URL of the desired chart values for Nginx Internal")
 	command.Flags().StringVar(&flags.teleportVersion, "teleport-version", "", "The version of Teleport to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.teleportValues, "teleport-values", "", "The full Git URL of the desired chart value file's version for Teleport")
+	command.Flags().StringVar(&flags.teleportValues, "teleport-values", "", "The full Git URL of the desired chart values for Teleport")
 	command.Flags().StringVar(&flags.pgbouncerVersion, "pgbouncer-version", "", "The version of Pgbouncer to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.pgbouncerValues, "pgbouncer-values", "", "The full Git URL of the desired chart value file's version for Pgbouncer")
+	command.Flags().StringVar(&flags.pgbouncerValues, "pgbouncer-values", "", "The full Git URL of the desired chart values for PGBouncer")
 	command.Flags().StringVar(&flags.rtcdVersion, "rtcd-version", "", "The version of RTCD to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.rtcdValues, "rtcd-values", "", "The full Git URL of the desired chart value file's version for RTCD")
+	command.Flags().StringVar(&flags.rtcdValues, "rtcd-values", "", "The full Git URL of the desired chart values for RTCD")
 	command.Flags().StringVar(&flags.promtailVersion, "promtail-version", "", "The version of Promtail to provision. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.promtailValues, "promtail-values", "", "The full Git URL of the desired chart value file's version for Promtail")
+	command.Flags().StringVar(&flags.promtailValues, "promtail-values", "", "The full Git URL of the desired chart values for Promtail")
 	command.Flags().StringVar(&flags.kubecostVersion, "kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.kubecostValues, "kubecost-values", "", "The full Git URL of the desired chart value file's version for Kubecost")
+	command.Flags().StringVar(&flags.kubecostValues, "kubecost-values", "", "The full Git URL of the desired chart values for Kubecost")
 	command.Flags().StringVar(&flags.nodeProblemDetectorVersion, "node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.nodeProblemDetectorValues, "node-problem-detector-values", "", "The full Git URL of the desired chart value file's version for Node Problem Detector")
+	command.Flags().StringVar(&flags.nodeProblemDetectorValues, "node-problem-detector-values", "", "The full Git URL of the desired chart values for Node Problem Detector")
 	command.Flags().StringVar(&flags.metricsServerVersion, "metrics-server-version", "", "The version of Metrics Server. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.metricsServerValues, "metrics-server-values", "", "The full Git URL of the desired chart value file's version for Metrics Server")
+	command.Flags().StringVar(&flags.metricsServerValues, "metrics-server-values", "", "The full Git URL of the desired chart values for Metrics Server")
 	command.Flags().StringVar(&flags.veleroVersion, "velero-version", "", "The version of Velero. Use 'stable' to provision the latest stable version published upstream.")
 	command.Flags().StringVar(&flags.veleroValues, "velero-values", "", "The full Git URL of the desired chart value file's version for Velero")
 	command.Flags().StringVar(&flags.cloudproberVersion, "cloudprober-version", "", "The version of Cloudprober. Use 'stable' to provision the latest stable version published upstream.")
@@ -132,6 +132,7 @@ type clusterCreateFlags struct {
 	eksFlags
 	utilityFlags
 	sizeOptions
+
 	cluster string
 }
 
@@ -153,12 +154,14 @@ func newClusterCreateFlags(flags clusterFlags) clusterCreateFlags {
 type clusterProvisionFlags struct {
 	clusterFlags
 	utilityFlags
+
 	cluster                 string
 	reprovisionAllUtilities bool
 }
 
 func (flags *clusterProvisionFlags) addFlags(command *cobra.Command) {
 	flags.utilityFlags.addFlags(command)
+
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be provisioned.")
 	command.Flags().BoolVar(&flags.reprovisionAllUtilities, "reprovision-all-utilities", false, "Set to true if all utilities should be reprovisioned and not just ones with new versions")
 
@@ -173,6 +176,7 @@ func newClusterProvisionFlags(flags clusterFlags) clusterProvisionFlags {
 
 type clusterUpdateFlags struct {
 	clusterFlags
+
 	cluster            string
 	allowInstallations bool
 }
@@ -264,7 +268,7 @@ type clusterResizeFlags struct {
 func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
 	flags.rotatorConfig.addFlags(command)
 
-	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be upgraded.")
+	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be resized.")
 	command.Flags().StringVar(&flags.size, "size", "", "The size constant describing the cluster")
 	command.Flags().StringVar(&flags.nodeInstanceType, "size-node-instance-type", "", "The instance type describing the k8s worker nodes. Overwrites value from 'size'.")
 	command.Flags().Int64Var(&flags.nodeMinCount, "size-node-min-count", 0, "The minimum number of k8s worker nodes. Overwrites value from 'size'.")

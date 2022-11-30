@@ -10,11 +10,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 // Defaults
@@ -295,6 +294,7 @@ func newCmdClusterUpgrade(globalFlags clusterFlags) *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			cmd.SilenceUsage = true
+			uf.clusterUpgradeFlagChanged.addFlags(cmd)
 			return
 		},
 	}
