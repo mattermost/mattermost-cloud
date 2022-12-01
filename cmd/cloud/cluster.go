@@ -499,7 +499,7 @@ func newCmdClusterList() *cobra.Command {
 func executeClusterListCmd(lf clusterListFlags) error {
 	client := model.NewClient(lf.serverAddress)
 
-	paging := getPagingModel(lf.pagingFlags)
+	paging := getPaging(lf.pagingFlags)
 
 	clusters, err := client.GetClusters(&model.GetClustersRequest{
 		Paging: paging,
