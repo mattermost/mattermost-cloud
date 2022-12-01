@@ -634,16 +634,6 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
-	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = awsClient.DetachPolicyFromRole(iamRole, aws.CustomNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to detach custom node policy")
-	}
-	err = awsClient.DetachPolicyFromRole(iamRole, aws.VeleroNodePolicyName, logger)
-	if err != nil {
-		return errors.Wrap(err, "unable to detach velero node policy")
-	}
-
 	_, err = kopsClient.GetCluster(kopsMetadata.Name)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kops cluster for deletion")
@@ -673,6 +663,16 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 	err = terraformClient.Destroy()
 	if err != nil {
 		return errors.Wrap(err, "failed to run terraform destroy")
+	}
+
+	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
+	err = awsClient.DetachPolicyFromRole(iamRole, aws.CustomNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to detach custom node policy")
+	}
+	err = awsClient.DetachPolicyFromRole(iamRole, aws.VeleroNodePolicyName, logger)
+	if err != nil {
+		return errors.Wrap(err, "unable to detach velero node policy")
 	}
 
 	err = kopsClient.DeleteCluster(kopsMetadata.Name)
