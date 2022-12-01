@@ -342,6 +342,10 @@ func provisionCluster(
 		}
 	}
 
+	if err := createOrUpdateClusterSLOs(cluster, k8sClient, logger); err != nil {
+		return errors.Wrap(err, "failed to create cluster slos")
+	}
+
 	clusterName := cluster.ID
 	if cluster.ProvisionerMetadataKops != nil {
 		clusterName = cluster.ProvisionerMetadataKops.Name
