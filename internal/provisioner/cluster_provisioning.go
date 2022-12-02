@@ -344,8 +344,23 @@ func provisionCluster(
 		}
 	}
 
+	logger.Info("Ensuring cluster SLOs are present")
 	if err := createOrUpdateClusterSLOs(cluster, k8sClient, logger); err != nil {
 		return errors.Wrap(err, "failed to create cluster slos")
+	}
+
+	groups, err := store.GetGroupDTOs(&model.GroupFilter{
+		Paging: model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get groups to create slos")
+	}
+
+	logger.Infof("Ensuring %d Ring SLOs are present", len(groups))
+	for _, group := range groups {
+		if err := createOrUpdateRingSLOs(group, k8sClient, logger); err != nil {
+			return errors.Wrap(err, "failed to apply ring slo: "+group.ID)
+		}
 	}
 
 	clusterName := cluster.ID
