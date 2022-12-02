@@ -910,7 +910,7 @@ var migrations = []migration{
 					ID TEXT PRIMARY KEY,
 					RawInstallationIDs BYTEA NOT NULL,
 					CreateAt BIGINT NOT NULL,
-					DeleteAt BIGINT NOT NULL,             
+					DeleteAt BIGINT NOT NULL,
 					LockAcquiredBy CHAR(26) NULL,
 					LockAcquiredAt BIGINT NOT NULL
 				);
@@ -1086,7 +1086,7 @@ var migrations = []migration{
 				DatabaseType TEXT NOT NULL,
 				InstallationsRaw BYTEA NOT NULL,
 				CreateAt BIGINT NOT NULL,
-				DeleteAt BIGINT NOT NULL,             
+				DeleteAt BIGINT NOT NULL,
 				LockAcquiredBy CHAR(26) NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
@@ -1211,7 +1211,7 @@ var migrations = []migration{
 				RequestAt BIGINT NOT NULL,
 				StartAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL,
-				APISecurityLock BOOLEAN NOT NULL, 
+				APISecurityLock BOOLEAN NOT NULL,
 				LockAcquiredBy TEXT NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
@@ -1283,7 +1283,7 @@ var migrations = []migration{
 				InstallationsRaw BYTEA NOT NULL,
 				MigratedInstallationsRaw BYTEA NOT NULL,
 				CreateAt BIGINT NOT NULL,
-				DeleteAt BIGINT NOT NULL,             
+				DeleteAt BIGINT NOT NULL,
 				LockAcquiredBy CHAR(26) NULL,
 				LockAcquiredAt BIGINT NOT NULL
 			);
@@ -1753,7 +1753,7 @@ var migrations = []migration{
 				DomainName TEXT NOT NULL,
 				InstallationID TEXT NOT NULL,
 				IsPrimary BOOLEAN NOT NULL,
-				CreateAt BIGINT NOT NULL, 
+				CreateAt BIGINT NOT NULL,
 				DeleteAt BIGINT NOT NULL
 			);
 		`)
@@ -1980,6 +1980,39 @@ var migrations = []migration{
 		_, err := e.Exec(`
 			CREATE INDEX ix_InstallationDNS_InstallationID on InstallationDNS(InstallationID)
 		`)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}},
+	{semver.MustParse("0.39.0"), semver.MustParse("0.40.0"), func(e execer) error {
+		// Add index on Installation(DeleteAt)
+		_, err := e.Exec(`CREATE INDEX ix_Installation_DeleteAt on Installation(DeleteAt)`)
+		if err != nil {
+			return err
+		}
+
+		// Add index on Installation(State)
+		_, err = e.Exec(`CREATE INDEX ix_Installation_State on Installation(State)`)
+		if err != nil {
+			return err
+		}
+
+		// Add index on StateChangeEvent(EventID)
+		_, err = e.Exec(`CREATE INDEX ix_StateChangeEvent_EventID on StateChangeEvent(EventID)`)
+		if err != nil {
+			return err
+		}
+
+		// Add index on StateChangeEvent(ResourceID, NewState)
+		_, err = e.Exec(`CREATE INDEX ix_StateChangeEvent_ResourceID_NewState on StateChangeEvent(ResourceID, NewState)`)
+		if err != nil {
+			return err
+		}
+
+		// Add index on Event(Timestamp)
+		_, err = e.Exec(`CREATE INDEX ix_Event_Timestamp ON event (Timestamp)`)
 		if err != nil {
 			return err
 		}
