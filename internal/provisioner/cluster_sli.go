@@ -12,16 +12,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const objective = 99.5
+const (
+	slothServiceLevelTypeLabel        = "serviceLevelType"
+	slothServiceLevelTypeClusterValue = "cluster"
+	slothServiceLevelTypeRingValue    = "ring"
+	objective                         = 99.5
+)
+
+func makeRingSLOName(group *model.GroupDTO) string {
+	return group.Name + "-ring-" + group.ID
+}
 
 func makeRingSLOs(group *model.GroupDTO) slothv1.PrometheusServiceLevel {
-	resourceName := group.Name + "-ring-" + group.ID
+	resourceName := makeRingSLOName(group)
 	sli := slothv1.PrometheusServiceLevel{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourceName,
 			Labels: map[string]string{
-				"app":     "kube-prometheus-stack",
-				"release": "prometheus-operator",
+				"app":                      "kube-prometheus-stack",
+				"release":                  "prometheus-operator",
+				slothServiceLevelTypeLabel: slothServiceLevelTypeRingValue,
 			},
 		},
 		Spec: slothv1.PrometheusServiceLevelSpec{
@@ -55,8 +65,9 @@ func makeClusterSLOs(cluster *model.Cluster) slothv1.PrometheusServiceLevel {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: resourceName,
 			Labels: map[string]string{
-				"app":     "kube-prometheus-stack",
-				"release": "prometheus-operator",
+				"app":                      "kube-prometheus-stack",
+				"release":                  "prometheus-operator",
+				slothServiceLevelTypeLabel: slothServiceLevelTypeClusterValue,
 			},
 		},
 		Spec: slothv1.PrometheusServiceLevelSpec{
