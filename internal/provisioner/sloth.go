@@ -16,11 +16,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const prometheusNamespace = "prometheus"
+const (
+	prometheusNamespace  = "prometheus"
+	slothDefaultWaitTime = time.Second * 60
+)
 
 func createPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	wait := 60
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
 	defer cancel()
 	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Create(ctx, &psl, metav1.CreateOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
@@ -34,8 +36,7 @@ func createPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient 
 }
 
 func updatePrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	wait := 60
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
 	defer cancel()
 	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, psl.Name, metav1.GetOptions{})
 	if err != nil {
@@ -50,8 +51,7 @@ func updatePrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient 
 }
 
 func createOrUpdateClusterPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	wait := 60
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
 	defer cancel()
 	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, psl.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -74,8 +74,7 @@ func createOrUpdateClusterPrometheusServiceLevel(psl slothv1.PrometheusServiceLe
 }
 
 func deletePrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	wait := 60
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
 	defer cancel()
 	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, psl.Name, metav1.GetOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
