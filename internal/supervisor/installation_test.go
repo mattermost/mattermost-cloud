@@ -236,6 +236,10 @@ func (s *mockInstallationStore) DeleteInstallationDNS(installationID string, dns
 	return nil
 }
 
+func (s *mockInstallationStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.GroupDTO, error) {
+	return []*model.GroupDTO{{Group: &model.Group{ID: "group-id"}}}, nil
+}
+
 type mockMultitenantDBStore struct{}
 
 func (m *mockMultitenantDBStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {

@@ -146,6 +146,10 @@ func (m *mockDBMigrationStore) GetWebhooks(filter *model.WebhookFilter) ([]*mode
 	return nil, nil
 }
 
+func (m *mockDBMigrationStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.GroupDTO, error) {
+	panic("implement me")
+}
+
 type mockDatabase struct{}
 
 func (m *mockDatabase) TeardownMigrated(store model.InstallationDatabaseStoreInterface, migrationOp *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
