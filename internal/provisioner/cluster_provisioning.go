@@ -25,7 +25,9 @@ func provisionCluster(
 	kubeconfigPath string,
 	awsClient aws.AWS,
 	params ProvisioningParams,
-	logger logrus.FieldLogger) error {
+	store model.InstallationDatabaseStoreInterface,
+	logger logrus.FieldLogger,
+) error {
 
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.

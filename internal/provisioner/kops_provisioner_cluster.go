@@ -275,7 +275,7 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), awsClient, provisioner.params, logger)
+	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), awsClient, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.

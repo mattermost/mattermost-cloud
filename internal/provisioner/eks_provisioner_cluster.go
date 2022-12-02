@@ -195,7 +195,7 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 		return errors.Wrap(err, "failed to prepare kubeconfig file")
 	}
 
-	return provisionCluster(cluster, kubeconfigFile, awsClient, provisioner.params, logger)
+	return provisionCluster(cluster, kubeconfigFile, awsClient, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades EKS cluster - not implemented.
