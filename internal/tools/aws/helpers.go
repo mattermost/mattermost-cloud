@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -247,7 +247,7 @@ func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error
 // getVPCForInstallation returns a single VPC that the cluster installation of
 // the provided installation resides in. Installations with multiple cluster
 // installations are currently not supported.
-func getVPCForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (*ec2.Vpc, error) {
+func getVPCForInstallation(installationID string, store model.InstallationDatabaseStoreInterface, client *Client) (*ec2Types.Vpc, error) {
 	var isActive = true
 	clusterInstallations, err := store.GetClusterInstallations(&model.ClusterInstallationFilter{
 		Paging:         model.AllPagesWithDeleted(),
@@ -274,33 +274,33 @@ func getVPCForInstallation(installationID string, store model.InstallationDataba
 	return vpc, nil
 }
 
-func getVPCForCluster(clusterID string, client *Client) (*ec2.Vpc, error) {
-	vpcs, err := client.GetVpcsWithFilters([]*ec2.Filter{
+func getVPCForCluster(clusterID string, client *Client) (*ec2Types.Vpc, error) {
+	vpcs, err := client.GetVpcsWithFilters([]ec2Types.Filter{
 		{
 			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(clusterID)},
+			Values: []string{clusterID},
 		},
 		{
 			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			Values: []string{VpcAvailableTagValueFalse},
 		},
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to perform VPC lookup for cluster %s", clusterID)
 	}
 	if len(vpcs) == 1 {
-		return vpcs[0], nil
+		return &vpcs[0], nil
 	}
 
 	// Proceed to check if this is a secondary cluster.
-	vpcs, err = client.GetVpcsWithFilters([]*ec2.Filter{
+	vpcs, err = client.GetVpcsWithFilters([]ec2Types.Filter{
 		{
 			Name:   aws.String(VpcSecondaryClusterIDTagKey),
-			Values: []*string{aws.String(clusterID)},
+			Values: []string{clusterID},
 		},
 		{
 			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			Values: []string{VpcAvailableTagValueFalse},
 		},
 	})
 	if err != nil {
@@ -310,7 +310,7 @@ func getVPCForCluster(clusterID string, client *Client) (*ec2.Vpc, error) {
 		return nil, errors.Errorf("expected 1 VPC for cluster %s, but found %d", clusterID, len(vpcs))
 	}
 
-	return vpcs[0], nil
+	return &vpcs[0], nil
 }
 
 func ensureTagInTagset(key, value string, tags []*s3.Tag) bool {

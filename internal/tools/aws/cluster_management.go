@@ -5,10 +5,12 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -56,16 +58,16 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 		VpcCIDR: vpcCIDR,
 	}
 
-	baseFilter := []*ec2.Filter{
+	baseFilter := []ec2Types.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{aws.String(vpcID)},
+			Values: []string{vpcID},
 		},
 	}
 
-	privateSubnetFilter := append(baseFilter, &ec2.Filter{
+	privateSubnetFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:SubnetType"),
-		Values: []*string{aws.String("private")},
+		Values: []string{"private"},
 	})
 
 	privateSubnets, err := a.GetSubnetsWithFilters(privateSubnetFilter)
@@ -77,9 +79,9 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 		clusterResources.PrivateSubnetIDs = append(clusterResources.PrivateSubnetIDs, *subnet.SubnetId)
 	}
 
-	publicSubnetFilter := append(baseFilter, &ec2.Filter{
+	publicSubnetFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:SubnetType"),
-		Values: []*string{aws.String("public")},
+		Values: []string{"public"},
 	})
 
 	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
@@ -91,9 +93,9 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 		clusterResources.PublicSubnetsIDs = append(clusterResources.PublicSubnetsIDs, *subnet.SubnetId)
 	}
 
-	masterSGFilter := append(baseFilter, &ec2.Filter{
+	masterSGFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:NodeType"),
-		Values: []*string{aws.String("master")},
+		Values: []string{"master"},
 	})
 
 	masterSecurityGroups, err := a.GetSecurityGroupsWithFilters(masterSGFilter)
@@ -105,9 +107,9 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 		clusterResources.MasterSecurityGroupIDs = append(clusterResources.MasterSecurityGroupIDs, *securityGroup.GroupId)
 	}
 
-	workerSGFilter := append(baseFilter, &ec2.Filter{
+	workerSGFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:NodeType"),
-		Values: []*string{aws.String("worker")},
+		Values: []string{"worker"},
 	})
 
 	workerSecurityGroups, err := a.GetSecurityGroupsWithFilters(workerSGFilter)
@@ -119,9 +121,9 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 		clusterResources.WorkerSecurityGroupIDs = append(clusterResources.WorkerSecurityGroupIDs, *securityGroup.GroupId)
 	}
 
-	callsSGFilter := append(baseFilter, &ec2.Filter{
+	callsSGFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:NodeType"),
-		Values: []*string{aws.String("calls")},
+		Values: []string{"calls"},
 	})
 
 	callsSecurityGroups, err := a.GetSecurityGroupsWithFilters(callsSGFilter)
@@ -143,9 +145,14 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 
 // ClaimVPC claims specified VPC for specified cluster.
 func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
-	vpcOut, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{VpcIds: stringsToPtr([]string{vpcID})})
+	ctx := context.TODO()
+	vpcOut, err := a.Service().ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{VpcIds: []string{vpcID}})
 	if err != nil {
 		return ClusterResources{}, errors.Wrap(err, "failed to describe vpc")
+	}
+
+	if len(vpcOut.Vpcs) == 0 {
+		return ClusterResources{}, fmt.Errorf("couldn't find vpcs")
 	}
 
 	clusterResources, err := a.getClusterResourcesForVPC(vpcID, *vpcOut.Vpcs[0].CidrBlock, logger)
@@ -166,17 +173,17 @@ func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, lo
 func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
 	// First, check if a VPC has been claimed by this cluster. If only one has
 	// already been claimed, then return that with no error.
-	clusterAlreadyClaimedFilter := []*ec2.Filter{
+	clusterAlreadyClaimedFilter := []ec2Types.Filter{
 		{
 			Name: aws.String(VpcAvailableTagKey),
-			Values: []*string{
-				aws.String(VpcAvailableTagValueFalse),
+			Values: []string{
+				VpcAvailableTagValueFalse,
 			},
 		},
 		{
 			Name: aws.String(VpcClusterIDTagKey),
-			Values: []*string{
-				aws.String(cluster.ID),
+			Values: []string{
+				cluster.ID,
 			},
 		},
 	}
@@ -192,12 +199,12 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 	}
 
 	// This cluster has not already claimed a VPC. Continue with claiming process.
-	totalVpcsFilter := []*ec2.Filter{
+	totalVpcsFilter := []ec2Types.Filter{
 		{
 			Name: aws.String(VpcAvailableTagKey),
-			Values: []*string{
-				aws.String(VpcAvailableTagValueTrue),
-				aws.String(VpcAvailableTagValueFalse),
+			Values: []string{
+				VpcAvailableTagValueTrue,
+				VpcAvailableTagValueFalse,
 			},
 		},
 	}
@@ -207,10 +214,10 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 	}
 	totalVpcCount := len(totalVpcs)
 
-	vpcFilters := []*ec2.Filter{
+	vpcFilters := []ec2Types.Filter{
 		{
 			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueTrue)},
+			Values: []string{VpcAvailableTagValueTrue},
 		},
 	}
 
@@ -266,19 +273,18 @@ func (a *Client) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 // If that conditions are not met, we will try to set this cluster as secondary in the VPC only if
 // the `CloudSecondaryClusterID` is set to `none`.
 func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
-	var claimSecondaryCluster bool
-	vpcFilter := []*ec2.Filter{
+	vpcFilter := []ec2Types.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{aws.String(clusterResources.VpcID)},
+			Values: []string{clusterResources.VpcID},
 		},
 		{
 			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueTrue)},
+			Values: []string{VpcAvailableTagValueTrue},
 		},
 		{
 			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(VpcClusterIDTagValueNone)},
+			Values: []string{VpcClusterIDTagValueNone},
 		},
 	}
 	vpcs, err := a.GetVpcsWithFilters(vpcFilter)
@@ -287,22 +293,23 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 	}
 
 	numVPCs := len(vpcs)
+	var claimSecondaryCluster bool
 	if numVPCs > 1 {
 		return fmt.Errorf("query for VPC %s somehow returned multiple results", clusterResources.VpcID)
 	}
 	if numVPCs == 0 {
-		vpcFilter = []*ec2.Filter{
+		vpcFilter = []ec2Types.Filter{
 			{
 				Name:   aws.String("vpc-id"),
-				Values: []*string{aws.String(clusterResources.VpcID)},
+				Values: []string{clusterResources.VpcID},
 			},
 			{
 				Name:   aws.String(VpcAvailableTagKey),
-				Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+				Values: []string{VpcAvailableTagValueFalse},
 			},
 			{
 				Name:   aws.String(VpcSecondaryClusterIDTagKey),
-				Values: []*string{aws.String(VpcClusterIDTagValueNone)},
+				Values: []string{VpcClusterIDTagValueNone},
 			},
 		}
 
@@ -383,14 +390,14 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 // If any of the VPC checks either returns no VPCs or more than one VPC this method will fail.
 func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
 	var isSecondaryCluster bool = false
-	secondaryVpcFilters := []*ec2.Filter{
+	secondaryVpcFilters := []ec2Types.Filter{
 		{
 			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			Values: []string{VpcAvailableTagValueFalse},
 		},
 		{
 			Name:   aws.String(VpcSecondaryClusterIDTagKey),
-			Values: []*string{aws.String(cluster.ID)},
+			Values: []string{cluster.ID},
 		},
 	}
 	vpcs, err := a.GetVpcsWithFilters(secondaryVpcFilters)
@@ -403,14 +410,14 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 	}
 
 	if !isSecondaryCluster {
-		vpcFilters := []*ec2.Filter{
+		vpcFilters := []ec2Types.Filter{
 			{
 				Name:   aws.String(VpcAvailableTagKey),
-				Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+				Values: []string{VpcAvailableTagValueFalse},
 			},
 			{
 				Name:   aws.String(VpcClusterIDTagKey),
-				Values: []*string{aws.String(cluster.ID)},
+				Values: []string{cluster.ID},
 			},
 		}
 
@@ -434,14 +441,14 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 	}
 
 	vpc := vpcs[0]
-	publicSubnetFilter := []*ec2.Filter{
+	publicSubnetFilter := []ec2Types.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{vpc.VpcId},
+			Values: []string{*vpcs[0].VpcId},
 		},
 		{
 			Name:   aws.String("tag:SubnetType"),
-			Values: []*string{aws.String("public")},
+			Values: []string{"public"},
 		},
 	}
 
@@ -457,14 +464,14 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		}
 	}
 
-	callsSecurityGroupFilter := []*ec2.Filter{
+	callsSecurityGroupFilter := []ec2Types.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{vpc.VpcId},
+			Values: []string{*vpcs[0].VpcId},
 		},
 		{
 			Name:   aws.String("tag:NodeType"),
-			Values: []*string{aws.String("calls")},
+			Values: []string{"calls"},
 		},
 	}
 
@@ -542,13 +549,14 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 
 // GetVpcResourcesByVpcID retrieve the VPC information for a particulary cluster.
 func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error) {
+	ctx := context.TODO()
 	input := &ec2.DescribeVpcsInput{
-		VpcIds: []*string{
-			aws.String(vpcID),
+		VpcIds: []string{
+			vpcID,
 		},
 	}
 
-	vpcCidr, err := a.Service().ec2.DescribeVpcs(input)
+	vpcCidr, err := a.Service().ec2.DescribeVpcs(ctx, input)
 	if err != nil {
 		return ClusterResources{}, errors.Wrapf(err, "failed to fetch the VPC information using VPC ID %s", vpcID)
 	}

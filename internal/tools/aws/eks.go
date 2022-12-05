@@ -5,10 +5,12 @@
 package aws
 
 import (
+	"context"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -16,10 +18,12 @@ import (
 
 // CreateEKSCluster creates EKS cluster.
 func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
+	ctx := context.TODO()
+
 	// TODO: we do not expect to query that many subnets but for safety
 	// we can check the NextToken.
-	subnetsOut, err := a.Service().ec2.DescribeSubnets(&ec2.DescribeSubnetsInput{
-		SubnetIds: stringsToPtr(resources.PublicSubnetsIDs),
+	subnetsOut, err := a.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+		SubnetIds: resources.PublicSubnetsIDs,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe subnets")
@@ -37,7 +41,7 @@ func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResou
 	vpcConfig := eks.VpcConfigRequest{
 		EndpointPrivateAccess: nil,
 		EndpointPublicAccess:  nil,
-		SecurityGroupIds:      stringsToPtr(resources.MasterSecurityGroupIDs),
+		SecurityGroupIds:      aws.StringSlice(resources.MasterSecurityGroupIDs),
 		SubnetIds:             subnetsIDs,
 	}
 
@@ -113,7 +117,9 @@ func (a *Client) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mod
 		return errors.Wrap(err, "failed to get EKS Postgres IP permissions")
 	}
 
-	_, err = a.Service().ec2.AuthorizeSecurityGroupIngress(&ec2.AuthorizeSecurityGroupIngressInput{
+	ctx := context.TODO()
+
+	_, err = a.Service().ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId:       postgresSG.GroupId,
 		IpPermissions: ipPermissions,
 	})
@@ -151,7 +157,9 @@ func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mo
 		return errors.Wrap(err, "failed to get EKS Postgres IP permissions")
 	}
 
-	_, err = a.Service().ec2.RevokeSecurityGroupIngress(&ec2.RevokeSecurityGroupIngressInput{
+	ctx := context.TODO()
+
+	_, err = a.Service().ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
 		GroupId:       postgresSG.GroupId,
 		IpPermissions: ipPermissions,
 	})
@@ -164,11 +172,12 @@ func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mo
 	return nil
 }
 
-func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2.SecurityGroup, error) {
-	securityGroupsResp, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2Types.SecurityGroup, error) {
+	ctx := context.TODO()
+	securityGroupsResp, err := a.Service().ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 		DryRun: nil,
-		Filters: []*ec2.Filter{
-			{Name: aws.String("vpc-id"), Values: []*string{&vpcID}},
+		Filters: []ec2Types.Filter{
+			{Name: aws.String("vpc-id"), Values: []string{vpcID}},
 		},
 		// TODO: make sure to list all
 	})
@@ -176,10 +185,10 @@ func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2.SecurityGroup, err
 		return nil, errors.Wrap(err, "failed to describe security groups for VPC")
 	}
 
-	var postgresSG *ec2.SecurityGroup
+	var postgresSG *ec2Types.SecurityGroup
 	for _, sg := range securityGroupsResp.SecurityGroups {
 		if strings.HasSuffix(*sg.GroupName, "-db-postgresql-sg") {
-			postgresSG = sg
+			postgresSG = &sg
 			break
 		}
 	}
@@ -190,14 +199,14 @@ func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2.SecurityGroup, err
 	return postgresSG, nil
 }
 
-func (a *Client) getEKSPostgresIPPermissions(cluster *eks.Cluster) ([]*ec2.IpPermission, error) {
+func (a *Client) getEKSPostgresIPPermissions(cluster *eks.Cluster) ([]ec2Types.IpPermission, error) {
 	eksSecurityGroup := cluster.ResourcesVpcConfig.ClusterSecurityGroupId
 
-	return []*ec2.IpPermission{{
-		FromPort:   aws.Int64(5432),
+	return []ec2Types.IpPermission{{
+		FromPort:   aws.Int32(5432),
 		IpProtocol: aws.String("tcp"),
-		ToPort:     aws.Int64(5432),
-		UserIdGroupPairs: []*ec2.UserIdGroupPair{
+		ToPort:     aws.Int32(5432),
+		UserIdGroupPairs: []ec2Types.UserIdGroupPair{
 			{GroupId: eksSecurityGroup, Description: aws.String("EKS permission")},
 		},
 	}}, nil
@@ -252,7 +261,6 @@ func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources
 
 		out, err := a.Service().eks.CreateNodegroup(&nodeGroupReq)
 		if err != nil {
-
 			return nil, errors.Wrap(err, "failed to create one of the node groups")
 		}
 

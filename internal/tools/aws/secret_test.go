@@ -13,7 +13,6 @@ import (
 )
 
 func TestInstallationDBSecret_ToK8sSecret(t *testing.T) {
-
 	for _, testCase := range []struct {
 		description        string
 		installationSecret InstallationDBSecret
@@ -83,5 +82,4 @@ func TestInstallationDBSecret_ToK8sSecret(t *testing.T) {
 			assert.Equal(t, testCase.expectedSecret, k8sSecret)
 		})
 	}
-
 }

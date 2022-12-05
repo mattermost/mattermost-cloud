@@ -7,7 +7,7 @@ package aws
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/stretchr/testify/assert"
 )
@@ -80,7 +80,7 @@ func TestTagsASEC2Tags(t *testing.T) {
 	tags, err := NewTags(key, value, key2, value2)
 	assert.NoError(t, err)
 	result := tags.ToEC2Tags()
-	assert.Subset(t, []*ec2.Tag{
+	assert.Subset(t, []ec2Types.Tag{
 		{
 			Key:   &key,
 			Value: &value,

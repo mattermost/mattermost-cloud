@@ -5,9 +5,12 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -85,7 +88,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupSGNotFoundError() {
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("sg-123-id-master").Times(1),
-		a.SetDescribeSecurityGroupsExpectation("vpc-123-master", "vpc-sg-123-id-master", &ec2.Tag{
+		a.SetDescribeSecurityGroupsExpectation("vpc-123-master", "vpc-sg-123-id-master", ec2Types.Tag{
 			Key:   aws.String("dummy_tag)"),
 			Value: aws.String(DefaultDBSecurityGroupTagMySQLValue),
 		}).Times(1),
@@ -167,7 +170,7 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownSGNotFoundError() {
 
 	gomock.InOrder(
 		a.SetDescribeDBInstancesExpectation("123-id-master").Times(1),
-		a.SetDescribeSecurityGroupsExpectation("vpc-sg-123-master", "vpc-sg-123-id-master", &ec2.Tag{
+		a.SetDescribeSecurityGroupsExpectation("vpc-sg-123-master", "vpc-sg-123-id-master", ec2Types.Tag{
 			Key:   aws.String("dummy_tag)"),
 			Value: aws.String(DefaultDBSecurityGroupTagMySQLValue),
 		}).Times(1),
@@ -193,36 +196,36 @@ func (a *AWSTestSuite) SetDescribeDBInstancesExpectation(vpcSecurityGroupID stri
 		}, nil)
 }
 
-func (a *AWSTestSuite) SetDescribeSecurityGroupsExpectation(groupID, groupName string, tag *ec2.Tag) *gomock.Call {
-	return a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any()).
+func (a *AWSTestSuite) SetDescribeSecurityGroupsExpectation(groupID, groupName string, tag ec2Types.Tag) *gomock.Call {
+	return a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), gomock.Any()).
 		Return(&ec2.DescribeSecurityGroupsOutput{
-			SecurityGroups: []*ec2.SecurityGroup{{
+			SecurityGroups: []ec2Types.SecurityGroup{{
 				GroupId:   aws.String(groupID),
 				GroupName: aws.String(groupName),
-				Tags:      []*ec2.Tag{tag},
+				Tags:      []ec2Types.Tag{tag},
 			}},
 		}, nil)
 }
 
 func (a *AWSTestSuite) SetAuthorizeSecurityGroupIngress(description, groupIDMaster, groupIDSlave string) *gomock.Call {
-	return a.Mocks.API.EC2.EXPECT().AuthorizeSecurityGroupIngress(gomock.Any()).
-		Do(func(input *ec2.AuthorizeSecurityGroupIngressInput) {
+	return a.Mocks.API.EC2.EXPECT().AuthorizeSecurityGroupIngress(gomock.Any(), gomock.Any()).
+		Do(func(ctx context.Context, input *ec2.AuthorizeSecurityGroupIngressInput, optFns ...func(*ec2.Options)) {
 			a.Assert().Equal(description, *input.IpPermissions[0].UserIdGroupPairs[0].Description)
 			a.Assert().Equal(groupIDSlave, *input.IpPermissions[0].UserIdGroupPairs[0].GroupId)
 			a.Assert().Equal(groupIDMaster, *input.GroupId)
 			a.Assert().Equal("tcp", *input.IpPermissions[0].IpProtocol)
-			a.Assert().Equal(int64(3306), *input.IpPermissions[0].ToPort)
-			a.Assert().Equal(int64(3306), *input.IpPermissions[0].FromPort)
+			a.Assert().Equal(int32(3306), *input.IpPermissions[0].ToPort)
+			a.Assert().Equal(int32(3306), *input.IpPermissions[0].FromPort)
 		})
 }
 
 func (a *AWSTestSuite) SetRevokeSecurityGroupIngress(description, groupIDMaster, groupIDSlave string) *gomock.Call {
-	return a.Mocks.API.EC2.EXPECT().RevokeSecurityGroupIngress(gomock.Any()).
-		Do(func(input *ec2.RevokeSecurityGroupIngressInput) {
+	return a.Mocks.API.EC2.EXPECT().RevokeSecurityGroupIngress(gomock.Any(), gomock.Any()).
+		Do(func(ctx context.Context, input *ec2.RevokeSecurityGroupIngressInput, optFns ...func(*ec2.Options)) {
 			a.Assert().Equal(groupIDSlave, *input.IpPermissions[0].UserIdGroupPairs[0].GroupId)
 			a.Assert().Equal(groupIDMaster, *input.GroupId)
 			a.Assert().Equal("tcp", *input.IpPermissions[0].IpProtocol)
-			a.Assert().Equal(int64(3306), *input.IpPermissions[0].ToPort)
-			a.Assert().Equal(int64(3306), *input.IpPermissions[0].FromPort)
+			a.Assert().Equal(int32(3306), *input.IpPermissions[0].ToPort)
+			a.Assert().Equal(int32(3306), *input.IpPermissions[0].FromPort)
 		})
 }
