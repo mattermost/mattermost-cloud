@@ -4,14 +4,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type globalFlags struct {
+func setClusterFlags(command *cobra.Command) {
+	command.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+	command.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
+}
+
+type clusterFlags struct {
 	serverAddress string
 	dryRun        bool
 }
 
-func (flags *globalFlags) addFlags(command *cobra.Command) {
-	command.PersistentFlags().StringVar(&flags.serverAddress, "server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
-	command.PersistentFlags().BoolVar(&flags.dryRun, "dry-run", false, "When set to true, only print the API request without sending it.")
+func (flags *clusterFlags) addFlags(command *cobra.Command) {
+	flags.serverAddress, _ = command.Flags().GetString("server")
+	flags.dryRun, _ = command.Flags().GetBool("dry-run")
 }
 
 type createRequestOptions struct {
@@ -129,7 +134,7 @@ func (flags *sizeOptions) addFlags(command *cobra.Command) {
 }
 
 type clusterCreateFlags struct {
-	globalFlags
+	clusterFlags
 	createRequestOptions
 	eksFlags
 	utilityFlags
@@ -147,7 +152,7 @@ func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterProvisionFlags struct {
-	globalFlags
+	clusterFlags
 	utilityFlags
 	cluster                 string
 	reprovisionAllUtilities bool
@@ -163,7 +168,7 @@ func (flags *clusterProvisionFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterUpdateFlags struct {
-	globalFlags
+	clusterFlags
 	cluster            string
 	allowInstallations bool
 }
@@ -208,7 +213,7 @@ func (flags *clusterUpgradeFlagChanged) addFlags(command *cobra.Command) {
 }
 
 type clusterUpgradeFlags struct {
-	globalFlags
+	clusterFlags
 	rotatorConfig
 	clusterUpgradeFlagChanged
 	cluster        string
@@ -229,7 +234,7 @@ func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterResizeFlags struct {
-	globalFlags
+	clusterFlags
 	rotatorConfig
 	cluster          string
 	size             string
@@ -251,7 +256,7 @@ func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterDeleteFlags struct {
-	globalFlags
+	clusterFlags
 	cluster string
 }
 
@@ -261,7 +266,7 @@ func (flags *clusterDeleteFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterGetFlags struct {
-	globalFlags
+	clusterFlags
 	cluster string
 }
 
@@ -293,7 +298,7 @@ func (flags *tableOptions) addFlags(command *cobra.Command) {
 }
 
 type clusterListFlags struct {
-	globalFlags
+	clusterFlags
 	pagingFlags
 	tableOptions
 }
@@ -304,7 +309,7 @@ func (flags *clusterListFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterUtilitiesFlags struct {
-	globalFlags
+	clusterFlags
 	cluster string
 }
 
