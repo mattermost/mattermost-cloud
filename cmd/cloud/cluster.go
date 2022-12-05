@@ -28,20 +28,24 @@ const (
 )
 
 func newCmdCluster() *cobra.Command {
+	var globalFlags globalFlags
+
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Manipulate clusters managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdClusterCreate())
-	cmd.AddCommand(newCmdClusterProvision())
-	cmd.AddCommand(newCmdClusterUpdate())
-	cmd.AddCommand(newCmdClusterUpgrade())
-	cmd.AddCommand(newCmdClusterResize())
-	cmd.AddCommand(newCmdClusterDelete())
-	cmd.AddCommand(newCmdClusterGet())
-	cmd.AddCommand(newCmdClusterList())
-	cmd.AddCommand(newCmdClusterUtilities())
+	globalFlags.addFlags(cmd)
+
+	cmd.AddCommand(newCmdClusterCreate(&globalFlags))
+	cmd.AddCommand(newCmdClusterProvision(&globalFlags))
+	cmd.AddCommand(newCmdClusterUpdate(&globalFlags))
+	cmd.AddCommand(newCmdClusterUpgrade(&globalFlags))
+	cmd.AddCommand(newCmdClusterResize(&globalFlags))
+	cmd.AddCommand(newCmdClusterDelete(&globalFlags))
+	cmd.AddCommand(newCmdClusterGet(&globalFlags))
+	cmd.AddCommand(newCmdClusterList(&globalFlags))
+	cmd.AddCommand(newCmdClusterUtilities(&globalFlags))
 
 	cmd.AddCommand(newCmdClusterSizeDictionary())
 	cmd.AddCommand(newCmdClusterShowStateReport())
@@ -71,7 +75,7 @@ func getRotatorConfigFromFlags(rc rotatorConfig) model.RotatorConfig {
 	}
 }
 
-func newCmdClusterCreate() *cobra.Command {
+func newCmdClusterCreate(globalFlags *globalFlags) *cobra.Command {
 	var cf clusterCreateFlags
 
 	cmd := &cobra.Command{
@@ -80,9 +84,13 @@ func newCmdClusterCreate() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterCreateCmd(cf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			cf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	cf.addFlags(cmd)
@@ -91,6 +99,7 @@ func newCmdClusterCreate() *cobra.Command {
 }
 
 func executeClusterCreateCmd(cf clusterCreateFlags) error {
+
 	client := model.NewClient(cf.serverAddress)
 
 	if cf.cluster != "" {
@@ -180,7 +189,7 @@ func executeClusterCreateCmd(cf clusterCreateFlags) error {
 
 }
 
-func newCmdClusterProvision() *cobra.Command {
+func newCmdClusterProvision(globalFlags *globalFlags) *cobra.Command {
 	var pf clusterProvisionFlags
 
 	cmd := &cobra.Command{
@@ -189,9 +198,13 @@ func newCmdClusterProvision() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterProvisionCmd(pf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			pf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	pf.addFlags(cmd)
@@ -230,7 +243,7 @@ func executeClusterProvisionCmd(pf clusterProvisionFlags) error {
 
 }
 
-func newCmdClusterUpdate() *cobra.Command {
+func newCmdClusterUpdate(globalFlags *globalFlags) *cobra.Command {
 	var uf clusterUpdateFlags
 
 	cmd := &cobra.Command{
@@ -239,9 +252,13 @@ func newCmdClusterUpdate() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterUpdateCmd(uf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			uf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	uf.addFlags(cmd)
@@ -280,7 +297,7 @@ func executeClusterUpdateCmd(uf clusterUpdateFlags) error {
 
 }
 
-func newCmdClusterUpgrade() *cobra.Command {
+func newCmdClusterUpgrade(globalFlags *globalFlags) *cobra.Command {
 	var uf clusterUpgradeFlags
 
 	cmd := &cobra.Command{
@@ -289,10 +306,13 @@ func newCmdClusterUpgrade() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterUpgradeCmd(uf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			uf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			uf.clusterUpgradeFlagChanged.addFlags(cmd)
-			return
+			return nil
 		},
 	}
 	uf.addFlags(cmd)
@@ -341,7 +361,7 @@ func executeClusterUpgradeCmd(uf clusterUpgradeFlags) error {
 
 }
 
-func newCmdClusterResize() *cobra.Command {
+func newCmdClusterResize(globalFlags *globalFlags) *cobra.Command {
 	var rf clusterResizeFlags
 
 	cmd := &cobra.Command{
@@ -350,9 +370,13 @@ func newCmdClusterResize() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterResizeCmd(rf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			rf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	rf.addFlags(cmd)
@@ -410,7 +434,7 @@ func executeClusterResizeCmd(rf clusterResizeFlags) error {
 
 }
 
-func newCmdClusterDelete() *cobra.Command {
+func newCmdClusterDelete(globalFlags *globalFlags) *cobra.Command {
 	var df clusterDeleteFlags
 
 	cmd := &cobra.Command{
@@ -419,9 +443,13 @@ func newCmdClusterDelete() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterDeleteCmd(df)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			df.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	df.addFlags(cmd)
@@ -440,7 +468,7 @@ func executeClusterDeleteCmd(df clusterDeleteFlags) error {
 	return nil
 }
 
-func newCmdClusterGet() *cobra.Command {
+func newCmdClusterGet(globalFlags *globalFlags) *cobra.Command {
 	var gf clusterGetFlags
 
 	cmd := &cobra.Command{
@@ -449,9 +477,13 @@ func newCmdClusterGet() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterGetCmd(gf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			gf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	gf.addFlags(cmd)
@@ -477,7 +509,7 @@ func executeClusterGetCmd(gf clusterGetFlags) error {
 	return nil
 }
 
-func newCmdClusterList() *cobra.Command {
+func newCmdClusterList(globalFlags *globalFlags) *cobra.Command {
 	var lf clusterListFlags
 
 	cmd := &cobra.Command{
@@ -486,9 +518,13 @@ func newCmdClusterList() *cobra.Command {
 		RunE: func(command *cobra.Command, args []string) error {
 			return executeClusterListCmd(lf)
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			lf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	lf.addFlags(cmd)
@@ -561,7 +597,7 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 	return keys, values
 }
 
-func newCmdClusterUtilities() *cobra.Command {
+func newCmdClusterUtilities(globalFlags *globalFlags) *cobra.Command {
 	var uf clusterUtilitiesFlags
 
 	cmd := &cobra.Command{
@@ -581,9 +617,13 @@ func newCmdClusterUtilities() *cobra.Command {
 
 			return nil
 		},
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if globalFlags == nil {
+				return errors.New("invalid global flagset")
+			}
+			uf.globalFlags = *globalFlags
 			cmd.SilenceUsage = true
-			return
+			return nil
 		},
 	}
 	uf.addFlags(cmd)

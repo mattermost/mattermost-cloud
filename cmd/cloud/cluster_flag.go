@@ -1,13 +1,15 @@
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
-type clusterFlags struct {
+type globalFlags struct {
 	serverAddress string
 	dryRun        bool
 }
 
-func (flags *clusterFlags) addFlags(command *cobra.Command) {
+func (flags *globalFlags) addFlags(command *cobra.Command) {
 	command.PersistentFlags().StringVar(&flags.serverAddress, "server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 	command.PersistentFlags().BoolVar(&flags.dryRun, "dry-run", false, "When set to true, only print the API request without sending it.")
 }
@@ -127,7 +129,7 @@ func (flags *sizeOptions) addFlags(command *cobra.Command) {
 }
 
 type clusterCreateFlags struct {
-	clusterFlags
+	globalFlags
 	createRequestOptions
 	eksFlags
 	utilityFlags
@@ -136,7 +138,6 @@ type clusterCreateFlags struct {
 }
 
 func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	flags.createRequestOptions.addFlags(command)
 	flags.eksFlags.addFlags(command)
 	flags.utilityFlags.addFlags(command)
@@ -146,14 +147,13 @@ func (flags *clusterCreateFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterProvisionFlags struct {
-	clusterFlags
+	globalFlags
 	utilityFlags
 	cluster                 string
 	reprovisionAllUtilities bool
 }
 
 func (flags *clusterProvisionFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	flags.utilityFlags.addFlags(command)
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be provisioned.")
@@ -163,14 +163,12 @@ func (flags *clusterProvisionFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterUpdateFlags struct {
-	clusterFlags
+	globalFlags
 	cluster            string
 	allowInstallations bool
 }
 
 func (flags *clusterUpdateFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
-
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be updated.")
 	command.Flags().BoolVar(&flags.allowInstallations, "allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 
@@ -210,7 +208,7 @@ func (flags *clusterUpgradeFlagChanged) addFlags(command *cobra.Command) {
 }
 
 type clusterUpgradeFlags struct {
-	clusterFlags
+	globalFlags
 	rotatorConfig
 	clusterUpgradeFlagChanged
 	cluster        string
@@ -220,7 +218,6 @@ type clusterUpgradeFlags struct {
 }
 
 func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	flags.rotatorConfig.addFlags(command)
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be upgraded.")
@@ -232,7 +229,7 @@ func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterResizeFlags struct {
-	clusterFlags
+	globalFlags
 	rotatorConfig
 	cluster          string
 	size             string
@@ -242,7 +239,6 @@ type clusterResizeFlags struct {
 }
 
 func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	flags.rotatorConfig.addFlags(command)
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be resized.")
@@ -255,23 +251,21 @@ func (flags *clusterResizeFlags) addFlags(command *cobra.Command) {
 }
 
 type clusterDeleteFlags struct {
-	clusterFlags
+	globalFlags
 	cluster string
 }
 
 func (flags *clusterDeleteFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be deleted.")
 	_ = command.MarkFlagRequired("cluster")
 }
 
 type clusterGetFlags struct {
-	clusterFlags
+	globalFlags
 	cluster string
 }
 
 func (flags *clusterGetFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be fetched.")
 	_ = command.MarkFlagRequired("cluster")
 }
@@ -299,24 +293,22 @@ func (flags *tableOptions) addFlags(command *cobra.Command) {
 }
 
 type clusterListFlags struct {
-	clusterFlags
+	globalFlags
 	pagingFlags
 	tableOptions
 }
 
 func (flags *clusterListFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	flags.pagingFlags.addFlags(command)
 	flags.tableOptions.addFlags(command)
 }
 
 type clusterUtilitiesFlags struct {
-	clusterFlags
+	globalFlags
 	cluster string
 }
 
 func (flags *clusterUtilitiesFlags) addFlags(command *cobra.Command) {
-	flags.clusterFlags.addFlags(command)
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster whose utilities are to be fetched.")
 	_ = command.MarkFlagRequired("cluster")
 }
