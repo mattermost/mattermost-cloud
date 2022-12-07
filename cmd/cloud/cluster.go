@@ -33,6 +33,8 @@ func newCmdCluster() *cobra.Command {
 		Short: "Manipulate clusters managed by the provisioning server.",
 	}
 
+	setClusterFlags(cmd)
+
 	cmd.AddCommand(newCmdClusterCreate())
 	cmd.AddCommand(newCmdClusterProvision())
 	cmd.AddCommand(newCmdClusterUpdate())
@@ -72,29 +74,30 @@ func getRotatorConfigFromFlags(rc rotatorConfig) model.RotatorConfig {
 }
 
 func newCmdClusterCreate() *cobra.Command {
-	var cf clusterCreateFlags
+	var flags clusterCreateFlags
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterCreateCmd(cf)
+			command.SilenceUsage = true
+			return executeClusterCreateCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	cf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterCreateCmd(cf clusterCreateFlags) error {
-	client := model.NewClient(cf.serverAddress)
+func executeClusterCreateCmd(flags clusterCreateFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
-	if cf.cluster != "" {
-		err := client.RetryCreateCluster(cf.cluster)
+	if flags.cluster != "" {
+		err := client.RetryCreateCluster(flags.cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to retry cluster creation")
 		}
@@ -102,19 +105,19 @@ func executeClusterCreateCmd(cf clusterCreateFlags) error {
 	}
 
 	request := &model.CreateClusterRequest{
-		Provider:               cf.provider,
-		Version:                cf.version,
-		KopsAMI:                cf.kopsAMI,
-		Zones:                  strings.Split(cf.zones, ","),
-		AllowInstallations:     cf.allowInstallations,
-		DesiredUtilityVersions: processUtilityFlags(cf.utilityFlags),
-		Annotations:            cf.annotations,
-		Networking:             cf.networking,
-		VPC:                    cf.vpc,
+		Provider:               flags.provider,
+		Version:                flags.version,
+		KopsAMI:                flags.kopsAMI,
+		Zones:                  strings.Split(flags.zones, ","),
+		AllowInstallations:     flags.allowInstallations,
+		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
+		Annotations:            flags.annotations,
+		Networking:             flags.networking,
+		VPC:                    flags.vpc,
 	}
 
-	if cf.useEKS {
-		nodeGroupsConfigRaw, err := os.ReadFile(cf.eksNodeGroupsConfig)
+	if flags.useEKS {
+		nodeGroupsConfigRaw, err := os.ReadFile(flags.eksNodeGroupsConfig)
 		if err != nil {
 			return errors.Wrap(err, "failed to read node groups config")
 		}
@@ -124,40 +127,40 @@ func executeClusterCreateCmd(cf clusterCreateFlags) error {
 			return errors.Wrap(err, "failed to unmarshal node groups config")
 		}
 		request.EKSConfig = &model.EKSConfig{
-			ClusterRoleARN: &cf.eksRoleArn,
+			ClusterRoleARN: &flags.eksRoleArn,
 			NodeGroups:     nodeGroupsConfig,
 		}
 	}
 
-	err := clusterdictionary.ApplyToCreateClusterRequest(cf.size, request)
+	err := clusterdictionary.ApplyToCreateClusterRequest(flags.size, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply size values")
 	}
 
-	if len(cf.masterInstanceType) != 0 {
-		request.MasterInstanceType = cf.masterInstanceType
+	if len(flags.masterInstanceType) != 0 {
+		request.MasterInstanceType = flags.masterInstanceType
 	}
 
-	if cf.masterCount != 0 {
-		request.MasterCount = cf.masterCount
+	if flags.masterCount != 0 {
+		request.MasterCount = flags.masterCount
 	}
 
-	if len(cf.nodeInstanceType) != 0 {
-		request.NodeInstanceType = cf.nodeInstanceType
+	if len(flags.nodeInstanceType) != 0 {
+		request.NodeInstanceType = flags.nodeInstanceType
 	}
 
-	if cf.nodeCount != 0 {
+	if flags.nodeCount != 0 {
 		// Setting different min and max counts in currently not supported
 		// with the kops create cluster flag.
-		request.NodeMinCount = cf.nodeCount
-		request.NodeMaxCount = cf.nodeCount
+		request.NodeMinCount = flags.nodeCount
+		request.NodeMaxCount = flags.nodeCount
 	}
 
-	if cf.maxPodsPerNode != 0 {
-		request.MaxPodsPerNode = cf.maxPodsPerNode
+	if flags.maxPodsPerNode != 0 {
+		request.MaxPodsPerNode = flags.maxPodsPerNode
 	}
 
-	if cf.dryRun {
+	if flags.dryRun {
 		err = printJSON(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to print API request")
@@ -181,33 +184,34 @@ func executeClusterCreateCmd(cf clusterCreateFlags) error {
 }
 
 func newCmdClusterProvision() *cobra.Command {
-	var pf clusterProvisionFlags
+	var flags clusterProvisionFlags
 
 	cmd := &cobra.Command{
 		Use:   "provision",
 		Short: "Provision/Re-provision a cluster's k8s resources.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterProvisionCmd(pf)
+			command.SilenceUsage = true
+			return executeClusterProvisionCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	pf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterProvisionCmd(pf clusterProvisionFlags) error {
-	client := model.NewClient(pf.serverAddress)
+func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
 	request := &model.ProvisionClusterRequest{
-		Force:                  pf.reprovisionAllUtilities,
-		DesiredUtilityVersions: processUtilityFlags(pf.utilityFlags),
+		Force:                  flags.reprovisionAllUtilities,
+		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
 	}
 
-	if pf.dryRun {
+	if flags.dryRun {
 		err := printJSON(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to print API request")
@@ -216,7 +220,7 @@ func executeClusterProvisionCmd(pf clusterProvisionFlags) error {
 		return nil
 	}
 
-	cluster, err := client.ProvisionCluster(pf.cluster, request)
+	cluster, err := client.ProvisionCluster(flags.cluster, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to provision cluster")
 	}
@@ -231,33 +235,34 @@ func executeClusterProvisionCmd(pf clusterProvisionFlags) error {
 }
 
 func newCmdClusterUpdate() *cobra.Command {
-	var uf clusterUpdateFlags
+	var flags clusterUpdateFlags
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Updates a cluster's configuration.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterUpdateCmd(uf)
+			command.SilenceUsage = true
+			return executeClusterUpdateCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	uf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterUpdateCmd(uf clusterUpdateFlags) error {
+func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
 
-	client := model.NewClient(uf.serverAddress)
+	client := model.NewClient(flags.serverAddress)
 
 	request := &model.UpdateClusterRequest{
-		AllowInstallations: uf.allowInstallations,
+		AllowInstallations: flags.allowInstallations,
 	}
 
-	if uf.dryRun {
+	if flags.dryRun {
 		err := printJSON(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to print API request")
@@ -266,7 +271,7 @@ func executeClusterUpdateCmd(uf clusterUpdateFlags) error {
 		return nil
 	}
 
-	cluster, err := client.UpdateCluster(uf.cluster, request)
+	cluster, err := client.UpdateCluster(flags.cluster, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster")
 	}
@@ -281,44 +286,45 @@ func executeClusterUpdateCmd(uf clusterUpdateFlags) error {
 }
 
 func newCmdClusterUpgrade() *cobra.Command {
-	var uf clusterUpgradeFlags
+	var flags clusterUpgradeFlags
 
 	cmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade k8s on a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterUpgradeCmd(uf)
+			command.SilenceUsage = true
+			return executeClusterUpgradeCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
-			uf.clusterUpgradeFlagChanged.addFlags(cmd)
+			flags.clusterFlags.addFlags(cmd)
+			flags.clusterUpgradeFlagChanged.addFlags(cmd)
 			return
 		},
 	}
-	uf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterUpgradeCmd(uf clusterUpgradeFlags) error {
-	client := model.NewClient(uf.serverAddress)
+func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
-	rotatorConfig := getRotatorConfigFromFlags(uf.rotatorConfig)
+	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
 	request := &model.PatchUpgradeClusterRequest{
 		RotatorConfig: &rotatorConfig,
 	}
 
-	if uf.isVersionChanged {
-		request.Version = &uf.version
+	if flags.isVersionChanged {
+		request.Version = &flags.version
 	}
-	if uf.isKopsAmiChanged {
-		request.KopsAMI = &uf.kopsAMI
+	if flags.isKopsAmiChanged {
+		request.KopsAMI = &flags.kopsAMI
 	}
-	if uf.isMaxPodsPerNodeChanged {
-		request.MaxPodsPerNode = &uf.maxPodsPerNode
+	if flags.isMaxPodsPerNodeChanged {
+		request.MaxPodsPerNode = &flags.maxPodsPerNode
 	}
-	if uf.dryRun {
+	if flags.dryRun {
 		err := printJSON(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to print API request")
@@ -327,7 +333,7 @@ func executeClusterUpgradeCmd(uf clusterUpgradeFlags) error {
 		return nil
 	}
 
-	cluster, err := client.UpgradeCluster(uf.cluster, request)
+	cluster, err := client.UpgradeCluster(flags.cluster, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to upgrade cluster")
 	}
@@ -342,52 +348,53 @@ func executeClusterUpgradeCmd(uf clusterUpgradeFlags) error {
 }
 
 func newCmdClusterResize() *cobra.Command {
-	var rf clusterResizeFlags
+	var flags clusterResizeFlags
 
 	cmd := &cobra.Command{
 		Use:   "resize",
 		Short: "Resize a k8s cluster",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterResizeCmd(rf)
+			command.SilenceUsage = true
+			return executeClusterResizeCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	rf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterResizeCmd(rf clusterResizeFlags) error {
-	client := model.NewClient(rf.serverAddress)
+func executeClusterResizeCmd(flags clusterResizeFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
-	rotatorConfig := getRotatorConfigFromFlags(rf.rotatorConfig)
+	rotatorConfig := getRotatorConfigFromFlags(flags.rotatorConfig)
 
 	request := &model.PatchClusterSizeRequest{
 		RotatorConfig: &rotatorConfig,
 	}
 
 	// Apply values from 'size' constant and then apply overrides.
-	err := clusterdictionary.ApplyToPatchClusterSizeRequest(rf.size, request)
+	err := clusterdictionary.ApplyToPatchClusterSizeRequest(flags.size, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply size values")
 	}
 
-	if len(rf.nodeInstanceType) != 0 {
-		request.NodeInstanceType = &rf.nodeInstanceType
+	if len(flags.nodeInstanceType) != 0 {
+		request.NodeInstanceType = &flags.nodeInstanceType
 	}
 
-	if rf.nodeMinCount != 0 {
-		request.NodeMinCount = &rf.nodeMinCount
+	if flags.nodeMinCount != 0 {
+		request.NodeMinCount = &flags.nodeMinCount
 	}
 
-	if rf.nodeMaxCount != 0 {
-		request.NodeMaxCount = &rf.nodeMaxCount
+	if flags.nodeMaxCount != 0 {
+		request.NodeMaxCount = &flags.nodeMaxCount
 	}
 
-	if rf.dryRun {
+	if flags.dryRun {
 		err = printJSON(request)
 		if err != nil {
 			return errors.Wrap(err, "failed to print API request")
@@ -396,7 +403,7 @@ func executeClusterResizeCmd(rf clusterResizeFlags) error {
 		return nil
 	}
 
-	cluster, err := client.ResizeCluster(rf.cluster, request)
+	cluster, err := client.ResizeCluster(flags.cluster, request)
 	if err != nil {
 		return errors.Wrap(err, "failed to resize cluster")
 	}
@@ -411,28 +418,29 @@ func executeClusterResizeCmd(rf clusterResizeFlags) error {
 }
 
 func newCmdClusterDelete() *cobra.Command {
-	var df clusterDeleteFlags
+	var flags clusterDeleteFlags
 
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterDeleteCmd(df)
+			command.SilenceUsage = true
+			return executeClusterDeleteCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	df.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterDeleteCmd(df clusterDeleteFlags) error {
-	client := model.NewClient(df.serverAddress)
+func executeClusterDeleteCmd(flags clusterDeleteFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
-	err := client.DeleteCluster(df.cluster)
+	err := client.DeleteCluster(flags.cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete cluster")
 	}
@@ -441,28 +449,29 @@ func executeClusterDeleteCmd(df clusterDeleteFlags) error {
 }
 
 func newCmdClusterGet() *cobra.Command {
-	var gf clusterGetFlags
+	var flags clusterGetFlags
 
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterGetCmd(gf)
+			command.SilenceUsage = true
+			return executeClusterGetCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	gf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterGetCmd(gf clusterGetFlags) error {
-	client := model.NewClient(gf.serverAddress)
+func executeClusterGetCmd(flags clusterGetFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
-	cluster, err := client.GetCluster(gf.cluster)
+	cluster, err := client.GetCluster(flags.cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to query cluster")
 	}
@@ -478,28 +487,29 @@ func executeClusterGetCmd(gf clusterGetFlags) error {
 }
 
 func newCmdClusterList() *cobra.Command {
-	var lf clusterListFlags
+	var flags clusterListFlags
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List created clusters.",
 		RunE: func(command *cobra.Command, args []string) error {
-			return executeClusterListCmd(lf)
+			command.SilenceUsage = true
+			return executeClusterListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	lf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
 
-func executeClusterListCmd(lf clusterListFlags) error {
-	client := model.NewClient(lf.serverAddress)
+func executeClusterListCmd(flags clusterListFlags) error {
+	client := model.NewClient(flags.serverAddress)
 
-	paging := getPaging(lf.pagingFlags)
+	paging := getPaging(flags.pagingFlags)
 
 	clusters, err := client.GetClusters(&model.GetClustersRequest{
 		Paging: paging,
@@ -508,7 +518,7 @@ func executeClusterListCmd(lf clusterListFlags) error {
 		return errors.Wrap(err, "failed to query clusters")
 	}
 
-	if enabled, customCols := getTableOutputOption(lf.tableOptions); enabled {
+	if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
 		var keys []string
 		var vals [][]string
 
@@ -562,15 +572,16 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 }
 
 func newCmdClusterUtilities() *cobra.Command {
-	var uf clusterUtilitiesFlags
+	var flags clusterUtilitiesFlags
 
 	cmd := &cobra.Command{
 		Use:   "utilities",
 		Short: "Show metadata regarding utility services running in a cluster.",
 		RunE: func(command *cobra.Command, args []string) error {
-			client := model.NewClient(uf.serverAddress)
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-			metadata, err := client.GetClusterUtilities(uf.cluster)
+			metadata, err := client.GetClusterUtilities(flags.cluster)
 			if err != nil {
 				return err
 			}
@@ -582,11 +593,11 @@ func newCmdClusterUtilities() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
+			flags.clusterFlags.addFlags(cmd)
 			return
 		},
 	}
-	uf.addFlags(cmd)
+	flags.addFlags(cmd)
 
 	return cmd
 }
@@ -596,14 +607,11 @@ func newCmdClusterSizeDictionary() *cobra.Command {
 		Use:   "dictionary",
 		Short: "Shows predefined cluster size templates.",
 		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 			if err := printJSON(clusterdictionary.ValidSizes); err != nil {
 				return errors.Wrap(err, "failed to print cluster dictionary")
 			}
 			return nil
-		},
-		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
-			return
 		},
 	}
 
@@ -618,14 +626,11 @@ func newCmdClusterShowStateReport() *cobra.Command {
 		Use:   "state-report",
 		Short: "Shows information regarding changing cluster state.",
 		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 			if err := printJSON(model.GetClusterRequestStateReport()); err != nil {
 				return err
 			}
 			return nil
-		},
-		PreRun: func(cmd *cobra.Command, args []string) {
-			cmd.SilenceUsage = true
-			return
 		},
 	}
 
