@@ -301,11 +301,13 @@ type clusterListFlags struct {
 	clusterFlags
 	pagingFlags
 	tableOptions
+	showTags bool
 }
 
 func (flags *clusterListFlags) addFlags(command *cobra.Command) {
 	flags.pagingFlags.addFlags(command)
 	flags.tableOptions.addFlags(command)
+	command.Flags().BoolVar(&flags.showTags, "show-tags", false, "When printing, show all tags as the last column")
 }
 
 type clusterUtilitiesFlags struct {
