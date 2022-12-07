@@ -154,7 +154,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			return errors.Wrapf(err, "failed to set %s", setValue)
 		}
 	}
-	if cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico" {
+
+	if kopsMetadata.ChangeRequest.Networking == "calico" {
 		logger.Info("Updating calico options")
 		setValue = "spec.networking.calico.prometheusMetricsEnabled=true"
 		err = kops.SetCluster(kopsMetadata.Name, setValue)
