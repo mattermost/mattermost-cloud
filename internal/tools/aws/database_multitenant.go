@@ -34,14 +34,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// SQLDatabaseManager is an interface that describes operations to query and to
-// close connection with a database. It's used mainly to implement a client that
-// needs to perform non-complex queries in a SQL database instance.
-type SQLDatabaseManager interface {
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	Close() error
-}
-
 // RDSMultitenantDatabase is a database backed by RDS that supports multi-tenancy.
 type RDSMultitenantDatabase struct {
 	databaseType              string

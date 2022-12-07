@@ -678,9 +678,12 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreat
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
+	if installationSecret != nil {
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
+		}
 
-	if installationSecret != nil && err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
+		return installationSecret, nil
 	}
 
 	description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)

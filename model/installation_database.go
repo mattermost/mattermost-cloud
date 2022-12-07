@@ -31,8 +31,12 @@ const (
 	// database hosted via Amazon RDS.
 	InstallationDatabaseMultiTenantRDSPostgres = "aws-multitenant-rds-postgres"
 	// InstallationDatabaseMultiTenantRDSPostgresPGBouncer is a PostgreSQL
-	// multitenant database hosted via Amazon RDS that has pooled connections.
+	// multitenant database hosted via Amazon RDS that has pooled connections
+	// through PGBouncer.
 	InstallationDatabaseMultiTenantRDSPostgresPGBouncer = "aws-multitenant-rds-postgres-pgbouncer"
+	// InstallationDatabasePerseus is a PostgreSQL multitenant database hosted
+	// via Amazon RDS that has pooled connections through Perseus.
+	InstallationDatabasePerseus = "perseus"
 	// InstallationDatabaseExternal is a database that is created and managed
 	// outside of the cloud provisioner. No provisioning or teardown is performed
 	// on this database type. An AWS secret with connection strings and
@@ -47,6 +51,9 @@ const (
 	// DatabaseEngineTypePostgresProxy is a PostgreSQL database that is
 	// configured for proxied connections.
 	DatabaseEngineTypePostgresProxy = "postgres-proxy"
+	// DatabaseEngineTypePostgresProxyPerseus is a PostgreSQL database that is
+	// configured for proxied connections from Perseus.
+	DatabaseEngineTypePostgresProxyPerseus = "postgres-proxy-perseus"
 )
 
 // Database is the interface for managing Mattermost databases.
@@ -169,6 +176,7 @@ func IsSupportedDatabase(database string) bool {
 	case InstallationDatabaseMultiTenantRDSMySQL:
 	case InstallationDatabaseMultiTenantRDSPostgres:
 	case InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
+	case InstallationDatabasePerseus:
 	case InstallationDatabaseMysqlOperator:
 	case InstallationDatabaseExternal:
 	default:
@@ -202,6 +210,7 @@ func IsMultiTenantRDS(database string) bool {
 	case InstallationDatabaseMultiTenantRDSMySQL:
 	case InstallationDatabaseMultiTenantRDSPostgres:
 	case InstallationDatabaseMultiTenantRDSPostgresPGBouncer:
+	case InstallationDatabasePerseus:
 	default:
 		return false
 	}

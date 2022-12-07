@@ -472,6 +472,7 @@ func executeServerCmd(flags serverFlags) error {
 
 func dbClusterUtilizationSettingsFromFlags(sf serverFlags) utils.DBClusterUtilizationSettings {
 	return utils.DBClusterUtilizationSettings{
+		MaxInstallationsPerseus:              sf.perseus,
 		MaxInstallationsRDSPostgresPGBouncer: sf.pgbouncer,
 		MaxInstallationsRDSPostgres:          sf.postgres,
 		MaxInstallationsRDSMySQL:             sf.mysql,

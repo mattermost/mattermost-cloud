@@ -149,6 +149,7 @@ func (flags *installationOptions) addFlags(command *cobra.Command) {
 }
 
 type dbUtilizationSettings struct {
+	perseus            int
 	pgbouncer          int
 	postgres           int
 	mysql              int
@@ -156,6 +157,7 @@ type dbUtilizationSettings struct {
 }
 
 func (flags *dbUtilizationSettings) addFlags(command *cobra.Command) {
+	command.Flags().IntVar(&flags.perseus, "max-installations-perseus", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type Perseus")
 	command.Flags().IntVar(&flags.pgbouncer, "max-installations-rds-postgres-pgbouncer", toolsAWS.DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres PGbouncer")
 	command.Flags().IntVar(&flags.postgres, "max-installations-rds-postgres", toolsAWS.DefaultRDSMultitenantDatabasePostgresCountLimit, "Max installations per DB cluster of type RDS Postgres")
 	command.Flags().IntVar(&flags.mysql, "max-installations-rds-mysql", toolsAWS.DefaultRDSMultitenantDatabaseMySQLCountLimit, "Max installations per DB cluster of type RDS MySQL")
