@@ -114,42 +114,47 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-		recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
+
+		existingRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{
+			Name: dnsName,
+			Type: "CNAME",
+		})
 		if err != nil {
-			// We do not have a clear indication if the record already exists
-			// based only on the status code (400 may mean invalid input),
-			// therefore we also need to compare the error code with the UNDOCUMMENTED
-			// error code that refers to a record already existing.
-			cloudflareRequestError := &cf.RequestError{}
-			if !errors.As(err, &cloudflareRequestError) || !cloudflareRequestError.InternalErrorCodeIs(recordExistsErrorCode) {
+			return errors.Wrap(err, "failed to get existing DNS record at Cloudflare")
+		}
+
+		if len(existingRecords) == 0 {
+			recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
+			if err != nil {
 				return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 			}
-			log.Info("Record already exists, trying to update...")
-			err = c.updateDNSRecord(zoneID, record, log)
+
+			log.Debugf("Cloudflare create DNS record response: %v", recordResp)
+			return nil
+		}
+
+		var recordIDToUpdate string
+		for _, r := range existingRecords {
+			if r.Content != record.Content || r.TTL != record.TTL || r.Proxied != record.Proxied {
+				recordIDToUpdate = r.ID
+				break
+			}
+		}
+		if len(recordIDToUpdate) > 0 {
+			err = c.updateDNSRecord(zoneID, recordIDToUpdate, record, log)
 			if err != nil {
 				return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
 			}
-			continue
 		}
-
-		log.Debugf("Cloudflare create DNS record response: %v", recordResp)
 	}
 
 	return nil
 }
 
-func (c *Client) updateDNSRecord(zoneID string, record cf.DNSRecord, logger logrus.FieldLogger) error {
-	ids, err := c.getRecordIDs(zoneID, record.Name, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to find record ID to update")
-	}
-	if len(ids) != 1 {
-		return errors.Errorf("erxpected one record id, found %d", len(ids))
-	}
-
+func (c *Client) updateDNSRecord(zoneID string, id string, record cf.DNSRecord, logger logrus.FieldLogger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
-	err = c.cfClient.UpdateDNSRecord(ctx, zoneID, ids[0], record)
+	err := c.cfClient.UpdateDNSRecord(ctx, zoneID, id, record)
 	if err != nil {
 		return errors.Wrap(err, "failed to update record")
 	}
