@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -251,14 +251,14 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 	}
 
 	clusterID := clusterInstallations[0].ClusterID
-	vpcFilters := []*ec2.Filter{
+	vpcFilters := []ec2Types.Filter{
 		{
 			Name:   aws.String(VpcClusterIDTagKey),
-			Values: []*string{aws.String(clusterID)},
+			Values: []string{clusterID},
 		},
 		{
 			Name:   aws.String(VpcAvailableTagKey),
-			Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+			Values: []string{VpcAvailableTagValueFalse},
 		},
 	}
 	vpcs, err := d.client.GetVpcsWithFilters(vpcFilters)

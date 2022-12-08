@@ -154,7 +154,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			return errors.Wrapf(err, "failed to set %s", setValue)
 		}
 	}
-	if cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico" {
+
+	if kopsMetadata.ChangeRequest.Networking == "calico" {
 		logger.Info("Updating calico options")
 		setValue = "spec.networking.calico.prometheusMetricsEnabled=true"
 		err = kops.SetCluster(kopsMetadata.Name, setValue)
@@ -182,6 +183,25 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 			return errors.Wrapf(err, "failed to set %s", setValue)
 		}
 	}
+
+	if len(provisioner.params.EtcdManagerEnv) > 0 {
+		var override []string
+		var overrideIndex int
+		for key, val := range provisioner.params.EtcdManagerEnv {
+			override = append(override, "spec.etcdClusters[0].manager.env=")
+			envName := fmt.Sprintf("spec.etcdClusters[0].manager.env[%d].name=%s", overrideIndex, key)
+			envValue := fmt.Sprintf("spec.etcdClusters[0].manager.env[%d].value=%s", overrideIndex, val)
+			override = append(override, envName, envValue)
+			overrideIndex++
+		}
+
+		logger.Infof("Adding environment variables to etcd cluster manager")
+		err = kops.SetCluster(kopsMetadata.Name, strings.Join(override, ","))
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
+	}
+
 	err = updateKopsInstanceGroupValue(kops, kopsMetadata, "spec.instanceMetadata.httpTokens=optional")
 	if err != nil {
 		return errors.Wrap(err, "failed to update kops instance group instance Metadata")

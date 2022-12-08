@@ -8,24 +8,29 @@ package main
 import (
 	"os"
 
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
 )
+
+var instanceID string
 
 var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
-	Run: func(cmd *cobra.Command, args []string) {
-		serverCmd.RunE(cmd, args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return newCmdServer().RunE(cmd, args)
 	},
 	// SilenceErrors allows us to explicitly log the error returned from rootCmd below.
 	SilenceErrors: true,
 }
 
 func init() {
-	rootCmd.MarkFlagRequired("database")
+	instanceID = model.NewID()
 
-	rootCmd.AddCommand(serverCmd)
-	rootCmd.AddCommand(clusterCmd)
+	_ = rootCmd.MarkFlagRequired("database")
+
+	rootCmd.AddCommand(newCmdServer())
+	rootCmd.AddCommand(newCmdCluster())
 	rootCmd.AddCommand(installationCmd)
 	rootCmd.AddCommand(groupCmd)
 	rootCmd.AddCommand(databaseCmd)

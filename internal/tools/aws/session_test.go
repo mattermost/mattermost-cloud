@@ -14,7 +14,6 @@ import (
 )
 
 func TestSanitizeParams(t *testing.T) {
-
 	for _, testCase := range []struct {
 		description string
 		params      interface{}

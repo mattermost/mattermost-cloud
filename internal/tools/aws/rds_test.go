@@ -5,8 +5,11 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -25,9 +28,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		Times(3)
 
 	a.Mocks.API.EC2.EXPECT().
-		DescribeSecurityGroups(gomock.Any()).
+		DescribeSecurityGroups(context.TODO(), gomock.Any()).
 		Return(&ec2.DescribeSecurityGroupsOutput{
-			SecurityGroups: []*ec2.SecurityGroup{
+			SecurityGroups: []ec2Types.SecurityGroup{
 				{
 					GroupId: &a.GroupID,
 				},
@@ -60,8 +63,8 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		Times(1)
 
 	// Retrive the Availability Zones.
-	a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
-		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
+	a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(context.TODO(), gomock.Any()).
+		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []ec2Types.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 		Times(1)
 
 	err = a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, tags, a.Mocks.Log.Logger)
@@ -89,7 +92,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedWithSGError() {
 		Times(1)
 
 	a.Mocks.API.EC2.EXPECT().
-		DescribeSecurityGroups(gomock.Any()).
+		DescribeSecurityGroups(context.TODO(), gomock.Any()).
 		Return(nil, errors.New("invalid group id"))
 
 	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
@@ -104,9 +107,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
 		WithField("security-group-ids", []string{a.GroupID}).
 		Return(testlib.NewLoggerEntry()).Times(1).
 		After(a.Mocks.API.EC2.EXPECT().
-			DescribeSecurityGroups(gomock.Any()).
+			DescribeSecurityGroups(context.TODO(), gomock.Any()).
 			Return(&ec2.DescribeSecurityGroupsOutput{
-				SecurityGroups: []*ec2.SecurityGroup{{GroupId: &a.GroupID}},
+				SecurityGroups: []ec2Types.SecurityGroup{{GroupId: &a.GroupID}},
 			}, nil))
 
 	a.Mocks.API.RDS.EXPECT().
@@ -128,9 +131,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 		WithField("security-group-ids", []string{a.GroupID}).
 		Return(testlib.NewLoggerEntry()).Times(1).
 		After(a.Mocks.API.EC2.EXPECT().
-			DescribeSecurityGroups(gomock.Any()).
+			DescribeSecurityGroups(context.TODO(), gomock.Any()).
 			Return(&ec2.DescribeSecurityGroupsOutput{
-				SecurityGroups: []*ec2.SecurityGroup{{GroupId: &a.GroupID}},
+				SecurityGroups: []ec2Types.SecurityGroup{{GroupId: &a.GroupID}},
 			}, nil))
 
 	a.Mocks.Log.Logger.EXPECT().
@@ -153,8 +156,8 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 		Times(1)
 
 	// Retrive the Availability Zones.
-	a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
-		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
+	a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(context.TODO(), gomock.Any()).
+		Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []ec2Types.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 		Times(1)
 
 	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
