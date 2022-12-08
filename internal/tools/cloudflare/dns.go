@@ -135,7 +135,16 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 
 		var recordIDToUpdate string
 		for _, r := range existingRecords {
-			if r.Content != record.Content || r.TTL != record.TTL || r.Proxied != record.Proxied {
+			if r.Content != record.Content || r.TTL != record.TTL {
+				recordIDToUpdate = r.ID
+				break
+			}
+			if r.Proxied != nil && record.Proxied != nil {
+				if *r.Proxied != *record.Proxied {
+					recordIDToUpdate = r.ID
+					break
+				}
+			} else if r.Proxied != nil || record.Proxied != nil {
 				recordIDToUpdate = r.ID
 				break
 			}
