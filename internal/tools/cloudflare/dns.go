@@ -83,7 +83,7 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 		return errors.New("no public hosted zones names found from AWS")
 	}
 
-	for _, dnsName := range dnsNames {
+	upsertDNS := func(dnsName string) error {
 		// Fetch the zone name for that customer DNS name
 		zoneName, found := c.getZoneName(zoneNameList, dnsName)
 		if !found {
@@ -124,6 +124,8 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 		}
 
 		if len(existingRecords) == 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+			defer cancel()
 			recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
 			if err != nil {
 				return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
@@ -154,6 +156,14 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 			if err != nil {
 				return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
 			}
+		}
+
+		return nil
+	}
+
+	for _, dnsName := range dnsNames {
+		if err := upsertDNS(dnsName); err != nil {
+			return err
 		}
 	}
 
