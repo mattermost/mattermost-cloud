@@ -535,6 +535,10 @@ func executeClusterListCmd(flags clusterListFlags) error {
 			keys, vals = defaultClustersTableData(clusters)
 		}
 
+		if flags.showTags {
+			keys, vals = enhanceTableWithAnnotations(clusters, keys, vals)
+		}
+
 		printTable(keys, vals)
 		return nil
 	}
@@ -569,6 +573,24 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		})
 	}
 	return keys, values
+}
+
+func enhanceTableWithAnnotations(clusters []*model.ClusterDTO, keys []string, vals [][]string) ([]string, [][]string) {
+	var tags [][]string
+	for _, cluster := range clusters {
+		var list []string
+		for _, annotation := range cluster.Annotations {
+			list = append(list, annotation.Name)
+		}
+		tags = append(tags, list)
+	}
+	keys = append(keys, "TAG")
+	for i, v := range vals {
+		v = append(v, strings.Join(tags[i], ","))
+		vals[i] = v
+	}
+
+	return keys, vals
 }
 
 func newCmdClusterUtilities() *cobra.Command {
