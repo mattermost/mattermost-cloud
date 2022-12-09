@@ -140,7 +140,8 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 
 		if recordToUpdate.Content != record.Content || recordToUpdate.TTL != record.TTL {
 			doUpdate = true
-		} else if recordToUpdate.Proxied != nil && record.Proxied != nil {
+		}
+		if recordToUpdate.Proxied != nil && record.Proxied != nil {
 			if *recordToUpdate.Proxied != *record.Proxied {
 				doUpdate = true
 			}
