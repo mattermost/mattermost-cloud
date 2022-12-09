@@ -33,6 +33,7 @@ type ProvisioningParams struct {
 	PGBouncerConfig         *PGBouncerConfig
 	SLOInstallationGroups   []string
 	EtcdManagerEnv          map[string]string
+	SLOObjective            float64
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.

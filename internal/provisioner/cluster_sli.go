@@ -16,14 +16,13 @@ const (
 	slothServiceLevelTypeLabel        = "serviceLevelType"
 	slothServiceLevelTypeClusterValue = "cluster"
 	slothServiceLevelTypeRingValue    = "ring"
-	objective                         = 99.5
 )
 
 func makeRingSLOName(group *model.GroupDTO) string {
 	return group.Name + "-ring-" + group.ID
 }
 
-func makeRingSLOs(group *model.GroupDTO) slothv1.PrometheusServiceLevel {
+func makeRingSLOs(group *model.GroupDTO, objective float64) slothv1.PrometheusServiceLevel {
 	resourceName := makeRingSLOName(group)
 	sli := slothv1.PrometheusServiceLevel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -59,7 +58,7 @@ func makeRingSLOs(group *model.GroupDTO) slothv1.PrometheusServiceLevel {
 	return sli
 }
 
-func makeClusterSLOs(cluster *model.Cluster) slothv1.PrometheusServiceLevel {
+func makeClusterSLOs(cluster *model.Cluster, objective float64) slothv1.PrometheusServiceLevel {
 	resourceName := "cluster-" + cluster.ID
 	sli := slothv1.PrometheusServiceLevel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -95,12 +94,12 @@ func makeClusterSLOs(cluster *model.Cluster) slothv1.PrometheusServiceLevel {
 	return sli
 }
 
-func createOrUpdateClusterSLOs(cluster *model.Cluster, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	sli := makeClusterSLOs(cluster)
+func createOrUpdateClusterSLOs(cluster *model.Cluster, k8sClient *k8s.KubeClient, objective float64, logger log.FieldLogger) error {
+	sli := makeClusterSLOs(cluster, objective)
 	return createOrUpdateClusterPrometheusServiceLevel(sli, k8sClient, logger)
 }
 
-func createOrUpdateRingSLOs(group *model.GroupDTO, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	sli := makeRingSLOs(group)
+func createOrUpdateRingSLOs(group *model.GroupDTO, k8sClient *k8s.KubeClient, objective float64, logger log.FieldLogger) error {
+	sli := makeRingSLOs(group, objective)
 	return createOrUpdateClusterPrometheusServiceLevel(sli, k8sClient, logger)
 }
