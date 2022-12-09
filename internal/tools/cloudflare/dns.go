@@ -135,24 +135,21 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 			return nil
 		}
 
-		var recordIDToUpdate string
-		for _, r := range existingRecords {
-			if r.Content != record.Content || r.TTL != record.TTL {
-				recordIDToUpdate = r.ID
-				break
+		recordToUpdate := existingRecords[0]
+		doUpdate := false
+
+		if recordToUpdate.Content != record.Content || recordToUpdate.TTL != record.TTL {
+			doUpdate = true
+		} else if recordToUpdate.Proxied != nil && record.Proxied != nil {
+			if *recordToUpdate.Proxied != *record.Proxied {
+				doUpdate = true
 			}
-			if r.Proxied != nil && record.Proxied != nil {
-				if *r.Proxied != *record.Proxied {
-					recordIDToUpdate = r.ID
-					break
-				}
-			} else if r.Proxied != nil || record.Proxied != nil {
-				recordIDToUpdate = r.ID
-				break
-			}
+		} else if recordToUpdate.Proxied != nil || record.Proxied != nil {
+			doUpdate = true
 		}
-		if len(recordIDToUpdate) > 0 {
-			err = c.updateDNSRecord(zoneID, recordIDToUpdate, record, log)
+
+		if doUpdate {
+			err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record, log)
 			if err != nil {
 				return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
 			}
