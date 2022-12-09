@@ -347,7 +347,7 @@ func provisionCluster(
 	}
 
 	logger.Info("Ensuring cluster SLOs are present")
-	if err := createOrUpdateClusterSLOs(cluster, k8sClient, params.SLOObjective, logger); err != nil {
+	if err := createOrUpdateClusterSLOs(cluster, k8sClient, params.SLOTargetAvailability, logger); err != nil {
 		return errors.Wrap(err, "failed to create cluster slos")
 	}
 
@@ -363,7 +363,7 @@ func provisionCluster(
 	logger.Infof("Ensuring %d Ring SLOs are present", len(groups))
 	for _, group := range groups {
 		groupIDs[makeRingSLOName(group)] = struct{}{}
-		if err := createOrUpdateRingSLOs(group, k8sClient, params.SLOObjective, logger); err != nil {
+		if err := createOrUpdateRingSLOs(group, k8sClient, params.SLOTargetAvailability, logger); err != nil {
 			return errors.Wrap(err, "failed to apply ring slo: "+group.ID)
 		}
 	}
