@@ -83,85 +83,85 @@ func (c *Client) CreateDNSRecords(dnsNames []string, dnsEndpoints []string, logg
 		return errors.New("no public hosted zones names found from AWS")
 	}
 
-	upsertDNS := func(dnsName string) error {
-		// Fetch the zone name for that customer DNS name
-		zoneName, found := c.getZoneName(zoneNameList, dnsName)
-		if !found {
-			return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+	for _, dnsName := range dnsNames {
+		if err := c.upsertDNS(zoneNameList, dnsName, dnsEndpoint, logger); err != nil {
+			return err
 		}
+	}
 
-		// Fetch the zone ID
-		zoneID, err := c.getZoneID(zoneName)
-		if err != nil {
-			return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
-		}
+	return nil
+}
 
-		log := logger.WithFields(logrus.Fields{
-			"cloudflare-dns-value":    dnsName,
-			"cloudflare-dns-endpoint": dnsEndpoint,
-			"cloudflare-zone-id":      zoneID,
-		})
+func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, logger logrus.FieldLogger) error {
+	// Fetch the zone name for that customer DNS name
+	zoneName, found := c.getZoneName(zoneNameList, dnsName)
+	if !found {
+		return errors.Errorf("hosted zone for %q domain name not found", dnsName)
+	}
 
-		proxied := true
+	// Fetch the zone ID
+	zoneID, err := c.getZoneID(zoneName)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch Zone ID from Cloudflare")
+	}
 
-		record := cf.DNSRecord{
-			Name:    dnsName,
-			Type:    "CNAME",
-			Content: dnsEndpoint,
-			TTL:     1,
-			Proxied: &proxied,
-		}
+	log := logger.WithFields(logrus.Fields{
+		"cloudflare-dns-value":    dnsName,
+		"cloudflare-dns-endpoint": dnsEndpoint,
+		"cloudflare-zone-id":      zoneID,
+	})
 
+	proxied := true
+
+	record := cf.DNSRecord{
+		Name:    dnsName,
+		Type:    "CNAME",
+		Content: dnsEndpoint,
+		TTL:     1,
+		Proxied: &proxied,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	existingRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{
+		Name: dnsName,
+		Type: "CNAME",
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get existing DNS record at Cloudflare")
+	}
+
+	if len(existingRecords) == 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-
-		existingRecords, err := c.cfClient.DNSRecords(ctx, zoneID, cf.DNSRecord{
-			Name: dnsName,
-			Type: "CNAME",
-		})
+		recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
 		if err != nil {
-			return errors.Wrap(err, "failed to get existing DNS record at Cloudflare")
+			return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 		}
 
-		if len(existingRecords) == 0 {
-			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-			defer cancel()
-			recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
-			if err != nil {
-				return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
-			}
-
-			log.Debugf("Cloudflare create DNS record response: %v", recordResp)
-			return nil
-		}
-
-		recordToUpdate := existingRecords[0]
-		doUpdate := false
-
-		if recordToUpdate.Content != record.Content || recordToUpdate.TTL != record.TTL {
-			doUpdate = true
-		}
-		if recordToUpdate.Proxied != nil && record.Proxied != nil {
-			if *recordToUpdate.Proxied != *record.Proxied {
-				doUpdate = true
-			}
-		} else if recordToUpdate.Proxied != nil || record.Proxied != nil {
-			doUpdate = true
-		}
-
-		if doUpdate {
-			err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record, log)
-			if err != nil {
-				return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
-			}
-		}
-
+		log.Debugf("Cloudflare create DNS record response: %v", recordResp)
 		return nil
 	}
 
-	for _, dnsName := range dnsNames {
-		if err := upsertDNS(dnsName); err != nil {
-			return err
+	recordToUpdate := existingRecords[0]
+	doUpdate := false
+
+	if recordToUpdate.Content != record.Content || recordToUpdate.TTL != record.TTL {
+		doUpdate = true
+	}
+	if recordToUpdate.Proxied != nil && record.Proxied != nil {
+		if *recordToUpdate.Proxied != *record.Proxied {
+			doUpdate = true
+		}
+	} else if recordToUpdate.Proxied != nil || record.Proxied != nil {
+		doUpdate = true
+	}
+
+	if doUpdate {
+		err = c.updateDNSRecord(zoneID, recordToUpdate.ID, record, log)
+		if err != nil {
+			return errors.Wrap(err, "failed to update existing DNS record at Cloudflare")
 		}
 	}
 
