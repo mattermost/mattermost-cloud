@@ -154,7 +154,7 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 		if *recordToUpdate.Proxied != *record.Proxied {
 			doUpdate = true
 		}
-	} else if recordToUpdate.Proxied != nil || record.Proxied != nil {
+	} else if recordToUpdate.Proxied != record.Proxied {
 		doUpdate = true
 	}
 
