@@ -5,10 +5,12 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 )
@@ -23,191 +25,143 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 	callsSecurityGroupID := "calls-sg-id"
 	cidrBlock := "100.0.0.0/16"
 	cluster := a.ClusterA
+	ctx := context.TODO()
 
-	a.Run("claim without specific vpc", func() {
+	a.Run("claim with specific vpc as primary cluster", func() {
 		a.SetupTest()
 		gomock.InOrder(
+			// ClaimVPC
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{
-						{
-							Name: aws.String(VpcAvailableTagKey),
-							Values: []*string{
-								aws.String(VpcAvailableTagValueFalse),
-							},
-						},
-						{
-							Name: aws.String(VpcClusterIDTagKey),
-							Values: []*string{
-								aws.String(cluster.ID),
-							},
-						},
-					},
+				DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
+					VpcIds: []string{vpcID},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{},
-				}, nil).
-				Times(1),
-			// List for total VPCs
-			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{
-						{
-							Name: aws.String(VpcAvailableTagKey),
-							Values: []*string{
-								aws.String(VpcAvailableTagValueTrue),
-								aws.String(VpcAvailableTagValueFalse),
-							},
-						},
-					},
-				}).
-				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
-						VpcId: aws.String(vpcID),
-					}, {
-						VpcId: aws.String("second"),
-					}},
-				}, nil).
-				Times(1),
-			// List available VPCs
-			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{
-						{
-							Name: aws.String(VpcAvailableTagKey),
-							Values: []*string{
-								aws.String(VpcAvailableTagValueTrue),
-							},
-						},
-					},
-				}).
-				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"private"}),
+						Values: []string{"private"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(privateSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"master"}),
+						Values: []string{"master"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(masterSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"worker"}),
+						Values: []string{"worker"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(workerSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
 			// claimVpc
-			a.Mocks.API.EC2.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: aws.StringSlice([]string{VpcAvailableTagValueTrue}),
+						Values: []string{VpcAvailableTagValueTrue},
 					},
 					{
 						Name:   aws.String(VpcClusterIDTagKey),
-						Values: aws.StringSlice([]string{VpcClusterIDTagValueNone}),
+						Values: []string{VpcClusterIDTagValueNone},
 					},
 				},
 			}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
+			a.Mocks.API.EC2.EXPECT().CreateTags(ctx, &ec2.CreateTagsInput{
+				Resources: []string{
+					vpcID,
 				},
-				Tags: []*ec2.Tag{
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcAvailableTagKey)),
 						Value: aws.String(VpcAvailableTagValueFalse),
@@ -216,11 +170,11 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
+			a.Mocks.API.EC2.EXPECT().CreateTags(ctx, &ec2.CreateTagsInput{
+				Resources: []string{
+					vpcID,
 				},
-				Tags: []*ec2.Tag{
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcClusterIDTagKey)),
 						Value: aws.String(cluster.ID),
@@ -229,11 +183,11 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
+			a.Mocks.API.EC2.EXPECT().CreateTags(ctx, &ec2.CreateTagsInput{
+				Resources: []string{
+					vpcID,
 				},
-				Tags: []*ec2.Tag{
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcClusterOwnerKey)),
 						Value: aws.String(owner),
@@ -242,15 +196,14 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any()).
+			a.Mocks.API.EC2.EXPECT().CreateTags(ctx, gomock.Any()).
 				Return(nil, nil).
 				Times(3),
 		)
 
 		logger := logrus.New()
 
-		clusterResources, err := a.Mocks.AWS.GetAndClaimVpcResources(cluster, owner, logger)
-		// clusterResources, err := a.Mocks.AWS.ClaimVPC(vpcID, cluster, owner, logger)
+		clusterResources, err := a.Mocks.AWS.ClaimVPC(vpcID, cluster, owner, logger)
 		a.Assert().NoError(err)
 		a.Assert().Equal(clusterResources.VpcID, vpcID)
 		a.Assert().Contains(clusterResources.PrivateSubnetIDs, privateSubnetID)
@@ -265,136 +218,134 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 		gomock.InOrder(
 			// ClaimVPC
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					VpcIds: aws.StringSlice([]string{vpcID}),
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					VpcIds: []string{vpcID},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"private"}),
+						Values: []string{"private"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(privateSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"master"}),
+						Values: []string{"master"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(masterSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"worker"}),
+						Values: []string{"worker"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(workerSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
 			// claimVpc
-			a.Mocks.API.EC2.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: aws.StringSlice([]string{VpcAvailableTagValueTrue}),
+						Values: []string{VpcAvailableTagValueTrue},
 					},
 					{
 						Name:   aws.String(VpcClusterIDTagKey),
-						Values: aws.StringSlice([]string{VpcClusterIDTagValueNone}),
+						Values: []string{VpcClusterIDTagValueNone},
 					},
 				},
 			}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
-				},
-				Tags: []*ec2.Tag{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcAvailableTagKey)),
 						Value: aws.String(VpcAvailableTagValueFalse),
@@ -403,11 +354,11 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{
+					vpcID,
 				},
-				Tags: []*ec2.Tag{
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcClusterIDTagKey)),
 						Value: aws.String(cluster.ID),
@@ -416,11 +367,9 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
-				},
-				Tags: []*ec2.Tag{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcClusterOwnerKey)),
 						Value: aws.String(owner),
@@ -429,7 +378,7 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any()).
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).
 				Return(nil, nil).
 				Times(3),
 		)
@@ -451,156 +400,154 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 		gomock.InOrder(
 			// ClaimVPC
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					VpcIds: aws.StringSlice([]string{vpcID}),
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					VpcIds: []string{vpcID},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"private"}),
+						Values: []string{"private"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(privateSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"master"}),
+						Values: []string{"master"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(masterSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"worker"}),
+						Values: []string{"worker"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(workerSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
 			// claimVpc
-			a.Mocks.API.EC2.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: aws.StringSlice([]string{VpcAvailableTagValueTrue}),
+						Values: []string{VpcAvailableTagValueTrue},
 					},
 					{
 						Name:   aws.String(VpcClusterIDTagKey),
-						Values: aws.StringSlice([]string{VpcClusterIDTagValueNone}),
+						Values: []string{VpcClusterIDTagValueNone},
 					},
 				},
 			}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{},
+					Vpcs: []ec2Types.Vpc{},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: aws.StringSlice([]string{VpcAvailableTagValueFalse}),
+						Values: []string{VpcAvailableTagValueFalse},
 					},
 					{
 						Name:   aws.String(VpcSecondaryClusterIDTagKey),
-						Values: aws.StringSlice([]string{VpcClusterIDTagValueNone}),
+						Values: []string{VpcClusterIDTagValueNone},
 					},
 				},
 			}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: []*string{
-					aws.String(vpcID),
-				},
-				Tags: []*ec2.Tag{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{
 					{
 						Key:   aws.String(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
 						Value: aws.String(cluster.ID),
@@ -609,7 +556,7 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 			}).
 				Return(nil, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any()).
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), gomock.Any()).
 				Return(nil, nil).
 				Times(3),
 		)
@@ -631,146 +578,146 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 		gomock.InOrder(
 			// ClaimVPC
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					VpcIds: aws.StringSlice([]string{vpcID}),
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					VpcIds: []string{vpcID},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"private"}),
+						Values: []string{"private"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(privateSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"master"}),
+						Values: []string{"master"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(masterSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"worker"}),
+						Values: []string{"worker"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(workerSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
 			// claimVpc
-			a.Mocks.API.EC2.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: aws.StringSlice([]string{VpcAvailableTagValueTrue}),
+						Values: []string{VpcAvailableTagValueTrue},
 					},
 					{
 						Name:   aws.String(VpcClusterIDTagKey),
-						Values: aws.StringSlice([]string{VpcClusterIDTagValueNone}),
+						Values: []string{VpcClusterIDTagValueNone},
 					},
 				},
 			}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{},
+					Vpcs: []ec2Types.Vpc{},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: aws.StringSlice([]string{VpcAvailableTagValueFalse}),
+						Values: []string{VpcAvailableTagValueFalse},
 					},
 					{
 						Name:   aws.String(VpcSecondaryClusterIDTagKey),
-						Values: aws.StringSlice([]string{VpcClusterIDTagValueNone}),
+						Values: []string{VpcClusterIDTagValueNone},
 					},
 				},
 			}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{},
+					Vpcs: []ec2Types.Vpc{},
 				}, nil).
 				Times(1),
 		)
@@ -793,34 +740,34 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 		gomock.InOrder(
 			// GetVpcsWithFilters
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{{
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					Filters: []ec2Types.Filter{{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+						Values: []string{VpcAvailableTagValueFalse},
 					}, {
 						Name:   aws.String(VpcSecondaryClusterIDTagKey),
-						Values: []*string{aws.String(cluster.ID)},
+						Values: []string{cluster.ID},
 					}},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{}, // Faking no VPCs as secondary cluster
+					Vpcs: []ec2Types.Vpc{}, // Faking no VPCs as secondary cluster
 				}, nil).
 				Times(1),
 			// GetVpcsWithFilters
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{{
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					Filters: []ec2Types.Filter{{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+						Values: []string{VpcAvailableTagValueFalse},
 					}, {
 						Name:   aws.String(VpcClusterIDTagKey),
-						Values: []*string{aws.String(cluster.ID)},
+						Values: []string{cluster.ID},
 					}},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId: &vpcID,
-						Tags: []*ec2.Tag{{ // VPC has no secondary clusters
+						Tags: []ec2Types.Tag{{ // VPC has no secondary clusters
 							Key:   aws.String(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
 							Value: aws.String(VpcClusterIDTagValueNone),
 						}},
@@ -828,88 +775,88 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{publicSubnetID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{publicSubnetID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster))),
 					Value: aws.String("shared"),
 				}},
 			}).
 				// Return(&ec2.DeleteTagsOutput{}, gomock.Any()).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{callsSecurityGroupID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{callsSecurityGroupID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster))),
 					Value: aws.String("shared"),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{callsSecurityGroupID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{callsSecurityGroupID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String("KubernetesCluster"),
 					Value: aws.String(getClusterTag(cluster)),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: aws.StringSlice([]string{vpcID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(trimTagPrefix(VpcClusterIDTagKey)),
 					Value: aws.String(VpcClusterIDTagValueNone),
 				}},
 			}).
 				// Return(gomock.Any()).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: aws.StringSlice([]string{vpcID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(trimTagPrefix(VpcAvailableTagKey)),
 					Value: aws.String(VpcAvailableTagValueTrue),
 				}},
 			}).
 				// Return(gomock.Any()).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: aws.StringSlice([]string{vpcID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(trimTagPrefix(VpcClusterOwnerKey)),
 					Value: aws.String(VpcClusterIDTagValueNone),
 				}},
@@ -929,19 +876,19 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 		gomock.InOrder(
 			// GetVpcsWithFilters
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{{
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					Filters: []ec2Types.Filter{{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+						Values: []string{VpcAvailableTagValueFalse},
 					}, {
 						Name:   aws.String(VpcSecondaryClusterIDTagKey),
-						Values: []*string{aws.String(cluster.ID)},
+						Values: []string{cluster.ID},
 					}},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId: &vpcID,
-						Tags: []*ec2.Tag{{ // VPC has no secondary clusters
+						Tags: []ec2Types.Tag{{ // VPC has no secondary clusters
 							Key:   aws.String(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
 							Value: aws.String(cluster.ID),
 						}},
@@ -949,70 +896,70 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{publicSubnetID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{publicSubnetID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster))),
 					Value: aws.String("shared"),
 				}},
 			}).
 				// Return(&ec2.DeleteTagsOutput{}, gomock.Any()).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{callsSecurityGroupID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{callsSecurityGroupID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster))),
 					Value: aws.String("shared"),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{callsSecurityGroupID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{callsSecurityGroupID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String("KubernetesCluster"),
 					Value: aws.String(getClusterTag(cluster)),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: aws.StringSlice([]string{vpcID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
 					Value: aws.String(VpcClusterIDTagValueNone),
 				}},
@@ -1031,34 +978,34 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 		gomock.InOrder(
 			// GetVpcsWithFilters
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{{
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					Filters: []ec2Types.Filter{{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+						Values: []string{VpcAvailableTagValueFalse},
 					}, {
 						Name:   aws.String(VpcSecondaryClusterIDTagKey),
-						Values: []*string{aws.String(cluster.ID)},
+						Values: []string{cluster.ID},
 					}},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{}, // Faking no VPCs as secondary cluster
+					Vpcs: []ec2Types.Vpc{}, // Faking no VPCs as secondary cluster
 				}, nil).
 				Times(1),
 			// GetVpcsWithFilters
 			a.Mocks.API.EC2.EXPECT().
-				DescribeVpcs(&ec2.DescribeVpcsInput{
-					Filters: []*ec2.Filter{{
+				DescribeVpcs(gomock.Any(), &ec2.DescribeVpcsInput{
+					Filters: []ec2Types.Filter{{
 						Name:   aws.String(VpcAvailableTagKey),
-						Values: []*string{aws.String(VpcAvailableTagValueFalse)},
+						Values: []string{VpcAvailableTagValueFalse},
 					}, {
 						Name:   aws.String(VpcClusterIDTagKey),
-						Values: []*string{aws.String(cluster.ID)},
+						Values: []string{cluster.ID},
 					}},
 				}).
 				Return(&ec2.DescribeVpcsOutput{
-					Vpcs: []*ec2.Vpc{{
+					Vpcs: []ec2Types.Vpc{{
 						VpcId: &vpcID,
-						Tags: []*ec2.Tag{{ // VPC has no secondary clusters
+						Tags: []ec2Types.Tag{{ // VPC has no secondary clusters
 							Key:   aws.String(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
 							Value: aws.String(a.ClusterB.ID),
 						}},
@@ -1066,78 +1013,78 @@ func (a *AWSTestSuite) TestReleaseVPC() {
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
-			a.Mocks.API.EC2.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:SubnetType"),
-						Values: aws.StringSlice([]string{"public"}),
+						Values: []string{"public"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSubnetsOutput{
-					Subnets: []*ec2.Subnet{{
+					Subnets: []ec2Types.Subnet{{
 						SubnetId: aws.String(publicSubnetID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{publicSubnetID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{publicSubnetID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster))),
 					Value: aws.String("shared"),
 				}},
 			}).
 				// Return(&ec2.DeleteTagsOutput{}, gomock.Any()).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
-				Filters: []*ec2.Filter{
+			a.Mocks.API.EC2.EXPECT().DescribeSecurityGroups(gomock.Any(), &ec2.DescribeSecurityGroupsInput{
+				Filters: []ec2Types.Filter{
 					{
 						Name:   aws.String("vpc-id"),
-						Values: aws.StringSlice([]string{vpcID}),
+						Values: []string{vpcID},
 					},
 					{
 						Name:   aws.String("tag:NodeType"),
-						Values: aws.StringSlice([]string{"calls"}),
+						Values: []string{"calls"},
 					},
 				},
 			}).
 				Return(&ec2.DescribeSecurityGroupsOutput{
-					SecurityGroups: []*ec2.SecurityGroup{{
+					SecurityGroups: []ec2Types.SecurityGroup{{
 						GroupId: aws.String(callsSecurityGroupID),
 					}},
 				}, nil).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{callsSecurityGroupID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{callsSecurityGroupID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster))),
 					Value: aws.String("shared"),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().DeleteTags(&ec2.DeleteTagsInput{
-				Resources: aws.StringSlice([]string{callsSecurityGroupID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().DeleteTags(gomock.Any(), &ec2.DeleteTagsInput{
+				Resources: []string{callsSecurityGroupID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String("KubernetesCluster"),
 					Value: aws.String(getClusterTag(cluster)),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: aws.StringSlice([]string{vpcID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(trimTagPrefix(VpcClusterIDTagKey)),
 					Value: aws.String(a.ClusterB.ID),
 				}},
 			}).
 				Times(1),
-			a.Mocks.API.EC2.EXPECT().CreateTags(&ec2.CreateTagsInput{
-				Resources: aws.StringSlice([]string{vpcID}),
-				Tags: []*ec2.Tag{{
+			a.Mocks.API.EC2.EXPECT().CreateTags(gomock.Any(), &ec2.CreateTagsInput{
+				Resources: []string{vpcID},
+				Tags: []ec2Types.Tag{{
 					Key:   aws.String(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
 					Value: aws.String(VpcClusterIDTagValueNone),
 				}},

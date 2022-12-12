@@ -30,7 +30,6 @@ func provisionCluster(
 	store model.InstallationDatabaseStoreInterface,
 	logger logrus.FieldLogger,
 ) error {
-
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
 	bifrostSecret, err := awsClient.GenerateBifrostUtilitySecret(cluster.ID, logger)
@@ -391,6 +390,22 @@ func provisionCluster(
 			}
 		}
 	}
+	// Sync PGBouncer configmap if there is any change
+	var vpc string
+	if cluster.ProvisionerMetadataKops != nil {
+		vpc = cluster.ProvisionerMetadataKops.VPC
+	} else if cluster.ProvisionerMetadataEKS != nil {
+		vpc = cluster.ProvisionerMetadataEKS.VPC
+	} else {
+		return errors.New("cluster metadata is nil cannot determine VPC")
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
+	defer cancel()
+	err = updatePGBouncerConfigMap(ctx, vpc, store, params.PGBouncerConfig, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
+	}
+	logger.Info("pgbouncer configmap updated successfully")
 
 	clusterName := cluster.ID
 	if cluster.ProvisionerMetadataKops != nil {

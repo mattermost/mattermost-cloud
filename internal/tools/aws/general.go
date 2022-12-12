@@ -5,14 +5,17 @@
 package aws
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
 // getAvailabilityZones retrive the Availabitly zones for the AWS region set in the Client.
 func (a *Client) getAvailabilityZones() ([]*string, error) {
-	resp, err := a.Service().ec2.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
+	ctx := context.TODO()
+	resp, err := a.Service().ec2.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get the AWS availabity zones for region %s", *a.config.Region)
 	}

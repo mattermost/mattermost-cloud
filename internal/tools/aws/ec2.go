@@ -5,26 +5,28 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
-	"strings"
+	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 // TagResource tags an AWS EC2 resource.
 func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogger) error {
+	ctx := context.TODO()
+
 	if resourceID == "" {
 		return errors.New("Missing resource ID")
 	}
 
-	resp, err := a.Service().ec2.CreateTags(&ec2.CreateTagsInput{
-		Resources: []*string{
-			aws.String(resourceID),
-		},
-		Tags: []*ec2.Tag{
+	output, err := a.Service().ec2.CreateTags(ctx, &ec2.CreateTagsInput{
+		Resources: []string{resourceID},
+		Tags: []ec2Types.Tag{
 			{
 				Key:   aws.String(key),
 				Value: aws.String(value),
@@ -38,22 +40,24 @@ func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogg
 	logger.WithFields(log.Fields{
 		"tag-key":   key,
 		"tag-value": value,
-	}).Debugf("AWS EC2 create tag response for %s: %s", resourceID, prettyCreateTagsResponse(resp))
+	}).Debugf("AWS EC2 create tag response for %s: %s", resourceID, prettyCreateTagsResponse(output))
 
 	return nil
 }
 
 // UntagResource deletes tags from an AWS EC2 resource.
 func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLogger) error {
+	ctx := context.TODO()
+
 	if resourceID == "" {
 		return errors.New("unable to remove AWS tag from resource: missing resource ID")
 	}
 
-	resp, err := a.Service().ec2.DeleteTags(&ec2.DeleteTagsInput{
-		Resources: []*string{
-			aws.String(resourceID),
+	output, err := a.Service().ec2.DeleteTags(ctx, &ec2.DeleteTagsInput{
+		Resources: []string{
+			resourceID,
 		},
-		Tags: []*ec2.Tag{
+		Tags: []ec2Types.Tag{
 			{
 				Key:   aws.String(key),
 				Value: aws.String(value),
@@ -67,30 +71,32 @@ func (a *Client) UntagResource(resourceID, key, value string, logger log.FieldLo
 	logger.WithFields(log.Fields{
 		"tag-key":   key,
 		"tag-value": value,
-	}).Debugf("AWS EC2 delete tag response for %s: %s", resourceID, prettyDeleteTagsResponse(resp))
+	}).Debugf("AWS EC2 delete tag response for %s: %s", resourceID, prettyDeleteTagsResponse(output))
 
 	return nil
 }
 
 // IsValidAMI check if the provided AMI exists
 func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, error) {
+	ctx := context.TODO()
+
 	// if AMI image is blank it will use the default KOPS image
 	if AMIImage == "" {
 		return true, nil
 	}
 
-	out, err := a.Service().ec2.DescribeImages(&ec2.DescribeImagesInput{
-		Filters: []*ec2.Filter{
+	output, err := a.Service().ec2.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Filters: []ec2Types.Filter{
 			{
 				Name:   aws.String("image-id"),
-				Values: []*string{aws.String(AMIImage)},
+				Values: []string{AMIImage},
 			},
 		},
 	})
 	if err != nil {
 		return false, err
 	}
-	if len(out.Images) == 0 {
+	if len(output.Images) == 0 {
 		return false, nil
 	}
 
@@ -98,54 +104,60 @@ func (a *Client) IsValidAMI(AMIImage string, logger log.FieldLogger) (bool, erro
 }
 
 // GetVpcsWithFilters returns VPCs matching a given filter.
-func (a *Client) GetVpcsWithFilters(filters []*ec2.Filter) ([]*ec2.Vpc, error) {
-	vpcOutput, err := a.Service().ec2.DescribeVpcs(&ec2.DescribeVpcsInput{
+func (a *Client) GetVpcsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Vpc, error) {
+	ctx := context.TODO()
+
+	output, err := a.Service().ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{
 		Filters: filters,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return vpcOutput.Vpcs, nil
+	return output.Vpcs, nil
 }
 
 // GetSubnetsWithFilters returns subnets matching a given filter.
-func (a *Client) GetSubnetsWithFilters(filters []*ec2.Filter) ([]*ec2.Subnet, error) {
-	subnetOutput, err := a.Service().ec2.DescribeSubnets(&ec2.DescribeSubnetsInput{
+func (a *Client) GetSubnetsWithFilters(filters []ec2Types.Filter) ([]ec2Types.Subnet, error) {
+	ctx := context.TODO()
+
+	output, err := a.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
 		Filters: filters,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return subnetOutput.Subnets, nil
+	return output.Subnets, nil
 }
 
 // GetSecurityGroupsWithFilters returns SGs matching a given filter.
-func (a *Client) GetSecurityGroupsWithFilters(filters []*ec2.Filter) ([]*ec2.SecurityGroup, error) {
-	sgOutput, err := a.Service().ec2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+func (a *Client) GetSecurityGroupsWithFilters(filters []ec2Types.Filter) ([]ec2Types.SecurityGroup, error) {
+	ctx := context.TODO()
+
+	output, err := a.Service().ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 		Filters: filters,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return sgOutput.SecurityGroups, nil
+	return output.SecurityGroups, nil
 }
 
-func prettyCreateTagsResponse(resp *ec2.CreateTagsOutput) string {
-	prettyResp, err := json.Marshal(resp)
+func prettyCreateTagsResponse(output *ec2.CreateTagsOutput) string {
+	prettyResp, err := json.Marshal(output)
 	if err != nil {
-		return strings.Replace(resp.String(), "\n", " ", -1)
+		return fmt.Sprintf("%v", output)
 	}
 
 	return string(prettyResp)
 }
 
-func prettyDeleteTagsResponse(resp *ec2.DeleteTagsOutput) string {
-	prettyResp, err := json.Marshal(resp)
+func prettyDeleteTagsResponse(output *ec2.DeleteTagsOutput) string {
+	prettyResp, err := json.Marshal(output)
 	if err != nil {
-		return strings.Replace(resp.String(), "\n", " ", -1)
+		return fmt.Sprintf("%v", output)
 	}
 
 	return string(prettyResp)

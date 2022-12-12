@@ -30,7 +30,7 @@ func init() {
 	_ = rootCmd.MarkFlagRequired("database")
 
 	rootCmd.AddCommand(newCmdServer())
-	rootCmd.AddCommand(clusterCmd)
+	rootCmd.AddCommand(newCmdCluster())
 	rootCmd.AddCommand(installationCmd)
 	rootCmd.AddCommand(groupCmd)
 	rootCmd.AddCommand(databaseCmd)

@@ -7,8 +7,8 @@ package aws
 import (
 	"errors"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/service/rds"
 )
 
@@ -51,11 +51,11 @@ func (t *Tags) ToRDSTags() []*rds.Tag {
 }
 
 // ToEC2Tags convert the tags into an EC2 tags format
-func (t *Tags) ToEC2Tags() []*ec2.Tag {
-	result := make([]*ec2.Tag, 0, t.Len())
+func (t *Tags) ToEC2Tags() []ec2Types.Tag {
+	result := make([]ec2Types.Tag, 0, t.Len())
 
 	for k, v := range t.tags {
-		result = append(result, &ec2.Tag{
+		result = append(result, ec2Types.Tag{
 			Key:   aws.String(k),
 			Value: aws.String(v),
 		})
