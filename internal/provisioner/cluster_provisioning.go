@@ -364,7 +364,7 @@ func provisionCluster(
 	for _, group := range groups {
 		groupIDs[makeRingSLOName(group)] = struct{}{}
 		if err := createOrUpdateRingSLOs(group, k8sClient, params.SLOTargetAvailability, logger); err != nil {
-			return errors.Wrap(err, "failed to apply ring slo: "+group.ID)
+			return errors.Wrapf(err, "failed to apply ring slo: %s", group.ID)
 		}
 	}
 
@@ -387,7 +387,7 @@ func provisionCluster(
 	for _, psl := range psls.Items {
 		if _, exist := groupIDs[psl.Name]; !exist {
 			if err := deletePrometheusServiceLevel(psl, k8sClient, logger); err != nil {
-				return errors.Wrap(err, "failed deleting removed ring slo: "+strings.ToLower(psl.Name))
+				return errors.Wrapf(err, "failed deleting removed ring slo: %s", strings.ToLower(psl.Name))
 			}
 		}
 	}
