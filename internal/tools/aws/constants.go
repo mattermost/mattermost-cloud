@@ -205,7 +205,7 @@ const (
 
 	// DefaultMySQLContextTimeSeconds is the number of seconds that a SQL
 	// client will take before cancel a call to the database.
-	DefaultMySQLContextTimeSeconds = 15
+	DefaultMySQLContextTimeSeconds = 30
 
 	// DefaultRDSMultitenantDatabaseMySQLCountLimit is the maximum number of
 	// schemas allowed in a MySQL multitenant RDS database cluster.
