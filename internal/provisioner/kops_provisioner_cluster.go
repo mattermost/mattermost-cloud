@@ -167,6 +167,16 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		if err != nil {
 			return errors.Wrapf(err, "failed to set %s", setValue)
 		}
+		setValue = "spec.networking.calico.prometheusGoMetricsEnabled=true"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
+		setValue = "spec.networking.calico.prometheusProcessMetricsEnabled=true"
+		err = kops.SetCluster(kopsMetadata.Name, setValue)
+		if err != nil {
+			return errors.Wrapf(err, "failed to set %s", setValue)
+		}
 		setValue = "spec.networking.calico.typhaPrometheusMetricsEnabled=true"
 		err = kops.SetCluster(kopsMetadata.Name, setValue)
 		if err != nil {
@@ -198,7 +208,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		logger.Infof("Adding environment variables to etcd cluster manager")
 		err = kops.SetCluster(kopsMetadata.Name, strings.Join(override, ","))
 		if err != nil {
-			return errors.Wrapf(err, "failed to set %s", setValue)
+			return errors.Wrap(err, "failed to set etcd environment variables")
 		}
 	}
 
