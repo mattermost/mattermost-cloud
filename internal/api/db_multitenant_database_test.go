@@ -48,31 +48,31 @@ func TestGetMultitenantDatabases(t *testing.T) {
 
 	t.Run("parameter handling", func(t *testing.T) {
 		t.Run("invalid page", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/api/databases?page=invalid&per_page=100", ts.URL))
+			resp, err := http.Get(fmt.Sprintf("%s/api/databases/multitenant_databases?page=invalid&per_page=100", ts.URL))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 		})
 
 		t.Run("invalid perPage", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/api/databases?page=0&per_page=invalid", ts.URL))
+			resp, err := http.Get(fmt.Sprintf("%s/api/databases/multitenant_databases?page=0&per_page=invalid", ts.URL))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 		})
 
 		t.Run("no paging parameters", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/api/databases", ts.URL))
+			resp, err := http.Get(fmt.Sprintf("%s/api/databases/multitenant_databases", ts.URL))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 
 		t.Run("missing page", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/api/databases?per_page=100", ts.URL))
+			resp, err := http.Get(fmt.Sprintf("%s/api/databases/multitenant_databases?per_page=100", ts.URL))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 
 		t.Run("missing perPage", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/api/databases?page=1", ts.URL))
+			resp, err := http.Get(fmt.Sprintf("%s/api/databases/multitenant_databases?page=1", ts.URL))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 		})
@@ -231,7 +231,7 @@ func TestUpdateMultitenantDatabase(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/database/%s", ts.URL, database1.ID), bytes.NewReader([]byte("invalid")))
+		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/databases/multitenant_database/%s", ts.URL, database1.ID), bytes.NewReader([]byte("invalid")))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(httpRequest)
@@ -240,7 +240,7 @@ func TestUpdateMultitenantDatabase(t *testing.T) {
 	})
 
 	t.Run("empty payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/database/%s", ts.URL, database1.ID), bytes.NewReader([]byte("")))
+		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/databases/multitenant_database/%s", ts.URL, database1.ID), bytes.NewReader([]byte("")))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(httpRequest)

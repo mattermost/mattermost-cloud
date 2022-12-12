@@ -5,8 +5,11 @@
 package aws
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -53,8 +56,8 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		// Find the VPC which the installation belongs to.
-		a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any()).
-			Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{{VpcId: &a.VPCa}}}, nil).
+		a.Mocks.API.EC2.EXPECT().DescribeVpcs(context.TODO(), gomock.Any()).
+			Return(&ec2.DescribeVpcsOutput{Vpcs: []ec2Types.Vpc{{VpcId: &a.VPCa}}}, nil).
 			Times(1),
 
 		// Get multitenant databases from the datastore to check if any belongs to the installation ID.

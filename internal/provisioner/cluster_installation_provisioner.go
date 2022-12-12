@@ -450,26 +450,11 @@ func prepareClusterUtilities(
 	// TODO: Yeah, so this is definitely a bit of a race condition. We would
 	// need to lock a bunch of stuff to do this completely properly, but that
 	// isn't really feasible right now.
-	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
-
-	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	err = updatePGBouncerConfigMap(ctx, vpc, store, pgbouncerConfig, k8sClient, logger)
 	if err != nil {
-		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
-	}
-	if configMap.Data["pgbouncer.ini"] != ini {
-		logger.Debug("Updating pgbouncer.ini with new database configuration")
-
-		configMap.Data["pgbouncer.ini"] = ini
-		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
-		}
+		return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
 	}
 
 	userlistSecret, err := k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Get(ctx, "pgbouncer-userlist-secret", metav1.GetOptions{})
@@ -492,6 +477,28 @@ func prepareClusterUtilities(
 		}
 	}
 
+	return nil
+}
+
+func updatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
+	}
+
+	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+	if configMap.Data["pgbouncer.ini"] != ini {
+		logger.Debug("Updating pgbouncer.ini with new database configuration")
+
+		configMap.Data["pgbouncer.ini"] = ini
+		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
+		}
+	}
 	return nil
 }
 

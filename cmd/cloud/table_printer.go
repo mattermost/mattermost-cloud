@@ -21,6 +21,10 @@ func registerTableOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSlice("custom-columns", []string{}, "Custom columns for table output specified with jsonpath in form <column_name>:<jsonpath>. Example: --custom-columns=ID:.ID,State:.State,VPC:.ProvisionerMetadataKops.VPC")
 }
 
+func getTableOutputOption(to tableOptions) (bool, []string) {
+	return to.outputToTable || len(to.customCols) > 0, to.customCols
+}
+
 func tableOutputEnabled(command *cobra.Command) (bool, []string) {
 	outputToTable, _ := command.Flags().GetBool("table")
 	customCols, _ := command.Flags().GetStringSlice("custom-columns")

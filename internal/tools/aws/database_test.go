@@ -5,14 +5,16 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -53,8 +55,8 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 			Times(1),
 
 		// Find the VPC which the installation belongs to.
-		a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any()).
-			Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{{VpcId: &a.VPCa}}}, nil).
+		a.Mocks.API.EC2.EXPECT().DescribeVpcs(context.TODO(), gomock.Any()).
+			Return(&ec2.DescribeVpcsOutput{Vpcs: []ec2Types.Vpc{{VpcId: &a.VPCa}}}, nil).
 			Times(1),
 
 		// Create a database secret.
@@ -95,8 +97,8 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 			Times(1),
 
 		// Retrive the Availability Zones.
-		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
-			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
+		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(context.TODO(), gomock.Any()).
+			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []ec2Types.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 			Times(1),
 	)
 
@@ -134,8 +136,8 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 			Times(1),
 
 		// Find the VPC which the installation belongs to.
-		a.Mocks.API.EC2.EXPECT().DescribeVpcs(gomock.Any()).
-			Return(&ec2.DescribeVpcsOutput{Vpcs: []*ec2.Vpc{{VpcId: &a.VPCa}}}, nil).
+		a.Mocks.API.EC2.EXPECT().DescribeVpcs(context.TODO(), gomock.Any()).
+			Return(&ec2.DescribeVpcsOutput{Vpcs: []ec2Types.Vpc{{VpcId: &a.VPCa}}}, nil).
 			Times(1),
 
 		// Create a database secret.
@@ -182,8 +184,8 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 			Times(1),
 
 		// Retrive the Availability Zones.
-		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(gomock.Any()).
-			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []*ec2.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
+		a.Mocks.API.EC2.EXPECT().DescribeAvailabilityZones(context.TODO(), gomock.Any()).
+			Return(&ec2.DescribeAvailabilityZonesOutput{AvailabilityZones: []ec2Types.AvailabilityZone{{ZoneName: aws.String("us-honk-1a")}, {ZoneName: aws.String("us-honk-1b")}}}, nil).
 			Times(1),
 	)
 
@@ -263,9 +265,9 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 			Times(1),
 
 		a.Mocks.API.EC2.EXPECT().
-			DescribeSecurityGroups(gomock.Any()).
+			DescribeSecurityGroups(context.TODO(), gomock.Any()).
 			Return(&ec2.DescribeSecurityGroupsOutput{
-				SecurityGroups: []*ec2.SecurityGroup{{GroupId: &a.GroupID}},
+				SecurityGroups: []ec2Types.SecurityGroup{{GroupId: &a.GroupID}},
 			}, nil).
 			Times(1),
 

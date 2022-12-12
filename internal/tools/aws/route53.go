@@ -546,7 +546,7 @@ func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string 
 
 // parseHostedZoneResourceID removes prefix from hosted zone ID.
 func parseHostedZoneResourceID(hostedZone *route53.HostedZone) (string, error) {
-	id := strings.TrimLeft(*hostedZone.Id, hostedZonePrefix)
+	id := strings.TrimLeft(*hostedZone.Id, hostedZonePrefix[0:len(hostedZonePrefix)-1])
 	if len(id) < hostedZoneIDLength {
 		return "", errors.Errorf("invalid hosted zone ID: %s", id)
 	}

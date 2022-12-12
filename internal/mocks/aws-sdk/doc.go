@@ -4,7 +4,7 @@
 
 // Package mockawssdk to create the mocks run go generate to regenerate this package.
 //
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./ec2.go github.com/aws/aws-sdk-go/service/ec2/ec2iface EC2API
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./ec2.go github.com/mattermost/mattermost-cloud/internal/tools/aws EC2API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./rds.go github.com/aws/aws-sdk-go/service/rds/rdsiface RDSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./s3.go github.com/aws/aws-sdk-go/service/s3/s3iface S3API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./acm.go github.com/mattermost/mattermost-cloud/internal/tools/aws ACMAPI

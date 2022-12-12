@@ -25,6 +25,7 @@ func provisionCluster(
 	kubeconfigPath string,
 	awsClient aws.AWS,
 	params ProvisioningParams,
+	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger) error {
 
 	// Start by gathering resources that will be needed later. If any of this
@@ -345,6 +346,23 @@ func provisionCluster(
 	if err := createOrUpdateClusterSLOs(cluster, k8sClient, logger); err != nil {
 		return errors.Wrap(err, "failed to create cluster slos")
 	}
+
+	// Sync PGBouncer configmap if there is any change
+	var vpc string
+	if cluster.ProvisionerMetadataKops != nil {
+		vpc = cluster.ProvisionerMetadataKops.VPC
+	} else if cluster.ProvisionerMetadataEKS != nil {
+		vpc = cluster.ProvisionerMetadataEKS.VPC
+	} else {
+		return errors.New("cluster metadata is nil cannot determine VPC")
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
+	defer cancel()
+	err = updatePGBouncerConfigMap(ctx, vpc, store, params.PGBouncerConfig, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
+	}
+	logger.Info("pgbouncer configmap updated successfully")
 
 	clusterName := cluster.ID
 	if cluster.ProvisionerMetadataKops != nil {

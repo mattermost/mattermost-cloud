@@ -8,9 +8,9 @@ import (
 	"sync"
 	"testing"
 
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/golang/mock/gomock"
 
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -95,7 +95,7 @@ type AWSTestSuite struct {
 	DNSNameB   string
 
 	// AWS Tags
-	DefaultRDSTag *ec2.Tag
+	DefaultRDSTag ec2Types.Tag
 }
 
 // NewAWSTestSuite gives a new instance of the entire AWS testing suite.
@@ -155,7 +155,7 @@ func NewAWSTestSuite(t *testing.T) *AWSTestSuite {
 		DNSNameA:   "mattermost.com",
 		DNSNameB:   "mattermost-cloud.com",
 
-		DefaultRDSTag: &ec2.Tag{
+		DefaultRDSTag: ec2Types.Tag{
 			Key:   aws.String(trimTagPrefix(DefaultDBSecurityGroupTagKey)),
 			Value: aws.String(DefaultDBSecurityGroupTagMySQLValue),
 		},
