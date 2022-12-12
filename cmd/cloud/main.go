@@ -31,7 +31,7 @@ func init() {
 
 	rootCmd.AddCommand(newCmdServer())
 	rootCmd.AddCommand(newCmdCluster())
-	rootCmd.AddCommand(installationCmd)
+	rootCmd.AddCommand(newCmdInstallation())
 	rootCmd.AddCommand(groupCmd)
 	rootCmd.AddCommand(databaseCmd)
 	rootCmd.AddCommand(schemaCmd)
