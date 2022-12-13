@@ -48,8 +48,8 @@ func newCmdCluster() *cobra.Command {
 	cmd.AddCommand(newCmdClusterSizeDictionary())
 	cmd.AddCommand(newCmdClusterShowStateReport())
 
-	cmd.AddCommand(clusterAnnotationCmd)
-	cmd.AddCommand(clusterInstallationCmd)
+	cmd.AddCommand(newCmdClusterAnnotation())
+	cmd.AddCommand(newCmdClusterInstallation())
 
 	return cmd
 }

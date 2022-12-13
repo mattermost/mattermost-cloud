@@ -10,78 +10,85 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	clusterAnnotationAddCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
-	clusterAnnotationAddCmd.Flags().String("cluster", "", "The id of the cluster to be annotated.")
-	clusterAnnotationAddCmd.MarkFlagRequired("cluster")
-	clusterAnnotationAddCmd.MarkFlagRequired("annotation")
+func newCmdClusterAnnotation() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "annotation",
+		Short: "Manipulate annotations of clusters managed by the provisioning server.",
+	}
 
-	clusterAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the cluster.")
-	clusterAnnotationDeleteCmd.Flags().String("cluster", "", "The id of the cluster from which annotation should be removed.")
-	clusterAnnotationDeleteCmd.MarkFlagRequired("cluster")
-	clusterAnnotationDeleteCmd.MarkFlagRequired("annotation")
+	cmd.AddCommand(newCmdClusterAnnotationAdd())
+	cmd.AddCommand(newCmdClusterAnnotationDelete())
 
-	clusterAnnotationCmd.AddCommand(clusterAnnotationAddCmd)
-	clusterAnnotationCmd.AddCommand(clusterAnnotationDeleteCmd)
+	return cmd
 }
 
-var clusterAnnotationCmd = &cobra.Command{
-	Use:   "annotation",
-	Short: "Manipulate annotations of clusters managed by the provisioning server.",
+func newCmdClusterAnnotationAdd() *cobra.Command {
+	var flags clusterAnnotationAddFlags
+
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "Adds annotations to the cluster.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			return executeClusterAnnotationAddCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
 }
 
-var clusterAnnotationAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Adds annotations to the cluster.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func executeClusterAnnotationAddCmd(flags clusterAnnotationAddFlags) error {
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	client := model.NewClient(flags.serverAddress)
 
-		clusterID, _ := command.Flags().GetString("cluster")
-		annotations, _ := command.Flags().GetStringArray("annotation")
+	request := newAddAnnotationsRequest(flags.annotations)
 
-		request := newAddAnnotationsRequest(annotations)
+	if flags.dryRun {
+		return runDryRun(request)
+	}
 
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			return runDryRun(request)
-		}
+	cluster, err := client.AddClusterAnnotations(flags.cluster, request)
+	if err != nil {
+		return errors.Wrap(err, "failed to add cluster annotations")
+	}
 
-		cluster, err := client.AddClusterAnnotations(clusterID, request)
-		if err != nil {
-			return errors.Wrap(err, "failed to add cluster annotations")
-		}
+	if err = printJSON(cluster); err != nil {
+		return errors.Wrap(err, "failed to print cluster annotations response")
+	}
 
-		err = printJSON(cluster)
-		if err != nil {
-			return errors.Wrap(err, "failed to print cluster annotations response")
-		}
-
-		return nil
-	},
+	return nil
 }
 
-var clusterAnnotationDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Deletes Annotation from the Cluster.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdClusterAnnotationDelete() *cobra.Command {
+	var flags clusterAnnotationDeleteFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes Annotation from the Cluster.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		clusterID, _ := command.Flags().GetString("cluster")
-		annotation, _ := command.Flags().GetString("annotation")
+			client := model.NewClient(flags.serverAddress)
 
-		err := client.DeleteClusterAnnotation(clusterID, annotation)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete cluster annotations")
-		}
+			if err := client.DeleteClusterAnnotation(flags.cluster, flags.annotation); err != nil {
+				return errors.Wrap(err, "failed to delete cluster annotations")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
 }
 
 func newAddAnnotationsRequest(annotations []string) *model.AddAnnotationsRequest {
