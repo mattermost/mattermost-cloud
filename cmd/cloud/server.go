@@ -236,6 +236,7 @@ func executeServerCmd(flags serverFlags) error {
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
 		"provisioner":                                   provisionerFlag,
+		"slo-availability":                              flags.sloTargetAvailability,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
@@ -282,6 +283,7 @@ func executeServerCmd(flags serverFlags) error {
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   flags.sloInstallationGroups,
 		EtcdManagerEnv:          etcdManagerEnv,
+		SLOTargetAvailability:   flags.sloTargetAvailability,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)

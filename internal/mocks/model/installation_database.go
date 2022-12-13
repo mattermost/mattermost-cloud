@@ -485,6 +485,21 @@ func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) DeleteInstallation
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstallationProxyDatabaseResources", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).DeleteInstallationProxyDatabaseResources), multitenantDatabase, databaseSchema)
 }
 
+// GetGroupDTOs mocks base method
+func (m *MockInstallationDatabaseStoreInterface) GetGroupDTOs(filter *model.GroupFilter) ([]*model.GroupDTO, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGroupDTOs", filter)
+	ret0, _ := ret[0].([]*model.GroupDTO)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGroupDTOs indicates an expected call of GetGroupDTOs
+func (mr *MockInstallationDatabaseStoreInterfaceMockRecorder) GetGroupDTOs(filter interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroupDTOs", reflect.TypeOf((*MockInstallationDatabaseStoreInterface)(nil).GetGroupDTOs), filter)
+}
+
 // MockClusterUtilityDatabaseStoreInterface is a mock of ClusterUtilityDatabaseStoreInterface interface
 type MockClusterUtilityDatabaseStoreInterface struct {
 	ctrl     *gomock.Controller
