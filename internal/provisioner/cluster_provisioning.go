@@ -343,6 +343,10 @@ func provisionCluster(
 		}
 	}
 
+	if err := createOrUpdateClusterSLOs(cluster, k8sClient, logger); err != nil {
+		return errors.Wrap(err, "failed to create cluster slos")
+	}
+
 	// Sync PGBouncer configmap if there is any change
 	var vpc string
 	if cluster.ProvisionerMetadataKops != nil {

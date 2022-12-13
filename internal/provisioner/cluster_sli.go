@@ -1,0 +1,53 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
+package provisioner
+
+import (
+	"github.com/mattermost/mattermost-cloud/k8s"
+	"github.com/mattermost/mattermost-cloud/model"
+	log "github.com/sirupsen/logrus"
+	slothv1 "github.com/slok/sloth/pkg/kubernetes/api/sloth/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+func makeClusterSLOs(cluster *model.Cluster) slothv1.PrometheusServiceLevel {
+	resourceName := "cluster-" + cluster.ID
+	sli := slothv1.PrometheusServiceLevel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: resourceName,
+			Labels: map[string]string{
+				"app":     "kube-prometheus-stack",
+				"release": "prometheus-operator",
+			},
+		},
+		Spec: slothv1.PrometheusServiceLevelSpec{
+			Labels: map[string]string{
+				"owner": "sreteam",
+			},
+			Service: resourceName,
+			SLOs: []slothv1.SLO{
+				{
+					Alerting: slothv1.Alerting{
+						PageAlert:   slothv1.Alert{Disable: true},
+						TicketAlert: slothv1.Alert{Disable: true},
+					},
+					Description: "Availability metric for mattermost API on cluster " + cluster.ID,
+					Name:        "requests-availability-cluster",
+					Objective:   99.5,
+					SLI: slothv1.SLI{Events: &slothv1.SLIEvents{
+						ErrorQuery: "sum(rate(mattermost_api_time_count{clusterID='" + cluster.ID + "',status_code=~'(5..|429|499)'}[{{.window}}]))",
+						TotalQuery: "sum(rate(mattermost_api_time_count{clusterID='" + cluster.ID + "'}[{{.window}}]))",
+					}},
+				}},
+		},
+	}
+
+	return sli
+}
+
+func createOrUpdateClusterSLOs(cluster *model.Cluster, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	sli := makeClusterSLOs(cluster)
+	return createOrUpdateClusterPrometheusServiceLevel(sli, k8sClient, logger)
+}
