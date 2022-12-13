@@ -6,7 +6,6 @@ package cloudflare
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -217,6 +216,9 @@ func TestCreateDNSRecord(t *testing.T) {
 					},
 				}, nil
 			},
+			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				return []cf.DNSRecord{}, nil
+			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com"}
 			},
@@ -236,6 +238,9 @@ func TestCreateDNSRecord(t *testing.T) {
 					},
 				}, nil
 			},
+			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				return []cf.DNSRecord{}, nil
+			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com", "cloud.test.mattermost.com"}
 			},
@@ -248,20 +253,41 @@ func TestCreateDNSRecord(t *testing.T) {
 			setupID: func(zoneName string) (zoneID string, err error) {
 				return "CLOUDFLAREZONEID", nil
 			},
-			setupDNS: func(ctx context.Context, zoneID string, rr cf.DNSRecord) (*cf.DNSRecordResponse, error) {
-				err := cf.NewRequestError(&cf.Error{
-					Type:       cf.ErrorTypeRequest,
-					StatusCode: http.StatusBadRequest,
-					ErrorCodes: []int{recordExistsErrorCode},
-				})
-				return nil, &err
-			},
 			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				trueVal := true
 				return []cf.DNSRecord{
 					{
-						Name:   rr.Name,
-						ID:     "CLOUDFLARERECORDID",
-						ZoneID: zoneID,
+						Name:    rr.Name,
+						ID:      "CLOUDFLARERECORDID",
+						ZoneID:  zoneID,
+						Content: "load.balancer.endpoint",
+						TTL:     1,
+						Proxied: &trueVal,
+					},
+				}, nil
+			},
+			awsZoneNameList: func() []string {
+				return []string{"cloud.mattermost.com"}
+			},
+			expected: nil,
+		},
+		{
+			description:     "success when record already exists",
+			customerDNSName: []string{"customer.cloud.mattermost.com"},
+			dnsEndpoints:    []string{"load.balancer.endpoint"},
+			setupID: func(zoneName string) (zoneID string, err error) {
+				return "CLOUDFLAREZONEID", nil
+			},
+			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				trueVal := true
+				return []cf.DNSRecord{
+					{
+						Name:    rr.Name,
+						ID:      "CLOUDFLARERECORDID",
+						ZoneID:  zoneID,
+						Content: "load.balancer.endpoint",
+						TTL:     2,
+						Proxied: &trueVal,
 					},
 				}, nil
 			},
@@ -275,6 +301,7 @@ func TestCreateDNSRecord(t *testing.T) {
 			},
 			expected: nil,
 		},
+
 		{
 			description:     "success with multiple domain names",
 			customerDNSName: []string{"customer.cloud.mattermost.com", "customer.cloud.mattermost.io"},
@@ -288,6 +315,9 @@ func TestCreateDNSRecord(t *testing.T) {
 						ID: "CLOUDFLARERECORDID",
 					},
 				}, nil
+			},
+			getDNSRecords: func(ctx context.Context, zoneID string, rr cf.DNSRecord) ([]cf.DNSRecord, error) {
+				return []cf.DNSRecord{}, nil
 			},
 			awsZoneNameList: func() []string {
 				return []string{"cloud.mattermost.com", "cloud.mattermost.io"}
