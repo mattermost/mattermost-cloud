@@ -71,9 +71,9 @@ var AllClusterStatesPendingWork = []string{
 	ClusterStateDeletionRequested,
 }
 
-// PendingWorkPriority is a map of states to their priority. Default priority is 0.
+// ClusterStateWorkPriority is a map of states to their priority. Default priority is 0.
 // States with higher priority will be processed first.
-var PendingWorkPriority = map[string]int{
+var ClusterStateWorkPriority = map[string]int{
 	ClusterStateCreationRequested:  2,
 	ClusterStateCreationInProgress: 1,
 }

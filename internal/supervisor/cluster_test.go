@@ -198,10 +198,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		require.NoError(t, err)
 
 		clusterListByWorkOrder := mockEventProducer.clusterListByEventOrder
-		require.Equal(t, len(preferredClusterOrder), len(clusterListByWorkOrder))
-		for i, clusterID := range clusterListByWorkOrder {
-			require.Equal(t, preferredClusterOrder[i], clusterID)
-		}
+		require.Equal(t, preferredClusterOrder, clusterListByWorkOrder)
 	})
 
 }

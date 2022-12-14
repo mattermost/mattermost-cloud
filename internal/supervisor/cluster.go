@@ -77,7 +77,7 @@ func (s *ClusterSupervisor) Do() error {
 
 	// Sort the clusters by state preference. Relative order is preserved.
 	sort.SliceStable(clusters, func(i, j int) bool {
-		return model.PendingWorkPriority[clusters[i].State] > model.PendingWorkPriority[clusters[j].State]
+		return model.ClusterStateWorkPriority[clusters[i].State] > model.ClusterStateWorkPriority[clusters[j].State]
 	})
 
 	for _, cluster := range clusters {
