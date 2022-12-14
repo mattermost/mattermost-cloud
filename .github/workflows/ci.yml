@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - master
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
   pull_request:
 
 permissions:
@@ -38,6 +40,18 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: cimg/postgres:12.11
+        env:
+          POSTGRES_USER: cloud_test
+          POSTGRES_DB: cloud_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
@@ -58,18 +72,12 @@ jobs:
         working-directory: ./cmd/tools/testwick
 
       - name: ci/test-postgres
-        run: |
-          for i in `seq 1 10`;
-          do
-            nc -z localhost 5432 && echo Success && exit 0
-            echo -n .
-            sleep 1
-          done
-          echo Failed waiting for Postgres && exit 1
-
-          make unittest
+        run: make unittest
+        env:
+          CLOUD_DATABASE: postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
 
   build:
+    if: ${{ github.event_name == 'pull_request' || github.ref_name  == 'master' }}
     runs-on: ubuntu-latest
     needs: [lint, test]
     steps:
