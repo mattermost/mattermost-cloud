@@ -1,0 +1,110 @@
+name: ci
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        with:
+          go-version: "1.19"
+          cache: true
+
+      - name: ci/check-style
+        run: make check-style
+
+      - name: ci/check-modules
+        run: make check-modules
+
+      - name: ci/check-boilerplate
+        run: make check-modules
+
+      - name: ci/check-mocks
+        run: make verify-mocks
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # v3.5.0
+        with:
+          go-version: "1.19"
+          cache: true
+
+      - name: ci/test-sqlite
+        run: make unittest goverall
+
+      - name: ci/test-testwick
+        run: make unittest
+        working-directory: ./cmd/tools/testwick
+
+      - name: ci/test-postgres
+        run: |
+          for i in `seq 1 10`;
+          do
+            nc -z localhost 5432 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Postgres && exit 1
+
+          make unittest
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v3.2.0
+        with:
+          fetch-depth: 0
+
+      - name: ci/build-docker
+        run: make build-image
+
+      - name: ci/build-docker-e2e
+        run: make build-image-e2e
+
+      - name: ci/scan-docker-security
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "mattermost/mattermost-cloud:${{ github.sha }}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL"
+
+      - name: ci/scan-docker-security-e2e
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "mattermost/mattermost-cloud-e2e:${{ github.sha }}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL"
+
+      - name: ci/docker-push
+        run: |
+          ./scripts/push-docker.sh
+        env:
+          TAG: ${GITHUB_SHA:0:7}

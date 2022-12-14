@@ -1,0 +1,48 @@
+name: cd
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@dc323e67f16fb5f7663d20ff7941f27f5809e9b6 # v3.2.0
+        with:
+          fetch-depth: 0
+
+      - name: ci/build-docker
+        run: make build-image
+
+      - name: ci/build-docker-e2e
+        run: make build-image-e2e
+
+      - name: ci/scan-docker-security
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "mattermost/mattermost-cloud:${{ github.ref_name }}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL"
+
+      - name: ci/scan-docker-security-e2e
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "mattermost/mattermost-cloud-e2e:${{ github.ref_name }}"
+          format: "table"
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL"
+
+      - name: ci/docker-push
+        run: ./scripts/push-docker.sh
+        env:
+          TAG: ${GITHUB_REF_NAME}
