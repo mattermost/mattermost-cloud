@@ -9,16 +9,13 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/eks"
-
 	"github.com/mattermost/mattermost-cloud/internal/events"
-	"github.com/mattermost/mattermost-cloud/internal/testutil"
-
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
@@ -581,12 +578,15 @@ func (a *mockAWS) SecretsManagerValidateExternalDatabaseSecret(name string) erro
 	return nil
 }
 
-type mockEventProducer struct{}
+type mockEventProducer struct {
+	clusterListByEventOrder []string
+}
 
 func (m *mockEventProducer) ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error {
 	return nil
 }
 func (m *mockEventProducer) ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error {
+	m.clusterListByEventOrder = append(m.clusterListByEventOrder, cluster.ID)
 	return nil
 }
 func (m *mockEventProducer) ProduceClusterInstallationStateChangeEvent(clusterInstallation *model.ClusterInstallation, oldState string, extraDataFields ...events.DataField) error {
