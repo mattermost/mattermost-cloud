@@ -10,111 +10,116 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	installationRestorationRequestCmd.Flags().String("installation", "", "The id of the installation to be restored.")
-	installationRestorationRequestCmd.Flags().String("backup", "", "The id of the backup to restore.")
-	installationRestorationRequestCmd.MarkFlagRequired("installation")
-	installationRestorationRequestCmd.MarkFlagRequired("backup")
+func newCmdInstallationRestorationOperation() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "restoration",
+		Short: "Manipulate installation restoration operations managed by the provisioning server.",
+	}
 
-	installationRestorationsListCmd.Flags().String("installation", "", "The id of the installation to query operations.")
-	installationRestorationsListCmd.Flags().String("state", "", "The state to filter operations by.")
-	installationRestorationsListCmd.Flags().String("cluster-installation", "", "The cluster installation to filter operations by.")
-	registerTableOutputFlags(installationRestorationsListCmd)
-	registerPagingFlags(installationRestorationsListCmd)
+	cmd.AddCommand(newCmdInstallationRestorationRequest())
+	cmd.AddCommand(newCmdInstallationRestorationsListCmd())
+	cmd.AddCommand(newCmdInstallationRestorationGetCmd())
 
-	installationRestorationGetCmd.Flags().String("restoration", "", "The id of restoration operation.")
-	installationRestorationGetCmd.MarkFlagRequired("restoration")
-
-	installationRestorationOperationCmd.AddCommand(installationRestorationRequestCmd)
-	installationRestorationOperationCmd.AddCommand(installationRestorationsListCmd)
-	installationRestorationOperationCmd.AddCommand(installationRestorationGetCmd)
+	return cmd
 }
 
-var installationRestorationOperationCmd = &cobra.Command{
-	Use:   "restoration",
-	Short: "Manipulate installation restoration operations managed by the provisioning server.",
-}
+func newCmdInstallationRestorationRequest() *cobra.Command {
+	var flags installationRestorationRequestFlags
 
-var installationRestorationRequestCmd = &cobra.Command{
-	Use:   "request",
-	Short: "Request database restoration",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+	cmd := &cobra.Command{
+		Use:   "request",
+		Short: "Request database restoration",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+			client := model.NewClient(flags.serverAddress)
 
-		installationID, _ := command.Flags().GetString("installation")
-		backupID, _ := command.Flags().GetString("backup")
-
-		installationDTO, err := client.RestoreInstallationDatabase(installationID, backupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to request installation database restoration")
-		}
-
-		err = printJSON(installationDTO)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var installationRestorationsListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List installation database restoration operations",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		installationID, _ := command.Flags().GetString("installation")
-		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
-		state, _ := command.Flags().GetString("state")
-		paging := parsePagingFlags(command)
-
-		request := &model.GetInstallationDBRestorationOperationsRequest{
-			Paging:                paging,
-			InstallationID:        installationID,
-			ClusterInstallationID: clusterInstallationID,
-			State:                 state,
-		}
-
-		dbRestorationOperations, err := client.GetInstallationDBRestorationOperations(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to list installation database restoration operations")
-		}
-
-		if enabled, customCols := tableOutputEnabled(command); enabled {
-			var keys []string
-			var vals [][]string
-
-			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(dbRestorationOperations))
-				for _, elem := range dbRestorationOperations {
-					data = append(data, elem)
-				}
-				keys, vals, err = prepareTableData(customCols, data)
-				if err != nil {
-					return errors.Wrap(err, "failed to prepare table output")
-				}
-			} else {
-				keys, vals = defaultDBRestorationOperationTableData(dbRestorationOperations)
+			installationDTO, err := client.RestoreInstallationDatabase(flags.installationID, flags.backupID)
+			if err != nil {
+				return errors.Wrap(err, "failed to request installation database restoration")
 			}
 
-			printTable(keys, vals)
+			if err = printJSON(installationDTO); err != nil {
+				return err
+			}
+
 			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationRestorationsListCmd() *cobra.Command {
+
+	var flags installationRestorationsListFlags
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List installation database restoration operations",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeInstallationRestorationsList(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeInstallationRestorationsList(flags installationRestorationsListFlags) error {
+	client := model.NewClient(flags.serverAddress)
+
+	paging := getPaging(flags.pagingFlags)
+
+	request := &model.GetInstallationDBRestorationOperationsRequest{
+		Paging:                paging,
+		InstallationID:        flags.installationID,
+		ClusterInstallationID: flags.clusterInstallationID,
+		State:                 flags.state,
+	}
+
+	dbRestorationOperations, err := client.GetInstallationDBRestorationOperations(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to list installation database restoration operations")
+	}
+
+	if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
+		var keys []string
+		var vals [][]string
+
+		if len(customCols) > 0 {
+			data := make([]interface{}, 0, len(dbRestorationOperations))
+			for _, elem := range dbRestorationOperations {
+				data = append(data, elem)
+			}
+			keys, vals, err = prepareTableData(customCols, data)
+			if err != nil {
+				return errors.Wrap(err, "failed to prepare table output")
+			}
+		} else {
+			keys, vals = defaultDBRestorationOperationTableData(dbRestorationOperations)
 		}
 
-		err = printJSON(dbRestorationOperations)
-		if err != nil {
-			return err
-		}
-
+		printTable(keys, vals)
 		return nil
-	},
+	}
+
+	if err = printJSON(dbRestorationOperations); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func defaultDBRestorationOperationTableData(ops []*model.InstallationDBRestorationOperation) ([]string, [][]string) {
@@ -135,27 +140,33 @@ func defaultDBRestorationOperationTableData(ops []*model.InstallationDBRestorati
 	return keys, vals
 }
 
-var installationRestorationGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Fetches given installation database restoration operation.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdInstallationRestorationGetCmd() *cobra.Command {
+	var flags installationRestorationGetFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Fetches given installation database restoration operation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		restorationID, _ := command.Flags().GetString("restoration")
+			client := model.NewClient(flags.serverAddress)
+			restorationOperation, err := client.GetInstallationDBRestoration(flags.restorationID)
+			if err != nil {
+				return errors.Wrap(err, "failed to get installation database restoration")
+			}
 
-		restorationOperation, err := client.GetInstallationDBRestoration(restorationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to get installation database restoration")
-		}
+			if err = printJSON(restorationOperation); err != nil {
+				return err
+			}
 
-		err = printJSON(restorationOperation)
-		if err != nil {
-			return err
-		}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+		},
+	}
 
-		return nil
-	},
+	flags.addFlags(cmd)
+
+	return cmd
 }

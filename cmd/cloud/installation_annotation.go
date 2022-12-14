@@ -10,76 +10,81 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	installationAnnotationAddCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
-	installationAnnotationAddCmd.Flags().String("installation", "", "The id of the installation to be annotated.")
-	installationAnnotationAddCmd.MarkFlagRequired("installation")
-	installationAnnotationAddCmd.MarkFlagRequired("annotation")
+func newCmdInstallationAnnotation() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "annotation",
+		Short: "Manipulate annotations of installations managed by the provisioning server.",
+	}
 
-	installationAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the installation.")
-	installationAnnotationDeleteCmd.Flags().String("installation", "", "The id of the installation from which annotations should be removed.")
-	installationAnnotationDeleteCmd.MarkFlagRequired("installation")
-	installationAnnotationDeleteCmd.MarkFlagRequired("annotation")
+	cmd.AddCommand(newCmdInstallationAnnotationAdd())
+	cmd.AddCommand(newCmdInstallationAnnotationDelete())
 
-	installationAnnotationCmd.AddCommand(installationAnnotationAddCmd)
-	installationAnnotationCmd.AddCommand(installationAnnotationDeleteCmd)
+	return cmd
 }
 
-var installationAnnotationCmd = &cobra.Command{
-	Use:   "annotation",
-	Short: "Manipulate annotations of installations managed by the provisioning server.",
+func newCmdInstallationAnnotationAdd() *cobra.Command {
+	var flags installationAnnotationAddFlags
+
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "Adds annotations to the installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			request := newAddAnnotationsRequest(flags.annotations)
+
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			cluster, err := client.AddInstallationAnnotations(flags.installationID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to add installation annotations")
+			}
+
+			if err = printJSON(cluster); err != nil {
+				return errors.Wrap(err, "failed to print installation annotations response")
+			}
+
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }
 
-var installationAnnotationAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Adds annotations to the installation.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdInstallationAnnotationDelete() *cobra.Command {
+	var flags installationAnnotationDeleteFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes Annotation from the Installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		installationID, _ := command.Flags().GetString("installation")
-		annotations, _ := command.Flags().GetStringArray("annotation")
+			client := model.NewClient(flags.serverAddress)
 
-		request := newAddAnnotationsRequest(annotations)
+			if err := client.DeleteInstallationAnnotation(flags.installationID, flags.annotation); err != nil {
+				return errors.Wrap(err, "failed to delete installation annotations")
+			}
 
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			return runDryRun(request)
-		}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		cluster, err := client.AddInstallationAnnotations(installationID, request)
-		if err != nil {
-			return errors.Wrap(err, "failed to add installation annotations")
-		}
+	flags.addFlags(cmd)
 
-		err = printJSON(cluster)
-		if err != nil {
-			return errors.Wrap(err, "failed to print installation annotations response")
-		}
-
-		return nil
-	},
-}
-
-var installationAnnotationDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Deletes Annotation from the Installation.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		installationID, _ := command.Flags().GetString("installation")
-		annotation, _ := command.Flags().GetString("annotation")
-
-		err := client.DeleteInstallationAnnotation(installationID, annotation)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete installation annotations")
-		}
-
-		return nil
-	},
+	return cmd
 }

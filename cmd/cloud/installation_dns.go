@@ -10,89 +10,91 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
+func newCmdInstallationDNS() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "dns",
+		Short: "Manipulate installation DNS records.",
+	}
 
-	installationDNSAddCmd.Flags().String("installation", "", "The id of the installation to add domain to.")
-	installationDNSAddCmd.MarkFlagRequired("installation")
-	installationDNSAddCmd.Flags().String("domain", "", "Domain name to map to the installation.")
-	installationDNSAddCmd.MarkFlagRequired("domain")
+	cmd.AddCommand(newCmdInstallationDNSAdd())
+	cmd.AddCommand(newCmdInstallationDNSSetPrimary())
 
-	installationDNSSetPrimaryCmd.Flags().String("installation", "", "The id of the installation for domain switch.")
-	installationDNSSetPrimaryCmd.MarkFlagRequired("installation")
-	installationDNSSetPrimaryCmd.Flags().String("domain-id", "", "The id of domain name to set as primary.")
-	installationDNSSetPrimaryCmd.MarkFlagRequired("domain-id")
-
-	installationDNSCmd.AddCommand(installationDNSAddCmd)
-	installationDNSCmd.AddCommand(installationDNSSetPrimaryCmd)
+	return cmd
 }
 
-var installationDNSCmd = &cobra.Command{
-	Use:   "dns",
-	Short: "Manipulate installation DNS records.",
-}
+func newCmdInstallationDNSAdd() *cobra.Command {
+	var flags installationDNSAddFlags
 
-var installationDNSAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Adds domain name for the installation.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "Adds domain name for the installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+			client := model.NewClient(flags.serverAddress)
 
-		installationID, _ := command.Flags().GetString("installation")
-		dnsName, _ := command.Flags().GetString("domain")
+			request := &model.AddDNSRecordRequest{
+				DNS: flags.dnsName,
+			}
 
-		request := &model.AddDNSRecordRequest{
-			DNS: dnsName,
-		}
+			if flags.dryRun {
+				if err := printJSON(request); err != nil {
+					return errors.Wrap(err, "failed to print API request")
+				}
+				return nil
+			}
 
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			err := printJSON(request)
+			installation, err := client.AddInstallationDNS(flags.installationID, request)
 			if err != nil {
-				return errors.Wrap(err, "failed to print API request")
+				return errors.Wrap(err, "failed to add installation dns")
+			}
+
+			if err = printJSON(installation); err != nil {
+				return errors.Wrap(err, "failed to print response")
 			}
 
 			return nil
-		}
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		installation, err := client.AddInstallationDNS(installationID, request)
-		if err != nil {
-			return errors.Wrap(err, "failed to add installation dns")
-		}
+	flags.addFlags(cmd)
 
-		err = printJSON(installation)
-		if err != nil {
-			return errors.Wrap(err, "failed to print response")
-		}
-
-		return nil
-	},
+	return cmd
 }
 
-var installationDNSSetPrimaryCmd = &cobra.Command{
-	Use:   "set-primary",
-	Short: "Sets installation domain name as primary.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdInstallationDNSSetPrimary() *cobra.Command {
+	var flags installationDNSSetPrimaryFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "set-primary",
+		Short: "Sets installation domain name as primary.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		installationID, _ := command.Flags().GetString("installation")
-		domainNameID, _ := command.Flags().GetString("domain-id")
+			client := model.NewClient(flags.serverAddress)
 
-		installation, err := client.SetInstallationDomainPrimary(installationID, domainNameID)
-		if err != nil {
-			return errors.Wrap(err, "failed to set installation domain primary")
-		}
+			installation, err := client.SetInstallationDomainPrimary(flags.installationID, flags.domainNameID)
+			if err != nil {
+				return errors.Wrap(err, "failed to set installation domain primary")
+			}
 
-		err = printJSON(installation)
-		if err != nil {
-			return errors.Wrap(err, "failed to print response")
-		}
+			if err = printJSON(installation); err != nil {
+				return errors.Wrap(err, "failed to print response")
+			}
 
-		return nil
-	},
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }
