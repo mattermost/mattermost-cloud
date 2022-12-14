@@ -75,15 +75,9 @@ func (s *ClusterSupervisor) Do() error {
 		return nil
 	}
 
-	// Preference of state (high to low).
-	preferredOrder := map[string]int{
-		model.ClusterStateCreationRequested:  2,
-		model.ClusterStateCreationInProgress: 1,
-	}
-
 	// Sort the clusters by state preference. Relative order is preserved.
 	sort.SliceStable(clusters, func(i, j int) bool {
-		return preferredOrder[clusters[i].State] > preferredOrder[clusters[j].State]
+		return model.PendingWorkPriority[clusters[i].State] > model.PendingWorkPriority[clusters[j].State]
 	})
 
 	for _, cluster := range clusters {
