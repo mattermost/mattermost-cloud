@@ -542,7 +542,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		return errors.Wrapf(err, "unable to untag %s from %s", VpcClusterOwnerKey, *vpc.VpcId)
 	}
 
-	logger.Debugf("Released VPC %s", vpc.VpcId)
+	logger.Debugf("Released VPC %s", *vpc.VpcId)
 
 	return nil
 }
