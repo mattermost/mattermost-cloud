@@ -28,6 +28,10 @@ spec:
       port: 8067 # MM
     - protocol: TCP
       port: 9125 # MySQL
+    - protocol: TCP
+      port: 9093 # Playbooks
+    - protocol: TCP
+      port: 9092 # Boards
 ---
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
