@@ -103,7 +103,6 @@ jobs:
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL"
-          output: "trivy-results-critical.sarif"
 
       - name: ci/build-docker-e2e
         run: make build-image-e2e
