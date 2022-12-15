@@ -10,76 +10,79 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	groupAnnotationAddCmd.Flags().StringArray("annotation", []string{}, "Additional annotations for the group. Accepts multiple values, for example: '... --annotation abc --annotation def'")
-	groupAnnotationAddCmd.Flags().String("group", "", "The id of the group to be annotated.")
-	groupAnnotationAddCmd.MarkFlagRequired("group")
-	groupAnnotationAddCmd.MarkFlagRequired("annotaoion")
+func newCmdGroupAnnotation() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "annotation",
+		Short: "Manipulate annotations of group managed by the provisioning server.",
+	}
 
-	groupAnnotationDeleteCmd.Flags().String("annotation", "", "Name of the annotation to be removed from the group.")
-	groupAnnotationDeleteCmd.Flags().String("group", "", "The id of the group from which annotations should be removed.")
-	groupAnnotationDeleteCmd.MarkFlagRequired("group")
-	groupAnnotationDeleteCmd.MarkFlagRequired("annotation")
+	cmd.AddCommand(newCmdGroupAnnotationAdd())
+	cmd.AddCommand(newCmdGroupAnnotationDelete())
 
-	groupAnnotationCmd.AddCommand(groupAnnotationAddCmd)
-	groupAnnotationCmd.AddCommand(groupAnnotationDeleteCmd)
+	return cmd
 }
 
-var groupAnnotationCmd = &cobra.Command{
-	Use:   "annotation",
-	Short: "Manipulate annotations of group managed by the provisioning server.",
+func newCmdGroupAnnotationAdd() *cobra.Command {
+
+	var flags groupAnnotationAddFlags
+
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "Adds annotations to the group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			request := newAddAnnotationsRequest(flags.annotations)
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			group, err := client.AddGroupAnnotations(flags.groupID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to add group annotations")
+			}
+
+			if err = printJSON(group); err != nil {
+				return errors.Wrap(err, "failed to print group annotations response")
+			}
+
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.clusterFlags.addFlags(cmd)
+
+	return cmd
 }
 
-var groupAnnotationAddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Adds annotations to the group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdGroupAnnotationDelete() *cobra.Command {
+	var flags groupAnnotationDeleteFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes Annotation from the group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		groupID, _ := command.Flags().GetString("group")
-		annotations, _ := command.Flags().GetStringArray("annotation")
+			if err := client.DeleteGroupAnnotation(flags.groupID, flags.annotation); err != nil {
+				return errors.Wrap(err, "failed to delete group annotations")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		request := newAddAnnotationsRequest(annotations)
+	flags.clusterFlags.addFlags(cmd)
 
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			return runDryRun(request)
-		}
-
-		group, err := client.AddGroupAnnotations(groupID, request)
-		if err != nil {
-			return errors.Wrap(err, "failed to add group annotations")
-		}
-
-		err = printJSON(group)
-		if err != nil {
-			return errors.Wrap(err, "failed to print group annotations response")
-		}
-
-		return nil
-	},
-}
-
-var groupAnnotationDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Deletes Annotation from the group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		groupID, _ := command.Flags().GetString("group")
-		annotation, _ := command.Flags().GetString("annotation")
-
-		err := client.DeleteGroupAnnotation(groupID, annotation)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete group annotations")
-		}
-
-		return nil
-	},
+	return cmd
 }

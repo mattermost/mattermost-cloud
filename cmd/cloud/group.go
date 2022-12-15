@@ -14,385 +14,402 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	groupCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
-	groupCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
+func newCmdGroup() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "group",
+		Short: "Manipulate groups managed by the provisioning server.",
+	}
 
-	groupCreateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
-	groupCreateCmd.Flags().String("description", "", "An optional description for this group of installations.")
-	groupCreateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
-	groupCreateCmd.Flags().String("image", "", "The Mattermost container image to use.")
-	groupCreateCmd.Flags().Int64("max-rolling", 1, "The maximum number of installations that can be updated at one time when a group is updated")
-	groupCreateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
-	groupCreateCmd.Flags().StringArray("annotation", []string{}, "Annotations for a group used for automatic group selection. Accepts multiple values, for example: '... --annotation abc --annotation def'")
-	groupCreateCmd.MarkFlagRequired("name")
+	setClusterFlags(cmd)
 
-	groupUpdateCmd.Flags().String("group", "", "The id of the group to be updated.")
-	groupUpdateCmd.Flags().String("name", "", "A unique name describing this group of installations.")
-	groupUpdateCmd.Flags().String("description", "", "An optional description for this group of installations.")
-	groupUpdateCmd.Flags().String("version", "", "The Mattermost version for installations in this group to target.")
-	groupUpdateCmd.Flags().String("image", "", "The Mattermost container image to use.")
-	groupUpdateCmd.Flags().Int64("max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
-	groupUpdateCmd.Flags().StringArray("mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
-	groupUpdateCmd.Flags().Bool("mattermost-env-clear", false, "Clears all env var data.")
-	groupUpdateCmd.Flags().Bool("force-sequence-update", false, "Forces the group version sequence to be increased by 1 even when no updates are present.")
-	groupUpdateCmd.Flags().Bool("force-installation-restart", false, "Forces the restart of all installations in the group even if Mattermost CR does not change.")
-	groupUpdateCmd.MarkFlagRequired("group")
+	cmd.AddCommand(newCmdGroupCreate())
+	cmd.AddCommand(newCmdGroupUpdate())
+	cmd.AddCommand(newCmdGroupDelete())
+	cmd.AddCommand(newCmdGroupGet())
+	cmd.AddCommand(newCmdGroupList())
+	cmd.AddCommand(newCmdGroupGetStatus())
+	cmd.AddCommand(newCmdGroupJoin())
+	cmd.AddCommand(newCmdGroupAssign())
+	cmd.AddCommand(newCmdGroupLeave())
+	cmd.AddCommand(newCmdGroupListStatus())
+	cmd.AddCommand(newCmdGroupAnnotation())
 
-	groupDeleteCmd.Flags().String("group", "", "The id of the group to be deleted.")
-	groupDeleteCmd.MarkFlagRequired("group")
-
-	groupGetCmd.Flags().String("group", "", "The id of the group to be fetched.")
-	groupGetCmd.MarkFlagRequired("group")
-
-	registerPagingFlags(groupListCmd)
-	groupListCmd.Flags().Bool("table", false, "Whether to display the returned group list in a table or not")
-	groupListCmd.Flags().Bool("include-installation-count", false, "Whether to retrieve the installation count for the groups")
-
-	groupGetStatusCmd.Flags().String("group", "", "The id of the group of which the status should be fetched.")
-	groupGetStatusCmd.MarkFlagRequired("group")
-
-	groupJoinCmd.Flags().String("group", "", "The id of the group to which the installation will be added.")
-	groupJoinCmd.Flags().String("installation", "", "The id of the installation to add to the group.")
-	groupJoinCmd.MarkFlagRequired("group")
-	groupJoinCmd.MarkFlagRequired("installation")
-
-	groupAssignCmd.Flags().String("installation", "", "The id of the installation to assign to the group.")
-	groupAssignCmd.Flags().StringArray("group-selection-annotation", []string{}, "Group annotations based on which the installation should be assigned.")
-	groupAssignCmd.MarkFlagRequired("installation")
-	groupAssignCmd.MarkFlagRequired("group-selection-annotation")
-
-	groupLeaveCmd.Flags().String("installation", "", "The id of the installation to leave its currently configured group.")
-	groupLeaveCmd.Flags().Bool("retain-config", true, "Whether to retain the group configuration values or not.")
-	groupLeaveCmd.MarkFlagRequired("installation")
-
-	groupCmd.AddCommand(groupCreateCmd)
-	groupCmd.AddCommand(groupUpdateCmd)
-	groupCmd.AddCommand(groupDeleteCmd)
-	groupCmd.AddCommand(groupGetCmd)
-	groupCmd.AddCommand(groupListCmd)
-	groupCmd.AddCommand(groupGetStatusCmd)
-	groupCmd.AddCommand(groupGetGroupsStatusCmd)
-	groupCmd.AddCommand(groupJoinCmd)
-	groupCmd.AddCommand(groupAssignCmd)
-	groupCmd.AddCommand(groupLeaveCmd)
-	groupCmd.AddCommand(groupAnnotationCmd)
+	return cmd
 }
 
-var groupCmd = &cobra.Command{
-	Use:   "group",
-	Short: "Manipulate groups managed by the provisioning server.",
-}
+func newCmdGroupCreate() *cobra.Command {
 
-var groupCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create a group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+	var flags groupCreateFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		name, _ := command.Flags().GetString("name")
-		image, _ := command.Flags().GetString("image")
-		description, _ := command.Flags().GetString("description")
-		version, _ := command.Flags().GetString("version")
-		maxRolling, _ := command.Flags().GetInt64("max-rolling")
-		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
-		annotations, _ := command.Flags().GetStringArray("annotation")
+			client := model.NewClient(flags.serverAddress)
 
-		envVarMap, err := parseEnvVarInput(mattermostEnv, false)
-		if err != nil {
-			return err
-		}
-
-		request := &model.CreateGroupRequest{
-			Name:          name,
-			MaxRolling:    maxRolling,
-			Description:   description,
-			Version:       version,
-			Image:         image,
-			MattermostEnv: envVarMap,
-			Annotations:   annotations,
-		}
-
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			err = printJSON(request)
+			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, false)
 			if err != nil {
-				return errors.Wrap(err, "failed to print API request")
+				return err
 			}
 
-			return nil
-		}
-
-		group, err := client.CreateGroup(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to create group")
-		}
-
-		return printJSON(group)
-	},
-}
-
-var groupUpdateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Update the group metadata.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		groupID, _ := command.Flags().GetString("group")
-		mattermostEnv, _ := command.Flags().GetStringArray("mattermost-env")
-		mattermostEnvClear, _ := command.Flags().GetBool("mattermost-env-clear")
-		forceSequenceUpdate, _ := command.Flags().GetBool("force-sequence-update")
-		forceInstallationRestart, _ := command.Flags().GetBool("force-installation-restart")
-
-		envVarMap, err := parseEnvVarInput(mattermostEnv, mattermostEnvClear)
-		if err != nil {
-			return errors.Wrap(err, "failed to parse env var input")
-		}
-
-		request := &model.PatchGroupRequest{
-			ID:                        groupID,
-			Name:                      getStringFlagPointer(command, "name"),
-			Description:               getStringFlagPointer(command, "description"),
-			Version:                   getStringFlagPointer(command, "version"),
-			Image:                     getStringFlagPointer(command, "image"),
-			MaxRolling:                getInt64FlagPointer(command, "max-rolling"),
-			MattermostEnv:             envVarMap,
-			ForceSequenceUpdate:       forceSequenceUpdate,
-			ForceInstallationsRestart: forceInstallationRestart,
-		}
-
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			err = printJSON(request)
-			if err != nil {
-				return errors.Wrap(err, "failed to print API request")
+			request := &model.CreateGroupRequest{
+				Name:          flags.name,
+				MaxRolling:    flags.maxRolling,
+				Description:   flags.description,
+				Version:       flags.version,
+				Image:         flags.image,
+				MattermostEnv: envVarMap,
+				Annotations:   flags.annotations,
 			}
 
-			return nil
-		}
-
-		group, err := client.UpdateGroup(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to update group")
-		}
-
-		return printJSON(group)
-	},
-}
-
-var groupDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete a group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		groupID, _ := command.Flags().GetString("group")
-
-		err := client.DeleteGroup(groupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete group")
-		}
-
-		return nil
-	},
-}
-
-var groupGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get a particular group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		groupID, _ := command.Flags().GetString("group")
-		group, err := client.GetGroup(groupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query group")
-		}
-		if group == nil {
-			return nil
-		}
-
-		err = printJSON(group)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var groupListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List created groups.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		withInstallationCount, _ := command.Flags().GetBool("include-installation-count")
-
-		paging := parsePagingFlags(command)
-		groups, err := client.GetGroups(&model.GetGroupsRequest{
-			Paging:                paging,
-			WithInstallationCount: withInstallationCount,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to query groups")
-		}
-
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "NAME", "SEQ", "ROL", "IMAGE", "VERSION", "ENV?"})
-
-			for _, group := range groups {
-				hasEnv := "no"
-				if len(group.MattermostEnv) > 0 {
-					hasEnv = "yes"
+			if flags.dryRun {
+				if err = printJSON(request); err != nil {
+					return errors.Wrap(err, "failed to print API request")
 				}
-				table.Append([]string{group.ID, group.Name, fmt.Sprintf("%d", group.Sequence), fmt.Sprintf("%d", group.MaxRolling), group.Image, group.Version, hasEnv})
+				return nil
 			}
-			table.Render()
+
+			group, err := client.CreateGroup(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to create group")
+			}
+
+			return printJSON(group)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdGroupUpdate() *cobra.Command {
+	var flags groupUpdateFlags
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update the group metadata.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeGroupUpdateCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			flags.groupUpgradeFlagChanged.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeGroupUpdateCmd(flags groupUpdateFlags) error {
+	client := model.NewClient(flags.serverAddress)
+
+	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse env var input")
+	}
+
+	request := &model.PatchGroupRequest{
+		ID:                        flags.groupID,
+		MattermostEnv:             envVarMap,
+		ForceSequenceUpdate:       flags.forceSequenceUpdate,
+		ForceInstallationsRestart: flags.forceInstallationRestart,
+	}
+
+	if flags.isNameChanged {
+		request.Name = &flags.name
+	}
+	if flags.isDescriptionChanged {
+		request.Description = &flags.description
+	}
+	if flags.isMaxRollingChanged {
+		request.MaxRolling = &flags.maxRolling
+	}
+	if flags.isVersionChanged {
+		request.Version = &flags.version
+	}
+	if flags.isImageChanged {
+		request.Image = &flags.image
+	}
+
+	if flags.dryRun {
+		if err = printJSON(request); err != nil {
+			return errors.Wrap(err, "failed to print API request")
+		}
+		return nil
+	}
+
+	group, err := client.UpdateGroup(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to update group")
+	}
+
+	return printJSON(group)
+}
+
+func newCmdGroupDelete() *cobra.Command {
+	var flags groupDeleteFlags
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete a group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+
+			if err := client.DeleteGroup(flags.groupID); err != nil {
+				return errors.Wrap(err, "failed to delete group")
+			}
 
 			return nil
-		}
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		err = printJSON(groups)
-		if err != nil {
-			return err
-		}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
 }
 
-var groupGetStatusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Get a particular group's status.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdGroupGet() *cobra.Command {
+	var flags groupGetFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a particular group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		groupID, _ := command.Flags().GetString("group")
-		groupStatus, err := client.GetGroupStatus(groupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query group status")
+			client := model.NewClient(flags.serverAddress)
+
+			group, err := client.GetGroup(flags.groupID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query group")
+			}
+			if group == nil {
+				return nil
+			}
+
+			return printJSON(group)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdGroupList() *cobra.Command {
+	var flags groupListFlags
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List created groups.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeGroupListCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeGroupListCmd(flags groupListFlags) error {
+	client := model.NewClient(flags.serverAddress)
+
+	paging := getPaging(flags.pagingFlags)
+	groups, err := client.GetGroups(&model.GetGroupsRequest{
+		Paging:                paging,
+		WithInstallationCount: flags.withInstallationCount,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query groups")
+	}
+	if flags.outputToTable {
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetAlignment(tablewriter.ALIGN_LEFT)
+		table.SetHeader([]string{"ID", "NAME", "SEQ", "ROL", "IMAGE", "VERSION", "ENV?"})
+
+		for _, group := range groups {
+			hasEnv := "no"
+			if len(group.MattermostEnv) > 0 {
+				hasEnv = "yes"
+			}
+			table.Append([]string{group.ID, group.Name, fmt.Sprintf("%d", group.Sequence), fmt.Sprintf("%d", group.MaxRolling), group.Image, group.Version, hasEnv})
 		}
-		if groupStatus == nil {
+		table.Render()
+		return nil
+	}
+
+	return printJSON(groups)
+}
+
+func newCmdGroupGetStatus() *cobra.Command {
+	var flags groupGetStatusFlags
+
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Get a particular group's status.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			groupStatus, err := client.GetGroupStatus(flags.groupID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query group status")
+			}
+			if groupStatus == nil {
+				return nil
+			}
+
+			return printJSON(groupStatus)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdGroupJoin() *cobra.Command {
+	var flags groupJoinFlags
+
+	cmd := &cobra.Command{
+		Use:   "join",
+		Short: "Join an installation to the given group, leaving any existing group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			err := client.JoinGroup(flags.groupID, flags.installationID)
+			if err != nil {
+				return errors.Wrap(err, "failed to join group")
+			}
+
 			return nil
-		}
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		err = printJSON(groupStatus)
-		if err != nil {
-			return err
-		}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
 }
 
-var groupJoinCmd = &cobra.Command{
-	Use:   "join",
-	Short: "Join an installation to the given group, leaving any existing group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdGroupAssign() *cobra.Command {
+	var flags groupAssignFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "assign",
+		Short: "Assign an installation to the group based on annotations, leaving any existing group.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		groupID, _ := command.Flags().GetString("group")
-		installationID, _ := command.Flags().GetString("installation")
+			client := model.NewClient(flags.serverAddress)
 
-		err := client.JoinGroup(groupID, installationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to join group")
-		}
-
-		return nil
-	},
-}
-
-var groupAssignCmd = &cobra.Command{
-	Use:   "assign",
-	Short: "Assign an installation to the group based on annotations, leaving any existing group.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		installationID, _ := command.Flags().GetString("installation")
-		annotations, _ := command.Flags().GetStringArray("group-selection-annotation")
-
-		err := client.AssignGroup(installationID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: annotations})
-		if err != nil {
-			return errors.Wrap(err, "failed to assign group")
-		}
-
-		return nil
-	},
-}
-
-var groupLeaveCmd = &cobra.Command{
-	Use:   "leave",
-	Short: "Remove an installation from its group, if any.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		retainConfig, _ := command.Flags().GetBool("retain-config")
-		client := model.NewClient(serverAddress)
-
-		installationID, _ := command.Flags().GetString("installation")
-		request := &model.LeaveGroupRequest{RetainConfig: retainConfig}
-
-		err := client.LeaveGroup(installationID, request)
-		if err != nil {
-			return errors.Wrap(err, "failed to leave group")
-		}
-
-		return nil
-	},
-}
-
-var groupGetGroupsStatusCmd = &cobra.Command{
-	Use:   "statuses",
-	Short: "Get Status from all groups.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		groupStatus, err := client.GetGroupsStatus()
-		if err != nil {
-			return errors.Wrap(err, "failed to query group status")
-		}
-		if groupStatus == nil {
+			err := client.AssignGroup(flags.installationID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: flags.annotations})
+			if err != nil {
+				return errors.Wrap(err, "failed to assign group")
+			}
 			return nil
-		}
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		err = printJSON(groupStatus)
-		if err != nil {
-			return err
-		}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
+}
+
+func newCmdGroupLeave() *cobra.Command {
+	var flags groupLeaveFlags
+
+	cmd := &cobra.Command{
+		Use:   "leave",
+		Short: "Remove an installation from its group, if any.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+			request := &model.LeaveGroupRequest{RetainConfig: flags.retainConfig}
+			if err := client.LeaveGroup(flags.installationID, request); err != nil {
+				return errors.Wrap(err, "failed to leave group")
+			}
+
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdGroupListStatus() *cobra.Command {
+	var flags clusterFlags
+
+	cmd := &cobra.Command{
+		Use:   "statuses",
+		Short: "Get Status from all groups.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+
+			client := model.NewClient(flags.serverAddress)
+
+			groupStatus, err := client.GetGroupsStatus()
+			if err != nil {
+				return errors.Wrap(err, "failed to query group status")
+			}
+			if groupStatus == nil {
+				return nil
+			}
+
+			return printJSON(groupStatus)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
 }
