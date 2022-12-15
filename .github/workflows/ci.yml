@@ -101,8 +101,7 @@ jobs:
         uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
           image-ref: "mattermost/mattermost-cloud"
-          format: "table"
-          exit-code: "1"
+          format: "sarif"
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL"
@@ -112,8 +111,7 @@ jobs:
         uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
           image-ref: "mattermost/mattermost-cloud-e2e"
-          format: "table"
-          exit-code: "1"
+          format: "sarif"
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL"
