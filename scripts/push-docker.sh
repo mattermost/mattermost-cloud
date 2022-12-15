@@ -5,7 +5,7 @@
 
 set -euox
 
-echo $DOCKER_TOKEN | docker login --username $DOCKER_USERNAME --password-stdin
+echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password-stdin
 
 docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
 docker tag mattermost/mattermost-cloud-e2e:test mattermost/mattermost-cloud-e2e:$TAG
