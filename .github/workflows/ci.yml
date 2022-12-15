@@ -97,7 +97,7 @@ jobs:
       - name: ci/scan-docker-security
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "mattermost/mattermost-cloud:${{ github.sha }}"
+          image-ref: "mattermost/mattermost-cloud:${GITHUB_SHA:0:7}"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
@@ -107,7 +107,7 @@ jobs:
       - name: ci/scan-docker-security-e2e
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "mattermost/mattermost-cloud-e2e:${{ github.sha }}"
+          image-ref: "mattermost/mattermost-cloud-e2e:${GITHUB_SHA:0:7}"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
