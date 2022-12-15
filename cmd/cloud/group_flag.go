@@ -64,7 +64,7 @@ func (flags *groupUpdateFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.image, "image", "", "The Mattermost container image to use.")
 	command.Flags().Int64Var(&flags.maxRolling, "max-rolling", 0, "The maximum number of installations that can be updated at one time when a group is updated")
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
-	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clear all Mattermost env vars.")
+	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
 	command.Flags().BoolVar(&flags.forceSequenceUpdate, "force-sequence-update", false, "Forces the group version sequence to be increased by 1 even when no updates are present.")
 	command.Flags().BoolVar(&flags.forceInstallationRestart, "force-installation-restart", false, "Forces the restart of all installations in the group even if Mattermost CR does not change.")
 
@@ -126,7 +126,7 @@ type groupJoinFlags struct {
 
 func (flags *groupJoinFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.groupID, "group", "", "The id of the group to which the installation will be added.")
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to join the group.")
+	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to add to the group.")
 
 	_ = command.MarkFlagRequired("group")
 	_ = command.MarkFlagRequired("installation")

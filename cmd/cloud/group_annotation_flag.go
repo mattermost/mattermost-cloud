@@ -10,10 +10,10 @@ type groupAnnotationAddFlags struct {
 
 func (flags *groupAnnotationAddFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.groupID, "group", "", "The id of the group to be annotated.")
-	command.Flags().StringSliceVar(&flags.annotations, "annotations", []string{}, "Additional annotations for the group. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the group. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
 	_ = command.MarkFlagRequired("group")
-	_ = command.MarkFlagRequired("annotations")
+	_ = command.MarkFlagRequired("annotation")
 }
 
 type groupAnnotationDeleteFlags struct {

@@ -165,6 +165,7 @@ func newCmdGroupDelete() *cobra.Command {
 		Short: "Delete a group.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
+
 			client := model.NewClient(flags.serverAddress)
 
 			if err := client.DeleteGroup(flags.groupID); err != nil {
