@@ -88,6 +88,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+
       - name: ci/build-docker
         run: make build-image
 
@@ -97,7 +100,7 @@ jobs:
       - name: ci/scan-docker-security
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "mattermost/mattermost-cloud:${GITHUB_SHA:0:7}"
+          image-ref: "mattermost/mattermost-cloud:${{ env.SHORT_SHA }}"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
@@ -107,7 +110,7 @@ jobs:
       - name: ci/scan-docker-security-e2e
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "mattermost/mattermost-cloud-e2e:${GITHUB_SHA:0:7}"
+          image-ref: "mattermost/mattermost-cloud-e2e:${{ env.SHORT_SHA }}"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
