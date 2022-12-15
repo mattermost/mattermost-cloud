@@ -98,9 +98,9 @@ jobs:
         run: make build-image-e2e
 
       - name: ci/scan-docker-security
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
-          image-ref: "mattermost/mattermost-cloud:${{ env.SHORT_SHA }}"
+          image-ref: "mattermost/mattermost-cloud"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
@@ -108,9 +108,9 @@ jobs:
           severity: "CRITICAL"
 
       - name: ci/scan-docker-security-e2e
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
-          image-ref: "mattermost/mattermost-cloud-e2e:${{ env.SHORT_SHA }}"
+          image-ref: "mattermost/mattermost-cloud-e2e"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true

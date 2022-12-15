@@ -26,20 +26,20 @@ jobs:
       - name: ci/build-docker-e2e
         run: make build-image-e2e
 
-      - name: cd/scan-docker-security
-        uses: aquasecurity/trivy-action@master
+      - name: ci/scan-docker-security
+        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
-          image-ref: "mattermost/mattermost-cloud:${{ github.ref_name }}"
+          image-ref: "mattermost/mattermost-cloud"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL"
 
-      - name: cd/scan-docker-security-e2e
-        uses: aquasecurity/trivy-action@master
+      - name: ci/scan-docker-security-e2e
+        uses: aquasecurity/trivy-action@9ab158e8597f3b310480b9a69402b419bc03dbd5 # v0.8.0
         with:
-          image-ref: "mattermost/mattermost-cloud-e2e:${{ github.ref_name }}"
+          image-ref: "mattermost/mattermost-cloud-e2e"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
