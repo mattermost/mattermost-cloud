@@ -10,108 +10,112 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	backupCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+func newCmdInstallationBackup() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "backup",
+		Short: "Manipulate installation backups managed by the provisioning server.",
+	}
 
-	backupCreateCmd.Flags().String("installation", "", "The installation id to be backed up.")
-	backupCreateCmd.MarkFlagRequired("installation")
+	cmd.AddCommand(newCmdInstallationBackupCreate())
+	cmd.AddCommand(newCmdInstallationBackupList())
+	cmd.AddCommand(newCmdInstallationBackupGet())
+	cmd.AddCommand(newCmdInstallationBackupDelete())
 
-	backupListCmd.Flags().String("installation", "", "The installation id for which the backups should be listed.")
-	backupListCmd.Flags().String("state", "", "The state to filter backups by.")
-	registerTableOutputFlags(backupListCmd)
-	registerPagingFlags(backupListCmd)
-
-	backupGetCmd.Flags().String("backup", "", "The id of the backup to get.")
-	backupGetCmd.MarkFlagRequired("backup")
-
-	backupDeleteCmd.Flags().String("backup", "", "The id of the backup to delete.")
-	backupDeleteCmd.MarkFlagRequired("backup")
-
-	backupCmd.AddCommand(backupCreateCmd)
-	backupCmd.AddCommand(backupListCmd)
-	backupCmd.AddCommand(backupGetCmd)
-	backupCmd.AddCommand(backupDeleteCmd)
+	return cmd
 }
 
-var backupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Manipulate installation backups managed by the provisioning server.",
-}
+func newCmdInstallationBackupCreate() *cobra.Command {
+	var flags installationBackupCreateFlags
 
-var backupCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Request an installation backup.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Request an installation backup.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+			client := model.NewClient(flags.serverAddress)
 
-		installationID, _ := command.Flags().GetString("installation")
-
-		backup, err := client.CreateInstallationBackup(installationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to request installation backup")
-		}
-
-		return printJSON(backup)
-	},
-}
-
-var backupListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List installation backups.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		installationID, _ := command.Flags().GetString("installation")
-		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
-		state, _ := command.Flags().GetString("state")
-		paging := parsePagingFlags(command)
-
-		request := &model.GetInstallationBackupsRequest{
-			InstallationID:        installationID,
-			ClusterInstallationID: clusterInstallationID,
-			State:                 state,
-			Paging:                paging,
-		}
-
-		backups, err := client.GetInstallationBackups(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to get backup")
-		}
-
-		if enabled, customCols := tableOutputEnabled(command); enabled {
-			var keys []string
-			var vals [][]string
-
-			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(backups))
-				for _, elem := range backups {
-					data = append(data, elem)
-				}
-				keys, vals, err = prepareTableData(customCols, data)
-				if err != nil {
-					return errors.Wrap(err, "failed to prepare table output")
-				}
-			} else {
-				keys, vals = defaultBackupTableData(backups)
+			backup, err := client.CreateInstallationBackup(flags.installationID)
+			if err != nil {
+				return errors.Wrap(err, "failed to request installation backup")
 			}
 
-			printTable(keys, vals)
-			return nil
+			return printJSON(backup)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationBackupList() *cobra.Command {
+	var flags installationBackupListFlags
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List installation backups.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeInstallationBackupListCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeInstallationBackupListCmd(flags installationBackupListFlags) error {
+	client := model.NewClient(flags.serverAddress)
+
+	paging := getPaging(flags.pagingFlags)
+
+	request := &model.GetInstallationBackupsRequest{
+		InstallationID: flags.installationID,
+		State:          flags.state,
+		Paging:         paging,
+	}
+
+	backups, err := client.GetInstallationBackups(request)
+	if err != nil {
+		return errors.Wrap(err, "failed to get backup")
+	}
+
+	if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
+		var keys []string
+		var vals [][]string
+
+		if len(customCols) > 0 {
+			data := make([]interface{}, 0, len(backups))
+			for _, elem := range backups {
+				data = append(data, elem)
+			}
+			keys, vals, err = prepareTableData(customCols, data)
+			if err != nil {
+				return errors.Wrap(err, "failed to prepare table output")
+			}
+		} else {
+			keys, vals = defaultBackupTableData(backups)
 		}
 
-		err = printJSON(backups)
-		if err != nil {
-			return err
-		}
-
+		printTable(keys, vals)
 		return nil
-	},
+	}
+
+	if err = printJSON(backups); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func defaultBackupTableData(backups []*model.InstallationBackup) ([]string, [][]string) {
@@ -131,47 +135,63 @@ func defaultBackupTableData(backups []*model.InstallationBackup) ([]string, [][]
 	return keys, vals
 }
 
-var backupGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get installation backup.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdInstallationBackupGet() *cobra.Command {
+	var flags installationBackupGetFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get installation backup.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		backupID, _ := command.Flags().GetString("backup")
+			client := model.NewClient(flags.serverAddress)
 
-		backup, err := client.GetInstallationBackup(backupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to get backup")
-		}
+			backup, err := client.GetInstallationBackup(flags.backupID)
+			if err != nil {
+				return errors.Wrap(err, "failed to get backup")
+			}
 
-		err = printJSON(backup)
-		if err != nil {
-			return err
-		}
+			if err = printJSON(backup); err != nil {
+				return err
+			}
 
-		return nil
-	},
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }
 
-var backupDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete installation backup.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdInstallationBackupDelete() *cobra.Command {
+	var flags installationBackupDeleteFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete installation backup.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
 
-		backupID, _ := command.Flags().GetString("backup")
+			client := model.NewClient(flags.serverAddress)
 
-		err := client.DeleteInstallationBackup(backupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete backup")
-		}
+			if err := client.DeleteInstallationBackup(flags.backupID); err != nil {
+				return errors.Wrap(err, "failed to delete backup")
+			}
 
-		return nil
-	},
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }

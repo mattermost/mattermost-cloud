@@ -39,11 +39,10 @@ func newCmdInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdInstallationShowStateReport())
 	cmd.AddCommand(newCmdInstallationRecovery())
 	cmd.AddCommand(newCmdInstallationDeploymentReport())
-
-	cmd.AddCommand(installationAnnotationCmd)
-	cmd.AddCommand(backupCmd)
-	cmd.AddCommand(installationOperationCmd)
-	cmd.AddCommand(installationDNSCmd)
+	cmd.AddCommand(newCmdInstallationAnnotation())
+	cmd.AddCommand(newCmdInstallationBackup())
+	cmd.AddCommand(newCmdInstallationOperation())
+	cmd.AddCommand(newCmdInstallationDNS())
 
 	return cmd
 }
