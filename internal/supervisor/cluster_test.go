@@ -7,11 +7,10 @@ package supervisor_test
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/testutil"
-
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
@@ -27,11 +26,21 @@ type mockClusterStore struct {
 }
 
 func (s *mockClusterStore) GetCluster(clusterID string) (*model.Cluster, error) {
-	return s.Cluster, nil
+	if s.Cluster != nil {
+		return s.Cluster, nil
+	}
+	for _, cluster := range s.Clusters {
+		if cluster.ID == clusterID {
+			return cluster, nil
+		}
+	}
+	return nil, nil
 }
 
 func (s *mockClusterStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, error) {
-	return s.UnlockedClustersPendingWork, nil
+	clusters := make([]*model.Cluster, len(s.UnlockedClustersPendingWork))
+	copy(clusters, s.UnlockedClustersPendingWork)
+	return clusters, nil
 }
 
 func (s *mockClusterStore) GetClusters(clusterFilter *model.ClusterFilter) ([]*model.Cluster, error) {
@@ -140,6 +149,58 @@ func TestClusterSupervisorDo(t *testing.T) {
 		<-mockStore.UnlockChan
 		require.Equal(t, 3, mockStore.UpdateClusterCalls)
 	})
+
+	t.Run("order of pending works", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		mockStore := &mockClusterStore{}
+
+		clusters := []*model.Cluster{
+			{
+				ID:    "1",
+				State: model.ClusterStateDeletionRequested, // should be 4th
+			},
+			{
+				ID:    "2",
+				State: model.ClusterStateCreationRequested, // should be 1st
+			},
+			{
+				ID:    "3",
+				State: model.ClusterStateResizeRequested, // should be 5th
+			},
+			{
+				ID:    "4",
+				State: model.ClusterStateCreationInProgress, // should be 3rd
+			},
+			{
+				ID:    "5",
+				State: model.ClusterStateProvisioningRequested, // should be 6th
+			},
+			{
+				ID:    "6",
+				State: model.ClusterStateCreationRequested, // should be 2nd
+			},
+		}
+		preferredClusterOrder := []string{"2", "6", "4", "1", "3", "5"}
+
+		mockStore.UnlockedClustersPendingWork = clusters
+		mockStore.Clusters = clusters
+
+		mockEventProducer := &mockEventProducer{}
+		supervisor := supervisor.NewClusterSupervisor(
+			mockStore,
+			&mockClusterProvisioner{},
+			&mockAWS{},
+			mockEventProducer,
+			"instanceID",
+			logger,
+		)
+		err := supervisor.Do()
+		require.NoError(t, err)
+
+		clusterListByWorkOrder := mockEventProducer.clusterListByEventOrder
+		require.Equal(t, preferredClusterOrder, clusterListByWorkOrder)
+	})
+
 }
 
 func TestClusterSupervisorSupervise(t *testing.T) {

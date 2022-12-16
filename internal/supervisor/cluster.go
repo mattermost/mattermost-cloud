@@ -5,6 +5,8 @@
 package supervisor
 
 import (
+	"sort"
+
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -72,6 +74,11 @@ func (s *ClusterSupervisor) Do() error {
 		s.logger.WithError(err).Warn("Failed to query for clusters pending work")
 		return nil
 	}
+
+	// Sort the clusters by state preference. Relative order is preserved.
+	sort.SliceStable(clusters, func(i, j int) bool {
+		return model.ClusterStateWorkPriority[clusters[i].State] > model.ClusterStateWorkPriority[clusters[j].State]
+	})
 
 	for _, cluster := range clusters {
 		s.Supervise(cluster)
