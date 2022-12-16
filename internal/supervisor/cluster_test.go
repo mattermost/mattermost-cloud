@@ -71,6 +71,10 @@ func (s *mockClusterStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.We
 	return nil, nil
 }
 
+func (s *mockClusterStore) GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error) {
+	return nil, nil
+}
+
 type mockClusterProvisioner struct{}
 
 func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
@@ -117,6 +121,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 			&mockEventProducer{},
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -142,6 +147,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 			&mockEventProducer{},
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -193,6 +199,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 			mockEventProducer,
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 		err := supervisor.Do()
 		require.NoError(t, err)
@@ -230,6 +237,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				"instanceID",
 				logger,
+				cloudMetrics,
 			)
 
 			cluster := &model.Cluster{
@@ -259,6 +267,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
 			logger,
+			cloudMetrics,
 		)
 
 		cluster := &model.Cluster{
