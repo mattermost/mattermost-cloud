@@ -5,14 +5,14 @@
 package supervisor
 
 import (
+	"sort"
+
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/pkg/errors"
-
-	log "github.com/sirupsen/logrus"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // clusterInstallationStore abstracts the database operations required to query installations.
@@ -83,6 +83,12 @@ func (s *ClusterInstallationSupervisor) Do() error {
 		s.logger.WithError(err).Warn("Failed to query for cluster installations pending work")
 		return nil
 	}
+
+	// Sort the installation by state preference. Relative order is preserved.
+	sort.SliceStable(clusterInstallations, func(i, j int) bool {
+		return model.ClusterInstallationStateWorkPriority[clusterInstallations[i].State] >
+			model.ClusterInstallationStateWorkPriority[clusterInstallations[j].State]
+	})
 
 	for _, clusterInstallation := range clusterInstallations {
 		s.Supervise(clusterInstallation)

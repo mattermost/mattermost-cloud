@@ -579,7 +579,8 @@ func (a *mockAWS) SecretsManagerValidateExternalDatabaseSecret(name string) erro
 }
 
 type mockEventProducer struct {
-	clusterListByEventOrder []string
+	clusterListByEventOrder             []string
+	clusterInstallationListByEventOrder []string
 }
 
 func (m *mockEventProducer) ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error {
@@ -590,6 +591,7 @@ func (m *mockEventProducer) ProduceClusterStateChangeEvent(cluster *model.Cluste
 	return nil
 }
 func (m *mockEventProducer) ProduceClusterInstallationStateChangeEvent(clusterInstallation *model.ClusterInstallation, oldState string, extraDataFields ...events.DataField) error {
+	m.clusterInstallationListByEventOrder = append(m.clusterInstallationListByEventOrder, clusterInstallation.ID)
 	return nil
 }
 
