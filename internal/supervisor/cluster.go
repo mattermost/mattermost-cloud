@@ -7,8 +7,10 @@ package supervisor
 import (
 	"sort"
 
+	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,6 +25,8 @@ type clusterStore interface {
 	DeleteCluster(clusterID string) error
 
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
+
+	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
 }
 
 // clusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
@@ -47,17 +51,19 @@ type ClusterSupervisor struct {
 	aws            aws.AWS
 	eventsProducer eventProducer
 	instanceID     string
+	metrics        *metrics.CloudMetrics
 	logger         log.FieldLogger
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, clusterProvisioner clusterProvisioner, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
 		provisioner:    clusterProvisioner,
 		aws:            aws,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,
+		metrics:        metrics,
 		logger:         logger,
 	}
 }
@@ -134,6 +140,11 @@ func (s *ClusterSupervisor) Supervise(cluster *model.Cluster) {
 	if err != nil {
 		logger.WithError(err).Warnf("failed to set cluster state to %s", newState)
 		return
+	}
+
+	err = s.processClusterMetrics(cluster, logger)
+	if err != nil {
+		logger.WithError(err).Error("Failed to process cluster metrics")
 	}
 
 	err = s.eventsProducer.ProduceClusterStateChangeEvent(cluster, oldState)
@@ -282,4 +293,50 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 	}
 
 	return s.provisionCluster(cluster, logger)
+}
+
+func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger log.FieldLogger) error {
+
+	if cluster.State != model.ClusterStateStable && cluster.State != model.ClusterStateDeleted {
+		return nil
+	}
+
+	// Get the latest event of a 'requested' type to emit the correct metrics.
+	events, err := s.store.GetStateChangeEvents(&model.StateChangeEventFilter{
+		ResourceID:   cluster.ID,
+		ResourceType: model.TypeCluster,
+		NewStates:    model.AllClusterRequestStates,
+		Paging:       model.Paging{Page: 0, PerPage: 1, IncludeDeleted: false},
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get state change events")
+	}
+	if len(events) != 1 {
+		return errors.Errorf("expected 1 state change event, but got %d", len(events))
+	}
+
+	event := events[0]
+	elapsedSeconds := model.ElapsedTimeInSeconds(event.Event.Timestamp)
+
+	switch event.StateChange.NewState {
+	case model.ClusterStateCreationRequested:
+		s.metrics.ClusterCreationDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster was created in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateUpgradeRequested:
+		s.metrics.ClusterUpgradeDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster was upgraded in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateProvisioningRequested:
+		s.metrics.ClusterProvisioningDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster was provisioned in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateResizeRequested:
+		s.metrics.ClusterResizeDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster was resized in %d seconds", int(elapsedSeconds))
+	case model.ClusterStateDeletionRequested:
+		s.metrics.ClusterDeletionDurationHist.WithLabelValues().Observe(elapsedSeconds)
+		logger.Debugf("Cluster was deleted in %d seconds", int(elapsedSeconds))
+	default:
+		return errors.Errorf("failed to handle event %s with new state %s", event.Event.ID, event.StateChange.NewState)
+	}
+
+	return nil
 }
