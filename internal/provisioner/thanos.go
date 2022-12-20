@@ -98,7 +98,7 @@ func (t *thanos) CreateOrUpgrade() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 		defer cancel()
 
-		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, "nginx-internal", logger.WithField("thanos-action", "create"), t.kubeconfigPath)
+		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, namespaceNginxInternal, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get the load balancer endpoint (nginx) for Thanos")
 		}

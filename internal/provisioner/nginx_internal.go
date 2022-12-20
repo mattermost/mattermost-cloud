@@ -18,6 +18,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	namespaceNginxInternal = "nginx-internal"
+)
+
 type nginxInternal struct {
 	awsClient      aws.AWS
 	kubeconfigPath string
@@ -98,14 +102,14 @@ func (n *nginxInternal) Destroy() error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	services, err := k8sClient.Clientset.CoreV1().Services("nginx-internal").List(context.TODO(), metav1.ListOptions{})
+	services, err := k8sClient.Clientset.CoreV1().Services(namespaceNginxInternal).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to list k8s services")
 	}
 
 	for _, service := range services.Items {
 		if service.Spec.Type == corev1.ServiceTypeLoadBalancer {
-			err := k8sClient.Clientset.CoreV1().Services("nginx-internal").Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
+			err := k8sClient.Clientset.CoreV1().Services(namespaceNginxInternal).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return errors.Wrap(err, "failed to delete k8s service")
 			}
@@ -140,7 +144,7 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 	return &helmDeployment{
 		chartDeploymentName: "nginx-internal",
 		chartName:           "ingress-nginx/ingress-nginx",
-		namespace:           "nginx-internal",
+		namespace:           namespaceNginxInternal,
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
 		desiredVersion:      n.desiredVersion,
 		kubeconfigPath:      n.kubeconfigPath,
