@@ -99,7 +99,6 @@ jobs:
         with:
           image-ref: "mattermost/mattermost-cloud"
           format: "table"
-          exit-code: "1"
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL"
@@ -112,7 +111,6 @@ jobs:
         with:
           image-ref: "mattermost/mattermost-cloud-e2e"
           format: "table"
-          exit-code: "1"
           ignore-unfixed: true
           vuln-type: "os,library"
           severity: "CRITICAL"
