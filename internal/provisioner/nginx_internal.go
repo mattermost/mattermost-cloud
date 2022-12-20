@@ -5,13 +5,17 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type nginxInternal struct {
@@ -89,6 +93,25 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
+	k8sClient, err := k8s.NewFromFile(n.kubeconfigPath, n.logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to set up the k8s client")
+	}
+
+	services, err := k8sClient.Clientset.CoreV1().Services("nginx-internal").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to list k8s services")
+	}
+
+	for _, service := range services.Items {
+		if service.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			err := k8sClient.Clientset.CoreV1().Services("nginx-internal").Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return errors.Wrap(err, "failed to delete k8s service")
+			}
+		}
+	}
+
 	return nil
 }
 
