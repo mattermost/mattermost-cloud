@@ -84,7 +84,7 @@ func (s *ClusterInstallationSupervisor) Do() error {
 		return nil
 	}
 
-	// Sort the installation by state preference. Relative order is preserved.
+	// Sort the cluster_installation by state preference. Relative order is preserved.
 	sort.SliceStable(clusterInstallations, func(i, j int) bool {
 		return model.ClusterInstallationStateWorkPriority[clusterInstallations[i].State] >
 			model.ClusterInstallationStateWorkPriority[clusterInstallations[j].State]
