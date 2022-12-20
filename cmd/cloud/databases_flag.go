@@ -14,8 +14,8 @@ type databaseMultiTenantListFlag struct {
 func (flags *databaseMultiTenantListFlag) addFlags(command *cobra.Command) {
 	flags.pagingFlags.addFlags(command)
 	flags.tableOptions.addFlags(command)
-	command.Flags().StringVar(&flags.vpcID, "vpc-id", "", "The VPC ID by which to filter mulitenant databases.")
-	command.Flags().StringVar(&flags.databaseType, "database-type", "", "The database type by which to filter mulitenant databases.")
+	command.Flags().StringVar(&flags.vpcID, "vpc-id", "", "The VPC ID by which to filter multitenant databases.")
+	command.Flags().StringVar(&flags.databaseType, "database-type", "", "The database type by which to filter multitenant databases.")
 }
 
 type databaseMultiTenantGetFlag struct {
@@ -24,7 +24,7 @@ type databaseMultiTenantGetFlag struct {
 }
 
 func (flags *databaseMultiTenantGetFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the mulitenant database to be fetched.")
+	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the multitenant database to be fetched.")
 	_ = command.MarkFlagRequired("multitenant-database")
 }
 
@@ -45,7 +45,7 @@ type databaseMultiTenantUpdateFlag struct {
 }
 
 func (flags *databaseMultiTenantUpdateFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the mulitenant database to be updated.")
+	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the multitenant database to be updated.")
 	command.Flags().Int64Var(&flags.maxInstallations, "max-installations-per-logical-db", 10, "The maximum number of installations permitted in a single logical database (only applies to proxy databases).")
 	_ = command.MarkFlagRequired("multitenant-database")
 }
@@ -57,7 +57,7 @@ type databaseMultiTenantDeleteFlag struct {
 }
 
 func (flags *databaseMultiTenantDeleteFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the mulitenant database to delete.")
+	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the multitenant database to delete.")
 	command.Flags().BoolVar(&flags.force, "force", false, "Specifies whether to delete record even if database cluster exists.")
 	_ = command.MarkFlagRequired("multitenant-database")
 }
@@ -68,7 +68,7 @@ type databaseMultiTenantReportFlag struct {
 }
 
 func (flags *databaseMultiTenantReportFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the mulitenant database to be fetched.")
+	command.Flags().StringVar(&flags.multitenantDatabaseID, "multitenant-database", "", "The id of the multitenant database to be fetched.")
 	_ = command.MarkFlagRequired("multitenant-database")
 }
 
