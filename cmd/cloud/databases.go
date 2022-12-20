@@ -12,123 +12,94 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	databaseCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
-	databaseCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
-	databaseCmd.AddCommand(multitenantDatabaseCmd)
-	databaseCmd.AddCommand(logicalDatabaseCmd)
-	databaseCmd.AddCommand(databaseSchemaCmd)
+func newCmdDatabase() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "database",
+		Short: "Manipulate database resources managed by the provisioning server.",
+	}
 
-	// Multitenant Databases
-	multitenantDatabaseListCmd.Flags().String("vpc-id", "", "The VPC ID by which to filter mulitenant databases.")
-	multitenantDatabaseListCmd.Flags().String("database-type", "", "The database type by which to filter mulitenant databases.")
-	registerTableOutputFlags(multitenantDatabaseListCmd)
-	registerPagingFlags(multitenantDatabaseListCmd)
+	setClusterFlags(cmd)
 
-	multitenantDatabaseGetCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to be fetched.")
-	multitenantDatabaseGetCmd.MarkFlagRequired("multitenant-database")
+	cmd.AddCommand(newCmdDatabaseMultitenant())
+	cmd.AddCommand(newCmdDatabaseLogical())
+	cmd.AddCommand(newCmdDatabaseSchema())
 
-	multitenantDatabaseUpdateCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to be updated.")
-	multitenantDatabaseUpdateCmd.Flags().Int64("max-installations-per-logical-db", 10, "The maximum number of installations permitted in a single logical database (only applies to proxy databases).")
-	multitenantDatabaseUpdateCmd.MarkFlagRequired("multitenant-database")
-
-	multitenantDatabaseDeleteCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to delete.")
-	multitenantDatabaseDeleteCmd.Flags().Bool("force", false, "Specifies whether to delete record even if database cluster exists.")
-	multitenantDatabaseDeleteCmd.MarkFlagRequired("multitenant-database")
-
-	multitenantDatabaseReportCmd.Flags().String("multitenant-database", "", "The id of the mulitenant database to be fetched.")
-	multitenantDatabaseReportCmd.MarkFlagRequired("multitenant-database")
-
-	multitenantDatabaseCmd.AddCommand(multitenantDatabaseListCmd)
-	multitenantDatabaseCmd.AddCommand(multitenantDatabaseGetCmd)
-	multitenantDatabaseCmd.AddCommand(multitenantDatabaseUpdateCmd)
-	multitenantDatabaseCmd.AddCommand(multitenantDatabaseDeleteCmd)
-	multitenantDatabaseCmd.AddCommand(multitenantDatabaseReportCmd)
-
-	// Logical Databases
-	logicalDatabaseListCmd.Flags().String("multitenant-database-id", "", "The multitenant database ID by which to filter logical databases.")
-	registerTableOutputFlags(logicalDatabaseListCmd)
-	registerPagingFlags(logicalDatabaseListCmd)
-
-	logicalDatabaseGetCmd.Flags().String("logical-database", "", "The id of the logical database to be fetched.")
-	logicalDatabaseGetCmd.MarkFlagRequired("logical-database")
-
-	logicalDatabaseCmd.AddCommand(logicalDatabaseListCmd)
-	logicalDatabaseCmd.AddCommand(logicalDatabaseGetCmd)
-
-	// Database Schemas
-	databaseSchemaListCmd.Flags().String("logical-database-id", "", "The logical database ID by which to filter database schemas.")
-	databaseSchemaListCmd.Flags().String("installation-id", "", "The installation ID by which to filter database schemas.")
-	registerTableOutputFlags(databaseSchemaListCmd)
-	registerPagingFlags(databaseSchemaListCmd)
-
-	databaseSchemaGetCmd.Flags().String("database-schema", "", "The id of the database schema to be fetched.")
-	databaseSchemaGetCmd.MarkFlagRequired("database-schema")
-
-	databaseSchemaCmd.AddCommand(databaseSchemaListCmd)
-	databaseSchemaCmd.AddCommand(databaseSchemaGetCmd)
+	return cmd
 }
 
-var databaseCmd = &cobra.Command{
-	Use:   "database",
-	Short: "Manipulate database resources managed by the provisioning server.",
+func newCmdDatabaseMultitenant() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "multitenant",
+		Short: "Manage and view multitenant database resources.",
+	}
+
+	cmd.AddCommand(newCmdDatabaseMultitenantList())
+	cmd.AddCommand(newCmdDatabaseMultitenantGet())
+	cmd.AddCommand(newCmdDatabaseMultitenantUpdate())
+	cmd.AddCommand(newCmdDatabaseMultitenantDelete())
+	cmd.AddCommand(newCmdDatabaseMultitenantReport())
+
+	return cmd
 }
 
-var multitenantDatabaseCmd = &cobra.Command{
-	Use:   "multitenant",
-	Short: "Manage and view multitenant database resources.",
+func newCmdDatabaseMultitenantList() *cobra.Command {
+
+	var flags databaseMultiTenantListFlag
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List known multitenant databases.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeDatabaseMultitenantListCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }
 
-var multitenantDatabaseListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List known multitenant databases.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func executeDatabaseMultitenantListCmd(flags databaseMultiTenantListFlag) error {
+	client := model.NewClient(flags.serverAddress)
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	paging := getPaging(flags.pagingFlags)
 
-		vpcID, _ := command.Flags().GetString("vpc-id")
-		databaseType, _ := command.Flags().GetString("database-type")
-		paging := parsePagingFlags(command)
+	multitenantDatabases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
+		VpcID:        flags.vpcID,
+		DatabaseType: flags.databaseType,
+		Paging:       paging,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query multitenant databases")
+	}
 
-		multitenantDatabases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
-			VpcID:        vpcID,
-			DatabaseType: databaseType,
-			Paging:       paging,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to query multitenant databases")
-		}
+	if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
+		var keys []string
+		var vals [][]string
 
-		if enabled, customCols := tableOutputEnabled(command); enabled {
-			var keys []string
-			var vals [][]string
-
-			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(multitenantDatabases))
-				for _, mtd := range multitenantDatabases {
-					data = append(data, mtd)
-				}
-				keys, vals, err = prepareTableData(customCols, data)
-				if err != nil {
-					return errors.Wrap(err, "failed to prepare table output")
-				}
-			} else {
-				keys, vals = defaultMultitenantDatabaseTableData(multitenantDatabases)
+		if len(customCols) > 0 {
+			data := make([]interface{}, 0, len(multitenantDatabases))
+			for _, mtd := range multitenantDatabases {
+				data = append(data, mtd)
 			}
-
-			printTable(keys, vals)
-			return nil
+			keys, vals, err = prepareTableData(customCols, data)
+			if err != nil {
+				return errors.Wrap(err, "failed to prepare table output")
+			}
+		} else {
+			keys, vals = defaultMultitenantDatabaseTableData(multitenantDatabases)
 		}
 
-		err = printJSON(multitenantDatabases)
-		if err != nil {
-			return err
-		}
-
+		printTable(keys, vals)
 		return nil
-	},
+	}
+
+	return printJSON(multitenantDatabases)
 }
 
 func defaultMultitenantDatabaseTableData(multitenantDatabases []*model.MultitenantDatabase) ([]string, [][]string) {
@@ -140,139 +111,172 @@ func defaultMultitenantDatabaseTableData(multitenantDatabases []*model.Multitena
 	return keys, vals
 }
 
-var multitenantDatabaseGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get a particular multitenant database.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdDatabaseMultitenantGet() *cobra.Command {
+	var flags databaseMultiTenantGetFlag
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a particular multitenant database.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database")
-		multitenantDatabase, err := client.GetMultitenantDatabase(multitenantDatabaseID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query multitenant database")
-		}
-		if multitenantDatabase == nil {
-			return nil
-		}
-
-		err = printJSON(multitenantDatabase)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var multitenantDatabaseUpdateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Update an multitenant database's configuration",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database")
-		request := &model.PatchMultitenantDatabaseRequest{
-			MaxInstallationsPerLogicalDatabase: getInt64FlagPointer(command, "max-installations-per-logical-db"),
-		}
-
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			err := printJSON(request)
+			multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
 			if err != nil {
-				return errors.Wrap(err, "failed to print API request")
+				return errors.Wrap(err, "failed to query multitenant database")
+			}
+			if multitenantDatabase == nil {
+				return nil
 			}
 
-			return nil
-		}
+			return printJSON(multitenantDatabase)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		multitenantDatabase, err := client.UpdateMultitenantDatabase(multitenantDatabaseID, request)
-		if err != nil {
-			return errors.Wrap(err, "failed to update multitenant database")
-		}
+	flags.addFlags(cmd)
 
-		return printJSON(multitenantDatabase)
-	},
+	return cmd
 }
 
-var multitenantDatabaseDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete an multitenant database's configuration",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdDatabaseMultitenantUpdate() *cobra.Command {
+	var flags databaseMultiTenantUpdateFlag
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update an multitenant database's configuration",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database")
-		force, _ := command.Flags().GetBool("force")
-
-		err := client.DeleteMultitenantDatabase(multitenantDatabaseID, force)
-		if err != nil {
-			return errors.Wrap(err, "failed to update multitenant database")
-		}
-		return nil
-	},
-}
-
-var logicalDatabaseCmd = &cobra.Command{
-	Use:   "logical",
-	Short: "Manage and view logical database resources.",
-}
-
-var logicalDatabaseListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List logical databases.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database-id")
-		paging := parsePagingFlags(command)
-
-		logicalDatabases, err := client.GetLogicalDatabases(&model.GetLogicalDatabasesRequest{
-			MultitenantDatabaseID: multitenantDatabaseID,
-			Paging:                paging,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to query logical databases")
-		}
-
-		if enabled, customCols := tableOutputEnabled(command); enabled {
-			var keys []string
-			var vals [][]string
-
-			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(logicalDatabases))
-				for _, ldb := range logicalDatabases {
-					data = append(data, ldb)
-				}
-				keys, vals, err = prepareTableData(customCols, data)
-				if err != nil {
-					return errors.Wrap(err, "failed to prepare table output")
-				}
-			} else {
-				keys, vals = defaultLogicalDatabaseTableData(logicalDatabases)
+			request := &model.PatchMultitenantDatabaseRequest{}
+			if flags.isMaxInstallationsChanged {
+				request.MaxInstallationsPerLogicalDatabase = &flags.maxInstallations
 			}
 
-			printTable(keys, vals)
+			if flags.dryRun {
+				if err := printJSON(request); err != nil {
+					return errors.Wrap(err, "failed to print API request")
+				}
+				return nil
+			}
+
+			multitenantDatabase, err := client.UpdateMultitenantDatabase(flags.multitenantDatabaseID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to update multitenant database")
+			}
+
+			return printJSON(multitenantDatabase)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			flags.databaseMultiTenantUpdateFlagChanged.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdDatabaseMultitenantDelete() *cobra.Command {
+	var flags databaseMultiTenantDeleteFlag
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an multitenant database's configuration",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+
+			if err := client.DeleteMultitenantDatabase(flags.multitenantDatabaseID, flags.force); err != nil {
+				return errors.Wrap(err, "failed to update multitenant database")
+			}
 			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdDatabaseLogical() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "logical",
+		Short: "Manage and view logical database resources.",
+	}
+
+	cmd.AddCommand(newCmdDatabaseLogicalList())
+	cmd.AddCommand(newCmdDatabaseLogicalGet())
+
+	return cmd
+}
+
+func newCmdDatabaseLogicalList() *cobra.Command {
+	var flags databaseLogicalListFlag
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List logical databases.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeDatabaseLogicalListCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeDatabaseLogicalListCmd(flags databaseLogicalListFlag) error {
+	client := model.NewClient(flags.serverAddress)
+
+	paging := getPaging(flags.pagingFlags)
+
+	logicalDatabases, err := client.GetLogicalDatabases(&model.GetLogicalDatabasesRequest{
+		MultitenantDatabaseID: flags.multitenantDatabaseID,
+		Paging:                paging,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query logical databases")
+	}
+
+	if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
+		var keys []string
+		var vals [][]string
+
+		if len(customCols) > 0 {
+			data := make([]interface{}, 0, len(logicalDatabases))
+			for _, ldb := range logicalDatabases {
+				data = append(data, ldb)
+			}
+			keys, vals, err = prepareTableData(customCols, data)
+			if err != nil {
+				return errors.Wrap(err, "failed to prepare table output")
+			}
+		} else {
+			keys, vals = defaultLogicalDatabaseTableData(logicalDatabases)
 		}
 
-		err = printJSON(logicalDatabases)
-		if err != nil {
-			return err
-		}
-
+		printTable(keys, vals)
 		return nil
-	},
+	}
+
+	return printJSON(logicalDatabases)
 }
 
 func defaultLogicalDatabaseTableData(logicalDatabases []*model.LogicalDatabase) ([]string, [][]string) {
@@ -284,88 +288,106 @@ func defaultLogicalDatabaseTableData(logicalDatabases []*model.LogicalDatabase) 
 	return keys, vals
 }
 
-var logicalDatabaseGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get a particular logical database.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdDatabaseLogicalGet() *cobra.Command {
+	var flags databaseLogicalGetFlag
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a particular logical database.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		logicalDatabaseID, _ := command.Flags().GetString("logical-database")
-		logicalDatabase, err := client.GetLogicalDatabase(logicalDatabaseID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query logical database")
-		}
-		if logicalDatabase == nil {
-			return nil
-		}
-
-		err = printJSON(logicalDatabase)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var databaseSchemaCmd = &cobra.Command{
-	Use:   "schema",
-	Short: "Manage and view database schema resources.",
-}
-
-var databaseSchemaListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List database schemas.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		logicalDatabaseID, _ := command.Flags().GetString("logical-database-id")
-		installationID, _ := command.Flags().GetString("installation-id")
-		paging := parsePagingFlags(command)
-
-		databaseSchemas, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
-			LogicalDatabaseID: logicalDatabaseID,
-			InstallationID:    installationID,
-			Paging:            paging,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to query database schemas")
-		}
-
-		if enabled, customCols := tableOutputEnabled(command); enabled {
-			var keys []string
-			var vals [][]string
-
-			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(databaseSchemas))
-				for _, dbs := range databaseSchemas {
-					data = append(data, dbs)
-				}
-				keys, vals, err = prepareTableData(customCols, data)
-				if err != nil {
-					return errors.Wrap(err, "failed to prepare table output")
-				}
-			} else {
-				keys, vals = defaultDatabaseSchemaTableData(databaseSchemas)
+			logicalDatabase, err := client.GetLogicalDatabase(flags.logicalDatabaseID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query logical database")
+			}
+			if logicalDatabase == nil {
+				return nil
 			}
 
-			printTable(keys, vals)
-			return nil
+			return printJSON(logicalDatabase)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdDatabaseSchema() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "schema",
+		Short: "Manage and view database schema resources.",
+	}
+
+	cmd.AddCommand(newCmdDatabaseSchemaList())
+	cmd.AddCommand(newCmdDatabaseSchemaGet())
+
+	return cmd
+}
+
+func newCmdDatabaseSchemaList() *cobra.Command {
+	var flags databaseSchemaListFlag
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List database schemas.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeDatabaseSchemaListCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeDatabaseSchemaListCmd(flags databaseSchemaListFlag) error {
+	client := model.NewClient(flags.serverAddress)
+
+	paging := getPaging(flags.pagingFlags)
+
+	databaseSchemas, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+		LogicalDatabaseID: flags.logicalDatabaseID,
+		InstallationID:    flags.installationID,
+		Paging:            paging,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query database schemas")
+	}
+
+	if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
+		var keys []string
+		var vals [][]string
+
+		if len(customCols) > 0 {
+			data := make([]interface{}, 0, len(databaseSchemas))
+			for _, dbs := range databaseSchemas {
+				data = append(data, dbs)
+			}
+			keys, vals, err = prepareTableData(customCols, data)
+			if err != nil {
+				return errors.Wrap(err, "failed to prepare table output")
+			}
+		} else {
+			keys, vals = defaultDatabaseSchemaTableData(databaseSchemas)
 		}
 
-		err = printJSON(databaseSchemas)
-		if err != nil {
-			return err
-		}
-
+		printTable(keys, vals)
 		return nil
-	},
+	}
+
+	return printJSON(databaseSchemas)
 }
 
 func defaultDatabaseSchemaTableData(databaseSchemas []*model.DatabaseSchema) ([]string, [][]string) {
@@ -377,75 +399,92 @@ func defaultDatabaseSchemaTableData(databaseSchemas []*model.DatabaseSchema) ([]
 	return keys, vals
 }
 
-var databaseSchemaGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get a particular database schema.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdDatabaseSchemaGet() *cobra.Command {
+	var flags databaseSchemaGetFlag
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a particular database schema.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		databaseSchemaID, _ := command.Flags().GetString("database-schema")
-		databaseSchema, err := client.GetDatabaseSchema(databaseSchemaID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query database schema")
-		}
-		if databaseSchema == nil {
-			return nil
-		}
-
-		err = printJSON(databaseSchema)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var multitenantDatabaseReportCmd = &cobra.Command{
-	Use:   "report",
-	Short: "Get a report of deployment details for a given multitenant database",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		multitenantDatabaseID, _ := command.Flags().GetString("multitenant-database")
-		multitenantDatabase, err := client.GetMultitenantDatabase(multitenantDatabaseID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query multitenant database")
-		}
-		if multitenantDatabase == nil {
-			return nil
-		}
-
-		output := fmt.Sprintf("Multitenant Database: %s\n", multitenantDatabase.ID)
-		output += fmt.Sprintf(" ├ Created: %s\n", multitenantDatabase.CreationDateString())
-		output += fmt.Sprintf(" ├ State: %s\n", multitenantDatabase.State)
-		output += fmt.Sprintf(" ├ Type: %s\n", multitenantDatabase.DatabaseType)
-		output += fmt.Sprintf(" ├ VPC: %s\n", multitenantDatabase.VpcID)
-		output += fmt.Sprintf(" ├ Installations: %d\n", multitenantDatabase.Installations.Count())
-		output += fmt.Sprintf(" ├ Writer Endpoint: %s\n", multitenantDatabase.WriterEndpoint)
-		output += fmt.Sprintf(" ├ Reader Endpoint: %s\n", multitenantDatabase.ReaderEndpoint)
-
-		if multitenantDatabase.DatabaseType == model.DatabaseEngineTypePostgresProxy {
-			logicalDatabases, err := client.GetLogicalDatabases(&model.GetLogicalDatabasesRequest{
-				MultitenantDatabaseID: multitenantDatabase.ID,
-				Paging:                model.AllPagesNotDeleted(),
-			})
+			databaseSchema, err := client.GetDatabaseSchema(flags.databaseSchemaID)
 			if err != nil {
-				return errors.Wrap(err, "failed to query installation logical databases")
+				return errors.Wrap(err, "failed to query database schema")
+			}
+			if databaseSchema == nil {
+				return nil
 			}
 
-			output += fmt.Sprintf(" └ Logical Databases: %d\n", len(logicalDatabases))
-			output += fmt.Sprintf("   └ Average Installations Per Logical Database: %.2f\n", float64(multitenantDatabase.Installations.Count())/float64(len(logicalDatabases)))
+			return printJSON(databaseSchema)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdDatabaseMultitenantReport() *cobra.Command {
+	var flags databaseMultiTenantReportFlag
+
+	cmd := &cobra.Command{
+		Use:   "report",
+		Short: "Get a report of deployment details for a given multitenant database",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeMultiTenantDatabaseReportCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeMultiTenantDatabaseReportCmd(flags databaseMultiTenantReportFlag) error {
+	client := model.NewClient(flags.serverAddress)
+
+	multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
+	if err != nil {
+		return errors.Wrap(err, "failed to query multitenant database")
+	}
+	if multitenantDatabase == nil {
+		return nil
+	}
+
+	output := fmt.Sprintf("Multitenant Database: %s\n", multitenantDatabase.ID)
+	output += fmt.Sprintf(" ├ Created: %s\n", multitenantDatabase.CreationDateString())
+	output += fmt.Sprintf(" ├ State: %s\n", multitenantDatabase.State)
+	output += fmt.Sprintf(" ├ Type: %s\n", multitenantDatabase.DatabaseType)
+	output += fmt.Sprintf(" ├ VPC: %s\n", multitenantDatabase.VpcID)
+	output += fmt.Sprintf(" ├ Installations: %d\n", multitenantDatabase.Installations.Count())
+	output += fmt.Sprintf(" ├ Writer Endpoint: %s\n", multitenantDatabase.WriterEndpoint)
+	output += fmt.Sprintf(" ├ Reader Endpoint: %s\n", multitenantDatabase.ReaderEndpoint)
+
+	if multitenantDatabase.DatabaseType == model.DatabaseEngineTypePostgresProxy {
+		logicalDatabases, err := client.GetLogicalDatabases(&model.GetLogicalDatabasesRequest{
+			MultitenantDatabaseID: multitenantDatabase.ID,
+			Paging:                model.AllPagesNotDeleted(),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to query installation logical databases")
 		}
 
-		fmt.Println(output)
+		output += fmt.Sprintf(" └ Logical Databases: %d\n", len(logicalDatabases))
+		output += fmt.Sprintf("   └ Average Installations Per Logical Database: %.2f\n", float64(multitenantDatabase.Installations.Count())/float64(len(logicalDatabases)))
+	}
 
-		return nil
-	},
+	fmt.Println(output)
+
+	return nil
 }
