@@ -5,21 +5,19 @@
 package provisioner
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	namespaceNginxInternal = "nginx-internal"
+	namespaceNginxInternal           = "nginx-internal"
+	chartDeploymentNameNginxInternal = "nginx-internal"
+	chartNameNginxInternal           = "ingress-nginx/ingress-nginx"
 )
 
 type nginxInternal struct {
@@ -97,26 +95,12 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
-	k8sClient, err := k8s.NewFromFile(n.kubeconfigPath, n.logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up the k8s client")
+	helm := helmDeployment{
+		chartDeploymentName: chartDeploymentNameNginxInternal,
+		chartName:           chartNameNginxInternal,
+		namespace:           namespaceNginxInternal,
 	}
-
-	services, err := k8sClient.Clientset.CoreV1().Services(namespaceNginxInternal).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to list k8s services")
-	}
-
-	for _, service := range services.Items {
-		if service.Spec.Type == corev1.ServiceTypeLoadBalancer {
-			err := k8sClient.Clientset.CoreV1().Services(namespaceNginxInternal).Delete(context.TODO(), service.Name, metav1.DeleteOptions{})
-			if err != nil {
-				return errors.Wrap(err, "failed to delete k8s service")
-			}
-		}
-	}
-
-	return nil
+	return helm.Delete()
 }
 
 func (n *nginxInternal) ValuesPath() string {
@@ -142,8 +126,8 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 	}
 
 	return &helmDeployment{
-		chartDeploymentName: "nginx-internal",
-		chartName:           "ingress-nginx/ingress-nginx",
+		chartDeploymentName: chartDeploymentNameNginxInternal,
+		chartName:           chartNameNginxInternal,
 		namespace:           namespaceNginxInternal,
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
 		desiredVersion:      n.desiredVersion,
