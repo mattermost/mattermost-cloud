@@ -21,6 +21,7 @@ type AWSMockedAPI struct {
 	ResourceGroupsTagging *mocks.MockResourceGroupsTaggingAPIAPI
 	SecretsManager        *mocks.MockSecretsManagerAPI
 	STS                   *mocks.MockSTSAPI
+	DynamoDB              *mocks.MockDynamoDBAPI
 }
 
 // NewAWSMockedAPI returns an instance of AWSMockedAPI.
@@ -36,5 +37,6 @@ func NewAWSMockedAPI(ctrl *gomock.Controller) *AWSMockedAPI {
 		ResourceGroupsTagging: mocks.NewMockResourceGroupsTaggingAPIAPI(ctrl),
 		SecretsManager:        mocks.NewMockSecretsManagerAPI(ctrl),
 		STS:                   mocks.NewMockSTSAPI(ctrl),
+		DynamoDB:              mocks.NewMockDynamoDBAPI(ctrl),
 	}
 }
