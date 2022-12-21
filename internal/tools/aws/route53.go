@@ -255,7 +255,7 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 			ChangeBatch: &types.ChangeBatch{
 				Changes: []types.Change{
 					{
-						Action: "UPSERT",
+						Action: types.ChangeActionUpsert,
 						ResourceRecordSet: &types.ResourceRecordSet{
 							Name:            aws.String(dnsName),
 							Type:            types.RRTypeCname,
@@ -323,11 +323,11 @@ func (a *Client) updateResourceRecordSets(oldRec, newRec *types.ResourceRecordSe
 		ChangeBatch: &types.ChangeBatch{
 			Changes: []types.Change{
 				{
-					Action:            "UPSERT",
+					Action:            types.ChangeActionUpsert,
 					ResourceRecordSet: newRec,
 				},
 				{
-					Action:            "DELETE",
+					Action:            types.ChangeActionDelete,
 					ResourceRecordSet: oldRec,
 				},
 			},
@@ -388,7 +388,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 	var changes []types.Change
 	for _, recordSet := range recordSets {
 		changes = append(changes, types.Change{
-			Action:            "DELETE",
+			Action:            types.ChangeActionDelete,
 			ResourceRecordSet: recordSet,
 		})
 	}
