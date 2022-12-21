@@ -86,6 +86,11 @@ func (a *Client) S3BatchDelete(bucketName string, prefix *string) error {
 			return errors.Wrap(err, "couldn't get bucket page")
 		}
 
+		// Ensure we have a page
+		if page == nil {
+			break
+		}
+
 		var objectIDs []types.ObjectIdentifier
 		for _, obj := range page.Contents {
 			objectIDs = append(objectIDs, types.ObjectIdentifier{
