@@ -16,11 +16,12 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
 
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	smTypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -246,9 +247,11 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
-	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: &installationSecretName,
-	})
+	result, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: &installationSecretName,
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret value for database")
 	}
@@ -811,7 +814,7 @@ func updateCounterTag(resourceARN *string, counter int, client *Client) error {
 	return nil
 }
 
-func createDatabaseUserSecret(secretName, username, description string, tags []*secretsmanager.Tag, client *Client) (*RDSSecret, error) {
+func createDatabaseUserSecret(secretName, username, description string, tags []smTypes.Tag, client *Client) (*RDSSecret, error) {
 	rdsSecretPayload := RDSSecret{
 		MasterUsername: username,
 		MasterPassword: model.NewRandomPassword(model.DefaultPasswordLength),
@@ -826,12 +829,14 @@ func createDatabaseUserSecret(secretName, username, description string, tags []*
 		return nil, errors.Wrap(err, "failed to marshal secrets manager payload")
 	}
 
-	_, err = client.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
-		Name:         aws.String(secretName),
-		Description:  aws.String(description),
-		Tags:         tags,
-		SecretString: aws.String(string(b)),
-	})
+	_, err = client.Service().secretsManager.CreateSecret(
+		context.TODO(),
+		&secretsmanager.CreateSecretInput{
+			Name:         aws.String(secretName),
+			Description:  aws.String(description),
+			Tags:         tags,
+			SecretString: aws.String(string(b)),
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create secret")
 	}
@@ -941,9 +946,11 @@ func (d *RDSMultitenantDatabase) removeMigratedInstallationFromMultitenantDataba
 func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoint string, logger log.FieldLogger) error {
 	databaseName := MattermostRDSDatabaseName(d.installationID)
 
-	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(rdsClusterID),
-	})
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(rdsClusterID),
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get master secret by ID %s", rdsClusterID)
 	}
@@ -973,10 +980,14 @@ func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoin
 func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
-	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(installationSecretName),
-	})
-	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(installationSecretName),
+		})
+
+	var awsErr *smTypes.ResourceNotFoundException
+	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
 
@@ -988,7 +999,7 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 		}
 	} else {
 		description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
-		tags := []*secretsmanager.Tag{
+		tags := []smTypes.Tag{
 			{
 				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
 				Value: rdsClusterID,
@@ -1033,9 +1044,11 @@ func isRDSClusterEndpointsReady(rdsClusterID string, client *Client) (bool, erro
 func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
-	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: rdsCluster.DBClusterIdentifier,
-	})
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: rdsCluster.DBClusterIdentifier,
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant RDS cluster %s", rdsID)
 	}

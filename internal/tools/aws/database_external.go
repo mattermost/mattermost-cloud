@@ -5,9 +5,10 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
 
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -67,9 +68,11 @@ func (d *ExternalDatabase) GenerateDatabaseSecret(store model.InstallationDataba
 
 	logger.Debugf("Using AWS secret %s for external database connections", installation.ExternalDatabaseConfig.SecretName)
 
-	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: &installation.ExternalDatabaseConfig.SecretName,
-	})
+	result, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: &installation.ExternalDatabaseConfig.SecretName,
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret value for database")
 	}
@@ -173,9 +176,11 @@ func extractExternalDatabaseSecret(payload string) (*externalDatabaseSecret, err
 // SecretsManagerValidateExternalDatabaseSecret pulls down the secret with the
 // provided name and validates it as an external database secret.
 func (a *Client) SecretsManagerValidateExternalDatabaseSecret(name string) error {
-	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: &name,
-	})
+	result, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: &name,
+		})
 	if err != nil {
 		return errors.Wrap(err, "failed to get secret value for database")
 	}
