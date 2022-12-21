@@ -14,7 +14,7 @@
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./secrets_manager.go github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface SecretsManagerAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./resource_tagging.go github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface ResourceGroupsTaggingAPIAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./dynamodb.go github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface DynamoDBAPI
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./dynamodb.go github.com/mattermost/mattermost-cloud/internal/tools/aws DynamoDBAPI
 //go:generate /usr/bin/env bash -c "cat ../../../hack/boilerplate/boilerplate.generatego.txt ec2.go > _ec2.go && mv _ec2.go ec2.go"
 //go:generate /usr/bin/env bash -c "cat ../../../hack/boilerplate/boilerplate.generatego.txt rds.go > _rds.go && mv _rds.go rds.go"
 //go:generate /usr/bin/env bash -c "cat ../../../hack/boilerplate/boilerplate.generatego.txt s3.go > _s3.go && mv _s3.go s3.go"
