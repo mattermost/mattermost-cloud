@@ -14,6 +14,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	namespaceNginxInternal           = "nginx-internal"
+	chartDeploymentNameNginxInternal = "nginx-internal"
+	chartNameNginxInternal           = "ingress-nginx/ingress-nginx"
+)
+
 type nginxInternal struct {
 	awsClient      aws.AWS
 	kubeconfigPath string
@@ -89,7 +95,12 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
-	return nil
+	helm := helmDeployment{
+		chartDeploymentName: chartDeploymentNameNginxInternal,
+		chartName:           chartNameNginxInternal,
+		namespace:           namespaceNginxInternal,
+	}
+	return helm.Delete()
 }
 
 func (n *nginxInternal) ValuesPath() string {
@@ -115,9 +126,9 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 	}
 
 	return &helmDeployment{
-		chartDeploymentName: "nginx-internal",
-		chartName:           "ingress-nginx/ingress-nginx",
-		namespace:           "nginx-internal",
+		chartDeploymentName: chartDeploymentNameNginxInternal,
+		chartName:           chartNameNginxInternal,
+		namespace:           namespaceNginxInternal,
 		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
 		desiredVersion:      n.desiredVersion,
 		kubeconfigPath:      n.kubeconfigPath,
