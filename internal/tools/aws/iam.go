@@ -45,8 +45,6 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ty
 	var awsErr *types.NoSuchEntityException
 	if errors.As(err, &awsErr) {
 		return nil, err
-	} else {
-		return nil, err
 	}
 
 	createResult, err := a.Service().iam.CreateUser(
