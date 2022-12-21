@@ -33,7 +33,7 @@ func init() {
 	rootCmd.AddCommand(newCmdCluster())
 	rootCmd.AddCommand(newCmdInstallation())
 	rootCmd.AddCommand(newCmdGroup())
-	rootCmd.AddCommand(databaseCmd)
+	rootCmd.AddCommand(newCmdDatabase())
 	rootCmd.AddCommand(newCmdSchema())
 	rootCmd.AddCommand(newCmdWebhook())
 	rootCmd.AddCommand(newCmdSecurity())
