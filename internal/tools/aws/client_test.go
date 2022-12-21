@@ -179,6 +179,7 @@ func (a *AWSTestSuite) SetupTest() {
 				resourceGroupsTagging: api.ResourceGroupsTagging,
 				kms:                   api.KMS,
 				sts:                   api.STS,
+				dynamodb:              api.DynamoDB,
 			},
 			cache:  newClientDummyCache(),
 			config: &aws.Config{},

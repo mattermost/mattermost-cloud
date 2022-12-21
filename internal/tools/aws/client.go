@@ -17,11 +17,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
@@ -153,7 +152,7 @@ type Service struct {
 	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
 	kms                   kmsiface.KMSAPI
-	dynamodb              dynamodbiface.DynamoDBAPI
+	dynamodb              DynamoDBAPI
 	sts                   stsiface.STSAPI
 	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
 	eks                   eksiface.EKSAPI
@@ -171,7 +170,7 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
 		ec2:                   ec2.NewFromConfig(cfg), // v2
 		kms:                   kms.New(sess),
-		dynamodb:              dynamodb.New(sess),
+		dynamodb:              dynamodb.NewFromConfig(cfg), // v2
 		sts:                   sts.New(sess),
 		appAutoscaling:        applicationautoscaling.New(sess),
 		eks:                   eks.New(sess),
