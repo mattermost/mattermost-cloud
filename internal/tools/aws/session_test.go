@@ -7,8 +7,8 @@ package aws
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +45,7 @@ func TestSanitizeParams(t *testing.T) {
 				SecretBinary: []byte("secret bytes"),
 				SecretString: aws.String("super secret"),
 			},
-			expected: `{"AddReplicaRegions":null,"ClientRequestToken":null,"Description":null,"ForceOverwriteReplicaSecret":null,"KmsKeyId":null,"Name":"name","SecretBinary":"*****","SecretString":"*****","Tags":null}`,
+			expected: `{"AddReplicaRegions":null,"ClientRequestToken":null,"Description":null,"ForceOverwriteReplicaSecret":false,"KmsKeyId":null,"Name":"name","SecretBinary":"*****","SecretString":"*****","Tags":null}`,
 		},
 	} {
 		t.Run(testCase.description, func(t *testing.T) {

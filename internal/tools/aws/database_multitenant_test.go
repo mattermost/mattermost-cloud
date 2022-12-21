@@ -7,12 +7,12 @@ package aws
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -247,8 +247,8 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		a.Mocks.API.SecretsManager.EXPECT().
-			GetSecretValue(gomock.Any()).
-			Do(func(input *secretsmanager.GetSecretValueInput) {
+			GetSecretValue(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *secretsmanager.GetSecretValueInput, opts ...func(*secretsmanager.Options)) {
 
 			}).
 			Return(&secretsmanager.GetSecretValueOutput{
