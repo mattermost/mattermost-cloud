@@ -29,6 +29,7 @@ func (a *Client) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLo
 			logger.WithField("dynamodb-table", tableName).Warn("DynamoDB table could not be found; assuming already deleted")
 			return nil
 		}
+		logger.WithField("dynamodb-table", tableName).WithError(err).Warn("Error checking for dynamodb table")
 	}
 
 	_, err = a.Service().dynamodb.DeleteTable(
