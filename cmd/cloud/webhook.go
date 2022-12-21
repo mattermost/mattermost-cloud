@@ -13,149 +13,154 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	webhookCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+func newCmdWebhook() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "webhook",
+		Short: "Manipulate webhooks managed by the provisioning server.",
+	}
 
-	webhookCreateCmd.Flags().String("owner", "", "An opaque identifier describing the owner of the webhook.")
-	webhookCreateCmd.Flags().String("url", "", "The callback URL of the webhook.")
-	webhookCreateCmd.MarkFlagRequired("owner")
-	webhookCreateCmd.MarkFlagRequired("url")
+	setWebhookFlags(cmd)
 
-	webhookGetCmd.Flags().String("webhook", "", "The id of the webhook to be fetched.")
-	webhookGetCmd.MarkFlagRequired("webhook")
+	cmd.AddCommand(newCmdWebhookCreate())
+	cmd.AddCommand(newCmdWebhookGet())
+	cmd.AddCommand(newCmdWebhookList())
+	cmd.AddCommand(newCmdWebhookDelete())
 
-	webhookListCmd.Flags().String("owner", "", "The owner by which to filter webhooks.")
-	webhookListCmd.Flags().Bool("table", false, "Whether to display the returned webhook list in a table or not")
-	registerPagingFlags(webhookListCmd)
-
-	webhookDeleteCmd.Flags().String("webhook", "", "The id of the webhook to be deleted.")
-	webhookDeleteCmd.MarkFlagRequired("webhook")
-
-	webhookCmd.AddCommand(webhookCreateCmd)
-	webhookCmd.AddCommand(webhookGetCmd)
-	webhookCmd.AddCommand(webhookListCmd)
-	webhookCmd.AddCommand(webhookDeleteCmd)
+	return cmd
 }
 
-var webhookCmd = &cobra.Command{
-	Use:   "webhook",
-	Short: "Manipulate webhooks managed by the provisioning server.",
-}
+func newCmdWebhookCreate() *cobra.Command {
+	var flags webhookCreateFlag
 
-var webhookCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create a webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a webhook.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		ownerID, _ := command.Flags().GetString("owner")
-		url, _ := command.Flags().GetString("url")
-
-		webhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
-			OwnerID: ownerID,
-			URL:     url,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create webhook")
-		}
-
-		err = printJSON(webhook)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var webhookGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get a particular webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		webhookID, _ := command.Flags().GetString("webhook")
-		webhook, err := client.GetWebhook(webhookID)
-		if err != nil {
-			return errors.Wrap(err, "failed to query webhook")
-		}
-		if webhook == nil {
-			return nil
-		}
-
-		err = printJSON(webhook)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
-var webhookListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List created webhooks.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		owner, _ := command.Flags().GetString("owner")
-		paging := parsePagingFlags(command)
-		webhooks, err := client.GetWebhooks(&model.GetWebhooksRequest{
-			OwnerID: owner,
-			Paging:  paging,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to query webhooks")
-		}
-
-		outputToTable, _ := command.Flags().GetBool("table")
-		if outputToTable {
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetHeader([]string{"ID", "OWNER", "URL"})
-
-			for _, webhook := range webhooks {
-				table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL})
+			webhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
+				OwnerID: flags.ownerID,
+				URL:     flags.url,
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to create webhook")
 			}
-			table.Render()
 
-			return nil
-		}
+			return printJSON(webhook)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.webhookFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		err = printJSON(webhooks)
-		if err != nil {
-			return err
-		}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
 }
 
-var webhookDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete a webhook.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdWebhookGet() *cobra.Command {
+	var flags webhookGetFlag
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get a particular webhook.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		webhookID, _ := command.Flags().GetString("webhook")
+			webhook, err := client.GetWebhook(flags.webhookID)
+			if err != nil {
+				return errors.Wrap(err, "failed to query webhook")
+			}
+			if webhook == nil {
+				return nil
+			}
 
-		err := client.DeleteWebhook(webhookID)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete webhook")
+			return printJSON(webhook)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.webhookFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdWebhookList() *cobra.Command {
+	var flags webhookListFlag
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List created webhooks.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeWebhookListCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.webhookFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeWebhookListCmd(flags webhookListFlag) error {
+	client := model.NewClient(flags.serverAddress)
+
+	paging := getPaging(flags.pagingFlags)
+	webhooks, err := client.GetWebhooks(&model.GetWebhooksRequest{
+		OwnerID: flags.owner,
+		Paging:  paging,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query webhooks")
+	}
+
+	if flags.outputToTable {
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetAlignment(tablewriter.ALIGN_LEFT)
+		table.SetHeader([]string{"ID", "OWNER", "URL"})
+
+		for _, webhook := range webhooks {
+			table.Append([]string{webhook.ID, webhook.OwnerID, webhook.URL})
 		}
+		table.Render()
 
 		return nil
-	},
+	}
+
+	return printJSON(webhooks)
+}
+
+func newCmdWebhookDelete() *cobra.Command {
+	var flags webhookDeleteFlag
+
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete a webhook.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.DeleteWebhook(flags.webhookID); err != nil {
+				return errors.Wrap(err, "failed to delete webhook")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.webhookFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }
