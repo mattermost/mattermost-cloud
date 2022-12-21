@@ -247,18 +247,9 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
-	result, err := d.client.Service().secretsManager.GetSecretValue(
-		context.TODO(),
-		&secretsmanager.GetSecretValueInput{
-			SecretId: &installationSecretName,
-		})
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get secret value for database")
-	}
-
-	installationSecret, err := unmarshalSecretPayload(*result.SecretString)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal secret payload")
 	}
 
 	var databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck string
@@ -980,23 +971,18 @@ func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoin
 func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
-	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
-		context.TODO(),
-		&secretsmanager.GetSecretValueInput{
-			SecretId: aws.String(installationSecretName),
-		})
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get secret value for database")
+	}
 
 	var awsErr *smTypes.ResourceNotFoundException
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
 
-	var installationSecret *RDSSecret
-	if installationSecretValue != nil && installationSecretValue.SecretString != nil {
-		installationSecret, err = unmarshalSecretPayload(*installationSecretValue.SecretString)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
-		}
+	if installationSecret != nil && err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
 	} else {
 		description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
 		tags := []smTypes.Tag{

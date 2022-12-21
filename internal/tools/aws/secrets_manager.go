@@ -82,15 +82,7 @@ func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.Field
 func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
 	authUserSecretName := PGBouncerAuthUserSecretName(vpcID)
 
-	result, err := a.Service().secretsManager.GetSecretValue(
-		context.TODO(),
-		&secretsmanager.GetSecretValueInput{
-			SecretId: aws.String(PGBouncerAuthUserSecretName(vpcID)),
-		})
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
-	}
-	secret, err := unmarshalSecretPayload(*result.SecretString)
+	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName, a.logger)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to unmarshal secret payload")
 	}
@@ -229,7 +221,7 @@ func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger
 	var rdsSecret *RDSSecret
 	err = json.Unmarshal([]byte(*result.SecretString), &rdsSecret)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+		return rdsSecret, errors.Wrap(err, "unable to marshal secrets manager secret payload")
 	}
 
 	err = rdsSecret.Validate()
@@ -269,19 +261,4 @@ func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, force bool
 	logger.WithField("secret-name", secretName).Debugf("Secret Manager secret scheduled for deletion on %s", response.DeletionDate)
 
 	return nil
-}
-
-func unmarshalSecretPayload(payload string) (*RDSSecret, error) {
-	var secret RDSSecret
-	err := json.Unmarshal([]byte(payload), &secret)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
-	}
-
-	err = secret.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &secret, nil
 }
