@@ -18,6 +18,7 @@ import (
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -32,8 +33,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -148,7 +147,7 @@ type Service struct {
 	// ec2                   ec2iface.EC2API
 	iam                   iamiface.IAMAPI
 	rds                   rdsiface.RDSAPI
-	s3                    s3iface.S3API
+	s3                    S3API
 	route53               route53iface.Route53API
 	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
@@ -165,7 +164,7 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		acm:                   acm.NewFromConfig(cfg), // v2
 		iam:                   iam.New(sess),
 		rds:                   rds.New(sess),
-		s3:                    s3.New(sess),
+		s3:                    s3.NewFromConfig(cfg), // v2
 		route53:               route53.New(sess),
 		secretsManager:        secretsmanager.New(sess),
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
