@@ -37,11 +37,11 @@ func init() {
 	rootCmd.AddCommand(newCmdSchema())
 	rootCmd.AddCommand(newCmdWebhook())
 	rootCmd.AddCommand(newCmdSecurity())
-	rootCmd.AddCommand(workbenchCmd)
-	rootCmd.AddCommand(completionCmd)
-	rootCmd.AddCommand(dashboardCmd)
-	rootCmd.AddCommand(eventsCmd)
-	rootCmd.AddCommand(subscriptionCmd)
+	rootCmd.AddCommand(newCmdWorkbench())
+	rootCmd.AddCommand(newCmdCompletion())
+	rootCmd.AddCommand(newCmdDashboard())
+	rootCmd.AddCommand(newCmdEvents())
+	rootCmd.AddCommand(newCmdSubscription())
 }
 
 func main() {
