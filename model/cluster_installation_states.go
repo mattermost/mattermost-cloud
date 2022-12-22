@@ -51,3 +51,11 @@ var AllClusterInstallationStatesPendingWork = []string{
 	ClusterInstallationStateReady,
 	ClusterInstallationStateDeletionRequested,
 }
+
+// ClusterInstallationStateWorkPriority is a map of states to their priority. Default priority is 0.
+// States with higher priority will be processed first.
+var ClusterInstallationStateWorkPriority = map[string]int{
+	ClusterInstallationStateCreationRequested: 3,
+	ClusterInstallationStateReconciling:       2,
+	ClusterInstallationStateReady:             1,
+}

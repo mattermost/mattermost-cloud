@@ -157,6 +157,16 @@ var AllInstallationStatesPendingWork = []string{
 	InstallationStateDeletionFinalCleanup,
 }
 
+// InstallationStateWorkPriority is a map of states to their priority. Default priority is 0.
+// States with higher priority will be processed first.
+var InstallationStateWorkPriority = map[string]int{
+	InstallationStateCreationRequested:            5,
+	InstallationStateCreationNoCompatibleClusters: 4,
+	InstallationStateCreationPreProvisioning:      3,
+	InstallationStateCreationInProgress:           2,
+	InstallationStateCreationDNS:                  1,
+}
+
 // AllInstallationRequestStates is a list of all states that an installation can
 // be put in via the API.
 // Warning:
