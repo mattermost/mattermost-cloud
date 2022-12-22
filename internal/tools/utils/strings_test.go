@@ -21,15 +21,15 @@ func TestSanitizeRFC1123String(t *testing.T) {
 		},
 		{
 			Input:  "SpinWick-thingy-123",
-			Output: "spinwick-thingy-123",
+			Output: "spinwickthingy123",
 		},
 		{
 			Input:  "sup3rR@nD#mS7t))((###-oopp<>../;[",
-			Output: "sup3rrndms7t-oopp..",
+			Output: "sup3rrndms7toopp",
 		},
 	}
 
 	for _, testCase := range testCases {
-		assert.Equal(t, testCase.Output, SanitizeRFC1123String(testCase.Input))
+		assert.Equal(t, testCase.Output, SanitizeAlphaNumericString(testCase.Input))
 	}
 }

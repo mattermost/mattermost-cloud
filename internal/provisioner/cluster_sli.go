@@ -20,7 +20,7 @@ const (
 )
 
 func makeRingSLOName(group *model.GroupDTO) string {
-	return utils.SanitizeRFC1123String(group.Name + "-ring-" + group.ID)
+	return utils.SanitizeAlphaNumericString(group.Name) + "-ring-" + group.ID
 }
 
 func makeRingSLOs(group *model.GroupDTO, objective float64) slothv1.PrometheusServiceLevel {

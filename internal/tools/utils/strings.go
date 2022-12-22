@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-var rfc1123Characters = regexp.MustCompile(`[^a-z0-9-.]+`)
+var alphaNumericCharacters = regexp.MustCompile(`[^a-z0-9]+`)
 
-// SanitizeRFC1123String converts a string to a valid RFC1123 representation, converting all letters to
+// SanitizeAlphaNumericString converts a string to a valid AlphaNumeric representation, converting all letters to
 // lowercase and then removing all invalid characters.
-func SanitizeRFC1123String(input string) string {
-	return rfc1123Characters.ReplaceAllString(strings.ToLower(input), "")
+func SanitizeAlphaNumericString(input string) string {
+	return alphaNumericCharacters.ReplaceAllString(strings.ToLower(input), "")
 }
