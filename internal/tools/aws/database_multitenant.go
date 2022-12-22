@@ -972,35 +972,41 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
 	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
+
+	// If there's any error apart from the resource not existing, fail
 	var awsErr *smTypes.ResourceNotFoundException
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
 
+	// If the secred existed but we failed to parse it into our data structure, fail
 	if installationSecret != nil && err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
 	}
 
-	description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
-	tags := []smTypes.Tag{
-		{
-			Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
-			Value: rdsClusterID,
-		},
-		{
-			Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
-			Value: VpcID,
-		},
-		{
-			Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
-			Value: aws.String(d.installationID),
-		},
-	}
+	// If the secret does not exist, create one
+	if installationSecret == nil {
+		description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
+		tags := []smTypes.Tag{
+			{
+				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
+				Value: rdsClusterID,
+			},
+			{
+				Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
+				Value: VpcID,
+			},
+			{
+				Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
+				Value: aws.String(d.installationID),
+			},
+		}
 
-	username := MattermostMultitenantDatabaseUsername(d.installationID)
-	installationSecret, err = createDatabaseUserSecret(installationSecretName, username, description, tags, d.client)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", installationSecretName)
+		username := MattermostMultitenantDatabaseUsername(d.installationID)
+		installationSecret, err = createDatabaseUserSecret(installationSecretName, username, description, tags, d.client)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", installationSecretName)
+		}
 	}
 
 	return installationSecret, nil
