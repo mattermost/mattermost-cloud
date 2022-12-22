@@ -1,9 +1,10 @@
 package main
 
 import (
+	"time"
+
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 type subscriptionCreateFlags struct {

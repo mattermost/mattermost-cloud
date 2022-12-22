@@ -22,7 +22,7 @@ func newCmdCompletion() *cobra.Command {
 	return cmd
 }
 
-var bashLong string = `To load completion, run
+var bashLong = `To load completion, run
 
 . <(cloud completion bash)
 
@@ -35,7 +35,7 @@ func newCmdCompletionBash() *cobra.Command {
 		Short: "Generates the bash autocompletion scripts",
 		Long:  bashLong,
 		Run: func(command *cobra.Command, args []string) {
-			rootCmd.GenBashCompletion(os.Stdout)
+			_ = rootCmd.GenBashCompletion(os.Stdout)
 		},
 	}
 
@@ -49,7 +49,7 @@ var zshLong string = `To load completion, run
 To configure your zsh shell to load completions for each session, add the above line to your ~/.zshrc
 `
 
-var zshInitialization string = `
+var zshInitialization = `
 __cloud_bash_source() {
 	alias shopt=':'
 	alias _expand=_bash_expand
@@ -181,7 +181,7 @@ __cloud_convert_bash_to_zsh() {
 	<<'BASH_COMPLETION_EOF'
 `
 
-var zshTail string = `
+var zshTail = `
 BASH_COMPLETION_EOF
 }
 __cloud_bash_source <(__cloud_convert_bash_to_zsh)

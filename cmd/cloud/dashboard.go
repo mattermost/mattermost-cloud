@@ -11,11 +11,10 @@ import (
 	"time"
 
 	"github.com/gosuri/uilive"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-
-	"github.com/mattermost/mattermost-cloud/model"
 )
 
 func newCmdDashboard() *cobra.Command {
@@ -154,7 +153,7 @@ func executeDashboardCmd(flags dashboardFlags) error {
 		}
 
 		for i := flags.refreshSeconds; i > 0; i-- {
-			fmt.Fprintf(writer, "%s\nUpdating in %d seconds...\n", renderedDashboard, i)
+			_, _ = fmt.Fprintf(writer, "%s\nUpdating in %d seconds...\n", renderedDashboard, i)
 			time.Sleep(time.Second)
 		}
 	}

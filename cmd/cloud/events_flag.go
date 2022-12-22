@@ -25,7 +25,6 @@ type stateChangeEventListFlags struct {
 func (flags *stateChangeEventListFlags) addFlags(command *cobra.Command) {
 	flags.pagingFlags.addFlags(command)
 	flags.tableOptions.addFlags(command)
-
 	command.Flags().StringVar(&flags.resourceType, "resource-type", "", "Type of a resource for which to list events.")
 	command.Flags().StringVar(&flags.resourceID, "resource-id", "", "ID of a resource for which to list events.")
 }
