@@ -43,7 +43,7 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ty
 		return getResult.User, nil
 	}
 	var awsErr *types.NoSuchEntityException
-	if errors.As(err, &awsErr) {
+	if !errors.As(err, &awsErr) {
 		return nil, err
 	}
 
@@ -169,7 +169,7 @@ func (a *Client) iamEnsureS3PolicyCreated(awsID, policyARN, bucketName, permitte
 	}
 	if err != nil {
 		var awsErr *types.NoSuchEntityException
-		if errors.As(err, &awsErr) {
+		if !errors.As(err, &awsErr) {
 			return nil, err
 		}
 	} else {
