@@ -96,10 +96,3 @@ func newAddAnnotationsRequest(annotations []string) *model.AddAnnotationsRequest
 		Annotations: annotations,
 	}
 }
-
-func runDryRun(request interface{}) error {
-	if err := printJSON(request); err != nil {
-		return errors.Wrap(err, "failed to print API request")
-	}
-	return nil
-}

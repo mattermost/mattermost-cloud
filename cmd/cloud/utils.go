@@ -50,3 +50,10 @@ func getPaging(pf pagingFlags) model.Paging {
 		IncludeDeleted: pf.includeDeleted,
 	}
 }
+
+func runDryRun(request interface{}) error {
+	if err := printJSON(request); err != nil {
+		return errors.Wrap(err, "failed to print API request")
+	}
+	return nil
+}
