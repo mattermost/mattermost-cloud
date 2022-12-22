@@ -278,8 +278,9 @@ func (c *Client) buildCloudEnvironmentNameCache() error {
 	}
 
 	for _, alias := range accountAliases.AccountAliases {
-		if strings.HasPrefix(alias, "mattermost-cloud") && len(strings.Split(alias, "-")) == 3 {
-			envName := strings.Split(alias, "-")[2]
+		envNameParts := strings.Split(alias, "-")
+		if strings.HasPrefix(alias, "mattermost-cloud") && len(envNameParts) == 3 {
+			envName := envNameParts[2]
 			if len(envName) == 0 {
 				return errors.New("environment name value was empty")
 			}
