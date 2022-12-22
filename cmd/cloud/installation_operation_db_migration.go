@@ -10,22 +10,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdInstallationDBMigrationOperation() *cobra.Command {
+func installationDBMigrationOperationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "db-migration",
 		Short: "Manipulate installation db migration operations managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdInstallationDBMigrationRequest())
-	cmd.AddCommand(newCmdInstallationDBMigrationsList())
-	cmd.AddCommand(newCmdInstallationDBMigrationGet())
-	cmd.AddCommand(newCmdInstallationDBMigrationCommit())
-	cmd.AddCommand(newCmdInstallationDBMigrationRollback())
+	cmd.AddCommand(installationDBMigrationRequestCmd())
+	cmd.AddCommand(installationDBMigrationsListCmd())
+	cmd.AddCommand(installationDBMigrationGetCmd())
+	cmd.AddCommand(installationDBMigrationCommitCmd())
+	cmd.AddCommand(installationDBMigrationRollbackCmd())
 
 	return cmd
 }
 
-func newCmdInstallationDBMigrationRequest() *cobra.Command {
+func installationDBMigrationRequestCmd() *cobra.Command {
 
 	var flags installationDBMigrationRequestFlags
 
@@ -44,11 +44,7 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				if err := printJSON(request); err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-
-				return nil
+				return runDryRun(request)
 			}
 
 			migrationOperation, err := client.MigrateInstallationDatabase(request)
@@ -56,11 +52,7 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 				return errors.Wrap(err, "failed to request installation database migration")
 			}
 
-			if err = printJSON(migrationOperation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(migrationOperation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -73,7 +65,7 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationDBMigrationsList() *cobra.Command {
+func installationDBMigrationsListCmd() *cobra.Command {
 	var flags installationDBMigrationsListFlags
 
 	cmd := &cobra.Command{
@@ -132,11 +124,7 @@ func executeInstallationDBMigrationsList(flags installationDBMigrationsListFlags
 		return nil
 	}
 
-	if err = printJSON(dbMigrationOperations); err != nil {
-		return err
-	}
-
-	return nil
+	return printJSON(dbMigrationOperations)
 }
 
 func defaultDBMigrationOperationTableData(ops []*model.InstallationDBMigrationOperation) ([]string, [][]string) {
@@ -154,7 +142,7 @@ func defaultDBMigrationOperationTableData(ops []*model.InstallationDBMigrationOp
 	return keys, vals
 }
 
-func newCmdInstallationDBMigrationGet() *cobra.Command {
+func installationDBMigrationGetCmd() *cobra.Command {
 	var flags installationDBMigrationGetFlags
 
 	cmd := &cobra.Command{
@@ -169,11 +157,7 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "failed to get installation database migration")
 			}
-			if err = printJSON(migrationOperation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(migrationOperation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -186,7 +170,7 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationDBMigrationCommit() *cobra.Command {
+func installationDBMigrationCommitCmd() *cobra.Command {
 	var flags installationDBMigrationCommitFlags
 
 	cmd := &cobra.Command{
@@ -202,11 +186,7 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 				return errors.Wrap(err, "failed to commit installation database migration")
 			}
 
-			if err = printJSON(migrationOperation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(migrationOperation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -220,7 +200,7 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 
 }
 
-func newCmdInstallationDBMigrationRollback() *cobra.Command {
+func installationDBMigrationRollbackCmd() *cobra.Command {
 	var flags installationDBMigrationRollbackFlags
 
 	cmd := &cobra.Command{
@@ -236,11 +216,7 @@ func newCmdInstallationDBMigrationRollback() *cobra.Command {
 				return errors.Wrap(err, "failed to trigger rollback of installation database migration")
 			}
 
-			if err = printJSON(migrationOperation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(migrationOperation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)

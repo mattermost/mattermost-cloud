@@ -19,7 +19,7 @@ import (
 
 const hiddenLicense = "hidden (--hide-license=true)"
 
-func newCmdInstallation() *cobra.Command {
+func installationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "installation",
 		Short: "Manipulate installations managed by the provisioning server.",
@@ -27,27 +27,27 @@ func newCmdInstallation() *cobra.Command {
 
 	setClusterFlags(cmd)
 
-	cmd.AddCommand(newCmdInstallationCreate())
-	cmd.AddCommand(newCmdInstallationUpdate())
-	cmd.AddCommand(newCmdInstallationDelete())
-	cmd.AddCommand(newCmdInstallationCancelDeletion())
-	cmd.AddCommand(newCmdInstallationHibernate())
-	cmd.AddCommand(newCmdInstallationWakeup())
-	cmd.AddCommand(newCmdInstallationGet())
-	cmd.AddCommand(newCmdInstallationList())
-	cmd.AddCommand(newCmdInstallationGetStatuses())
-	cmd.AddCommand(newCmdInstallationShowStateReport())
-	cmd.AddCommand(newCmdInstallationRecovery())
-	cmd.AddCommand(newCmdInstallationDeploymentReport())
-	cmd.AddCommand(newCmdInstallationAnnotation())
-	cmd.AddCommand(newCmdInstallationBackup())
-	cmd.AddCommand(newCmdInstallationOperation())
-	cmd.AddCommand(newCmdInstallationDNS())
+	cmd.AddCommand(installationCreateCmd())
+	cmd.AddCommand(installationUpdateCmd())
+	cmd.AddCommand(installationDeleteCmd())
+	cmd.AddCommand(installationCancelDeletionCmd())
+	cmd.AddCommand(installationHibernateCmd())
+	cmd.AddCommand(installationWakeupCmd())
+	cmd.AddCommand(installationGetCmd())
+	cmd.AddCommand(installationListCmd())
+	cmd.AddCommand(installationGetStatusesCmd())
+	cmd.AddCommand(installationShowStateReportCmd())
+	cmd.AddCommand(installationRecoveryCmd())
+	cmd.AddCommand(installationDeploymentReportCmd())
+	cmd.AddCommand(installationAnnotationCmd())
+	cmd.AddCommand(installationBackupCmd())
+	cmd.AddCommand(installationOperationCmd())
+	cmd.AddCommand(installationDNSCmd())
 
 	return cmd
 }
 
-func newCmdInstallationCreate() *cobra.Command {
+func installationCreateCmd() *cobra.Command {
 	var flags installationCreateFlags
 
 	cmd := &cobra.Command{
@@ -121,12 +121,7 @@ func executeInstallationCreateCmd(flags installationCreateFlags) error {
 	}
 
 	if flags.dryRun {
-		err = printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	installation, err := client.CreateInstallation(request)
@@ -137,7 +132,7 @@ func executeInstallationCreateCmd(flags installationCreateFlags) error {
 	return printJSON(installation)
 }
 
-func newCmdInstallationUpdate() *cobra.Command {
+func installationUpdateCmd() *cobra.Command {
 	var flags installationUpdateFlags
 
 	cmd := &cobra.Command{
@@ -167,12 +162,7 @@ func newCmdInstallationUpdate() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				err = printJSON(request)
-				if err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-
-				return nil
+				return runDryRun(request)
 			}
 
 			installation, err := client.UpdateInstallation(flags.installationID, request)
@@ -192,7 +182,7 @@ func newCmdInstallationUpdate() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationDelete() *cobra.Command {
+func installationDeleteCmd() *cobra.Command {
 	var flags installationDeleteFlags
 
 	cmd := &cobra.Command{
@@ -217,7 +207,7 @@ func newCmdInstallationDelete() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationCancelDeletion() *cobra.Command {
+func installationCancelDeletionCmd() *cobra.Command {
 	var flags installationCancelDeletionFlags
 
 	cmd := &cobra.Command{
@@ -242,7 +232,7 @@ func newCmdInstallationCancelDeletion() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationHibernate() *cobra.Command {
+func installationHibernateCmd() *cobra.Command {
 	var flags installationHibernateFlags
 
 	cmd := &cobra.Command{
@@ -257,11 +247,7 @@ func newCmdInstallationHibernate() *cobra.Command {
 				return errors.Wrap(err, "failed to put installation into hibernation")
 			}
 
-			if err = printJSON(installation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -273,7 +259,7 @@ func newCmdInstallationHibernate() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationWakeup() *cobra.Command {
+func installationWakeupCmd() *cobra.Command {
 	var flags installationWakeupFlags
 
 	cmd := &cobra.Command{
@@ -302,11 +288,7 @@ func newCmdInstallationWakeup() *cobra.Command {
 				return errors.Wrap(err, "failed to wake up installation")
 			}
 
-			if err = printJSON(installation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -318,7 +300,7 @@ func newCmdInstallationWakeup() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationGet() *cobra.Command {
+func installationGetCmd() *cobra.Command {
 	var flags installationGetFlags
 
 	cmd := &cobra.Command{
@@ -345,11 +327,7 @@ func newCmdInstallationGet() *cobra.Command {
 				hideMattermostEnv(installation.Installation)
 			}
 
-			if err = printJSON(installation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -361,7 +339,7 @@ func newCmdInstallationGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationList() *cobra.Command {
+func installationListCmd() *cobra.Command {
 	var flags installationListFlags
 
 	cmd := &cobra.Command{
@@ -432,12 +410,7 @@ func executeInstallationListCmd(flags installationListFlags) error {
 		return nil
 	}
 
-	err = printJSON(installations)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return printJSON(installations)
 }
 
 func defaultInstallationTableData(installations []*model.InstallationDTO) ([]string, [][]string) {
@@ -454,7 +427,7 @@ func dnsNames(dnsRecords []*model.InstallationDNS) string {
 	return strings.Join(names, ", ")
 }
 
-func newCmdInstallationGetStatuses() *cobra.Command {
+func installationGetStatusesCmd() *cobra.Command {
 	var flags clusterFlags
 
 	cmd := &cobra.Command{
@@ -472,10 +445,7 @@ func newCmdInstallationGetStatuses() *cobra.Command {
 				return nil
 			}
 
-			if err = printJSON(installationsStatus); err != nil {
-				return err
-			}
-			return nil
+			return printJSON(installationsStatus)
 		},
 	}
 	flags.addFlags(cmd)
@@ -483,7 +453,7 @@ func newCmdInstallationGetStatuses() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationShowStateReport() *cobra.Command {
+func installationShowStateReportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "state-report",
 		Short: "Shows information regarding changing installation state.",
@@ -502,7 +472,7 @@ func newCmdInstallationShowStateReport() *cobra.Command {
 
 // WARNING: EXPERIMENTAL
 // This command runs as a client with direct store integration.
-func newCmdInstallationRecovery() *cobra.Command {
+func installationRecoveryCmd() *cobra.Command {
 	var flags installationRecoveryFlags
 
 	cmd := &cobra.Command{
@@ -668,7 +638,7 @@ func executeInstallationRecoveryCmd(flags installationRecoveryFlags) error {
 	return nil
 }
 
-func newCmdInstallationDeploymentReport() *cobra.Command {
+func installationDeploymentReportCmd() *cobra.Command {
 	var flags installationDeploymentReportFlags
 
 	cmd := &cobra.Command{

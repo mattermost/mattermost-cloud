@@ -10,19 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdClusterAnnotation() *cobra.Command {
+func clusterAnnotationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "annotation",
 		Short: "Manipulate annotations of clusters managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdClusterAnnotationAdd())
-	cmd.AddCommand(newCmdClusterAnnotationDelete())
+	cmd.AddCommand(clusterAnnotationAddCmd())
+	cmd.AddCommand(clusterAnnotationDeleteCmd())
 
 	return cmd
 }
 
-func newCmdClusterAnnotationAdd() *cobra.Command {
+func clusterAnnotationAddCmd() *cobra.Command {
 	var flags clusterAnnotationAddFlags
 
 	cmd := &cobra.Command{
@@ -65,7 +65,7 @@ func executeClusterAnnotationAddCmd(flags clusterAnnotationAddFlags) error {
 	return nil
 }
 
-func newCmdClusterAnnotationDelete() *cobra.Command {
+func clusterAnnotationDeleteCmd() *cobra.Command {
 	var flags clusterAnnotationDeleteFlags
 
 	cmd := &cobra.Command{
@@ -98,10 +98,8 @@ func newAddAnnotationsRequest(annotations []string) *model.AddAnnotationsRequest
 }
 
 func runDryRun(request interface{}) error {
-	err := printJSON(request)
-	if err != nil {
+	if err := printJSON(request); err != nil {
 		return errors.Wrap(err, "failed to print API request")
 	}
-
 	return nil
 }

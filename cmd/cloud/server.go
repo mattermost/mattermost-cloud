@@ -49,7 +49,7 @@ type Provisioner interface {
 	supervisor.Provisioner
 }
 
-func newCmdServer() *cobra.Command {
+func serverCmd() *cobra.Command {
 	var flags serverFlags
 
 	cmd := &cobra.Command{

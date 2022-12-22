@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdGroup() *cobra.Command {
+func groupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "group",
 		Short: "Manipulate groups managed by the provisioning server.",
@@ -22,22 +22,22 @@ func newCmdGroup() *cobra.Command {
 
 	setClusterFlags(cmd)
 
-	cmd.AddCommand(newCmdGroupCreate())
-	cmd.AddCommand(newCmdGroupUpdate())
-	cmd.AddCommand(newCmdGroupDelete())
-	cmd.AddCommand(newCmdGroupGet())
-	cmd.AddCommand(newCmdGroupList())
-	cmd.AddCommand(newCmdGroupGetStatus())
-	cmd.AddCommand(newCmdGroupJoin())
-	cmd.AddCommand(newCmdGroupAssign())
-	cmd.AddCommand(newCmdGroupLeave())
-	cmd.AddCommand(newCmdGroupListStatus())
-	cmd.AddCommand(newCmdGroupAnnotation())
+	cmd.AddCommand(groupCreateCmd())
+	cmd.AddCommand(groupUpdateCmd())
+	cmd.AddCommand(groupDeleteCmd())
+	cmd.AddCommand(groupGetCmd())
+	cmd.AddCommand(groupListCmd())
+	cmd.AddCommand(groupGetStatusCmd())
+	cmd.AddCommand(groupJoinCmd())
+	cmd.AddCommand(groupAssignCmd())
+	cmd.AddCommand(groupLeaveCmd())
+	cmd.AddCommand(groupListStatusCmd())
+	cmd.AddCommand(groupAnnotationCmd())
 
 	return cmd
 }
 
-func newCmdGroupCreate() *cobra.Command {
+func groupCreateCmd() *cobra.Command {
 
 	var flags groupCreateFlags
 
@@ -63,10 +63,7 @@ func newCmdGroupCreate() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				if err = printJSON(request); err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-				return nil
+				return runDryRun(request)
 			}
 
 			group, err := client.CreateGroup(request)
@@ -87,7 +84,7 @@ func newCmdGroupCreate() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupUpdate() *cobra.Command {
+func groupUpdateCmd() *cobra.Command {
 	var flags groupUpdateFlags
 
 	cmd := &cobra.Command{
@@ -141,10 +138,7 @@ func executeGroupUpdateCmd(flags groupUpdateFlags) error {
 	}
 
 	if flags.dryRun {
-		if err = printJSON(request); err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-		return nil
+		return runDryRun(request)
 	}
 
 	group, err := client.UpdateGroup(request)
@@ -155,7 +149,7 @@ func executeGroupUpdateCmd(flags groupUpdateFlags) error {
 	return printJSON(group)
 }
 
-func newCmdGroupDelete() *cobra.Command {
+func groupDeleteCmd() *cobra.Command {
 	var flags groupDeleteFlags
 
 	cmd := &cobra.Command{
@@ -180,7 +174,7 @@ func newCmdGroupDelete() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupGet() *cobra.Command {
+func groupGetCmd() *cobra.Command {
 	var flags groupGetFlags
 
 	cmd := &cobra.Command{
@@ -210,7 +204,7 @@ func newCmdGroupGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupList() *cobra.Command {
+func groupListCmd() *cobra.Command {
 	var flags groupListFlags
 
 	cmd := &cobra.Command{
@@ -261,7 +255,7 @@ func executeGroupListCmd(flags groupListFlags) error {
 	return printJSON(groups)
 }
 
-func newCmdGroupGetStatus() *cobra.Command {
+func groupGetStatusCmd() *cobra.Command {
 	var flags groupGetStatusFlags
 
 	cmd := &cobra.Command{
@@ -291,7 +285,7 @@ func newCmdGroupGetStatus() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupJoin() *cobra.Command {
+func groupJoinCmd() *cobra.Command {
 	var flags groupJoinFlags
 
 	cmd := &cobra.Command{
@@ -317,7 +311,7 @@ func newCmdGroupJoin() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupAssign() *cobra.Command {
+func groupAssignCmd() *cobra.Command {
 	var flags groupAssignFlags
 
 	cmd := &cobra.Command{
@@ -343,7 +337,7 @@ func newCmdGroupAssign() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupLeave() *cobra.Command {
+func groupLeaveCmd() *cobra.Command {
 	var flags groupLeaveFlags
 
 	cmd := &cobra.Command{
@@ -371,7 +365,7 @@ func newCmdGroupLeave() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupListStatus() *cobra.Command {
+func groupListStatusCmd() *cobra.Command {
 	var flags clusterFlags
 
 	cmd := &cobra.Command{

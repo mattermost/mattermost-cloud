@@ -10,19 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdInstallationDNS() *cobra.Command {
+func installationDNSCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dns",
 		Short: "Manipulate installation DNS records.",
 	}
 
-	cmd.AddCommand(newCmdInstallationDNSAdd())
-	cmd.AddCommand(newCmdInstallationDNSSetPrimary())
+	cmd.AddCommand(installationDNSAddCmd())
+	cmd.AddCommand(installationDNSSetPrimaryCmd())
 
 	return cmd
 }
 
-func newCmdInstallationDNSAdd() *cobra.Command {
+func installationDNSAddCmd() *cobra.Command {
 	var flags installationDNSAddFlags
 
 	cmd := &cobra.Command{
@@ -38,10 +38,7 @@ func newCmdInstallationDNSAdd() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				if err := printJSON(request); err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-				return nil
+				return runDryRun(request)
 			}
 
 			installation, err := client.AddInstallationDNS(flags.installationID, request)
@@ -66,7 +63,7 @@ func newCmdInstallationDNSAdd() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationDNSSetPrimary() *cobra.Command {
+func installationDNSSetPrimaryCmd() *cobra.Command {
 	var flags installationDNSSetPrimaryFlags
 
 	cmd := &cobra.Command{
