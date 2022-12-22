@@ -12,12 +12,12 @@ type installationAnnotationAddFlags struct {
 	annotations    []string
 }
 
-func (flags *installationAnnotationAddFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be annotated.")
-	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+func (flags *installationAnnotationAddFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be annotated.")
+	cmd.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the installation. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
-	_ = command.MarkFlagRequired("installation")
-	_ = command.MarkFlagRequired("annotation")
+	_ = cmd.MarkFlagRequired("installation")
+	_ = cmd.MarkFlagRequired("annotation")
 }
 
 type installationAnnotationDeleteFlags struct {
@@ -26,10 +26,10 @@ type installationAnnotationDeleteFlags struct {
 	annotation     string
 }
 
-func (flags *installationAnnotationDeleteFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation from which annotations should be removed.")
-	command.Flags().StringVar(&flags.annotation, "annotation", "", "Name of the annotation to be removed from the installation.")
+func (flags *installationAnnotationDeleteFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation from which annotations should be removed.")
+	cmd.Flags().StringVar(&flags.annotation, "annotation", "", "Name of the annotation to be removed from the installation.")
 
-	_ = command.MarkFlagRequired("installation")
-	_ = command.MarkFlagRequired("annotation")
+	_ = cmd.MarkFlagRequired("installation")
+	_ = cmd.MarkFlagRequired("annotation")
 }

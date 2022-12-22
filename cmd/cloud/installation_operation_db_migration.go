@@ -32,8 +32,8 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "request",
 		Short: "Request database migration to different DB",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -79,8 +79,8 @@ func newCmdInstallationDBMigrationsList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List installation database migration operations",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationDBMigrationsList(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -160,8 +160,8 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Fetches given installation database migration operation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -192,8 +192,8 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "commit",
 		Short: "Commits database migration",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -226,8 +226,8 @@ func newCmdInstallationDBMigrationRollback() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rollback",
 		Short: "Triggers rollback of database migration",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 

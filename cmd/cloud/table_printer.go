@@ -12,24 +12,11 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
 )
 
-func registerTableOutputFlags(cmd *cobra.Command) {
-	cmd.Flags().Bool("table", false, "Whether to display the returned output list as a table or not.")
-	cmd.Flags().StringSlice("custom-columns", []string{}, "Custom columns for table output specified with jsonpath in form <column_name>:<jsonpath>. Example: --custom-columns=ID:.ID,State:.State,VPC:.ProvisionerMetadataKops.VPC")
-}
-
 func getTableOutputOption(to tableOptions) (bool, []string) {
 	return to.outputToTable || len(to.customCols) > 0, to.customCols
-}
-
-func tableOutputEnabled(command *cobra.Command) (bool, []string) {
-	outputToTable, _ := command.Flags().GetBool("table")
-	customCols, _ := command.Flags().GetStringSlice("custom-columns")
-
-	return outputToTable || len(customCols) > 0, customCols
 }
 
 func printTable(columnNames []string, values [][]string) {

@@ -28,8 +28,8 @@ func newCmdClusterAnnotationAdd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Adds annotations to the cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			return executeClusterAnnotationAddCmd(flags)
 		},
@@ -71,8 +71,8 @@ func newCmdClusterAnnotationDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Deletes Annotation from the Cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 

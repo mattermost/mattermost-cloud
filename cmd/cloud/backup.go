@@ -30,8 +30,8 @@ func newCmdInstallationBackupCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Request an installation backup.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -59,8 +59,8 @@ func newCmdInstallationBackupList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List installation backups.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationBackupListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -141,8 +141,8 @@ func newCmdInstallationBackupGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get installation backup.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -174,8 +174,8 @@ func newCmdInstallationBackupDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete installation backup.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 

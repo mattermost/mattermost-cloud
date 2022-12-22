@@ -11,9 +11,9 @@ type installationBackupCreateFlags struct {
 	installationID string
 }
 
-func (flags *installationBackupCreateFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The installation id to be backed up.")
-	_ = command.MarkFlagRequired("installation")
+func (flags *installationBackupCreateFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The installation id to be backed up.")
+	_ = cmd.MarkFlagRequired("installation")
 }
 
 type installationBackupListFlags struct {
@@ -24,11 +24,11 @@ type installationBackupListFlags struct {
 	state          string
 }
 
-func (flags *installationBackupListFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The installation id for which the backups should be listed.")
-	command.Flags().StringVar(&flags.state, "state", "", "The state to filter backups by.")
-	flags.pagingFlags.addFlags(command)
-	flags.tableOptions.addFlags(command)
+func (flags *installationBackupListFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The installation id for which the backups should be listed.")
+	cmd.Flags().StringVar(&flags.state, "state", "", "The state to filter backups by.")
+	flags.pagingFlags.addFlags(cmd)
+	flags.tableOptions.addFlags(cmd)
 }
 
 type installationBackupGetFlags struct {
@@ -36,9 +36,9 @@ type installationBackupGetFlags struct {
 	backupID string
 }
 
-func (flags *installationBackupGetFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.backupID, "backup", "", "The id of the backup to get.")
-	_ = command.MarkFlagRequired("backup")
+func (flags *installationBackupGetFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.backupID, "backup", "", "The id of the backup to get.")
+	_ = cmd.MarkFlagRequired("backup")
 }
 
 type installationBackupDeleteFlags struct {
@@ -46,7 +46,7 @@ type installationBackupDeleteFlags struct {
 	backupID string
 }
 
-func (flags *installationBackupDeleteFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.backupID, "backup", "", "The id of the backup to delete.")
-	_ = command.MarkFlagRequired("backup")
+func (flags *installationBackupDeleteFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.backupID, "backup", "", "The id of the backup to delete.")
+	_ = cmd.MarkFlagRequired("backup")
 }

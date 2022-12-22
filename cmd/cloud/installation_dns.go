@@ -28,8 +28,8 @@ func newCmdInstallationDNSAdd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
 		Short: "Adds domain name for the installation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -72,8 +72,8 @@ func newCmdInstallationDNSSetPrimary() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-primary",
 		Short: "Sets installation domain name as primary.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 

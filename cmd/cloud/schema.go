@@ -37,8 +37,8 @@ func newCmdSchemaMigrate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migrate",
 		Short: "Migrate the schema to the latest supported version.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			sqlStore, err := sqlStore(flags.database)
 			if err != nil {
 				return err

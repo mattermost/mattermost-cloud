@@ -16,15 +16,15 @@ type subscriptionCreateFlags struct {
 	failureThreshold time.Duration
 }
 
-func (flags *subscriptionCreateFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.name, "name", "", "Name of the subscription.")
-	command.Flags().StringVar(&flags.url, "url", "", "URL of the subscription.")
-	command.Flags().StringVar(&flags.owner, "owner", "", "OwnerID of the subscription.")
-	command.Flags().StringVar(&flags.eventType, "event-type", string(model.ResourceStateChangeEventType), "Event type of the subscription.")
-	command.Flags().DurationVar(&flags.failureThreshold, "failure-threshold", 0, "Failure threshold of the subscription.")
-	_ = command.MarkFlagRequired("url")
-	_ = command.MarkFlagRequired("owner")
-	_ = command.MarkFlagRequired("event-type")
+func (flags *subscriptionCreateFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.name, "name", "", "Name of the subscription.")
+	cmd.Flags().StringVar(&flags.url, "url", "", "URL of the subscription.")
+	cmd.Flags().StringVar(&flags.owner, "owner", "", "OwnerID of the subscription.")
+	cmd.Flags().StringVar(&flags.eventType, "event-type", string(model.ResourceStateChangeEventType), "Event type of the subscription.")
+	cmd.Flags().DurationVar(&flags.failureThreshold, "failure-threshold", 0, "Failure threshold of the subscription.")
+	_ = cmd.MarkFlagRequired("url")
+	_ = cmd.MarkFlagRequired("owner")
+	_ = cmd.MarkFlagRequired("event-type")
 }
 
 type subscriptionListFlags struct {
@@ -35,11 +35,11 @@ type subscriptionListFlags struct {
 	eventType string
 }
 
-func (flags *subscriptionListFlags) addFlags(command *cobra.Command) {
-	flags.pagingFlags.addFlags(command)
-	flags.tableOptions.addFlags(command)
-	command.Flags().StringVar(&flags.owner, "owner", "", "OwnerID of the subscription.")
-	command.Flags().StringVar(&flags.eventType, "event-type", "", "Event type of the subscription.")
+func (flags *subscriptionListFlags) addFlags(cmd *cobra.Command) {
+	flags.pagingFlags.addFlags(cmd)
+	flags.tableOptions.addFlags(cmd)
+	cmd.Flags().StringVar(&flags.owner, "owner", "", "OwnerID of the subscription.")
+	cmd.Flags().StringVar(&flags.eventType, "event-type", "", "Event type of the subscription.")
 }
 
 type subscriptionGetFlags struct {
@@ -47,9 +47,9 @@ type subscriptionGetFlags struct {
 	subID string
 }
 
-func (flags *subscriptionGetFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.subID, "subscription", "", "ID of subscription to get")
-	_ = command.MarkFlagRequired("subscription")
+func (flags *subscriptionGetFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.subID, "subscription", "", "ID of subscription to get")
+	_ = cmd.MarkFlagRequired("subscription")
 }
 
 type subscriptionDeleteFlags struct {
@@ -57,7 +57,7 @@ type subscriptionDeleteFlags struct {
 	subID string
 }
 
-func (flags *subscriptionDeleteFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.subID, "subscription", "", "ID of subscription to delete")
-	_ = command.MarkFlagRequired("subscription")
+func (flags *subscriptionDeleteFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.subID, "subscription", "", "ID of subscription to delete")
+	_ = cmd.MarkFlagRequired("subscription")
 }

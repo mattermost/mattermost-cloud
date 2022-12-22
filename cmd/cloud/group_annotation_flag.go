@@ -8,12 +8,12 @@ type groupAnnotationAddFlags struct {
 	annotations []string
 }
 
-func (flags *groupAnnotationAddFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.groupID, "group", "", "The id of the group to be annotated.")
-	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the group. Accepts multiple values, for example: '... --annotation abc --annotation def'")
+func (flags *groupAnnotationAddFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.groupID, "group", "", "The id of the group to be annotated.")
+	cmd.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the group. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 
-	_ = command.MarkFlagRequired("group")
-	_ = command.MarkFlagRequired("annotation")
+	_ = cmd.MarkFlagRequired("group")
+	_ = cmd.MarkFlagRequired("annotation")
 }
 
 type groupAnnotationDeleteFlags struct {
@@ -22,10 +22,10 @@ type groupAnnotationDeleteFlags struct {
 	annotation string
 }
 
-func (flags *groupAnnotationDeleteFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.groupID, "group", "", "The id of the group from which annotations should be removed.")
-	command.Flags().StringVar(&flags.annotation, "annotation", "", "Name of the annotation to be removed from the group.")
+func (flags *groupAnnotationDeleteFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.groupID, "group", "", "The id of the group from which annotations should be removed.")
+	cmd.Flags().StringVar(&flags.annotation, "annotation", "", "Name of the annotation to be removed from the group.")
 
-	_ = command.MarkFlagRequired("group")
-	_ = command.MarkFlagRequired("annotation")
+	_ = cmd.MarkFlagRequired("group")
+	_ = cmd.MarkFlagRequired("annotation")
 }

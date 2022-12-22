@@ -2,16 +2,16 @@ package main
 
 import "github.com/spf13/cobra"
 
-func setWebhookFlags(command *cobra.Command) {
-	command.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+func setWebhookFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 }
 
 type webhookFlags struct {
 	serverAddress string
 }
 
-func (flags *webhookFlags) addFlags(command *cobra.Command) {
-	flags.serverAddress, _ = command.Flags().GetString("server")
+func (flags *webhookFlags) addFlags(cmd *cobra.Command) {
+	flags.serverAddress, _ = cmd.Flags().GetString("server")
 }
 
 type webhookCreateFlag struct {
@@ -20,11 +20,11 @@ type webhookCreateFlag struct {
 	url     string
 }
 
-func (flags *webhookCreateFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.ownerID, "owner", "", "An opaque identifier describing the owner of the webhook.")
-	command.Flags().StringVar(&flags.url, "url", "", "The callback URL of the webhook.")
-	_ = command.MarkFlagRequired("owner")
-	_ = command.MarkFlagRequired("url")
+func (flags *webhookCreateFlag) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.ownerID, "owner", "", "An opaque identifier describing the owner of the webhook.")
+	cmd.Flags().StringVar(&flags.url, "url", "", "The callback URL of the webhook.")
+	_ = cmd.MarkFlagRequired("owner")
+	_ = cmd.MarkFlagRequired("url")
 }
 
 type webhookGetFlag struct {
@@ -32,9 +32,9 @@ type webhookGetFlag struct {
 	webhookID string
 }
 
-func (flags *webhookGetFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.webhookID, "webhook", "", "The id of the webhook to be fetched.")
-	_ = command.MarkFlagRequired("webhook")
+func (flags *webhookGetFlag) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.webhookID, "webhook", "", "The id of the webhook to be fetched.")
+	_ = cmd.MarkFlagRequired("webhook")
 }
 
 type webhookListFlag struct {
@@ -44,10 +44,10 @@ type webhookListFlag struct {
 	outputToTable bool
 }
 
-func (flags *webhookListFlag) addFlags(command *cobra.Command) {
-	flags.pagingFlags.addFlags(command)
-	command.Flags().StringVar(&flags.owner, "owner", "", "The owner by which to filter webhooks.")
-	command.Flags().BoolVar(&flags.outputToTable, "table", false, "Whether to display the returned webhook list in a table or not")
+func (flags *webhookListFlag) addFlags(cmd *cobra.Command) {
+	flags.pagingFlags.addFlags(cmd)
+	cmd.Flags().StringVar(&flags.owner, "owner", "", "The owner by which to filter webhooks.")
+	cmd.Flags().BoolVar(&flags.outputToTable, "table", false, "Whether to display the returned webhook list in a table or not")
 }
 
 type webhookDeleteFlag struct {
@@ -55,7 +55,7 @@ type webhookDeleteFlag struct {
 	webhookID string
 }
 
-func (flags *webhookDeleteFlag) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.webhookID, "webhook", "", "The id of the webhook to be deleted.")
-	_ = command.MarkFlagRequired("webhook")
+func (flags *webhookDeleteFlag) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.webhookID, "webhook", "", "The id of the webhook to be deleted.")
+	_ = cmd.MarkFlagRequired("webhook")
 }
