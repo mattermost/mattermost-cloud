@@ -972,10 +972,6 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 	installationSecretName := RDSMultitenantSecretName(d.installationID)
 
 	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get secret value for database")
-	}
-
 	var awsErr *smTypes.ResourceNotFoundException
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
