@@ -5,6 +5,8 @@
 package provisioner
 
 import (
+	"strings"
+
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -19,7 +21,7 @@ const (
 )
 
 func makeRingSLOName(group *model.GroupDTO) string {
-	return group.Name + "-ring-" + group.ID
+	return strings.ToLower(group.Name) + "-ring-" + group.ID
 }
 
 func makeRingSLOs(group *model.GroupDTO, objective float64) slothv1.PrometheusServiceLevel {
