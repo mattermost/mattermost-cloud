@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +59,7 @@ func TestTagsASRDSTags(t *testing.T) {
 	tags, err := NewTags(key, value, key2, value2)
 	assert.NoError(t, err)
 	result := tags.ToRDSTags()
-	assert.Subset(t, []*rds.Tag{
+	assert.Subset(t, []rdsTypes.Tag{
 		{
 			Key:   &key,
 			Value: &value,

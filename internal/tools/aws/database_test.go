@@ -15,9 +15,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/rds"
-	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	kmsTypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
+	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/golang/mock/gomock"
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -67,26 +70,26 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 
 		// Create encryption key since none has been created yet.
 		a.Mocks.API.ResourceGroupsTagging.EXPECT().
-			GetResources(gomock.Any()).
+			GetResources(gomock.Any(), gomock.Any()).
 			Return(&gt.GetResourcesOutput{}, nil).
-			Do(func(input *gt.GetResourcesInput) {
+			Do(func(ctx context.Context, input *gt.GetResourcesInput, optFns ...func(*gt.Options)) {
 				a.Assert().Equal(DefaultRDSEncryptionTagKey, *input.TagFilters[0].Key)
-				a.Assert().Equal(CloudID(a.InstallationA.ID), *input.TagFilters[0].Values[0])
+				a.Assert().Equal(CloudID(a.InstallationA.ID), input.TagFilters[0].Values[0])
 				a.Assert().Nil(input.PaginationToken)
 			}).
 			Times(1),
 
 		a.Mocks.API.KMS.EXPECT().
-			CreateKey(gomock.Any()).
-			Do(func(input *kms.CreateKeyInput) {
+			CreateKey(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *kms.CreateKeyInput, optFns ...func(*kms.Options)) {
 				a.Assert().Equal(*input.Tags[0].TagKey, DefaultRDSEncryptionTagKey)
 				a.Assert().Equal(*input.Tags[0].TagValue, CloudID(a.InstallationA.ID))
 			}).
 			Return(&kms.CreateKeyOutput{
-				KeyMetadata: &kms.KeyMetadata{
+				KeyMetadata: &kmsTypes.KeyMetadata{
 					Arn:      aws.String(a.ResourceARN),
 					KeyId:    aws.String(a.RDSEncryptionKeyID),
-					KeyState: aws.String(kms.KeyStateEnabled),
+					KeyState: kmsTypes.KeyStateEnabled,
 				},
 			}, nil).
 			Times(1),
@@ -149,14 +152,14 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 		// Get encryption key associated with this installation. This step assumes that
 		// the key already exists.
 		a.Mocks.API.ResourceGroupsTagging.EXPECT().
-			GetResources(gomock.Any()).
-			Do(func(input *gt.GetResourcesInput) {
+			GetResources(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *gt.GetResourcesInput, optFns ...func(*gt.Options)) {
 				a.Assert().Equal(DefaultRDSEncryptionTagKey, *input.TagFilters[0].Key)
-				a.Assert().Equal(CloudID(a.InstallationA.ID), *input.TagFilters[0].Values[0])
+				a.Assert().Equal(CloudID(a.InstallationA.ID), input.TagFilters[0].Values[0])
 				a.Assert().Nil(input.PaginationToken)
 			}).
 			Return(&gt.GetResourcesOutput{
-				ResourceTagMappingList: []*gt.ResourceTagMapping{
+				ResourceTagMappingList: []gtTypes.ResourceTagMapping{
 					{
 						ResourceARN: aws.String(a.ResourceARN),
 					},
@@ -165,15 +168,15 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 			Times(1),
 
 		a.Mocks.API.KMS.EXPECT().
-			DescribeKey(gomock.Any()).
+			DescribeKey(gomock.Any(), gomock.Any()).
 			Return(&kms.DescribeKeyOutput{
-				KeyMetadata: &kms.KeyMetadata{
+				KeyMetadata: &kmsTypes.KeyMetadata{
 					Arn:      aws.String(a.ResourceARN),
 					KeyId:    aws.String(a.RDSEncryptionKeyID),
-					KeyState: aws.String(kms.KeyStateEnabled),
+					KeyState: kmsTypes.KeyStateEnabled,
 				},
 			}, nil).
-			Do(func(input *kms.DescribeKeyInput) {
+			Do(func(ctx context.Context, input *kms.DescribeKeyInput, optFns ...func(*kms.Options)) {
 				a.Assert().Equal(*input.KeyId, a.ResourceARN)
 			}).
 			Times(1),
@@ -212,14 +215,15 @@ func (a *AWSTestSuite) TestSnapshot() {
 			Return(testlib.NewLoggerEntry()).
 			Times(1),
 
-		a.Mocks.API.RDS.EXPECT().CreateDBClusterSnapshot(gomock.Any()).
-			Return(&rds.CreateDBClusterSnapshotOutput{}, nil).Do(func(input *rds.CreateDBClusterSnapshotInput) {
-			a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.ClusterA.ID))
-			a.Assert().True(strings.Contains(*input.DBClusterSnapshotIdentifier, fmt.Sprintf("%s-snapshot-", a.ClusterA.ID)))
-			a.Assert().Greater(len(input.Tags), 0)
-			a.Assert().Equal(*input.Tags[0].Key, DefaultClusterInstallationSnapshotTagKey)
-			a.Assert().Equal(*input.Tags[0].Value, RDSSnapshotTagValue(CloudID(a.ClusterA.ID)))
-		}).Times(1),
+		a.Mocks.API.RDS.EXPECT().CreateDBClusterSnapshot(gomock.Any(), gomock.Any()).
+			Return(&rds.CreateDBClusterSnapshotOutput{}, nil).
+			Do(func(ctx context.Context, input *rds.CreateDBClusterSnapshotInput, optFns ...func(*rds.Options)) {
+				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.ClusterA.ID))
+				a.Assert().True(strings.Contains(*input.DBClusterSnapshotIdentifier, fmt.Sprintf("%s-snapshot-", a.ClusterA.ID)))
+				a.Assert().Greater(len(input.Tags), 0)
+				a.Assert().Equal(*input.Tags[0].Key, DefaultClusterInstallationSnapshotTagKey)
+				a.Assert().Equal(*input.Tags[0].Value, RDSSnapshotTagValue(CloudID(a.ClusterA.ID)))
+			}).Times(1),
 	)
 
 	err := database.Snapshot(a.Mocks.AWS.store, a.Mocks.Log.Logger)
@@ -243,7 +247,7 @@ func (a *AWSTestSuite) TestSnapshotError() {
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
-			CreateDBClusterSnapshot(gomock.Any()).
+			CreateDBClusterSnapshot(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("database is not stable")).
 			Times(1),
 	)
@@ -260,7 +264,7 @@ func (a *AWSTestSuite) TestSnapshotError() {
 func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 	gomock.InOrder(
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBClusters(gomock.Any()).
+			DescribeDBClusters(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("db cluster does not exist")).
 			Times(1),
 
@@ -272,9 +276,9 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBSubnetGroups(gomock.Any()).
+			DescribeDBSubnetGroups(gomock.Any(), gomock.Any()).
 			Return(&rds.DescribeDBSubnetGroupsOutput{
-				DBSubnetGroups: []*rds.DBSubnetGroup{
+				DBSubnetGroups: []rdsTypes.DBSubnetGroup{
 					{
 						DBSubnetGroupName: aws.String(DBSubnetGroupName(a.VPCa)),
 					},
@@ -283,15 +287,15 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
-			CreateDBCluster(gomock.Any()).
-			Do(func(input *rds.CreateDBClusterInput) {
+			CreateDBCluster(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *rds.CreateDBClusterInput, optFns ...func(*rds.Options)) {
 				for _, zone := range input.AvailabilityZones {
-					a.Assert().Contains(a.RDSAvailabilityZones, *zone)
+					a.Assert().Contains(a.RDSAvailabilityZones, zone)
 				}
-				a.Assert().Equal(*input.BackupRetentionPeriod, int64(7))
+				a.Assert().Equal(*input.BackupRetentionPeriod, int32(7))
 				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 				a.Assert().Equal(*input.DatabaseName, a.DBName)
-				a.Assert().Equal(*input.VpcSecurityGroupIds[0], a.GroupID)
+				a.Assert().Equal(input.VpcSecurityGroupIds[0], a.GroupID)
 			}).
 			Times(1),
 	)
@@ -301,30 +305,30 @@ func (a *AWSTestSuite) SetExpectCreateDBCluster() {
 func (a *AWSTestSuite) SetExpectCreateDBInstance() {
 	gomock.InOrder(
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBInstances(gomock.Any()).
+			DescribeDBInstances(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("db cluster instance does not exist")).
-			Do(func(input *rds.DescribeDBInstancesInput) {
+			Do(func(ctx context.Context, input *rds.DescribeDBInstancesInput, optFns ...func(*rds.Options)) {
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 			}),
 
 		a.Mocks.API.RDS.EXPECT().
-			CreateDBInstance(gomock.Any()).Return(nil, nil).
-			Do(func(input *rds.CreateDBInstanceInput) {
+			CreateDBInstance(gomock.Any(), gomock.Any()).Return(nil, nil).
+			Do(func(ctx context.Context, input *rds.CreateDBInstanceInput, optFns ...func(*rds.Options)) {
 				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 			}).
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBInstances(gomock.Any()).
+			DescribeDBInstances(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("db cluster instance does not exist")).
-			Do(func(input *rds.DescribeDBInstancesInput) {
+			Do(func(ctx context.Context, input *rds.DescribeDBInstancesInput, optFns ...func(*rds.Options)) {
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSReplicaInstanceID(a.InstallationA.ID, 0))
 			}),
 
 		a.Mocks.API.RDS.EXPECT().
-			CreateDBInstance(gomock.Any()).Return(nil, nil).
-			Do(func(input *rds.CreateDBInstanceInput) {
+			CreateDBInstance(gomock.Any(), gomock.Any()).Return(nil, nil).
+			Do(func(ctx context.Context, input *rds.CreateDBInstanceInput, optFns ...func(*rds.Options)) {
 				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSReplicaInstanceID(a.InstallationA.ID, 0))
 			}),

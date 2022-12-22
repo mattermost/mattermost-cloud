@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 )
 
 // Tags an abstract represtation of tags that can be converted to different AWS resource tags.
@@ -37,11 +37,11 @@ func (t *Tags) AddMany(items ...string) error {
 }
 
 // ToRDSTags convert the tags into an RDS tags format
-func (t *Tags) ToRDSTags() []*rds.Tag {
-	result := make([]*rds.Tag, 0, t.Len())
+func (t *Tags) ToRDSTags() []rdsTypes.Tag {
+	result := make([]rdsTypes.Tag, 0, t.Len())
 
 	for k, v := range t.tags {
-		result = append(result, &rds.Tag{
+		result = append(result, rdsTypes.Tag{
 			Key:   aws.String(k),
 			Value: aws.String(v),
 		})

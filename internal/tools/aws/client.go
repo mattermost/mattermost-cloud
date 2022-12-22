@@ -19,16 +19,13 @@ import (
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -142,16 +139,15 @@ type cache struct {
 
 // Service hold AWS clients for each service.
 type Service struct {
-	acm ACMAPI
-	ec2 EC2API
-	// ec2                   ec2iface.EC2API
+	acm                   ACMAPI
+	ec2                   EC2API
 	iam                   iamiface.IAMAPI
-	rds                   rdsiface.RDSAPI
+	rds                   RDSAPI
 	s3                    s3iface.S3API
 	route53               route53iface.Route53API
 	secretsManager        secretsmanageriface.SecretsManagerAPI
-	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
-	kms                   kmsiface.KMSAPI
+	resourceGroupsTagging ResourceGroupsTaggingAPIAPI
+	kms                   KMSAPI
 	dynamodb              DynamoDBAPI
 	sts                   stsiface.STSAPI
 	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
@@ -163,14 +159,14 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
 		acm:                   acm.NewFromConfig(cfg), // v2
 		iam:                   iam.New(sess),
-		rds:                   rds.New(sess),
+		rds:                   rds.NewFromConfig(cfg), // v2
 		s3:                    s3.New(sess),
 		route53:               route53.New(sess),
 		secretsManager:        secretsmanager.New(sess),
-		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
-		ec2:                   ec2.NewFromConfig(cfg), // v2
-		kms:                   kms.New(sess),
-		dynamodb:              dynamodb.NewFromConfig(cfg), // v2
+		resourceGroupsTagging: resourcegroupstaggingapi.NewFromConfig(cfg), // v2
+		ec2:                   ec2.NewFromConfig(cfg),                      // v2
+		kms:                   kms.NewFromConfig(cfg),                      // v2
+		dynamodb:              dynamodb.NewFromConfig(cfg),                 // v2
 		sts:                   sts.New(sess),
 		appAutoscaling:        applicationautoscaling.New(sess),
 		eks:                   eks.New(sess),
