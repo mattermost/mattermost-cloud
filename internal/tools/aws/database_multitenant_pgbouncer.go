@@ -399,10 +399,6 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated
 	authUserSecretName := PGBouncerAuthUserSecretName(*VpcID)
 
 	secret, err := d.client.secretsManagerGetRDSSecret(authUserSecretName, d.client.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get secret value for database")
-	}
-
 	var awsErr *smTypes.ResourceNotFoundException
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
@@ -677,10 +673,6 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreat
 	installationSecretName := RDSMultitenantPGBouncerSecretName(d.installationID)
 
 	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get secret value for database")
-	}
-
 	var awsErr *smTypes.ResourceNotFoundException
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
