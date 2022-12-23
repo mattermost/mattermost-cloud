@@ -10,135 +10,123 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	subscriptionCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
-	subscriptionCmd.PersistentFlags().Bool("dry-run", false, "When set to true, only print the API request without sending it.")
+func newCmdSubscription() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "subscription",
+		Short: "Manipulate subscriptions managed by the provisioning server.",
+	}
 
-	subscriptionCreateCmd.Flags().String("name", "", "Name of the subscription.")
-	subscriptionCreateCmd.Flags().String("url", "", "URL of the subscription.")
-	subscriptionCreateCmd.Flags().String("owner", "", "OwnerID of the subscription.")
-	subscriptionCreateCmd.Flags().String("event-type", string(model.ResourceStateChangeEventType), "Event type of the subscription.")
-	subscriptionCreateCmd.Flags().String("failure-threshold", "", "Failure threshold of the subscription.")
-	subscriptionCreateCmd.MarkFlagRequired("url")
-	subscriptionCreateCmd.MarkFlagRequired("owner")
-	subscriptionCreateCmd.MarkFlagRequired("event-type")
+	setClusterFlags(cmd)
 
-	subscriptionListCmd.Flags().String("owner", "", "OwnerID of the subscription.")
-	subscriptionListCmd.Flags().String("event-type", "", "Event type of the subscription.")
-	registerPagingFlags(subscriptionListCmd)
-	registerTableOutputFlags(subscriptionListCmd)
+	cmd.AddCommand(newCmdSubscriptionCreate())
+	cmd.AddCommand(newCmdSubscriptionList())
+	cmd.AddCommand(newCmdSubscriptionGet())
+	cmd.AddCommand(newCmdSubscriptionDelete())
 
-	subscriptionGetCmd.Flags().String("subscription", "", "ID of subscription to get")
-	subscriptionGetCmd.MarkFlagRequired("subscription")
-
-	subscriptionDeleteCmd.Flags().String("subscription", "", "ID of subscription to delete")
-	subscriptionDeleteCmd.MarkFlagRequired("subscription")
-
-	subscriptionCmd.AddCommand(subscriptionCreateCmd)
-	subscriptionCmd.AddCommand(subscriptionListCmd)
-	subscriptionCmd.AddCommand(subscriptionGetCmd)
-	subscriptionCmd.AddCommand(subscriptionDeleteCmd)
+	return cmd
 }
 
-var subscriptionCmd = &cobra.Command{
-	Use:   "subscription",
-	Short: "Manipulate subscriptions managed by the provisioning server.",
-}
+func newCmdSubscriptionCreate() *cobra.Command {
 
-var subscriptionCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Creates subscription.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+	var flags subscriptionCreateFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Creates subscription.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		name, _ := command.Flags().GetString("name")
-		url, _ := command.Flags().GetString("url")
-		owner, _ := command.Flags().GetString("owner")
-		eventType, _ := command.Flags().GetString("event-type")
-		failureThreshold, _ := command.Flags().GetDuration("failure-threshold")
-
-		request := &model.CreateSubscriptionRequest{
-			Name:             name,
-			URL:              url,
-			OwnerID:          owner,
-			EventType:        model.EventType(eventType),
-			FailureThreshold: failureThreshold,
-		}
-
-		dryRun, _ := command.Flags().GetBool("dry-run")
-		if dryRun {
-			err := printJSON(request)
-			if err != nil {
-				return errors.Wrap(err, "failed to print API request")
+			request := &model.CreateSubscriptionRequest{
+				Name:             flags.name,
+				URL:              flags.url,
+				OwnerID:          flags.owner,
+				EventType:        model.EventType(flags.eventType),
+				FailureThreshold: flags.failureThreshold,
 			}
 
-			return nil
-		}
-
-		backup, err := client.CreateSubscription(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to create subscription")
-		}
-
-		return printJSON(backup)
-	},
-}
-
-var subscriptionListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List subscriptions.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		owner, _ := command.Flags().GetString("owner")
-		eventType, _ := command.Flags().GetString("event-type")
-		paging := parsePagingFlags(command)
-
-		request := &model.ListSubscriptionsRequest{
-			Paging:    paging,
-			Owner:     owner,
-			EventType: model.EventType(eventType),
-		}
-
-		subscriptions, err := client.ListSubscriptions(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to get backup")
-		}
-
-		if enabled, customCols := tableOutputEnabled(command); enabled {
-			var keys []string
-			var vals [][]string
-
-			if len(customCols) > 0 {
-				data := make([]interface{}, 0, len(subscriptions))
-				for _, elem := range subscriptions {
-					data = append(data, elem)
-				}
-				keys, vals, err = prepareTableData(customCols, data)
+			if flags.dryRun {
+				err := printJSON(request)
 				if err != nil {
-					return errors.Wrap(err, "failed to prepare table output")
+					return errors.Wrap(err, "failed to print API request")
 				}
-			} else {
-				keys, vals = defaultSubscriptionsTableData(subscriptions)
+				return nil
 			}
 
-			printTable(keys, vals)
-			return nil
-		}
+			backup, err := client.CreateSubscription(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to create subscription")
+			}
 
-		err = printJSON(subscriptions)
-		if err != nil {
-			return err
-		}
+			return printJSON(backup)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		return nil
-	},
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdSubscriptionList() *cobra.Command {
+
+	var flags subscriptionListFlags
+
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "List subscriptions.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+
+			paging := getPaging(flags.pagingFlags)
+
+			request := &model.ListSubscriptionsRequest{
+				Paging:    paging,
+				Owner:     flags.owner,
+				EventType: model.EventType(flags.eventType),
+			}
+
+			subscriptions, err := client.ListSubscriptions(request)
+			if err != nil {
+				return errors.Wrap(err, "failed to get backup")
+			}
+
+			if enabled, customCols := getTableOutputOption(flags.tableOptions); enabled {
+				var keys []string
+				var vals [][]string
+
+				if len(customCols) > 0 {
+					data := make([]interface{}, 0, len(subscriptions))
+					for _, elem := range subscriptions {
+						data = append(data, elem)
+					}
+					keys, vals, err = prepareTableData(customCols, data)
+					if err != nil {
+						return errors.Wrap(err, "failed to prepare table output")
+					}
+				} else {
+					keys, vals = defaultSubscriptionsTableData(subscriptions)
+				}
+
+				printTable(keys, vals)
+				return nil
+			}
+
+			return printJSON(subscriptions)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
+
+	flags.addFlags(cmd)
+
+	return cmd
 }
 
 func defaultSubscriptionsTableData(subscriptions []*model.Subscription) ([]string, [][]string) {
@@ -158,47 +146,56 @@ func defaultSubscriptionsTableData(subscriptions []*model.Subscription) ([]strin
 	return keys, vals
 }
 
-var subscriptionGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get subscription.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSubscriptionGet() *cobra.Command {
+	var flags subscriptionGetFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get subscription.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
 
-		subID, _ := command.Flags().GetString("subscription")
+			subscription, err := client.GetSubscription(flags.subID)
+			if err != nil {
+				return errors.Wrap(err, "failed to get subscription")
+			}
 
-		subscription, err := client.GetSubscription(subID)
-		if err != nil {
-			return errors.Wrap(err, "failed to get subscription")
-		}
+			return printJSON(subscription)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		err = printJSON(subscription)
-		if err != nil {
-			return err
-		}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
 }
 
-var subscriptionDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete subscription.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSubscriptionDelete() *cobra.Command {
+	var flags subscriptionDeleteFlags
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete subscription.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.DeleteSubscription(flags.subID); err != nil {
+				return errors.Wrap(err, "failed to delete subscription")
+			}
 
-		subID, _ := command.Flags().GetString("subscription")
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			return
+		},
+	}
 
-		err := client.DeleteSubscription(subID)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete subscription")
-		}
+	flags.addFlags(cmd)
 
-		return nil
-	},
+	return cmd
 }
