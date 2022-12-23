@@ -9,10 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	iamTypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -90,7 +90,7 @@ func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (strin
 	return secret.MasterPassword, nil
 }
 
-func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iam.AccessKey, logger log.FieldLogger) error {
+func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak *iamTypes.AccessKey, logger log.FieldLogger) error {
 	accessKeyPayload := &IAMAccessKey{
 		ID:     *ak.AccessKeyId,
 		Secret: *ak.SecretAccessKey,

@@ -19,19 +19,17 @@ import (
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -141,14 +139,13 @@ type cache struct {
 
 // Service hold AWS clients for each service.
 type Service struct {
-	acm ACMAPI
-	ec2 EC2API
-	// ec2                   ec2iface.EC2API
-	iam                   iamiface.IAMAPI
+	acm                   ACMAPI
+	ec2                   EC2API
+	iam                   IAMAPI
 	rds                   rdsiface.RDSAPI
 	s3                    s3iface.S3API
-	route53               route53iface.Route53API
 	secretsManager        SecretsManagerAPI
+	route53               Route53API
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
 	kms                   kmsiface.KMSAPI
 	dynamodb              DynamoDBAPI
@@ -161,11 +158,11 @@ type Service struct {
 func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
 		acm:                   acm.NewFromConfig(cfg), // v2
-		iam:                   iam.New(sess),
+		iam:                   iam.NewFromConfig(cfg),
 		rds:                   rds.New(sess),
 		s3:                    s3.New(sess),
-		route53:               route53.New(sess),
 		secretsManager:        secretsmanager.NewFromConfig(cfg), // v2
+		route53:               route53.NewFromConfig(cfg),        // v2
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
 		ec2:                   ec2.NewFromConfig(cfg), // v2
 		kms:                   kms.New(sess),
@@ -278,8 +275,9 @@ func (c *Client) buildCloudEnvironmentNameCache() error {
 	}
 
 	for _, alias := range accountAliases.AccountAliases {
-		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
-			envName := strings.Split(*alias, "-")[2]
+		envNameParts := strings.Split(alias, "-")
+		if strings.HasPrefix(alias, "mattermost-cloud") && len(envNameParts) == 3 {
+			envName := envNameParts[2]
 			if len(envName) == 0 {
 				return errors.New("environment name value was empty")
 			}
