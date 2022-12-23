@@ -10,14 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdCompletion() *cobra.Command {
+func completionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion",
 		Short: "Generates autocompletion scripts for bash and zsh",
 	}
 
-	cmd.AddCommand(newCmdCompletionBash())
-	cmd.AddCommand(newCmdZsh())
+	cmd.AddCommand(completionBashCmd())
+	cmd.AddCommand(zshCmd())
 
 	return cmd
 }
@@ -29,7 +29,7 @@ var bashLong = `To load completion, run
 To configure your bash shell to load completions for each session, add the above line to your ~/.bashrc
 `
 
-func newCmdCompletionBash() *cobra.Command {
+func completionBashCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bash",
 		Short: "Generates the bash autocompletion scripts",
@@ -187,7 +187,7 @@ BASH_COMPLETION_EOF
 __cloud_bash_source <(__cloud_convert_bash_to_zsh)
 `
 
-func newCmdZsh() *cobra.Command {
+func zshCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "zsh",
 		Short: "Generates the zsh autocompletion scripts",

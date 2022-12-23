@@ -13,23 +13,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdClusterInstallation() *cobra.Command {
+func clusterInstallationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "installation",
 		Short: "Manipulate cluster installations managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdClusterInstallationGet())
-	cmd.AddCommand(newCmdClusterInstallationList())
-	cmd.AddCommand(newCmdClusterInstallationConfig())
-	cmd.AddCommand(newCmdClusterInstallationMMCTL())
-	cmd.AddCommand(newCmdClusterInstallationMattermostCLI())
-	cmd.AddCommand(newCmdClusterInstallationMigration())
+	cmd.AddCommand(clusterInstallationGetCmd())
+	cmd.AddCommand(clusterInstallationListCmd())
+	cmd.AddCommand(clusterInstallationConfigCmd())
+	cmd.AddCommand(clusterInstallationMMCTLCmd())
+	cmd.AddCommand(clusterInstallationMattermostCLICmd())
+	cmd.AddCommand(clusterInstallationMigrationCmd())
 
 	return cmd
 }
 
-func newCmdClusterInstallationGet() *cobra.Command {
+func clusterInstallationGetCmd() *cobra.Command {
 	var flags clusterInstallationGetFlags
 
 	cmd := &cobra.Command{
@@ -63,7 +63,7 @@ func newCmdClusterInstallationGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdClusterInstallationList() *cobra.Command {
+func clusterInstallationListCmd() *cobra.Command {
 	var flags clusterInstallationListFlags
 
 	cmd := &cobra.Command{
@@ -136,19 +136,19 @@ func defaultClusterInstallationTableData(cis []*model.ClusterInstallation) ([]st
 	return keys, vals
 }
 
-func newCmdClusterInstallationConfig() *cobra.Command {
+func clusterInstallationConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manipulate a particular cluster installation's config.",
 	}
 
-	cmd.AddCommand(newCmdClusterInstallationConfigGet())
-	cmd.AddCommand(newCmdClusterInstallationConfigSet())
+	cmd.AddCommand(clusterInstallationConfigGetCmd())
+	cmd.AddCommand(clusterInstallationConfigSetCmd())
 
 	return cmd
 }
 
-func newCmdClusterInstallationConfigGet() *cobra.Command {
+func clusterInstallationConfigGetCmd() *cobra.Command {
 	var flags clusterInstallationConfigGetFlags
 
 	cmd := &cobra.Command{
@@ -182,7 +182,7 @@ func newCmdClusterInstallationConfigGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdClusterInstallationConfigSet() *cobra.Command {
+func clusterInstallationConfigSetCmd() *cobra.Command {
 	var flags clusterInstallationConfigSetFlags
 
 	cmd := &cobra.Command{
@@ -221,7 +221,7 @@ func newCmdClusterInstallationConfigSet() *cobra.Command {
 	return cmd
 }
 
-func newCmdClusterInstallationMMCTL() *cobra.Command {
+func clusterInstallationMMCTLCmd() *cobra.Command {
 	var flags clusterInstallationMMCTLFlags
 
 	cmd := &cobra.Command{
@@ -250,7 +250,7 @@ func newCmdClusterInstallationMMCTL() *cobra.Command {
 	return cmd
 }
 
-func newCmdClusterInstallationMattermostCLI() *cobra.Command {
+func clusterInstallationMattermostCLICmd() *cobra.Command {
 	var flags clusterInstallationMattermostCLIFlags
 
 	cmd := &cobra.Command{
@@ -278,7 +278,7 @@ func newCmdClusterInstallationMattermostCLI() *cobra.Command {
 	return cmd
 }
 
-func newCmdClusterInstallationMigration() *cobra.Command {
+func clusterInstallationMigrationCmd() *cobra.Command {
 	var flags clusterInstallationMigrationFlags
 
 	cmd := &cobra.Command{
@@ -295,9 +295,9 @@ func newCmdClusterInstallationMigration() *cobra.Command {
 		},
 	}
 	flags.addFlags(cmd)
-	cmd.AddCommand(newCmdClusterInstallationDNSMigration())
-	cmd.AddCommand(newCmdDeleteInActiveClusterInstallation())
-	cmd.AddCommand(newCmdClusterRolesPostMigrationSwitch())
+	cmd.AddCommand(clusterInstallationDNSMigrationCmd())
+	cmd.AddCommand(deleteInActiveClusterInstallationCmd())
+	cmd.AddCommand(clusterRolesPostMigrationSwitchCmd())
 
 	return cmd
 }
@@ -324,7 +324,7 @@ func executeClusterInstallationMigrationCmd(flags clusterInstallationMigrationFl
 	return nil
 }
 
-func newCmdClusterInstallationDNSMigration() *cobra.Command {
+func clusterInstallationDNSMigrationCmd() *cobra.Command {
 	var flags clusterInstallationDNSMigrationFlags
 
 	cmd := &cobra.Command{
@@ -364,7 +364,7 @@ func executeClusterInstallationDNSMigrationCmd(flags clusterInstallationDNSMigra
 	return nil
 }
 
-func newCmdDeleteInActiveClusterInstallation() *cobra.Command {
+func deleteInActiveClusterInstallationCmd() *cobra.Command {
 	var flags inActiveClusterInstallationDeleteFlags
 
 	cmd := &cobra.Command{
@@ -414,7 +414,7 @@ func executeDeleteInActiveClusterInstallationCmd(flags inActiveClusterInstallati
 	return nil
 }
 
-func newCmdClusterRolesPostMigrationSwitch() *cobra.Command {
+func clusterRolesPostMigrationSwitchCmd() *cobra.Command {
 	var flags clusterRolesPostMigrationSwitchFlags
 
 	cmd := &cobra.Command{

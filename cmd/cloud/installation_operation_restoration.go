@@ -10,20 +10,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdInstallationRestorationOperation() *cobra.Command {
+func installationRestorationOperationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restoration",
 		Short: "Manipulate installation restoration operations managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdInstallationRestorationRequest())
-	cmd.AddCommand(newCmdInstallationRestorationsListCmd())
-	cmd.AddCommand(newCmdInstallationRestorationGetCmd())
+	cmd.AddCommand(installationRestorationRequestCmd())
+	cmd.AddCommand(installationRestorationsListCmd())
+	cmd.AddCommand(installationRestorationGetCmd())
 
 	return cmd
 }
 
-func newCmdInstallationRestorationRequest() *cobra.Command {
+func installationRestorationRequestCmd() *cobra.Command {
 	var flags installationRestorationRequestFlags
 
 	cmd := &cobra.Command{
@@ -56,7 +56,7 @@ func newCmdInstallationRestorationRequest() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationRestorationsListCmd() *cobra.Command {
+func installationRestorationsListCmd() *cobra.Command {
 
 	var flags installationRestorationsListFlags
 
@@ -140,7 +140,7 @@ func defaultDBRestorationOperationTableData(ops []*model.InstallationDBRestorati
 	return keys, vals
 }
 
-func newCmdInstallationRestorationGetCmd() *cobra.Command {
+func installationRestorationGetCmd() *cobra.Command {
 	var flags installationRestorationGetFlags
 
 	cmd := &cobra.Command{

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdSubscription() *cobra.Command {
+func subscriptionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "subscription",
 		Short: "Manipulate subscriptions managed by the provisioning server.",
@@ -18,15 +18,15 @@ func newCmdSubscription() *cobra.Command {
 
 	setClusterFlags(cmd)
 
-	cmd.AddCommand(newCmdSubscriptionCreate())
-	cmd.AddCommand(newCmdSubscriptionList())
-	cmd.AddCommand(newCmdSubscriptionGet())
-	cmd.AddCommand(newCmdSubscriptionDelete())
+	cmd.AddCommand(subscriptionCreateCmd())
+	cmd.AddCommand(subscriptionListCmd())
+	cmd.AddCommand(subscriptionGetCmd())
+	cmd.AddCommand(subscriptionDeleteCmd())
 
 	return cmd
 }
 
-func newCmdSubscriptionCreate() *cobra.Command {
+func subscriptionCreateCmd() *cobra.Command {
 
 	var flags subscriptionCreateFlags
 
@@ -71,7 +71,7 @@ func newCmdSubscriptionCreate() *cobra.Command {
 	return cmd
 }
 
-func newCmdSubscriptionList() *cobra.Command {
+func subscriptionListCmd() *cobra.Command {
 
 	var flags subscriptionListFlags
 
@@ -146,7 +146,7 @@ func defaultSubscriptionsTableData(subscriptions []*model.Subscription) ([]strin
 	return keys, vals
 }
 
-func newCmdSubscriptionGet() *cobra.Command {
+func subscriptionGetCmd() *cobra.Command {
 	var flags subscriptionGetFlags
 
 	cmd := &cobra.Command{
@@ -174,7 +174,7 @@ func newCmdSubscriptionGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdSubscriptionDelete() *cobra.Command {
+func subscriptionDeleteCmd() *cobra.Command {
 	var flags subscriptionDeleteFlags
 
 	cmd := &cobra.Command{

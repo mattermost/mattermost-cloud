@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdWorkbench() *cobra.Command {
+func workbenchCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workbench",
 		Short: "Tools for working with cloud resources",
@@ -20,12 +20,12 @@ func newCmdWorkbench() *cobra.Command {
 
 	setWorkbenchFlags(cmd)
 
-	cmd.AddCommand(newCmdWorkbenchCluster())
+	cmd.AddCommand(workbenchClusterCmd())
 
 	return cmd
 }
 
-func newCmdWorkbenchCluster() *cobra.Command {
+func workbenchClusterCmd() *cobra.Command {
 
 	var flags workbenchClusterFlag
 

@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdDashboard() *cobra.Command {
+func dashboardCmd() *cobra.Command {
 
 	var flags dashboardFlags
 

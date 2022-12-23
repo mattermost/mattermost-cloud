@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdWebhook() *cobra.Command {
+func webhookCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "webhook",
 		Short: "Manipulate webhooks managed by the provisioning server.",
@@ -21,15 +21,15 @@ func newCmdWebhook() *cobra.Command {
 
 	setWebhookFlags(cmd)
 
-	cmd.AddCommand(newCmdWebhookCreate())
-	cmd.AddCommand(newCmdWebhookGet())
-	cmd.AddCommand(newCmdWebhookList())
-	cmd.AddCommand(newCmdWebhookDelete())
+	cmd.AddCommand(webhookCreateCmd())
+	cmd.AddCommand(webhookGetCmd())
+	cmd.AddCommand(webhookListCmd())
+	cmd.AddCommand(webhookDeleteCmd())
 
 	return cmd
 }
 
-func newCmdWebhookCreate() *cobra.Command {
+func webhookCreateCmd() *cobra.Command {
 	var flags webhookCreateFlag
 
 	cmd := &cobra.Command{
@@ -60,7 +60,7 @@ func newCmdWebhookCreate() *cobra.Command {
 	return cmd
 }
 
-func newCmdWebhookGet() *cobra.Command {
+func webhookGetCmd() *cobra.Command {
 	var flags webhookGetFlag
 
 	cmd := &cobra.Command{
@@ -91,7 +91,7 @@ func newCmdWebhookGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdWebhookList() *cobra.Command {
+func webhookListCmd() *cobra.Command {
 	var flags webhookListFlag
 
 	cmd := &cobra.Command{
@@ -140,7 +140,7 @@ func executeWebhookListCmd(flags webhookListFlag) error {
 	return printJSON(webhooks)
 }
 
-func newCmdWebhookDelete() *cobra.Command {
+func webhookDeleteCmd() *cobra.Command {
 	var flags webhookDeleteFlag
 
 	cmd := &cobra.Command{

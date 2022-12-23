@@ -6,14 +6,14 @@ package main
 
 import "github.com/spf13/cobra"
 
-func newCmdInstallationOperation() *cobra.Command {
+func installationOperationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "operation",
 		Short: "Manipulate installation operations managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdInstallationRestorationOperation())
-	cmd.AddCommand(newCmdInstallationDBMigrationOperation())
+	cmd.AddCommand(installationRestorationOperationCmd())
+	cmd.AddCommand(installationDBMigrationOperationCmd())
 
 	return cmd
 }

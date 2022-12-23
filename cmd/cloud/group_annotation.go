@@ -10,19 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdGroupAnnotation() *cobra.Command {
+func groupAnnotationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "annotation",
 		Short: "Manipulate annotations of group managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdGroupAnnotationAdd())
-	cmd.AddCommand(newCmdGroupAnnotationDelete())
+	cmd.AddCommand(groupAnnotationAddCmd())
+	cmd.AddCommand(groupAnnotationDeleteCmd())
 
 	return cmd
 }
 
-func newCmdGroupAnnotationAdd() *cobra.Command {
+func groupAnnotationAddCmd() *cobra.Command {
 
 	var flags groupAnnotationAddFlags
 
@@ -59,7 +59,7 @@ func newCmdGroupAnnotationAdd() *cobra.Command {
 	return cmd
 }
 
-func newCmdGroupAnnotationDelete() *cobra.Command {
+func groupAnnotationDeleteCmd() *cobra.Command {
 	var flags groupAnnotationDeleteFlags
 
 	cmd := &cobra.Command{

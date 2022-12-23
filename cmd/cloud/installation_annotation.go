@@ -10,19 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdInstallationAnnotation() *cobra.Command {
+func installationAnnotationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "annotation",
 		Short: "Manipulate annotations of installations managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdInstallationAnnotationAdd())
-	cmd.AddCommand(newCmdInstallationAnnotationDelete())
+	cmd.AddCommand(installationAnnotationAddCmd())
+	cmd.AddCommand(installationAnnotationDeleteCmd())
 
 	return cmd
 }
 
-func newCmdInstallationAnnotationAdd() *cobra.Command {
+func installationAnnotationAddCmd() *cobra.Command {
 	var flags installationAnnotationAddFlags
 
 	cmd := &cobra.Command{
@@ -61,7 +61,7 @@ func newCmdInstallationAnnotationAdd() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationAnnotationDelete() *cobra.Command {
+func installationAnnotationDeleteCmd() *cobra.Command {
 	var flags installationAnnotationDeleteFlags
 
 	cmd := &cobra.Command{

@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdDatabase() *cobra.Command {
+func databaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "database",
 		Short: "Manipulate database resources managed by the provisioning server.",
@@ -20,29 +20,29 @@ func newCmdDatabase() *cobra.Command {
 
 	setClusterFlags(cmd)
 
-	cmd.AddCommand(newCmdDatabaseMultitenant())
-	cmd.AddCommand(newCmdDatabaseLogical())
-	cmd.AddCommand(newCmdDatabaseSchema())
+	cmd.AddCommand(databaseMultitenantCmd())
+	cmd.AddCommand(databaseLogicalCmd())
+	cmd.AddCommand(databaseSchemaCmd())
 
 	return cmd
 }
 
-func newCmdDatabaseMultitenant() *cobra.Command {
+func databaseMultitenantCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "multitenant",
 		Short: "Manage and view multitenant database resources.",
 	}
 
-	cmd.AddCommand(newCmdDatabaseMultitenantList())
-	cmd.AddCommand(newCmdDatabaseMultitenantGet())
-	cmd.AddCommand(newCmdDatabaseMultitenantUpdate())
-	cmd.AddCommand(newCmdDatabaseMultitenantDelete())
-	cmd.AddCommand(newCmdDatabaseMultitenantReport())
+	cmd.AddCommand(databaseMultitenantListCmd())
+	cmd.AddCommand(databaseMultitenantGetCmd())
+	cmd.AddCommand(databaseMultitenantUpdateCmd())
+	cmd.AddCommand(databaseMultitenantDeleteCmd())
+	cmd.AddCommand(databaseMultitenantReportCmd())
 
 	return cmd
 }
 
-func newCmdDatabaseMultitenantList() *cobra.Command {
+func databaseMultitenantListCmd() *cobra.Command {
 
 	var flags databaseMultiTenantListFlag
 
@@ -111,7 +111,7 @@ func defaultMultitenantDatabaseTableData(multitenantDatabases []*model.Multitena
 	return keys, vals
 }
 
-func newCmdDatabaseMultitenantGet() *cobra.Command {
+func databaseMultitenantGetCmd() *cobra.Command {
 	var flags databaseMultiTenantGetFlag
 
 	cmd := &cobra.Command{
@@ -142,7 +142,7 @@ func newCmdDatabaseMultitenantGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdDatabaseMultitenantUpdate() *cobra.Command {
+func databaseMultitenantUpdateCmd() *cobra.Command {
 	var flags databaseMultiTenantUpdateFlag
 
 	cmd := &cobra.Command{
@@ -183,7 +183,7 @@ func newCmdDatabaseMultitenantUpdate() *cobra.Command {
 	return cmd
 }
 
-func newCmdDatabaseMultitenantDelete() *cobra.Command {
+func databaseMultitenantDeleteCmd() *cobra.Command {
 	var flags databaseMultiTenantDeleteFlag
 
 	cmd := &cobra.Command{
@@ -209,19 +209,19 @@ func newCmdDatabaseMultitenantDelete() *cobra.Command {
 	return cmd
 }
 
-func newCmdDatabaseLogical() *cobra.Command {
+func databaseLogicalCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logical",
 		Short: "Manage and view logical database resources.",
 	}
 
-	cmd.AddCommand(newCmdDatabaseLogicalList())
-	cmd.AddCommand(newCmdDatabaseLogicalGet())
+	cmd.AddCommand(databaseLogicalListCmd())
+	cmd.AddCommand(databaseLogicalGetCmd())
 
 	return cmd
 }
 
-func newCmdDatabaseLogicalList() *cobra.Command {
+func databaseLogicalListCmd() *cobra.Command {
 	var flags databaseLogicalListFlag
 
 	cmd := &cobra.Command{
@@ -288,7 +288,7 @@ func defaultLogicalDatabaseTableData(logicalDatabases []*model.LogicalDatabase) 
 	return keys, vals
 }
 
-func newCmdDatabaseLogicalGet() *cobra.Command {
+func databaseLogicalGetCmd() *cobra.Command {
 	var flags databaseLogicalGetFlag
 
 	cmd := &cobra.Command{
@@ -319,19 +319,19 @@ func newCmdDatabaseLogicalGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdDatabaseSchema() *cobra.Command {
+func databaseSchemaCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "schema",
 		Short: "Manage and view database schema resources.",
 	}
 
-	cmd.AddCommand(newCmdDatabaseSchemaList())
-	cmd.AddCommand(newCmdDatabaseSchemaGet())
+	cmd.AddCommand(databaseSchemaListCmd())
+	cmd.AddCommand(databaseSchemaGetCmd())
 
 	return cmd
 }
 
-func newCmdDatabaseSchemaList() *cobra.Command {
+func databaseSchemaListCmd() *cobra.Command {
 	var flags databaseSchemaListFlag
 
 	cmd := &cobra.Command{
@@ -399,7 +399,7 @@ func defaultDatabaseSchemaTableData(databaseSchemas []*model.DatabaseSchema) ([]
 	return keys, vals
 }
 
-func newCmdDatabaseSchemaGet() *cobra.Command {
+func databaseSchemaGetCmd() *cobra.Command {
 	var flags databaseSchemaGetFlag
 
 	cmd := &cobra.Command{
@@ -430,7 +430,7 @@ func newCmdDatabaseSchemaGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdDatabaseMultitenantReport() *cobra.Command {
+func databaseMultitenantReportCmd() *cobra.Command {
 	var flags databaseMultiTenantReportFlag
 
 	cmd := &cobra.Command{

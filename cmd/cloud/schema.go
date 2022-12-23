@@ -10,7 +10,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 )
 
-func newCmdSchema() *cobra.Command {
+func schemaCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "schema",
 		Short: "Manipulate the schema used by the provisioning server.",
@@ -18,7 +18,7 @@ func newCmdSchema() *cobra.Command {
 
 	setSchemaFlags(cmd)
 
-	cmd.AddCommand(newCmdSchemaMigrate())
+	cmd.AddCommand(schemaMigrateCmd())
 
 	return cmd
 }
@@ -32,7 +32,7 @@ func sqlStore(database string) (*store.SQLStore, error) {
 	return sqlStore, nil
 }
 
-func newCmdSchemaMigrate() *cobra.Command {
+func schemaMigrateCmd() *cobra.Command {
 	var flags schemaFlag
 	cmd := &cobra.Command{
 		Use:   "migrate",

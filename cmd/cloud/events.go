@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdEvents() *cobra.Command {
+func eventsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "events",
 		Short: "Groups event commands managed by the provisioning server.",
@@ -18,24 +18,24 @@ func newCmdEvents() *cobra.Command {
 
 	setEventFlags(cmd)
 
-	cmd.AddCommand(newCmdStateChangeEvents())
+	cmd.AddCommand(stateChangeEventsCmd())
 
 	return cmd
 }
 
-func newCmdStateChangeEvents() *cobra.Command {
+func stateChangeEventsCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "state-change",
 		Short: "Groups state change event commands managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdStateChangeEventList())
+	cmd.AddCommand(stateChangeEventListCmd())
 
 	return cmd
 }
 
-func newCmdStateChangeEventList() *cobra.Command {
+func stateChangeEventListCmd() *cobra.Command {
 	var flags stateChangeEventListFlags
 
 	cmd := &cobra.Command{

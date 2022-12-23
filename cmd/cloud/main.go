@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return newCmdServer().RunE(cmd, args)
+		return serverCmd().RunE(cmd, args)
 	},
 	// SilenceErrors allows us to explicitly log the error returned from rootCmd below.
 	SilenceErrors: true,
@@ -29,19 +29,19 @@ func init() {
 
 	_ = rootCmd.MarkFlagRequired("database")
 
-	rootCmd.AddCommand(newCmdServer())
-	rootCmd.AddCommand(newCmdCluster())
-	rootCmd.AddCommand(newCmdInstallation())
-	rootCmd.AddCommand(newCmdGroup())
-	rootCmd.AddCommand(newCmdDatabase())
-	rootCmd.AddCommand(newCmdSchema())
-	rootCmd.AddCommand(newCmdWebhook())
-	rootCmd.AddCommand(newCmdSecurity())
-	rootCmd.AddCommand(newCmdWorkbench())
-	rootCmd.AddCommand(newCmdCompletion())
-	rootCmd.AddCommand(newCmdDashboard())
-	rootCmd.AddCommand(newCmdEvents())
-	rootCmd.AddCommand(newCmdSubscription())
+	rootCmd.AddCommand(serverCmd())
+	rootCmd.AddCommand(clusterCmd())
+	rootCmd.AddCommand(installationCmd())
+	rootCmd.AddCommand(groupCmd())
+	rootCmd.AddCommand(databaseCmd())
+	rootCmd.AddCommand(schemaCmd())
+	rootCmd.AddCommand(webhookCmd())
+	rootCmd.AddCommand(securityCmd())
+	rootCmd.AddCommand(workbenchCmd())
+	rootCmd.AddCommand(completionCmd())
+	rootCmd.AddCommand(dashboardCmd())
+	rootCmd.AddCommand(eventsCmd())
+	rootCmd.AddCommand(subscriptionCmd())
 }
 
 func main() {

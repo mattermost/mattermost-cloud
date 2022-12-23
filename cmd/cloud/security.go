@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdSecurity() *cobra.Command {
+func securityCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "security",
 		Short: "Manage security locks for different cloud resources.",
@@ -18,16 +18,16 @@ func newCmdSecurity() *cobra.Command {
 
 	setSecurityFlags(cmd)
 
-	cmd.AddCommand(newCmdSecurityCluster())
-	cmd.AddCommand(newCmdSecurityInstallation())
-	cmd.AddCommand(newCmdSecurityClusterInstallation())
-	cmd.AddCommand(newCmdSecurityGroup())
-	cmd.AddCommand(newCmdSecurityBackup())
+	cmd.AddCommand(securityClusterCmd())
+	cmd.AddCommand(securityInstallationCmd())
+	cmd.AddCommand(securityClusterInstallationCmd())
+	cmd.AddCommand(securityGroupCmd())
+	cmd.AddCommand(securityBackupCmd())
 
 	return cmd
 }
 
-func newCmdSecurityCluster() *cobra.Command {
+func securityClusterCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Manage security locks for cluster resources.",
@@ -35,13 +35,13 @@ func newCmdSecurityCluster() *cobra.Command {
 
 	setSecurityClusterFlags(cmd)
 
-	cmd.AddCommand(newCmdSecurityClusterLock())
-	cmd.AddCommand(newCmdSecurityClusterUnlock())
+	cmd.AddCommand(securityClusterLockCmd())
+	cmd.AddCommand(securityClusterUnlockCmd())
 
 	return cmd
 }
 
-func newCmdSecurityClusterLock() *cobra.Command {
+func securityClusterLockCmd() *cobra.Command {
 
 	var flags securityClusterFlags
 
@@ -65,7 +65,7 @@ func newCmdSecurityClusterLock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityClusterUnlock() *cobra.Command {
+func securityClusterUnlockCmd() *cobra.Command {
 
 	var flags securityClusterFlags
 
@@ -89,7 +89,7 @@ func newCmdSecurityClusterUnlock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityInstallation() *cobra.Command {
+func securityInstallationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "installation",
 		Short: "Manage security locks for installation resources.",
@@ -97,13 +97,13 @@ func newCmdSecurityInstallation() *cobra.Command {
 
 	setSecurityInstallationFlags(cmd)
 
-	cmd.AddCommand(newCmdSecurityInstallationLock())
-	cmd.AddCommand(newCmdSecurityInstallationUnlock())
+	cmd.AddCommand(securityInstallationLockCmd())
+	cmd.AddCommand(securityInstallationUnlockCmd())
 
 	return cmd
 }
 
-func newCmdSecurityInstallationLock() *cobra.Command {
+func securityInstallationLockCmd() *cobra.Command {
 
 	var flags securityInstallationFlags
 
@@ -127,7 +127,7 @@ func newCmdSecurityInstallationLock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityInstallationUnlock() *cobra.Command {
+func securityInstallationUnlockCmd() *cobra.Command {
 
 	var flags securityInstallationFlags
 
@@ -151,7 +151,7 @@ func newCmdSecurityInstallationUnlock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityClusterInstallation() *cobra.Command {
+func securityClusterInstallationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster-installation",
 		Short: "Manage security locks for cluster installation resources.",
@@ -159,13 +159,13 @@ func newCmdSecurityClusterInstallation() *cobra.Command {
 
 	setSecurityClusterInstallationFlags(cmd)
 
-	cmd.AddCommand(newCmdSecurityClusterInstallationLock())
-	cmd.AddCommand(newCmdSecurityClusterInstallationUnlock())
+	cmd.AddCommand(securityClusterInstallationLockCmd())
+	cmd.AddCommand(securityClusterInstallationUnlockCmd())
 
 	return cmd
 }
 
-func newCmdSecurityClusterInstallationLock() *cobra.Command {
+func securityClusterInstallationLockCmd() *cobra.Command {
 
 	var flags securityClusterInstallationFlags
 
@@ -189,7 +189,7 @@ func newCmdSecurityClusterInstallationLock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
+func securityClusterInstallationUnlockCmd() *cobra.Command {
 
 	var flags securityClusterInstallationFlags
 
@@ -213,7 +213,7 @@ func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityGroup() *cobra.Command {
+func securityGroupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "group",
 		Short: "Manage security locks for group resources.",
@@ -221,13 +221,13 @@ func newCmdSecurityGroup() *cobra.Command {
 
 	setSecurityGroupFlags(cmd)
 
-	cmd.AddCommand(newCmdSecurityGroupLock())
-	cmd.AddCommand(newCmdSecurityGroupUnlock())
+	cmd.AddCommand(securityGroupLockCmd())
+	cmd.AddCommand(securityGroupUnlockCmd())
 
 	return cmd
 }
 
-func newCmdSecurityGroupLock() *cobra.Command {
+func securityGroupLockCmd() *cobra.Command {
 
 	var flags securityGroupFlags
 
@@ -251,7 +251,7 @@ func newCmdSecurityGroupLock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityGroupUnlock() *cobra.Command {
+func securityGroupUnlockCmd() *cobra.Command {
 
 	var flags securityGroupFlags
 
@@ -275,7 +275,7 @@ func newCmdSecurityGroupUnlock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityBackup() *cobra.Command {
+func securityBackupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Manage security locks for backup resources.",
@@ -283,13 +283,13 @@ func newCmdSecurityBackup() *cobra.Command {
 
 	setSecurityBackupFlags(cmd)
 
-	cmd.AddCommand(newCmdSecurityBackupLock())
-	cmd.AddCommand(newCmdSecurityBackupUnlock())
+	cmd.AddCommand(securityBackupLockCmd())
+	cmd.AddCommand(securityBackupUnlockCmd())
 
 	return cmd
 }
 
-func newCmdSecurityBackupLock() *cobra.Command {
+func securityBackupLockCmd() *cobra.Command {
 
 	var flags securityBackupFlags
 
@@ -313,7 +313,7 @@ func newCmdSecurityBackupLock() *cobra.Command {
 	return cmd
 }
 
-func newCmdSecurityBackupUnlock() *cobra.Command {
+func securityBackupUnlockCmd() *cobra.Command {
 
 	var flags securityBackupFlags
 

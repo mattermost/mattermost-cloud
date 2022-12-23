@@ -27,7 +27,7 @@ const (
 	waitBetweenPodEvictionsDefault = 5    // seconds
 )
 
-func newCmdCluster() *cobra.Command {
+func clusterCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "Manipulate clusters managed by the provisioning server.",
@@ -35,21 +35,21 @@ func newCmdCluster() *cobra.Command {
 
 	setClusterFlags(cmd)
 
-	cmd.AddCommand(newCmdClusterCreate())
-	cmd.AddCommand(newCmdClusterProvision())
-	cmd.AddCommand(newCmdClusterUpdate())
-	cmd.AddCommand(newCmdClusterUpgrade())
-	cmd.AddCommand(newCmdClusterResize())
-	cmd.AddCommand(newCmdClusterDelete())
-	cmd.AddCommand(newCmdClusterGet())
-	cmd.AddCommand(newCmdClusterList())
-	cmd.AddCommand(newCmdClusterUtilities())
+	cmd.AddCommand(clusterCreateCmd())
+	cmd.AddCommand(clusterProvisionCmd())
+	cmd.AddCommand(clusterUpdateCmd())
+	cmd.AddCommand(clusterUpgradeCmd())
+	cmd.AddCommand(clusterResizeCmd())
+	cmd.AddCommand(clusterDeleteCmd())
+	cmd.AddCommand(clusterGetCmd())
+	cmd.AddCommand(clusterListCmd())
+	cmd.AddCommand(clusterUtilitiesCmd())
 
-	cmd.AddCommand(newCmdClusterSizeDictionary())
-	cmd.AddCommand(newCmdClusterShowStateReport())
+	cmd.AddCommand(clusterSizeDictionaryCmd())
+	cmd.AddCommand(clusterShowStateReportCmd())
 
-	cmd.AddCommand(newCmdClusterAnnotation())
-	cmd.AddCommand(newCmdClusterInstallation())
+	cmd.AddCommand(clusterAnnotationCmd())
+	cmd.AddCommand(clusterInstallationCmd())
 
 	return cmd
 }
@@ -73,7 +73,7 @@ func getRotatorConfigFromFlags(rc rotatorConfig) model.RotatorConfig {
 	}
 }
 
-func newCmdClusterCreate() *cobra.Command {
+func clusterCreateCmd() *cobra.Command {
 	var flags clusterCreateFlags
 
 	cmd := &cobra.Command{
@@ -183,7 +183,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 
 }
 
-func newCmdClusterProvision() *cobra.Command {
+func clusterProvisionCmd() *cobra.Command {
 	var flags clusterProvisionFlags
 
 	cmd := &cobra.Command{
@@ -234,7 +234,7 @@ func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
 
 }
 
-func newCmdClusterUpdate() *cobra.Command {
+func clusterUpdateCmd() *cobra.Command {
 	var flags clusterUpdateFlags
 
 	cmd := &cobra.Command{
@@ -285,7 +285,7 @@ func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
 
 }
 
-func newCmdClusterUpgrade() *cobra.Command {
+func clusterUpgradeCmd() *cobra.Command {
 	var flags clusterUpgradeFlags
 
 	cmd := &cobra.Command{
@@ -347,7 +347,7 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 
 }
 
-func newCmdClusterResize() *cobra.Command {
+func clusterResizeCmd() *cobra.Command {
 	var flags clusterResizeFlags
 
 	cmd := &cobra.Command{
@@ -417,7 +417,7 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 
 }
 
-func newCmdClusterDelete() *cobra.Command {
+func clusterDeleteCmd() *cobra.Command {
 	var flags clusterDeleteFlags
 
 	cmd := &cobra.Command{
@@ -448,7 +448,7 @@ func executeClusterDeleteCmd(flags clusterDeleteFlags) error {
 	return nil
 }
 
-func newCmdClusterGet() *cobra.Command {
+func clusterGetCmd() *cobra.Command {
 	var flags clusterGetFlags
 
 	cmd := &cobra.Command{
@@ -486,7 +486,7 @@ func executeClusterGetCmd(flags clusterGetFlags) error {
 	return nil
 }
 
-func newCmdClusterList() *cobra.Command {
+func clusterListCmd() *cobra.Command {
 	var flags clusterListFlags
 
 	cmd := &cobra.Command{
@@ -593,7 +593,7 @@ func enhanceTableWithAnnotations(clusters []*model.ClusterDTO, keys []string, va
 	return keys, vals
 }
 
-func newCmdClusterUtilities() *cobra.Command {
+func clusterUtilitiesCmd() *cobra.Command {
 	var flags clusterUtilitiesFlags
 
 	cmd := &cobra.Command{
@@ -624,7 +624,7 @@ func newCmdClusterUtilities() *cobra.Command {
 	return cmd
 }
 
-func newCmdClusterSizeDictionary() *cobra.Command {
+func clusterSizeDictionaryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dictionary",
 		Short: "Shows predefined cluster size templates.",
@@ -643,7 +643,7 @@ func newCmdClusterSizeDictionary() *cobra.Command {
 // TODO:
 // Instead of showing the state data from the model of the CLI binary, add a new
 // API endpoint to return the server's state model.
-func newCmdClusterShowStateReport() *cobra.Command {
+func clusterShowStateReportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "state-report",
 		Short: "Shows information regarding changing cluster state.",

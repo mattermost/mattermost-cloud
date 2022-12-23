@@ -10,21 +10,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdInstallationBackup() *cobra.Command {
+func installationBackupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Manipulate installation backups managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdInstallationBackupCreate())
-	cmd.AddCommand(newCmdInstallationBackupList())
-	cmd.AddCommand(newCmdInstallationBackupGet())
-	cmd.AddCommand(newCmdInstallationBackupDelete())
+	cmd.AddCommand(installationBackupCreateCmd())
+	cmd.AddCommand(installationBackupListCmd())
+	cmd.AddCommand(installationBackupGetCmd())
+	cmd.AddCommand(installationBackupDeleteCmd())
 
 	return cmd
 }
 
-func newCmdInstallationBackupCreate() *cobra.Command {
+func installationBackupCreateCmd() *cobra.Command {
 	var flags installationBackupCreateFlags
 
 	cmd := &cobra.Command{
@@ -53,7 +53,7 @@ func newCmdInstallationBackupCreate() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationBackupList() *cobra.Command {
+func installationBackupListCmd() *cobra.Command {
 	var flags installationBackupListFlags
 
 	cmd := &cobra.Command{
@@ -135,7 +135,7 @@ func defaultBackupTableData(backups []*model.InstallationBackup) ([]string, [][]
 	return keys, vals
 }
 
-func newCmdInstallationBackupGet() *cobra.Command {
+func installationBackupGetCmd() *cobra.Command {
 	var flags installationBackupGetFlags
 
 	cmd := &cobra.Command{
@@ -168,7 +168,7 @@ func newCmdInstallationBackupGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationBackupDelete() *cobra.Command {
+func installationBackupDeleteCmd() *cobra.Command {
 	var flags installationBackupDeleteFlags
 
 	cmd := &cobra.Command{

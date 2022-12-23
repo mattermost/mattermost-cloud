@@ -10,22 +10,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCmdInstallationDBMigrationOperation() *cobra.Command {
+func installationDBMigrationOperationCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "db-migration",
 		Short: "Manipulate installation db migration operations managed by the provisioning server.",
 	}
 
-	cmd.AddCommand(newCmdInstallationDBMigrationRequest())
-	cmd.AddCommand(newCmdInstallationDBMigrationsList())
-	cmd.AddCommand(newCmdInstallationDBMigrationGet())
-	cmd.AddCommand(newCmdInstallationDBMigrationCommit())
-	cmd.AddCommand(newCmdInstallationDBMigrationRollback())
+	cmd.AddCommand(installationDBMigrationRequestCmd())
+	cmd.AddCommand(installationDBMigrationsListCmd())
+	cmd.AddCommand(installationDBMigrationGetCmd())
+	cmd.AddCommand(installationDBMigrationCommitCmd())
+	cmd.AddCommand(installationDBMigrationRollbackCmd())
 
 	return cmd
 }
 
-func newCmdInstallationDBMigrationRequest() *cobra.Command {
+func installationDBMigrationRequestCmd() *cobra.Command {
 
 	var flags installationDBMigrationRequestFlags
 
@@ -73,7 +73,7 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationDBMigrationsList() *cobra.Command {
+func installationDBMigrationsListCmd() *cobra.Command {
 	var flags installationDBMigrationsListFlags
 
 	cmd := &cobra.Command{
@@ -154,7 +154,7 @@ func defaultDBMigrationOperationTableData(ops []*model.InstallationDBMigrationOp
 	return keys, vals
 }
 
-func newCmdInstallationDBMigrationGet() *cobra.Command {
+func installationDBMigrationGetCmd() *cobra.Command {
 	var flags installationDBMigrationGetFlags
 
 	cmd := &cobra.Command{
@@ -186,7 +186,7 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 	return cmd
 }
 
-func newCmdInstallationDBMigrationCommit() *cobra.Command {
+func installationDBMigrationCommitCmd() *cobra.Command {
 	var flags installationDBMigrationCommitFlags
 
 	cmd := &cobra.Command{
@@ -220,7 +220,7 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 
 }
 
-func newCmdInstallationDBMigrationRollback() *cobra.Command {
+func installationDBMigrationRollbackCmd() *cobra.Command {
 	var flags installationDBMigrationRollbackFlags
 
 	cmd := &cobra.Command{
