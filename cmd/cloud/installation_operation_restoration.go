@@ -39,11 +39,7 @@ func newCmdInstallationRestorationRequest() *cobra.Command {
 				return errors.Wrap(err, "failed to request installation database restoration")
 			}
 
-			if err = printJSON(installationDTO); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installationDTO)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -115,11 +111,7 @@ func executeInstallationRestorationsList(flags installationRestorationsListFlags
 		return nil
 	}
 
-	if err = printJSON(dbRestorationOperations); err != nil {
-		return err
-	}
-
-	return nil
+	return printJSON(dbRestorationOperations)
 }
 
 func defaultDBRestorationOperationTableData(ops []*model.InstallationDBRestorationOperation) ([]string, [][]string) {
@@ -155,11 +147,7 @@ func newCmdInstallationRestorationGetCmd() *cobra.Command {
 				return errors.Wrap(err, "failed to get installation database restoration")
 			}
 
-			if err = printJSON(restorationOperation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(restorationOperation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)

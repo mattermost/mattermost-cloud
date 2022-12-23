@@ -111,11 +111,7 @@ func executeInstallationBackupListCmd(flags installationBackupListFlags) error {
 		return nil
 	}
 
-	if err = printJSON(backups); err != nil {
-		return err
-	}
-
-	return nil
+	return printJSON(backups)
 }
 
 func defaultBackupTableData(backups []*model.InstallationBackup) ([]string, [][]string) {
@@ -151,11 +147,7 @@ func newCmdInstallationBackupGet() *cobra.Command {
 				return errors.Wrap(err, "failed to get backup")
 			}
 
-			if err = printJSON(backup); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(backup)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
