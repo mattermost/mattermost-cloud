@@ -5,7 +5,9 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/service/route53"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/golang/mock/gomock"
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/pkg/errors"
@@ -15,8 +17,8 @@ import (
 func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 	gomock.InOrder(
 		a.Mocks.API.Route53.EXPECT().
-			ChangeResourceRecordSets(gomock.Any()).
-			Do(func(input *route53.ChangeResourceRecordSetsInput) {
+			ChangeResourceRecordSets(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *route53.ChangeResourceRecordSetsInput, optFns ...func(*route53.Options)) {
 				a.Assert().Equal("mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.Name)
 				a.Assert().Equal("example.mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.ResourceRecords[0].Value)
 			}).
@@ -38,8 +40,8 @@ func (a *AWSTestSuite) TestRoute53CreatePublicCNAME() {
 func (a *AWSTestSuite) TestRoute53CreatePrivateCNAME() {
 	gomock.InOrder(
 		a.Mocks.API.Route53.EXPECT().
-			ChangeResourceRecordSets(gomock.Any()).
-			Do(func(input *route53.ChangeResourceRecordSetsInput) {
+			ChangeResourceRecordSets(gomock.Any(), gomock.Any()).
+			Do(func(context context.Context, input *route53.ChangeResourceRecordSetsInput, optFns ...func(*route53.Options)) {
 				a.Assert().Equal("mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.Name)
 				a.Assert().Equal("example.mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.ResourceRecords[0].Value)
 				a.Assert().Equal(a.Mocks.AWS.GetPrivateHostedZoneID(), *input.HostedZoneId)
@@ -62,8 +64,8 @@ func (a *AWSTestSuite) TestRoute53CreatePrivateCNAME() {
 func (a *AWSTestSuite) TestRoute53CreatePublicCNAMEChangeRecordSetsError() {
 	gomock.InOrder(
 		a.Mocks.API.Route53.EXPECT().
-			ChangeResourceRecordSets(gomock.Any()).
-			Do(func(input *route53.ChangeResourceRecordSetsInput) {
+			ChangeResourceRecordSets(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *route53.ChangeResourceRecordSetsInput, optFns ...func(*route53.Options)) {
 				a.Assert().Equal("mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.Name)
 				a.Assert().Equal("example.mattermost.com", *input.ChangeBatch.Changes[0].ResourceRecordSet.ResourceRecords[0].Value)
 			}).
