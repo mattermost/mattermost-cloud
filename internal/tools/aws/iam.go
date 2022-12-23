@@ -42,8 +42,9 @@ func (a *Client) iamEnsureUserCreated(awsID string, logger log.FieldLogger) (*ty
 		logger.WithField("iam-user-name", *getResult.User.UserName).Debug("AWS IAM user already created")
 		return getResult.User, nil
 	}
+
 	var awsErr *types.NoSuchEntityException
-	if errors.As(err, &awsErr) {
+	if !errors.As(err, &awsErr) {
 		return nil, err
 	}
 
@@ -86,6 +87,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 	if err != nil {
 		return err
 	}
+
 	for _, policy := range policyResult.AttachedPolicies {
 		_, err = a.Service().iam.DetachUserPolicy(
 			ctx,
@@ -125,6 +127,7 @@ func (a *Client) iamEnsureUserDeleted(awsID string, logger log.FieldLogger) erro
 	if err != nil {
 		return err
 	}
+
 	for _, ak := range accessKeyResult.AccessKeyMetadata {
 		_, err = a.Service().iam.DeleteAccessKey(
 			ctx,
@@ -255,6 +258,7 @@ func (a *Client) iamEnsureAccessKeyCreated(awsID string, logger log.FieldLogger)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, ak := range listResult.AccessKeyMetadata {
 		_, err = a.Service().iam.DeleteAccessKey(
 			ctx,
