@@ -9,25 +9,21 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go-v2/service/acm"
-	"github.com/aws/aws-sdk-go/service/eks"
-	"github.com/aws/aws-sdk-go/service/eks/eksiface"
-
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
-
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/route53/route53iface"
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -141,10 +137,10 @@ type cache struct {
 type Service struct {
 	acm                   ACMAPI
 	ec2                   EC2API
-	iam                   iamiface.IAMAPI
 	rds                   RDSAPI
+	iam                   IAMAPI
 	s3                    s3iface.S3API
-	route53               route53iface.Route53API
+	route53               Route53API
 	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging ResourceGroupsTaggingAPIAPI
 	kms                   KMSAPI
@@ -158,10 +154,10 @@ type Service struct {
 func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
 		acm:                   acm.NewFromConfig(cfg), // v2
-		iam:                   iam.New(sess),
 		rds:                   rds.NewFromConfig(cfg), // v2
+		iam:                   iam.NewFromConfig(cfg), // v2
 		s3:                    s3.New(sess),
-		route53:               route53.New(sess),
+		route53:               route53.NewFromConfig(cfg), //v2
 		secretsManager:        secretsmanager.New(sess),
 		resourceGroupsTagging: resourcegroupstaggingapi.NewFromConfig(cfg), // v2
 		ec2:                   ec2.NewFromConfig(cfg),                      // v2
@@ -275,8 +271,9 @@ func (c *Client) buildCloudEnvironmentNameCache() error {
 	}
 
 	for _, alias := range accountAliases.AccountAliases {
-		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
-			envName := strings.Split(*alias, "-")[2]
+		envNameParts := strings.Split(alias, "-")
+		if strings.HasPrefix(alias, "mattermost-cloud") && len(envNameParts) == 3 {
+			envName := envNameParts[2]
 			if len(envName) == 0 {
 				return errors.New("environment name value was empty")
 			}

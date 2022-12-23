@@ -10,41 +10,46 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	completionCmd.AddCommand(bashCmd)
-	completionCmd.AddCommand(zshCmd)
+func newCmdCompletion() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "completion",
+		Short: "Generates autocompletion scripts for bash and zsh",
+	}
+
+	cmd.AddCommand(newCmdCompletionBash())
+	cmd.AddCommand(newCmdZsh())
+
+	return cmd
 }
 
-var completionCmd = &cobra.Command{
-	Use:   "completion",
-	Short: "Generates autocompletion scripts for bash and zsh",
-}
-
-var bashCmd = &cobra.Command{
-	Use:   "bash",
-	Short: "Generates the bash autocompletion scripts",
-	Long: `To load completion, run
+var bashLong = `To load completion, run
 
 . <(cloud completion bash)
 
 To configure your bash shell to load completions for each session, add the above line to your ~/.bashrc
-`,
-	Run: func(command *cobra.Command, args []string) {
-		rootCmd.GenBashCompletion(os.Stdout)
-	},
+`
+
+func newCmdCompletionBash() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "bash",
+		Short: "Generates the bash autocompletion scripts",
+		Long:  bashLong,
+		Run: func(command *cobra.Command, args []string) {
+			_ = rootCmd.GenBashCompletion(os.Stdout)
+		},
+	}
+
+	return cmd
 }
 
-var zshCmd = &cobra.Command{
-	Use:   "zsh",
-	Short: "Generates the zsh autocompletion scripts",
-	Long: `To load completion, run
+var zshLong string = `To load completion, run
 
 . <(cloud completion zsh)
 
 To configure your zsh shell to load completions for each session, add the above line to your ~/.zshrc
-`,
-	Run: func(command *cobra.Command, args []string) {
-		zshInitialization := `
+`
+
+var zshInitialization = `
 __cloud_bash_source() {
 	alias shopt=':'
 	alias _expand=_bash_expand
@@ -176,14 +181,23 @@ __cloud_convert_bash_to_zsh() {
 	<<'BASH_COMPLETION_EOF'
 `
 
-		zshTail := `
+var zshTail = `
 BASH_COMPLETION_EOF
 }
 __cloud_bash_source <(__cloud_convert_bash_to_zsh)
 `
 
-		os.Stdout.Write([]byte(zshInitialization))
-		rootCmd.GenBashCompletion(os.Stdout)
-		os.Stdout.Write([]byte(zshTail))
-	},
+func newCmdZsh() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "zsh",
+		Short: "Generates the zsh autocompletion scripts",
+		Long:  zshLong,
+		Run: func(command *cobra.Command, args []string) {
+			_, _ = os.Stdout.Write([]byte(zshInitialization))
+			_ = rootCmd.GenBashCompletion(os.Stdout)
+			_, _ = os.Stdout.Write([]byte(zshTail))
+		},
+	}
+
+	return cmd
 }

@@ -225,6 +225,8 @@ github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.9 h1:b5IdivLEHiIPErQoNNLAt7s
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.9/go.mod h1:uP2wpt43//qh6NqMFslaRu53A2YbnFStkV4Wn1Ldels=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.72.0 h1:bCFJL8mahOZJa3+t8+uWHL1JzuCICZCSb50FCljz9hE=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.72.0/go.mod h1:zul71QqzR4D1a90/5FloZiAnZ1CtuIjVH7R9MP997+A=
+github.com/aws/aws-sdk-go-v2/service/iam v1.18.25 h1:Np+wTW2nuSBGyEu0WFsiu0LO05rxLFMh3hYVAjOzyVw=
+github.com/aws/aws-sdk-go-v2/service/iam v1.18.25/go.mod h1:OyAuvpFeSVNppcSsp1hFOVQcaTRc1LE24YIR7pMbbAA=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.2.1/go.mod h1:v33JQ57i2nekYTA70Mb+O18KeH4KqhdqxTJZNK1zdRE=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 h1:y2+VQzC6Zh2ojtV2LoC0MNwHWc6qXv/j2vrQtlftkdA=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11/go.mod h1:iV4q2hsqtNECrfmlXyord9u4zyuFEJX9eLgLpSPzWA8=
@@ -241,6 +243,8 @@ github.com/aws/aws-sdk-go-v2/service/rds v1.36.0 h1:vZpqgQhYoay+Qb+OfTxFLxoqBnDO
 github.com/aws/aws-sdk-go-v2/service/rds v1.36.0/go.mod h1:Ume9NHqT871hUdxIRojWtWsPFyCswQmSjHHhyGot7v0=
 github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.26 h1:/PUrNPA60N/tE60pf3AZPIe5th/E5GXgVq+PdLgae5c=
 github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.26/go.mod h1:NjPeUP8L8V1lN1ik1Znb0cEnIgGA3Upt/UFSzwBLC6o=
+github.com/aws/aws-sdk-go-v2/service/route53 v1.25.2 h1:MNL6bLDcwOGL9j+ANiejLYn/cBSku1m+pLWXri/FFF4=
+github.com/aws/aws-sdk-go-v2/service/route53 v1.25.2/go.mod h1:4SAHuLdh4v7pA2F6HdhUUgiLUDA6J89KWr7xAYCDiyc=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.11.1/go.mod h1:XLAGFrEjbvMCLvAtWLLP32yTv8GpBquCApZEycDLunI=
 github.com/aws/aws-sdk-go-v2/service/sso v1.3.1/go.mod h1:J3A3RGUvuCZjvSuZEcOpHDnzZP/sKbhDWV2T1EOzFIM=
 github.com/aws/aws-sdk-go-v2/service/sso v1.11.25 h1:GFZitO48N/7EsFDt8fMa5iYdmWqkUDDB3Eje6z3kbG0=

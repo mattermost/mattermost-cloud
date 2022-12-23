@@ -5,12 +5,14 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
+	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -57,7 +59,7 @@ func (a *Client) buildRoute53Cache() error {
 	zoneMap := map[string]awsHostedZone{}
 
 	for _, zone := range zones {
-		zoneID, err := parseHostedZoneResourceID(zone)
+		zoneID, err := parseHostedZoneResourceID(*zone)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse hosted zone ID")
 		}
@@ -186,36 +188,38 @@ func (a *Client) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) erro
 
 // GetTagByKeyAndZoneID returns a Tag of a given tag:key and of a given route53 id
 func (a *Client) GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*Tag, error) {
-	tagList, err := a.Service().route53.ListTagsForResource(&route53.ListTagsForResourceInput{
-		ResourceId:   aws.String(id),
-		ResourceType: aws.String(hostedZoneResourceType),
-	})
+	tagList, err := a.Service().route53.ListTagsForResource(
+		context.TODO(),
+		&route53.ListTagsForResourceInput{
+			ResourceId:   aws.String(id),
+			ResourceType: hostedZoneResourceType,
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get tag list")
 	}
 
 	for _, resourceTag := range tagList.ResourceTagSet.Tags {
-		if resourceTag != nil {
-			resourceTagKey := resourceTag.Key
-			if resourceTagKey != nil && *resourceTagKey == trimTagPrefix(key) {
-				logger.WithFields(log.Fields{
-					"route53-tag-key":        *resourceTag.Key,
-					"route53-hosted-zone-id": id,
-				}).Debug("AWS Route53 Hosted Zone Tag found")
-				return &Tag{
-					Key:   *resourceTag.Key,
-					Value: *resourceTag.Value,
-				}, nil
-			}
+		resourceTagKey := resourceTag.Key
+		if resourceTagKey != nil && *resourceTagKey == trimTagPrefix(key) {
+			logger.WithFields(log.Fields{
+				"route53-tag-key":        *resourceTag.Key,
+				"route53-hosted-zone-id": id,
+			}).Debug("AWS Route53 Hosted Zone Tag found")
+			return &Tag{
+				Key:   *resourceTag.Key,
+				Value: *resourceTag.Value,
+			}, nil
 		}
 	}
 	return nil, nil
 }
 
 func (a *Client) getZoneDNS(hostedZoneID string, logger log.FieldLogger) (string, error) {
-	out, err := a.Service().route53.GetHostedZone(&route53.GetHostedZoneInput{
-		Id: aws.String(hostedZoneID),
-	})
+	out, err := a.Service().route53.GetHostedZone(
+		context.TODO(),
+		&route53.GetHostedZoneInput{
+			Id: aws.String(hostedZoneID),
+		})
 	if err != nil {
 		return "", err
 	}
@@ -245,24 +249,26 @@ func (a *Client) createCNAME(hostedZoneID, dnsName string, dnsEndpoints []string
 		identifier = dnsIdentifier
 	}
 
-	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
-		ChangeBatch: &route53.ChangeBatch{
-			Changes: []*route53.Change{
-				{
-					Action: aws.String("UPSERT"),
-					ResourceRecordSet: &route53.ResourceRecordSet{
-						Name:            aws.String(dnsName),
-						Type:            aws.String(route53.RRTypeCname),
-						ResourceRecords: resourceRecords,
-						TTL:             aws.Int64(defaultTTL),
-						Weight:          aws.Int64(defaultWeight),
-						SetIdentifier:   aws.String(identifier),
+	resp, err := a.Service().route53.ChangeResourceRecordSets(
+		context.TODO(),
+		&route53.ChangeResourceRecordSetsInput{
+			ChangeBatch: &types.ChangeBatch{
+				Changes: []types.Change{
+					{
+						Action: types.ChangeActionUpsert,
+						ResourceRecordSet: &types.ResourceRecordSet{
+							Name:            aws.String(dnsName),
+							Type:            types.RRTypeCname,
+							ResourceRecords: resourceRecords,
+							TTL:             aws.Int64(defaultTTL),
+							Weight:          aws.Int64(defaultWeight),
+							SetIdentifier:   aws.String(identifier),
+						},
 					},
 				},
 			},
-		},
-		HostedZoneId: &hostedZoneID,
-	})
+			HostedZoneId: &hostedZoneID,
+		})
 	if err != nil {
 		return err
 	}
@@ -312,16 +318,16 @@ func (a *Client) updateResourceRecordIDs(hostedZoneID, dnsName, newID string, lo
 	return a.updateResourceRecordSets(recordSet, &newRecordSet, hostedZoneID, logger)
 }
 
-func (a *Client) updateResourceRecordSets(oldRec, newRec *route53.ResourceRecordSet, hostedZoneID string, logger log.FieldLogger) error {
-	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
-		ChangeBatch: &route53.ChangeBatch{
-			Changes: []*route53.Change{
+func (a *Client) updateResourceRecordSets(oldRec, newRec *types.ResourceRecordSet, hostedZoneID string, logger log.FieldLogger) error {
+	resp, err := a.Service().route53.ChangeResourceRecordSets(context.TODO(), &route53.ChangeResourceRecordSetsInput{
+		ChangeBatch: &types.ChangeBatch{
+			Changes: []types.Change{
 				{
-					Action:            aws.String("UPSERT"),
+					Action:            types.ChangeActionUpsert,
 					ResourceRecordSet: newRec,
 				},
 				{
-					Action:            aws.String("DELETE"),
+					Action:            types.ChangeActionDelete,
 					ResourceRecordSet: oldRec,
 				},
 			},
@@ -379,10 +385,10 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
 	}
 
-	var changes []*route53.Change
+	var changes []types.Change
 	for _, recordSet := range recordSets {
-		changes = append(changes, &route53.Change{
-			Action:            aws.String("DELETE"),
+		changes = append(changes, types.Change{
+			Action:            types.ChangeActionDelete,
 			ResourceRecordSet: recordSet,
 		})
 	}
@@ -394,8 +400,8 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		return errors.Errorf("expected exactly 1 resource record, but found %d", len(changes))
 	}
 
-	resp, err := a.Service().route53.ChangeResourceRecordSets(&route53.ChangeResourceRecordSetsInput{
-		ChangeBatch:  &route53.ChangeBatch{Changes: changes},
+	resp, err := a.Service().route53.ChangeResourceRecordSets(context.TODO(), &route53.ChangeResourceRecordSetsInput{
+		ChangeBatch:  &types.ChangeBatch{Changes: changes},
 		HostedZoneId: &hostedZoneID,
 	})
 	if err != nil {
@@ -425,13 +431,14 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 // this doesn't scale and leads to rate limiting issues. As such, this should
 // only be called when expecting less than 10 records for a given DNS value and
 // we will cross our fingers that the records will always be ordered correctly.
-func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string) ([]*route53.ResourceRecordSet, error) {
-	var recordSets []*route53.ResourceRecordSet
+func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string) ([]*types.ResourceRecordSet, error) {
+	var recordSets []*types.ResourceRecordSet
 	recordList, err := a.Service().route53.ListResourceRecordSets(
+		context.TODO(),
 		&route53.ListResourceRecordSetsInput{
 			HostedZoneId:    &hostedZoneID,
 			StartRecordName: &dnsName,
-			MaxItems:        aws.String("10"),
+			MaxItems:        aws.Int32(10),
 		})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list resource records")
@@ -439,7 +446,7 @@ func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string) ([]*route53.R
 
 	for _, recordSet := range recordList.ResourceRecordSets {
 		if strings.TrimRight(*recordSet.Name, ".") == dnsName {
-			recordSets = append(recordSets, recordSet)
+			recordSets = append(recordSets, &recordSet)
 		}
 	}
 
@@ -459,11 +466,11 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
 	if len(zones) == 0 {
 		return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
 	}
-	return parseHostedZoneResourceID(zones[0])
+	return parseHostedZoneResourceID(*zones[0])
 }
 
 // GetHostedZonesWithTag returns R53 hosted zone for a given tag
-func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*route53.HostedZone, error) {
+func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*types.HostedZone, error) {
 	zones, err := a.getHostedZonesWithTag(tag, false)
 	if err != nil {
 		return nil, err
@@ -471,12 +478,12 @@ func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*route53.HostedZone, error) {
 	return zones, nil
 }
 
-func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*route53.HostedZone, error) {
-	var zones []*route53.HostedZone
+func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*types.HostedZone, error) {
+	var zones []*types.HostedZone
 	var next *string
 
 	for {
-		zoneList, err := a.Service().route53.ListHostedZones(&route53.ListHostedZonesInput{Marker: next})
+		zoneList, err := a.Service().route53.ListHostedZones(context.TODO(), &route53.ListHostedZonesInput{Marker: next})
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to list all hosted zones")
 		}
@@ -484,20 +491,22 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*route53.Host
 		for _, zone := range zoneList.HostedZones {
 			id, err := parseHostedZoneResourceID(zone)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse hosted zone ID: %s", zone.String())
+				return nil, errors.Wrapf(err, "failed to parse hosted zone ID: %s", *zone.Name)
 			}
 
-			tagList, err := a.Service().route53.ListTagsForResource(&route53.ListTagsForResourceInput{
-				ResourceId:   aws.String(id),
-				ResourceType: aws.String(hostedZoneResourceType),
-			})
+			tagList, err := a.Service().route53.ListTagsForResource(
+				context.TODO(),
+				&route53.ListTagsForResourceInput{
+					ResourceId:   aws.String(id),
+					ResourceType: hostedZoneResourceType,
+				})
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get tag list for hosted zone")
 			}
 
 			for _, resourceTag := range tagList.ResourceTagSet.Tags {
 				if tag.Compare(resourceTag) {
-					zones = append(zones, zone)
+					zones = append(zones, &zone)
 					break
 				}
 			}
@@ -515,7 +524,7 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*route53.Host
 	return zones, nil
 }
 
-func recordsFromEndpoints(dnsEndpoints []string) ([]*route53.ResourceRecord, error) {
+func recordsFromEndpoints(dnsEndpoints []string) ([]types.ResourceRecord, error) {
 	if len(dnsEndpoints) == 0 {
 		return nil, errors.New("no DNS endpoints provided for route53 creation request")
 	}
@@ -525,9 +534,9 @@ func recordsFromEndpoints(dnsEndpoints []string) ([]*route53.ResourceRecord, err
 		}
 	}
 
-	var resourceRecords []*route53.ResourceRecord
+	var resourceRecords []types.ResourceRecord
 	for _, endpoint := range dnsEndpoints {
-		resourceRecords = append(resourceRecords, &route53.ResourceRecord{
+		resourceRecords = append(resourceRecords, types.ResourceRecord{
 			Value: aws.String(endpoint),
 		})
 	}
@@ -538,14 +547,15 @@ func recordsFromEndpoints(dnsEndpoints []string) ([]*route53.ResourceRecord, err
 func prettyRoute53Response(resp *route53.ChangeResourceRecordSetsOutput) string {
 	prettyResp, err := json.Marshal(resp)
 	if err != nil {
-		return strings.Replace(resp.String(), "\n", " ", -1)
+		return fmt.Sprintf("%v", resp)
+		// return strings.Replace(resp, "\n", " ", -1)
 	}
 
 	return string(prettyResp)
 }
 
 // parseHostedZoneResourceID removes prefix from hosted zone ID.
-func parseHostedZoneResourceID(hostedZone *route53.HostedZone) (string, error) {
+func parseHostedZoneResourceID(hostedZone types.HostedZone) (string, error) {
 	id := strings.TrimLeft(*hostedZone.Id, hostedZonePrefix[0:len(hostedZonePrefix)-1])
 	if len(id) < hostedZoneIDLength {
 		return "", errors.Errorf("invalid hosted zone ID: %s", id)
@@ -560,17 +570,15 @@ type Tag struct {
 }
 
 // Compare a package specific tag with a AWS Route53 resource tag.
-func (t *Tag) Compare(tag *route53.Tag) bool {
-	if tag != nil {
-		if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
-			if tag.Value != nil && len(*tag.Value) > 0 {
-				if *tag.Value == t.Value {
-					return true
-				}
-				return false
+func (t *Tag) Compare(tag types.Tag) bool {
+	if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
+		if tag.Value != nil && len(*tag.Value) > 0 {
+			if *tag.Value == t.Value {
+				return true
 			}
-			return true
+			return false
 		}
+		return true
 	}
 	return false
 }

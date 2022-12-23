@@ -8,9 +8,9 @@
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./rds.go  github.com/mattermost/mattermost-cloud/internal/tools/aws RDSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./s3.go github.com/aws/aws-sdk-go/service/s3/s3iface S3API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./acm.go github.com/mattermost/mattermost-cloud/internal/tools/aws ACMAPI
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./iam.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./route53.go github.com/aws/aws-sdk-go/service/route53/route53iface Route53API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./kms.go github.com/mattermost/mattermost-cloud/internal/tools/aws KMSAPI
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./iam.go github.com/mattermost/mattermost-cloud/internal/tools/aws IAMAPI
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./route53.go github.com/mattermost/mattermost-cloud/internal/tools/aws Route53API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./secrets_manager.go github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface SecretsManagerAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./resource_tagging.go github.com/mattermost/mattermost-cloud/internal/tools/aws ResourceGroupsTaggingAPIAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
