@@ -19,11 +19,10 @@ import (
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/rds"
@@ -143,7 +142,7 @@ type cache struct {
 type Service struct {
 	acm                   ACMAPI
 	ec2                   EC2API
-	iam                   iamiface.IAMAPI
+	iam                   IAMAPI
 	rds                   rdsiface.RDSAPI
 	s3                    s3iface.S3API
 	route53               Route53API
@@ -160,7 +159,7 @@ type Service struct {
 func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
 		acm:                   acm.NewFromConfig(cfg), // v2
-		iam:                   iam.New(sess),
+		iam:                   iam.NewFromConfig(cfg),
 		rds:                   rds.New(sess),
 		s3:                    s3.New(sess),
 		route53:               route53.NewFromConfig(cfg), //v2
@@ -277,8 +276,9 @@ func (c *Client) buildCloudEnvironmentNameCache() error {
 	}
 
 	for _, alias := range accountAliases.AccountAliases {
-		if strings.HasPrefix(*alias, "mattermost-cloud") && len(strings.Split(*alias, "-")) == 3 {
-			envName := strings.Split(*alias, "-")[2]
+		envNameParts := strings.Split(alias, "-")
+		if strings.HasPrefix(alias, "mattermost-cloud") && len(envNameParts) == 3 {
+			envName := envNameParts[2]
 			if len(envName) == 0 {
 				return errors.New("environment name value was empty")
 			}
