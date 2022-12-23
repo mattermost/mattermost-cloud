@@ -161,12 +161,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 	}
 
 	if flags.dryRun {
-		err = printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	cluster, err := client.CreateCluster(request)
@@ -174,8 +169,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		return errors.Wrap(err, "failed to create cluster")
 	}
 
-	err = printJSON(cluster)
-	if err != nil {
+	if err = printJSON(cluster); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 
@@ -212,12 +206,7 @@ func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
 	}
 
 	if flags.dryRun {
-		err := printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	cluster, err := client.ProvisionCluster(flags.cluster, request)
@@ -225,8 +214,7 @@ func executeClusterProvisionCmd(flags clusterProvisionFlags) error {
 		return errors.Wrap(err, "failed to provision cluster")
 	}
 
-	err = printJSON(cluster)
-	if err != nil {
+	if err = printJSON(cluster); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 
@@ -263,12 +251,7 @@ func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
 	}
 
 	if flags.dryRun {
-		err := printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	cluster, err := client.UpdateCluster(flags.cluster, request)
@@ -276,8 +259,7 @@ func executeClusterUpdateCmd(flags clusterUpdateFlags) error {
 		return errors.Wrap(err, "failed to update cluster")
 	}
 
-	err = printJSON(cluster)
-	if err != nil {
+	if err = printJSON(cluster); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 
@@ -325,12 +307,7 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 		request.MaxPodsPerNode = &flags.maxPodsPerNode
 	}
 	if flags.dryRun {
-		err := printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	cluster, err := client.UpgradeCluster(flags.cluster, request)
@@ -338,8 +315,7 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 		return errors.Wrap(err, "failed to upgrade cluster")
 	}
 
-	err = printJSON(cluster)
-	if err != nil {
+	if err = printJSON(cluster); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 
@@ -395,12 +371,7 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 	}
 
 	if flags.dryRun {
-		err = printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	cluster, err := client.ResizeCluster(flags.cluster, request)
@@ -408,8 +379,7 @@ func executeClusterResizeCmd(flags clusterResizeFlags) error {
 		return errors.Wrap(err, "failed to resize cluster")
 	}
 
-	err = printJSON(cluster)
-	if err != nil {
+	if err = printJSON(cluster); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 
@@ -479,8 +449,7 @@ func executeClusterGetCmd(flags clusterGetFlags) error {
 		return nil
 	}
 
-	err = printJSON(cluster)
-	if err != nil {
+	if err = printJSON(cluster); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 	return nil
@@ -543,8 +512,7 @@ func executeClusterListCmd(flags clusterListFlags) error {
 		return nil
 	}
 
-	err = printJSON(clusters)
-	if err != nil {
+	if err = printJSON(clusters); err != nil {
 		return errors.Wrap(err, "failed to print cluster response")
 	}
 
@@ -608,11 +576,7 @@ func newCmdClusterUtilities() *cobra.Command {
 				return err
 			}
 
-			if err := printJSON(metadata); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(metadata)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
