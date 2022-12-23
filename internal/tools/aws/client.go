@@ -19,6 +19,7 @@ import (
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -29,8 +30,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
-	"github.com/aws/aws-sdk-go/service/route53"
-	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -142,13 +141,12 @@ type cache struct {
 
 // Service hold AWS clients for each service.
 type Service struct {
-	acm ACMAPI
-	ec2 EC2API
-	// ec2                   ec2iface.EC2API
+	acm                   ACMAPI
+	ec2                   EC2API
 	iam                   iamiface.IAMAPI
 	rds                   rdsiface.RDSAPI
 	s3                    s3iface.S3API
-	route53               route53iface.Route53API
+	route53               Route53API
 	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
 	kms                   kmsiface.KMSAPI
@@ -165,7 +163,7 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		iam:                   iam.New(sess),
 		rds:                   rds.New(sess),
 		s3:                    s3.New(sess),
-		route53:               route53.New(sess),
+		route53:               route53.NewFromConfig(cfg), //v2
 		secretsManager:        secretsmanager.New(sess),
 		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
 		ec2:                   ec2.NewFromConfig(cfg), // v2
