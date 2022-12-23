@@ -169,11 +169,11 @@ func (a *Client) iamEnsureS3PolicyCreated(awsID, policyARN, bucketName, permitte
 	if err == nil {
 		logger.WithField("iam-policy-name", *getResult.Policy.PolicyName).Debug("AWS IAM policy already created")
 		return getResult.Policy, nil
-	} else {
-		var awsErr *types.NoSuchEntityException
-		if !errors.As(err, &awsErr) {
-			return nil, err
-		}
+	}
+
+	var awsErr *types.NoSuchEntityException
+	if !errors.As(err, &awsErr) {
+		return nil, err
 	}
 
 	// The list condition directory needs a bit of logic to set correctly for
