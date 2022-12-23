@@ -6,6 +6,7 @@ package supervisor_test
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/eks"
@@ -30,6 +31,7 @@ import (
 
 type mockInstallationStore struct {
 	Installation                     *model.Installation
+	Installations                    []*model.Installation
 	UnlockedInstallationsPendingWork []*model.Installation
 
 	Group *model.Group
@@ -63,7 +65,15 @@ func (s *mockInstallationStore) UnlockCluster(clusterID string, lockerID string,
 }
 
 func (s *mockInstallationStore) GetInstallation(installationID string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
-	return s.Installation, nil
+	if s.Installation != nil {
+		return s.Installation, nil
+	}
+	for _, installation := range s.Installations {
+		if installation.ID == installationID {
+			return installation, nil
+		}
+	}
+	return nil, nil
 }
 
 func (s *mockInstallationStore) GetInstallations(installationFilter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error) {
@@ -79,7 +89,9 @@ func (s *mockInstallationStore) GetInstallations(installationFilter *model.Insta
 }
 
 func (s *mockInstallationStore) GetUnlockedInstallationsPendingWork() ([]*model.Installation, error) {
-	return s.UnlockedInstallationsPendingWork, nil
+	installations := make([]*model.Installation, len(s.UnlockedInstallationsPendingWork))
+	copy(installations, s.UnlockedInstallationsPendingWork)
+	return installations, nil
 }
 
 func (s *mockInstallationStore) UpdateInstallation(installation *model.Installation) error {
@@ -123,15 +135,19 @@ func (s *mockInstallationStore) GetClusterInstallation(clusterInstallationID str
 	return nil, nil
 }
 
-func (s *mockInstallationStore) GetClusterInstallations(*model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
+func (s *mockInstallationStore) GetClusterInstallations(filter *model.ClusterInstallationFilter) ([]*model.ClusterInstallation, error) {
+	installation, err := s.GetInstallation(filter.InstallationID, false, false)
+	if installation == nil || err != nil {
+		return nil, err
+	}
 	return []*model.ClusterInstallation{{
 		ID:              model.NewID(),
 		ClusterID:       model.NewID(),
-		InstallationID:  s.Installation.ID,
-		Namespace:       s.Installation.ID,
+		InstallationID:  installation.ID,
+		Namespace:       installation.ID,
 		State:           "stable",
-		CreateAt:        s.Installation.CreateAt,
-		DeleteAt:        s.Installation.DeleteAt,
+		CreateAt:        installation.CreateAt,
+		DeleteAt:        installation.DeleteAt,
 		APISecurityLock: false,
 	},
 	}, nil
@@ -224,8 +240,12 @@ func (s *mockInstallationStore) GetStateChangeEvents(filter *model.StateChangeEv
 }
 
 func (s *mockInstallationStore) GetDNSRecordsForInstallation(installationID string) ([]*model.InstallationDNS, error) {
+	installation, err := s.GetInstallation(installationID, false, false)
+	if installation == nil || err != nil {
+		return nil, err
+	}
 	return []*model.InstallationDNS{
-		{ID: "abcd", DomainName: "dns.example.com", InstallationID: s.Installation.ID},
+		{ID: "abcd", DomainName: "dns.example.com", InstallationID: installation.ID},
 	}, nil
 }
 
@@ -579,10 +599,13 @@ func (a *mockAWS) SecretsManagerValidateExternalDatabaseSecret(name string) erro
 }
 
 type mockEventProducer struct {
-	clusterListByEventOrder []string
+	installationListByEventOrder        []string
+	clusterListByEventOrder             []string
+	clusterInstallationListByEventOrder []string
 }
 
 func (m *mockEventProducer) ProduceInstallationStateChangeEvent(installation *model.Installation, oldState string, extraDataFields ...events.DataField) error {
+	m.installationListByEventOrder = append(m.installationListByEventOrder, installation.ID)
 	return nil
 }
 func (m *mockEventProducer) ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error {
@@ -590,6 +613,7 @@ func (m *mockEventProducer) ProduceClusterStateChangeEvent(cluster *model.Cluste
 	return nil
 }
 func (m *mockEventProducer) ProduceClusterInstallationStateChangeEvent(clusterInstallation *model.ClusterInstallation, oldState string, extraDataFields ...events.DataField) error {
+	m.clusterInstallationListByEventOrder = append(m.clusterInstallationListByEventOrder, clusterInstallation.ID)
 	return nil
 }
 
@@ -635,6 +659,49 @@ func TestInstallationSupervisorDo(t *testing.T) {
 
 		<-mockStore.UnlockChan
 		require.Equal(t, 1, mockStore.UpdateInstallationCalls)
+	})
+
+	t.Run("order of pending works", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+
+		priorityTaskInstallationIDs := map[string]string{
+			model.InstallationStateCreationRequested:            "a",
+			model.InstallationStateCreationNoCompatibleClusters: "b",
+			model.InstallationStateCreationPreProvisioning:      "c",
+			model.InstallationStateCreationInProgress:           "d",
+			model.InstallationStateCreationDNS:                  "e",
+		}
+
+		preferredInstallationOrder := []string{"a", "b", "c", "d", "e"}
+
+		installations := make([]*model.Installation, len(model.AllInstallationStatesPendingWork))
+		for i, state := range model.AllInstallationStatesPendingWork {
+			id := model.NewID()
+			if _, ok := priorityTaskInstallationIDs[state]; ok {
+				id = priorityTaskInstallationIDs[state]
+			}
+			installations[i] = &model.Installation{
+				ID:    id,
+				State: state,
+			}
+		}
+
+		rand.Shuffle(len(installations), func(i, j int) {
+			installations[i], installations[j] = installations[j], installations[i]
+		})
+
+		mockStore := &mockInstallationStore{
+			Installations:                    installations,
+			UnlockedInstallationsPendingWork: installations,
+		}
+
+		mockEventProducer := &mockEventProducer{}
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
+		err := supervisor.Do()
+		require.NoError(t, err)
+
+		installationListByWorkOrder := mockEventProducer.installationListByEventOrder
+		require.Equal(t, preferredInstallationOrder, installationListByWorkOrder[:len(preferredInstallationOrder)])
 	})
 }
 

@@ -6,6 +6,7 @@ package supervisor
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -233,6 +234,12 @@ func (s *InstallationSupervisor) Do() error {
 		s.logger.WithError(err).Warn("Failed to query for installation pending work")
 		return nil
 	}
+
+	// Sort the installation by state preference. Relative order is preserved.
+	sort.SliceStable(installations, func(i, j int) bool {
+		return model.InstallationStateWorkPriority[installations[i].State] >
+			model.InstallationStateWorkPriority[installations[j].State]
+	})
 
 	for _, installation := range installations {
 		s.Supervise(installation)

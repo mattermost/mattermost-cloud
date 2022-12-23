@@ -10,261 +10,329 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	securityCmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+func newCmdSecurity() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "security",
+		Short: "Manage security locks for different cloud resources.",
+	}
 
-	securityClusterCmd.PersistentFlags().String("cluster", "", "The id of the cluster.")
-	securityClusterCmd.MarkPersistentFlagRequired("cluster")
+	setSecurityFlags(cmd)
 
-	securityInstallationCmd.PersistentFlags().String("installation", "", "The id of the installation.")
-	securityInstallationCmd.MarkPersistentFlagRequired("installation")
+	cmd.AddCommand(newCmdSecurityCluster())
+	cmd.AddCommand(newCmdSecurityInstallation())
+	cmd.AddCommand(newCmdSecurityClusterInstallation())
+	cmd.AddCommand(newCmdSecurityGroup())
+	cmd.AddCommand(newCmdSecurityBackup())
 
-	securityClusterInstallationCmd.PersistentFlags().String("cluster-installation", "", "The id of the cluster installation.")
-	securityClusterInstallationCmd.MarkPersistentFlagRequired("cluster-installation")
-
-	securityGroupCmd.PersistentFlags().String("group", "", "The id of the group.")
-	securityGroupCmd.MarkPersistentFlagRequired("group")
-
-	securityBackupCmd.PersistentFlags().String("backup", "", "The id of the backup.")
-	securityBackupCmd.MarkPersistentFlagRequired("backup")
-
-	securityCmd.AddCommand(securityClusterCmd)
-	securityClusterCmd.AddCommand(securityClusterLockAPICmd)
-	securityClusterCmd.AddCommand(securityClusterUnlockAPICmd)
-
-	securityCmd.AddCommand(securityInstallationCmd)
-	securityInstallationCmd.AddCommand(securityInstallationLockAPICmd)
-	securityInstallationCmd.AddCommand(securityInstallationUnlockAPICmd)
-
-	securityCmd.AddCommand(securityClusterInstallationCmd)
-	securityClusterInstallationCmd.AddCommand(securityClusterInstallationLockAPICmd)
-	securityClusterInstallationCmd.AddCommand(securityClusterInstallationUnlockAPICmd)
-
-	securityCmd.AddCommand(securityGroupCmd)
-	securityGroupCmd.AddCommand(securityGroupLockAPICmd)
-	securityGroupCmd.AddCommand(securityGroupUnlockAPICmd)
-
-	securityCmd.AddCommand(securityBackupCmd)
-	securityBackupCmd.AddCommand(securityBackupLockAPICmd)
-	securityBackupCmd.AddCommand(securityBackupUnlockAPICmd)
+	return cmd
 }
 
-var securityCmd = &cobra.Command{
-	Use:   "security",
-	Short: "Manage security locks for different cloud resources.",
+func newCmdSecurityCluster() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "cluster",
+		Short: "Manage security locks for cluster resources.",
+	}
+
+	setSecurityClusterFlags(cmd)
+
+	cmd.AddCommand(newCmdSecurityClusterLock())
+	cmd.AddCommand(newCmdSecurityClusterUnlock())
+
+	return cmd
 }
 
-var securityClusterCmd = &cobra.Command{
-	Use:   "cluster",
-	Short: "Manage security locks for cluster resources.",
+func newCmdSecurityClusterLock() *cobra.Command {
+
+	var flags securityClusterFlags
+
+	cmd := &cobra.Command{
+		Use:   "api-lock",
+		Short: "Lock API changes on a given cluster",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.LockAPIForCluster(flags.clusterID); err != nil {
+				return errors.Wrap(err, "failed to lock cluster API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
 }
 
-var securityClusterLockAPICmd = &cobra.Command{
-	Use:   "api-lock",
-	Short: "Lock API changes on a given cluster",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityClusterUnlock() *cobra.Command {
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	var flags securityClusterFlags
 
-		clusterID, _ := command.Flags().GetString("cluster")
-		err := client.LockAPIForCluster(clusterID)
-		if err != nil {
-			return errors.Wrap(err, "failed to lock cluster API")
-		}
+	cmd := &cobra.Command{
+		Use:   "api-unlock",
+		Short: "Unlock API changes on a given cluster",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.UnlockAPIForCluster(flags.clusterID); err != nil {
+				return errors.Wrap(err, "failed to unlock cluster API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
 
-		return nil
-	},
+	return cmd
 }
 
-var securityClusterUnlockAPICmd = &cobra.Command{
-	Use:   "api-unlock",
-	Short: "Unlock API changes on a given cluster",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityInstallation() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "installation",
+		Short: "Manage security locks for installation resources.",
+	}
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	setSecurityInstallationFlags(cmd)
 
-		clusterID, _ := command.Flags().GetString("cluster")
-		err := client.UnlockAPIForCluster(clusterID)
-		if err != nil {
-			return errors.Wrap(err, "failed to unlock cluster API")
-		}
+	cmd.AddCommand(newCmdSecurityInstallationLock())
+	cmd.AddCommand(newCmdSecurityInstallationUnlock())
 
-		return nil
-	},
+	return cmd
 }
 
-var securityInstallationCmd = &cobra.Command{
-	Use:   "installation",
-	Short: "Manage security locks for installation resources.",
+func newCmdSecurityInstallationLock() *cobra.Command {
+
+	var flags securityInstallationFlags
+
+	cmd := &cobra.Command{
+		Use:   "api-lock",
+		Short: "Lock API changes on a given installation",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.LockAPIForInstallation(flags.installationID); err != nil {
+				return errors.Wrap(err, "failed to lock installation API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
 }
 
-var securityInstallationLockAPICmd = &cobra.Command{
-	Use:   "api-lock",
-	Short: "Lock API changes on a given installation",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityInstallationUnlock() *cobra.Command {
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	var flags securityInstallationFlags
 
-		installationID, _ := command.Flags().GetString("installation")
-		err := client.LockAPIForInstallation(installationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to lock installation API")
-		}
+	cmd := &cobra.Command{
+		Use:   "api-unlock",
+		Short: "Unlock API changes on a given installation",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.UnlockAPIForInstallation(flags.installationID); err != nil {
+				return errors.Wrap(err, "failed to unlock installation API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
 
-		return nil
-	},
+	return cmd
 }
 
-var securityInstallationUnlockAPICmd = &cobra.Command{
-	Use:   "api-unlock",
-	Short: "Unlock API changes on a given installation",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityClusterInstallation() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "cluster-installation",
+		Short: "Manage security locks for cluster installation resources.",
+	}
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	setSecurityClusterInstallationFlags(cmd)
 
-		installationID, _ := command.Flags().GetString("installation")
-		err := client.UnlockAPIForInstallation(installationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to unlock installation API")
-		}
+	cmd.AddCommand(newCmdSecurityClusterInstallationLock())
+	cmd.AddCommand(newCmdSecurityClusterInstallationUnlock())
 
-		return nil
-	},
+	return cmd
 }
 
-var securityClusterInstallationCmd = &cobra.Command{
-	Use:   "cluster-installation",
-	Short: "Manage security locks for cluster installation resources.",
+func newCmdSecurityClusterInstallationLock() *cobra.Command {
+
+	var flags securityClusterInstallationFlags
+
+	cmd := &cobra.Command{
+		Use:   "api-lock",
+		Short: "Lock API changes on a given cluster installation",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.LockAPIForClusterInstallation(flags.clusterInstallationID); err != nil {
+				return errors.Wrap(err, "failed to lock cluster installation API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
 }
 
-var securityClusterInstallationLockAPICmd = &cobra.Command{
-	Use:   "api-lock",
-	Short: "Lock API changes on a given cluster installation",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	var flags securityClusterInstallationFlags
 
-		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
-		err := client.LockAPIForClusterInstallation(clusterInstallationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to lock cluster installation API")
-		}
+	cmd := &cobra.Command{
+		Use:   "api-unlock",
+		Short: "Unlock API changes on a given cluster installation",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.UnlockAPIForClusterInstallation(flags.clusterInstallationID); err != nil {
+				return errors.Wrap(err, "failed to unlock cluster installation API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
 
-		return nil
-	},
+	return cmd
 }
 
-var securityClusterInstallationUnlockAPICmd = &cobra.Command{
-	Use:   "api-unlock",
-	Short: "Unlock API changes on a given cluster installation",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityGroup() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "group",
+		Short: "Manage security locks for group resources.",
+	}
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	setSecurityGroupFlags(cmd)
 
-		clusterInstallationID, _ := command.Flags().GetString("cluster-installation")
-		err := client.UnlockAPIForClusterInstallation(clusterInstallationID)
-		if err != nil {
-			return errors.Wrap(err, "failed to unlock cluster installation API")
-		}
+	cmd.AddCommand(newCmdSecurityGroupLock())
+	cmd.AddCommand(newCmdSecurityGroupUnlock())
 
-		return nil
-	},
+	return cmd
 }
 
-var securityGroupCmd = &cobra.Command{
-	Use:   "group",
-	Short: "Manage security locks for group resources.",
+func newCmdSecurityGroupLock() *cobra.Command {
+
+	var flags securityGroupFlags
+
+	cmd := &cobra.Command{
+		Use:   "api-lock",
+		Short: "Lock API changes on a given group",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.LockAPIForGroup(flags.groupID); err != nil {
+				return errors.Wrap(err, "failed to lock group API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
 }
 
-var securityGroupLockAPICmd = &cobra.Command{
-	Use:   "api-lock",
-	Short: "Lock API changes on a given group",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityGroupUnlock() *cobra.Command {
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	var flags securityGroupFlags
 
-		groupID, _ := command.Flags().GetString("group")
-		err := client.LockAPIForGroup(groupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to lock group API")
-		}
+	cmd := &cobra.Command{
+		Use:   "api-unlock",
+		Short: "Unlock API changes on a given group",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.UnlockAPIForGroup(flags.groupID); err != nil {
+				return errors.Wrap(err, "failed to unlock group API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
 
-		return nil
-	},
+	return cmd
 }
 
-var securityGroupUnlockAPICmd = &cobra.Command{
-	Use:   "api-unlock",
-	Short: "Unlock API changes on a given group",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityBackup() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "backup",
+		Short: "Manage security locks for backup resources.",
+	}
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	setSecurityBackupFlags(cmd)
 
-		groupID, _ := command.Flags().GetString("group")
-		err := client.UnlockAPIForGroup(groupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to unlock group API")
-		}
+	cmd.AddCommand(newCmdSecurityBackupLock())
+	cmd.AddCommand(newCmdSecurityBackupUnlock())
 
-		return nil
-	},
+	return cmd
 }
 
-var securityBackupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Manage security locks for backup resources.",
+func newCmdSecurityBackupLock() *cobra.Command {
+
+	var flags securityBackupFlags
+
+	cmd := &cobra.Command{
+		Use:   "api-lock",
+		Short: "Lock API changes on a given backup",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.LockAPIForBackup(flags.backupID); err != nil {
+				return errors.Wrap(err, "failed to lock backup API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
 }
 
-var securityBackupLockAPICmd = &cobra.Command{
-	Use:   "api-lock",
-	Short: "Lock API changes on a given backup",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
+func newCmdSecurityBackupUnlock() *cobra.Command {
 
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
+	var flags securityBackupFlags
 
-		backupID, _ := command.Flags().GetString("backup")
-		err := client.LockAPIForBackup(backupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to lock backup API")
-		}
+	cmd := &cobra.Command{
+		Use:   "api-unlock",
+		Short: "Unlock API changes on a given backup",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+			if err := client.UnlockAPIForBackup(flags.backupID); err != nil {
+				return errors.Wrap(err, "failed to unlock backup API")
+			}
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
 
-		return nil
-	},
-}
-
-var securityBackupUnlockAPICmd = &cobra.Command{
-	Use:   "api-unlock",
-	Short: "Unlock API changes on a given backup",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-
-		serverAddress, _ := command.Flags().GetString("server")
-		client := model.NewClient(serverAddress)
-
-		backupID, _ := command.Flags().GetString("backup")
-		err := client.UnlockAPIForBackup(backupID)
-		if err != nil {
-			return errors.Wrap(err, "failed to unlock backup API")
-		}
-
-		return nil
-	},
+	return cmd
 }
