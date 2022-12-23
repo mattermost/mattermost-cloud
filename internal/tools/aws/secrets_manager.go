@@ -84,7 +84,7 @@ func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (strin
 
 	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName, a.logger)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal secret payload")
+		return "", errors.Wrap(err, "failed to get secret")
 	}
 
 	return secret.MasterPassword, nil
@@ -221,7 +221,7 @@ func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger
 	var rdsSecret *RDSSecret
 	err = json.Unmarshal([]byte(*result.SecretString), &rdsSecret)
 	if err != nil {
-		return rdsSecret, errors.Wrap(err, "unable to marshal secrets manager secret payload")
+		return nil, errors.Wrap(err, "unable to unmarshal secrets manager secret payload")
 	}
 
 	err = rdsSecret.Validate()

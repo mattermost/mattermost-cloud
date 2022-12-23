@@ -399,30 +399,30 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated
 	authUserSecretName := PGBouncerAuthUserSecretName(*VpcID)
 
 	secret, err := d.client.secretsManagerGetRDSSecret(authUserSecretName, d.client.logger)
-	var awsErr *smTypes.ResourceNotFoundException
-	if err != nil && !errors.As(err, &awsErr) {
-		return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
-	}
-
-	if secret != nil && err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal pgbouncer auth user secret %s", authUserSecretName)
-	}
-
-	description := RDSMultitenantPGBouncerClusterSecretDescription(*VpcID)
-	tags := []smTypes.Tag{
-		{
-			Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
-			Value: rdsClusterID,
-		},
-		{
-			Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
-			Value: VpcID,
-		},
-	}
-
-	secret, err = createDatabaseUserSecret(authUserSecretName, DefaultPGBouncerAuthUsername, description, tags, d.client)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", authUserSecretName)
+		var awsErr *smTypes.ResourceNotFoundException
+		if !errors.As(err, &awsErr) {
+			return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
+		}
+	}
+
+	if secret == nil {
+		description := RDSMultitenantPGBouncerClusterSecretDescription(*VpcID)
+		tags := []smTypes.Tag{
+			{
+				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
+				Value: rdsClusterID,
+			},
+			{
+				Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
+				Value: VpcID,
+			},
+		}
+
+		secret, err = createDatabaseUserSecret(authUserSecretName, DefaultPGBouncerAuthUsername, description, tags, d.client)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", authUserSecretName)
+		}
 	}
 
 	return secret, nil
