@@ -10,14 +10,17 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/store"
 )
 
-func init() {
-	schemaCmd.AddCommand(schemaMigrateCmd)
-	schemaCmd.PersistentFlags().String("database", "sqlite://cloud.db", "The database backing the provisioning server.")
-}
+func newCmdSchema() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "schema",
+		Short: "Manipulate the schema used by the provisioning server.",
+	}
 
-var schemaCmd = &cobra.Command{
-	Use:   "schema",
-	Short: "Manipulate the schema used by the provisioning server.",
+	setSchemaFlags(cmd)
+
+	cmd.AddCommand(newCmdSchemaMigrate())
+
+	return cmd
 }
 
 func sqlStore(database string) (*store.SQLStore, error) {
@@ -29,17 +32,26 @@ func sqlStore(database string) (*store.SQLStore, error) {
 	return sqlStore, nil
 }
 
-var schemaMigrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Migrate the schema to the latest supported version.",
-	RunE: func(command *cobra.Command, args []string) error {
-		command.SilenceUsage = true
-		database, _ := command.Flags().GetString("database")
-		sqlStore, err := sqlStore(database)
-		if err != nil {
-			return err
-		}
+func newCmdSchemaMigrate() *cobra.Command {
+	var flags schemaFlag
+	cmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Migrate the schema to the latest supported version.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			sqlStore, err := sqlStore(flags.database)
+			if err != nil {
+				return err
+			}
 
-		return sqlStore.Migrate()
-	},
+			return sqlStore.Migrate()
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+			return
+		},
+	}
+
+	return cmd
+
 }
