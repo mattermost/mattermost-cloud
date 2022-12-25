@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
@@ -33,8 +34,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -150,7 +149,7 @@ type Service struct {
 	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
 	kms                   kmsiface.KMSAPI
 	dynamodb              DynamoDBAPI
-	sts                   stsiface.STSAPI
+	sts                   STSAPI
 	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
 	eks                   eksiface.EKSAPI
 }
@@ -168,7 +167,7 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		ec2:                   ec2.NewFromConfig(cfg), // v2
 		kms:                   kms.New(sess),
 		dynamodb:              dynamodb.NewFromConfig(cfg), // v2
-		sts:                   sts.New(sess),
+		sts:                   sts.NewFromConfig(cfg),      // v2
 		appAutoscaling:        applicationautoscaling.New(sess),
 		eks:                   eks.New(sess),
 	}
