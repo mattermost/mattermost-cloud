@@ -13,9 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
-
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -150,7 +147,6 @@ type Service struct {
 	kms                   kmsiface.KMSAPI
 	dynamodb              DynamoDBAPI
 	sts                   STSAPI
-	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
 	eks                   eksiface.EKSAPI
 }
 
@@ -168,7 +164,6 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		kms:                   kms.New(sess),
 		dynamodb:              dynamodb.NewFromConfig(cfg), // v2
 		sts:                   sts.NewFromConfig(cfg),      // v2
-		appAutoscaling:        applicationautoscaling.New(sess),
 		eks:                   eks.New(sess),
 	}
 }
