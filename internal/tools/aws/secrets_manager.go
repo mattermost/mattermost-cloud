@@ -5,13 +5,14 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	iamTypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -58,16 +59,16 @@ func (s *RDSSecret) Validate() error {
 
 // SecretsManagerRestoreSecret restores a deleted secret.
 func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.FieldLogger) error {
-	_, err := a.Service().secretsManager.RestoreSecret(&secretsmanager.RestoreSecretInput{
-		SecretId: aws.String(secretName),
-	})
+	_, err := a.Service().secretsManager.RestoreSecret(
+		context.TODO(),
+		&secretsmanager.RestoreSecretInput{
+			SecretId: aws.String(secretName),
+		})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
-				logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming fully deleted")
-
-				return nil
-			}
+		var awsErr *types.ResourceNotFoundException
+		if errors.As(err, &awsErr) {
+			logger.WithField("secret-name", secretName).Warn("Secret Manager secret could not be found; assuming fully deleted")
+			return nil
 		}
 		return err
 	}
@@ -81,15 +82,9 @@ func (a *Client) SecretsManagerRestoreSecret(secretName string, logger log.Field
 func (a *Client) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
 	authUserSecretName := PGBouncerAuthUserSecretName(vpcID)
 
-	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(PGBouncerAuthUserSecretName(vpcID)),
-	})
+	secret, err := a.secretsManagerGetRDSSecret(authUserSecretName, a.logger)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
-	}
-	secret, err := unmarshalSecretPayload(*result.SecretString)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal secret payload")
+		return "", errors.Wrap(err, "failed to get secret")
 	}
 
 	return secret.MasterPassword, nil
@@ -111,11 +106,13 @@ func (a *Client) secretsManagerEnsureIAMAccessKeySecretCreated(awsID string, ak 
 	}
 
 	secretName := IAMSecretName(awsID)
-	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
-		Name:         aws.String(secretName),
-		Description:  aws.String(fmt.Sprintf("IAM access key for user %s", awsID)),
-		SecretString: aws.String(string(b)),
-	})
+	_, err = a.Service().secretsManager.CreateSecret(
+		context.TODO(),
+		&secretsmanager.CreateSecretInput{
+			Name:         aws.String(secretName),
+			Description:  aws.String(fmt.Sprintf("IAM access key for user %s", awsID)),
+			SecretString: aws.String(string(b)),
+		})
 	if err != nil {
 		return errors.Wrap(err, "unable to create secrets manager secret")
 	}
@@ -128,9 +125,11 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 	rdsSecretPayload := &RDSSecret{}
 
 	// Check if we already have an RDS secret for this installation.
-	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretName),
-	})
+	result, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(secretName),
+		})
 	if err == nil {
 		logger.WithField("secret-name", secretName).Debug("AWS RDS secret already created")
 
@@ -161,11 +160,13 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
 	}
 
-	_, err = a.Service().secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
-		Name:         aws.String(secretName),
-		Description:  aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
-		SecretString: aws.String(string(b)),
-	})
+	_, err = a.Service().secretsManager.CreateSecret(
+		context.TODO(),
+		&secretsmanager.CreateSecretInput{
+			Name:         aws.String(secretName),
+			Description:  aws.String(fmt.Sprintf("RDS configuration for %s", awsID)),
+			SecretString: aws.String(string(b)),
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create secrets manager secret")
 	}
@@ -183,9 +184,11 @@ func (a *Client) secretsManagerGetIAMAccessKey(awsID string) (*IAMAccessKey, err
 // secretsManagerGetIAMAccessKeyFromSecretName attempts to parse a secret into
 // and IAMAccessKey.
 func (a *Client) secretsManagerGetIAMAccessKeyFromSecretName(secretName string) (*IAMAccessKey, error) {
-	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretName),
-	})
+	result, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(secretName),
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get secrets manager secret")
 	}
@@ -206,9 +209,11 @@ func (a *Client) secretsManagerGetIAMAccessKeyFromSecretName(secretName string) 
 
 func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
 	secretName := RDSSecretName(awsID)
-	result, err := a.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(secretName),
-	})
+	result, err := a.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(secretName),
+		})
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get secrets manager secret")
 	}
@@ -216,7 +221,7 @@ func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger
 	var rdsSecret *RDSSecret
 	err = json.Unmarshal([]byte(*result.SecretString), &rdsSecret)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
+		return nil, errors.Wrap(err, "unable to unmarshal secrets manager secret payload")
 	}
 
 	err = rdsSecret.Validate()
@@ -236,36 +241,24 @@ func (a *Client) secretsManagerEnsureRDSSecretDeleted(awsID string, logger log.F
 }
 
 func (a *Client) secretsManagerEnsureSecretDeleted(secretName string, force bool, logger log.FieldLogger) error {
-	response, err := a.Service().secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
-		SecretId:                   aws.String(secretName),
-		RecoveryWindowInDays:       aws.Int64(defaultSecretManagerDeletionDays),
-		ForceDeleteWithoutRecovery: aws.Bool(force),
-	})
+	response, err := a.Service().secretsManager.DeleteSecret(
+		context.TODO(),
+		&secretsmanager.DeleteSecretInput{
+			SecretId:                   aws.String(secretName),
+			RecoveryWindowInDays:       aws.Int64(defaultSecretManagerDeletionDays),
+			ForceDeleteWithoutRecovery: aws.Bool(force),
+		})
+
 	if err != nil {
-		if IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+		var awsErr *types.ResourceNotFoundException
+		if errors.As(err, &awsErr) {
 			logger.WithField("secret-name", secretName).Warn("Secret Manager secret not found; assuming already deleted")
 			return nil
 		}
-
 		return errors.Wrap(err, "failed to delete secret")
 	}
 
 	logger.WithField("secret-name", secretName).Debugf("Secret Manager secret scheduled for deletion on %s", response.DeletionDate)
 
 	return nil
-}
-
-func unmarshalSecretPayload(payload string) (*RDSSecret, error) {
-	var secret RDSSecret
-	err := json.Unmarshal([]byte(payload), &secret)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
-	}
-
-	err = secret.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return &secret, nil
 }

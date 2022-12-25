@@ -12,11 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	smTypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/rds"
 	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -352,9 +353,11 @@ func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID strin
 
 	logger.Infof("Provisioning PGBouncer database %s", rdsID)
 
-	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: rdsCluster.DBClusterIdentifier,
-	})
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: rdsCluster.DBClusterIdentifier,
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
@@ -395,22 +398,17 @@ func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID strin
 func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated(rdsClusterID, VpcID *string) (*RDSSecret, error) {
 	authUserSecretName := PGBouncerAuthUserSecretName(*VpcID)
 
-	secretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(authUserSecretName),
-	})
-	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
-		return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
+	secret, err := d.client.secretsManagerGetRDSSecret(authUserSecretName, d.client.logger)
+	if err != nil {
+		var awsErr *smTypes.ResourceNotFoundException
+		if !errors.As(err, &awsErr) {
+			return nil, errors.Wrapf(err, "failed to get pgbouncer auth user secret %s", authUserSecretName)
+		}
 	}
 
-	var secret *RDSSecret
-	if secretValue != nil && secretValue.SecretString != nil {
-		secret, err = unmarshalSecretPayload(*secretValue.SecretString)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal pgbouncer auth user secret %s", authUserSecretName)
-		}
-	} else {
+	if secret == nil {
 		description := RDSMultitenantPGBouncerClusterSecretDescription(*VpcID)
-		tags := []*secretsmanager.Tag{
+		tags := []smTypes.Tag{
 			{
 				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
 				Value: rdsClusterID,
@@ -433,9 +431,11 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated
 func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
-	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: rdsCluster.DBClusterIdentifier,
-	})
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: rdsCluster.DBClusterIdentifier,
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
@@ -460,9 +460,11 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseNa
 func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
-	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: rdsCluster.DBClusterIdentifier,
-	})
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: rdsCluster.DBClusterIdentifier,
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
@@ -670,41 +672,36 @@ func (d *RDSMultitenantPGBouncerDatabase) connectRDSCluster(database, endpoint, 
 func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClusterID, vpcID *string) (*RDSSecret, error) {
 	installationSecretName := RDSMultitenantPGBouncerSecretName(d.installationID)
 
-	installationSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(installationSecretName),
-	})
-	if err != nil && !IsErrorCode(err, secretsmanager.ErrCodeResourceNotFoundException) {
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
+	var awsErr *smTypes.ResourceNotFoundException
+	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
 
-	var installationSecret *RDSSecret
-	if installationSecretValue != nil && installationSecretValue.SecretString != nil {
-		installationSecret, err = unmarshalSecretPayload(*installationSecretValue.SecretString)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
-		}
-	} else {
-		description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
-		tags := []*secretsmanager.Tag{
-			{
-				Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
-				Value: rdsClusterID,
-			},
-			{
-				Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
-				Value: vpcID,
-			},
-			{
-				Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
-				Value: aws.String(d.installationID),
-			},
-		}
+	if installationSecret != nil && err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
+	}
 
-		username := MattermostPGBouncerDatabaseUsername(d.installationID)
-		installationSecret, err = createDatabaseUserSecret(installationSecretName, username, description, tags, d.client)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", installationSecretName)
-		}
+	description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)
+	tags := []smTypes.Tag{
+		{
+			Key:   aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
+			Value: rdsClusterID,
+		},
+		{
+			Key:   aws.String(trimTagPrefix(VpcIDTagKey)),
+			Value: vpcID,
+		},
+		{
+			Key:   aws.String(trimTagPrefix(DefaultMattermostInstallationIDTagKey)),
+			Value: aws.String(d.installationID),
+		},
+	}
+
+	username := MattermostPGBouncerDatabaseUsername(d.installationID)
+	installationSecret, err = createDatabaseUserSecret(installationSecretName, username, description, tags, d.client)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create a multitenant RDS database secret %s", installationSecretName)
 	}
 
 	return installationSecret, nil
@@ -744,16 +741,9 @@ func (d *RDSMultitenantPGBouncerDatabase) GenerateDatabaseSecret(store model.Ins
 
 	installationSecretName := RDSMultitenantPGBouncerSecretName(d.installationID)
 
-	result, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: &installationSecretName,
-	})
+	installationSecret, err := d.client.secretsManagerGetRDSSecret(installationSecretName, d.client.logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get secret value for database")
-	}
-
-	installationSecret, err := unmarshalSecretPayload(*result.SecretString)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal secret payload")
+		return nil, errors.Wrap(err, "failed to get secret value for installation")
 	}
 
 	databaseConnectionString, databaseReadReplicasString, databaseConnectionCheck :=
@@ -844,9 +834,11 @@ func (d *RDSMultitenantPGBouncerDatabase) removeInstallationPGBouncerResources(d
 }
 
 func (d *RDSMultitenantPGBouncerDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoint, databaseName, installationUsername string, logger log.FieldLogger) error {
-	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(rdsClusterID),
-	})
+	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
+		context.TODO(),
+		&secretsmanager.GetSecretValueInput{
+			SecretId: aws.String(rdsClusterID),
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to get master secret by ID %s", rdsClusterID)
 	}
