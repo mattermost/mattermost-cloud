@@ -20,6 +20,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.6
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.16.10
 	github.com/aws/aws-sdk-go-v2/service/sts v1.17.7
+	github.com/aws/smithy-go v1.13.5
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cloudflare/cloudflare-go v0.54.0
 	github.com/go-sql-driver/mysql v1.6.0
@@ -71,7 +72,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.21 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.11 // indirect
-	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/banzaicloud/k8s-objectmatcher v1.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

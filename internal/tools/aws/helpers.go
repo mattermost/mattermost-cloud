@@ -13,7 +13,6 @@ import (
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -72,65 +71,6 @@ func RDSReplicaInstanceID(installationID string, id int) string {
 // RDSMigrationInstanceID formats the name used for migrated RDS database instances.
 func RDSMigrationInstanceID(installationID string) string {
 	return fmt.Sprintf("%s-migration", CloudID(installationID))
-}
-
-// IsErrorCode asserts that an AWS error has a certain code.
-func IsErrorCode(err error, code string) bool {
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if ok {
-			return awsErr.Code() == code
-		}
-	}
-	return false
-}
-
-// IsErrorResourceNotFound asserts that an AWS error is
-// ResourceNotFoundException.
-func IsErrorResourceNotFound(err error) bool {
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if ok {
-			return awsErr.Code() == "ResourceNotFoundException"
-		}
-	}
-	return false
-}
-
-// IsErrorPermissionNotFound asserts that an AWS error is
-// InvalidPermission.NotFound.
-func IsErrorPermissionNotFound(err error) bool {
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if ok {
-			return awsErr.Code() == "InvalidPermission.NotFound"
-		}
-	}
-	return false
-}
-
-// IsErrorPermissionDuplicate asserts that an AWS error is
-// InvalidPermission.Duplicate.
-func IsErrorPermissionDuplicate(err error) bool {
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if ok {
-			return awsErr.Code() == "InvalidPermission.Duplicate"
-		}
-	}
-	return false
-}
-
-// IsErrorResourceInUseException asserts that an AWS error is
-// ResourceInUseException.
-func IsErrorResourceInUseException(err error) bool {
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if ok {
-			return awsErr.Code() == "ResourceInUseException"
-		}
-	}
-	return false
 }
 
 // RDSMultitenantSecretName formats the name of a secret used in a multitenant RDS database.
