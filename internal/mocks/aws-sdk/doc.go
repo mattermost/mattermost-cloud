@@ -6,7 +6,7 @@
 //
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./ec2.go github.com/mattermost/mattermost-cloud/internal/tools/aws EC2API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./rds.go github.com/aws/aws-sdk-go/service/rds/rdsiface RDSAPI
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./s3.go github.com/aws/aws-sdk-go/service/s3/s3iface S3API
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./s3.go github.com/mattermost/mattermost-cloud/internal/tools/aws S3API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./acm.go github.com/mattermost/mattermost-cloud/internal/tools/aws ACMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./iam.go github.com/mattermost/mattermost-cloud/internal/tools/aws IAMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./route53.go github.com/mattermost/mattermost-cloud/internal/tools/aws Route53API

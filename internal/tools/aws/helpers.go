@@ -5,13 +5,15 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
@@ -222,14 +224,16 @@ func getMultitenantBucketNameForCluster(clusterID string, client *Client) (strin
 func getMultitenantBucketNameForVPC(vpcID string, client *Client) (string, error) {
 	bucketName := MattermostMultitenantS3Name(client.GetCloudEnvironmentName(), vpcID)
 
-	tags, err := client.Service().s3.GetBucketTagging(&s3.GetBucketTaggingInput{
-		Bucket: aws.String(bucketName),
-	})
-	if aerr, ok := err.(awserr.Error); ok {
-		if aerr.Code() == s3.ErrCodeNoSuchBucket {
+	tags, err := client.Service().s3.GetBucketTagging(
+		context.TODO(),
+		&s3.GetBucketTaggingInput{
+			Bucket: aws.String(bucketName),
+		})
+	if err != nil {
+		var awsErr *s3Types.NoSuchBucket
+		if errors.As(err, &awsErr) {
 			return "", errors.Wrapf(err, "failed to find bucket %s", bucketName)
 		}
-	} else if err != nil {
 		return "", errors.Wrap(err, "failed to get bucket tags")
 	}
 
@@ -313,7 +317,7 @@ func getVPCForCluster(clusterID string, client *Client) (*ec2Types.Vpc, error) {
 	return &vpcs[0], nil
 }
 
-func ensureTagInTagset(key, value string, tags []*s3.Tag) bool {
+func ensureTagInTagset(key, value string, tags []s3Types.Tag) bool {
 	for _, tag := range tags {
 		if *tag.Key == key && *tag.Value == value {
 			return true
