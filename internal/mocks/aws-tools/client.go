@@ -8,7 +8,7 @@
 package mockawstools
 
 import (
-	eks "github.com/aws/aws-sdk-go/service/eks"
+	types "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	model "github.com/mattermost/mattermost-cloud/model"
@@ -543,10 +543,10 @@ func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, log
 }
 
 // EnsureEKSCluster mocks base method
-func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
+func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*types.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSCluster", cluster, resources, eksMetadata)
-	ret0, _ := ret[0].(*eks.Cluster)
+	ret0, _ := ret[0].(*types.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -558,10 +558,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources, eksMetadata 
 }
 
 // EnsureEKSClusterNodeGroups mocks base method
-func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
+func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*types.Nodegroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSClusterNodeGroups", cluster, resources, eksMetadata)
-	ret0, _ := ret[0].([]*eks.Nodegroup)
+	ret0, _ := ret[0].([]*types.Nodegroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -573,10 +573,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterNodeGroups(cluster, resources, ek
 }
 
 // GetEKSCluster mocks base method
-func (m *MockAWS) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
+func (m *MockAWS) GetEKSCluster(clusterName string) (*types.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEKSCluster", clusterName)
-	ret0, _ := ret[0].(*eks.Cluster)
+	ret0, _ := ret[0].(*types.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
