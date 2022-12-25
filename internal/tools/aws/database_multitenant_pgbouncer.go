@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/rds/types"
+	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	smTypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/rds"
-	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -220,30 +221,30 @@ func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTag
 	databaseType := d.DatabaseTypeTagValue()
 
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []*gt.TagFilter{
+		TagFilters: []gtTypes.TagFilter{
 			{
 				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
-				Values: []*string{aws.String(RDSMultitenantPurposeTagValueProvisioning)},
+				Values: []string{RDSMultitenantPurposeTagValueProvisioning},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
-				Values: []*string{aws.String(RDSMultitenantOwnerTagValueCloudTeam)},
+				Values: []string{RDSMultitenantOwnerTagValueCloudTeam},
 			},
 			{
 				Key:    aws.String(DefaultAWSTerraformProvisionedKey),
-				Values: []*string{aws.String(DefaultAWSTerraformProvisionedValueTrue)},
+				Values: []string{DefaultAWSTerraformProvisionedValueTrue},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
-				Values: []*string{aws.String(DefaultRDSMultitenantDatabaseDBProxyTypeTagValue)},
+				Values: []string{DefaultRDSMultitenantDatabaseDBProxyTypeTagValue},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
-				Values: []*string{&vpcID},
+				Values: []string{vpcID},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-				Values: []*string{&databaseType},
+				Values: []string{databaseType},
 			},
 			{
 				Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
@@ -252,7 +253,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTag
 				Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
 			},
 		},
-		ResourceTypeFilters: []*string{aws.String(DefaultResourceTypeClusterRDS)},
+		ResourceTypeFilters: []string{DefaultResourceTypeClusterRDS},
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get available multitenant RDS resources")
@@ -348,7 +349,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getAndLockAssignedProxiedDatabase(stor
 	return databaseResources, unlockFn, nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	logger.Infof("Provisioning PGBouncer database %s", rdsID)
@@ -428,7 +429,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated
 	return secret, nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
@@ -457,7 +458,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseNa
 	return nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(

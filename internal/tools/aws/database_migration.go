@@ -7,10 +7,10 @@ package aws
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
@@ -124,14 +124,15 @@ func (d *RDSDatabaseMigration) Replicate(logger log.FieldLogger) (string, error)
 }
 
 func (d *RDSDatabaseMigration) describeDBInstanceSecurityGroup(instanceID string) (*ec2Types.SecurityGroup, error) {
-	output, err := d.awsClient.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
-		DBInstanceIdentifier: aws.String(instanceID),
-	})
+	ctx := context.TODO()
+	output, err := d.awsClient.Service().rds.DescribeDBInstances(
+		ctx,
+		&rds.DescribeDBInstancesInput{
+			DBInstanceIdentifier: aws.String(instanceID),
+		})
 	if err != nil {
 		return nil, err
 	}
-
-	ctx := context.TODO()
 
 	for _, instance := range output.DBInstances {
 		for _, vpcSG := range instance.VpcSecurityGroups {

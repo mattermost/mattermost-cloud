@@ -9,26 +9,22 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go-v2/service/acm"
-	"github.com/aws/aws-sdk-go/service/eks"
-	"github.com/aws/aws-sdk-go/service/eks/eksiface"
-
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -136,13 +132,13 @@ type cache struct {
 type Service struct {
 	acm                   ACMAPI
 	ec2                   EC2API
+	rds                   RDSAPI
 	iam                   IAMAPI
-	rds                   rdsiface.RDSAPI
 	s3                    S3API
 	secretsManager        SecretsManagerAPI
 	route53               Route53API
-	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
-	kms                   kmsiface.KMSAPI
+	resourceGroupsTagging ResourceGroupsTaggingAPIAPI
+	kms                   KMSAPI
 	dynamodb              DynamoDBAPI
 	sts                   STSAPI
 	eks                   eksiface.EKSAPI
@@ -151,17 +147,17 @@ type Service struct {
 // NewService creates a new instance of Service.
 func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
-		acm:                   acm.NewFromConfig(cfg), // v2
-		iam:                   iam.NewFromConfig(cfg),
-		rds:                   rds.New(sess),
-		s3:                    s3.NewFromConfig(cfg),             // v2
-		route53:               route53.NewFromConfig(cfg),        // v2
-		secretsManager:        secretsmanager.NewFromConfig(cfg), // v2
-		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
-		ec2:                   ec2.NewFromConfig(cfg), // v2
-		kms:                   kms.New(sess),
-		dynamodb:              dynamodb.NewFromConfig(cfg), // v2
-		sts:                   sts.NewFromConfig(cfg),      // v2
+		acm:                   acm.NewFromConfig(cfg),                      // v2
+		rds:                   rds.NewFromConfig(cfg),                      // v2
+		iam:                   iam.NewFromConfig(cfg),                      // v2
+		s3:                    s3.NewFromConfig(cfg),                       // v2
+		route53:               route53.NewFromConfig(cfg),                  // v2
+		secretsManager:        secretsmanager.NewFromConfig(cfg),           // v2
+		resourceGroupsTagging: resourcegroupstaggingapi.NewFromConfig(cfg), // v2
+		ec2:                   ec2.NewFromConfig(cfg),                      // v2
+		kms:                   kms.NewFromConfig(cfg),                      // v2
+		dynamodb:              dynamodb.NewFromConfig(cfg),                 // v2
+		sts:                   sts.NewFromConfig(cfg),                      // v2
 		eks:                   eks.New(sess),
 	}
 }

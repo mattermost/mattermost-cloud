@@ -13,16 +13,16 @@ import (
 )
 
 // getAvailabilityZones retrive the Availabitly zones for the AWS region set in the Client.
-func (a *Client) getAvailabilityZones() ([]*string, error) {
+func (a *Client) getAvailabilityZones() ([]string, error) {
 	ctx := context.TODO()
 	resp, err := a.Service().ec2.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get the AWS availabity zones for region %s", *a.config.Region)
 	}
 
-	azs := []*string{}
+	azs := []string{}
 	for _, az := range resp.AvailabilityZones {
-		azs = append(azs, az.ZoneName)
+		azs = append(azs, *az.ZoneName)
 	}
 
 	return azs, nil

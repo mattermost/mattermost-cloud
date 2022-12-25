@@ -10,9 +10,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
+	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/service/rds"
-	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -81,33 +83,33 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 
 		// Get resources from AWS and try to find a RDS cluster that the database can be created.
 		a.Mocks.API.ResourceGroupsTagging.EXPECT().
-			GetResources(gomock.Any()).
-			Do(func(input *gt.GetResourcesInput) {
-				a.Assert().Equal(input.ResourceTypeFilters, []*string{aws.String(DefaultResourceTypeClusterRDS)})
-				tagFilter := []*gt.TagFilter{
+			GetResources(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *gt.GetResourcesInput, optFns ...func(*gt.Options)) {
+				a.Assert().Equal(input.ResourceTypeFilters, []string{DefaultResourceTypeClusterRDS})
+				tagFilter := []gtTypes.TagFilter{
 					{
 						Key:    aws.String("Purpose"),
-						Values: []*string{aws.String("provisioning")},
+						Values: []string{"provisioning"},
 					},
 					{
 						Key:    aws.String("Owner"),
-						Values: []*string{aws.String("cloud-team")},
+						Values: []string{"cloud-team"},
 					},
 					{
 						Key:    aws.String("Terraform"),
-						Values: []*string{aws.String("true")},
+						Values: []string{"true"},
 					},
 					{
 						Key:    aws.String("DatabaseType"),
-						Values: []*string{aws.String("multitenant-rds")},
+						Values: []string{"multitenant-rds"},
 					},
 					{
 						Key:    aws.String("VpcID"),
-						Values: []*string{aws.String(a.VPCa)},
+						Values: []string{a.VPCa},
 					},
 					{
 						Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-						Values: []*string{&databaseType},
+						Values: []string{databaseType},
 					},
 					{
 						Key: aws.String("Counter"),
@@ -119,14 +121,14 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 				a.Assert().Equal(input.TagFilters, tagFilter)
 			}).
 			Return(&gt.GetResourcesOutput{
-				ResourceTagMappingList: []*gt.ResourceTagMapping{
+				ResourceTagMappingList: []gtTypes.ResourceTagMapping{
 					{
 						ResourceARN: aws.String(a.RDSResourceARN),
 
 						// WARNING: If you ever find the need to change some of the hardcoded values such as
 						// Owner, Terraform or any of the keys here, make sure that an E2e system's test still
 						// passes.
-						Tags: []*gt.Tag{
+						Tags: []gtTypes.Tag{
 							{
 								Key:   aws.String("Purpose"),
 								Value: aws.String("provisioning"),
@@ -161,9 +163,9 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			}, nil),
 
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBClusterEndpoints(gomock.Any()).
+			DescribeDBClusterEndpoints(gomock.Any(), gomock.Any()).
 			Return(&rds.DescribeDBClusterEndpointsOutput{
-				DBClusterEndpoints: []*rds.DBClusterEndpoint{
+				DBClusterEndpoints: []rdsTypes.DBClusterEndpoint{
 					{
 						Status: aws.String("available"),
 					},
@@ -172,17 +174,17 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBClusters(gomock.Any()).
-			Do(func(input *rds.DescribeDBClustersInput) {
-				a.Assert().Equal(input.Filters, []*rds.Filter{
+			DescribeDBClusters(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *rds.DescribeDBClustersInput, optFns ...func(*rds.Options)) {
+				a.Assert().Equal(input.Filters, []rdsTypes.Filter{
 					{
 						Name:   aws.String("db-cluster-id"),
-						Values: []*string{&a.RDSClusterID},
+						Values: []string{a.RDSClusterID},
 					},
 				})
 			}).
 			Return(&rds.DescribeDBClustersOutput{
-				DBClusters: []*rds.DBCluster{
+				DBClusters: []rdsTypes.DBCluster{
 					{
 						DBClusterIdentifier: &a.RDSClusterID,
 						Endpoint:            aws.String("writer.rds.aws.com"),
@@ -226,17 +228,17 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 			Times(1),
 
 		a.Mocks.API.RDS.EXPECT().
-			DescribeDBClusters(gomock.Any()).
-			Do(func(input *rds.DescribeDBClustersInput) {
-				a.Assert().Equal(input.Filters, []*rds.Filter{
+			DescribeDBClusters(gomock.Any(), gomock.Any()).
+			Do(func(ctx context.Context, input *rds.DescribeDBClustersInput, optFns ...func(*rds.Options)) {
+				a.Assert().Equal(input.Filters, []rdsTypes.Filter{
 					{
 						Name:   aws.String("db-cluster-id"),
-						Values: []*string{&a.RDSClusterID},
+						Values: []string{a.RDSClusterID},
 					},
 				})
 			}).
 			Return(&rds.DescribeDBClustersOutput{
-				DBClusters: []*rds.DBCluster{
+				DBClusters: []rdsTypes.DBCluster{
 					{
 						DBClusterIdentifier: &a.RDSClusterID,
 						Status:              aws.String("available"),
