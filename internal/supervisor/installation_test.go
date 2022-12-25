@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/eks"
+	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
@@ -428,16 +428,16 @@ func (a *mockAWS) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, l
 	return aws.ClusterResources{}, nil
 }
 
-func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
-	return &eks.Cluster{}, nil
+func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
+	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
+func (a *mockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
 	return nil, nil
 }
 
-func (a *mockAWS) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
-	return &eks.Cluster{}, nil
+func (a *mockAWS) GetEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
+	return &eksTypes.Cluster{}, nil
 }
 
 func (a *mockAWS) IsClusterReady(clusterName string) (bool, error) {

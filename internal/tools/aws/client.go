@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
+	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
@@ -23,8 +25,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/eks"
-	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -78,9 +78,9 @@ type AWS interface {
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 
-	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error)
-	EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error)
-	GetEKSCluster(clusterName string) (*eks.Cluster, error)
+	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error)
+	EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error)
+	GetEKSCluster(clusterName string) (*eksTypes.Cluster, error)
 	IsClusterReady(clusterName string) (bool, error)
 	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
 	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
@@ -141,7 +141,7 @@ type Service struct {
 	kms                   KMSAPI
 	dynamodb              DynamoDBAPI
 	sts                   STSAPI
-	eks                   eksiface.EKSAPI
+	eks                   EKSAPI
 }
 
 // NewService creates a new instance of Service.
@@ -158,7 +158,7 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		kms:                   kms.NewFromConfig(cfg),                      // v2
 		dynamodb:              dynamodb.NewFromConfig(cfg),                 // v2
 		sts:                   sts.NewFromConfig(cfg),                      // v2
-		eks:                   eks.New(sess),
+		eks:                   eks.NewFromConfig(cfg),                      // v2
 	}
 }
 
