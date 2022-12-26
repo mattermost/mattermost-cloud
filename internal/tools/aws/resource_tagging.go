@@ -8,11 +8,11 @@ import (
 	"context"
 
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 )
 
-func (a *Client) resourceTaggingGetAllResources(input gt.GetResourcesInput) ([]types.ResourceTagMapping, error) {
-	var resources []types.ResourceTagMapping
+func (a *Client) resourceTaggingGetAllResources(input gt.GetResourcesInput) ([]gtTypes.ResourceTagMapping, error) {
+	var resources []gtTypes.ResourceTagMapping
 	var next *string
 
 	for {

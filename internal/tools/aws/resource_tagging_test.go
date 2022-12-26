@@ -9,10 +9,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-
 	"github.com/golang/mock/gomock"
 )
 
@@ -106,7 +104,7 @@ func (a *AWSTestSuite) TestResourceTaggingGetAllResourcesError() {
 	)
 
 	result, err := a.Mocks.AWS.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []types.TagFilter{
+		TagFilters: []gtTypes.TagFilter{
 			{
 				Key:    aws.String(DefaultRDSEncryptionTagKey),
 				Values: []string{CloudID(a.InstallationA.ID)},

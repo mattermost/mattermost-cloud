@@ -14,15 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/common"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
-	"github.com/aws/aws-sdk-go-v2/service/rds/types"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -129,7 +128,7 @@ func (d *RDSMultitenantDatabase) updateMultitenantDatabase(store model.Installat
 	return updateCounterTagWithCurrentWeight(database, rdsCluster, store, d.client, logger)
 }
 
-func updateCounterTagWithCurrentWeight(database *model.MultitenantDatabase, rdsCluster *types.DBCluster, store model.InstallationDatabaseStoreInterface, client *Client, logger log.FieldLogger) error {
+func updateCounterTagWithCurrentWeight(database *model.MultitenantDatabase, rdsCluster *rdsTypes.DBCluster, store model.InstallationDatabaseStoreInterface, client *Client, logger log.FieldLogger) error {
 	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate total database weight")
@@ -801,7 +800,7 @@ func updateCounterTag(resourceARN *string, counter int, client *Client) error {
 		context.TODO(),
 		&rds.AddTagsToResourceInput{
 			ResourceName: resourceARN,
-			Tags: []types.Tag{
+			Tags: []rdsTypes.Tag{
 				{
 					Key:   aws.String(trimTagPrefix(DefaultMultitenantDatabaseCounterTagKey)),
 					Value: aws.String(fmt.Sprintf("%d", counter)),
@@ -843,11 +842,11 @@ func createDatabaseUserSecret(secretName, username, description string, tags []*
 	return &rdsSecretPayload, nil
 }
 
-func describeRDSCluster(dbClusterID string, client *Client) (*types.DBCluster, error) {
+func describeRDSCluster(dbClusterID string, client *Client) (*rdsTypes.DBCluster, error) {
 	dbClusterOutput, err := client.Service().rds.DescribeDBClusters(
 		context.TODO(),
 		&rds.DescribeDBClustersInput{
-			Filters: []types.Filter{
+			Filters: []rdsTypes.Filter{
 				{
 					Name:   aws.String("db-cluster-id"),
 					Values: []string{dbClusterID},
@@ -1040,7 +1039,7 @@ func isRDSClusterEndpointsReady(rdsClusterID string, client *Client) (bool, erro
 	return true, nil
 }
 
-func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseName, vpcID string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseName, vpcID string, rdsCluster *rdsTypes.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{

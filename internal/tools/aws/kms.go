@@ -9,11 +9,11 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
-	"github.com/aws/aws-sdk-go-v2/service/kms/types"
+	kmsTypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 )
 
 // kmsCreateSymmetricKey creates a symmetric encryption key with alias.
-func (a *Client) kmsCreateSymmetricKey(keyDescription string, tags []types.Tag) (*types.KeyMetadata, error) {
+func (a *Client) kmsCreateSymmetricKey(keyDescription string, tags []kmsTypes.Tag) (*kmsTypes.KeyMetadata, error) {
 	createKeyOut, err := a.Service().kms.CreateKey(
 		context.TODO(),
 		&kms.CreateKeyInput{
@@ -58,7 +58,7 @@ func (a *Client) kmsDisableSymmetricKey(keyID string) error {
 }
 
 // kmsGetSymmetricKey get a symmetric encryption key with alias.
-func (a *Client) kmsGetSymmetricKey(aliasName string) (*types.KeyMetadata, error) {
+func (a *Client) kmsGetSymmetricKey(aliasName string) (*kmsTypes.KeyMetadata, error) {
 	describeKeyOut, err := a.Service().kms.DescribeKey(
 		context.TODO(),
 		&kms.DescribeKeyInput{

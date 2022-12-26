@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
-	"github.com/aws/aws-sdk-go-v2/service/rds/types"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -28,7 +28,7 @@ func (a *Client) RDSDBCLusterExists(awsID string) (bool, error) {
 			DBClusterIdentifier: aws.String(awsID),
 		})
 	if err != nil {
-		var awsErr *types.DBClusterNotFoundFault
+		var awsErr *rdsTypes.DBClusterNotFoundFault
 		if errors.As(err, &awsErr) {
 			return false, nil
 		}
@@ -229,7 +229,7 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 			DBClusterIdentifier: aws.String(awsID),
 		})
 	if err != nil {
-		var awsErr *types.DBClusterNotFoundFault
+		var awsErr *rdsTypes.DBClusterNotFoundFault
 		if errors.As(err, &awsErr) {
 			logger.WithField("db-cluster-name", awsID).Warn("DBCluster could not be found; assuming already deleted")
 			return nil
