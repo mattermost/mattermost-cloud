@@ -121,12 +121,7 @@ func executeInstallationCreateCmd(flags installationCreateFlags) error {
 	}
 
 	if flags.dryRun {
-		err = printJSON(request)
-		if err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-
-		return nil
+		return runDryRun(request)
 	}
 
 	installation, err := client.CreateInstallation(request)
@@ -167,12 +162,7 @@ func newCmdInstallationUpdate() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				err = printJSON(request)
-				if err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-
-				return nil
+				return runDryRun(request)
 			}
 
 			installation, err := client.UpdateInstallation(flags.installationID, request)
@@ -257,11 +247,7 @@ func newCmdInstallationHibernate() *cobra.Command {
 				return errors.Wrap(err, "failed to put installation into hibernation")
 			}
 
-			if err = printJSON(installation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -302,11 +288,7 @@ func newCmdInstallationWakeup() *cobra.Command {
 				return errors.Wrap(err, "failed to wake up installation")
 			}
 
-			if err = printJSON(installation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -345,11 +327,7 @@ func newCmdInstallationGet() *cobra.Command {
 				hideMattermostEnv(installation.Installation)
 			}
 
-			if err = printJSON(installation); err != nil {
-				return err
-			}
-
-			return nil
+			return printJSON(installation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -432,12 +410,7 @@ func executeInstallationListCmd(flags installationListFlags) error {
 		return nil
 	}
 
-	err = printJSON(installations)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return printJSON(installations)
 }
 
 func defaultInstallationTableData(installations []*model.InstallationDTO) ([]string, [][]string) {
@@ -472,10 +445,7 @@ func newCmdInstallationGetStatuses() *cobra.Command {
 				return nil
 			}
 
-			if err = printJSON(installationsStatus); err != nil {
-				return err
-			}
-			return nil
+			return printJSON(installationsStatus)
 		},
 	}
 	flags.addFlags(cmd)
