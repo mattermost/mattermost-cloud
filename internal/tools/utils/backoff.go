@@ -33,7 +33,7 @@ func NewExponentialBackoff(initialInterval, maxInterval, maxElapsedTime time.Dur
 }
 
 // Retry is used to invoke a function with constant backoff
-func (b *Backoff) Retry(fn func() error) error {
+func (b *Backoff) Retry(fn backoff.Operation) error {
 	b.exp.Reset()
 	return backoff.Retry(fn, b.exp)
 }
