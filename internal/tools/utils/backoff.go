@@ -14,16 +14,17 @@ type Backoff struct {
 // NewExponentialBackoff is used to retry a function with exponential backoff
 func NewExponentialBackoff(initialInterval, maxInterval, maxElapsedTime time.Duration) *Backoff {
 	expBackoff := backoff.NewExponentialBackOff()
-	expBackoff.InitialInterval = initialInterval
-	expBackoff.MaxInterval = maxInterval
-	expBackoff.MaxElapsedTime = maxElapsedTime
 
-	if expBackoff.InitialInterval == 0 {
-		expBackoff.InitialInterval = backoff.DefaultInitialInterval
+	if initialInterval != 0 {
+		expBackoff.InitialInterval = initialInterval
 	}
 
-	if expBackoff.MaxInterval == 0 {
-		expBackoff.MaxInterval = backoff.DefaultMaxInterval
+	if maxInterval != 0 {
+		expBackoff.MaxInterval = maxInterval
+	}
+
+	if maxElapsedTime != 0 {
+		expBackoff.MaxElapsedTime = maxElapsedTime
 	}
 
 	return &Backoff{
