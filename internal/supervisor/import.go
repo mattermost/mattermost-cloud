@@ -141,9 +141,11 @@ func (s *ImportSupervisor) Do() error {
 
 		go func() {
 			completeAt := model.GetMillis()
+			attempts := 0
 
 			expBackoff := utils.NewExponentialBackoff(time.Second*5, time.Minute*10, time.Minute*30)
 			err := expBackoff.Retry(func() error {
+				attempts++
 				err := s.awatClient.CompleteImport(
 					&awat.ImportCompletedWorkRequest{
 						ID:         work.ID,
@@ -151,13 +153,13 @@ func (s *ImportSupervisor) Do() error {
 						Error:      workError,
 					})
 				if err != nil {
-					s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s", work.ID)
+					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
 				}
 				return err
 			})
 
 			if err != nil {
-				s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s", work.ID)
+				s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
 			}
 		}()
 	}
