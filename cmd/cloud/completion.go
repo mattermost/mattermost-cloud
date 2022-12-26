@@ -34,7 +34,7 @@ func newCmdCompletionBash() *cobra.Command {
 		Use:   "bash",
 		Short: "Generates the bash autocompletion scripts",
 		Long:  bashLong,
-		Run: func(command *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			_ = rootCmd.GenBashCompletion(os.Stdout)
 		},
 	}
@@ -192,7 +192,7 @@ func newCmdZsh() *cobra.Command {
 		Use:   "zsh",
 		Short: "Generates the zsh autocompletion scripts",
 		Long:  zshLong,
-		Run: func(command *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			_, _ = os.Stdout.Write([]byte(zshInitialization))
 			_ = rootCmd.GenBashCompletion(os.Stdout)
 			_, _ = os.Stdout.Write([]byte(zshTail))

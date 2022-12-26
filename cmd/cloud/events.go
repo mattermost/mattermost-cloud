@@ -41,8 +41,8 @@ func newCmdStateChangeEventList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "Fetch state change events managed by the provisioning server.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeStateChangeEventListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {

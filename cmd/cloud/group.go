@@ -44,8 +44,8 @@ func newCmdGroupCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a group.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, false)
 			if err != nil {
@@ -90,8 +90,8 @@ func newCmdGroupUpdate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update the group metadata.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeGroupUpdateCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -155,8 +155,8 @@ func newCmdGroupDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a group.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.DeleteGroup(flags.groupID); err != nil {
 				return errors.Wrap(err, "failed to delete group")
@@ -180,8 +180,8 @@ func newCmdGroupGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular group.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			group, err := client.GetGroup(flags.groupID)
 			if err != nil {
@@ -210,8 +210,8 @@ func newCmdGroupList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List created groups.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeGroupListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -261,8 +261,8 @@ func newCmdGroupGetStatus() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Get a particular group's status.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			groupStatus, err := client.GetGroupStatus(flags.groupID)
 			if err != nil {
@@ -291,8 +291,8 @@ func newCmdGroupJoin() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "join",
 		Short: "Join an installation to the given group, leaving any existing group.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			err := client.JoinGroup(flags.groupID, flags.installationID)
 			if err != nil {
@@ -317,8 +317,8 @@ func newCmdGroupAssign() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "assign",
 		Short: "Assign an installation to the group based on annotations, leaving any existing group.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			err := client.AssignGroup(flags.installationID, model.AssignInstallationGroupRequest{GroupSelectionAnnotations: flags.annotations})
 			if err != nil {
@@ -343,8 +343,8 @@ func newCmdGroupLeave() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "leave",
 		Short: "Remove an installation from its group, if any.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 			request := &model.LeaveGroupRequest{RetainConfig: flags.retainConfig}
@@ -371,8 +371,8 @@ func newCmdGroupListStatus() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "statuses",
 		Short: "Get Status from all groups.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			groupStatus, err := client.GetGroupsStatus()
 			if err != nil {

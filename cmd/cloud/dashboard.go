@@ -24,8 +24,8 @@ func newCmdDashboard() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dashboard",
 		Short: "View an auto-refreshing dashboard of all cloud server resources.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeDashboardCmd(flags)
 		},
 	}

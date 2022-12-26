@@ -85,7 +85,7 @@ func main() {
 var testerCmd = &cobra.Command{
 	Use:   "test",
 	Short: "Run tester to start creating installations with provisioner and interact with them.",
-	Run: func(command *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		u, err := url.Parse(testerConfig.provisioner)
 		if err != nil {
 			logger.WithError(err).Error("Invalid provisioner URL")

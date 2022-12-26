@@ -15,27 +15,27 @@ import (
 var filestoreCmd = &cobra.Command{
 	Use:   "filestore",
 	Short: "Run the filestore test suite.",
-	RunE: func(command *cobra.Command, args []string) error {
-		port, _ := command.Flags().GetString("webhook-listener-port")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		port, _ := cmd.Flags().GetString("webhook-listener-port")
 
 		c := make(chan *model.WebhookPayload)
 
 		shutdown := startWebhookListener(port, c)
 		defer shutdown()
 
-		results := runFilestoreTests(command, c)
+		results := runFilestoreTests(cmd, c)
 		printResults(results)
 
 		return nil
 	},
 }
 
-func runFilestoreTests(command *cobra.Command, c chan *model.WebhookPayload) []string {
-	serverAddress, _ := command.Flags().GetString("server")
-	webhookURL, _ := command.Flags().GetString("webhook-url")
-	installationDomain, _ := command.Flags().GetString("installation-domain")
-	version, _ := command.Flags().GetString("version")
-	license, _ := command.Flags().GetString("license")
+func runFilestoreTests(cmd *cobra.Command, c chan *model.WebhookPayload) []string {
+	serverAddress, _ := cmd.Flags().GetString("server")
+	webhookURL, _ := cmd.Flags().GetString("webhook-url")
+	installationDomain, _ := cmd.Flags().GetString("installation-domain")
+	version, _ := cmd.Flags().GetString("version")
+	license, _ := cmd.Flags().GetString("license")
 
 	filestoreTypes := []string{
 		model.InstallationFilestoreBifrost,

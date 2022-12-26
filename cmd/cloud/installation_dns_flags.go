@@ -12,11 +12,11 @@ type installationDNSAddFlags struct {
 	dnsName        string
 }
 
-func (flags *installationDNSAddFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to add domain to.")
-	command.Flags().StringVar(&flags.dnsName, "domain", "", "Domain name to map to the installation.")
-	_ = command.MarkFlagRequired("installation")
-	_ = command.MarkFlagRequired("domain")
+func (flags *installationDNSAddFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to add domain to.")
+	cmd.Flags().StringVar(&flags.dnsName, "domain", "", "Domain name to map to the installation.")
+	_ = cmd.MarkFlagRequired("installation")
+	_ = cmd.MarkFlagRequired("domain")
 }
 
 type installationDNSSetPrimaryFlags struct {
@@ -25,10 +25,10 @@ type installationDNSSetPrimaryFlags struct {
 	domainNameID   string
 }
 
-func (flags *installationDNSSetPrimaryFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation for domain switch.")
-	command.Flags().StringVar(&flags.domainNameID, "domain-id", "", "The id of domain name to set as primary.")
-	_ = command.MarkFlagRequired("installation")
-	_ = command.MarkFlagRequired("domain-id")
+func (flags *installationDNSSetPrimaryFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation for domain switch.")
+	cmd.Flags().StringVar(&flags.domainNameID, "domain-id", "", "The id of domain name to set as primary.")
+	_ = cmd.MarkFlagRequired("installation")
+	_ = cmd.MarkFlagRequired("domain-id")
 
 }

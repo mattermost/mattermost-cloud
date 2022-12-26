@@ -29,8 +29,8 @@ func newCmdInstallationRestorationRequest() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "request",
 		Short: "Request database restoration",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -59,8 +59,8 @@ func newCmdInstallationRestorationsListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List installation database restoration operations",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationRestorationsList(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -138,8 +138,8 @@ func newCmdInstallationRestorationGetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Fetches given installation database restoration operation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 			restorationOperation, err := client.GetInstallationDBRestoration(flags.restorationID)

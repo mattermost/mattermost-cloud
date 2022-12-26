@@ -48,8 +48,8 @@ func newCmdSecurityClusterLock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-lock",
 		Short: "Lock API changes on a given cluster",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.LockAPIForCluster(flags.clusterID); err != nil {
 				return errors.Wrap(err, "failed to lock cluster API")
@@ -72,8 +72,8 @@ func newCmdSecurityClusterUnlock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-unlock",
 		Short: "Unlock API changes on a given cluster",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.UnlockAPIForCluster(flags.clusterID); err != nil {
 				return errors.Wrap(err, "failed to unlock cluster API")
@@ -110,8 +110,8 @@ func newCmdSecurityInstallationLock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-lock",
 		Short: "Lock API changes on a given installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.LockAPIForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to lock installation API")
@@ -134,8 +134,8 @@ func newCmdSecurityInstallationUnlock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-unlock",
 		Short: "Unlock API changes on a given installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.UnlockAPIForInstallation(flags.installationID); err != nil {
 				return errors.Wrap(err, "failed to unlock installation API")
@@ -172,8 +172,8 @@ func newCmdSecurityClusterInstallationLock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-lock",
 		Short: "Lock API changes on a given cluster installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.LockAPIForClusterInstallation(flags.clusterInstallationID); err != nil {
 				return errors.Wrap(err, "failed to lock cluster installation API")
@@ -196,8 +196,8 @@ func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-unlock",
 		Short: "Unlock API changes on a given cluster installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.UnlockAPIForClusterInstallation(flags.clusterInstallationID); err != nil {
 				return errors.Wrap(err, "failed to unlock cluster installation API")
@@ -234,8 +234,8 @@ func newCmdSecurityGroupLock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-lock",
 		Short: "Lock API changes on a given group",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.LockAPIForGroup(flags.groupID); err != nil {
 				return errors.Wrap(err, "failed to lock group API")
@@ -258,8 +258,8 @@ func newCmdSecurityGroupUnlock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-unlock",
 		Short: "Unlock API changes on a given group",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.UnlockAPIForGroup(flags.groupID); err != nil {
 				return errors.Wrap(err, "failed to unlock group API")
@@ -296,8 +296,8 @@ func newCmdSecurityBackupLock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-lock",
 		Short: "Lock API changes on a given backup",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.LockAPIForBackup(flags.backupID); err != nil {
 				return errors.Wrap(err, "failed to lock backup API")
@@ -320,8 +320,8 @@ func newCmdSecurityBackupUnlock() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api-unlock",
 		Short: "Unlock API changes on a given backup",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.UnlockAPIForBackup(flags.backupID); err != nil {
 				return errors.Wrap(err, "failed to unlock backup API")

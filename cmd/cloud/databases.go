@@ -49,8 +49,8 @@ func newCmdDatabaseMultitenantList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List known multitenant databases.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeDatabaseMultitenantListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -117,8 +117,8 @@ func newCmdDatabaseMultitenantGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular multitenant database.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			multitenantDatabase, err := client.GetMultitenantDatabase(flags.multitenantDatabaseID)
@@ -148,8 +148,8 @@ func newCmdDatabaseMultitenantUpdate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update an multitenant database's configuration",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			request := &model.PatchMultitenantDatabaseRequest{}
@@ -186,8 +186,8 @@ func newCmdDatabaseMultitenantDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete an multitenant database's configuration",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			if err := client.DeleteMultitenantDatabase(flags.multitenantDatabaseID, flags.force); err != nil {
@@ -224,8 +224,8 @@ func newCmdDatabaseLogicalList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List logical databases.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeDatabaseLogicalListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -291,8 +291,8 @@ func newCmdDatabaseLogicalGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular logical database.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			logicalDatabase, err := client.GetLogicalDatabase(flags.logicalDatabaseID)
@@ -334,8 +334,8 @@ func newCmdDatabaseSchemaList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List database schemas.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeDatabaseSchemaListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -402,8 +402,8 @@ func newCmdDatabaseSchemaGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular database schema.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			databaseSchema, err := client.GetDatabaseSchema(flags.databaseSchemaID)
@@ -433,8 +433,8 @@ func newCmdDatabaseMultitenantReport() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "report",
 		Short: "Get a report of deployment details for a given multitenant database",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeMultiTenantDatabaseReportCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {

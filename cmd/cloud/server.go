@@ -55,13 +55,13 @@ func newCmdServer() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server",
 		Short: "Run the provisioning server.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeServerCmd(flags)
 		},
-		PreRun: func(command *cobra.Command, args []string) {
-			flags.serverFlagChanged.addFlags(command) // To populate flag change variables.
-			deprecationWarnings(logger, command)
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.serverFlagChanged.addFlags(cmd) // To populate flag change variables.
+			deprecationWarnings(logger, cmd)
 		},
 	}
 	flags.addFlags(cmd)

@@ -16,12 +16,12 @@ type installationDBMigrationRequestFlags struct {
 	multiTenantDBID string
 }
 
-func (flags *installationDBMigrationRequestFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be migrated.")
-	command.Flags().StringVar(&flags.destinationDB, "destination-db", model.InstallationDatabaseMultiTenantRDSPostgres, "The destination database type.")
-	command.Flags().StringVar(&flags.multiTenantDBID, "multi-tenant-db", "", "The id of the destination multi tenant db.")
-	_ = command.MarkFlagRequired("installation")
-	_ = command.MarkFlagRequired("multi-tenant-db")
+func (flags *installationDBMigrationRequestFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to be migrated.")
+	cmd.Flags().StringVar(&flags.destinationDB, "destination-db", model.InstallationDatabaseMultiTenantRDSPostgres, "The destination database type.")
+	cmd.Flags().StringVar(&flags.multiTenantDBID, "multi-tenant-db", "", "The id of the destination multi tenant db.")
+	_ = cmd.MarkFlagRequired("installation")
+	_ = cmd.MarkFlagRequired("multi-tenant-db")
 }
 
 type installationDBMigrationsListFlags struct {
@@ -32,11 +32,11 @@ type installationDBMigrationsListFlags struct {
 	state          string
 }
 
-func (flags *installationDBMigrationsListFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to query operations.")
-	command.Flags().StringVar(&flags.state, "state", "", "The state to filter operations by.")
-	flags.pagingFlags.addFlags(command)
-	flags.tableOptions.addFlags(command)
+func (flags *installationDBMigrationsListFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to query operations.")
+	cmd.Flags().StringVar(&flags.state, "state", "", "The state to filter operations by.")
+	flags.pagingFlags.addFlags(cmd)
+	flags.tableOptions.addFlags(cmd)
 }
 
 type installationDBMigrationGetFlags struct {
@@ -44,9 +44,9 @@ type installationDBMigrationGetFlags struct {
 	dbMigrationID string
 }
 
-func (flags *installationDBMigrationGetFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.dbMigrationID, "db-migration", "", "The id of the installation db migration operation.")
-	_ = command.MarkFlagRequired("db-migration")
+func (flags *installationDBMigrationGetFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.dbMigrationID, "db-migration", "", "The id of the installation db migration operation.")
+	_ = cmd.MarkFlagRequired("db-migration")
 }
 
 type installationDBMigrationCommitFlags struct {
@@ -54,9 +54,9 @@ type installationDBMigrationCommitFlags struct {
 	dbMigrationID string
 }
 
-func (flags *installationDBMigrationCommitFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.dbMigrationID, "db-migration", "", "The id of the installation db migration operation.")
-	_ = command.MarkFlagRequired("db-migration")
+func (flags *installationDBMigrationCommitFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.dbMigrationID, "db-migration", "", "The id of the installation db migration operation.")
+	_ = cmd.MarkFlagRequired("db-migration")
 }
 
 type installationDBMigrationRollbackFlags struct {
@@ -64,7 +64,7 @@ type installationDBMigrationRollbackFlags struct {
 	dbMigrationID string
 }
 
-func (flags *installationDBMigrationRollbackFlags) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.dbMigrationID, "db-migration", "", "The id of the installation db migration operation.")
-	_ = command.MarkFlagRequired("db-migration")
+func (flags *installationDBMigrationRollbackFlags) addFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&flags.dbMigrationID, "db-migration", "", "The id of the installation db migration operation.")
+	_ = cmd.MarkFlagRequired("db-migration")
 }

@@ -176,8 +176,8 @@ func newCmdSubscriptionDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete subscription.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.DeleteSubscription(flags.subID); err != nil {
 				return errors.Wrap(err, "failed to delete subscription")

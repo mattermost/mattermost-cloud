@@ -53,8 +53,8 @@ func newCmdInstallationCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create an installation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationCreateCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -138,8 +138,8 @@ func newCmdInstallationUpdate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update an installation's configuration",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
@@ -188,8 +188,8 @@ func newCmdInstallationDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete an installation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			if err := client.DeleteInstallation(flags.installationID); err != nil {
@@ -213,8 +213,8 @@ func newCmdInstallationCancelDeletion() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cancel-deletion",
 		Short: "Cancels the pending deletion of an installation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			if err := client.CancelInstallationDeletion(flags.installationID); err != nil {
@@ -238,8 +238,8 @@ func newCmdInstallationHibernate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "hibernate",
 		Short: "Put an installation into hibernation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			installation, err := client.HibernateInstallation(flags.installationID)
@@ -265,8 +265,8 @@ func newCmdInstallationWakeup() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake-up",
 		Short: "Wake an installation from hibernation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
@@ -306,8 +306,8 @@ func newCmdInstallationGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular installation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			installation, err := client.GetInstallation(flags.installationID, &model.GetInstallationRequest{
@@ -345,8 +345,8 @@ func newCmdInstallationList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List created installations.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -433,8 +433,8 @@ func newCmdInstallationGetStatuses() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Get status information for all installations.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			installationsStatus, err := client.GetInstallationsStatus()
@@ -457,8 +457,8 @@ func newCmdInstallationShowStateReport() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "state-report",
 		Short: "Shows information regarding changing installation state.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			if err := printJSON(model.GetInstallationRequestStateReport()); err != nil {
 				return err
 			}
@@ -478,8 +478,8 @@ func newCmdInstallationRecovery() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "recover",
 		Short: "recover the basic resources of a deleted installation by recreating it.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationRecoveryCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -644,8 +644,8 @@ func newCmdInstallationDeploymentReport() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "report",
 		Short: "Get a report of deployment details for a given installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeInstallationDeploymentReportCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {

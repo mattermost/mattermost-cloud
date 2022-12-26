@@ -79,8 +79,8 @@ func newCmdClusterCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterCreateCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -183,8 +183,8 @@ func newCmdClusterProvision() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "provision",
 		Short: "Provision/Re-provision a cluster's k8s resources.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterProvisionCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -228,8 +228,8 @@ func newCmdClusterUpdate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Updates a cluster's configuration.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterUpdateCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -273,8 +273,8 @@ func newCmdClusterUpgrade() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Upgrade k8s on a cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterUpgradeCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -329,8 +329,8 @@ func newCmdClusterResize() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resize",
 		Short: "Resize a k8s cluster",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterResizeCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -393,8 +393,8 @@ func newCmdClusterDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterDeleteCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -424,8 +424,8 @@ func newCmdClusterGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterGetCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -461,8 +461,8 @@ func newCmdClusterList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List created clusters.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeClusterListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -567,8 +567,8 @@ func newCmdClusterUtilities() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "utilities",
 		Short: "Show metadata regarding utility services running in a cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			metadata, err := client.GetClusterUtilities(flags.cluster)
@@ -592,8 +592,8 @@ func newCmdClusterSizeDictionary() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dictionary",
 		Short: "Shows predefined cluster size templates.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			if err := printJSON(clusterdictionary.ValidSizes); err != nil {
 				return errors.Wrap(err, "failed to print cluster dictionary")
 			}
@@ -611,8 +611,8 @@ func newCmdClusterShowStateReport() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "state-report",
 		Short: "Shows information regarding changing cluster state.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			if err := printJSON(model.GetClusterRequestStateReport()); err != nil {
 				return err
 			}

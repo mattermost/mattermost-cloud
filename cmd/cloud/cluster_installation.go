@@ -35,8 +35,8 @@ func newCmdClusterInstallationGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular cluster installation.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -66,8 +66,8 @@ func newCmdClusterInstallationList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List created cluster installations.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			return executeClusterInstallationListCmd(flags)
 		},
@@ -147,8 +147,8 @@ func newCmdClusterInstallationConfigGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular cluster installation's config.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -178,8 +178,8 @@ func newCmdClusterInstallationConfigSet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "Set a particular cluster installation's config.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -217,8 +217,8 @@ func newCmdClusterInstallationMMCTL() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mmctl",
 		Short: "Run a mmctl command on a cluster installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -246,8 +246,8 @@ func newCmdClusterInstallationMattermostCLI() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mattermost-cli",
 		Short: "Run a mattermost CLI command on a cluster installation",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			client := model.NewClient(flags.serverAddress)
 
@@ -274,8 +274,8 @@ func newCmdClusterInstallationMigration() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "migration",
 		Short: "Migrate installation(s) to the target cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			return executeClusterInstallationMigrationCmd(flags)
 		},
@@ -320,8 +320,8 @@ func newCmdClusterInstallationDNSMigration() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dns",
 		Short: "Switch over the DNS CNAME record(s) to the target cluster's Load Balancer.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			return executeClusterInstallationDNSMigrationCmd(flags)
 		},
@@ -360,8 +360,8 @@ func newCmdDeleteInActiveClusterInstallation() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete stale cluster installation(s) after migration.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			return executeDeleteInActiveClusterInstallationCmd(flags)
 		},
@@ -410,8 +410,8 @@ func newCmdClusterRolesPostMigrationSwitch() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "switch-cluster",
 		Short: "Mark the target/secondary cluster as primary cluster.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 
 			return executeClusterRolesPostMigrationSwitchCmd(flags)
 		},

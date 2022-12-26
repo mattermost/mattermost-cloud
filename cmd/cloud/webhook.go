@@ -35,8 +35,8 @@ func newCmdWebhookCreate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a webhook.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			webhook, err := client.CreateWebhook(&model.CreateWebhookRequest{
@@ -66,8 +66,8 @@ func newCmdWebhookGet() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get a particular webhook.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
 			webhook, err := client.GetWebhook(flags.webhookID)
@@ -97,8 +97,8 @@ func newCmdWebhookList() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List created webhooks.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			return executeWebhookListCmd(flags)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
@@ -146,8 +146,8 @@ func newCmdWebhookDelete() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete a webhook.",
-		RunE: func(command *cobra.Command, args []string) error {
-			command.SilenceUsage = true
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmd.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 			if err := client.DeleteWebhook(flags.webhookID); err != nil {
 				return errors.Wrap(err, "failed to delete webhook")

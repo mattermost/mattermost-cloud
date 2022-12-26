@@ -2,21 +2,21 @@ package main
 
 import "github.com/spf13/cobra"
 
-func setSecurityFlags(command *cobra.Command) {
-	command.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
+func setSecurityFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("server", defaultLocalServerAPI, "The provisioning server whose API will be queried.")
 }
 
 type securityFlags struct {
 	serverAddress string
 }
 
-func (flags *securityFlags) addFlags(command *cobra.Command) {
-	flags.serverAddress, _ = command.Flags().GetString("server")
+func (flags *securityFlags) addFlags(cmd *cobra.Command) {
+	flags.serverAddress, _ = cmd.Flags().GetString("server")
 }
 
-func setSecurityClusterFlags(command *cobra.Command) {
-	command.PersistentFlags().String("cluster", "", "The id of the cluster.")
-	_ = command.MarkPersistentFlagRequired("cluster")
+func setSecurityClusterFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("cluster", "", "The id of the cluster.")
+	_ = cmd.MarkPersistentFlagRequired("cluster")
 }
 
 type securityClusterFlags struct {
@@ -24,14 +24,14 @@ type securityClusterFlags struct {
 	clusterID string
 }
 
-func (flags *securityClusterFlags) addFlags(command *cobra.Command) {
-	flags.securityFlags.addFlags(command)
-	flags.clusterID, _ = command.Flags().GetString("cluster")
+func (flags *securityClusterFlags) addFlags(cmd *cobra.Command) {
+	flags.securityFlags.addFlags(cmd)
+	flags.clusterID, _ = cmd.Flags().GetString("cluster")
 }
 
-func setSecurityInstallationFlags(command *cobra.Command) {
-	command.PersistentFlags().String("installation", "", "The id of the installation.")
-	_ = command.MarkPersistentFlagRequired("installation")
+func setSecurityInstallationFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("installation", "", "The id of the installation.")
+	_ = cmd.MarkPersistentFlagRequired("installation")
 }
 
 type securityInstallationFlags struct {
@@ -39,13 +39,13 @@ type securityInstallationFlags struct {
 	installationID string
 }
 
-func (flags *securityInstallationFlags) addFlags(command *cobra.Command) {
-	flags.installationID, _ = command.Flags().GetString("installation")
+func (flags *securityInstallationFlags) addFlags(cmd *cobra.Command) {
+	flags.installationID, _ = cmd.Flags().GetString("installation")
 }
 
-func setSecurityClusterInstallationFlags(command *cobra.Command) {
-	command.PersistentFlags().String("cluster-installation", "", "The id of the cluster installation.")
-	_ = command.MarkPersistentFlagRequired("cluster-installation")
+func setSecurityClusterInstallationFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("cluster-installation", "", "The id of the cluster installation.")
+	_ = cmd.MarkPersistentFlagRequired("cluster-installation")
 }
 
 type securityClusterInstallationFlags struct {
@@ -53,13 +53,13 @@ type securityClusterInstallationFlags struct {
 	clusterInstallationID string
 }
 
-func (flags *securityClusterInstallationFlags) addFlags(command *cobra.Command) {
-	flags.clusterInstallationID, _ = command.Flags().GetString("cluster-installation")
+func (flags *securityClusterInstallationFlags) addFlags(cmd *cobra.Command) {
+	flags.clusterInstallationID, _ = cmd.Flags().GetString("cluster-installation")
 }
 
-func setSecurityGroupFlags(command *cobra.Command) {
-	command.PersistentFlags().String("group", "", "The id of the group.")
-	_ = command.MarkPersistentFlagRequired("group")
+func setSecurityGroupFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("group", "", "The id of the group.")
+	_ = cmd.MarkPersistentFlagRequired("group")
 }
 
 type securityGroupFlags struct {
@@ -67,13 +67,13 @@ type securityGroupFlags struct {
 	groupID string
 }
 
-func (flags *securityGroupFlags) addFlags(command *cobra.Command) {
-	flags.groupID, _ = command.Flags().GetString("group")
+func (flags *securityGroupFlags) addFlags(cmd *cobra.Command) {
+	flags.groupID, _ = cmd.Flags().GetString("group")
 }
 
-func setSecurityBackupFlags(command *cobra.Command) {
-	command.PersistentFlags().String("backup", "", "The id of the backup.")
-	_ = command.MarkPersistentFlagRequired("backup")
+func setSecurityBackupFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("backup", "", "The id of the backup.")
+	_ = cmd.MarkPersistentFlagRequired("backup")
 }
 
 type securityBackupFlags struct {
@@ -81,6 +81,6 @@ type securityBackupFlags struct {
 	backupID string
 }
 
-func (flags *securityBackupFlags) addFlags(command *cobra.Command) {
-	flags.backupID, _ = command.Flags().GetString("backup")
+func (flags *securityBackupFlags) addFlags(cmd *cobra.Command) {
+	flags.backupID, _ = cmd.Flags().GetString("backup")
 }
