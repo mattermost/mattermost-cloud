@@ -151,7 +151,7 @@ func (s *ImportSupervisor) Do() error {
 						Error:      workError,
 					})
 				if err != nil {
-					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s", work.ID)
+					s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s", work.ID)
 				}
 				return err
 			})
