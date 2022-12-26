@@ -63,10 +63,7 @@ func newCmdGroupCreate() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				if err = printJSON(request); err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-				return nil
+				return runDryRun(request)
 			}
 
 			group, err := client.CreateGroup(request)
@@ -141,10 +138,7 @@ func executeGroupUpdateCmd(flags groupUpdateFlags) error {
 	}
 
 	if flags.dryRun {
-		if err = printJSON(request); err != nil {
-			return errors.Wrap(err, "failed to print API request")
-		}
-		return nil
+		return runDryRun(request)
 	}
 
 	group, err := client.UpdateGroup(request)

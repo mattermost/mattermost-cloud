@@ -158,10 +158,7 @@ func newCmdDatabaseMultitenantUpdate() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				if err := printJSON(request); err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-				return nil
+				return runDryRun(request)
 			}
 
 			multitenantDatabase, err := client.UpdateMultitenantDatabase(flags.multitenantDatabaseID, request)

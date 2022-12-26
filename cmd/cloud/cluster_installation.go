@@ -48,10 +48,7 @@ func newCmdClusterInstallationGet() *cobra.Command {
 				return nil
 			}
 
-			if err := printJSON(clusterInstallation); err != nil {
-				return err
-			}
-			return nil
+			return printJSON(clusterInstallation)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
@@ -119,11 +116,7 @@ func executeClusterInstallationListCmd(flags clusterInstallationListFlags) error
 		return nil
 	}
 
-	if err := printJSON(clusterInstallations); err != nil {
-		return err
-	}
-
-	return nil
+	return printJSON(clusterInstallations)
 }
 
 func defaultClusterInstallationTableData(cis []*model.ClusterInstallation) ([]string, [][]string) {
@@ -167,10 +160,7 @@ func newCmdClusterInstallationConfigGet() *cobra.Command {
 				return nil
 			}
 
-			if err := printJSON(clusterInstallationConfig); err != nil {
-				return err
-			}
-			return nil
+			return printJSON(clusterInstallationConfig)
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)

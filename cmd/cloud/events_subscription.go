@@ -46,11 +46,7 @@ func newCmdSubscriptionCreate() *cobra.Command {
 			}
 
 			if flags.dryRun {
-				err := printJSON(request)
-				if err != nil {
-					return errors.Wrap(err, "failed to print API request")
-				}
-				return nil
+				return runDryRun(request)
 			}
 
 			backup, err := client.CreateSubscription(request)
