@@ -5,12 +5,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"strings"
 
-	sdkAWS "github.com/aws/aws-sdk-go/aws"
-	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -560,20 +559,16 @@ func executeInstallationRecoveryCmd(flags installationRecoveryFlags) error {
 
 	logger.Info("Restoring AWS resources")
 
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = toolsAWS.DefaultAWSRegion
+	awsConfig, err := awsTools.NewAWSConfig(context.TODO())
+	if err != nil {
+		return errors.Wrap(err, "failed to build aws configuration")
 	}
-	awsConfig := &sdkAWS.Config{
-		Region:     sdkAWS.String(awsRegion),
-		MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
-	}
-	awsClient, err := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
+	awsClient, err := awsTools.NewAWSClientWithConfig(&awsConfig, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to build AWS client")
 	}
 
-	err = awsClient.SecretsManagerRestoreSecret(toolsAWS.RDSMultitenantSecretName(installation.ID), logger)
+	err = awsClient.SecretsManagerRestoreSecret(awsTools.RDSMultitenantSecretName(installation.ID), logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to recover AWS database secret")
 	}

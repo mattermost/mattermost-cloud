@@ -7,7 +7,6 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -64,11 +63,6 @@ func (t *thanos) ValuesPath() string {
 
 func (t *thanos) CreateOrUpgrade() error {
 	logger := t.logger.WithField("thanos-action", "create")
-
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = aws.DefaultAWSRegion
-	}
 
 	privateDomainName, err := t.awsClient.GetPrivateZoneDomainName(logger)
 	if err != nil {

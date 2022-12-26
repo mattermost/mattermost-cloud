@@ -129,11 +129,7 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 		},
 	}
 
-	S3RegionURL := S3URL
-	awsRegion := *f.awsClient.config.Region
-	if awsRegion != "" && awsRegion != "us-east-1" {
-		S3RegionURL = "s3." + awsRegion + ".amazonaws.com"
-	}
+	S3RegionURL := f.awsClient.GetS3RegionURL()
 
 	filestoreConfig := &model.FilestoreConfig{
 		URL:    S3RegionURL,

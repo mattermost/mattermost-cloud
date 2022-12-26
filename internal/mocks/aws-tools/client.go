@@ -440,6 +440,20 @@ func (mr *MockAWSMockRecorder) GetMultitenantBucketNameForInstallation(installat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantBucketNameForInstallation", reflect.TypeOf((*MockAWS)(nil).GetMultitenantBucketNameForInstallation), installationID, store)
 }
 
+// GetS3RegionURL mocks base method
+func (m *MockAWS) GetS3RegionURL() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetS3RegionURL")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetS3RegionURL indicates an expected call of GetS3RegionURL
+func (mr *MockAWSMockRecorder) GetS3RegionURL() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetS3RegionURL", reflect.TypeOf((*MockAWS)(nil).GetS3RegionURL))
+}
+
 // GenerateBifrostUtilitySecret mocks base method
 func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()

@@ -21,6 +21,16 @@ const (
 	s3ACLPrivate = "private"
 )
 
+// GetS3RegionURL returns the s3 urls with the region from the client configuration
+func (a *Client) GetS3RegionURL() string {
+	result := S3URL
+	awsRegion := a.GetRegion()
+	if awsRegion != "" && awsRegion != "us-east-1" {
+		result = "s3." + awsRegion + ".amazonaws.com"
+	}
+	return result
+}
+
 func (a *Client) s3EnsureBucketCreated(bucketName string, logger log.FieldLogger) error {
 	ctx := context.TODO()
 	_, err := a.Service().s3.CreateBucket(

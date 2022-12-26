@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	sdkAWS "github.com/aws/aws-sdk-go/aws"
 	cf "github.com/cloudflare/cloudflare-go"
 	"github.com/gorilla/mux"
 	awat "github.com/mattermost/awat/model"
@@ -28,7 +27,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
-	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/cloudflare"
 	"github.com/mattermost/mattermost-cloud/internal/tools/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
@@ -244,17 +243,11 @@ func executeServerCmd(flags serverFlags) error {
 		logger.Warn("[DEV] Server is configured to not use cluster VPC claim functionality")
 	}
 
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = toolsAWS.DefaultAWSRegion
+	awsConfig, err := awsTools.NewAWSConfig(context.TODO())
+	if err != nil {
+		return errors.Wrap(err, "failed to get aws configuration")
 	}
-	awsConfig := &sdkAWS.Config{
-		Region: sdkAWS.String(awsRegion),
-		// TODO: we should use Retryer for a more robust retry strategy.
-		// https://github.com/aws/aws-sdk-go/blob/99cd35c8c7d369ba8c32c46ed306f6c88d24cfd7/aws/request/retryer.go#L20
-		MaxRetries: sdkAWS.Int(toolsAWS.DefaultAWSClientRetries),
-	}
-	awsClient, err := toolsAWS.NewAWSClientWithConfig(awsConfig, logger)
+	awsClient, err := awsTools.NewAWSClientWithConfig(&awsConfig, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to build AWS client")
 	}
@@ -300,7 +293,7 @@ func executeServerCmd(flags serverFlags) error {
 			resourceUtil,
 			logger,
 			sqlStore,
-			provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsRegion, flags.backupJobTTL),
+			provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
 		)
 		defer kopsProvisioner.Teardown()
 		clusterProvisioner = kopsProvisioner

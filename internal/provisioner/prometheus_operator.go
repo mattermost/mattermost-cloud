@@ -7,7 +7,6 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -63,16 +62,11 @@ func newPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, 
 func (p *prometheusOperator) CreateOrUpgrade() error {
 	logger := p.logger.WithField("prometheus-action", "create")
 
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = aws.DefaultAWSRegion
-	}
-
 	secretData := map[string]interface{}{
 		"type": "s3",
 		"config": map[string]string{
 			"bucket":   fmt.Sprintf("cloud-%s-prometheus-metrics", p.awsClient.GetCloudEnvironmentName()),
-			"endpoint": fmt.Sprintf("s3.%s.amazonaws.com", awsRegion),
+			"endpoint": p.awsClient.GetS3RegionURL(),
 		},
 	}
 
