@@ -60,7 +60,7 @@ func main() {
 func populateEnv(cmd *cobra.Command) {
 	v := viper.New()
 
-	v.SetEnvPrefix("mm")
+	v.SetEnvPrefix("cp")
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	v.AutomaticEnv()
 
