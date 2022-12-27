@@ -73,7 +73,8 @@ func (d *helmDeployment) Delete() error {
 	if err != nil {
 		return err
 	}
-        if !exists {
+
+	if !exists {
 		logger.Warnf("chart %s not present, assuming already deleted", d.chartDeploymentName)
 		return nil
 	}
