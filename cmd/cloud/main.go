@@ -7,9 +7,12 @@ package main
 
 import (
 	"os"
+	"strings"
 
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 var instanceID string
@@ -17,6 +20,9 @@ var instanceID string
 var rootCmd = &cobra.Command{
 	Use:   "cloud",
 	Short: "Cloud is a tool to provision, manage, and monitor Kubernetes clusters.",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		populateEnv(cmd)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return newCmdServer().RunE(cmd, args)
 	},
@@ -49,4 +55,20 @@ func main() {
 		logger.WithError(err).Error("command failed")
 		os.Exit(1)
 	}
+}
+
+func populateEnv(cmd *cobra.Command) {
+	v := viper.New()
+
+	v.SetEnvPrefix("mm")
+	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	v.AutomaticEnv()
+
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if !f.Changed {
+			if v.IsSet(f.Name) {
+				_ = cmd.Flags().Set(f.Name, v.GetString(f.Name))
+			}
+		}
+	})
 }
