@@ -75,6 +75,7 @@ func (a *Client) S3BatchDelete(bucketName string, prefix *string) error {
 	paginator := s3.NewListObjectsV2Paginator(
 		a.service.s3,
 		&s3.ListObjectsV2Input{
+			Bucket:  &bucketName,
 			MaxKeys: 1000, // The maximum number of objects we can retrieve on a single request
 			Prefix:  prefix,
 		},
