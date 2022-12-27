@@ -95,15 +95,10 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
-	helm := newHelmDeployment(
-		chartNameNginxInternal,
-		chartDeploymentNameNginxInternal,
-		namespaceNginxInternal,
-		n.kubeconfigPath,
-		nil,
-		defaultHelmDeploymentSetArgument,
-		n.logger,
-	)
+	helm, err := n.NewHelmDeployment()
+	if err != nil {
+		return err
+	}
 	return helm.Delete()
 }
 
