@@ -75,14 +75,15 @@ func (f *nodeProblemDetector) Name() string {
 }
 
 func (f *nodeProblemDetector) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
-	return &helmDeployment{
-		chartDeploymentName: "node-problem-detector",
-		chartName:           "deliveryhero/node-problem-detector",
-		namespace:           "node-problem-detector",
-		kubeconfigPath:      f.kubeconfigPath,
-		logger:              logger,
-		desiredVersion:      f.desiredVersion,
-	}
+	return newHelmDeployment(
+		"deliveryhero/node-problem-detector",
+		"node-problem-detector",
+		"node-problem-detector",
+		f.kubeconfigPath,
+		f.desiredVersion,
+		defaultHelmDeploymentSetArgument,
+		logger,
+	)
 }
 
 func (f *nodeProblemDetector) ValuesPath() string {

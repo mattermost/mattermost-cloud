@@ -20,6 +20,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	defaultKubeConfigPath            = ""
+	defaultHelmDeploymentSetArgument = ""
+)
+
 // helmDeployment deploys Helm charts.
 type helmDeployment struct {
 	chartDeploymentName string
@@ -30,6 +35,23 @@ type helmDeployment struct {
 
 	kubeconfigPath string
 	logger         log.FieldLogger
+}
+
+func newHelmDeployment(
+	chartName, chartDeploymentName, namespace, kubeConfigPath string,
+	desiredVersion *model.HelmUtilityVersion,
+	setArgument string,
+	logger log.FieldLogger,
+) *helmDeployment {
+	return &helmDeployment{
+		chartName:           chartName,
+		chartDeploymentName: chartDeploymentName,
+		namespace:           namespace,
+		kubeconfigPath:      kubeConfigPath,
+		desiredVersion:      desiredVersion,
+		setArgument:         setArgument,
+		logger:              logger,
+	}
 }
 
 func (d *helmDeployment) Update() error {

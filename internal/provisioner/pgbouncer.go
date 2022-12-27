@@ -107,14 +107,15 @@ func (p *pgbouncer) Migrate() error {
 }
 
 func (p *pgbouncer) NewHelmDeployment() *helmDeployment {
-	return &helmDeployment{
-		chartDeploymentName: "pgbouncer",
-		chartName:           "chartmuseum/pgbouncer",
-		namespace:           "pgbouncer",
-		kubeconfigPath:      p.kubeconfigPath,
-		logger:              p.logger,
-		desiredVersion:      p.desiredVersion,
-	}
+	return newHelmDeployment(
+		"chartmuseum/pgbouncer",
+		"pgbouncer",
+		"pgbouncer",
+		p.kubeconfigPath,
+		p.desiredVersion,
+		defaultHelmDeploymentSetArgument,
+		p.logger,
+	)
 }
 
 // Deploys pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret

@@ -95,11 +95,15 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
-	helm := helmDeployment{
-		chartDeploymentName: chartDeploymentNameNginxInternal,
-		chartName:           chartNameNginxInternal,
-		namespace:           namespaceNginxInternal,
-	}
+	helm := newHelmDeployment(
+		chartNameNginxInternal,
+		chartDeploymentNameNginxInternal,
+		namespaceNginxInternal,
+		defaultKubeConfigPath,
+		nil,
+		defaultHelmDeploymentSetArgument,
+		n.logger,
+	)
 	return helm.Delete()
 }
 
@@ -125,16 +129,15 @@ func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
-	return &helmDeployment{
-		chartDeploymentName: chartDeploymentNameNginxInternal,
-		chartName:           chartNameNginxInternal,
-		namespace:           namespaceNginxInternal,
-		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
-		desiredVersion:      n.desiredVersion,
-		kubeconfigPath:      n.kubeconfigPath,
-
-		logger: n.logger,
-	}, nil
+	return newHelmDeployment(
+		chartNameNginxInternal,
+		chartDeploymentNameNginxInternal,
+		namespaceNginxInternal,
+		n.kubeconfigPath,
+		n.desiredVersion,
+		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
+		n.logger,
+	), nil
 }
 
 func (n *nginxInternal) Name() string {
