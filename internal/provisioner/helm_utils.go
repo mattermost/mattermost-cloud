@@ -68,12 +68,36 @@ func (d *helmDeployment) Update() error {
 func (d *helmDeployment) Delete() error {
 	logger := d.logger.WithField("helm-delete", d.chartDeploymentName)
 
-	logger.Infof("Deleting helm chart %s", d.chartDeploymentName)
-	err := deleteHelmChart(*d, d.kubeconfigPath, logger)
+	// Ensure the chart is present before deletion
+	exists, err := d.Exists()
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("got an error trying to delete the helm chart %s", d.chartDeploymentName))
+		return err
+	} else if !exists {
+		logger.Warnf("chart %s not present, assuming already deleted", d.chartDeploymentName)
+		return nil
 	}
+
+	err = deleteHelmChart(*d, d.kubeconfigPath, logger)
+	if err != nil {
+		return errors.Wrapf(err, "got an error trying to delete the helm chart %s", d.chartDeploymentName)
+	}
+
 	return nil
+}
+
+func (d *helmDeployment) Exists() (bool, error) {
+	list, err := d.List()
+	if err != nil {
+		return false, errors.Wrap(err, "failed to list helm charts")
+	}
+
+	for _, chart := range list.asSlice() {
+		if chart.Name == d.chartDeploymentName && chart.Chart == d.chartName && chart.Namespace == d.namespace {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // helmRepoAdd adds new helm repos
