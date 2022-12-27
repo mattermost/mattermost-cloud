@@ -208,8 +208,8 @@ type clusterUpgradeFlagChanged struct {
 
 func (flags *clusterUpgradeFlagChanged) addFlags(command *cobra.Command) {
 	flags.isVersionChanged = command.Flags().Changed("version")
-	flags.isKopsAmiChanged = command.PersistentFlags().Changed("kops-ami")
-	flags.isMaxPodsPerNodeChanged = command.PersistentFlags().Changed("max-pods-per-node")
+	flags.isKopsAmiChanged = command.Flags().Changed("kops-ami")
+	flags.isMaxPodsPerNodeChanged = command.Flags().Changed("max-pods-per-node")
 }
 
 type clusterUpgradeFlags struct {
