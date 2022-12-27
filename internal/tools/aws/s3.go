@@ -99,6 +99,12 @@ func (a *Client) S3BatchDelete(bucketName string, prefix *string) error {
 			})
 		}
 
+		// Ensure we have objects
+		if len(objectIDs) == 0 {
+			a.logger.Warnf("received empty page while emptying bucket %s, assuming finished", bucketName)
+			break
+		}
+
 		_, err = a.Service().s3.DeleteObjects(
 			ctx,
 			&s3.DeleteObjectsInput{
@@ -120,14 +126,14 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 	ctx := context.TODO()
 	// First check if bucket still exists. There isn't a "GetBucket" so we will
 	// try to get the bucket policy instead.
-	_, err := a.Service().s3.GetBucketPolicy(
+	_, err := a.Service().s3.HeadBucket(
 		ctx,
-		&s3.GetBucketPolicyInput{
+		&s3.HeadBucketInput{
 			Bucket: aws.String(bucketName),
 		})
 	if err != nil {
-		var awsErr *types.NoSuchBucket
-		if errors.As(err, &awsErr) {
+		var awsNotFound *types.NotFound
+		if errors.As(err, &awsNotFound) {
 			logger.WithField("s3-bucket-name", bucketName).Warn("AWS S3 bucket could not be found; assuming already deleted")
 			return nil
 		}
