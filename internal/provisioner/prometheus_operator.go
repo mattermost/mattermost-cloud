@@ -185,8 +185,8 @@ func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeploy
 	return newHelmDeployment(
 		"prometheus-community/kube-prometheus-stack",
 		"prometheus-operator",
-		p.kubeconfigPath,
 		"prometheus",
+		p.kubeconfigPath,
 		p.desiredVersion,
 		helmValueArguments,
 		p.logger,
