@@ -99,7 +99,7 @@ func (n *nginxInternal) Destroy() error {
 		chartNameNginxInternal,
 		chartDeploymentNameNginxInternal,
 		namespaceNginxInternal,
-		defaultKubeConfigPath,
+		n.kubeconfigPath,
 		nil,
 		defaultHelmDeploymentSetArgument,
 		n.logger,
