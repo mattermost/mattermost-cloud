@@ -99,6 +99,9 @@ func (n *nginxInternal) Destroy() error {
 		chartDeploymentName: chartDeploymentNameNginxInternal,
 		chartName:           chartNameNginxInternal,
 		namespace:           namespaceNginxInternal,
+
+		kubeconfigPath: n.kubeconfigPath,
+		logger:         n.logger,
 	}
 	return helm.Delete()
 }
