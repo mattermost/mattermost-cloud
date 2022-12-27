@@ -182,15 +182,15 @@ func (p *prometheusOperator) Migrate() error {
 func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("prometheus.prometheusSpec.externalLabels.clusterID=%s,prometheus.ingress.hosts={%s},prometheus.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", p.cluster.ID, prometheusDNS, strings.Join(p.allowCIDRRangeList, "\\,"))
 
-	return &helmDeployment{
-		chartDeploymentName: "prometheus-operator",
-		chartName:           "prometheus-community/kube-prometheus-stack",
-		kubeconfigPath:      p.kubeconfigPath,
-		logger:              p.logger,
-		namespace:           "prometheus",
-		setArgument:         helmValueArguments,
-		desiredVersion:      p.desiredVersion,
-	}
+	return newHelmDeployment(
+		"prometheus-community/kube-prometheus-stack",
+		"prometheus-operator",
+		p.kubeconfigPath,
+		"prometheus",
+		p.desiredVersion,
+		helmValueArguments,
+		p.logger,
+	)
 }
 
 func (p *prometheusOperator) Name() string {

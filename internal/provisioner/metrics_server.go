@@ -75,14 +75,15 @@ func (m *metricsServer) Name() string {
 }
 
 func (m *metricsServer) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
-	return &helmDeployment{
-		chartDeploymentName: "metrics-server",
-		chartName:           "metrics-server/metrics-server",
-		namespace:           "kube-system",
-		kubeconfigPath:      m.kubeconfigPath,
-		logger:              logger,
-		desiredVersion:      m.desiredVersion,
-	}
+	return newHelmDeployment(
+		"metrics-server/metrics-server",
+		"metrics-server",
+		"kube-system",
+		m.kubeconfigPath,
+		m.desiredVersion,
+		defaultHelmDeploymentSetArgument,
+		logger,
+	)
 }
 
 func (m *metricsServer) ValuesPath() string {
