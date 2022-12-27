@@ -99,6 +99,12 @@ func (a *Client) S3BatchDelete(bucketName string, prefix *string) error {
 			})
 		}
 
+		// Ensure we have objects
+		if len(objectIDs) == 0 {
+			a.logger.Warnf("received empty page while emptying bucket %s, assuming finished", bucketName)
+			break
+		}
+
 		_, err = a.Service().s3.DeleteObjects(
 			ctx,
 			&s3.DeleteObjectsInput{
