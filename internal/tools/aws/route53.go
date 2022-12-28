@@ -59,7 +59,7 @@ func (a *Client) buildRoute53Cache() error {
 	zoneMap := map[string]awsHostedZone{}
 
 	for _, zone := range zones {
-		zoneID, err := parseHostedZoneResourceID(*zone)
+		zoneID, err := parseHostedZoneResourceID(zone)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse hosted zone ID")
 		}
@@ -466,11 +466,11 @@ func (a *Client) getHostedZoneIDWithTag(tag Tag) (string, error) {
 	if len(zones) == 0 {
 		return "", errors.Errorf("no hosted zone ID associated with tag: %s", tag.String())
 	}
-	return parseHostedZoneResourceID(*zones[0])
+	return parseHostedZoneResourceID(zones[0])
 }
 
 // GetHostedZonesWithTag returns R53 hosted zone for a given tag
-func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*types.HostedZone, error) {
+func (a *Client) GetHostedZonesWithTag(tag Tag) ([]types.HostedZone, error) {
 	zones, err := a.getHostedZonesWithTag(tag, false)
 	if err != nil {
 		return nil, err
@@ -478,8 +478,8 @@ func (a *Client) GetHostedZonesWithTag(tag Tag) ([]*types.HostedZone, error) {
 	return zones, nil
 }
 
-func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*types.HostedZone, error) {
-	var zones []*types.HostedZone
+func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]types.HostedZone, error) {
+	var zones []types.HostedZone
 	var next *string
 
 	for {
@@ -488,7 +488,7 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*types.Hosted
 			return nil, errors.Wrapf(err, "failed to list all hosted zones")
 		}
 
-		for i, zone := range zoneList.HostedZones {
+		for _, zone := range zoneList.HostedZones {
 			id, err := parseHostedZoneResourceID(zone)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to parse hosted zone ID: %s", *zone.Name)
@@ -506,7 +506,7 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*types.Hosted
 
 			for _, resourceTag := range tagList.ResourceTagSet.Tags {
 				if tag.Compare(resourceTag) {
-					zones = append(zones, &zoneList.HostedZones[i])
+					zones = append(zones, zone)
 					break
 				}
 			}
