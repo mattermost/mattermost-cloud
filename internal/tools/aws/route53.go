@@ -488,7 +488,7 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*types.Hosted
 			return nil, errors.Wrapf(err, "failed to list all hosted zones")
 		}
 
-		for _, zone := range zoneList.HostedZones {
+		for i, zone := range zoneList.HostedZones {
 			id, err := parseHostedZoneResourceID(zone)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to parse hosted zone ID: %s", *zone.Name)
@@ -506,7 +506,7 @@ func (a *Client) getHostedZonesWithTag(tag Tag, firstOnly bool) ([]*types.Hosted
 
 			for _, resourceTag := range tagList.ResourceTagSet.Tags {
 				if tag.Compare(resourceTag) {
-					zones = append(zones, &zone)
+					zones = append(zones, &zoneList.HostedZones[i])
 					break
 				}
 			}
