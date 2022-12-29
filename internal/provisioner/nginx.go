@@ -118,16 +118,15 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.Wrap(err, "failed to retrive the VPC information")
 	}
 
-	return &helmDeployment{
-		chartDeploymentName: "nginx",
-		chartName:           "ingress-nginx/ingress-nginx",
-		namespace:           "nginx",
-		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *certificate.ARN, clusterResources.VpcCIDR),
-		desiredVersion:      n.desiredVersion,
-
-		kubeconfigPath: n.kubeconfigPath,
-		logger:         n.logger,
-	}, nil
+	return newHelmDeployment(
+		"ingress-nginx/ingress-nginx",
+		"nginx",
+		"nginx",
+		n.kubeconfigPath,
+		n.desiredVersion,
+		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *certificate.ARN, clusterResources.VpcCIDR),
+		n.logger,
+	), nil
 }
 
 func (n *nginx) Name() string {
