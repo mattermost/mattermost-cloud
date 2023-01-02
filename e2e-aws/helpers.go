@@ -14,8 +14,8 @@ func testClusterCreation(t *testing.T, suite *ClusterTestSuite, clusterRequest *
 	err = suite.WaitForEvent(
 		model.TypeCluster,
 		cluster.ID,
-		model.ClusterStateStable,
-		model.ClusterStateCreationFailed,
+		[]string{model.ClusterStateStable},
+		[]string{model.ClusterStateCreationFailed},
 		defaultClusterCreationTimeout,
 	)
 	assert.NoError(t, err)
@@ -30,8 +30,8 @@ func testClusterDeletion(t *testing.T, suite *ClusterTestSuite, clusterID string
 	err = suite.WaitForEvent(
 		model.TypeCluster,
 		clusterID,
-		model.ClusterStateStable,
-		model.ClusterStateCreationFailed,
+		[]string{model.ClusterStateDeleted},
+		[]string{model.ClusterStateDeletionFailed},
 		defaultClusterCreationTimeout,
 	)
 	assert.NoError(t, err)
@@ -44,8 +44,8 @@ func testInstallationCreation(t *testing.T, suite *ClusterTestSuite, request *mo
 	err = suite.WaitForEvent(
 		model.TypeInstallation,
 		installation.ID,
-		model.InstallationStateStable,
-		model.InstallationStateCreationFailed,
+		[]string{model.InstallationStateStable},
+		[]string{model.InstallationStateCreationFailed},
 		defaultInstallationCreationTimeout,
 	)
 	assert.NoError(t, err)
@@ -60,8 +60,8 @@ func testInstallationDeletion(t *testing.T, suite *ClusterTestSuite, installatio
 	err = suite.WaitForEvent(
 		model.TypeInstallation,
 		installationID,
-		model.InstallationStateDeleted,
-		model.InstallationStateDeletionFailed,
+		[]string{model.InstallationStateDeleted},
+		[]string{model.InstallationStateDeletionFailed},
 		defaultInstallationDeletionTimeout,
 	)
 	assert.NoError(t, err)

@@ -52,6 +52,16 @@ func checkDependencies(t *testing.T) {
 	}
 }
 
+func sliceContains(haystack []string, needle string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+
+	return false
+}
+
 func createUniqueName() string {
 	return fmt.Sprintf("e2e-aws-%s", uuid.New().String())
 }

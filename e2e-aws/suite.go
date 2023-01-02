@@ -78,7 +78,7 @@ func (s *ClusterTestSuite) UnregisterWebhook() error {
 	return nil
 }
 
-func (s *ClusterTestSuite) WaitForEvent(resource model.ResourceType, resourceID, expectedEvent, failedEvent string, timeout time.Duration) error {
+func (s *ClusterTestSuite) WaitForEvent(resource model.ResourceType, resourceID string, expectedEvents, failedEvents []string, timeout time.Duration) error {
 	started := time.Now()
 
 	key := strings.Join([]string{string(resource), resourceID}, "-")
@@ -95,7 +95,7 @@ func (s *ClusterTestSuite) WaitForEvent(resource model.ResourceType, resourceID,
 		delete(s.webhookHandlers, key)
 	}()
 
-	log.Printf("Waiting for %s %s to be %s or %s for %v", resource, resourceID, expectedEvent, failedEvent, timeout)
+	log.Printf("Waiting for %s %s to be %s or %s for %v", resource, resourceID, expectedEvents, failedEvents, timeout)
 
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
@@ -103,13 +103,12 @@ func (s *ClusterTestSuite) WaitForEvent(resource model.ResourceType, resourceID,
 	for {
 		select {
 		case payload := <-ch:
-			switch payload.NewState {
-			case expectedEvent:
+			if sliceContains(expectedEvents, payload.NewState) {
 				delta := time.Since(started)
-				log.Printf("Expected %s event received after %v", expectedEvent, delta)
+				log.Printf("Expected %s %s event received after %v", resource, payload.NewState, delta)
 				return nil
-			case failedEvent:
-				return fmt.Errorf("received failed event: %s", payload.NewState)
+			} else if sliceContains(failedEvents, payload.NewState) {
+				return fmt.Errorf("received %s failed event: %s", resource, payload.NewState)
 			}
 		case <-ticker.C:
 			return fmt.Errorf("timeout")
