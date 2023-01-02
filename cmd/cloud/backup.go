@@ -44,7 +44,6 @@ func newCmdInstallationBackupCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -65,7 +64,6 @@ func newCmdInstallationBackupList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -151,7 +149,6 @@ func newCmdInstallationBackupGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -179,7 +176,6 @@ func newCmdInstallationBackupDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 

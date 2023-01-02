@@ -353,7 +353,7 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group, annotations []*model.A
 			return errors.Wrap(err, "failed to get or create annotations")
 		}
 
-		annotations, err = sqlStore.createGroupAnnotations(tx, group.ID, annotations)
+		_, err = sqlStore.createGroupAnnotations(tx, group.ID, annotations)
 		if err != nil {
 			return errors.Wrap(err, "failed to create group annotations")
 		}

@@ -7,7 +7,6 @@ package terraform
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -25,7 +24,7 @@ type terraformOutput struct {
 
 // Init invokes terraform init.
 func (c *Cmd) Init(remoteKey string) error {
-	err := ioutil.WriteFile(path.Join(c.dir, backendFilename), []byte(backendFile), 0644)
+	err := os.WriteFile(path.Join(c.dir, backendFilename), []byte(backendFile), 0644)
 	if err != nil {
 		return errors.Wrap(err, "unable to write terraform backend state file")
 	}

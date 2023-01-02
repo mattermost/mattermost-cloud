@@ -20,7 +20,7 @@ func TestValidateDBMigrationDestination(t *testing.T) {
 	defer store.CloseConnection(t, sqlStore)
 
 	installation := &model.Installation{
-		Name:   "dns",
+		Name:  "dns",
 		State: model.InstallationStateStable,
 	}
 	err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.com"))

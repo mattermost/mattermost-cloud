@@ -29,7 +29,7 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 	instanceID := model.NewID()
 
 	installation := &model.Installation{
-		Name:   "test",
+		Name:  "test",
 		State: model.InstallationStateStable,
 	}
 	err := sqlStore.CreateInstallation(installation, nil, nil)

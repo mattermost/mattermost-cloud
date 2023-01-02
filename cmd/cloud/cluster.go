@@ -85,7 +85,6 @@ func newCmdClusterCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -189,7 +188,6 @@ func newCmdClusterProvision() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -234,7 +232,6 @@ func newCmdClusterUpdate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -280,7 +277,6 @@ func newCmdClusterUpgrade() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
 			flags.clusterUpgradeFlagChanged.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -335,7 +331,6 @@ func newCmdClusterResize() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -399,7 +394,6 @@ func newCmdClusterDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -430,7 +424,6 @@ func newCmdClusterGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -467,7 +460,6 @@ func newCmdClusterList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -580,7 +572,6 @@ func newCmdClusterUtilities() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)

@@ -6,7 +6,7 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +15,7 @@ import (
 
 func TestGenerate(t *testing.T) {
 	t.Run("all generators", func(t *testing.T) {
-		expectedCode, err := ioutil.ReadFile("testdata/all_generators.txt")
+		expectedCode, err := os.ReadFile("testdata/all_generators.txt")
 		require.NoError(t, err)
 
 		mainCmd := newRootCmd()
@@ -30,7 +30,7 @@ func TestGenerate(t *testing.T) {
 	})
 
 	t.Run("id generator only", func(t *testing.T) {
-		expectedCode, err := ioutil.ReadFile("testdata/id_generator.txt")
+		expectedCode, err := os.ReadFile("testdata/id_generator.txt")
 		require.NoError(t, err)
 
 		mainCmd := newRootCmd()

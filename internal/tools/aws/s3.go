@@ -172,6 +172,9 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 			Bucket: destBucketName,
 			Key:    destBucketKey,
 		})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create multipart upload for %s/%s", *srcBucketName, *srcBucketKey)
+	}
 
 	uploadID := response.UploadId
 	copySource := fmt.Sprintf("%s/%s", *srcBucketName, *srcBucketKey)

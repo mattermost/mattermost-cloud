@@ -41,7 +41,7 @@ func (sqlStore *SQLStore) setSystemValue(e execer, key, value string) error {
 		return nil
 	}
 
-	result, err = sqlStore.execBuilder(e,
+	_, err = sqlStore.execBuilder(e,
 		sq.Insert("System").Columns("Key", "Value").Values(key, value),
 	)
 	if err != nil {

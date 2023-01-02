@@ -47,7 +47,6 @@ func newCmdStateChangeEventList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.eventFlags.addFlags(cmd)
-			return
 		},
 	}
 

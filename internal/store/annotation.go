@@ -308,7 +308,7 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallations(filter *model.Installat
 		"Annotation.ID as AnnotationID",
 		"Annotation.Name as AnnotationName").
 		From("Installation").
-		LeftJoin(fmt.Sprintf("InstallationDNS ON InstallationDNS.InstallationID = Installation.ID")).
+		LeftJoin("InstallationDNS ON InstallationDNS.InstallationID = Installation.ID").
 		LeftJoin(fmt.Sprintf("%s ON %s.InstallationID = Installation.ID", installationAnnotationTable, installationAnnotationTable)).
 		Join("Annotation ON Annotation.ID=AnnotationID")
 	builder = sqlStore.applyInstallationFilter(builder, filter)

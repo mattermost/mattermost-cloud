@@ -6,7 +6,6 @@ package provisioner
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -103,10 +102,6 @@ func (n *teleport) Migrate() error {
 }
 
 func (n *teleport) NewHelmDeployment() *helmDeployment {
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = aws.DefaultAWSRegion
-	}
 	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
 	return newHelmDeployment(
 		"chartmuseum/teleport-kube-agent",

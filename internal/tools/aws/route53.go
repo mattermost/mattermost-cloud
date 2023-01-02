@@ -446,7 +446,8 @@ func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string) ([]*types.Res
 
 	for _, recordSet := range recordList.ResourceRecordSets {
 		if strings.TrimRight(*recordSet.Name, ".") == dnsName {
-			recordSets = append(recordSets, &recordSet)
+			rs := recordSet
+			recordSets = append(recordSets, &rs)
 		}
 	}
 
@@ -573,10 +574,7 @@ type Tag struct {
 func (t *Tag) Compare(tag types.Tag) bool {
 	if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
 		if tag.Value != nil && len(*tag.Value) > 0 {
-			if *tag.Value == t.Value {
-				return true
-			}
-			return false
+			return *tag.Value == t.Value
 		}
 		return true
 	}

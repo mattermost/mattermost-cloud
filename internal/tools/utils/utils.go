@@ -11,13 +11,10 @@ import (
 	"os"
 	"time"
 
+	"emperror.dev/errors"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 )
-
-type stop struct {
-	error
-}
 
 // CopyDirectory copy the entire directory to another destination
 func CopyDirectory(source string, dest string) error {
@@ -33,6 +30,9 @@ func CopyDirectory(source string, dest string) error {
 
 	directory, _ := os.Open(source)
 	objects, err := directory.Readdir(-1)
+	if err != nil {
+		return errors.Wrap(err, "error reading source directory")
+	}
 
 	for _, obj := range objects {
 		sourcefilepointer := source + "/" + obj.Name()

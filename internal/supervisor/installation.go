@@ -953,44 +953,6 @@ func (s *InstallationSupervisor) waitForUpdateStable(installation *model.Install
 	return model.InstallationStateStable
 }
 
-// Unused stub function
-// Will verify that all cluster installation belonging to an installation match
-// the provisioner's config.
-func (s *InstallationSupervisor) verifyClusterInstallationResourcesMatchInstallationConfig(installation *model.Installation, logger log.FieldLogger) (bool, error) {
-	clusterInstallations, err := s.store.GetClusterInstallations(&model.ClusterInstallationFilter{
-		Paging:         model.AllPagesNotDeleted(),
-		InstallationID: installation.ID,
-	})
-	if err != nil {
-		return false, errors.Wrap(err, "failed to lookup cluster installations")
-	}
-
-	if len(clusterInstallations) == 0 {
-		return false, errors.Wrap(err, "cluster installation list contained no results")
-	}
-
-	for _, clusterInstallation := range clusterInstallations {
-		cluster, err := s.store.GetCluster(clusterInstallation.ClusterID)
-		if err != nil {
-			return false, errors.Wrapf(err, "failed to query cluster %s", clusterInstallation.ClusterID)
-		}
-		if cluster == nil {
-			return false, errors.Wrapf(err, "failed to find cluster %s", clusterInstallation.ClusterID)
-		}
-
-		match, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
-			VerifyClusterInstallationMatchesConfig(cluster, installation, clusterInstallation)
-		if err != nil {
-			return false, errors.Wrapf(err, "failed to verify cluster installation matches")
-		}
-		if !match {
-			return false, nil
-		}
-	}
-
-	return true, nil
-}
-
 func (s *InstallationSupervisor) hibernateInstallation(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
 	success := s.performInstallationHibernation(installation, instanceID, logger)
 	if !success {
@@ -1737,30 +1699,6 @@ func (s *InstallationSupervisor) dnsSwitchForHibernatingInstallation(installatio
 	}
 
 	return s.waitForHibernationStable(installation, instanceID, logger)
-}
-
-// The record ID will be set to DNS name with idSuffix appended after '-'.
-func (s *InstallationSupervisor) updatePublicRecordsIDForCNAME(dnsNames []string, idSuffix string, logger log.FieldLogger) error {
-	for _, dns := range dnsNames {
-		recordID := determineRecordID(dns, idSuffix)
-
-		// TODO: for now we do not expect having multiple domains for the same hosted zone
-		// therefore we just do updates in a loop instead of trying to batch.
-		// If this ever changes, we can optimize by updating all records in same zone at once
-		err := s.aws.UpdatePublicRecordIDForCNAME(dns, recordID, logger)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func determineRecordID(dnsName, idSuffix string) string {
-	recordID := dnsName
-	if idSuffix != "" {
-		recordID = fmt.Sprintf("%s-%s", recordID, idSuffix)
-	}
-	return recordID
 }
 
 func (s *InstallationSupervisor) processInstallationMetrics(installation *model.Installation, logger log.FieldLogger) error {

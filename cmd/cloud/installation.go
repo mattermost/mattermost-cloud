@@ -59,7 +59,6 @@ func newCmdInstallationCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -174,7 +173,6 @@ func newCmdInstallationUpdate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -199,7 +197,6 @@ func newCmdInstallationDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -224,7 +221,6 @@ func newCmdInstallationCancelDeletion() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -251,7 +247,6 @@ func newCmdInstallationHibernate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -292,7 +287,6 @@ func newCmdInstallationWakeup() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -331,7 +325,6 @@ func newCmdInstallationGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -351,7 +344,6 @@ func newCmdInstallationList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -484,7 +476,6 @@ func newCmdInstallationRecovery() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -650,7 +641,6 @@ func newCmdInstallationDeploymentReport() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -781,7 +771,7 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	}
 
 	if flags.eventCount > 0 {
-		output += fmt.Sprintf("\nRecent Events:\n")
+		output += "\nRecent Events:\n"
 
 		req := model.ListStateChangeEventsRequest{
 			Paging: model.Paging{

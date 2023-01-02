@@ -52,7 +52,6 @@ func newCmdClusterInstallationGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -73,7 +72,6 @@ func newCmdClusterInstallationList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -164,7 +162,6 @@ func newCmdClusterInstallationConfigGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -203,7 +200,6 @@ func newCmdClusterInstallationConfigSet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -232,7 +228,6 @@ func newCmdClusterInstallationMMCTL() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -260,7 +255,6 @@ func newCmdClusterInstallationMattermostCLI() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -281,7 +275,6 @@ func newCmdClusterInstallationMigration() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -327,7 +320,6 @@ func newCmdClusterInstallationDNSMigration() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -367,7 +359,6 @@ func newCmdDeleteInActiveClusterInstallation() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -417,7 +408,6 @@ func newCmdClusterRolesPostMigrationSwitch() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)

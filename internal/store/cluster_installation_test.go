@@ -264,20 +264,6 @@ func TestGetUnlockedClusterInstallationPendingWork(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(deletionRequestedInstallation)
 	require.NoError(t, err)
 
-	otherStates := []string{
-		model.ClusterInstallationStateCreationFailed,
-		model.ClusterInstallationStateDeletionFailed,
-		model.ClusterInstallationStateDeleted,
-		model.ClusterInstallationStateStable,
-	}
-
-	otherClusterInstallations := []*model.ClusterInstallation{}
-	for _, otherState := range otherStates {
-		otherClusterInstallations = append(otherClusterInstallations, &model.ClusterInstallation{
-			State: otherState,
-		})
-	}
-
 	clusterInstallations, err := sqlStore.GetUnlockedClusterInstallationsPendingWork()
 	require.NoError(t, err)
 	require.Equal(t, []*model.ClusterInstallation{creationRequestedInstallation, deletionRequestedInstallation}, clusterInstallations)

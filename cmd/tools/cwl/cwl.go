@@ -50,7 +50,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := fmt.Sprintf("[ %s | %s ] %s -> %s", wType, webhook.ID[0:4], webhook.OldState, webhook.NewState)
-	log.Printf(message)
+	log.Print(message)
 	notify.Push("Cloud Webhook Listener", message, icon, notificator.UR_NORMAL)
 
 	w.WriteHeader(http.StatusOK)

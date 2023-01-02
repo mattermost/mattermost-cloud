@@ -387,7 +387,7 @@ func (s *ImportSupervisor) startImportProcessAndWait(mmctl *mmctl, logger logrus
 	}
 
 	jobResponses := []*jobResponse{}
-	err = json.Unmarshal([]byte(output), &jobResponses)
+	err = json.Unmarshal(output, &jobResponses)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal Job response from Mattermost")
 	}
@@ -417,7 +417,7 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, logger logrus.F
 			continue
 		}
 
-		err = json.Unmarshal([]byte(output), &jobResponses)
+		err = json.Unmarshal(output, &jobResponses)
 		if err != nil {
 			logger.WithError(err).Warn("failed to check job; bad JSON")
 			time.Sleep(5 * time.Second)

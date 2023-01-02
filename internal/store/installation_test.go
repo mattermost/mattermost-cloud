@@ -416,21 +416,6 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 	err = sqlStore.CreateInstallation(deletionRequestedInstallation, nil, fixDNSRecords(3))
 	require.NoError(t, err)
 
-	otherStates := []string{
-		model.InstallationStateCreationFailed,
-		model.InstallationStateDeletionFailed,
-		model.InstallationStateDeleted,
-		model.InstallationStateUpdateFailed,
-		model.InstallationStateStable,
-	}
-
-	otherInstallations := []*model.Installation{}
-	for _, otherState := range otherStates {
-		otherInstallations = append(otherInstallations, &model.Installation{
-			State: otherState,
-		})
-	}
-
 	installations, err := sqlStore.GetUnlockedInstallationsPendingWork()
 	require.NoError(t, err)
 	require.Equal(t, []*model.Installation{creationRequestedInstallation, updateRequestedInstallation, deletionRequestedInstallation}, installations)

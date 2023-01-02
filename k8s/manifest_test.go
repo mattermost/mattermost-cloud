@@ -6,7 +6,6 @@ package k8s
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -128,20 +127,20 @@ rules:
 func TestCreate(t *testing.T) {
 	testClient := newTestKubeClient()
 
-	tempDir, err := ioutil.TempDir(".", "k8s-file-testing-")
+	tempDir, err := os.CreateTemp(".", "k8s-file-testing-")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir.Name())
 
-	serviceYAML := filepath.Join(tempDir, "service.yaml")
-	err = ioutil.WriteFile(serviceYAML, []byte(exampleServiceYAML), 0600)
-	assert.NoError(t, err)
-
-	multiYAML := filepath.Join(tempDir, "multi.yaml")
-	err = ioutil.WriteFile(multiYAML, []byte(exampleMultiResourceYAML), 0600)
+	serviceYAML := filepath.Join(tempDir.Name(), "service.yaml")
+	err = os.WriteFile(serviceYAML, []byte(exampleServiceYAML), 0600)
 	assert.NoError(t, err)
 
-	badYAML := filepath.Join(tempDir, "bad.yaml")
-	err = ioutil.WriteFile(badYAML, []byte(exampleBadYAML), 0600)
+	multiYAML := filepath.Join(tempDir.Name(), "multi.yaml")
+	err = os.WriteFile(multiYAML, []byte(exampleMultiResourceYAML), 0600)
+	assert.NoError(t, err)
+
+	badYAML := filepath.Join(tempDir.Name(), "bad.yaml")
+	err = os.WriteFile(badYAML, []byte(exampleBadYAML), 0600)
 	assert.NoError(t, err)
 
 	namespace := "testing"
@@ -202,16 +201,16 @@ func TestBasename(t *testing.T) {
 func TestCreateNetworkPolicy(t *testing.T) {
 	testClient := newTestKubeClient()
 
-	tempDir, err := ioutil.TempDir(".", "k8s-file-testing-netpol")
+	tempDir, err := os.CreateTemp(".", "k8s-file-testing-netpol")
 	assert.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(tempDir.Name())
 
-	networkPolYAML := filepath.Join(tempDir, "netpol.yaml")
-	err = ioutil.WriteFile(networkPolYAML, []byte(exampleNetPolYAML), 0600)
+	networkPolYAML := filepath.Join(tempDir.Name(), "netpol.yaml")
+	err = os.WriteFile(networkPolYAML, []byte(exampleNetPolYAML), 0600)
 	assert.NoError(t, err)
 
-	networkPolDenyYAML := filepath.Join(tempDir, "netpoldeny.yaml")
-	err = ioutil.WriteFile(networkPolDenyYAML, []byte(exampleNetPolDenyYAML), 0600)
+	networkPolDenyYAML := filepath.Join(tempDir.Name(), "netpoldeny.yaml")
+	err = os.WriteFile(networkPolDenyYAML, []byte(exampleNetPolDenyYAML), 0600)
 	assert.NoError(t, err)
 
 	namespace := "testing"

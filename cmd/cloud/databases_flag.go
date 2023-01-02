@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+// 
+
 package main
 
 import "github.com/spf13/cobra"
@@ -39,9 +43,8 @@ func (flags *databaseMultiTenantUpdateFlagChanged) addFlags(command *cobra.Comma
 type databaseMultiTenantUpdateFlag struct {
 	clusterFlags
 	databaseMultiTenantUpdateFlagChanged
-	multitenantDatabaseID             string
-	maxInstallations                  int64
-	isMaxInstallationsPerLogicalDBSet bool
+	multitenantDatabaseID string
+	maxInstallations      int64
 }
 
 func (flags *databaseMultiTenantUpdateFlag) addFlags(command *cobra.Command) {

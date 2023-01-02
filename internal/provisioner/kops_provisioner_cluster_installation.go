@@ -699,13 +699,6 @@ func int32Ptr(i int) *int32 {
 	return &i32
 }
 
-func unwrapInt32(i *int32) int32 {
-	if i != nil {
-		return *i
-	}
-	return 0
-}
-
 func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
 	for _, env := range all {
 		if env == wanted {

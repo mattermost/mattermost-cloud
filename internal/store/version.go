@@ -20,6 +20,9 @@ func (sqlStore *SQLStore) GetCurrentVersion() (semver.Version, error) {
 // queryer.
 func (sqlStore *SQLStore) getCurrentVersion(q queryer) (semver.Version, error) {
 	currentVersionStr, err := sqlStore.getSystemValue(q, systemDatabaseVersionKey)
+	if err != nil {
+		return semver.Version{}, errors.Wrap(err, "error getting system value "+systemDatabaseVersionKey)
+	}
 	if currentVersionStr == "" {
 		return semver.Version{}, nil
 	}

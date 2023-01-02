@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -44,7 +44,7 @@ func NewClientWithHeaders(address string, headers map[string]string) *Client {
 // closeBody ensures the Body of an http.Response is properly closed.
 func closeBody(r *http.Response) {
 	if r.Body != nil {
-		_, _ = ioutil.ReadAll(r.Body)
+		_, _ = io.ReadAll(r.Body)
 		_ = r.Body.Close()
 	}
 }
@@ -956,7 +956,7 @@ func (c *Client) ExecClusterInstallationCLI(clusterInstallationID, command strin
 	}
 	defer closeBody(resp)
 
-	bytes, _ := ioutil.ReadAll(resp.Body)
+	bytes, _ := io.ReadAll(resp.Body)
 
 	switch resp.StatusCode {
 	case http.StatusOK:
