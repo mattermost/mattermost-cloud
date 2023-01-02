@@ -1,0 +1,39 @@
+# Configuration file for golangci-lint linter.
+# This will be automatically picked up when golangci-lint is invoked.
+# For all config options, see https://golangci-lint.run/usage/configuration/#config-file
+#
+
+# options for analysis running
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+exclude-rules:
+  # Exclude shadowing errors from test files
+  - path: internal/mocks/...
+    disable: all
+
+linters-settings:
+  gofmt:
+    simplify: true
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+      - shadow
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - gosimple
+    - govet
+    - ineffassign
+    - exportloopref
+    - staticcheck
+    - unconvert
+    - unused
