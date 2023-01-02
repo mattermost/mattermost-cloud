@@ -7,10 +7,10 @@ package main
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCluster(t *testing.T) {
@@ -24,81 +24,63 @@ func TestCluster(t *testing.T) {
 		clusterRequest := &model.CreateClusterRequest{
 			AllowInstallations: true,
 		}
-		if err := clusterdictionary.ApplyToCreateClusterRequest(clusterdictionary.SizeAlefDev, clusterRequest); err != nil {
-			t.Error(err)
-		}
-		cluster, err := suite.Client().CreateCluster(clusterRequest)
-		if err != nil {
-			t.Error(err)
-		}
+		err := clusterdictionary.ApplyToCreateClusterRequest(clusterdictionary.SizeAlefDev, clusterRequest)
+		assert.NoError(t, err)
 
-		err = suite.WaitForEvent(
-			model.TypeCluster,
-			cluster.ID,
-			model.ClusterStateStable,
-			model.ClusterStateCreationFailed,
-			time.Minute*30,
-		)
-		if err != nil {
-			t.Error(err)
-		}
+		cluster := testClusterCreation(t, suite, clusterRequest)
 
-		// installation create
-		name := createUniqueName()
-		installationRequest := &model.CreateInstallationRequest{
-			OwnerID: testIdentifier,
-			Name:    name,
-			DNSNames: []string{
-				fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
-			},
-		}
-		installation, err := suite.Client().CreateInstallation(installationRequest)
-		if err != nil {
-			t.Error(err)
-		}
+		t.Run("create simple installation", func(t *testing.T) {
+			// installation create
+			name := createUniqueName()
+			installationRequest := &model.CreateInstallationRequest{
+				OwnerID: testIdentifier,
+				Name:    name,
+				DNSNames: []string{
+					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
+				},
+			}
+			installation := testInstallationCreation(t, suite, installationRequest)
+			testInstallationDeletion(t, suite, installation.ID)
+		})
 
-		err = suite.WaitForEvent(
-			model.TypeInstallation,
-			installation.ID,
-			model.InstallationStateStable,
-			model.InstallationStateCreationFailed,
-			time.Minute*10,
-		)
-		if err != nil {
-			t.Error(err)
-		}
+		t.Run("create installation with single tenant database (defaults)", func(t *testing.T) {
+			// installation create
+			name := createUniqueName()
+			installationRequest := &model.CreateInstallationRequest{
+				OwnerID: testIdentifier,
+				Name:    name,
+				DNSNames: []string{
+					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
+				},
+				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{},
+			}
+			installation := testInstallationCreation(t, suite, installationRequest)
+			testInstallationDeletion(t, suite, installation.ID)
+		})
 
-		// installation dekete
-		err = suite.Client().DeleteInstallation(installation.ID)
-		if err != nil {
-			t.Error(err)
-		}
+		// Set cluster as multi-tenant
+		_, err = suite.Client().AddClusterAnnotations(cluster.ID, &model.AddAnnotationsRequest{
+			Annotations: []string{"multi-tenant"},
+		})
+		assert.NoError(t, err)
 
-		err = suite.WaitForEvent(
-			model.TypeInstallation,
-			installation.ID,
-			model.InstallationStateDeleted,
-			model.InstallationStateDeletionFailed,
-			time.Minute*10,
-		)
-		if err != nil {
-			t.Error(err)
-		}
+		t.Run("create installation (isolated)", func(t *testing.T) {
+			// installation create
+			name := createUniqueName()
+			installationRequest := &model.CreateInstallationRequest{
+				OwnerID: testIdentifier,
+				Name:    name,
+				DNSNames: []string{
+					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
+				},
+				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{},
+				Affinity:                   model.InstallationAffinityMultiTenant,
+			}
+			installation := testInstallationCreation(t, suite, installationRequest)
+			testInstallationDeletion(t, suite, installation.ID)
+		})
 
 		// cluster delete
-		if err := suite.Client().DeleteCluster(cluster.ID); err != nil {
-			t.Error(err)
-		}
-
-		err = suite.WaitForEvent(
-			model.TypeCluster,
-			cluster.ID,
-			model.ClusterStateDeleted,
-			model.ClusterStateDeletionFailed,
-			time.Minute*30,
-		)
-		if err != nil {
-			t.Error(err)
-		}
+		testClusterDeletion(t, suite, cluster.ID)
 	})
 }

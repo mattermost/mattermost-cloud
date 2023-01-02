@@ -81,6 +81,21 @@ func CleanupTest(t *testing.T, suite *ClusterTestSuite) {
 
 	suite.StopServer()
 
+	// // Removing dangling installations
+	// installations, err := suite.Client().GetInstallations(&model.GetInstallationsRequest{
+	// 	OwnerID: testIdentifier,
+	// })
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// 	return
+	// }
+
+	// for _, installation := range installations {
+	// 	if err := suite.Client().DeleteInstallation(installation.ID); err != nil {
+	// 		log.Printf("error removing cluster: %s", err.Error())
+	// 	}
+	// }
+
 	// // Removing dangling clusters
 	// clusters, err := suite.Client().GetClusters(&model.GetClustersRequest{})
 	// if err != nil {
@@ -93,4 +108,5 @@ func CleanupTest(t *testing.T, suite *ClusterTestSuite) {
 	// 		log.Printf("error removing cluster: %s", err.Error())
 	// 	}
 	// }
+
 }

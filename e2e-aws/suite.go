@@ -12,6 +12,13 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 )
 
+const (
+	defaultClusterCreationTimeout      = time.Minute * 30
+	defaultClusterDeletionTimeout      = time.Minute * 30
+	defaultInstallationCreationTimeout = time.Minute * 10
+	defaultInstallationDeletionTimeout = time.Minute * 10
+)
+
 type ClusterTestSuite struct {
 	http   *httpServer
 	client *model.Client
