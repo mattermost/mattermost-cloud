@@ -1,21 +1,13 @@
-# Configuration file for golangci-lint linter.
-# This will be automatically picked up when golangci-lint is invoked.
-# For all config options, see https://golangci-lint.run/usage/configuration/#config-file
-#
+# Docs: https://golangci-lint.run/usage/configuration/#config-file
 
-# options for analysis running
 run:
-  # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
+  skip-dirs:
+    - internal/mocks
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
-exclude-rules:
-  # Exclude shadowing errors from test files
-  - path: internal/mocks/...
-    disable: all
 
 linters-settings:
   gofmt:
