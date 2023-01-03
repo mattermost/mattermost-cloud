@@ -19,9 +19,6 @@ const (
 	// MattermostChannel is the name of the Environment Variable which
 	// may contain a Mattermost channel in which notifications are going to be sent
 	MattermostChannel = "mattermost-channel"
-	// KubecostToken is the name of the Environment Variable which
-	// may contain a Kubecost token which kubecost helm chart needs
-	KubecostToken = "kubecost-token"
 )
 
 // Cluster represents a Kubernetes cluster.

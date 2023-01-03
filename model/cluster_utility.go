@@ -29,8 +29,6 @@ const (
 	PromtailCanonicalName = "promtail"
 	// RtcdCanonicalName is the canonical string representation of RTCD
 	RtcdCanonicalName = "rtcd"
-	// KubecostCanonicalName is the canonical string representation of kubecost
-	KubecostCanonicalName = "kubecost"
 	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
 	NodeProblemDetectorCanonicalName = "node-problem-detector"
 	// MetricsServerCanonicalName is the canonical string representation of metrics server
@@ -101,7 +99,6 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	PgbouncerCanonicalName:           "pgbouncer_values.yaml",
 	PromtailCanonicalName:            "promtail_values.yaml",
 	RtcdCanonicalName:                "rtcd_values.yaml",
-	KubecostCanonicalName:            "kubecost_values.yaml",
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
 	VeleroCanonicalName:              "velero_values.yaml",
