@@ -73,9 +73,8 @@ func copyFile(source string, dest string) error {
 	if err == nil {
 		sourceinfo, err := os.Stat(source)
 		if err != nil {
-			err = os.Chmod(dest, sourceinfo.Mode())
+			_ = os.Chmod(dest, sourceinfo.Mode())
 		}
-
 	}
 
 	return nil
