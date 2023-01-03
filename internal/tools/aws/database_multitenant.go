@@ -14,13 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/common"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/rds"
-	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
+	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -127,7 +128,7 @@ func (d *RDSMultitenantDatabase) updateMultitenantDatabase(store model.Installat
 	return updateCounterTagWithCurrentWeight(database, rdsCluster, store, d.client, logger)
 }
 
-func updateCounterTagWithCurrentWeight(database *model.MultitenantDatabase, rdsCluster *rds.DBCluster, store model.InstallationDatabaseStoreInterface, client *Client, logger log.FieldLogger) error {
+func updateCounterTagWithCurrentWeight(database *model.MultitenantDatabase, rdsCluster *rdsTypes.DBCluster, store model.InstallationDatabaseStoreInterface, client *Client, logger log.FieldLogger) error {
 	weight, err := store.GetInstallationsTotalDatabaseWeight(database.Installations)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate total database weight")
@@ -670,30 +671,30 @@ func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID s
 	databaseType := d.DatabaseTypeTagValue()
 
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []*gt.TagFilter{
+		TagFilters: []gtTypes.TagFilter{
 			{
 				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
-				Values: []*string{aws.String(RDSMultitenantPurposeTagValueProvisioning)},
+				Values: []string{RDSMultitenantPurposeTagValueProvisioning},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
-				Values: []*string{aws.String(RDSMultitenantOwnerTagValueCloudTeam)},
+				Values: []string{RDSMultitenantOwnerTagValueCloudTeam},
 			},
 			{
 				Key:    aws.String(DefaultAWSTerraformProvisionedKey),
-				Values: []*string{aws.String(DefaultAWSTerraformProvisionedValueTrue)},
+				Values: []string{DefaultAWSTerraformProvisionedValueTrue},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
-				Values: []*string{aws.String(DefaultRDSMultitenantDatabaseTypeTagValue)},
+				Values: []string{DefaultRDSMultitenantDatabaseTypeTagValue},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
-				Values: []*string{&vpcID},
+				Values: []string{vpcID},
 			},
 			{
 				Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-				Values: []*string{&databaseType},
+				Values: []string{databaseType},
 			},
 			{
 				Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
@@ -702,7 +703,7 @@ func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID s
 				Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
 			},
 		},
-		ResourceTypeFilters: []*string{aws.String(DefaultResourceTypeClusterRDS)},
+		ResourceTypeFilters: []string{DefaultResourceTypeClusterRDS},
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get available multitenant RDS resources")
@@ -766,7 +767,7 @@ func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID s
 	return multitenantDatabases, nil
 }
 
-func getRDSClusterIDFromResourceTags(maxDatabases int, resourceTags []*gt.Tag) (*string, error) {
+func getRDSClusterIDFromResourceTags(maxDatabases int, resourceTags []gtTypes.Tag) (*string, error) {
 	var rdsClusterID *string
 	var installationCounter *string
 
@@ -795,15 +796,17 @@ func getRDSClusterIDFromResourceTags(maxDatabases int, resourceTags []*gt.Tag) (
 }
 
 func updateCounterTag(resourceARN *string, counter int, client *Client) error {
-	_, err := client.Service().rds.AddTagsToResource(&rds.AddTagsToResourceInput{
-		ResourceName: resourceARN,
-		Tags: []*rds.Tag{
-			{
-				Key:   aws.String(trimTagPrefix(DefaultMultitenantDatabaseCounterTagKey)),
-				Value: aws.String(fmt.Sprintf("%d", counter)),
+	_, err := client.Service().rds.AddTagsToResource(
+		context.TODO(),
+		&rds.AddTagsToResourceInput{
+			ResourceName: resourceARN,
+			Tags: []rdsTypes.Tag{
+				{
+					Key:   aws.String(trimTagPrefix(DefaultMultitenantDatabaseCounterTagKey)),
+					Value: aws.String(fmt.Sprintf("%d", counter)),
+				},
 			},
-		},
-	})
+		})
 	if err != nil {
 		return errors.Wrapf(err, "failed to update %s for the multitenant RDS cluster %s", DefaultMultitenantDatabaseCounterTagKey, *resourceARN)
 	}
@@ -839,15 +842,17 @@ func createDatabaseUserSecret(secretName, username, description string, tags []*
 	return &rdsSecretPayload, nil
 }
 
-func describeRDSCluster(dbClusterID string, client *Client) (*rds.DBCluster, error) {
-	dbClusterOutput, err := client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		Filters: []*rds.Filter{
-			{
-				Name:   aws.String("db-cluster-id"),
-				Values: []*string{aws.String(dbClusterID)},
+func describeRDSCluster(dbClusterID string, client *Client) (*rdsTypes.DBCluster, error) {
+	dbClusterOutput, err := client.Service().rds.DescribeDBClusters(
+		context.TODO(),
+		&rds.DescribeDBClustersInput{
+			Filters: []rdsTypes.Filter{
+				{
+					Name:   aws.String("db-cluster-id"),
+					Values: []string{dbClusterID},
+				},
 			},
-		},
-	})
+		})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS cluster id %s", dbClusterID)
 	}
@@ -855,7 +860,9 @@ func describeRDSCluster(dbClusterID string, client *Client) (*rds.DBCluster, err
 		return nil, errors.Errorf("expected exactly one multitenant RDS cluster (found %d)", len(dbClusterOutput.DBClusters))
 	}
 
-	return dbClusterOutput.DBClusters[0], nil
+	cluster := dbClusterOutput.DBClusters[0]
+
+	return &cluster, nil
 }
 
 func lockMultitenantDatabase(multitenantDatabaseID, instanceID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) (func(), error) {
@@ -1014,9 +1021,11 @@ func (d *RDSMultitenantDatabase) ensureMultitenantDatabaseSecretIsCreated(rdsClu
 }
 
 func isRDSClusterEndpointsReady(rdsClusterID string, client *Client) (bool, error) {
-	output, err := client.service.rds.DescribeDBClusterEndpoints(&rds.DescribeDBClusterEndpointsInput{
-		DBClusterIdentifier: aws.String(rdsClusterID),
-	})
+	output, err := client.service.rds.DescribeDBClusterEndpoints(
+		context.TODO(),
+		&rds.DescribeDBClusterEndpointsInput{
+			DBClusterIdentifier: aws.String(rdsClusterID),
+		})
 	if err != nil {
 		return false, errors.Wrap(err, "failed to describe RDS cluster endpoint")
 	}
@@ -1030,7 +1039,7 @@ func isRDSClusterEndpointsReady(rdsClusterID string, client *Client) (bool, erro
 	return true, nil
 }
 
-func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseName, vpcID string, rdsCluster *rds.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseName, vpcID string, rdsCluster *rdsTypes.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(&secretsmanager.GetSecretValueInput{
