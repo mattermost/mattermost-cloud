@@ -77,8 +77,6 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	PromtailCanonicalName: {Chart: "6.2.2", ValuesPath: ""},
 	// RtcdCanonicalName defines the default version and values path for the Helm chart
 	RtcdCanonicalName: {Chart: "1.1.0", ValuesPath: ""},
-	// KubecostCanonicalName defines the default version and values path for the Helm chart
-	KubecostCanonicalName: {Chart: "1.95.0", ValuesPath: ""},
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
 	NodeProblemDetectorCanonicalName: {Chart: "2.0.5", ValuesPath: ""},
 	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
@@ -144,7 +142,6 @@ type UtilityGroupVersions struct {
 	Pgbouncer           *HelmUtilityVersion
 	Promtail            *HelmUtilityVersion
 	Rtcd                *HelmUtilityVersion
-	Kubecost            *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
 	MetricsServer       *HelmUtilityVersion
 	Velero              *HelmUtilityVersion
@@ -165,7 +162,6 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		PgbouncerCanonicalName:           h.Pgbouncer,
 		PromtailCanonicalName:            h.Promtail,
 		RtcdCanonicalName:                h.Rtcd,
-		KubecostCanonicalName:            h.Kubecost,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 		MetricsServerCanonicalName:       h.MetricsServer,
 		VeleroCanonicalName:              h.Velero,
@@ -298,8 +294,6 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Promtail = desiredVersion
 	case RtcdCanonicalName:
 		versions.Rtcd = desiredVersion
-	case KubecostCanonicalName:
-		versions.Kubecost = desiredVersion
 	case NodeProblemDetectorCanonicalName:
 		versions.NodeProblemDetector = desiredVersion
 	case MetricsServerCanonicalName:
