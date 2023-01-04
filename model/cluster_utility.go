@@ -29,8 +29,6 @@ const (
 	PromtailCanonicalName = "promtail"
 	// RtcdCanonicalName is the canonical string representation of RTCD
 	RtcdCanonicalName = "rtcd"
-	// KubecostCanonicalName is the canonical string representation of kubecost
-	KubecostCanonicalName = "kubecost"
 	// NodeProblemDetectorCanonicalName is the canonical string representation of node problem detector
 	NodeProblemDetectorCanonicalName = "node-problem-detector"
 	// MetricsServerCanonicalName is the canonical string representation of metrics server
@@ -79,8 +77,6 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	PromtailCanonicalName: {Chart: "6.2.2", ValuesPath: ""},
 	// RtcdCanonicalName defines the default version and values path for the Helm chart
 	RtcdCanonicalName: {Chart: "1.1.0", ValuesPath: ""},
-	// KubecostCanonicalName defines the default version and values path for the Helm chart
-	KubecostCanonicalName: {Chart: "1.95.0", ValuesPath: ""},
 	// NodeProblemDetectorCanonicalName defines the default version and values path for the Helm chart
 	NodeProblemDetectorCanonicalName: {Chart: "2.0.5", ValuesPath: ""},
 	// MetricsServerCanonicalName defines the default version and values path for the Helm chart
@@ -101,7 +97,6 @@ var defaultUtilityValuesFileNames map[string]string = map[string]string{
 	PgbouncerCanonicalName:           "pgbouncer_values.yaml",
 	PromtailCanonicalName:            "promtail_values.yaml",
 	RtcdCanonicalName:                "rtcd_values.yaml",
-	KubecostCanonicalName:            "kubecost_values.yaml",
 	NodeProblemDetectorCanonicalName: "node_problem_detector_values.yaml",
 	MetricsServerCanonicalName:       "metrics_server_values.yaml",
 	VeleroCanonicalName:              "velero_values.yaml",
@@ -147,7 +142,6 @@ type UtilityGroupVersions struct {
 	Pgbouncer           *HelmUtilityVersion
 	Promtail            *HelmUtilityVersion
 	Rtcd                *HelmUtilityVersion
-	Kubecost            *HelmUtilityVersion
 	NodeProblemDetector *HelmUtilityVersion
 	MetricsServer       *HelmUtilityVersion
 	Velero              *HelmUtilityVersion
@@ -168,7 +162,6 @@ func (h *UtilityGroupVersions) AsMap() map[string]*HelmUtilityVersion {
 		PgbouncerCanonicalName:           h.Pgbouncer,
 		PromtailCanonicalName:            h.Promtail,
 		RtcdCanonicalName:                h.Rtcd,
-		KubecostCanonicalName:            h.Kubecost,
 		NodeProblemDetectorCanonicalName: h.NodeProblemDetector,
 		MetricsServerCanonicalName:       h.MetricsServer,
 		VeleroCanonicalName:              h.Velero,
@@ -301,8 +294,6 @@ func setUtilityVersion(versions *UtilityGroupVersions, utility string, desiredVe
 		versions.Promtail = desiredVersion
 	case RtcdCanonicalName:
 		versions.Rtcd = desiredVersion
-	case KubecostCanonicalName:
-		versions.Kubecost = desiredVersion
 	case NodeProblemDetectorCanonicalName:
 		versions.NodeProblemDetector = desiredVersion
 	case MetricsServerCanonicalName:
