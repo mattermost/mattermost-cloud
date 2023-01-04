@@ -172,8 +172,9 @@ func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mo
 	return nil
 }
 
-func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2Types.SecurityGroup, error) {
+func (a *Client) getPostgresSecurityGroup(vpcID string) (ec2Types.SecurityGroup, error) {
 	ctx := context.TODO()
+	var postgresSG ec2Types.SecurityGroup
 	securityGroupsResp, err := a.Service().ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 		DryRun: nil,
 		Filters: []ec2Types.Filter{
@@ -182,18 +183,17 @@ func (a *Client) getPostgresSecurityGroup(vpcID string) (*ec2Types.SecurityGroup
 		// TODO: make sure to list all
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to describe security groups for VPC")
+		return postgresSG, errors.Wrap(err, "failed to describe security groups for VPC")
 	}
 
-	var postgresSG *ec2Types.SecurityGroup
 	for _, sg := range securityGroupsResp.SecurityGroups {
 		if strings.HasSuffix(*sg.GroupName, "-db-postgresql-sg") {
-			postgresSG = &sg
+			postgresSG = sg
 			break
 		}
 	}
-	if postgresSG == nil {
-		return nil, errors.New("postgres db security group not found")
+	if postgresSG.GroupName == nil {
+		return postgresSG, errors.New("postgres db security group not found")
 	}
 
 	return postgresSG, nil
