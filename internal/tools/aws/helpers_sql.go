@@ -8,13 +8,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/pkg/errors"
 )
 
 // MattermostMySQLConnStrings formats the connection string used for accessing a
 // Mattermost database.
-func MattermostMySQLConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
+func MattermostMySQLConnStrings(schema, username, password string, dbCluster *rdsTypes.DBCluster) (string, string) {
 	dbConnection := fmt.Sprintf("mysql://%s:%s@tcp(%s:3306)/%s?charset=utf8mb4%%2Cutf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
 		username, password, *dbCluster.Endpoint, schema)
 	readReplicas := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?charset=utf8mb4%%2Cutf8&readTimeout=30s&writeTimeout=30s&tls=skip-verify",
@@ -32,7 +32,7 @@ func RDSMySQLConnString(schema, endpoint, username, password string) string {
 
 // MattermostPostgresConnStrings formats the connection strings used by Mattermost
 // servers to access a PostgreSQL database.
-func MattermostPostgresConnStrings(schema, username, password string, dbCluster *rds.DBCluster) (string, string) {
+func MattermostPostgresConnStrings(schema, username, password string, dbCluster *rdsTypes.DBCluster) (string, string) {
 	dbConnection := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",
 		username, password, *dbCluster.Endpoint, schema)
 	readReplicas := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?connect_timeout=10",

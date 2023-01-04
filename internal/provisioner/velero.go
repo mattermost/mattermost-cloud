@@ -84,15 +84,15 @@ func (f *velero) ActualVersion() *model.HelmUtilityVersion {
 func (f *velero) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("configuration.backupStorageLocation.prefix=%s", f.cluster.ID)
 
-	return &helmDeployment{
-		chartDeploymentName: "velero",
-		chartName:           "vmware-tanzu/velero",
-		namespace:           "velero",
-		kubeconfigPath:      f.kubeconfigPath,
-		logger:              logger,
-		setArgument:         helmValueArguments,
-		desiredVersion:      f.desiredVersion,
-	}
+	return newHelmDeployment(
+		"vmware-tanzu/velero",
+		"velero",
+		"velero",
+		f.kubeconfigPath,
+		f.desiredVersion,
+		helmValueArguments,
+		logger,
+	)
 }
 
 func (f *velero) ValuesPath() string {

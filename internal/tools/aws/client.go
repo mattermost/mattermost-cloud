@@ -9,28 +9,23 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go-v2/service/acm"
-	"github.com/aws/aws-sdk-go-v2/service/eks"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
-
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
+	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -142,13 +137,13 @@ type cache struct {
 type Service struct {
 	acm                   ACMAPI
 	ec2                   EC2API
+	rds                   RDSAPI
 	iam                   IAMAPI
-	rds                   rdsiface.RDSAPI
-	s3                    s3iface.S3API
+	s3                    S3API
 	route53               Route53API
 	secretsManager        secretsmanageriface.SecretsManagerAPI
-	resourceGroupsTagging resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
-	kms                   kmsiface.KMSAPI
+	resourceGroupsTagging ResourceGroupsTaggingAPIAPI
+	kms                   KMSAPI
 	dynamodb              DynamoDBAPI
 	sts                   stsiface.STSAPI
 	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
@@ -159,15 +154,15 @@ type Service struct {
 func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 	return &Service{
 		acm:                   acm.NewFromConfig(cfg), // v2
+		rds:                   rds.NewFromConfig(cfg), // v2
 		iam:                   iam.NewFromConfig(cfg),
-		rds:                   rds.New(sess),
-		s3:                    s3.New(sess),
-		route53:               route53.NewFromConfig(cfg), //v2
+		s3:                    s3.NewFromConfig(cfg),      // v2
+		route53:               route53.NewFromConfig(cfg), // v2
 		secretsManager:        secretsmanager.New(sess),
-		resourceGroupsTagging: resourcegroupstaggingapi.New(sess),
-		ec2:                   ec2.NewFromConfig(cfg), // v2
-		kms:                   kms.New(sess),
-		dynamodb:              dynamodb.NewFromConfig(cfg), // v2
+		resourceGroupsTagging: resourcegroupstaggingapi.NewFromConfig(cfg), // v2
+		ec2:                   ec2.NewFromConfig(cfg),                      // v2
+		kms:                   kms.NewFromConfig(cfg),                      // v2
+		dynamodb:              dynamodb.NewFromConfig(cfg),                 // v2
 		sts:                   sts.New(sess),
 		appAutoscaling:        applicationautoscaling.New(sess),
 		eks:                   eks.NewFromConfig(cfg), // v2

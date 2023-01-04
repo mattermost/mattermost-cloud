@@ -99,14 +99,15 @@ func (r *rtcd) Migrate() error {
 }
 
 func (r *rtcd) NewHelmDeployment() *helmDeployment {
-	return &helmDeployment{
-		chartDeploymentName: "mattermost-rtcd",
-		chartName:           "mattermost/mattermost-rtcd",
-		namespace:           "mattermost-rtcd",
-		kubeconfigPath:      r.kubeconfigPath,
-		logger:              r.logger,
-		desiredVersion:      r.desiredVersion,
-	}
+	return newHelmDeployment(
+		"mattermost/mattermost-rtcd",
+		"mattermost-rtcd",
+		"mattermost-rtcd",
+		r.kubeconfigPath,
+		r.desiredVersion,
+		defaultHelmDeploymentSetArgument,
+		r.logger,
+	)
 }
 
 func (r *rtcd) Name() string {

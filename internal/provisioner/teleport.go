@@ -108,15 +108,15 @@ func (n *teleport) NewHelmDeployment() *helmDeployment {
 		awsRegion = aws.DefaultAWSRegion
 	}
 	teleportClusterName := fmt.Sprintf("cloud-%s-%s", n.environment, n.cluster.ID)
-	return &helmDeployment{
-		chartDeploymentName: "teleport-kube-agent",
-		chartName:           "chartmuseum/teleport-kube-agent",
-		namespace:           "teleport",
-		setArgument:         fmt.Sprintf("kubeClusterName=%s", teleportClusterName),
-		kubeconfigPath:      n.kubeconfigPath,
-		logger:              n.logger,
-		desiredVersion:      n.desiredVersion,
-	}
+	return newHelmDeployment(
+		"chartmuseum/teleport-kube-agent",
+		"teleport-kube-agent",
+		"teleport",
+		n.kubeconfigPath,
+		n.desiredVersion,
+		fmt.Sprintf("kubeClusterName=%s", teleportClusterName),
+		n.logger,
+	)
 }
 
 func (n *teleport) Name() string {
