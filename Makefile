@@ -68,14 +68,14 @@ check-style: govet lint goformat goimports
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
-lint: $(GOLANGCILINT_GEN)
+lint: $(GOLANGCILINT)
 	@echo Running golangci-lint
-	$(GOLANGCILINT_BIN) run
+	$(GOLANGCILINT) run
 
 ## Runs lint against all packages for changes only
-lint-changes: $(GOLANGCILINT_GEN)
+lint-changes: $(GOLANGCILINT)
 	@echo Running golangci-lint over changes only
-	$(GOLANGCILINT_BIN) run -n
+	$(GOLANGCILINT) run -n
 
 ## Runs govet against all packages.
 .PHONY: vet
@@ -239,5 +239,5 @@ $(GOVERALLS_GEN): ## Build goveralls.
 $(GOIMPORTS): ## Build goimports.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/tools/cmd/goimports $(GOIMPORTS_BIN) $(GOIMPORTS_VER)
 
-$(GOLANGCILINT_GEN): ## Build golangci-lint
+$(GOLANGCILINT): ## Build golangci-lint
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCILINT_BIN) $(GOLANGCILINT_VER)
