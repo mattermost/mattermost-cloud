@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/model"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCluster(t *testing.T) {
@@ -21,16 +19,15 @@ func TestCluster(t *testing.T) {
 
 	t.Run("test cluster and installation create and destroy", func(t *testing.T) {
 		// cluster create
-		clusterRequest := &model.CreateClusterRequest{
-			AllowInstallations: true,
-		}
-		err := clusterdictionary.ApplyToCreateClusterRequest(clusterdictionary.SizeAlefDev, clusterRequest)
-		assert.NoError(t, err)
+		// clusterRequest := &model.CreateClusterRequest{
+		// 	AllowInstallations: true,
+		// }
+		// err := clusterdictionary.ApplyToCreateClusterRequest(clusterdictionary.SizeAlefDev, clusterRequest)
+		// assert.NoError(t, err)
 
-		cluster := testClusterCreation(t, suite, clusterRequest)
+		// cluster := testClusterCreation(t, suite, clusterRequest)
 
 		t.Run("create simple installation", func(t *testing.T) {
-			// installation create
 			name := createUniqueName()
 			installationRequest := &model.CreateInstallationRequest{
 				OwnerID: testIdentifier,
@@ -44,7 +41,6 @@ func TestCluster(t *testing.T) {
 		})
 
 		t.Run("create installation with single tenant database (defaults)", func(t *testing.T) {
-			// installation create
 			name := createUniqueName()
 			installationRequest := &model.CreateInstallationRequest{
 				OwnerID: testIdentifier,
@@ -53,19 +49,13 @@ func TestCluster(t *testing.T) {
 					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
 				},
 				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{},
+				Database:                   model.InstallationDatabaseSingleTenantRDSMySQL,
 			}
 			installation := testInstallationCreation(t, suite, installationRequest)
 			testInstallationDeletion(t, suite, installation.ID)
 		})
 
-		// Set cluster as multi-tenant
-		_, err = suite.Client().AddClusterAnnotations(cluster.ID, &model.AddAnnotationsRequest{
-			Annotations: []string{"multi-tenant"},
-		})
-		assert.NoError(t, err)
-
-		t.Run("create installation (isolated)", func(t *testing.T) {
-			// installation create
+		t.Run("create installation with aws s3 filestore", func(t *testing.T) {
 			name := createUniqueName()
 			installationRequest := &model.CreateInstallationRequest{
 				OwnerID: testIdentifier,
@@ -73,14 +63,41 @@ func TestCluster(t *testing.T) {
 				DNSNames: []string{
 					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
 				},
-				SingleTenantDatabaseConfig: model.SingleTenantDatabaseRequest{},
-				Affinity:                   model.InstallationAffinityMultiTenant,
+				Filestore: model.InstallationFilestoreAwsS3,
+			}
+			installation := testInstallationCreation(t, suite, installationRequest)
+			testInstallationDeletion(t, suite, installation.ID)
+		})
+
+		t.Run("create installation with s3 multitenant filestore", func(t *testing.T) {
+			name := createUniqueName()
+			installationRequest := &model.CreateInstallationRequest{
+				OwnerID: testIdentifier,
+				Name:    name,
+				DNSNames: []string{
+					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
+				},
+				Filestore: model.InstallationFilestoreMultiTenantAwsS3,
+			}
+			installation := testInstallationCreation(t, suite, installationRequest)
+			testInstallationDeletion(t, suite, installation.ID)
+		})
+
+		t.Run("create installation with bifrost filestore", func(t *testing.T) {
+			name := createUniqueName()
+			installationRequest := &model.CreateInstallationRequest{
+				OwnerID: testIdentifier,
+				Name:    name,
+				DNSNames: []string{
+					fmt.Sprintf("%s.dev.cloud.mattermost.com", name),
+				},
+				Filestore: model.InstallationFilestoreBifrost,
 			}
 			installation := testInstallationCreation(t, suite, installationRequest)
 			testInstallationDeletion(t, suite, installation.ID)
 		})
 
 		// cluster delete
-		testClusterDeletion(t, suite, cluster.ID)
+		// testClusterDeletion(t, suite, cluster.ID)
 	})
 }

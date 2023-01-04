@@ -45,7 +45,7 @@ func testInstallationCreation(t *testing.T, suite *ClusterTestSuite, request *mo
 		model.TypeInstallation,
 		installation.ID,
 		[]string{model.InstallationStateStable},
-		[]string{model.InstallationStateCreationFailed},
+		[]string{model.InstallationStateCreationFailed, model.InstallationStateCreationNoCompatibleClusters},
 		defaultInstallationCreationTimeout,
 	)
 	assert.NoError(t, err)
