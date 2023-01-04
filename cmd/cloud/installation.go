@@ -97,8 +97,9 @@ func executeInstallationCreateCmd(flags installationCreateFlags) error {
 
 	// For CLI to be backward compatible, if only one DNS is passed we use
 	// the old field.
+	// TODO: properly replace with DNSNames
 	if len(flags.dns) == 1 {
-		request.DNS = flags.dns[0]
+		request.DNS = flags.dns[0] //nolint
 	} else {
 		request.DNSNames = flags.dns
 	}
@@ -662,13 +663,18 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 		return nil
 	}
 
+	var dnsName string
+	if len(installation.DNSRecords) > 0 {
+		dnsName = installation.DNSRecords[0].DomainName
+	}
+
 	output := fmt.Sprintf("Installation: %s\n", installation.ID)
 	output += fmt.Sprintf(" ├ Created: %s\n", installation.CreationDateString())
 	output += fmt.Sprintf(" ├ State: %s\n", installation.State)
 	if installation.State == model.InstallationStateDeleted {
 		output += fmt.Sprintf(" │ └ Deleted: %s\n", installation.DeletionDateString())
 	}
-	output += fmt.Sprintf(" ├ DNS: %s\n", installation.DNS)
+	output += fmt.Sprintf(" ├ DNS: %s\n", dnsName)
 	output += fmt.Sprintf(" ├ Version: %s:%s\n", installation.Image, installation.Version)
 	output += fmt.Sprintf(" ├ Size: %s\n", installation.Size)
 	output += fmt.Sprintf(" ├ Affinity: %s\n", installation.Affinity)

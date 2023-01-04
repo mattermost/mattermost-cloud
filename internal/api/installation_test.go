@@ -203,7 +203,7 @@ func TestGetInstallations(t *testing.T) {
 				assert.NoError(t, err)
 				require.NotNil(t, installation)
 				assert.Equal(t, installation1.ID, installation.ID)
-				assert.Equal(t, "dns.example.com", installation.DNS)
+				assert.Equal(t, "dns.example.com", installation.DNS) //nolint
 				assert.Equal(t, "dns.example.com", installation.DNSRecords[0].DomainName)
 
 				noInstallation, err := client.GetInstallationByDNS("notreal", nil)
@@ -472,7 +472,8 @@ func TestCreateInstallation(t *testing.T) {
 		require.Equal(t, "owner", installation.OwnerID)
 		require.Equal(t, "version", installation.Version)
 		require.Equal(t, "mattermost/mattermost-enterprise-edition", installation.Image)
-		require.Equal(t, "dns.example.com", installation.DNS)
+		require.Equal(t, "dns.example.com", installation.DNS) //nolint
+		require.Equal(t, "dns.example.com", installation.DNSRecords[0].DomainName)
 		require.Equal(t, "dns", installation.Name)
 		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
 		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
@@ -502,7 +503,8 @@ func TestCreateInstallation(t *testing.T) {
 		require.Equal(t, "owner1", installation.OwnerID)
 		require.Equal(t, "version", installation.Version)
 		require.Equal(t, "custom-image", installation.Image)
-		require.Equal(t, "dns1.example.com", installation.DNS)
+		require.Equal(t, "dns1.example.com", installation.DNS) //nolint
+		require.Equal(t, "dns1.example.com", installation.DNSRecords[0].DomainName)
 		require.Equal(t, model.InstallationAffinityIsolated, installation.Affinity)
 		require.Equal(t, model.InstallationStateCreationRequested, installation.State)
 		require.Equal(t, model.DefaultCRVersion, installation.CRVersion)
