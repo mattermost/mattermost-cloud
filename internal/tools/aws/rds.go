@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -22,14 +22,15 @@ import (
 
 // RDSDBCLusterExists check whether RDS cluster with specified ID exists.
 func (a *Client) RDSDBCLusterExists(awsID string) (bool, error) {
-	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
-	})
+	_, err := a.Service().rds.DescribeDBClusters(
+		context.TODO(),
+		&rds.DescribeDBClustersInput{
+			DBClusterIdentifier: aws.String(awsID),
+		})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == rds.ErrCodeDBClusterNotFoundFault {
-				return false, nil
-			}
+		var awsErr *rdsTypes.DBClusterNotFoundFault
+		if errors.As(err, &awsErr) {
+			return false, nil
 		}
 		return false, err
 	}
@@ -77,7 +78,7 @@ func (a *Client) rdsGetDBSubnetGroupName(vpcID string, logger log.FieldLogger) (
 	//
 	// We should periodically check if filters become supported and move to that
 	// when they do.
-	result, err := a.Service().rds.DescribeDBSubnetGroups(nil)
+	result, err := a.Service().rds.DescribeDBSubnetGroups(context.TODO(), nil)
 	if err != nil {
 		return "", err
 	}
@@ -105,7 +106,7 @@ func (a *Client) rdsEnsureDBClusterCreated(
 	tags *Tags,
 	logger log.FieldLogger) error {
 	var engine, engineVersion, sgTagValue string
-	var port int64
+	var port int32
 	switch databaseType {
 	case model.DatabaseEngineTypeMySQL:
 		engine = "aurora-mysql"
@@ -121,9 +122,11 @@ func (a *Client) rdsEnsureDBClusterCreated(
 		return errors.Errorf("%s is an invalid database engine type", databaseType)
 	}
 
-	_, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
-	})
+	_, err := a.Service().rds.DescribeDBClusters(
+		context.TODO(),
+		&rds.DescribeDBClustersInput{
+			DBClusterIdentifier: aws.String(awsID),
+		})
 	if err == nil {
 		logger.WithField("db-cluster-name", awsID).Debug("AWS DB cluster already created")
 
@@ -155,7 +158,7 @@ func (a *Client) rdsEnsureDBClusterCreated(
 
 	input := &rds.CreateDBClusterInput{
 		AvailabilityZones:     rdsAZs,
-		BackupRetentionPeriod: aws.Int64(7),
+		BackupRetentionPeriod: aws.Int32(7),
 		DBClusterIdentifier:   aws.String(awsID),
 		DatabaseName:          aws.String("mattermost"),
 		EngineMode:            aws.String("provisioned"),
@@ -163,15 +166,15 @@ func (a *Client) rdsEnsureDBClusterCreated(
 		EngineVersion:         aws.String(engineVersion),
 		MasterUserPassword:    aws.String(password),
 		MasterUsername:        aws.String(username),
-		Port:                  aws.Int64(port),
+		Port:                  aws.Int32(port),
 		StorageEncrypted:      aws.Bool(true),
 		DBSubnetGroupName:     aws.String(dbSubnetGroupName),
-		VpcSecurityGroupIds:   aws.StringSlice(dbSecurityGroupIDs),
+		VpcSecurityGroupIds:   dbSecurityGroupIDs,
 		KmsKeyId:              aws.String(kmsKeyID),
 		Tags:                  tags.ToRDSTags(),
 	}
 
-	_, err = a.Service().rds.CreateDBCluster(input)
+	_, err = a.Service().rds.CreateDBCluster(context.TODO(), input)
 	if err != nil {
 		return err
 	}
@@ -188,23 +191,27 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(
 	instanceClass string,
 	tags *Tags,
 	logger log.FieldLogger) error {
-	_, err := a.Service().rds.DescribeDBInstances(&rds.DescribeDBInstancesInput{
-		DBInstanceIdentifier: aws.String(instanceName),
-	})
+	_, err := a.Service().rds.DescribeDBInstances(
+		context.TODO(),
+		&rds.DescribeDBInstancesInput{
+			DBInstanceIdentifier: aws.String(instanceName),
+		})
 	if err == nil {
 		logger.WithField("db-instance-name", instanceName).Debug("AWS DB instance already created")
 
 		return nil
 	}
 
-	_, err = a.Service().rds.CreateDBInstance(&rds.CreateDBInstanceInput{
-		DBClusterIdentifier:  aws.String(awsID),
-		DBInstanceIdentifier: aws.String(instanceName),
-		DBInstanceClass:      aws.String(instanceClass),
-		Engine:               aws.String(engine),
-		PubliclyAccessible:   aws.Bool(false),
-		Tags:                 tags.ToRDSTags(),
-	})
+	_, err = a.Service().rds.CreateDBInstance(
+		context.TODO(),
+		&rds.CreateDBInstanceInput{
+			DBClusterIdentifier:  aws.String(awsID),
+			DBInstanceIdentifier: aws.String(instanceName),
+			DBInstanceClass:      aws.String(instanceClass),
+			Engine:               aws.String(engine),
+			PubliclyAccessible:   aws.Bool(false),
+			Tags:                 tags.ToRDSTags(),
+		})
 	if err != nil {
 		return err
 	}
@@ -215,15 +222,17 @@ func (a *Client) rdsEnsureDBClusterInstanceCreated(
 }
 
 func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger) error {
-	result, err := a.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
-	})
+	ctx := context.TODO()
+	result, err := a.Service().rds.DescribeDBClusters(
+		ctx,
+		&rds.DescribeDBClustersInput{
+			DBClusterIdentifier: aws.String(awsID),
+		})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == rds.ErrCodeDBClusterNotFoundFault {
-				logger.WithField("db-cluster-name", awsID).Warn("DBCluster could not be found; assuming already deleted")
-				return nil
-			}
+		var awsErr *rdsTypes.DBClusterNotFoundFault
+		if errors.As(err, &awsErr) {
+			logger.WithField("db-cluster-name", awsID).Warn("DBCluster could not be found; assuming already deleted")
+			return nil
 		}
 		return err
 	}
@@ -233,20 +242,24 @@ func (a *Client) rdsEnsureDBClusterDeleted(awsID string, logger log.FieldLogger)
 	}
 
 	for _, instance := range result.DBClusters[0].DBClusterMembers {
-		_, err = a.Service().rds.DeleteDBInstance(&rds.DeleteDBInstanceInput{
-			DBInstanceIdentifier: instance.DBInstanceIdentifier,
-			SkipFinalSnapshot:    aws.Bool(true),
-		})
+		_, err = a.Service().rds.DeleteDBInstance(
+			ctx,
+			&rds.DeleteDBInstanceInput{
+				DBInstanceIdentifier: instance.DBInstanceIdentifier,
+				SkipFinalSnapshot:    true,
+			})
 		if err != nil {
 			return errors.Wrap(err, "unable to delete DB cluster instance")
 		}
 		logger.WithField("db-instance-name", *instance.DBInstanceIdentifier).Debug("DB instance deleted")
 	}
 
-	_, err = a.Service().rds.DeleteDBCluster(&rds.DeleteDBClusterInput{
-		DBClusterIdentifier: aws.String(awsID),
-		SkipFinalSnapshot:   aws.Bool(true),
-	})
+	_, err = a.Service().rds.DeleteDBCluster(
+		ctx,
+		&rds.DeleteDBClusterInput{
+			DBClusterIdentifier: aws.String(awsID),
+			SkipFinalSnapshot:   true,
+		})
 	if err != nil {
 		return errors.Wrap(err, "unable to delete DB cluster")
 	}

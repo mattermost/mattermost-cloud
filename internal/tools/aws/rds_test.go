@@ -10,7 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/pkg/errors"
@@ -20,7 +21,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 	tags, err := NewTags("tag1", "value1", "tag2", "value2")
 	a.Assert().NoError(err)
 
-	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
+	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any(), gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
 
 	a.Mocks.Log.Logger.EXPECT().
 		WithField(gomock.Any(), gomock.Any()).
@@ -38,9 +39,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		}, nil)
 
 	a.Mocks.API.RDS.EXPECT().
-		DescribeDBSubnetGroups(gomock.Any()).
+		DescribeDBSubnetGroups(gomock.Any(), gomock.Any()).
 		Return(&rds.DescribeDBSubnetGroupsOutput{
-			DBSubnetGroups: []*rds.DBSubnetGroup{
+			DBSubnetGroups: []rdsTypes.DBSubnetGroup{
 				{
 					DBSubnetGroupName: aws.String(DBSubnetGroupName(a.VPCa)),
 				},
@@ -48,16 +49,16 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreated() {
 		}, nil)
 
 	a.Mocks.API.RDS.EXPECT().
-		CreateDBCluster(gomock.Any()).
+		CreateDBCluster(gomock.Any(), gomock.Any()).
 		Return(nil, nil).
-		Do(func(input *rds.CreateDBClusterInput) {
+		Do(func(ctx context.Context, input *rds.CreateDBClusterInput, optFns ...func(*rds.Options)) {
 			for _, zone := range input.AvailabilityZones {
-				a.Assert().Contains(a.RDSAvailabilityZones, *zone)
+				a.Assert().Contains(a.RDSAvailabilityZones, zone)
 			}
-			a.Assert().Equal(*input.BackupRetentionPeriod, int64(7))
+			a.Assert().Equal(*input.BackupRetentionPeriod, int32(7))
 			a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 			a.Assert().Equal(*input.DatabaseName, a.DBName)
-			a.Assert().Equal(*input.VpcSecurityGroupIds[0], a.GroupID)
+			a.Assert().Equal(input.VpcSecurityGroupIds[0], a.GroupID)
 			a.Assert().Len(input.Tags, tags.Len())
 		}).
 		Times(1)
@@ -77,7 +78,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedAlreadyCreated() {
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
 		After(a.Mocks.API.RDS.EXPECT().
-			DescribeDBClusters(gomock.Any()).
+			DescribeDBClusters(gomock.Any(), gomock.Any()).
 			Return(nil, nil).
 			Times(1))
 
@@ -87,7 +88,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedAlreadyCreated() {
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedWithSGError() {
 	a.Mocks.API.RDS.EXPECT().
-		DescribeDBClusters(gomock.Any()).
+		DescribeDBClusters(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("db cluster does not exist")).
 		Times(1)
 
@@ -101,7 +102,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedWithSGError() {
 }
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
-	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
+	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any(), gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
 
 	a.Mocks.Log.Logger.EXPECT().
 		WithField("security-group-ids", []string{a.GroupID}).
@@ -113,9 +114,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
 			}, nil))
 
 	a.Mocks.API.RDS.EXPECT().
-		DescribeDBSubnetGroups(gomock.Any()).
+		DescribeDBSubnetGroups(gomock.Any(), gomock.Any()).
 		Return(&rds.DescribeDBSubnetGroupsOutput{
-			DBSubnetGroups: []*rds.DBSubnetGroup{},
+			DBSubnetGroups: []rdsTypes.DBSubnetGroup{},
 		}, errors.New("invalid cluster id"))
 
 	err := a.Mocks.AWS.rdsEnsureDBClusterCreated(CloudID(a.InstallationA.ID), a.VPCa, a.DBUser, a.DBPassword, a.RDSEncryptionKeyID, a.RDSEngineType, &Tags{}, a.Mocks.Log.Logger)
@@ -125,7 +126,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedSubnetError() {
 }
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
-	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
+	a.Mocks.API.RDS.EXPECT().DescribeDBClusters(gomock.Any(), gomock.Any()).Return(nil, errors.New("db cluster does not exist")).Times(1)
 
 	a.Mocks.Log.Logger.EXPECT().
 		WithField("security-group-ids", []string{a.GroupID}).
@@ -141,9 +142,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
 		After(a.Mocks.API.RDS.EXPECT().
-			DescribeDBSubnetGroups(gomock.Any()).
+			DescribeDBSubnetGroups(gomock.Any(), gomock.Any()).
 			Return(&rds.DescribeDBSubnetGroupsOutput{
-				DBSubnetGroups: []*rds.DBSubnetGroup{
+				DBSubnetGroups: []rdsTypes.DBSubnetGroup{
 					{
 						DBSubnetGroupName: aws.String(DBSubnetGroupName(a.VPCa)),
 					},
@@ -151,7 +152,7 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 			}, nil))
 
 	a.Mocks.API.RDS.EXPECT().
-		CreateDBCluster(gomock.Any()).
+		CreateDBCluster(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("invalid cluster name")).
 		Times(1)
 
@@ -167,9 +168,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterCreatedError() {
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreated() {
 	a.Mocks.API.RDS.EXPECT().
-		DescribeDBInstances(gomock.Any()).
+		DescribeDBInstances(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("db cluster instance does not exist")).
-		Do(func(input *rds.DescribeDBInstancesInput) {
+		Do(func(ctx context.Context, input *rds.DescribeDBInstancesInput, optFns ...func(*rds.Options)) {
 			a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 		})
 
@@ -177,8 +178,8 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreated() {
 		Return(testlib.NewLoggerEntry()).
 		Times(1).
 		After(a.Mocks.API.RDS.EXPECT().
-			CreateDBInstance(gomock.Any()).Return(nil, nil).
-			Do(func(input *rds.CreateDBInstanceInput) {
+			CreateDBInstance(gomock.Any(), gomock.Any()).Return(nil, nil).
+			Do(func(ctx context.Context, input *rds.CreateDBInstanceInput, optFns ...func(*rds.Options)) {
 				a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 				a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 			}).
@@ -190,9 +191,9 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreated() {
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceAlreadyExistError() {
 	a.Mocks.API.RDS.EXPECT().
-		DescribeDBInstances(gomock.Any()).
+		DescribeDBInstances(gomock.Any(), gomock.Any()).
 		Return(nil, nil).
-		Do(func(input *rds.DescribeDBInstancesInput) {
+		Do(func(ctx context.Context, input *rds.DescribeDBInstancesInput, optFns ...func(*rds.Options)) {
 			a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 		})
 
@@ -206,15 +207,15 @@ func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceAlreadyExistError() {
 
 func (a *AWSTestSuite) TestRDSEnsureDBClusterInstanceCreateError() {
 	a.Mocks.API.RDS.EXPECT().
-		DescribeDBInstances(gomock.Any()).
+		DescribeDBInstances(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("db cluster instance does not exist")).
-		Do(func(input *rds.DescribeDBInstancesInput) {
+		Do(func(ctx context.Context, input *rds.DescribeDBInstancesInput, optFns ...func(*rds.Options)) {
 			a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 		})
 
 	a.Mocks.API.RDS.EXPECT().
-		CreateDBInstance(gomock.Any()).Return(nil, errors.New("instance creation failure")).
-		Do(func(input *rds.CreateDBInstanceInput) {
+		CreateDBInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("instance creation failure")).
+		Do(func(ctx context.Context, input *rds.CreateDBInstanceInput, optFns ...func(*rds.Options)) {
 			a.Assert().Equal(*input.DBClusterIdentifier, CloudID(a.InstallationA.ID))
 			a.Assert().Equal(*input.DBInstanceIdentifier, RDSMasterInstanceID(a.InstallationA.ID))
 		}).

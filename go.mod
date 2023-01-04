@@ -12,6 +12,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.17.9
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.72.0
 	github.com/aws/aws-sdk-go-v2/service/iam v1.18.25
+	github.com/aws/aws-sdk-go-v2/service/kms v1.19.4
+	github.com/aws/aws-sdk-go-v2/service/rds v1.36.0
+	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.26
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.25.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.6
 	github.com/blang/semver v3.5.1+incompatible

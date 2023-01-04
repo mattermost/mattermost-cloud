@@ -128,10 +128,6 @@ func executeServerCmd(flags serverFlags) error {
 	}
 	model.SetUtilityDefaults(flags.utilitiesGitURL)
 
-	if flags.kubecostToken != "" {
-		_ = os.Setenv(model.KubecostToken, flags.kubecostToken)
-	}
-
 	logger := logger.WithField("instance", instanceID)
 
 	sqlStore, err := sqlStore(flags.database)

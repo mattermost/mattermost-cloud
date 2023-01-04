@@ -655,10 +655,6 @@ func processUtilityFlags(utilityFlags utilityFlags) map[string]*model.HelmUtilit
 			Chart:      utilityFlags.rtcdVersion,
 			ValuesPath: utilityFlags.rtcdValues,
 		},
-		model.KubecostCanonicalName: {
-			Chart:      utilityFlags.kubecostVersion,
-			ValuesPath: utilityFlags.kubecostValues,
-		},
 		model.NodeProblemDetectorCanonicalName: {
 			Chart:      utilityFlags.nodeProblemDetectorVersion,
 			ValuesPath: utilityFlags.nodeProblemDetectorValues,
