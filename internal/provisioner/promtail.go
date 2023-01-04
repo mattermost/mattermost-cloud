@@ -94,15 +94,15 @@ func (p *promtail) Migrate() error {
 }
 
 func (p *promtail) NewHelmDeployment() *helmDeployment {
-	return &helmDeployment{
-		chartDeploymentName: "promtail",
-		chartName:           "grafana/promtail",
-		namespace:           "promtail",
-		logger:              p.logger,
-		kubeconfigPath:      p.kubeconfigPath,
-		setArgument:         fmt.Sprintf("extraArgs={-client.external-labels=cluster=%s}", p.cluster.ID),
-		desiredVersion:      p.desiredVersion,
-	}
+	return newHelmDeployment(
+		"grafana/promtail",
+		"promtail",
+		"promtail",
+		p.kubeconfigPath,
+		p.desiredVersion,
+		fmt.Sprintf("extraArgs={-client.external-labels=cluster=%s}", p.cluster.ID),
+		p.logger,
+	)
 }
 
 func (p *promtail) Name() string {

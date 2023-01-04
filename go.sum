@@ -243,6 +243,12 @@ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19/go.mod h1:02
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.21 h1:5C6XgTViSb0bunmU57b3CT+MhxULqHH2721FVA+/kDM=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.21/go.mod h1:lRToEJsn+DRA9lW4O9L9+/3hjTkUzlzyzHqn8MTds5k=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.5.1/go.mod h1:6EQZIwNNvHpq/2/QSJnp4+ECvqIy55w95Ofs0ze+nGQ=
+github.com/aws/aws-sdk-go-v2/service/kms v1.19.4 h1:bX+nEwdukfDdfGPUjNNqs7NwZyqyMjIy5YpZda9Gcu4=
+github.com/aws/aws-sdk-go-v2/service/kms v1.19.4/go.mod h1:13sjgMH7Xu4e46+0BEDhSnNh+cImHSYS5PpBjV3oXcU=
+github.com/aws/aws-sdk-go-v2/service/rds v1.36.0 h1:vZpqgQhYoay+Qb+OfTxFLxoqBnDOFI3C8yx8c4T1pak=
+github.com/aws/aws-sdk-go-v2/service/rds v1.36.0/go.mod h1:Ume9NHqT871hUdxIRojWtWsPFyCswQmSjHHhyGot7v0=
+github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.26 h1:/PUrNPA60N/tE60pf3AZPIe5th/E5GXgVq+PdLgae5c=
+github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.13.26/go.mod h1:NjPeUP8L8V1lN1ik1Znb0cEnIgGA3Upt/UFSzwBLC6o=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.21 h1:vY5siRXvW5TrOKm2qKEf9tliBfdLxdfy0i02LOcmqUo=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.21/go.mod h1:WZvNXT1XuH8dnJM0HvOlvk+RNn7NbAPvA/ACO0QarSc=
 github.com/aws/aws-sdk-go-v2/service/route53 v1.25.2 h1:MNL6bLDcwOGL9j+ANiejLYn/cBSku1m+pLWXri/FFF4=
@@ -297,6 +303,7 @@ github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748/go.
 github.com/casbin/casbin/v2 v2.1.2/go.mod h1:YcPU1XXisHhLzuxH9coDNf2FbKpjGlbCg3n9yuLkIJQ=
 github.com/cenkalti/backoff v0.0.0-20181003080854-62661b46c409/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
+github.com/cenkalti/backoff/v4 v4.1.0 h1:c8LkOFQTzuO0WBM/ae5HdGQuZPfPxp7lqBRwQRm4fSc=
 github.com/cenkalti/backoff/v4 v4.1.0/go.mod h1:scbssz8iZGpm3xbr14ovlUdkxfGXNInqkPWOWmG2CLw=
 github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

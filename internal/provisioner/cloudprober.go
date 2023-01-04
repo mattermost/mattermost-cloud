@@ -82,14 +82,15 @@ func (f *cloudprober) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (f *cloudprober) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
-	return &helmDeployment{
-		chartDeploymentName: "cloudprober",
-		chartName:           "chartmuseum/cloudprober",
-		namespace:           "cloudprober",
-		kubeconfigPath:      f.kubeconfigPath,
-		logger:              logger,
-		desiredVersion:      f.desiredVersion,
-	}
+	return newHelmDeployment(
+		"chartmuseum/cloudprober",
+		"cloudprober",
+		"cloudprober",
+		f.kubeconfigPath,
+		f.desiredVersion,
+		defaultHelmDeploymentSetArgument,
+		logger,
+	)
 }
 
 func (f *cloudprober) ValuesPath() string {

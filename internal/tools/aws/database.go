@@ -5,14 +5,17 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/service/kms"
-	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	kmsTypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	"github.com/aws/aws-sdk-go-v2/service/rds/types"
+	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	tgTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -115,16 +118,18 @@ func (d *RDSDatabase) Snapshot(store model.InstallationDatabaseStoreInterface, l
 		"database-type":   d.databaseType,
 	})
 
-	_, err := d.client.Service().rds.CreateDBClusterSnapshot(&rds.CreateDBClusterSnapshotInput{
-		DBClusterIdentifier:         aws.String(awsID),
-		DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", awsID, time.Now().Nanosecond())),
-		Tags: []*rds.Tag{
-			{
-				Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
-				Value: aws.String(RDSSnapshotTagValue(awsID)),
+	_, err := d.client.Service().rds.CreateDBClusterSnapshot(
+		context.TODO(),
+		&rds.CreateDBClusterSnapshotInput{
+			DBClusterIdentifier:         aws.String(awsID),
+			DBClusterSnapshotIdentifier: aws.String(fmt.Sprintf("%s-snapshot-%v", awsID, time.Now().Nanosecond())),
+			Tags: []types.Tag{
+				{
+					Key:   aws.String(DefaultClusterInstallationSnapshotTagKey),
+					Value: aws.String(RDSSnapshotTagValue(awsID)),
+				},
 			},
-		},
-	})
+		})
 	if err != nil {
 		return errors.Wrap(err, "failed to create a DB cluster snapshot")
 	}
@@ -149,9 +154,11 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 		return nil, err
 	}
 
-	dbClusters, err := d.client.Service().rds.DescribeDBClusters(&rds.DescribeDBClustersInput{
-		DBClusterIdentifier: aws.String(awsID),
-	})
+	dbClusters, err := d.client.Service().rds.DescribeDBClusters(
+		context.TODO(),
+		&rds.DescribeDBClustersInput{
+			DBClusterIdentifier: aws.String(awsID),
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +176,7 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 				"mattermost",
 				installationSecret.MasterUsername,
 				installationSecret.MasterPassword,
-				rdsCluster,
+				&rdsCluster,
 			)
 		databaseConnectionCheck = fmt.Sprintf("http://%s:3306", *rdsCluster.Endpoint)
 	case model.DatabaseEngineTypePostgres:
@@ -178,7 +185,7 @@ func (d *RDSDatabase) GenerateDatabaseSecret(store model.InstallationDatabaseSto
 				"mattermost",
 				installationSecret.MasterUsername,
 				installationSecret.MasterPassword,
-				rdsCluster,
+				&rdsCluster,
 			)
 		databaseConnectionCheck = databaseConnectionString
 	default:
@@ -279,7 +286,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 		return err
 	}
 
-	var keyMetadata *kms.KeyMetadata
+	var keyMetadata *kmsTypes.KeyMetadata
 	if len(kmsResourceNames) > 0 {
 		enabledKeys, err := d.getEnabledEncryptionKeys(kmsResourceNames)
 		if err != nil {
@@ -292,7 +299,7 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 		keyMetadata = enabledKeys[0]
 	} else {
-		keyMetadata, err = d.client.kmsCreateSymmetricKey(KMSKeyDescriptionRDS(awsID), []*kms.Tag{
+		keyMetadata, err = d.client.kmsCreateSymmetricKey(KMSKeyDescriptionRDS(awsID), []kmsTypes.Tag{
 			{
 				TagKey:   aws.String(DefaultRDSEncryptionTagKey),
 				TagValue: aws.String(awsID),
@@ -347,10 +354,10 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 func (d *RDSDatabase) getKMSResourceNames(awsID string) ([]*string, error) {
 	kmsResources, err := d.client.resourceTaggingGetAllResources(resourcegroupstaggingapi.GetResourcesInput{
-		TagFilters: []*resourcegroupstaggingapi.TagFilter{
+		TagFilters: []tgTypes.TagFilter{
 			{
 				Key:    aws.String(DefaultRDSEncryptionTagKey),
-				Values: []*string{aws.String(awsID)},
+				Values: []string{awsID},
 			},
 		},
 	})
@@ -366,15 +373,15 @@ func (d *RDSDatabase) getKMSResourceNames(awsID string) ([]*string, error) {
 	return resourceNameList, nil
 }
 
-func (d *RDSDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*kms.KeyMetadata, error) {
-	var keys []*kms.KeyMetadata
+func (d *RDSDatabase) getEnabledEncryptionKeys(resourceNameList []*string) ([]*kmsTypes.KeyMetadata, error) {
+	var keys []*kmsTypes.KeyMetadata
 
 	for _, name := range resourceNameList {
 		keyMetadata, err := d.client.kmsGetSymmetricKey(*name)
 		if err != nil {
 			return nil, err
 		}
-		if keyMetadata != nil && *keyMetadata.KeyState == kms.KeyStateEnabled {
+		if keyMetadata != nil && keyMetadata.KeyState == kmsTypes.KeyStateEnabled {
 			keys = append(keys, keyMetadata)
 		}
 	}

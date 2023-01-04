@@ -173,15 +173,15 @@ func (k *kubecost) NewHelmDeployment(kubecostDNS string) *helmDeployment {
 	}
 	helmValueArguments := fmt.Sprintf("kubecostToken=%s,ingress.hosts={%s},ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", kubecostToken, kubecostDNS, strings.Join(k.allowCIDRRangeList, "\\,"))
 
-	return &helmDeployment{
-		chartDeploymentName: "cost-analyzer",
-		chartName:           "kubecost/cost-analyzer",
-		namespace:           "kubecost",
-		kubeconfigPath:      k.kubeconfigPath,
-		setArgument:         helmValueArguments,
-		logger:              k.logger,
-		desiredVersion:      k.desiredVersion,
-	}
+	return newHelmDeployment(
+		"kubecost/cost-analyzer",
+		"cost-analyzer",
+		"kubecost",
+		k.kubeconfigPath,
+		k.desiredVersion,
+		helmValueArguments,
+		k.logger,
+	)
 }
 
 func (k *kubecost) Name() string {

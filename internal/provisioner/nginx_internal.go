@@ -65,7 +65,7 @@ func (n *nginxInternal) updateVersion(h *helmDeployment) error {
 }
 
 func (n *nginxInternal) CreateOrUpgrade() error {
-	h, err := n.NewHelmDeployment()
+	h, err := n.NewHelmDeployment(true)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate nginx internal helm deployment")
 	}
@@ -95,10 +95,9 @@ func (n *nginxInternal) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginxInternal) Destroy() error {
-	helm := helmDeployment{
-		chartDeploymentName: chartDeploymentNameNginxInternal,
-		chartName:           chartNameNginxInternal,
-		namespace:           namespaceNginxInternal,
+	helm, err := n.NewHelmDeployment(false)
+	if err != nil {
+		return err
 	}
 	return helm.Delete()
 }
@@ -114,27 +113,30 @@ func (n *nginxInternal) Migrate() error {
 	return nil
 }
 
-func (n *nginxInternal) NewHelmDeployment() (*helmDeployment, error) {
+func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, error) {
+	var setArguments string
+	if withArguments {
+		certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrive the AWS Private ACM")
+		}
 
-	certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrive the AWS Private ACM")
+		if certificate.ARN == nil {
+			return nil, errors.New("retrieved certificate does not have ARN")
+		}
+
+		setArguments = fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN)
 	}
 
-	if certificate.ARN == nil {
-		return nil, errors.New("retrieved certificate does not have ARN")
-	}
-
-	return &helmDeployment{
-		chartDeploymentName: chartDeploymentNameNginxInternal,
-		chartName:           chartNameNginxInternal,
-		namespace:           namespaceNginxInternal,
-		setArgument:         fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
-		desiredVersion:      n.desiredVersion,
-		kubeconfigPath:      n.kubeconfigPath,
-
-		logger: n.logger,
-	}, nil
+	return newHelmDeployment(
+		chartNameNginxInternal,
+		chartDeploymentNameNginxInternal,
+		namespaceNginxInternal,
+		n.kubeconfigPath,
+		n.desiredVersion,
+		setArguments,
+		n.logger,
+	), nil
 }
 
 func (n *nginxInternal) Name() string {

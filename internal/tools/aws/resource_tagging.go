@@ -5,16 +5,19 @@
 package aws
 
 import (
-	gt "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	"context"
+
+	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 )
 
-func (a *Client) resourceTaggingGetAllResources(input gt.GetResourcesInput) ([]*gt.ResourceTagMapping, error) {
-	var resources []*gt.ResourceTagMapping
+func (a *Client) resourceTaggingGetAllResources(input gt.GetResourcesInput) ([]gtTypes.ResourceTagMapping, error) {
+	var resources []gtTypes.ResourceTagMapping
 	var next *string
 
 	for {
 		input.PaginationToken = next
-		output, err := a.Service().resourceGroupsTagging.GetResources(&input)
+		output, err := a.Service().resourceGroupsTagging.GetResources(context.TODO(), &input)
 		if err != nil {
 			return nil, err
 		}

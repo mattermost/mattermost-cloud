@@ -10,8 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -186,10 +187,10 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownSGNotFoundError() {
 // Helpers
 
 func (a *AWSTestSuite) SetDescribeDBInstancesExpectation(vpcSecurityGroupID string) *gomock.Call {
-	return a.Mocks.API.RDS.EXPECT().DescribeDBInstances(gomock.Any()).
+	return a.Mocks.API.RDS.EXPECT().DescribeDBInstances(gomock.Any(), gomock.Any()).
 		Return(&rds.DescribeDBInstancesOutput{
-			DBInstances: []*rds.DBInstance{{
-				VpcSecurityGroups: []*rds.VpcSecurityGroupMembership{{
+			DBInstances: []rdsTypes.DBInstance{{
+				VpcSecurityGroups: []rdsTypes.VpcSecurityGroupMembership{{
 					VpcSecurityGroupId: aws.String(vpcSecurityGroupID),
 				}},
 			}},

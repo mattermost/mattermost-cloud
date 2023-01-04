@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/events"
-
 	awat "github.com/mattermost/awat/model"
+	"github.com/mattermost/mattermost-cloud/internal/events"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -138,19 +138,28 @@ func (s *ImportSupervisor) Do() error {
 	if err != nil {
 		s.logger.WithError(err).Errorf("Failed to perform work on Import %s", work.ID)
 		workError := err.Error()
+
 		go func() {
-			for {
+			completeAt := model.GetMillis()
+			attempts := 0
+
+			expBackoff := utils.NewExponentialBackoff(time.Second*5, time.Minute*10, time.Minute*30)
+			err := expBackoff.Retry(func() error {
+				attempts++
 				err := s.awatClient.CompleteImport(
 					&awat.ImportCompletedWorkRequest{
 						ID:         work.ID,
-						CompleteAt: model.GetMillis(),
+						CompleteAt: completeAt,
 						Error:      workError,
 					})
-				if err == nil {
-					return
+				if err != nil {
+					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
 				}
-				s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s", work.ID)
-				time.Sleep(time.Second * 5)
+				return err
+			})
+
+			if err != nil {
+				s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
 			}
 		}()
 	}

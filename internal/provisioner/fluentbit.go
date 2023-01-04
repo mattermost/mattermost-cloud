@@ -78,14 +78,15 @@ func (f *fluentbit) Name() string {
 }
 
 func (f *fluentbit) NewHelmDeployment() *helmDeployment {
-	return &helmDeployment{
-		kubeconfigPath:      f.kubeconfigPath,
-		chartDeploymentName: "fluent-bit",
-		chartName:           "fluent/fluent-bit",
-		namespace:           "fluent-bit",
-		logger:              f.logger,
-		desiredVersion:      f.desiredVersion,
-	}
+	return newHelmDeployment(
+		"fluent/fluent-bit",
+		"fluent-bit",
+		"fluent-bit",
+		f.kubeconfigPath,
+		f.desiredVersion,
+		defaultHelmDeploymentSetArgument,
+		f.logger,
+	)
 }
 
 func (f *fluentbit) ValuesPath() string {

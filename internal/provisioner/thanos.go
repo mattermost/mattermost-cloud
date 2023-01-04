@@ -165,15 +165,15 @@ func (t *thanos) Migrate() error {
 func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeployment {
 	helmValueArguments := fmt.Sprintf("query.ingress.hostname=%s,query.ingress.grpc.hostname=%s,query.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range=%s", thanosDNS, thanosDNSGRPC, strings.Join(t.allowCIDRRangeList, "\\,"))
 
-	return &helmDeployment{
-		chartDeploymentName: "thanos",
-		chartName:           "bitnami/thanos",
-		kubeconfigPath:      t.kubeconfigPath,
-		logger:              t.logger,
-		namespace:           "prometheus",
-		setArgument:         helmValueArguments,
-		desiredVersion:      t.desiredVersion,
-	}
+	return newHelmDeployment(
+		"bitnami/thanos",
+		"thanos",
+		"prometheus",
+		t.kubeconfigPath,
+		t.desiredVersion,
+		helmValueArguments,
+		t.logger,
+	)
 }
 
 func (t *thanos) Name() string {
