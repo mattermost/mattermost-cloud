@@ -23,7 +23,7 @@ import (
 	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/golang/mock/gomock"
-	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
