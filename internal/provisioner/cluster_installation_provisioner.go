@@ -99,7 +99,7 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
 			err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
-				return errors.Wrap(err, "failed to create Nginx SLI")
+				return errors.Wrap(err, "failed to create enterprise nginx SLI")
 			}
 		}
 	}
@@ -185,7 +185,7 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 	}
 
 	if err = ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
-		return errors.Wrap(err, "failed to delete nginx SLI")
+		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
 	}
 
 	logger.Info("Updated cluster installation")
@@ -346,12 +346,12 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
 		if err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
-			return errors.Wrapf(err, "failed to create enterprise Nginx SLI %s", clusterInstallation.InstallationID)
+			return errors.Wrapf(err, "failed to create enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))
 		}
 	} else {
 		logger.Debug("Removing Mattermost Enterprise Nginx SLI")
 		if err := ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
-			return errors.Wrapf(err, "failed to delete cluster installation SLI %s", clusterInstallation.InstallationID)
+			return errors.Wrapf(err, "failed to delete enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))
 		}
 	}
 
@@ -427,7 +427,7 @@ func deleteClusterInstallation(
 	}
 
 	if err = ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
-		return errors.Wrap(err, "failed to delete nginx SLI")
+		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
 	}
 
 	logger.Info("Successfully deleted cluster installation")
