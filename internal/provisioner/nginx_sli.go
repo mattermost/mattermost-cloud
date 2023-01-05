@@ -7,14 +7,14 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	slothv1 "github.com/slok/sloth/pkg/kubernetes/api/sloth/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
