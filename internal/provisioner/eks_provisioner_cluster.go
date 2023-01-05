@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/eks"
+	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
@@ -156,11 +156,11 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 	}
 
 	for _, ng := range nodeGroups {
-		if ng.Status != nil && *ng.Status == eks.NodegroupStatusCreateFailed {
+		if ng.Status == eksTypes.NodegroupStatusCreateFailed {
 			return false, errors.Errorf("failed to check node group ready %q", *ng.NodegroupName)
 		}
 
-		if ng.Status == nil || *ng.Status != eks.NodegroupStatusActive {
+		if ng.Status != eksTypes.NodegroupStatusActive {
 			logger.WithField("node=group", *ng.NodegroupName).Info("Node group not yet ready")
 			return false, nil
 		}
@@ -317,7 +317,7 @@ func (provisioner *EKSProvisioner) prepareClusterKubeconfig(clusterID string) (s
 }
 
 // NewEKSKubeconfig creates kubeconfig for EKS cluster.
-func NewEKSKubeconfig(cluster *eks.Cluster, aws aws.AWS) (clientcmdapi.Config, error) {
+func NewEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Config, error) {
 	region := aws.GetRegion()
 	accountID, err := aws.GetAccountID()
 	if err != nil {
