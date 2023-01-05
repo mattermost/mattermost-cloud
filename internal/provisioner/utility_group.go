@@ -64,7 +64,6 @@ var helmRepos = map[string]string{
 	"bitnami":              "https://charts.bitnami.com/bitnami",
 	"fluent":               "https://fluent.github.io/helm-charts",
 	"grafana":              "https://grafana.github.io/helm-charts",
-	"kubecost":             "https://kubecost.github.io/cost-analyzer/",
 	"deliveryhero":         "https://charts.deliveryhero.io/",
 	"metrics-server":       "https://kubernetes-sigs.github.io/metrics-server/",
 	"vmware-tanzu":         "https://vmware-tanzu.github.io/helm-charts/",
@@ -140,13 +139,6 @@ func newUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for RTCD")
 	}
 
-	kubecost, err := newKubecostHandle(cluster,
-		cluster.DesiredUtilityVersion(model.KubecostCanonicalName),
-		kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get handle for Kubecost")
-	}
-
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
 		cluster, kubeconfigPath, logger)
@@ -178,7 +170,7 @@ func newUtilityGroupHandle(
 	// the order of utilities here matters; the utilities are deployed
 	// in order to resolve dependencies between them
 	return &utilityGroup{
-		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, kubecost, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
+		utilities: []Utility{nginx, nginxInternal, prometheusOperator, thanos, fluentbit, teleport, pgbouncer, promtail, nodeProblemDetector, rtcd, metricsServer, velero, cloudprober},
 		logger:    logger,
 		cluster:   cluster,
 	}, nil

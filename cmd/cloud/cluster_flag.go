@@ -72,8 +72,6 @@ type utilityFlags struct {
 	rtcdValues                 string
 	promtailVersion            string
 	promtailValues             string
-	kubecostVersion            string
-	kubecostValues             string
 	nodeProblemDetectorVersion string
 	nodeProblemDetectorValues  string
 	metricsServerVersion       string
@@ -103,8 +101,6 @@ func (flags *utilityFlags) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.rtcdValues, "rtcd-values", "", "The full Git URL of the desired chart values for RTCD")
 	command.Flags().StringVar(&flags.promtailVersion, "promtail-version", "", "The version of Promtail to provision. Use 'stable' to provision the latest stable version published upstream.")
 	command.Flags().StringVar(&flags.promtailValues, "promtail-values", "", "The full Git URL of the desired chart values for Promtail")
-	command.Flags().StringVar(&flags.kubecostVersion, "kubecost-version", "", "The version of Kubecost. Use 'stable' to provision the latest stable version published upstream.")
-	command.Flags().StringVar(&flags.kubecostValues, "kubecost-values", "", "The full Git URL of the desired chart values for Kubecost")
 	command.Flags().StringVar(&flags.nodeProblemDetectorVersion, "node-problem-detector-version", "", "The version of Node Problem Detector. Use 'stable' to provision the latest stable version published upstream.")
 	command.Flags().StringVar(&flags.nodeProblemDetectorValues, "node-problem-detector-values", "", "The full Git URL of the desired chart values for Node Problem Detector")
 	command.Flags().StringVar(&flags.metricsServerVersion, "metrics-server-version", "", "The version of Metrics Server. Use 'stable' to provision the latest stable version published upstream.")

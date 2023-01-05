@@ -22,12 +22,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
 	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -139,9 +138,9 @@ type Service struct {
 	ec2                   EC2API
 	rds                   RDSAPI
 	iam                   IAMAPI
+	secretsManager        SecretsManagerAPI
 	s3                    S3API
 	route53               Route53API
-	secretsManager        secretsmanageriface.SecretsManagerAPI
 	resourceGroupsTagging ResourceGroupsTaggingAPIAPI
 	kms                   KMSAPI
 	dynamodb              DynamoDBAPI
@@ -156,9 +155,9 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		acm:                   acm.NewFromConfig(cfg), // v2
 		rds:                   rds.NewFromConfig(cfg), // v2
 		iam:                   iam.NewFromConfig(cfg),
-		s3:                    s3.NewFromConfig(cfg),      // v2
-		route53:               route53.NewFromConfig(cfg), // v2
-		secretsManager:        secretsmanager.New(sess),
+		s3:                    s3.NewFromConfig(cfg),                       // v2
+		route53:               route53.NewFromConfig(cfg),                  // v2
+		secretsManager:        secretsmanager.NewFromConfig(cfg),           // v2
 		resourceGroupsTagging: resourcegroupstaggingapi.NewFromConfig(cfg), // v2
 		ec2:                   ec2.NewFromConfig(cfg),                      // v2
 		kms:                   kms.NewFromConfig(cfg),                      // v2
