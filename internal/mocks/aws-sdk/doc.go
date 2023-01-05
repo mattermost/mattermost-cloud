@@ -11,7 +11,7 @@
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./kms.go github.com/mattermost/mattermost-cloud/internal/tools/aws KMSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./iam.go github.com/mattermost/mattermost-cloud/internal/tools/aws IAMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./route53.go github.com/mattermost/mattermost-cloud/internal/tools/aws Route53API
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./secrets_manager.go github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface SecretsManagerAPI
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./secrets_manager.go github.com/mattermost/mattermost-cloud/internal/tools/aws SecretsManagerAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./resource_tagging.go github.com/mattermost/mattermost-cloud/internal/tools/aws ResourceGroupsTaggingAPIAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./dynamodb.go github.com/mattermost/mattermost-cloud/internal/tools/aws DynamoDBAPI
