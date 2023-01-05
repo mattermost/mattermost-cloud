@@ -14,7 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
-	"github.com/aws/aws-sdk-go-v2/service/rds/types"
+	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
@@ -349,7 +349,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getAndLockAssignedProxiedDatabase(stor
 	return databaseResources, unlockFn, nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID string, rdsCluster *rdsTypes.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	logger.Infof("Provisioning PGBouncer database %s", rdsID)
@@ -429,7 +429,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerAuthUserSecretIsCreated
 	return secret, nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCluster *rdsTypes.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(
@@ -458,7 +458,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseNa
 	return nil
 }
 
-func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string, rdsCluster *types.DBCluster, logger log.FieldLogger) error {
+func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string, rdsCluster *rdsTypes.DBCluster, logger log.FieldLogger) error {
 	rdsID := *rdsCluster.DBClusterIdentifier
 
 	masterSecretValue, err := d.client.Service().secretsManager.GetSecretValue(

@@ -137,7 +137,6 @@ func TestGetActualVersion(t *testing.T) {
 				Pgbouncer:           &HelmUtilityVersion{Chart: "123456"},
 				Promtail:            &HelmUtilityVersion{Chart: "123456"},
 				Rtcd:                &HelmUtilityVersion{Chart: "123456"},
-				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 				Velero:              &HelmUtilityVersion{Chart: "12345678910"},
@@ -152,7 +151,6 @@ func TestGetActualVersion(t *testing.T) {
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.1.0"},
-				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.95.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.2"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-2.31.3"},
@@ -185,9 +183,6 @@ func TestGetActualVersion(t *testing.T) {
 	version = c.ActualUtilityVersion(RtcdCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "rtcd-1.1.0"}, version)
 
-	version = c.ActualUtilityVersion(KubecostCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "cost-analyzer-1.95.0"}, version)
-
 	version = c.ActualUtilityVersion(NodeProblemDetectorCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"}, version)
 
@@ -216,7 +211,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Pgbouncer:           &HelmUtilityVersion{Chart: "123456"},
 				Promtail:            &HelmUtilityVersion{Chart: "123456"},
 				Rtcd:                &HelmUtilityVersion{Chart: "123456"},
-				Kubecost:            &HelmUtilityVersion{Chart: "12345678"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "123456789"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "1234567899"},
 				Velero:              &HelmUtilityVersion{Chart: "12345678910"},
@@ -231,7 +225,6 @@ func TestGetDesiredVersion(t *testing.T) {
 				Pgbouncer:           &HelmUtilityVersion{Chart: "pgbouncer-1.2.0"},
 				Promtail:            &HelmUtilityVersion{Chart: "promtail-6.2.2"},
 				Rtcd:                &HelmUtilityVersion{Chart: "rtcd-1.1.0"},
-				Kubecost:            &HelmUtilityVersion{Chart: "cost-analyzer-1.95.0"},
 				NodeProblemDetector: &HelmUtilityVersion{Chart: "node-problem-detector-2.0.5"},
 				MetricsServer:       &HelmUtilityVersion{Chart: "metrics-server-3.8.2"},
 				Velero:              &HelmUtilityVersion{Chart: "velero-2.31.3"},
@@ -263,9 +256,6 @@ func TestGetDesiredVersion(t *testing.T) {
 
 	version = c.DesiredUtilityVersion(RtcdCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "123456"}, version)
-
-	version = c.DesiredUtilityVersion(KubecostCanonicalName)
-	assert.Equal(t, &HelmUtilityVersion{Chart: "12345678"}, version)
 
 	version = c.DesiredUtilityVersion(NodeProblemDetectorCanonicalName)
 	assert.Equal(t, &HelmUtilityVersion{Chart: "123456789"}, version)
