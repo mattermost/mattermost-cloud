@@ -22,7 +22,7 @@ func getNginxSlothObjectName(clusterInstallation *model.ClusterInstallation) str
 	return fmt.Sprintf("slo-nginx-my-enterpise-%s", clusterInstallation.InstallationID)
 }
 
-func makeNginxSLIs(clusterInstallation *model.ClusterInstallation) slothv1.PrometheusServiceLevel {
+func makeNginxSLI(clusterInstallation *model.ClusterInstallation) slothv1.PrometheusServiceLevel {
 	pslName := getNginxSlothObjectName(clusterInstallation)
 	serviceName := makeClusterInstallationName(clusterInstallation)
 
@@ -60,12 +60,12 @@ func makeNginxSLIs(clusterInstallation *model.ClusterInstallation) slothv1.Prome
 	return sli
 }
 
-func createOrUpdateNginxSLIs(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	sli := makeNginxSLIs(clusterInstallation)
+func createOrUpdateNginxSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	sli := makeNginxSLI(clusterInstallation)
 	return createOrUpdateClusterPrometheusServiceLevel(sli, k8sClient, logger)
 }
 
-func deleteNginxSLI(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+func ensureNginxSLIDeleted(clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
 	pslName := getNginxSlothObjectName(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()

@@ -97,7 +97,7 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 		}
 		if containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
-			err = createOrUpdateNginxSLIs(clusterInstallation, k8sClient, logger)
+			err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to create Nginx SLI")
 			}
@@ -184,7 +184,7 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 		return errors.Wrap(err, "failed to delete installation SLI")
 	}
 
-	if err = deleteNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
+	if err = ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
 		return errors.Wrap(err, "failed to delete nginx SLI")
 	}
 
@@ -345,12 +345,12 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 
 	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
-		if err = createOrUpdateNginxSLIs(clusterInstallation, k8sClient, logger); err != nil {
+		if err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
 			return errors.Wrapf(err, "failed to create enterprise Nginx SLI %s", clusterInstallation.InstallationID)
 		}
 	} else {
 		logger.Debug("Removing Mattermost Enterprise Nginx SLI")
-		if err := deleteNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
+		if err := ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
 			return errors.Wrapf(err, "failed to delete cluster installation SLI %s", clusterInstallation.InstallationID)
 		}
 	}
@@ -426,7 +426,7 @@ func deleteClusterInstallation(
 		return errors.Wrap(err, "failed to delete installation SLI")
 	}
 
-	if err = deleteNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
+	if err = ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
 		return errors.Wrap(err, "failed to delete nginx SLI")
 	}
 
