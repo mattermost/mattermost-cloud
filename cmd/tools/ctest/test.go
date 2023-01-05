@@ -39,9 +39,9 @@ func runInstallationLifecycleTest(request *model.CreateInstallationRequest, clie
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			logger.WithError(err).Warn("Installation failed health ping check and failed to decode response")
+		b, err2 := io.ReadAll(resp.Body)
+		if err2 != nil {
+			logger.WithError(err2).Warn("Installation failed health ping check and failed to decode response")
 		} else {
 			logger.Warnf("Installation failed health ping check: %s", string(b))
 		}

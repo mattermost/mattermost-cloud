@@ -221,11 +221,11 @@ func TestUpdateInstallationDBMigration(t *testing.T) {
 		dbMigration.CompleteAt = -1
 		dbMigration.InstallationDBRestorationOperationID = "test"
 
-		err = sqlStore.UpdateInstallationDBMigrationOperationState(dbMigration)
-		require.NoError(t, err)
+		err2 := sqlStore.UpdateInstallationDBMigrationOperationState(dbMigration)
+		require.NoError(t, err2)
 
-		fetched, err := sqlStore.GetInstallationDBMigrationOperation(dbMigration.ID)
-		require.NoError(t, err)
+		fetched, err3 := sqlStore.GetInstallationDBMigrationOperation(dbMigration.ID)
+		require.NoError(t, err3)
 		assert.Equal(t, model.InstallationDBMigrationStateSucceeded, fetched.State)
 		assert.Equal(t, int64(0), fetched.CompleteAt)                     // Assert complete time not updated
 		assert.Equal(t, "", fetched.InstallationDBRestorationOperationID) // Assert ID not updated

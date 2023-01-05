@@ -240,9 +240,9 @@ func (sqlStore *SQLStore) DeleteClusterAnnotation(clusterID string, annotationNa
 	}
 
 	for _, ci := range clusterInstallations {
-		annotations, err := sqlStore.getAnnotationsForInstallation(tx, ci.InstallationID)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get annotations for '%s' installation", ci.InstallationID)
+		annotations, errAnnotation := sqlStore.getAnnotationsForInstallation(tx, ci.InstallationID)
+		if errAnnotation != nil {
+			return errors.Wrapf(errAnnotation, "failed to get annotations for '%s' installation", ci.InstallationID)
 		}
 		if model.ContainsAnnotation(annotations, annotation) {
 			return ErrClusterAnnotationUsedByInstallation
@@ -354,9 +354,9 @@ func (sqlStore *SQLStore) CreateInstallationAnnotations(installationID string, a
 	}
 
 	for _, ci := range clusterInstallations {
-		clusterAnnotations, err := sqlStore.getAnnotationsForCluster(tx, ci.ClusterID)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get annotations for '%s' cluster", ci.ClusterID)
+		clusterAnnotations, errAnnotation := sqlStore.getAnnotationsForCluster(tx, ci.ClusterID)
+		if errAnnotation != nil {
+			return nil, errors.Wrapf(errAnnotation, "failed to get annotations for '%s' cluster", ci.ClusterID)
 		}
 
 		if !containsAllAnnotations(clusterAnnotations, annotations) {

@@ -197,9 +197,9 @@ func provisionCluster(
 	}
 
 	for deployment, namespace := range appsWithDeployment {
-		pods, err := k8sClient.GetPodsFromDeployment(namespace, deployment)
-		if err != nil {
-			return err
+		pods, err2 := k8sClient.GetPodsFromDeployment(namespace, deployment)
+		if err2 != nil {
+			return err2
 		}
 		if len(pods.Items) == 0 {
 			return fmt.Errorf("no pods found from %q deployment", deployment)
@@ -207,11 +207,11 @@ func provisionCluster(
 
 		for _, pod := range pods.Items {
 			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, deployment, pod.GetName())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			_, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
-			if err != nil {
-				return err
+			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel2()
+			_, err3 := k8sClient.WaitForPodRunning(ctx2, namespace, pod.GetName())
+			if err3 != nil {
+				return err3
 			}
 			logger.Infof("Successfully deployed service pod %q", pod.GetName())
 		}
@@ -223,9 +223,9 @@ func provisionCluster(
 	}
 
 	for _, operator := range operatorsWithStatefulSet {
-		pods, err := k8sClient.GetPodsFromStatefulset(operator, operator)
-		if err != nil {
-			return err
+		pods, err2 := k8sClient.GetPodsFromStatefulset(operator, operator)
+		if err2 != nil {
+			return err2
 		}
 		if len(pods.Items) == 0 {
 			return fmt.Errorf("no pods found from %q statefulSet", operator)
@@ -234,11 +234,11 @@ func provisionCluster(
 		for _, pod := range pods.Items {
 
 			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, operator, pod.GetName())
-			if err != nil {
-				return err
+			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel2()
+			pod, err3 := k8sClient.WaitForPodRunning(ctx2, operator, pod.GetName())
+			if err3 != nil {
+				return err3
 			}
 			logger.Infof("Successfully deployed service pod %q", pod.GetName())
 		}
@@ -252,11 +252,11 @@ func provisionCluster(
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
 		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
 			logger.Infof("Waiting up to %d seconds for %q daemonset to get it...", wait, daemonSet)
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			daemonSetObj, err := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx, daemonSet, metav1.GetOptions{})
-			if err != nil {
-				return errors.Wrapf(err, " failed to get daemonSet %s", daemonSet)
+			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel2()
+			daemonSetObj, err2 := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx2, daemonSet, metav1.GetOptions{})
+			if err2 != nil {
+				return errors.Wrapf(err2, " failed to get daemonSet %s", daemonSet)
 			}
 			var payload []k8s.PatchStringValue
 			if daemonSetObj.Spec.Selector != nil {
@@ -286,15 +286,15 @@ func provisionCluster(
 					}
 				}
 
-				err = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
-				if err != nil {
-					return err
+				err2 = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
+				if err2 != nil {
+					return err2
 				}
 			}
 		}
-		pods, err := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
-		if err != nil {
-			return err
+		pods, err3 := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
+		if err3 != nil {
+			return err3
 		}
 		// Pods for k8s-spot-termination-handler do not ment to be schedule in every cluster so doesn't need to fail provision in this case/
 		if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
@@ -303,11 +303,11 @@ func provisionCluster(
 
 		for _, pod := range pods.Items {
 			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel()
-			pod, err := k8sClient.WaitForPodRunning(ctx, namespace, pod.GetName())
-			if err != nil {
-				return err
+			ctx3, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancel2()
+			pod, err4 := k8sClient.WaitForPodRunning(ctx3, namespace, pod.GetName())
+			if err4 != nil {
+				return err4
 			}
 			logger.Infof("Successfully deployed support apps pod %q", pod.GetName())
 		}
@@ -346,8 +346,8 @@ func provisionCluster(
 	}
 
 	logger.Info("Ensuring cluster SLOs are present")
-	if err := createOrUpdateClusterSLOs(cluster, k8sClient, params.SLOTargetAvailability, logger); err != nil {
-		return errors.Wrap(err, "failed to create cluster slos")
+	if errInner := createOrUpdateClusterSLOs(cluster, k8sClient, params.SLOTargetAvailability, logger); errInner != nil {
+		return errors.Wrap(errInner, "failed to create cluster slos")
 	}
 
 	groups, err := store.GetGroupDTOs(&model.GroupFilter{
@@ -362,8 +362,8 @@ func provisionCluster(
 	logger.Infof("Ensuring %d Ring SLOs are present", len(groups))
 	for _, group := range groups {
 		groupIDs[makeRingSLOName(group)] = struct{}{}
-		if err := createOrUpdateRingSLOs(group, k8sClient, params.SLOTargetAvailability, logger); err != nil {
-			return errors.Wrapf(err, "failed to apply ring slo: %s", group.ID)
+		if errInner := createOrUpdateRingSLOs(group, k8sClient, params.SLOTargetAvailability, logger); errInner != nil {
+			return errors.Wrapf(errInner, "failed to apply ring slo: %s", group.ID)
 		}
 	}
 
@@ -385,8 +385,8 @@ func provisionCluster(
 
 	for _, psl := range psls.Items {
 		if _, exist := groupIDs[psl.Name]; !exist {
-			if err := deletePrometheusServiceLevel(psl, k8sClient, logger); err != nil {
-				return errors.Wrapf(err, "failed deleting removed ring slo: %s", strings.ToLower(psl.Name))
+			if errInner := deletePrometheusServiceLevel(psl, k8sClient, logger); errInner != nil {
+				return errors.Wrapf(errInner, "failed deleting removed ring slo: %s", strings.ToLower(psl.Name))
 			}
 		}
 	}

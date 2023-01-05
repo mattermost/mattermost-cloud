@@ -95,16 +95,16 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 
 	t.Run("fail to trigger migration if other migration succeeded but not committed", func(t *testing.T) {
 		succeededMigration := &model.InstallationDBMigrationOperation{State: model.InstallationDBMigrationStateSucceeded, InstallationID: installation1.ID}
-		err = sqlStore.CreateInstallationDBMigrationOperation(succeededMigration)
-		require.NoError(t, err)
+		err2 := sqlStore.CreateInstallationDBMigrationOperation(succeededMigration)
+		require.NoError(t, err2)
 		defer func() {
-			err := sqlStore.DeleteInstallationDBRestorationOperation(succeededMigration.ID)
-			assert.NoError(t, err)
+			err3 := sqlStore.DeleteInstallationDBRestorationOperation(succeededMigration.ID)
+			assert.NoError(t, err3)
 		}()
 
-		migrationOperation, err = client.MigrateInstallationDatabase(migrationRequest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "400")
+		_, err4 := client.MigrateInstallationDatabase(migrationRequest)
+		require.Error(t, err4)
+		assert.Contains(t, err4.Error(), "400")
 	})
 
 	t.Run("fail to trigger migration if destination database not supported", func(t *testing.T) {

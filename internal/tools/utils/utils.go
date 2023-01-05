@@ -11,9 +11,9 @@ import (
 	"os"
 	"time"
 
-	"emperror.dev/errors"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 )
 
 // CopyDirectory copy the entire directory to another destination

@@ -185,13 +185,13 @@ func TestGetInstallationBackupsMetadata(t *testing.T) {
 	}
 
 	for i := range backupsMeta {
-		err := sqlStore.CreateInstallationBackup(backupsMeta[i])
-		require.NoError(t, err)
+		err2 := sqlStore.CreateInstallationBackup(backupsMeta[i])
+		require.NoError(t, err2)
 		time.Sleep(1 * time.Millisecond) // Ensure RequestAt is different for all installations.
 	}
 
-	err = sqlStore.DeleteInstallationBackup(backupsMeta[2].ID)
-	require.NoError(t, err)
+	err3 := sqlStore.DeleteInstallationBackup(backupsMeta[2].ID)
+	require.NoError(t, err3)
 
 	for _, testCase := range []struct {
 		description string
@@ -300,11 +300,11 @@ func TestUpdateInstallationBackup(t *testing.T) {
 		backup.State = model.InstallationBackupStateBackupSucceeded
 		backup.StartAt = -1
 
-		err = sqlStore.UpdateInstallationBackupState(backup)
-		require.NoError(t, err)
+		err2 := sqlStore.UpdateInstallationBackupState(backup)
+		require.NoError(t, err2)
 
-		fetched, err := sqlStore.GetInstallationBackup(backup.ID)
-		require.NoError(t, err)
+		fetched, err3 := sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err3)
 		assert.Equal(t, model.InstallationBackupStateBackupSucceeded, fetched.State)
 		assert.Equal(t, int64(0), fetched.StartAt)         // Assert start time not updated
 		assert.Equal(t, "", fetched.ClusterInstallationID) // Assert CI ID not updated
@@ -318,11 +318,11 @@ func TestUpdateInstallationBackup(t *testing.T) {
 		backup.DataResidence = updatedResidence
 		backup.ClusterInstallationID = clusterInstallationID
 
-		err = sqlStore.UpdateInstallationBackupSchedulingData(backup)
-		require.NoError(t, err)
+		err2 := sqlStore.UpdateInstallationBackupSchedulingData(backup)
+		require.NoError(t, err2)
 
-		fetched, err := sqlStore.GetInstallationBackup(backup.ID)
-		require.NoError(t, err)
+		fetched, err3 := sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err3)
 		assert.Equal(t, updatedResidence, fetched.DataResidence)
 		assert.Equal(t, clusterInstallationID, fetched.ClusterInstallationID)
 		assert.Equal(t, int64(0), fetched.StartAt) // Assert start time not updated
@@ -335,11 +335,11 @@ func TestUpdateInstallationBackup(t *testing.T) {
 		backup.StartAt = startTime
 		backup.ClusterInstallationID = "modified-ci-id"
 
-		err = sqlStore.UpdateInstallationBackupStartTime(backup)
-		require.NoError(t, err)
+		err2 := sqlStore.UpdateInstallationBackupStartTime(backup)
+		require.NoError(t, err2)
 
-		fetched, err := sqlStore.GetInstallationBackup(backup.ID)
-		require.NoError(t, err)
+		fetched, err3 := sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, err3)
 		assert.Equal(t, startTime, fetched.StartAt)
 		assert.Equal(t, originalCIId, fetched.ClusterInstallationID) // Assert ClusterInstallationID not updated
 	})

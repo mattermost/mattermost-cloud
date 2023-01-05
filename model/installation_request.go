@@ -149,9 +149,9 @@ func (request *CreateInstallationRequest) Validate() error {
 	}
 
 	for _, ann := range request.GroupSelectionAnnotations {
-		err := validateAnnotationName(ann)
-		if err != nil {
-			return errors.Wrap(err, "invalid group selection annotation")
+		errInner := validateAnnotationName(ann)
+		if errInner != nil {
+			return errors.Wrap(errInner, "invalid group selection annotation")
 		}
 	}
 

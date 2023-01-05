@@ -144,22 +144,22 @@ func (s *ImportSupervisor) Do() error {
 			attempts := 0
 
 			expBackoff := utils.NewExponentialBackoff(time.Second*5, time.Minute*10, time.Minute*30)
-			err := expBackoff.Retry(func() error {
+			err2 := expBackoff.Retry(func() error {
 				attempts++
-				err := s.awatClient.CompleteImport(
+				err3 := s.awatClient.CompleteImport(
 					&awat.ImportCompletedWorkRequest{
 						ID:         work.ID,
 						CompleteAt: completeAt,
 						Error:      workError,
 					})
-				if err != nil {
-					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
+				if err3 != nil {
+					s.logger.WithError(err3).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
 				}
-				return err
+				return err3
 			})
 
-			if err != nil {
-				s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
+			if err2 != nil {
+				s.logger.WithError(err2).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
 			}
 		}()
 	}
@@ -410,14 +410,14 @@ func (s *ImportSupervisor) waitForImportToComplete(mmctl *mmctl, logger logrus.F
 	)
 
 	for !complete {
-		output, err := mmctl.Run("import", "job", "show", mattermostJobID)
+		output2, err := mmctl.Run("import", "job", "show", mattermostJobID)
 		if err != nil {
 			logger.WithError(err).Warn("failed to check import job")
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
-		err = json.Unmarshal(output, &jobResponses)
+		err = json.Unmarshal(output2, &jobResponses)
 		if err != nil {
 			logger.WithError(err).Warn("failed to check job; bad JSON")
 			time.Sleep(5 * time.Second)
@@ -509,9 +509,9 @@ func (s *ImportSupervisor) checkInstallation(installation *model.Installation) e
 		return errors.Errorf("failed to lock Installation %s", installation.ID)
 	}
 	defer func() {
-		unlocked, err := s.store.UnlockInstallation(installation.ID, s.ID, false)
-		if err != nil {
-			s.logger.WithError(err).Warnf("failed to unlock Installation %s to mark Import %s complete", installation.ID, mostRecentImport.ID)
+		unlocked, errDefer := s.store.UnlockInstallation(installation.ID, s.ID, false)
+		if errDefer != nil {
+			s.logger.WithError(errDefer).Warnf("failed to unlock Installation %s to mark Import %s complete", installation.ID, mostRecentImport.ID)
 			return
 		}
 		if !unlocked {

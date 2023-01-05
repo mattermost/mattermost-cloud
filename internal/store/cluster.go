@@ -114,15 +114,15 @@ func (rc *rawClusters) toClusters() ([]*model.Cluster, error) {
 
 // GetCluster fetches the given cluster by id.
 func (sqlStore *SQLStore) GetCluster(id string) (*model.Cluster, error) {
-	var rawCluster rawCluster
-	err := sqlStore.getBuilder(sqlStore.db, &rawCluster, clusterSelect.Where("ID = ?", id))
+	var rawClusterOutput rawCluster
+	err := sqlStore.getBuilder(sqlStore.db, &rawClusterOutput, clusterSelect.Where("ID = ?", id))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to get cluster by id")
 	}
 
-	return rawCluster.toCluster()
+	return rawClusterOutput.toCluster()
 }
 
 // GetClusters fetches the given page of created clusters. The first page is 0.
@@ -131,13 +131,13 @@ func (sqlStore *SQLStore) GetClusters(filter *model.ClusterFilter) ([]*model.Clu
 		OrderBy("CreateAt ASC")
 	builder = sqlStore.applyClustersFilter(builder, filter)
 
-	var rawClusters rawClusters
-	err := sqlStore.selectBuilder(sqlStore.db, &rawClusters, builder)
+	var rawClustersOutput rawClusters
+	err := sqlStore.selectBuilder(sqlStore.db, &rawClustersOutput, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for clusters")
 	}
 
-	return rawClusters.toClusters()
+	return rawClustersOutput.toClusters()
 }
 
 func (sqlStore *SQLStore) applyClustersFilter(builder sq.SelectBuilder, filter *model.ClusterFilter) sq.SelectBuilder {
@@ -163,13 +163,13 @@ func (sqlStore *SQLStore) GetUnlockedClustersPendingWork() ([]*model.Cluster, er
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
 
-	var rawClusters rawClusters
-	err := sqlStore.selectBuilder(sqlStore.db, &rawClusters, builder)
+	var rawClustersOutput rawClusters
+	err := sqlStore.selectBuilder(sqlStore.db, &rawClustersOutput, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for clusters")
 	}
 
-	return rawClusters.toClusters()
+	return rawClustersOutput.toClusters()
 }
 
 // CreateCluster records the given cluster to the database, assigning it a unique ID.
@@ -186,14 +186,14 @@ func (sqlStore *SQLStore) CreateCluster(cluster *model.Cluster, annotations []*m
 	}
 
 	if len(annotations) > 0 {
-		annotations, err := sqlStore.getOrCreateAnnotations(tx, annotations)
-		if err != nil {
-			return errors.Wrap(err, "failed to get or create annotations")
+		annotationsInner, errInner := sqlStore.getOrCreateAnnotations(tx, annotations)
+		if errInner != nil {
+			return errors.Wrap(errInner, "failed to get or create annotations")
 		}
 
-		_, err = sqlStore.createClusterAnnotations(tx, cluster.ID, annotations)
-		if err != nil {
-			return errors.Wrap(err, "failed to create annotations for cluster")
+		_, errInner = sqlStore.createClusterAnnotations(tx, cluster.ID, annotationsInner)
+		if errInner != nil {
+			return errors.Wrap(errInner, "failed to create annotations for cluster")
 		}
 	}
 
