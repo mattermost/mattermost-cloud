@@ -22,11 +22,11 @@ type EKSNodeGroups map[string]EKSNodeGroup
 // EKSNodeGroup is node group configuration.
 type EKSNodeGroup struct {
 	RoleARN       *string
-	InstanceTypes []*string
+	InstanceTypes []string
 	AMIVersion    *string
-	DesiredSize   *int64
-	MinSize       *int64
-	MaxSize       *int64
+	DesiredSize   *int32
+	MinSize       *int32
+	MaxSize       *int32
 }
 
 // NewEKSMetadata creates an instance of EKSMetadata given the raw provisioner metadata.
