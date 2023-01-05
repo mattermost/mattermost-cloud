@@ -87,13 +87,23 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
-	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
-		logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
-		err = createInstallationSLI(clusterInstallation, k8sClient, logger)
-		if err != nil {
-			return errors.Wrap(err, "failed to create installation SLI")
+	if installation.GroupID != nil && *installation.GroupID != "" {
+		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+			logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
+			err = createInstallationSLI(clusterInstallation, k8sClient, logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to create installation SLI")
+			}
+		}
+		if containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
+			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
+			err = createOrUpdateNginxSLIs(clusterInstallation, k8sClient, logger)
+			if err != nil {
+				return errors.Wrap(err, "failed to create Nginx SLI")
+			}
 		}
 	}
+
 	ctx := context.TODO()
 	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Create(ctx, mattermost, metav1.CreateOptions{})
 	if err != nil {
@@ -173,6 +183,11 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 	if err != nil {
 		return errors.Wrap(err, "failed to delete installation SLI")
 	}
+
+	if err = deleteNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
+		return errors.Wrap(err, "failed to delete nginx SLI")
+	}
+
 	logger.Info("Updated cluster installation")
 
 	return nil
@@ -328,6 +343,18 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		}
 	}
 
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
+		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
+		if err = createOrUpdateNginxSLIs(clusterInstallation, k8sClient, logger); err != nil {
+			return errors.Wrapf(err, "failed to create enterprise Nginx SLI %s", clusterInstallation.InstallationID)
+		}
+	} else {
+		logger.Debug("Removing Mattermost Enterprise Nginx SLI")
+		if err := deleteNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
+			return errors.Wrapf(err, "failed to delete cluster installation SLI %s", clusterInstallation.InstallationID)
+		}
+	}
+
 	logger.Info("Updated cluster installation")
 
 	return nil
@@ -397,6 +424,10 @@ func deleteClusterInstallation(
 	err = deleteInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete installation SLI")
+	}
+
+	if err = deleteNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
+		return errors.Wrap(err, "failed to delete nginx SLI")
 	}
 
 	logger.Info("Successfully deleted cluster installation")

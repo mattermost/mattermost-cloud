@@ -72,6 +72,7 @@ type provisioningParams struct {
 	s3StateStore          string
 	allowListCIDRRange    []string
 	sloInstallationGroups []string
+	enterpriseGroups      []string
 	vpnListCIDR           []string
 	useExistingResources  bool
 	deployMySQLOperator   bool
@@ -90,6 +91,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.Flags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	command.Flags().StringSliceVar(&flags.sloInstallationGroups, "slo-installation-groups", []string{}, "The list of installation group ids to create dedicated SLOs for.")
+	command.Flags().StringSliceVar(&flags.enterpriseGroups, "enterprise-groups", []string{}, "The list of enterprise group ids to create dedicated Nginx SLOs for.")
 	command.Flags().StringSliceVar(&flags.vpnListCIDR, "vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	command.Flags().BoolVar(&flags.useExistingResources, "use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	command.Flags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
