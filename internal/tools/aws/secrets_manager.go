@@ -207,8 +207,7 @@ func (a *Client) secretsManagerGetIAMAccessKeyFromSecretName(secretName string) 
 	return iamAccessKey, nil
 }
 
-func (a *Client) secretsManagerGetRDSSecret(awsID string, logger log.FieldLogger) (*RDSSecret, error) {
-	secretName := RDSSecretName(awsID)
+func (a *Client) secretsManagerGetRDSSecret(secretName string, logger log.FieldLogger) (*RDSSecret, error) {
 	result, err := a.Service().secretsManager.GetSecretValue(
 		context.TODO(),
 		&secretsmanager.GetSecretValueInput{
