@@ -32,7 +32,7 @@ type ProvisioningParams struct {
 	NdotsValue              string
 	PGBouncerConfig         *PGBouncerConfig
 	SLOInstallationGroups   []string
-	EnterpriseGroups        []string
+	SLOEnterpriseGroups     []string
 	EtcdManagerEnv          map[string]string
 	SLOTargetAvailability   float64
 }

@@ -278,7 +278,7 @@ func executeServerCmd(flags serverFlags) error {
 		NdotsValue:              flags.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   flags.sloInstallationGroups,
-		EnterpriseGroups:        flags.enterpriseGroups,
+		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
 		EtcdManagerEnv:          etcdManagerEnv,
 		SLOTargetAvailability:   flags.sloTargetAvailability,
 	}

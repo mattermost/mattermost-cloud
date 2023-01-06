@@ -95,7 +95,7 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 				return errors.Wrap(err, "failed to create installation SLI")
 			}
 		}
-		if containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
+		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
 			err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
@@ -343,7 +343,7 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		}
 	}
 
-	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.EnterpriseGroups) {
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
 		if err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
 			return errors.Wrapf(err, "failed to create enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))
