@@ -43,7 +43,7 @@ func makeNginxSLI(clusterInstallation *model.ClusterInstallation) slothv1.Promet
 			SLOs: []slothv1.SLO{
 				{
 					Name:        "requests-availability",
-					Objective:   99.9,
+					Objective:   99.5,
 					Description: "Common SLO based on availability for HTTP request responses measured on ingress layer.",
 					SLI: slothv1.SLI{Events: &slothv1.SLIEvents{
 						ErrorQuery: "sum(rate(nginx_ingress_controller_request_duration_seconds_count{exported_service='" + serviceName + "',status=~'(5..|429|499)'}[{{.window}}]))",
