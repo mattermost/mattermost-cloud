@@ -186,10 +186,11 @@ type serverFlags struct {
 	listen      string
 	metricsPort int
 
-	debug       bool
-	debugHelm   bool
-	devMode     bool
-	machineLogs bool
+	debug               bool
+	debugHelm           bool
+	devMode             bool
+	machineLogs         bool
+	enableLogStacktrace bool
 
 	database      string
 	maxSchemas    int64
@@ -216,6 +217,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.debugHelm, "debug-helm", false, "Whether to include Helm output in debug logs.")
 	command.Flags().BoolVar(&flags.devMode, "dev", false, "Set sane defaults for development")
 	command.Flags().BoolVar(&flags.machineLogs, "machine-readable-logs", false, "Output the logs in machine readable format.")
+	command.Flags().BoolVar(&flags.enableLogStacktrace, "enable-log-stacktrace", false, "Add stacktrace in error logs.")
 
 	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	command.Flags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
