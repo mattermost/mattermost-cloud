@@ -12,7 +12,7 @@ import (
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/smithy-go"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -51,7 +51,10 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationSetupAlreadyExist() {
 		a.SetDescribeDBInstancesExpectation("sg-123-id-slave").Times(1),
 		a.SetDescribeSecurityGroupsExpectation("vpc-db-sg-123-slave", "vpc-db-sg-123-id-slave", a.DefaultRDSTag).Times(1),
 		a.SetAuthorizeSecurityGroupIngress("Ingress Traffic from other RDS instance", "vpc-db-sg-123-master", "vpc-db-sg-123-slave").
-			Return(nil, awserr.New("InvalidPermission.Duplicate", "rule already exists", nil)).
+			Return(nil, errors.Wrap(&smithy.GenericAPIError{
+				Code:    "InvalidPermission.Duplicate",
+				Message: "rule already exists",
+			}, "test")).
 			Times(1),
 		a.Mocks.Log.Logger.EXPECT().
 			WithFields(logrus.Fields{"master-installation-id": a.InstallationA.ID, "slave-installation-id": a.ClusterInstallationB.InstallationID}).
@@ -133,7 +136,10 @@ func (a *AWSTestSuite) TestDatabaseRDSMigrationTeardownRuleError() {
 		a.SetDescribeDBInstancesExpectation("sg-123-id-slave").Times(1),
 		a.SetDescribeSecurityGroupsExpectation("vpc-db-sg-123-slave", "vpc-db-sg-123-id-slave", a.DefaultRDSTag).Times(1),
 		a.SetRevokeSecurityGroupIngress("Ingress Traffic from other RDS instance", "vpc-db-sg-123-master", "vpc-db-sg-123-slave").
-			Return(&ec2.RevokeSecurityGroupIngressOutput{}, awserr.New("InvalidPermission.NotFound", "rule not found", nil)).
+			Return(&ec2.RevokeSecurityGroupIngressOutput{}, errors.Wrap(&smithy.GenericAPIError{
+				Code:    "InvalidPermission.NotFound",
+				Message: "rule already exists",
+			}, "test")).
 			Times(1),
 		a.Mocks.Log.Logger.EXPECT().
 			WithFields(logrus.Fields{"master-installation-id": a.InstallationA.ID, "slave-installation-id": a.ClusterInstallationB.InstallationID}).

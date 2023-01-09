@@ -9,13 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
-
-	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
+	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
@@ -23,12 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling"
-	"github.com/aws/aws-sdk-go/service/applicationautoscaling/applicationautoscalingiface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -71,6 +65,7 @@ type AWS interface {
 	S3EnsureObjectDeleted(bucketName, path string) error
 	S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *string) error
 	GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error)
+	GetS3RegionURL() string
 
 	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
@@ -138,23 +133,22 @@ type Service struct {
 	ec2                   EC2API
 	rds                   RDSAPI
 	iam                   IAMAPI
-	secretsManager        SecretsManagerAPI
 	s3                    S3API
+	secretsManager        SecretsManagerAPI
 	route53               Route53API
 	resourceGroupsTagging ResourceGroupsTaggingAPIAPI
 	kms                   KMSAPI
 	dynamodb              DynamoDBAPI
-	sts                   stsiface.STSAPI
-	appAutoscaling        applicationautoscalingiface.ApplicationAutoScalingAPI
+	sts                   STSAPI
 	eks                   EKSAPI
 }
 
 // NewService creates a new instance of Service.
-func NewService(sess *session.Session, cfg awsv2.Config) *Service {
+func NewService(cfg aws.Config) *Service {
 	return &Service{
-		acm:                   acm.NewFromConfig(cfg), // v2
-		rds:                   rds.NewFromConfig(cfg), // v2
-		iam:                   iam.NewFromConfig(cfg),
+		acm:                   acm.NewFromConfig(cfg),                      // v2
+		rds:                   rds.NewFromConfig(cfg),                      // v2
+		iam:                   iam.NewFromConfig(cfg),                      // v2
 		s3:                    s3.NewFromConfig(cfg),                       // v2
 		route53:               route53.NewFromConfig(cfg),                  // v2
 		secretsManager:        secretsmanager.NewFromConfig(cfg),           // v2
@@ -162,15 +156,14 @@ func NewService(sess *session.Session, cfg awsv2.Config) *Service {
 		ec2:                   ec2.NewFromConfig(cfg),                      // v2
 		kms:                   kms.NewFromConfig(cfg),                      // v2
 		dynamodb:              dynamodb.NewFromConfig(cfg),                 // v2
-		sts:                   sts.New(sess),
-		appAutoscaling:        applicationautoscaling.New(sess),
-		eks:                   eks.NewFromConfig(cfg), // v2
+		sts:                   sts.NewFromConfig(cfg),                      // v2
+		eks:                   eks.NewFromConfig(cfg),                      // v2
 	}
 }
 
 // GetRegion returns current AWS region.
 func (c *Client) GetRegion() string {
-	return *c.config.Region
+	return c.config.Region
 }
 
 // Service constructs an AWS session and configuration if not yet successfully done and returns AWS
@@ -185,16 +178,8 @@ func (c *Client) Service() *Service {
 			c.logger.WithError(err).Error("Can't load AWS Configuration")
 		}
 
-		// Load session for the V1 SDK
-		sess, err := NewAWSSessionWithLogger(c.config, c.logger.WithField("tools-aws", "client"))
-		if err != nil {
-			c.logger.WithError(err).Error("failed to initialize AWS session")
-			// Calls to AWS will fail until a healthy session is acquired.
-			return NewService(&session.Session{}, cfg)
-		}
-
 		c.mux.Lock()
-		c.service = NewService(sess, cfg)
+		c.service = NewService(cfg)
 		c.mux.Unlock()
 	}
 

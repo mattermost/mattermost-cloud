@@ -472,6 +472,10 @@ func (a *mockAWS) S3EnsureObjectDeleted(bucketName, path string) error {
 	return nil
 }
 
+func (a *mockAWS) GetS3RegionURL() string {
+	return "s3.amazonaws.test.com"
+}
+
 func (a *mockAWS) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }

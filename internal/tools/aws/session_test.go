@@ -7,8 +7,8 @@ package aws
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

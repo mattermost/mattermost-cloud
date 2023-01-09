@@ -5,15 +5,15 @@
 // Package mockawssdk to create the mocks run go generate to regenerate this package.
 //
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./ec2.go github.com/mattermost/mattermost-cloud/internal/tools/aws EC2API
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./rds.go  github.com/mattermost/mattermost-cloud/internal/tools/aws RDSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./s3.go github.com/mattermost/mattermost-cloud/internal/tools/aws S3API
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./rds.go  github.com/mattermost/mattermost-cloud/internal/tools/aws RDSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./acm.go github.com/mattermost/mattermost-cloud/internal/tools/aws ACMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./kms.go github.com/mattermost/mattermost-cloud/internal/tools/aws KMSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./iam.go github.com/mattermost/mattermost-cloud/internal/tools/aws IAMAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./route53.go github.com/mattermost/mattermost-cloud/internal/tools/aws Route53API
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./secrets_manager.go github.com/mattermost/mattermost-cloud/internal/tools/aws SecretsManagerAPI
+//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./sts.go github.com/mattermost/mattermost-cloud/internal/tools/aws STSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./resource_tagging.go github.com/mattermost/mattermost-cloud/internal/tools/aws ResourceGroupsTaggingAPIAPI
-//go:generate ../../../bin/mockgen -package=mockawssdk -destination ./sts.go github.com/aws/aws-sdk-go/service/sts/stsiface STSAPI
 //go:generate ../../../bin/mockgen -package=mockawssdk -destination ./dynamodb.go github.com/mattermost/mattermost-cloud/internal/tools/aws DynamoDBAPI
 //go:generate /usr/bin/env bash -c "cat ../../../hack/boilerplate/boilerplate.generatego.txt ec2.go > _ec2.go && mv _ec2.go ec2.go"
 //go:generate /usr/bin/env bash -c "cat ../../../hack/boilerplate/boilerplate.generatego.txt rds.go > _rds.go && mv _rds.go rds.go"
