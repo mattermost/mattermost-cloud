@@ -14,6 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	namespaceNginx = "nginx"
+)
+
 type nginx struct {
 	awsClient      aws.AWS
 	kubeconfigPath string
@@ -69,8 +73,29 @@ func (n *nginx) CreateOrUpgrade() error {
 		return err
 	}
 
-	err = n.updateVersion(h)
-	return err
+	if err = n.updateVersion(h); err != nil {
+		return err
+	}
+
+	if err = n.addLoadBalancerNameTag(); err != nil {
+		n.logger.Errorln(err)
+	}
+
+	return nil
+}
+
+func (n *nginx) addLoadBalancerNameTag() error {
+
+	endpoint, elbType, err := getElasticLoadBalancerInfo(namespaceNginx, n.logger, n.kubeconfigPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get the loadbalancer endpoint (nginx)")
+	}
+
+	if err := addLoadBalancerNameTag(n.awsClient.GetLoadBalancerAPI(elbType), endpoint); err != nil {
+		return errors.Wrap(err, "failed to add loadbalancer name tag (nginx)")
+	}
+
+	return nil
 }
 
 func (n *nginx) DesiredVersion() *model.HelmUtilityVersion {
@@ -121,7 +146,7 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 	return newHelmDeployment(
 		"ingress-nginx/ingress-nginx",
 		"nginx",
-		"nginx",
+		namespaceNginx,
 		n.kubeconfigPath,
 		n.desiredVersion,
 		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *certificate.ARN, clusterResources.VpcCIDR),

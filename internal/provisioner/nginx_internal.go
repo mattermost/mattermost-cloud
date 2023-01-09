@@ -75,8 +75,30 @@ func (n *nginxInternal) CreateOrUpgrade() error {
 		return err
 	}
 
-	err = n.updateVersion(h)
-	return err
+	if err = n.updateVersion(h); err != nil {
+		return err
+
+	}
+
+	if err = n.addLoadBalancerNameTag(); err != nil {
+		n.logger.Errorln(err)
+	}
+
+	return nil
+}
+
+func (n *nginxInternal) addLoadBalancerNameTag() error {
+
+	endpoint, elbType, err := getElasticLoadBalancerInfo(namespaceNginxInternal, n.logger, n.kubeconfigPath)
+	if err != nil {
+		return errors.Wrap(err, "couldn't get the loadbalancer endpoint (nginx-internal)")
+	}
+
+	if err := addLoadBalancerNameTag(n.awsClient.GetLoadBalancerAPI(elbType), endpoint); err != nil {
+		return errors.Wrap(err, "failed to add loadbalancer name tag (nginx-internal)")
+	}
+
+	return nil
 }
 
 func (n *nginxInternal) DesiredVersion() *model.HelmUtilityVersion {
@@ -141,4 +163,27 @@ func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, 
 
 func (n *nginxInternal) Name() string {
 	return model.NginxInternalCanonicalName
+}
+
+func addLoadBalancerNameTag(elbClient aws.ELB, hostname string) error {
+	if hostname == "" {
+		return errors.New("cannot add loadbalancer name tag if hostname is empty")
+	}
+
+	parts := strings.Split(hostname, "-")
+	loadbalancerName := parts[0]
+
+	resource, err := elbClient.GetLoadBalancerResource(loadbalancerName)
+	if err != nil {
+		return errors.Wrap(err, "failed to get loadbalancer ARN")
+	}
+
+	err = elbClient.TagLoadBalancer(resource, map[string]string{
+		"Name": loadbalancerName,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to tag loadbalancer")
+	}
+
+	return nil
 }

@@ -90,6 +90,8 @@ type AWS interface {
 
 	GetRegion() string
 	GetAccountID() (string, error)
+
+	GetLoadBalancerAPI(string) ELB
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
@@ -141,6 +143,7 @@ type Service struct {
 	dynamodb              DynamoDBAPI
 	sts                   STSAPI
 	eks                   EKSAPI
+	elb                   elasticLoadbalancer
 }
 
 // NewService creates a new instance of Service.
@@ -158,6 +161,7 @@ func NewService(cfg aws.Config) *Service {
 		dynamodb:              dynamodb.NewFromConfig(cfg),                 // v2
 		sts:                   sts.NewFromConfig(cfg),                      // v2
 		eks:                   eks.NewFromConfig(cfg),                      // v2
+		elb:                   newElasticLoadbalancerFromConfig(cfg),
 	}
 }
 

@@ -404,6 +404,11 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // can be tested.
 type mockAWS struct{}
 
+func (a *mockAWS) GetLoadBalancerAPI(s string) aws.ELB {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (a *mockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
 	return nil
 }

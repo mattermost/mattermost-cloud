@@ -23,6 +23,11 @@ type MockAWS struct {
 	recorder *MockAWSMockRecorder
 }
 
+func (m *MockAWS) GetLoadBalancerAPI(s string) aws.ELB {
+	//TODO implement me
+	panic("implement me")
+}
+
 // MockAWSMockRecorder is the mock recorder for MockAWS
 type MockAWSMockRecorder struct {
 	mock *MockAWS
