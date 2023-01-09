@@ -27,7 +27,7 @@ type ELBV1 interface {
 	AddTags(ctx context.Context, params *elbv1.AddTagsInput, optFns ...func(*elbv1.Options)) (*elbv1.AddTagsOutput, error)
 }
 
-// ELBV2 represents the series of calls we require from the AWS SDK v2 ELB Client
+// ELBV2 represents the series of calls we require from the AWS SDK v2 ELB Client v2
 type ELBV2 interface {
 	DescribeLoadBalancers(ctx context.Context, params *elbv2.DescribeLoadBalancersInput, optFns ...func(*elbv2.Options)) (*elbv2.DescribeLoadBalancersOutput, error)
 	AddTags(ctx context.Context, params *elbv2.AddTagsInput, optFns ...func(*elbv2.Options)) (*elbv2.AddTagsOutput, error)
