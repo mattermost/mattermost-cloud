@@ -717,16 +717,16 @@ func (mr *MockAWSMockRecorder) GetAccountID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountID", reflect.TypeOf((*MockAWS)(nil).GetAccountID))
 }
 
-// GetLoadBalancerAPI mocks base method
-func (m *MockAWS) GetLoadBalancerAPI(arg0 string) aws.ELB {
+// GetLoadBalancerAPIByType mocks base method
+func (m *MockAWS) GetLoadBalancerAPIByType(arg0 string) aws.ELB {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLoadBalancerAPI", arg0)
+	ret := m.ctrl.Call(m, "GetLoadBalancerAPIByType", arg0)
 	ret0, _ := ret[0].(aws.ELB)
 	return ret0
 }
 
-// GetLoadBalancerAPI indicates an expected call of GetLoadBalancerAPI
-func (mr *MockAWSMockRecorder) GetLoadBalancerAPI(arg0 interface{}) *gomock.Call {
+// GetLoadBalancerAPIByType indicates an expected call of GetLoadBalancerAPIByType
+func (mr *MockAWSMockRecorder) GetLoadBalancerAPIByType(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLoadBalancerAPI", reflect.TypeOf((*MockAWS)(nil).GetLoadBalancerAPI), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLoadBalancerAPIByType", reflect.TypeOf((*MockAWS)(nil).GetLoadBalancerAPIByType), arg0)
 }

@@ -27,8 +27,8 @@ func newElasticLoadbalancerFromConfig(cfg aws.Config) elasticLoadbalancer {
 	}
 }
 
-// GetLoadBalancerAPI returns the correct ELB API based on elb type
-func (c *Client) GetLoadBalancerAPI(elbType string) ELB {
+// GetLoadBalancerAPIByType returns the correct ELB API based on elb type
+func (c *Client) GetLoadBalancerAPIByType(elbType string) ELB {
 	if elbType == "nlb" {
 		return c.service.elb.elasticLoadbalancerV2
 	}

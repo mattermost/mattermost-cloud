@@ -22,7 +22,7 @@ type ELB interface {
 	TagLoadBalancer(arn string, tags map[string]string) error
 }
 
-// ELBV1 represents the series of calls we require from the AWS SDK v1 ELB Client
+// ELBV1 represents the series of calls we require from the AWS SDK v2 ELB Client v1
 type ELBV1 interface {
 	AddTags(ctx context.Context, params *elbv1.AddTagsInput, optFns ...func(*elbv1.Options)) (*elbv1.AddTagsOutput, error)
 }

@@ -91,7 +91,7 @@ func (n *nginx) addLoadBalancerNameTag() error {
 		return errors.Wrap(err, "couldn't get the loadbalancer endpoint (nginx)")
 	}
 
-	if err := addLoadBalancerNameTag(n.awsClient.GetLoadBalancerAPI(elbType), endpoint); err != nil {
+	if err := addLoadBalancerNameTag(n.awsClient.GetLoadBalancerAPIByType(elbType), endpoint); err != nil {
 		return errors.Wrap(err, "failed to add loadbalancer name tag (nginx)")
 	}
 

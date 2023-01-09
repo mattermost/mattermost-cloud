@@ -91,7 +91,7 @@ type AWS interface {
 	GetRegion() string
 	GetAccountID() (string, error)
 
-	GetLoadBalancerAPI(string) ELB
+	GetLoadBalancerAPIByType(string) ELB
 }
 
 // Client is a client for interacting with AWS resources in a single AWS account.
