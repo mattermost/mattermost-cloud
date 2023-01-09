@@ -23,11 +23,6 @@ type MockAWS struct {
 	recorder *MockAWSMockRecorder
 }
 
-func (m *MockAWS) GetLoadBalancerAPI(s string) aws.ELB {
-	//TODO implement me
-	panic("implement me")
-}
-
 // MockAWSMockRecorder is the mock recorder for MockAWS
 type MockAWSMockRecorder struct {
 	mock *MockAWS
@@ -720,4 +715,18 @@ func (m *MockAWS) GetAccountID() (string, error) {
 func (mr *MockAWSMockRecorder) GetAccountID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountID", reflect.TypeOf((*MockAWS)(nil).GetAccountID))
+}
+
+// GetLoadBalancerAPI mocks base method
+func (m *MockAWS) GetLoadBalancerAPI(arg0 string) aws.ELB {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLoadBalancerAPI", arg0)
+	ret0, _ := ret[0].(aws.ELB)
+	return ret0
+}
+
+// GetLoadBalancerAPI indicates an expected call of GetLoadBalancerAPI
+func (mr *MockAWSMockRecorder) GetLoadBalancerAPI(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLoadBalancerAPI", reflect.TypeOf((*MockAWS)(nil).GetLoadBalancerAPI), arg0)
 }
