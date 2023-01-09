@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 	github.com/Masterminds/squirrel v1.5.3
-	github.com/aws/aws-sdk-go v1.42.16
 	github.com/aws/aws-sdk-go-v2 v1.17.3
 	github.com/aws/aws-sdk-go-v2/config v1.18.7
 	github.com/aws/aws-sdk-go-v2/service/acm v1.15.2
@@ -19,6 +18,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.25.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.6
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.16.10
+	github.com/aws/aws-sdk-go-v2/service/sts v1.17.7
+	github.com/aws/smithy-go v1.13.5
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/cloudflare/cloudflare-go v0.54.0
@@ -58,6 +59,7 @@ require (
 	emperror.dev/errors v0.8.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/aws/aws-sdk-go v1.42.16 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.21 // indirect
@@ -72,8 +74,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.21 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.28 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.17.7 // indirect
-	github.com/aws/smithy-go v1.13.5 // indirect
 	github.com/banzaicloud/k8s-objectmatcher v1.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

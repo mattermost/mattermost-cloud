@@ -5,12 +5,14 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/service/sts"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 // GetAccountID gets the current AWS Account ID
 func (a *Client) GetAccountID() (string, error) {
-	callerIdentityOutput, err := a.Service().sts.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	callerIdentityOutput, err := a.Service().sts.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", err
 	}
