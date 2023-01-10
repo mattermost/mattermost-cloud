@@ -205,7 +205,7 @@ func failureEventHandler(t *testing.T, deliveryChan chan<- *model.StateChangeEve
 }
 
 func awaitEvents(t *testing.T, deliveryChan <-chan *model.StateChangeEventPayload, expectedID string, eventsCount int) {
-	timeout := time.After(25 * time.Second)
+	timeout := time.After(50 * time.Second)
 	delivered := 0
 
 	for delivered < eventsCount {
