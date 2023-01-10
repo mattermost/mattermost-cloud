@@ -57,6 +57,10 @@ GOLANGCILINT_VER := v1.50.1
 GOLANGCILINT_BIN := golangci-lint
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
+TRIVY_SEVERITY := CRITICAL
+TRIVY_EXIT_CODE := 1
+TRIVY_VULN_TYPE := os,library
+
 export GO111MODULE=on
 
 ## Checks the code style, tests, builds and bundles.
@@ -123,6 +127,11 @@ goimports: $(GOIMPORTS)
 		fi; \
 	done
 	@echo "goimports success"; \
+
+## Checks for vulnerabilities
+trivy: build-image
+	@echo running trivy
+	@trivy image --format table --exit-code $(TRIVY_EXIT_CODE) --ignore-unfixed --vuln-type $(TRIVY_VULN_TYPE) --severity $(TRIVY_SEVERITY) $(MATTERMOST_CLOUD_IMAGE)
 
 ## Builds and thats all :)
 .PHONY: dist
