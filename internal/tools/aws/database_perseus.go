@@ -51,7 +51,7 @@ func NewPerseusDatabase(databaseType, instanceID, installationID string, client 
 		instanceID:                instanceID,
 		installationID:            installationID,
 		client:                    client,
-		maxSupportedInstallations: valueOrDefault(installationsLimit, DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit),
+		maxSupportedInstallations: valueOrDefault(installationsLimit, DefaultRDSMultitenantPerseusDatabasePostgresCountLimit),
 		disableDBCheck:            disableDBCheck,
 	}
 }
@@ -195,16 +195,16 @@ func (d *PerseusDatabase) ensurePerseusAuthDatabaseEntriesCreated(dbResources *m
 	encryptedDestinationPassword := base64.StdEncoding.EncodeToString(encBytes)
 
 	// Create Perseus auth entries.
-	close, err := d.connectToPerseusAuthDatabase(dbResources.MultitenantDatabase.VpcID, logger)
+	closeDB, err := d.connectToPerseusAuthDatabase(dbResources.MultitenantDatabase.VpcID, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to perseus auth database")
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
-	writerEntryQuery := buildPerseusAuthEntry(
+	writerEntryQuery := buildPerseusAuthEntryQuery(
 		dbResources.LogicalDatabase.Name,
 		installationSecret.MasterUsername,
 		hashedSourcePassword,
@@ -213,7 +213,7 @@ func (d *PerseusDatabase) ensurePerseusAuthDatabaseEntriesCreated(dbResources *m
 		encryptedDestinationPassword,
 		dbResources.MultitenantDatabase.WriterEndpoint,
 	)
-	readerEntryQuery := buildPerseusAuthEntry(
+	readerEntryQuery := buildPerseusAuthEntryQuery(
 		dbResources.LogicalDatabase.Name+"-ro",
 		installationSecret.MasterUsername,
 		hashedSourcePassword,
@@ -232,7 +232,7 @@ func (d *PerseusDatabase) ensurePerseusAuthDatabaseEntriesCreated(dbResources *m
 	return nil
 }
 
-func buildPerseusAuthEntry(sourceDatabase, sourceUsername, sourcePassword, destinationDatabase, destinationUsername, destinationPassword, endpoint string) string {
+func buildPerseusAuthEntryQuery(sourceDatabase, sourceUsername, sourcePassword, destinationDatabase, destinationUsername, destinationPassword, endpoint string) string {
 	return fmt.Sprintf(`INSERT INTO perseus_auth (
 		source_db,
 		source_schema,
@@ -285,7 +285,7 @@ func (d *PerseusDatabase) assignInstallationToProxiedDatabaseAndLock(vpcID strin
 
 	// We want to be smart about how we assign the installation to a database.
 	// Find the database with the most installations on it to keep utilization
-	// as close to maximim efficiency as possible.
+	// as close to maximum efficiency as possible.
 	selectedDatabase := &model.MultitenantDatabase{}
 	for _, multitenantDatabase := range multitenantDatabases {
 		if multitenantDatabase.Installations.Count() >= selectedDatabase.Installations.Count() {
@@ -434,6 +434,7 @@ func (d *PerseusDatabase) getAndLockAssignedProxiedDatabase(store model.Installa
 	}
 	databaseResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(d.installationID, multitenantDatabases[0].ID)
 	if err != nil {
+		unlockFn()
 		return nil, nil, errors.Wrap(err, "failed to get database resources")
 	}
 
@@ -464,13 +465,13 @@ func (d *PerseusDatabase) provisionPerseusDatabase(vpcID string, rdsCluster *rds
 		return errors.Wrapf(err, "failed to ensure the pgbouncer auth user secret was created for %s", rdsID)
 	}
 
-	close, err := d.connectToRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterDBSecret.SecretString)
+	closeDB, err := d.connectToRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterDBSecret.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
 	err = ensureDatabaseUserIsCreated(ctx, d.db, perseusUser.MasterUsername, perseusUser.MasterPassword)
@@ -564,13 +565,13 @@ func (d *PerseusDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCl
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
 
-	close, err := d.connectToRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	closeDB, err := d.connectToRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
 	err = d.ensureDatabaseIsCreated(ctx, databaseName)
@@ -593,13 +594,13 @@ func (d *PerseusDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string,
 		return nil, errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
 
-	close, err := d.connectToRDSCluster(databaseName, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	closeDB, err := d.connectToRDSCluster(databaseName, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
 	err = d.ensureBaselineDatabasePrep(ctx, databaseName)
@@ -963,13 +964,13 @@ func (d *PerseusDatabase) cleanupPerseusMultitenantDatabase(rdsClusterID, rdsClu
 		return errors.Wrapf(err, "failed to get master secret by ID %s", rdsClusterID)
 	}
 
-	close, err := d.connectToRDSCluster(databaseName, rdsClusterendpoint, DefaultMattermostDatabaseUsername, *masterDBSecret.SecretString)
+	closeDB, err := d.connectToRDSCluster(databaseName, rdsClusterendpoint, DefaultMattermostDatabaseUsername, *masterDBSecret.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to multitenant RDS cluster ID %s", rdsClusterID)
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
 	err = dropSchemaIfExists(ctx, d.db, installationUsername)
@@ -986,13 +987,13 @@ func (d *PerseusDatabase) cleanupPerseusMultitenantDatabase(rdsClusterID, rdsClu
 }
 
 func (d *PerseusDatabase) cleanupPerseusAuthDatabase(vpcID, username string, logger log.FieldLogger) error {
-	close, err := d.connectToPerseusAuthDatabase(vpcID, logger)
+	closeDB, err := d.connectToPerseusAuthDatabase(vpcID, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to perseus auth database")
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
 	query := fmt.Sprintf(`DELETE FROM perseus_auth WHERE source_user = '%s';`, username)
@@ -1067,13 +1068,13 @@ func ensurePerseusAuthDatabaseProvisioned(a *Client, rdsCluster *rdsTypes.DBClus
 	}
 
 	err = func() error {
-		db, close, err := connectToPostgresRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+		db, closeDB, err := connectToPostgresRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 		if err != nil {
 			return errors.Wrapf(err, "failed to connect to RDS cluster %s", rdsID)
 		}
-		defer close(logger)
+		defer closeDB(logger)
 
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 		defer cancel()
 
 		err = ensureDatabaseUserIsCreated(ctx, db, authUserCredentials.MasterUsername, authUserCredentials.MasterPassword)
@@ -1092,13 +1093,13 @@ func ensurePerseusAuthDatabaseProvisioned(a *Client, rdsCluster *rdsTypes.DBClus
 		return nil, err
 	}
 
-	db, close, err := connectToPostgresRDSCluster(DefaultPerseusAuthDatabaseName, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	db, closeDB, err := connectToPostgresRDSCluster(DefaultPerseusAuthDatabaseName, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to RDS cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer closeDB(logger)
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
 	query := `CREATE TABLE IF NOT EXISTS perseus_auth (

@@ -621,7 +621,7 @@ func (d *RDSMultitenantDatabase) assignInstallationToMultitenantDatabaseAndLock(
 
 	// We want to be smart about how we assign the installation to a database.
 	// Find the database with the most installations on it to keep utilization
-	// as close to maximim efficiency as possible.
+	// as close to maximum efficiency as possible.
 	// TODO: we haven't aquired a lock yet on any of these databases so this
 	// could open up small race conditions.
 	selectedDatabase := &model.MultitenantDatabase{}

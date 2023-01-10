@@ -207,6 +207,10 @@ const (
 	// client will take before cancel a call to the database.
 	DefaultMySQLContextTimeSeconds = 30
 
+	// DefaultPostgresContextTimeSeconds is the number of seconds that a SQL
+	// client will take before cancel a call to a postgres database.
+	DefaultPostgresContextTimeSeconds = 30
+
 	// DefaultRDSMultitenantDatabaseMySQLCountLimit is the maximum number of
 	// schemas allowed in a MySQL multitenant RDS database cluster.
 	DefaultRDSMultitenantDatabaseMySQLCountLimit = 10
@@ -219,6 +223,11 @@ const (
 	// number of schemas allowed in a Postgres multitenant RDS database cluster
 	// with a PGBouncer proxy.
 	DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit = 2500
+
+	// DefaultRDSMultitenantPerseusDatabasePostgresCountLimit is the maximum
+	// number of schemas allowed in a Postgres multitenant RDS database cluster
+	// with a Perseus proxy.
+	DefaultRDSMultitenantPerseusDatabasePostgresCountLimit = 2500
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
