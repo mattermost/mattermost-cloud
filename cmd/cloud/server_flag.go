@@ -72,6 +72,7 @@ type provisioningParams struct {
 	s3StateStore          string
 	allowListCIDRRange    []string
 	sloInstallationGroups []string
+	sloEnterpriseGroups   []string
 	vpnListCIDR           []string
 	useExistingResources  bool
 	deployMySQLOperator   bool
@@ -90,6 +91,7 @@ func (flags *provisioningParams) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.Flags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	command.Flags().StringSliceVar(&flags.sloInstallationGroups, "slo-installation-groups", []string{}, "The list of installation group ids to create dedicated SLOs for.")
+	command.Flags().StringSliceVar(&flags.sloEnterpriseGroups, "slo-enterprise-groups", []string{}, "The list of enterprise group ids to create dedicated Nginx SLOs for.")
 	command.Flags().StringSliceVar(&flags.vpnListCIDR, "vpn-list-cidr", []string{"0.0.0.0/0"}, "The list of VPN CIDRs to allow communication with the clusters.")
 	command.Flags().BoolVar(&flags.useExistingResources, "use-existing-aws-resources", true, "Whether to use existing AWS resources (VPCs, subnets, etc.) or not.")
 	command.Flags().BoolVar(&flags.deployMySQLOperator, "deploy-mysql-operator", true, "Whether to deploy the mysql operator.")
@@ -186,10 +188,11 @@ type serverFlags struct {
 	listen      string
 	metricsPort int
 
-	debug       bool
-	debugHelm   bool
-	devMode     bool
-	machineLogs bool
+	debug               bool
+	debugHelm           bool
+	devMode             bool
+	machineLogs         bool
+	enableLogStacktrace bool
 
 	database      string
 	maxSchemas    int64
@@ -216,6 +219,7 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.debugHelm, "debug-helm", false, "Whether to include Helm output in debug logs.")
 	command.Flags().BoolVar(&flags.devMode, "dev", false, "Set sane defaults for development")
 	command.Flags().BoolVar(&flags.machineLogs, "machine-readable-logs", false, "Output the logs in machine readable format.")
+	command.Flags().BoolVar(&flags.enableLogStacktrace, "enable-log-stacktrace", false, "Add stacktrace in error logs.")
 
 	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	command.Flags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")

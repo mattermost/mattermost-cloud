@@ -61,6 +61,10 @@ func newCmdServer() *cobra.Command {
 		PreRun: func(command *cobra.Command, args []string) {
 			flags.serverFlagChanged.addFlags(command) // To populate flag change variables.
 			deprecationWarnings(logger, command)
+
+			if flags.enableLogStacktrace {
+				enableLogStacktrace()
+			}
 		},
 	}
 	flags.addFlags(cmd)
@@ -271,6 +275,7 @@ func executeServerCmd(flags serverFlags) error {
 		NdotsValue:              flags.ndotsDefaultValue,
 		PGBouncerConfig:         pgbouncerConfig,
 		SLOInstallationGroups:   flags.sloInstallationGroups,
+		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
 		EtcdManagerEnv:          etcdManagerEnv,
 		SLOTargetAvailability:   flags.sloTargetAvailability,
 	}
