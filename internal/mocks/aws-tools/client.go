@@ -8,7 +8,7 @@
 package mockawstools
 
 import (
-	eks "github.com/aws/aws-sdk-go/service/eks"
+	types "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	model "github.com/mattermost/mattermost-cloud/model"
@@ -440,6 +440,20 @@ func (mr *MockAWSMockRecorder) GetMultitenantBucketNameForInstallation(installat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultitenantBucketNameForInstallation", reflect.TypeOf((*MockAWS)(nil).GetMultitenantBucketNameForInstallation), installationID, store)
 }
 
+// GetS3RegionURL mocks base method
+func (m *MockAWS) GetS3RegionURL() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetS3RegionURL")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetS3RegionURL indicates an expected call of GetS3RegionURL
+func (mr *MockAWSMockRecorder) GetS3RegionURL() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetS3RegionURL", reflect.TypeOf((*MockAWS)(nil).GetS3RegionURL))
+}
+
 // GenerateBifrostUtilitySecret mocks base method
 func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
@@ -543,10 +557,10 @@ func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, log
 }
 
 // EnsureEKSCluster mocks base method
-func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eks.Cluster, error) {
+func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*types.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSCluster", cluster, resources, eksMetadata)
-	ret0, _ := ret[0].(*eks.Cluster)
+	ret0, _ := ret[0].(*types.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -558,10 +572,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources, eksMetadata 
 }
 
 // EnsureEKSClusterNodeGroups mocks base method
-func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eks.Nodegroup, error) {
+func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*types.Nodegroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSClusterNodeGroups", cluster, resources, eksMetadata)
-	ret0, _ := ret[0].([]*eks.Nodegroup)
+	ret0, _ := ret[0].([]*types.Nodegroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -573,10 +587,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterNodeGroups(cluster, resources, ek
 }
 
 // GetEKSCluster mocks base method
-func (m *MockAWS) GetEKSCluster(clusterName string) (*eks.Cluster, error) {
+func (m *MockAWS) GetEKSCluster(clusterName string) (*types.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEKSCluster", clusterName)
-	ret0, _ := ret[0].(*eks.Cluster)
+	ret0, _ := ret[0].(*types.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

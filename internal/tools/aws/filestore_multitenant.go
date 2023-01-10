@@ -7,7 +7,7 @@ package aws
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -129,11 +129,7 @@ func (f *S3MultitenantFilestore) GenerateFilestoreSpecAndSecret(store model.Inst
 		},
 	}
 
-	S3RegionURL := S3URL
-	awsRegion := *f.awsClient.config.Region
-	if awsRegion != "" && awsRegion != "us-east-1" {
-		S3RegionURL = "s3." + awsRegion + ".amazonaws.com"
-	}
+	S3RegionURL := f.awsClient.GetS3RegionURL()
 
 	filestoreConfig := &model.FilestoreConfig{
 		URL:    S3RegionURL,

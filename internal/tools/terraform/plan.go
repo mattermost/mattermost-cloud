@@ -8,13 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"strings"
 
+	awsClient "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/pkg/errors"
-
-	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 )
 
 type terraformOutput struct {
@@ -30,10 +28,7 @@ func (c *Cmd) Init(remoteKey string) error {
 		return errors.Wrap(err, "unable to write terraform backend state file")
 	}
 
-	awsRegion := os.Getenv("AWS_REGION")
-	if awsRegion == "" {
-		awsRegion = toolsAWS.DefaultAWSRegion
-	}
+	awsRegion := awsClient.GetAWSRegion()
 
 	_, _, err = c.run(
 		"init",

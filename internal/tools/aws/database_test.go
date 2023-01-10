@@ -21,7 +21,7 @@ import (
 	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/golang/mock/gomock"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -64,7 +64,7 @@ func (a *AWSTestSuite) TestProvisioningRDSAcceptance() {
 
 		// Create a database secret.
 		a.Mocks.API.SecretsManager.EXPECT().
-			GetSecretValue(gomock.Any()).
+			GetSecretValue(gomock.Any(), gomock.Any()).
 			Return(&secretsmanager.GetSecretValueOutput{SecretString: &a.SecretString}, nil).
 			Times(1),
 
@@ -145,7 +145,7 @@ func (a *AWSTestSuite) TestProvisioningRDSWithExistentEncryptionKey() {
 
 		// Create a database secret.
 		a.Mocks.API.SecretsManager.EXPECT().
-			GetSecretValue(gomock.Any()).
+			GetSecretValue(gomock.Any(), gomock.Any()).
 			Return(&secretsmanager.GetSecretValueOutput{SecretString: &a.SecretString}, nil).
 			Times(1),
 

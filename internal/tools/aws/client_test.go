@@ -8,9 +8,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/golang/mock/gomock"
 
 	testlib "github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -18,21 +17,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 )
-
-// ClientTestSuite supplies tests for aws package Client.
-type ClientTestSuite struct {
-	suite.Suite
-
-	session *session.Session
-}
-
-func (d *ClientTestSuite) SetupTest() {
-	d.session = session.Must(session.NewSession())
-}
-
-func TestClientSuite(t *testing.T) {
-	suite.Run(t, new(ClientTestSuite))
-}
 
 type Mocks struct {
 	AWS   *Client

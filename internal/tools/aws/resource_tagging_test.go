@@ -10,7 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/smithy-go"
+
 	"github.com/golang/mock/gomock"
 )
 
@@ -99,7 +100,10 @@ func (a *AWSTestSuite) TestResourceTaggingGetAllResourcesError() {
 				a.Assert().Equal(CloudID(a.InstallationA.ID), input.TagFilters[0].Values[0])
 				a.Assert().Nil(input.PaginationToken)
 			}).
-			Return(nil, awserr.New("InternalServerError", "something went wrong", nil)).
+			Return(nil, &smithy.GenericAPIError{
+				Code:    "InternalServerError",
+				Message: "something went wrong",
+			}).
 			Times(1),
 	)
 
@@ -114,5 +118,5 @@ func (a *AWSTestSuite) TestResourceTaggingGetAllResourcesError() {
 
 	a.Assert().Nil(result)
 	a.Assert().Error(err)
-	a.Assert().Equal("InternalServerError: something went wrong", err.Error())
+	a.Assert().Equal("api error InternalServerError: something went wrong", err.Error())
 }
