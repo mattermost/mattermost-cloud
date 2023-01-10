@@ -207,6 +207,10 @@ const (
 	// client will take before cancel a call to the database.
 	DefaultMySQLContextTimeSeconds = 30
 
+	// DefaultPostgresContextTimeSeconds is the number of seconds that a SQL
+	// client will take before cancel a call to a postgres database.
+	DefaultPostgresContextTimeSeconds = 30
+
 	// DefaultRDSMultitenantDatabaseMySQLCountLimit is the maximum number of
 	// schemas allowed in a MySQL multitenant RDS database cluster.
 	DefaultRDSMultitenantDatabaseMySQLCountLimit = 10
@@ -219,6 +223,11 @@ const (
 	// number of schemas allowed in a Postgres multitenant RDS database cluster
 	// with a PGBouncer proxy.
 	DefaultRDSMultitenantPGBouncerDatabasePostgresCountLimit = 2500
+
+	// DefaultRDSMultitenantPerseusDatabasePostgresCountLimit is the maximum
+	// number of schemas allowed in a Postgres multitenant RDS database cluster
+	// with a Perseus proxy.
+	DefaultRDSMultitenantPerseusDatabasePostgresCountLimit = 2500
 
 	// RDSMultitenantDBClusterResourceNamePrefix identifies the prefix
 	// used for naming multitenant RDS DB cluster resources.
@@ -242,6 +251,24 @@ const (
 	// Warning:
 	// changing this value may break the connection to existing databases.
 	DefaultPGBouncerAuthUsername = "pgbouncer"
+
+	// DefaultPerseusAuthDatabaseName is the default database name used for
+	// authorizing perseus connections to a database.
+	// Warning:
+	// changing this value may break the connection to existing databases.
+	DefaultPerseusAuthDatabaseName = "perseus"
+
+	// DefaultPerseusAuthUsername is the default username used for authorizing
+	// perseus connections to a database.
+	// Warning:
+	// changing this value may break the connection to existing databases.
+	DefaultPerseusAuthUsername = "perseus_auth"
+
+	// DefaultPerseusDatabaseUsername is the default perseus username used for
+	// connecting to shared multitenant databases.
+	// Warning:
+	// changing this value may break the connection to existing databases.
+	DefaultPerseusDatabaseUsername = "perseus"
 
 	// DefaultResourceTypeClusterRDS is the default resource type used by
 	// AWS to identify an RDS cluster.
@@ -281,6 +308,12 @@ const (
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantDatabaseIDTagKey = "tag:MultitenantDatabaseID"
 
+	// DefaultPerseusAuthDatabaseIDTagKey is the key used to identify the RDS
+	// cluster ID for Perseus authentication data.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultPerseusAuthDatabaseIDTagKey = "tag:PerseusAuthDatabaseID"
+
 	// DefaultRDSMultitenantDatabaseTypeTagKey is the key used to identify a
 	// multitenant RDS database clusters.
 	// Warning:
@@ -299,6 +332,27 @@ const (
 	// Warning:
 	// changing this value will break the connection to AWS resources for existing installations.
 	DefaultRDSMultitenantDatabaseDBProxyTypeTagValue = "multitenant-rds-dbproxy"
+
+	// DefaultRDSMultitenantDatabasePerseusTypeTagValue key used to identify a
+	// multitenant database cluster with pooled connections of type
+	// multitenant-rds-multitenant-rds-perseus.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultRDSMultitenantDatabasePerseusTypeTagValue = "multitenant-rds-perseus"
+
+	// DefaultPerseusAuthDatabaseTagKey is the key used to identify a database
+	// that should be used for storing authentication data for shared Perseus
+	// databases.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultPerseusAuthDatabaseTagKey = "tag:PerseusAuthDatabase"
+
+	// DefaultPerseusAuthDatabaseTagValue is the value used to identify a database
+	// that should be used for storing authentication data for shared Perseus
+	// databases.
+	// Warning:
+	// changing this value will break the connection to AWS resources for existing installations.
+	DefaultPerseusAuthDatabaseTagValue = "true"
 
 	// RDSMultitenantPurposeTagKey is the key used to identify the purpose
 	// of an RDS cluster.

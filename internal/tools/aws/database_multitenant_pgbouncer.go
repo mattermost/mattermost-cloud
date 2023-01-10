@@ -194,7 +194,7 @@ func (d *RDSMultitenantPGBouncerDatabase) assignInstallationToProxiedDatabaseAnd
 
 	// We want to be smart about how we assign the installation to a database.
 	// Find the database with the most installations on it to keep utilization
-	// as close to maximim efficiency as possible.
+	// as close to maximum efficiency as possible.
 	selectedDatabase := &model.MultitenantDatabase{}
 	for _, multitenantDatabase := range multitenantDatabases {
 		if multitenantDatabase.Installations.Count() >= selectedDatabase.Installations.Count() {
@@ -343,6 +343,7 @@ func (d *RDSMultitenantPGBouncerDatabase) getAndLockAssignedProxiedDatabase(stor
 	}
 	databaseResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(d.installationID, multitenantDatabases[0].ID)
 	if err != nil {
+		unlockFn()
 		return nil, nil, errors.Wrap(err, "failed to get database resources")
 	}
 
@@ -678,9 +679,12 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureMultitenantDatabaseSecretIsCreat
 	if err != nil && !errors.As(err, &awsErr) {
 		return nil, errors.Wrapf(err, "failed to get multitenant RDS database secret %s", installationSecretName)
 	}
+	if installationSecret != nil {
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
+		}
 
-	if installationSecret != nil && err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal multitenant RDS database secret %s", installationSecretName)
+		return installationSecret, nil
 	}
 
 	description := RDSMultitenantClusterSecretDescription(d.installationID, *rdsClusterID)

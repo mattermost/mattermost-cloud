@@ -454,6 +454,21 @@ func (mr *MockAWSMockRecorder) GetS3RegionURL() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetS3RegionURL", reflect.TypeOf((*MockAWS)(nil).GetS3RegionURL))
 }
 
+// GeneratePerseusUtilitySecret mocks base method
+func (m *MockAWS) GeneratePerseusUtilitySecret(clusterID string, logger logrus.FieldLogger) (*v1.Secret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GeneratePerseusUtilitySecret", clusterID, logger)
+	ret0, _ := ret[0].(*v1.Secret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GeneratePerseusUtilitySecret indicates an expected call of GeneratePerseusUtilitySecret
+func (mr *MockAWSMockRecorder) GeneratePerseusUtilitySecret(clusterID, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GeneratePerseusUtilitySecret", reflect.TypeOf((*MockAWS)(nil).GeneratePerseusUtilitySecret), clusterID, logger)
+}
+
 // GenerateBifrostUtilitySecret mocks base method
 func (m *MockAWS) GenerateBifrostUtilitySecret(clusterID string, logger logrus.FieldLogger) (*v1.Secret, error) {
 	m.ctrl.T.Helper()

@@ -117,6 +117,26 @@ func (mr *MockKMSAPIMockRecorder) DisableKey(arg0, arg1 interface{}, arg2 ...int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableKey", reflect.TypeOf((*MockKMSAPI)(nil).DisableKey), varargs...)
 }
 
+// Encrypt mocks base method
+func (m *MockKMSAPI) Encrypt(arg0 context.Context, arg1 *kms.EncryptInput, arg2 ...func(*kms.Options)) (*kms.EncryptOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Encrypt", varargs...)
+	ret0, _ := ret[0].(*kms.EncryptOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Encrypt indicates an expected call of Encrypt
+func (mr *MockKMSAPIMockRecorder) Encrypt(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encrypt", reflect.TypeOf((*MockKMSAPI)(nil).Encrypt), varargs...)
+}
+
 // ScheduleKeyDeletion mocks base method
 func (m *MockKMSAPI) ScheduleKeyDeletion(arg0 context.Context, arg1 *kms.ScheduleKeyDeletionInput, arg2 ...func(*kms.Options)) (*kms.ScheduleKeyDeletionOutput, error) {
 	m.ctrl.T.Helper()
