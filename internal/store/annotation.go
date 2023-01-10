@@ -524,8 +524,8 @@ func (sqlStore *SQLStore) createGroupAnnotations(db execer, groupID string, anno
 	return annotations, nil
 }
 
-func containsAllAnnotations(base, new []*model.Annotation) bool {
-	for _, n := range new {
+func containsAllAnnotations(base, annotations []*model.Annotation) bool {
+	for _, n := range annotations {
 		if !model.ContainsAnnotation(base, n) {
 			return false
 		}

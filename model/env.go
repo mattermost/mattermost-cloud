@@ -51,24 +51,24 @@ func (em *EnvVarMap) Validate() error {
 // EnvVarMap with the following logic:
 //   - If the new EnvVarMap is empty, clear the existing EnvVarMap completely.
 //   - If the new EnvVarMap is not empty, apply normal patch logic.
-func (em *EnvVarMap) ClearOrPatch(new *EnvVarMap) bool {
+func (em *EnvVarMap) ClearOrPatch(input *EnvVarMap) bool {
 	if *em == nil {
-		if len(*new) == 0 {
+		if len(*input) == 0 {
 			return false
 		}
 
-		*em = *new
+		*em = *input
 		return true
 	}
 
-	if len(*new) == 0 {
+	if len(*input) == 0 {
 		originalEmpty := len(*em) != 0
 		*em = nil
 
 		return originalEmpty
 	}
 
-	return em.Patch(*new)
+	return em.Patch(*input)
 }
 
 // Patch takes a new EnvVarMap and patches changes into the existing EnvVarMap
@@ -77,13 +77,13 @@ func (em *EnvVarMap) ClearOrPatch(new *EnvVarMap) bool {
 //   - If the new EnvVar is a new key, add the EnvVar.
 //   - If the new EnvVar has no value(is blank), clear the old EnvVar if there
 //     was one.
-func (em EnvVarMap) Patch(new EnvVarMap) bool {
-	if new == nil {
+func (em EnvVarMap) Patch(input EnvVarMap) bool {
+	if input == nil {
 		return false
 	}
 
 	var wasPatched bool
-	for newName, newEnv := range new {
+	for newName, newEnv := range input {
 		if oldEnv, ok := em[newName]; ok {
 			// This EnVar exists already. Delete it or update it if the patch
 			// value is different.

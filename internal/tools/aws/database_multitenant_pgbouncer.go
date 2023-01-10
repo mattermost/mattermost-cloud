@@ -368,11 +368,11 @@ func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID strin
 		return errors.Wrapf(err, "failed to ensure the pgbouncer auth user secret was created for %s", rdsID)
 	}
 
-	close, err := d.connectRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	disconnect, err := d.connectRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer disconnect(logger)
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
@@ -441,11 +441,11 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseNa
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
 
-	close, err := d.connectRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	disconnect, err := d.connectRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer disconnect(logger)
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
@@ -470,11 +470,11 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant proxy cluster %s", rdsID)
 	}
 
-	close, err := d.connectRDSCluster(databaseName, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	disconnect, err := d.connectRDSCluster(databaseName, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to the multitenant proxy cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer disconnect(logger)
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
@@ -844,11 +844,11 @@ func (d *RDSMultitenantPGBouncerDatabase) cleanupDatabase(rdsClusterID, rdsClust
 		return errors.Wrapf(err, "failed to get master secret by ID %s", rdsClusterID)
 	}
 
-	close, err := d.connectRDSCluster(databaseName, rdsClusterendpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	disconnect, err := d.connectRDSCluster(databaseName, rdsClusterendpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to multitenant RDS cluster ID %s", rdsClusterID)
 	}
-	defer close(logger)
+	defer disconnect(logger)
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
