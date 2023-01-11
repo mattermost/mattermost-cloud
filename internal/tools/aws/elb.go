@@ -8,7 +8,6 @@ import (
 	elbv1Type "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing/types"
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	elbv2Type "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
-	"k8s.io/utils/pointer"
 )
 
 type elasticLoadbalancer struct {
@@ -49,8 +48,8 @@ func (e elasticLoadbalancerV1) TagLoadBalancer(name string, tags map[string]stri
 	var elbTags []elbv1Type.Tag
 	for key, value := range tags {
 		elbTags = append(elbTags, elbv1Type.Tag{
-			Key:   pointer.String(key),
-			Value: pointer.String(value),
+			Key:   aws.String(key),
+			Value: aws.String(value),
 		})
 	}
 
@@ -86,8 +85,8 @@ func (e elasticLoadbalancerV2) TagLoadBalancer(arn string, tags map[string]strin
 	var elbTags []elbv2Type.Tag
 	for key, value := range tags {
 		elbTags = append(elbTags, elbv2Type.Tag{
-			Key:   pointer.String(key),
-			Value: pointer.String(value),
+			Key:   aws.String(key),
+			Value: aws.String(value),
 		})
 	}
 
