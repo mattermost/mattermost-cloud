@@ -102,6 +102,42 @@ func MattermostPGBouncerDatabaseUsername(installationID string) string {
 	return fmt.Sprintf("id_%s", installationID)
 }
 
+// PerseusInstallationSecretName formats the name of an installation secret used
+// in a Perseus database.
+func PerseusInstallationSecretName(id string) string {
+	return fmt.Sprintf("rds-multitenant-perseus-installation-%s", id)
+}
+
+// PerseusAuthUserSecretName formats the name of a secret used for the perseus
+// authentication database user.
+func PerseusAuthUserSecretName(vpcID string) string {
+	return fmt.Sprintf("rds-multitenant-perseus-authuser-%s", vpcID)
+}
+
+// PerseusDatabaseUserSecretName formats the name of a secret used for the
+// perseus database user.
+func PerseusDatabaseUserSecretName(rdsID string) string {
+	return fmt.Sprintf("rds-multitenant-perseus-databaseuser-%s", rdsID)
+}
+
+// PerseusIAMUserSecretName formats the name of a secret used for the perseus
+// IAM user.
+func PerseusIAMUserSecretName(vpcID string) string {
+	return fmt.Sprintf("perseus-iam-%s", vpcID)
+}
+
+// PerseusKMSAliasName formats the name of a KMS alias used for the perseus
+// encrytption and decryption.
+func PerseusKMSAliasName(vpcID string) string {
+	return fmt.Sprintf("alias/perseus-%s", vpcID)
+}
+
+// MattermostPerseusDatabaseUsername formats the name of a Mattermost user for
+// use in a Perseus database.
+func MattermostPerseusDatabaseUsername(installationID string) string {
+	return fmt.Sprintf("id_%s", installationID)
+}
+
 // MattermostMultitenantS3Name formats the name of a Mattermost S3 multitenant
 // filestore bucket name.
 func MattermostMultitenantS3Name(environmentName, vpcID string) string {
@@ -128,6 +164,18 @@ func RDSMultitenantClusterSecretDescription(installationID, rdsClusterID string)
 // describing a PGBouncer auth user secret key.
 func RDSMultitenantPGBouncerClusterSecretDescription(vpcID string) string {
 	return fmt.Sprintf("The PGBouncer auth user credentials for VPC ID: %s", vpcID)
+}
+
+// RDSMultitenantPerseusAuthSecretDescription formats the text used for
+// describing a Perseus auth database user secret key.
+func RDSMultitenantPerseusAuthSecretDescription(vpcID string) string {
+	return fmt.Sprintf("The Perseus auth database user credentials for VPC ID: %s", vpcID)
+}
+
+// RDSMultitenantPerseusClusterSecretDescription formats the text used for
+// describing a Perseus multitenant database user secret key.
+func RDSMultitenantPerseusClusterSecretDescription(rdsID string) string {
+	return fmt.Sprintf("The Perseus database user credentials for RDS cluster: %s", rdsID)
 }
 
 // GetMultitenantBucketNameForInstallation is a convenience function

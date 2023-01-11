@@ -87,3 +87,18 @@ func (a *Client) kmsScheduleKeyDeletion(keyID string, days int32) error {
 
 	return nil
 }
+
+// kmsEncrypt encrypts a given value with the provided KMS key.
+func (a *Client) kmsEncrypt(keyID, value string) ([]byte, error) {
+	enc, err := a.Service().kms.Encrypt(
+		context.TODO(),
+		&kms.EncryptInput{
+			KeyId:     aws.String(keyID),
+			Plaintext: []byte(value),
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return enc.CiphertextBlob, nil
+}

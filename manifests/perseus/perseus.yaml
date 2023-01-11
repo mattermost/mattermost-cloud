@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perseus
+  namespace: perseus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: perseus
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: perseus
+    spec:
+      containers:
+      - image: mattermost/perseus:v0.0.1
+        imagePullPolicy: IfNotPresent
+        name: perseus
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        env:
+        - name: PERSEUS_LISTENADDRESS
+          value: 0.0.0.0:5432
+        - name: PERSEUS_METRICSADDRESS
+          value: 0.0.0.0:5000
+        - name: "PERSEUS_AWSSETTINGS_REGION"
+          value: "us-east-1"
+        - name: PERSEUS_LOGSETTINGS_JSON
+          value: "true"
+        - name: PERSEUS_LOGSETTINGS_LEVEL
+          value: "debug"
+        - name: PERSEUS_AUTHDBSETTINGS_AUTHDBDSN
+          valueFrom:
+            secretKeyRef:
+              name: perseus
+              key: AuthDBSettings_AuthDBDSN
+        - name: PERSEUS_AWSSETTINGS_ACCESSKEYID
+          valueFrom:
+            secretKeyRef:
+              name: perseus
+              key: AWSSettings_AccessKeyId
+        - name: PERSEUS_AWSSETTINGS_SECRETACCESSKEY
+          valueFrom:
+            secretKeyRef:
+              name: perseus
+              key: AWSSettings_SecretAccessKey
+        - name: PERSEUS_AWSSETTINGS_KMSKEYARN
+          valueFrom:
+            secretKeyRef:
+              name: perseus
+              key: AWSSettings_KMSKeyARN
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perseus
+  namespace: perseus
+spec:
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: perseus
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  - name: perseus-metrics
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    name: perseus
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

@@ -91,6 +91,7 @@ type ResourceUtil struct {
 
 // DBClusterUtilizationSettings define maximum utilization of database clusters.
 type DBClusterUtilizationSettings struct {
+	MaxInstallationsPerseus              int
 	MaxInstallationsRDSPostgresPGBouncer int
 	MaxInstallationsRDSPostgres          int
 	MaxInstallationsRDSMySQL             int
@@ -169,6 +170,15 @@ func (r *ResourceUtil) GetDatabase(installationID, dbType string) model.Database
 			installationID,
 			r.awsClient,
 			r.dbClusterUtilizationSettings.MaxInstallationsRDSPostgresPGBouncer,
+			r.disableDBCheck,
+		)
+	case model.InstallationDatabasePerseus:
+		return aws.NewPerseusDatabase(
+			model.DatabaseEngineTypePostgresProxyPerseus,
+			r.instanceID,
+			installationID,
+			r.awsClient,
+			r.dbClusterUtilizationSettings.MaxInstallationsPerseus,
 			r.disableDBCheck,
 		)
 	}

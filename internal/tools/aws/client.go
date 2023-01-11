@@ -67,6 +67,7 @@ type AWS interface {
 	GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error)
 	GetS3RegionURL() string
 
+	GeneratePerseusUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 

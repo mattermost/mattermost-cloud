@@ -34,14 +34,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// SQLDatabaseManager is an interface that describes operations to query and to
-// close connection with a database. It's used mainly to implement a client that
-// needs to perform non-complex queries in a SQL database instance.
-type SQLDatabaseManager interface {
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	Close() error
-}
-
 // RDSMultitenantDatabase is a database backed by RDS that supports multi-tenancy.
 type RDSMultitenantDatabase struct {
 	databaseType              string
@@ -629,7 +621,7 @@ func (d *RDSMultitenantDatabase) assignInstallationToMultitenantDatabaseAndLock(
 
 	// We want to be smart about how we assign the installation to a database.
 	// Find the database with the most installations on it to keep utilization
-	// as close to maximim efficiency as possible.
+	// as close to maximum efficiency as possible.
 	// TODO: we haven't aquired a lock yet on any of these databases so this
 	// could open up small race conditions.
 	selectedDatabase := &model.MultitenantDatabase{}

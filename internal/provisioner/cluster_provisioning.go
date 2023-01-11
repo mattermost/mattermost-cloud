@@ -32,6 +32,17 @@ func provisionCluster(
 ) error {
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
+	deployPerseus := true
+	perseusSecret, err := awsClient.GeneratePerseusUtilitySecret(cluster.ID, logger)
+	if err != nil {
+		// NOTE: for now, there is no guarantee that all of the cluster VPCs will have
+		// the necessary resources created for Perseus. If the necessary resources are
+		// not available then warnings will be logged and Perseus won't be deployed.
+		// TODO: revisit this after perseus testing is complete.
+		logger.WithError(err).Warn("Failed to generate perseus secret; skipping perseus utility deployment")
+		deployPerseus = false
+	}
+
 	bifrostSecret, err := awsClient.GenerateBifrostUtilitySecret(cluster.ID, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate bifrost secret")
@@ -50,11 +61,9 @@ func provisionCluster(
 	namespaces := []string{
 		mattermostOperatorNamespace,
 	}
-
 	if params.DeployMysqlOperator {
 		namespaces = append(namespaces, mysqlOperatorNamespace)
 	}
-
 	if params.DeployMinioOperator {
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
@@ -80,14 +89,26 @@ func provisionCluster(
 		return err
 	}
 
-	// The bifrost utility cannot have downtime so it is not part of the namespace
-	// cleanup and recreation flow. We always only update bifrost.
+	// The perseus and bifrost utilities cannot have downtime so they are not
+	// part of the standard namespace cleanup and recreation flow. We always
+	// only update both.
+	perseusNamespace := "perseus"
+	namespaces = append(namespaces, perseusNamespace)
 	bifrostNamespace := "bifrost"
 	namespaces = append(namespaces, bifrostNamespace)
+
 	logger.Info("Creating utility namespaces")
 	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
 	if err != nil {
 		return errors.Wrap(err, "failed to create bifrost namespace")
+	}
+
+	if deployPerseus {
+		logger.Info("Creating or updating perseus secret")
+		_, err = k8sClient.CreateOrUpdateSecret(perseusNamespace, perseusSecret)
+		if err != nil {
+			return errors.Wrap(err, "failed to create perseus secret")
+		}
 	}
 
 	logger.Info("Creating or updating bifrost secret")
@@ -159,6 +180,13 @@ func provisionCluster(
 		}
 	}
 
+	if deployPerseus {
+		files = append(files, k8s.ManifestFile{
+			Path:            "manifests/perseus/perseus.yaml",
+			DeployNamespace: perseusNamespace,
+		})
+	}
+
 	if params.DeployMysqlOperator {
 		files = append(files, k8s.ManifestFile{
 			Path:            "manifests/operator-manifests/mysql/mysql-operator.yaml",
@@ -190,6 +218,10 @@ func provisionCluster(
 			(cluster.ProvisionerMetadataKops.ChangeRequest != nil && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico") {
 			appsWithDeployment["calico-typha-horizontal-autoscaler"] = "kube-system"
 		}
+	}
+
+	if deployPerseus {
+		appsWithDeployment["perseus"] = perseusNamespace
 	}
 
 	if params.DeployMinioOperator {

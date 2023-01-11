@@ -42,11 +42,13 @@ func TestIsSupportedDatabase(t *testing.T) {
 		{"", false},
 		{"unknown", false},
 		{model.InstallationDatabaseMysqlOperator, true},
+		{model.InstallationDatabaseExternal, true},
 		{model.InstallationDatabaseSingleTenantRDSMySQL, true},
 		{model.InstallationDatabaseSingleTenantRDSPostgres, true},
 		{model.InstallationDatabaseMultiTenantRDSMySQL, true},
 		{model.InstallationDatabaseMultiTenantRDSPostgres, true},
 		{model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, true},
+		{model.InstallationDatabasePerseus, true},
 	}
 
 	for _, tc := range testCases {
@@ -69,6 +71,7 @@ func TestIsSingleTenantDatabase(t *testing.T) {
 		{model.InstallationDatabaseMultiTenantRDSPostgres, false},
 		{model.InstallationDatabaseMultiTenantRDSMySQL, false},
 		{model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, false},
+		{model.InstallationDatabasePerseus, false},
 	}
 
 	for _, tc := range testCases {
@@ -91,6 +94,7 @@ func TestIsMultiTenantDatabase(t *testing.T) {
 		{model.InstallationDatabaseMultiTenantRDSPostgres, true},
 		{model.InstallationDatabaseMultiTenantRDSMySQL, true},
 		{model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer, true},
+		{model.InstallationDatabasePerseus, true},
 	}
 
 	for _, tc := range testCases {
