@@ -121,3 +121,11 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  cd:
+    needs:
+      - lint
+      - test
+      - build
+    uses: ./.github/workflows/cd.yml
+    if: startsWith(github.ref, 'refs/tags/v')
