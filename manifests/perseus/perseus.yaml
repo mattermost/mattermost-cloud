@@ -4,7 +4,7 @@ metadata:
   name: perseus
   namespace: perseus
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       name: perseus
@@ -19,7 +19,7 @@ spec:
         name: perseus
     spec:
       containers:
-      - image: mattermost/perseus:v0.0.1
+      - image: mattermost/perseus:v0.0.2
         imagePullPolicy: IfNotPresent
         name: perseus
         resources: {}
@@ -29,13 +29,11 @@ spec:
         - name: PERSEUS_LISTENADDRESS
           value: 0.0.0.0:5432
         - name: PERSEUS_METRICSADDRESS
-          value: 0.0.0.0:5000
+          value: 0.0.0.0:5500
         - name: "PERSEUS_AWSSETTINGS_REGION"
           value: "us-east-1"
         - name: PERSEUS_LOGSETTINGS_JSON
           value: "true"
-        - name: PERSEUS_LOGSETTINGS_LEVEL
-          value: "debug"
         - name: PERSEUS_AUTHDBSETTINGS_AUTHDBDSN
           valueFrom:
             secretKeyRef:
@@ -56,6 +54,18 @@ spec:
             secretKeyRef:
               name: perseus
               key: AWSSettings_KMSKeyARN
+        readinessProbe:
+          tcpSocket:
+            path: /health
+            port: 5500
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5500
+          initialDelaySeconds: 5
+          periodSeconds: 3
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -67,6 +77,8 @@ kind: Service
 metadata:
   name: perseus
   namespace: perseus
+  labels:
+    kubernetes.io/name: "perseus"
 spec:
   internalTrafficPolicy: Cluster
   ipFamilies:
@@ -77,10 +89,10 @@ spec:
     port: 5432
     protocol: TCP
     targetPort: 5432
-  - name: perseus-metrics
-    port: 5000
+  - name: metrics
+    port: 5500
     protocol: TCP
-    targetPort: 5000
+    targetPort: 5500
   selector:
     name: perseus
   sessionAffinity: None
