@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+//go:build e2e
 // +build e2e
 
 package workflow
@@ -276,6 +277,24 @@ func (w *InstallationSuite) InstallationDeletionEvents() []eventstest.EventOccur
 			ResourceType: model.TypeInstallation.String(),
 			ResourceID:   w.Meta.InstallationID,
 			OldState:     model.InstallationStateStable,
+			NewState:     model.InstallationStateDeletionPendingRequested,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateDeletionPendingRequested,
+			NewState:     model.InstallationStateDeletionPendingInProgress,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateDeletionPendingInProgress,
+			NewState:     model.InstallationStateDeletionPending,
+		},
+		{
+			ResourceType: model.TypeInstallation.String(),
+			ResourceID:   w.Meta.InstallationID,
+			OldState:     model.InstallationStateDeletionPending,
 			NewState:     model.InstallationStateDeletionRequested,
 		},
 		{
