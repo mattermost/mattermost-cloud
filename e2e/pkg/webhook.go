@@ -51,7 +51,7 @@ func sendWebhook(ctx context.Context, webhookURL string, payload *webhookPayload
 	return nil
 }
 
-// Send E2EResult sends the webhook with the provided icon and message. Errors on trying to send a
+// SendE2EResult sends the webhook with the provided icon and message. Errors on trying to send a
 // message or if the webhook URL is not provided properly.
 func SendE2EResult(ctx context.Context, icon, text string) error {
 	webhookURL := os.Getenv("WEBHOOK_URL")
