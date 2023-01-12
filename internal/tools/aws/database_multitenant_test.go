@@ -35,7 +35,7 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 		false,
 	)
 
-	databaseType := database.DatabaseTypeTagValue()
+	databaseType := database.DatabaseEngineTypeTagValue()
 
 	var databaseID string
 
@@ -88,6 +88,18 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 				a.Assert().Equal(input.ResourceTypeFilters, []string{DefaultResourceTypeClusterRDS})
 				tagFilter := []gtTypes.TagFilter{
 					{
+						Key:    aws.String("DatabaseType"),
+						Values: []string{"multitenant-rds"},
+					},
+					{
+						Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
+						Values: []string{databaseType},
+					},
+					{
+						Key:    aws.String("VpcID"),
+						Values: []string{a.VPCa},
+					},
+					{
 						Key:    aws.String("Purpose"),
 						Values: []string{"provisioning"},
 					},
@@ -98,18 +110,6 @@ func (a *AWSTestSuite) TestProvisioningMultitenantDatabase() {
 					{
 						Key:    aws.String("Terraform"),
 						Values: []string{"true"},
-					},
-					{
-						Key:    aws.String("DatabaseType"),
-						Values: []string{"multitenant-rds"},
-					},
-					{
-						Key:    aws.String("VpcID"),
-						Values: []string{a.VPCa},
-					},
-					{
-						Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-						Values: []string{databaseType},
 					},
 					{
 						Key: aws.String("Counter"),

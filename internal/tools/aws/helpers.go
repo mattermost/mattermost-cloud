@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -308,6 +309,51 @@ func getVPCForCluster(clusterID string, client *Client) (*ec2Types.Vpc, error) {
 func ensureTagInTagset(key, value string, tags []s3Types.Tag) bool {
 	for _, tag := range tags {
 		if *tag.Key == key && *tag.Value == value {
+			return true
+		}
+	}
+
+	return false
+}
+
+func standardMultitenantDatabaseTagFilters(databaseType, engineType, vpcID string) []gtTypes.TagFilter {
+	return []gtTypes.TagFilter{
+		{
+			Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
+			Values: []string{databaseType},
+		},
+		{
+			Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
+			Values: []string{engineType},
+		},
+		{
+			Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
+			Values: []string{vpcID},
+		},
+		{
+			Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
+			Values: []string{RDSMultitenantPurposeTagValueProvisioning},
+		},
+		{
+			Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
+			Values: []string{RDSMultitenantOwnerTagValueCloudTeam},
+		},
+		{
+			Key:    aws.String(DefaultAWSTerraformProvisionedKey),
+			Values: []string{DefaultAWSTerraformProvisionedValueTrue},
+		},
+		{
+			Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
+		},
+		{
+			Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
+		},
+	}
+}
+
+func ensureTagFilterInFilterSet(key, value string, tagFilters []gtTypes.TagFilter) bool {
+	for _, tf := range tagFilters {
+		if *tf.Key == key && len(tf.Values) != 0 && tf.Values[0] == value {
 			return true
 		}
 	}

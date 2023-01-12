@@ -71,9 +71,9 @@ func (d *PerseusDatabase) Validate() error {
 	return nil
 }
 
-// DatabaseTypeTagValue returns the tag value used for filtering RDS cluster
-// resources based on database type.
-func (d *PerseusDatabase) DatabaseTypeTagValue() string {
+// DatabaseEngineTypeTagValue returns the tag value used for filtering RDS cluster
+// resources based on database engine type.
+func (d *PerseusDatabase) DatabaseEngineTypeTagValue() string {
 	return DatabaseTypePostgresSQLAurora
 }
 
@@ -309,41 +309,14 @@ func (d *PerseusDatabase) assignInstallationToProxiedDatabaseAndLock(vpcID strin
 }
 
 func (d *PerseusDatabase) getMultitenantDatabasesFromResourceTags(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) ([]*model.MultitenantDatabase, error) {
-	databaseType := d.DatabaseTypeTagValue()
+	databaseEngineType := d.DatabaseEngineTypeTagValue()
 
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []gtTypes.TagFilter{
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
-				Values: []string{RDSMultitenantPurposeTagValueProvisioning},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
-				Values: []string{RDSMultitenantOwnerTagValueCloudTeam},
-			},
-			{
-				Key:    aws.String(DefaultAWSTerraformProvisionedKey),
-				Values: []string{DefaultAWSTerraformProvisionedValueTrue},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
-				Values: []string{DefaultRDSMultitenantDatabasePerseusTypeTagValue},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
-				Values: []string{vpcID},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-				Values: []string{databaseType},
-			},
-			{
-				Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
-			},
-			{
-				Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
-			},
-		},
+		TagFilters: standardMultitenantDatabaseTagFilters(
+			DefaultRDSMultitenantDatabasePerseusTypeTagValue,
+			databaseEngineType,
+			vpcID,
+		),
 		ResourceTypeFilters: []string{DefaultResourceTypeClusterRDS},
 	})
 	if err != nil {
@@ -574,7 +547,7 @@ func (d *PerseusDatabase) ensureLogicalDatabaseExists(databaseName string, rdsCl
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 	defer cancel()
 
-	err = d.ensureDatabaseIsCreated(ctx, databaseName)
+	err = ensureDatabaseIsCreated(ctx, d.db, databaseName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create database in multitenant proxy cluster %s", rdsID)
 	}
@@ -620,7 +593,7 @@ func (d *PerseusDatabase) ensureLogicalDatabaseSetup(databaseName, vpcID string,
 		return nil, errors.Wrap(err, "failed to get secret for installation")
 	}
 
-	err = d.ensureDatabaseUserIsCreated(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
+	err = ensureDatabaseUserIsCreated(ctx, d.db, installationSecret.MasterUsername, installationSecret.MasterPassword)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create Mattermost database user")
 	}
@@ -656,7 +629,7 @@ func (d *PerseusDatabase) ensureBaselineDatabasePrep(ctx context.Context, databa
 		return errors.Wrap(err, "failed to run database search path set SQL command")
 	}
 
-	err = d.ensureDefaultTextSearchConfig(ctx, databaseName)
+	err = ensureDefaultTextSearchConfig(ctx, d.db, databaseName)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure default text search config")
 	}
@@ -692,24 +665,6 @@ func (d *PerseusDatabase) ensurePGBouncerDatabasePrep(ctx context.Context, datab
 	}
 
 	return nil
-}
-
-func (d *PerseusDatabase) ensureDefaultTextSearchConfig(ctx context.Context, databaseName string) error {
-	query := fmt.Sprintf(`ALTER DATABASE %s SET default_text_search_config TO "pg_catalog.english";`, databaseName)
-	_, err := d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.Wrap(err, "failed to run SQL command to set default_text_search_config to pg_catalog.english")
-	}
-
-	return nil
-}
-
-func (d *PerseusDatabase) ensureDatabaseIsCreated(ctx context.Context, databaseName string) error {
-	return ensureDatabaseIsCreated(ctx, d.db, databaseName)
-}
-
-func (d *PerseusDatabase) ensureDatabaseUserIsCreated(ctx context.Context, username, password string) error {
-	return ensureDatabaseUserIsCreated(ctx, d.db, username, password)
 }
 
 func (d *PerseusDatabase) ensureSchemaIsCreated(ctx context.Context, schemaName, username string) error {
