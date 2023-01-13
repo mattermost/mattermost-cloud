@@ -7,6 +7,10 @@ set -euox
 
 echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password-stdin
 
+if [ "$TAG" = "master" ] || [ "$TAG" = "main" ]; then
+    TAG=latest
+fi
+
 docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
 docker tag mattermost/mattermost-cloud-e2e:test mattermost/mattermost-cloud-e2e:$TAG
 
