@@ -88,9 +88,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set short SHA
-        run: echo "SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
-
       - name: ci/build-docker
         run: make build-image
 
@@ -117,7 +114,8 @@ jobs:
 
       - name: ci/docker-push
         run: |
-          TAG=${GITHUB_SHA:0:7} ./scripts/push-docker.sh
+          COMMIT_SHA=${GITHUB_SHA:0:7} ./scripts/push-docker.sh
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
