@@ -2,6 +2,7 @@ name: cd
 on:
   workflow_run:
     workflows: ["ci"]
+    branches-ignore: [master]
     types:
       - completed
   push:
@@ -28,4 +29,4 @@ jobs:
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          TAG: ${GITHUB_REF_NAME}
+          TAG: ${{ github.ref_name }}
