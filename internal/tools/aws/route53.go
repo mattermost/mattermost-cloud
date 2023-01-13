@@ -446,7 +446,8 @@ func (a *Client) getRecordSetsForDNS(hostedZoneID, dnsName string) ([]*types.Res
 
 	for _, recordSet := range recordList.ResourceRecordSets {
 		if strings.TrimRight(*recordSet.Name, ".") == dnsName {
-			recordSets = append(recordSets, &recordSet)
+			rs := recordSet
+			recordSets = append(recordSets, &rs)
 		}
 	}
 
