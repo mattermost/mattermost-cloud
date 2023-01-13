@@ -385,12 +385,14 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		return errors.Wrapf(err, "failed to get record sets for dns name %s", dnsName)
 	}
 
+	var changesLog string
 	var changes []types.Change
 	for _, recordSet := range recordSets {
 		changes = append(changes, types.Change{
 			Action:            types.ChangeActionDelete,
 			ResourceRecordSet: recordSet,
 		})
+		changesLog += fmt.Sprintf("%s(%v) ", recordSet.Type, recordSet.Name)
 	}
 	if len(changes) == 0 {
 		logger.Warn("Unable to find any DNS records; skipping...")
@@ -412,6 +414,7 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		"route53-records-deleted": len(changes),
 		"route53-dns-value":       dnsName,
 		"route53-hosted-zone-id":  hostedZoneID,
+		"route53-changes":         changesLog,
 	}).Debugf("AWS route53 delete response: %s", prettyRoute53Response(resp))
 
 	return nil
