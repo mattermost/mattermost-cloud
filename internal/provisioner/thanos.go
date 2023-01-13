@@ -141,14 +141,14 @@ func (t *thanos) Destroy() error {
 	app := "thanos"
 	dns := fmt.Sprintf("%s.%s.%s", t.cluster.ID, app, privateDomainName)
 
-	logger.Infof("Deleting Route53 DNS Record for %s", app)
+	logger.WithField("dns", dns).Infof("Deleting Route53 DNS Record for %s", app)
 	err = t.awsClient.DeletePrivateCNAME(dns, logger.WithField("thanos-dns-delete", dns))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete Route53 DNS record")
 	}
 
 	grpcDNS := fmt.Sprintf("%s-grpc.%s.%s", t.cluster.ID, app, privateDomainName)
-	logger.Infof("Deleting GRPC Route53 DNS Record for %s", app)
+	logger.WithField("grpcDNS", grpcDNS).Infof("Deleting GRPC Route53 DNS Record for %s", app)
 	err = t.awsClient.DeletePrivateCNAME(grpcDNS, logger.WithField("thanos-dns-delete", grpcDNS))
 	if err != nil {
 		return errors.Wrap(err, "failed to delete GRPC Route53 DNS record")
