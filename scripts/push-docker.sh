@@ -7,18 +7,18 @@ set -euox
 
 echo $DOCKERHUB_TOKEN | docker login --username $DOCKERHUB_USERNAME --password-stdin
 
-if [ "$COMMIT_SHA" = "" ]; then
-    echo "COMMIT_SHA was not provided"
+if [ "$TAG" = "" ]; then
+    echo "TAG was not provided"
     exit 1
 fi
 
-echo "Tagging images with SHA $COMMIT_SHA"
+echo "Tagging images with SHA $TAG"
 
-docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$COMMIT_SHA
-docker tag mattermost/mattermost-cloud-e2e:test mattermost/mattermost-cloud-e2e:$COMMIT_SHA
+docker tag mattermost/mattermost-cloud:test mattermost/mattermost-cloud:$TAG
+docker tag mattermost/mattermost-cloud-e2e:test mattermost/mattermost-cloud-e2e:$TAG
 
-docker push mattermost/mattermost-cloud:$COMMIT_SHA
-docker push mattermost/mattermost-cloud-e2e:$COMMIT_SHA
+docker push mattermost/mattermost-cloud:$TAG
+docker push mattermost/mattermost-cloud-e2e:$TAG
 
 if [ "$REF_NAME" = "master" ] || [ "$REF_NAME" = "main" ]; then
     echo "Tagging images with 'latest' tag"
