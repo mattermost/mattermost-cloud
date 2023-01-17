@@ -114,7 +114,7 @@ jobs:
 
       - name: ci/docker-push
         run: |
-          COMMIT_SHA=${GITHUB_SHA:0:7} ./scripts/push-docker.sh
+          TAG=${GITHUB_SHA:0:7} ./scripts/push-docker.sh
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
