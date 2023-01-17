@@ -25,7 +25,7 @@ jobs:
         run: make build-image build-image-e2e
 
       - name: cd/docker-push
-        run: COMMIT_SHA=${GITHUB_SHA:0:7} ./scripts/push-docker.sh
+        run: TAG=${GITHUB_REF_NAME} ./scripts/push-docker.sh
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
