@@ -398,8 +398,12 @@ func (a *Client) deleteCNAME(hostedZoneID, dnsName string, logger log.FieldLogge
 		logger.Warn("Unable to find any DNS records; skipping...")
 		return nil
 	}
-	if len(recordSets) != 1 {
+	if len(changes) != 1 {
 		return errors.Errorf("expected exactly 1 resource record, but found %d", len(changes))
+	}
+	// One final validation check just to be safe.
+	if !strings.Contains(*changes[0].ResourceRecordSet.Name, dnsName) {
+		return errors.Errorf("final route53 record deletion validation failed: %s was not found in record name %s", dnsName, *changes[0].ResourceRecordSet.Name)
 	}
 
 	resp, err := a.Service().route53.ChangeResourceRecordSets(context.TODO(), &route53.ChangeResourceRecordSetsInput{
