@@ -2,21 +2,55 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+//go:build e2e
+// +build e2e
 
 package cluster
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const (
+	webhookSuccessfulMessage = "Provisioner E2E tests passed successfully :rocket:"
+	webhookFailedMessage     = `Provisioner E2E tests failed:
+[Check the logs here](https://grafana.internal.mattermost.com/goto/kWlEn-24k?orgId=1)`
+	webhookSuccessEmoji = "large_green_circle"
+	webhookFailedEmoji  = "red_circle"
+)
+
+func TestMain(m *testing.M) {
+	// This is mainly used to send a notification when tests are finished to a mattermost webhook
+	// provided with the WEBHOOOK_URL environment variable.
+	code := m.Run()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	var err error
+	if code != 0 {
+		err = pkg.SendE2EResult(ctx, webhookFailedEmoji, webhookFailedMessage)
+	} else {
+		err = pkg.SendE2EResult(ctx, webhookSuccessEmoji, webhookSuccessfulMessage)
+	}
+
+	if err != nil {
+		fmt.Printf("error sending webhook: %s", err)
+	}
+
+	os.Exit(code)
+}
 
 func Test_ClusterLifecycle(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())

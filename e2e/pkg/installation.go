@@ -2,7 +2,8 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+//go:build e2e
+// +build e2e
 
 package pkg
 
@@ -67,7 +68,7 @@ func WaitForStable(client *model.Client, installationID string, log logrus.Field
 
 // WaitForInstallationDeletion waits until Installation reaches Deleted state.
 func WaitForInstallationDeletion(client *model.Client, installationID string, log logrus.FieldLogger) error {
-	err := WaitForFunc(NewWaitConfig(5*time.Minute, 10*time.Second, 2, log), func() (bool, error) {
+	err := WaitForFunc(NewWaitConfig(10*time.Minute, 10*time.Second, 2, log), func() (bool, error) {
 		installation, err := client.GetInstallation(installationID, &model.GetInstallationRequest{})
 		if err != nil {
 			return false, errors.Wrap(err, "while waiting for deletion")
@@ -100,4 +101,3 @@ func PingInstallation(dns string) error {
 func pingURL(dns string) string {
 	return fmt.Sprintf("https://%s/api/v4/system/ping", dns)
 }
-

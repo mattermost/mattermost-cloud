@@ -9,6 +9,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
 
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
@@ -32,7 +33,8 @@ type TestConfig struct {
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
 	FetchAMI                  bool   `envconfig:"default=true"`
-	Cleanup                   bool   `envconfig:"default=true"`
+	KopsAMI                   string
+	Cleanup                   bool `envconfig:"default=true"`
 }
 
 // Test holds all data required for a db migration test.
@@ -66,6 +68,7 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	createClusterReq := &model.CreateClusterRequest{
 		AllowInstallations: true,
 		Annotations:        testAnnotations(testID),
+		KopsAMI:            config.KopsAMI,
 	}
 
 	// If specified, we fetch AMI from existing clusters.
@@ -75,6 +78,8 @@ func SetupClusterLifecycleTest() (*Test, error) {
 			return nil, errors.Wrap(err, "failed to fetch AMI")
 		}
 		createClusterReq.KopsAMI = ami
+	} else if config.KopsAMI != "" {
+		createClusterReq.KopsAMI = config.KopsAMI
 	}
 
 	err = clusterdictionary.ApplyToCreateClusterRequest("SizeAlef1000", createClusterReq)
