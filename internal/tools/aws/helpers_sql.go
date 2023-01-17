@@ -173,3 +173,13 @@ func dropSchemaIfExists(ctx context.Context, db SQLDatabaseManager, schemaName s
 
 	return nil
 }
+
+func ensureDefaultTextSearchConfig(ctx context.Context, db SQLDatabaseManager, databaseName string) error {
+	query := fmt.Sprintf(`ALTER DATABASE %s SET default_text_search_config TO "pg_catalog.english";`, databaseName)
+	_, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return errors.Wrap(err, "failed to run SQL command to set default_text_search_config to pg_catalog.english")
+	}
+
+	return nil
+}

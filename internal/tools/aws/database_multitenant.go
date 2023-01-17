@@ -80,9 +80,9 @@ func (d *RDSMultitenantDatabase) IsValid() error {
 	return nil
 }
 
-// DatabaseTypeTagValue returns the tag value used for filtering RDS cluster
-// resources based on database type.
-func (d *RDSMultitenantDatabase) DatabaseTypeTagValue() string {
+// DatabaseEngineTypeTagValue returns the tag value used for filtering RDS cluster
+// resources based on database engine type.
+func (d *RDSMultitenantDatabase) DatabaseEngineTypeTagValue() string {
 	if d.databaseType == model.DatabaseEngineTypeMySQL {
 		return DatabaseTypeMySQLAurora
 	}
@@ -655,41 +655,14 @@ func (d *RDSMultitenantDatabase) assignInstallationToMultitenantDatabaseAndLock(
 }
 
 func (d *RDSMultitenantDatabase) getMultitenantDatabasesFromResourceTags(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) ([]*model.MultitenantDatabase, error) {
-	databaseType := d.DatabaseTypeTagValue()
+	databaseEngineType := d.DatabaseEngineTypeTagValue()
 
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []gtTypes.TagFilter{
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
-				Values: []string{RDSMultitenantPurposeTagValueProvisioning},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
-				Values: []string{RDSMultitenantOwnerTagValueCloudTeam},
-			},
-			{
-				Key:    aws.String(DefaultAWSTerraformProvisionedKey),
-				Values: []string{DefaultAWSTerraformProvisionedValueTrue},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
-				Values: []string{DefaultRDSMultitenantDatabaseTypeTagValue},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
-				Values: []string{vpcID},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-				Values: []string{databaseType},
-			},
-			{
-				Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
-			},
-			{
-				Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
-			},
-		},
+		TagFilters: standardMultitenantDatabaseTagFilters(
+			DefaultRDSMultitenantDatabaseTypeTagValue,
+			databaseEngineType,
+			vpcID,
+		),
 		ResourceTypeFilters: []string{DefaultResourceTypeClusterRDS},
 	})
 	if err != nil {

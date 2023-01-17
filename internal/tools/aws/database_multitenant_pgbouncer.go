@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	rdsTypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
 	gt "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
-	gtTypes "github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	smTypes "github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -69,9 +68,9 @@ func (d *RDSMultitenantPGBouncerDatabase) IsValid() error {
 	return nil
 }
 
-// DatabaseTypeTagValue returns the tag value used for filtering RDS cluster
-// resources based on database type.
-func (d *RDSMultitenantPGBouncerDatabase) DatabaseTypeTagValue() string {
+// DatabaseEngineTypeTagValue returns the tag value used for filtering RDS cluster
+// resources based on database engine type.
+func (d *RDSMultitenantPGBouncerDatabase) DatabaseEngineTypeTagValue() string {
 	return DatabaseTypePostgresSQLAurora
 }
 
@@ -218,41 +217,14 @@ func (d *RDSMultitenantPGBouncerDatabase) assignInstallationToProxiedDatabaseAnd
 }
 
 func (d *RDSMultitenantPGBouncerDatabase) getMultitenantDatabasesFromResourceTags(vpcID string, store model.InstallationDatabaseStoreInterface, logger log.FieldLogger) ([]*model.MultitenantDatabase, error) {
-	databaseType := d.DatabaseTypeTagValue()
+	databaseEngineType := d.DatabaseEngineTypeTagValue()
 
 	resourceNames, err := d.client.resourceTaggingGetAllResources(gt.GetResourcesInput{
-		TagFilters: []gtTypes.TagFilter{
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantPurposeTagKey)),
-				Values: []string{RDSMultitenantPurposeTagValueProvisioning},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(RDSMultitenantOwnerTagKey)),
-				Values: []string{RDSMultitenantOwnerTagValueCloudTeam},
-			},
-			{
-				Key:    aws.String(DefaultAWSTerraformProvisionedKey),
-				Values: []string{DefaultAWSTerraformProvisionedValueTrue},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseTypeTagKey)),
-				Values: []string{DefaultRDSMultitenantDatabaseDBProxyTypeTagValue},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(VpcIDTagKey)),
-				Values: []string{vpcID},
-			},
-			{
-				Key:    aws.String(trimTagPrefix(CloudInstallationDatabaseTagKey)),
-				Values: []string{databaseType},
-			},
-			{
-				Key: aws.String(trimTagPrefix(RDSMultitenantInstallationCounterTagKey)),
-			},
-			{
-				Key: aws.String(trimTagPrefix(DefaultRDSMultitenantDatabaseIDTagKey)),
-			},
-		},
+		TagFilters: standardMultitenantDatabaseTagFilters(
+			DefaultRDSMultitenantDatabaseDBProxyTypeTagValue,
+			databaseEngineType,
+			vpcID,
+		),
 		ResourceTypeFilters: []string{DefaultResourceTypeClusterRDS},
 	})
 	if err != nil {
@@ -378,20 +350,9 @@ func (d *RDSMultitenantPGBouncerDatabase) provisionPGBouncerDatabase(vpcID strin
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
-	query := fmt.Sprintf("SELECT 1 FROM pg_roles WHERE rolname='%s'", authUserSecret.MasterUsername)
-	rows, err := d.db.QueryContext(ctx, query)
+	err = ensureDatabaseUserIsCreated(ctx, d.db, authUserSecret.MasterUsername, authUserSecret.MasterPassword)
 	if err != nil {
-		return errors.Wrap(err, "failed to run database user check SQL command")
-	}
-	if rows.Next() {
-		// User already exists.
-		return nil
-	}
-
-	query = fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s'", authUserSecret.MasterUsername, authUserSecret.MasterPassword)
-	_, err = d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.New("failed to run create pgbouncer auth user SQL command: error suppressed")
+		return errors.Wrap(err, "failed to ensure pgbouncer user was created")
 	}
 
 	return nil
@@ -451,7 +412,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseExists(databaseNa
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
 
-	err = d.ensureDatabaseIsCreated(ctx, databaseName)
+	err = ensureDatabaseIsCreated(ctx, d.db, databaseName)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create database in multitenant proxy cluster %s", rdsID)
 	}
@@ -485,7 +446,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 		return errors.Wrap(err, "failed to perform pgbouncer setup")
 	}
 
-	err = d.ensureDefaultTextSearchConfig(ctx, databaseName)
+	err = ensureDefaultTextSearchConfig(ctx, d.db, databaseName)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure default text search config")
 	}
@@ -495,7 +456,7 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 		return errors.Wrap(err, "failed to get a secret for installation")
 	}
 
-	err = d.ensureDatabaseUserIsCreated(ctx, installationSecret.MasterUsername, installationSecret.MasterPassword)
+	err = ensureDatabaseUserIsCreated(ctx, d.db, installationSecret.MasterUsername, installationSecret.MasterPassword)
 	if err != nil {
 		return errors.Wrap(err, "failed to create Mattermost database user")
 	}
@@ -513,25 +474,6 @@ func (d *RDSMultitenantPGBouncerDatabase) ensureLogicalDatabaseSetup(databaseNam
 	err = d.ensureSchemaIsCreated(ctx, installationSecret.MasterUsername)
 	if err != nil {
 		return errors.Wrap(err, "failed to grant permissions to Mattermost database user")
-	}
-
-	return nil
-}
-
-func (d *RDSMultitenantPGBouncerDatabase) ensureDatabaseIsCreated(ctx context.Context, databaseName string) error {
-	query := fmt.Sprintf(`SELECT datname FROM pg_catalog.pg_database WHERE lower(datname) = lower('%s');`, databaseName)
-	rows, err := d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.Wrap(err, "failed to run database exists SQL command")
-	}
-	if rows.Next() {
-		return nil
-	}
-
-	query = fmt.Sprintf(`CREATE DATABASE %s`, databaseName)
-	_, err = d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.Wrap(err, "failed to run create database SQL command")
 	}
 
 	return nil
@@ -599,35 +541,6 @@ func (d *RDSMultitenantPGBouncerDatabase) ensurePGBouncerDatabasePrep(ctx contex
 	_, err = d.db.QueryContext(ctx, query)
 	if err != nil {
 		return errors.Wrap(err, "failed to run auth user lookup query SQL command")
-	}
-
-	return nil
-}
-
-func (d *RDSMultitenantPGBouncerDatabase) ensureDefaultTextSearchConfig(ctx context.Context, databaseName string) error {
-	query := fmt.Sprintf(`ALTER DATABASE %s SET default_text_search_config TO "pg_catalog.english";`, databaseName)
-	_, err := d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.Wrap(err, "failed to run SQL command to set default_text_search_config to pg_catalog.english")
-	}
-
-	return nil
-}
-
-func (d *RDSMultitenantPGBouncerDatabase) ensureDatabaseUserIsCreated(ctx context.Context, username, password string) error {
-	query := fmt.Sprintf("SELECT 1 FROM pg_roles WHERE rolname='%s'", username)
-	rows, err := d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.Wrap(err, "failed to run database user check SQL command")
-	}
-	if rows.Next() {
-		return nil
-	}
-
-	query = fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s'", username, password)
-	_, err = d.db.QueryContext(ctx, query)
-	if err != nil {
-		return errors.New("failed to run create user SQL command: error suppressed")
 	}
 
 	return nil
