@@ -139,7 +139,7 @@ func (c *Cmd) rollingUpdateCluster(name string, dryRun bool) ([]byte, []byte, er
 
 // UpdateCluster invokes kops update cluster, using the context of the created Cmd.
 func (c *Cmd) UpdateCluster(name, dir string) error {
-	stdout, _, err := c.run(
+	_, _, err := c.run(
 		"update",
 		"cluster",
 		arg("name", name),
@@ -151,12 +151,6 @@ func (c *Cmd) UpdateCluster(name, dir string) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops update cluster")
-	}
-
-	for _, line := range bytes.Split(stdout, []byte("\n")) {
-		if bytes.Contains(line, []byte("Apply complete!")) {
-			c.logger.Warnf("%s", string(line))
-		}
 	}
 
 	return nil
