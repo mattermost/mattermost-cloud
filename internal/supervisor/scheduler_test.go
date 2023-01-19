@@ -107,9 +107,6 @@ func TestScheduler(t *testing.T) {
 			assert.Fail(t, "doer not invoked within 5 seconds")
 		}
 
-		// Drain the second call, but non-blocking in case it doesn't fire in a racey way.
-		select {
-		case <-doer.calls:
-		}
+		<-doer.calls
 	})
 }

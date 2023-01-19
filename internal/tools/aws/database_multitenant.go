@@ -919,11 +919,11 @@ func (d *RDSMultitenantDatabase) cleanupDatabase(rdsClusterID, rdsClusterendpoin
 		return errors.Wrapf(err, "failed to get master secret by ID %s", rdsClusterID)
 	}
 
-	close, err := d.connectRDSCluster(rdsClusterendpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	disconnect, err := d.connectRDSCluster(rdsClusterendpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to multitenant RDS cluster ID %s", rdsClusterID)
 	}
-	defer close(logger)
+	defer disconnect(logger)
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()
@@ -1012,11 +1012,11 @@ func (d *RDSMultitenantDatabase) runProvisionSQLCommands(installationDatabaseNam
 		return errors.Wrapf(err, "failed to find the master secret for the multitenant RDS cluster %s", rdsID)
 	}
 
-	close, err := d.connectRDSCluster(*rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+	disconnect, err := d.connectRDSCluster(*rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
 	if err != nil {
 		return errors.Wrapf(err, "failed to connect to the multitenant RDS cluster %s", rdsID)
 	}
-	defer close(logger)
+	defer disconnect(logger)
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultMySQLContextTimeSeconds*time.Second))
 	defer cancel()

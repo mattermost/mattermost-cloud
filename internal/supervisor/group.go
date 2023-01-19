@@ -106,7 +106,7 @@ func (s *GroupSupervisor) Supervise(group *model.Group) {
 		"installations-rolling": groupMetadata.InstallationsRolling,
 	})
 
-	if int64(groupMetadata.InstallationsRolling) >= group.MaxRolling {
+	if groupMetadata.InstallationsRolling >= group.MaxRolling {
 		logger.Infof("Group already has %d rolling installations with a max of %d", groupMetadata.InstallationsRolling, group.MaxRolling)
 		return
 	}

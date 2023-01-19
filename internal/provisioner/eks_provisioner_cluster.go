@@ -30,7 +30,6 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	resourceUtil       *utils.ResourceUtil
 	logger             log.FieldLogger
 	store              model.InstallationDatabaseStoreInterface
 	clusterUpdateStore clusterUpdateStore
@@ -82,21 +81,13 @@ func (provisioner *EKSProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClient aws.AWS) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
-	// TODO: extract this to the function?
-	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", awsClient.GetCloudEnvironmentName())
-	cncVPCCIDR, err := awsClient.GetCIDRByVPCTag(cncVPCName, logger)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get the CIDR for the VPC Name %s", cncVPCName)
-	}
-	allowSSHCIDRS := []string{cncVPCCIDR}
-	allowSSHCIDRS = append(allowSSHCIDRS, provisioner.params.VpnCIDRList...)
-
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
 		return errors.New("error: EKS metadata not set when creating EKS cluster")
 	}
 
 	var clusterResources aws.ClusterResources
+	var err error
 	if eksMetadata.VPC != "" {
 		clusterResources, err = awsClient.ClaimVPC(eksMetadata.VPC, cluster, provisioner.params.Owner, logger)
 		if err != nil {

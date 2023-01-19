@@ -47,7 +47,8 @@ func Test_AddInstallationDNS(t *testing.T) {
 	installation1, err := client.CreateInstallation(multiDNSInstallationReq)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(installation1.DNSRecords))
-	assert.Equal(t, "multi-dns.example.com", installation1.DNS)
+	assert.Equal(t, "multi-dns.example.com", installation1.DNS) //nolint
+	assert.Equal(t, "multi-dns.example.com", installation1.DNSRecords[0].DomainName)
 	assert.Equal(t, true, installation1.DNSRecords[0].IsPrimary)
 
 	// Assert one record set as primary.
@@ -81,7 +82,8 @@ func Test_AddInstallationDNS(t *testing.T) {
 	installation2, err := client.CreateInstallation(oldAPIInstallation)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(installation2.DNSRecords))
-	assert.Equal(t, "old-api-dns.example.com", installation2.DNS)
+	assert.Equal(t, "old-api-dns.example.com", installation2.DNS) //nolint
+	assert.Equal(t, "old-api-dns.example.com", installation2.DNSRecords[0].DomainName)
 	assert.Equal(t, "old-api-dns", installation2.Name)
 
 	// Set installation to stable so we can add DNS.

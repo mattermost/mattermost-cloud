@@ -36,9 +36,9 @@ func TestGetSchemaDatabase(t *testing.T) {
 	createAndCheckDatabaseSchema(t, store, databaseSchema)
 
 	t.Run("success", func(t *testing.T) {
-		databaseSchema, err := store.GetDatabaseSchema(databaseSchema.ID)
+		databaseSchema2, err := store.GetDatabaseSchema(databaseSchema.ID)
 		require.NoError(t, err)
-		assert.NotNil(t, databaseSchema)
+		assert.NotNil(t, databaseSchema2)
 	})
 
 	t.Run("invalid id", func(t *testing.T) {

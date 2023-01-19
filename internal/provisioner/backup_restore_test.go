@@ -146,9 +146,9 @@ func TestOperator_TriggerBackup(t *testing.T) {
 
 		installation := &model.Installation{ID: "installation-1", Filestore: model.InstallationFilestoreMultiTenantAwsS3}
 
-		operator := NewBackupOperator("image", "us", -1)
+		operator2 := NewBackupOperator("image", "us", -1)
 
-		_, err := operator.TriggerBackup(
+		_, err := operator2.TriggerBackup(
 			jobClinet,
 			backupMeta,
 			installation,
@@ -232,8 +232,8 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Run("return -1 start time if not finished", func(t *testing.T) {
-				timestamp, err := testCase.checkFunc(jobClient, backupMeta, logrus.New())
-				require.NoError(t, err)
+				timestamp, err2 := testCase.checkFunc(jobClient, backupMeta, logrus.New())
+				require.NoError(t, err2)
 				assert.Equal(t, int64(-1), timestamp)
 			})
 
@@ -428,9 +428,9 @@ func TestOperator_TriggerRestore(t *testing.T) {
 
 		installation := &model.Installation{ID: "installation-1", Filestore: model.InstallationFilestoreMultiTenantAwsS3}
 
-		operator := NewBackupOperator("image", "us", -1)
+		operator2 := NewBackupOperator("image", "us", -1)
 
-		err := operator.TriggerRestore(
+		err := operator2.TriggerRestore(
 			jobClinet,
 			backupMeta,
 			installation,

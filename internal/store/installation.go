@@ -99,8 +99,8 @@ func (rs *rawInstallations) toInstallations() ([]*model.Installation, error) {
 
 // GetInstallation fetches the given installation by id.
 func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, includeGroupConfigOverrides bool) (*model.Installation, error) {
-	var rawInstallation rawInstallation
-	err := sqlStore.getBuilder(sqlStore.db, &rawInstallation,
+	var rawInstallationOutput rawInstallation
+	err := sqlStore.getBuilder(sqlStore.db, &rawInstallationOutput,
 		installationSelect.Where("ID = ?", id),
 	)
 	if err == sql.ErrNoRows {
@@ -109,7 +109,7 @@ func (sqlStore *SQLStore) GetInstallation(id string, includeGroupConfig, include
 		return nil, errors.Wrap(err, "failed to get installation by id")
 	}
 
-	installation, err := rawInstallation.toInstallation()
+	installation, err := rawInstallationOutput.toInstallation()
 	if err != nil {
 		return installation, err
 	}
@@ -145,13 +145,13 @@ func (sqlStore *SQLStore) GetInstallations(filter *model.InstallationFilter, inc
 		OrderBy("Installation.CreateAt ASC")
 	builder = sqlStore.applyInstallationFilter(builder, filter)
 
-	var rawInstallations rawInstallations
-	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
+	var rawInstallationsOutput rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallationsOutput, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for installations")
 	}
 
-	installations, err := rawInstallations.toInstallations()
+	installations, err := rawInstallationsOutput.toInstallations()
 	if err != nil {
 		return nil, err
 	}
@@ -279,13 +279,13 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingWork() ([]*model.Instal
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
 
-	var rawInstallations rawInstallations
-	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
+	var rawInstallationsOutput rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallationsOutput, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations pending work")
 	}
 
-	installations, err := rawInstallations.toInstallations()
+	installations, err := rawInstallationsOutput.toInstallations()
 	if err != nil {
 		return nil, err
 	}
@@ -315,13 +315,13 @@ func (sqlStore *SQLStore) GetUnlockedInstallationsPendingDeletion() ([]*model.In
 		Where("LockAcquiredAt = 0").
 		OrderBy("CreateAt ASC")
 
-	var rawInstallations rawInstallations
-	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallations, builder)
+	var rawInstallationsOutput rawInstallations
+	err := sqlStore.selectBuilder(sqlStore.db, &rawInstallationsOutput, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get installations pending deletion")
 	}
 
-	installations, err := rawInstallations.toInstallations()
+	installations, err := rawInstallationsOutput.toInstallations()
 	if err != nil {
 		return nil, err
 	}
@@ -392,14 +392,14 @@ func (sqlStore *SQLStore) CreateInstallation(installation *model.Installation, a
 	}
 
 	if len(annotations) > 0 {
-		annotations, err := sqlStore.getOrCreateAnnotations(tx, annotations)
-		if err != nil {
-			return errors.Wrap(err, "failed to get or create annotations")
+		annotationsInner, errInner := sqlStore.getOrCreateAnnotations(tx, annotations)
+		if errInner != nil {
+			return errors.Wrap(errInner, "failed to get or create annotations")
 		}
 
-		_, err = sqlStore.createInstallationAnnotations(tx, installation.ID, annotations)
-		if err != nil {
-			return errors.Wrap(err, "failed to create annotations for installation")
+		_, errInner = sqlStore.createInstallationAnnotations(tx, installation.ID, annotationsInner)
+		if errInner != nil {
+			return errors.Wrap(errInner, "failed to create annotations for installation")
 		}
 	}
 
@@ -439,8 +439,8 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 		"Affinity":              installation.Affinity,
 		"State":                 installation.State,
 		"License":               installation.License,
-		"MattermostEnvRaw":      []byte(envJSON),
-		"PriorityEnvRaw":        []byte(priorityEnvJSON),
+		"MattermostEnvRaw":      envJSON,
+		"PriorityEnvRaw":        priorityEnvJSON,
 		"CreateAt":              installation.CreateAt,
 		"DeleteAt":              0,
 		"DeletionPendingExpiry": 0,
@@ -513,8 +513,8 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 			"Size":                  installation.Size,
 			"Affinity":              installation.Affinity,
 			"License":               installation.License,
-			"MattermostEnvRaw":      []byte(envJSON),
-			"PriorityEnvRaw":        []byte(priorityEnvJSON),
+			"MattermostEnvRaw":      envJSON,
+			"PriorityEnvRaw":        priorityEnvJSON,
 			"State":                 installation.State,
 			"CRVersion":             installation.CRVersion,
 			"DeletionPendingExpiry": installation.DeletionPendingExpiry,

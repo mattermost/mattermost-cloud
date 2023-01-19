@@ -51,7 +51,6 @@ func newCmdWebhookCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.webhookFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -82,7 +81,6 @@ func newCmdWebhookGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.webhookFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -103,7 +101,6 @@ func newCmdWebhookList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.webhookFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -156,7 +153,6 @@ func newCmdWebhookDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.webhookFlags.addFlags(cmd)
-			return
 		},
 	}
 

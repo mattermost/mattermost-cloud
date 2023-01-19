@@ -288,9 +288,9 @@ func (d *RDSDatabase) rdsDatabaseProvision(installationID string, logger log.Fie
 
 	var keyMetadata *kmsTypes.KeyMetadata
 	if len(kmsResourceNames) > 0 {
-		enabledKeys, err := d.getEnabledEncryptionKeys(kmsResourceNames)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get encryption keys for db cluster %s", awsID)
+		enabledKeys, err2 := d.getEnabledEncryptionKeys(kmsResourceNames)
+		if err2 != nil {
+			return errors.Wrapf(err2, "failed to get encryption keys for db cluster %s", awsID)
 		}
 
 		if len(enabledKeys) != 1 {

@@ -294,16 +294,16 @@ func TestDeleteInstallationBackup(t *testing.T) {
 			BackupID: backup.ID,
 			State:    model.InstallationDBRestorationStateInProgress,
 		}
-		err := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
-		require.NoError(t, err)
+		err2 := sqlStore.CreateInstallationDBRestorationOperation(restorationOp)
+		require.NoError(t, err2)
 		defer func() {
 			restorationOp.State = model.InstallationDBRestorationStateFailed
-			err = sqlStore.UpdateInstallationDBRestorationOperation(restorationOp)
-			assert.NoError(t, err)
+			err3 := sqlStore.UpdateInstallationDBRestorationOperation(restorationOp)
+			assert.NoError(t, err3)
 		}()
 
-		err = client.DeleteInstallationBackup(backup.ID)
-		require.EqualError(t, err, "failed with status code 400")
+		err4 := client.DeleteInstallationBackup(backup.ID)
+		require.EqualError(t, err4, "failed with status code 400")
 	})
 
 	err = client.DeleteInstallationBackup(backup.ID)

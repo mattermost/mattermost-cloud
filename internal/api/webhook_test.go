@@ -310,8 +310,8 @@ func TestDeleteWebhook(t *testing.T) {
 	})
 
 	t.Run("ensure webhook is deleted", func(t *testing.T) {
-		webhook, err := client.GetWebhook(webhook.ID)
+		webhook2, err := client.GetWebhook(webhook.ID)
 		require.NoError(t, err)
-		require.True(t, webhook.IsDeleted())
+		require.True(t, webhook2.IsDeleted())
 	})
 }

@@ -43,7 +43,6 @@ func newCmdInstallationRestorationRequest() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 

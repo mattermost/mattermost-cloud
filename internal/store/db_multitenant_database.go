@@ -224,8 +224,8 @@ func (sqlStore *SQLStore) updateMultitenantDatabase(db execer, multitenantDataba
 		SetMap(map[string]interface{}{
 			"State":                              multitenantDatabase.State,
 			"MaxInstallationsPerLogicalDatabase": multitenantDatabase.MaxInstallationsPerLogicalDatabase,
-			"InstallationsRaw":                   []byte(installationsJSON),
-			"MigratedInstallationsRaw":           []byte(migratedInstallationsJSON),
+			"InstallationsRaw":                   installationsJSON,
+			"MigratedInstallationsRaw":           migratedInstallationsJSON,
 		}).
 		Where(sq.Eq{"ID": multitenantDatabase.ID}),
 	)

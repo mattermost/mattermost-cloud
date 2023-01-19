@@ -100,7 +100,11 @@ func executeDashboardCmd(flags dashboardFlags) error {
 			case model.InstallationStateDeletionPending:
 				installationsPendingDeletionCount++
 			default:
-				unstableList = append(unstableList, fmt.Sprintf("Installation: %s | %s (%s)", installation.ID, installation.DNS, installation.State))
+				var domainName string
+				if len(installation.DNSRecords) > 0 {
+					domainName = installation.DNSRecords[0].DomainName
+				}
+				unstableList = append(unstableList, fmt.Sprintf("Installation: %s | %s (%s)", installation.ID, domainName, installation.State))
 			}
 		}
 

@@ -58,7 +58,6 @@ func newCmdSecurityClusterLock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -82,7 +81,6 @@ func newCmdSecurityClusterUnlock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -120,7 +118,6 @@ func newCmdSecurityInstallationLock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -144,7 +141,6 @@ func newCmdSecurityInstallationUnlock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -182,7 +178,6 @@ func newCmdSecurityClusterInstallationLock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -206,7 +201,6 @@ func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -244,7 +238,6 @@ func newCmdSecurityGroupLock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -268,7 +261,6 @@ func newCmdSecurityGroupUnlock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -306,7 +298,6 @@ func newCmdSecurityBackupLock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -330,7 +321,6 @@ func newCmdSecurityBackupUnlock() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 

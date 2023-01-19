@@ -153,11 +153,7 @@ func TestGroupSupervisor(t *testing.T) {
 
 		actualStateCounts := make(map[string]int)
 		for _, installation := range installations {
-			if _, ok := actualStateCounts[installation.State]; ok {
-				actualStateCounts[installation.State]++
-			} else {
-				actualStateCounts[installation.State] = 1
-			}
+			actualStateCounts[installation.State] += 1
 		}
 
 		require.Equal(t, expectedStateCounts, actualStateCounts)

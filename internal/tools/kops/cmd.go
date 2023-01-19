@@ -5,7 +5,6 @@
 package kops
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -34,7 +33,7 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 		return nil, errors.Wrap(err, "failed to find kops installed on your PATH")
 	}
 
-	tempDir, err := ioutil.TempDir("", "kops-")
+	tempDir, err := os.CreateTemp("", "kops-")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create temporary kops directory")
 	}
@@ -42,7 +41,7 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 	return &Cmd{
 		kopsPath:     kopsPath,
 		s3StateStore: s3StateStore,
-		tempDir:      tempDir,
+		tempDir:      tempDir.Name(),
 		logger:       logger,
 	}, nil
 }

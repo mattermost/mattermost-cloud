@@ -6,7 +6,6 @@ package k8s
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -128,20 +127,20 @@ rules:
 func TestCreate(t *testing.T) {
 	testClient := newTestKubeClient()
 
-	tempDir, err := ioutil.TempDir(".", "k8s-file-testing-")
+	tempDir, err := os.MkdirTemp(".", "k8s-file-testing-")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
 	serviceYAML := filepath.Join(tempDir, "service.yaml")
-	err = ioutil.WriteFile(serviceYAML, []byte(exampleServiceYAML), 0600)
+	err = os.WriteFile(serviceYAML, []byte(exampleServiceYAML), 0600)
 	assert.NoError(t, err)
 
 	multiYAML := filepath.Join(tempDir, "multi.yaml")
-	err = ioutil.WriteFile(multiYAML, []byte(exampleMultiResourceYAML), 0600)
+	err = os.WriteFile(multiYAML, []byte(exampleMultiResourceYAML), 0600)
 	assert.NoError(t, err)
 
 	badYAML := filepath.Join(tempDir, "bad.yaml")
-	err = ioutil.WriteFile(badYAML, []byte(exampleBadYAML), 0600)
+	err = os.WriteFile(badYAML, []byte(exampleBadYAML), 0600)
 	assert.NoError(t, err)
 
 	namespace := "testing"
@@ -202,16 +201,16 @@ func TestBasename(t *testing.T) {
 func TestCreateNetworkPolicy(t *testing.T) {
 	testClient := newTestKubeClient()
 
-	tempDir, err := ioutil.TempDir(".", "k8s-file-testing-netpol")
+	tempDir, err := os.MkdirTemp(".", "k8s-file-testing-netpol")
 	assert.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
 	networkPolYAML := filepath.Join(tempDir, "netpol.yaml")
-	err = ioutil.WriteFile(networkPolYAML, []byte(exampleNetPolYAML), 0600)
+	err = os.WriteFile(networkPolYAML, []byte(exampleNetPolYAML), 0600)
 	assert.NoError(t, err)
 
 	networkPolDenyYAML := filepath.Join(tempDir, "netpoldeny.yaml")
-	err = ioutil.WriteFile(networkPolDenyYAML, []byte(exampleNetPolDenyYAML), 0600)
+	err = os.WriteFile(networkPolDenyYAML, []byte(exampleNetPolDenyYAML), 0600)
 	assert.NoError(t, err)
 
 	namespace := "testing"
