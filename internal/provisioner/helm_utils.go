@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -345,7 +345,7 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 		return "", nil, errors.Errorf("request to Gitlab failed with status: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to read body from Gitlab response")
 	}
@@ -356,7 +356,7 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 		return "", nil, errors.Wrap(err, "failed to unmarshal JSON in Gitlab response")
 	}
 
-	temporaryValuesFile, err := ioutil.TempFile(os.TempDir(), "helm-values-file-")
+	temporaryValuesFile, err := os.CreateTemp(os.TempDir(), "helm-values-file-")
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to create temporary file for Helm values file")
 	}
@@ -366,7 +366,7 @@ func fetchFromGitlabIfNecessary(path string) (string, func(string), error) {
 		return "", nil, errors.Wrap(err, "failed to decode base64-encoded YAML file")
 	}
 
-	err = ioutil.WriteFile(temporaryValuesFile.Name(), []byte(content), 0600)
+	err = os.WriteFile(temporaryValuesFile.Name(), content, 0600)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to write values file to disk for Helm to read")
 	}

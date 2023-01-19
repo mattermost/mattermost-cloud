@@ -230,12 +230,9 @@ func (b *Blaster) waitForInstallations(input map[string]*cloud.Installation) {
 			}
 			if this == nil {
 				b.addReports(&errorReport{
-					installation: this.Installation,
-					timestamp:    time.Now(),
-					message:      err.Error(),
+					timestamp: time.Now(),
 				})
 				logger.Errorf("Installation %s has gone missing", w.ID)
-				delete(waiting, this.ID)
 				continue
 			}
 			if strings.Contains(this.State, "failed") {
@@ -243,7 +240,6 @@ func (b *Blaster) waitForInstallations(input map[string]*cloud.Installation) {
 				b.addReports(&errorReport{
 					installation: this.Installation,
 					timestamp:    time.Now(),
-					message:      err.Error(),
 				})
 				delete(waiting, this.ID)
 				continue
@@ -431,14 +427,4 @@ func main() {
 		logger.WithError(err).Error("command failed")
 		os.Exit(1)
 	}
-}
-
-var rootCmd = &cobra.Command{
-	Use:   "cloudburst",
-	Short: "Cloudburst is a tool for testing explosive demand against the Cloud Provisioner",
-	Run: func(cmd *cobra.Command, args []string) {
-		blastCommand.RunE(cmd, args)
-	},
-	// SilenceErrors allows us to explicitly log the error returned from rootCmd below.
-	SilenceErrors: true,
 }

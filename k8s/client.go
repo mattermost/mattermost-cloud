@@ -95,10 +95,6 @@ func createKubeClient(config *rest.Config, logger log.FieldLogger) (*KubeClient,
 		nil
 }
 
-func (kc *KubeClient) getKubeConfigClientset() (*kubernetes.Clientset, error) {
-	return kubernetes.NewForConfig(kc.config)
-}
-
 // GetConfig exposes the rest.Config for use with other k8s packages.
 func (kc *KubeClient) GetConfig() *rest.Config {
 	return kc.config

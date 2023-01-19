@@ -288,8 +288,8 @@ func (sqlStore *SQLStore) countInstallationsInGroup(group *model.Group) (int64, 
 
 // GetGroup fetches the given group by id.
 func (sqlStore *SQLStore) GetGroup(id string) (*model.Group, error) {
-	var rawGroup rawGroup
-	err := sqlStore.getBuilder(sqlStore.db, &rawGroup,
+	var rawGroupOutput rawGroup
+	err := sqlStore.getBuilder(sqlStore.db, &rawGroupOutput,
 		groupSelect.Where("ID = ?", id),
 	)
 	if err == sql.ErrNoRows {
@@ -298,7 +298,7 @@ func (sqlStore *SQLStore) GetGroup(id string) (*model.Group, error) {
 		return nil, errors.Wrap(err, "failed to get group by id")
 	}
 
-	return rawGroup.toGroup()
+	return rawGroupOutput.toGroup()
 }
 
 // GetGroups fetches the given page of created groups. The first page is 0.
@@ -308,13 +308,13 @@ func (sqlStore *SQLStore) GetGroups(filter *model.GroupFilter) ([]*model.Group, 
 
 	builder = applyGroupsFilter(builder, filter)
 
-	var rawGroups rawGroups
-	err := sqlStore.selectBuilder(sqlStore.db, &rawGroups, builder)
+	var rawGroupsOutput rawGroups
+	err := sqlStore.selectBuilder(sqlStore.db, &rawGroupsOutput, builder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query for groups")
 	}
 
-	return rawGroups.toGroups()
+	return rawGroupsOutput.toGroups()
 }
 
 func applyGroupsFilter(builder sq.SelectBuilder, filter *model.GroupFilter) sq.SelectBuilder {
@@ -348,14 +348,14 @@ func (sqlStore *SQLStore) CreateGroup(group *model.Group, annotations []*model.A
 	}
 
 	if len(annotations) > 0 {
-		annotations, err := sqlStore.getOrCreateAnnotations(tx, annotations)
-		if err != nil {
-			return errors.Wrap(err, "failed to get or create annotations")
+		annotationsInner, errInner := sqlStore.getOrCreateAnnotations(tx, annotations)
+		if errInner != nil {
+			return errors.Wrap(errInner, "failed to get or create annotations")
 		}
 
-		annotations, err = sqlStore.createGroupAnnotations(tx, group.ID, annotations)
-		if err != nil {
-			return errors.Wrap(err, "failed to create group annotations")
+		_, errInner = sqlStore.createGroupAnnotations(tx, group.ID, annotationsInner)
+		if errInner != nil {
+			return errors.Wrap(errInner, "failed to create group annotations")
 		}
 	}
 

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"go/types"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -23,7 +22,7 @@ func setupCodeBuffer(cmd *cobra.Command, pkgName string) (*bytes.Buffer, error) 
 
 	boilerplatePath, _ := cmd.Flags().GetString("boilerplate-file")
 	if boilerplatePath != "" {
-		file, err := ioutil.ReadFile(boilerplatePath)
+		file, err := os.ReadFile(boilerplatePath)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to read boilerplate file")
 		}
@@ -52,7 +51,7 @@ func printOutput(cmd *cobra.Command, code []byte, pkgName string) error {
 		outFile = fmt.Sprintf("%s_resource_impl_gen.go", pkgName)
 	}
 
-	return ioutil.WriteFile(outFile, code, os.ModePerm)
+	return os.WriteFile(outFile, code, os.ModePerm)
 }
 
 func loadTypes(c *cobra.Command) (*packages.Package, []string, []*types.Struct, error) {

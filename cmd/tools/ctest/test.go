@@ -7,7 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/mattermost/mattermost-cloud/model"
@@ -32,16 +32,16 @@ func runInstallationLifecycleTest(request *model.CreateInstallationRequest, clie
 		}
 	}
 
-	resp, err := http.Get(fmt.Sprintf("https://%s/api/v4/system/ping?get_server_status=true", installation.DNS))
+	resp, err := http.Get(fmt.Sprintf("https://%s/api/v4/system/ping?get_server_status=true", installation.DNSRecords[0].DomainName))
 	if err != nil {
 		return errors.Wrap(err, "failed to run enhanced ping test")
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			logger.WithError(err).Warn("Installation failed health ping check and failed to decode response")
+		b, err2 := io.ReadAll(resp.Body)
+		if err2 != nil {
+			logger.WithError(err2).Warn("Installation failed health ping check and failed to decode response")
 		} else {
 			logger.Warnf("Installation failed health ping check: %s", string(b))
 		}

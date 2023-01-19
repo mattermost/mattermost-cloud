@@ -496,15 +496,15 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 			InstallationsTotalCount:   0,
 			InstallationsRolling:      0,
 		}
-		metadata, err := sqlStore.GetGroupRollingMetadata(group2.ID)
-		require.NoError(t, err)
+		metadata, err2 := sqlStore.GetGroupRollingMetadata(group2.ID)
+		require.NoError(t, err2)
 		assert.Equal(t, expectedMetadata, metadata)
 	})
 
 	t.Run("group with work", func(t *testing.T) {
 		t.Run("installation creation-requested", func(t *testing.T) {
-			groups, err := sqlStore.GetUnlockedGroupsPendingWork()
-			require.NoError(t, err)
+			groups, err2 := sqlStore.GetUnlockedGroupsPendingWork()
+			require.NoError(t, err2)
 			require.Len(t, groups, 0)
 
 			expectedMetadata := &GroupRollingMetadata{
@@ -512,20 +512,20 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 				InstallationsTotalCount:   1,
 				InstallationsRolling:      1,
 			}
-			metadata, err := sqlStore.GetGroupRollingMetadata(group1.ID)
-			require.NoError(t, err)
+			metadata, err3 := sqlStore.GetGroupRollingMetadata(group1.ID)
+			require.NoError(t, err3)
 			assert.Equal(t, expectedMetadata, metadata)
 		})
 
 		t.Run("installation stable", func(t *testing.T) {
 			installation1.State = model.InstallationStateStable
-			err = sqlStore.UpdateInstallation(installation1)
-			require.NoError(t, err)
+			err2 := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, err2)
 
 			time.Sleep(1 * time.Millisecond)
 
-			groups, err := sqlStore.GetUnlockedGroupsPendingWork()
-			require.NoError(t, err)
+			groups, err3 := sqlStore.GetUnlockedGroupsPendingWork()
+			require.NoError(t, err3)
 			require.Len(t, groups, 1)
 
 			expectedMetadata := &GroupRollingMetadata{
@@ -533,20 +533,20 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 				InstallationsTotalCount:   1,
 				InstallationsRolling:      0,
 			}
-			metadata, err := sqlStore.GetGroupRollingMetadata(group1.ID)
-			require.NoError(t, err)
+			metadata, err4 := sqlStore.GetGroupRollingMetadata(group1.ID)
+			require.NoError(t, err4)
 			assert.Equal(t, expectedMetadata, metadata)
 		})
 
 		t.Run("installation hibernating", func(t *testing.T) {
 			installation1.State = model.InstallationStateHibernating
-			err = sqlStore.UpdateInstallation(installation1)
-			require.NoError(t, err)
+			err2 := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, err2)
 
 			time.Sleep(1 * time.Millisecond)
 
-			groups, err := sqlStore.GetUnlockedGroupsPendingWork()
-			require.NoError(t, err)
+			groups, err3 := sqlStore.GetUnlockedGroupsPendingWork()
+			require.NoError(t, err3)
 			require.Len(t, groups, 0)
 
 			expectedMetadata := &GroupRollingMetadata{
@@ -554,20 +554,20 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 				InstallationsTotalCount:   1,
 				InstallationsRolling:      0,
 			}
-			metadata, err := sqlStore.GetGroupRollingMetadata(group1.ID)
-			require.NoError(t, err)
+			metadata, err4 := sqlStore.GetGroupRollingMetadata(group1.ID)
+			require.NoError(t, err4)
 			assert.Equal(t, expectedMetadata, metadata)
 		})
 
 		t.Run("installation pending deletion", func(t *testing.T) {
 			installation1.State = model.InstallationStateDeletionPending
-			err = sqlStore.UpdateInstallation(installation1)
-			require.NoError(t, err)
+			err2 := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, err2)
 
 			time.Sleep(1 * time.Millisecond)
 
-			groups, err := sqlStore.GetUnlockedGroupsPendingWork()
-			require.NoError(t, err)
+			groups, err3 := sqlStore.GetUnlockedGroupsPendingWork()
+			require.NoError(t, err3)
 			require.Len(t, groups, 0)
 
 			expectedMetadata := &GroupRollingMetadata{
@@ -575,8 +575,8 @@ func TestGetGroupRollingMetadata(t *testing.T) {
 				InstallationsTotalCount:   1,
 				InstallationsRolling:      0,
 			}
-			metadata, err := sqlStore.GetGroupRollingMetadata(group1.ID)
-			require.NoError(t, err)
+			metadata, err4 := sqlStore.GetGroupRollingMetadata(group1.ID)
+			require.NoError(t, err4)
 			assert.Equal(t, expectedMetadata, metadata)
 		})
 	})
@@ -719,8 +719,8 @@ func TestGetGroupStatus(t *testing.T) {
 			InstallationsHibernating:     0,
 			InstallationsPendingDeletion: 0,
 		}
-		groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
-		require.NoError(t, err)
+		groupStatus, err2 := sqlStore.GetGroupStatus(group1.ID)
+		require.NoError(t, err2)
 		assert.Equal(t, expectedStatus, groupStatus)
 	})
 
@@ -750,8 +750,8 @@ func TestGetGroupStatus(t *testing.T) {
 				InstallationsHibernating:     0,
 				InstallationsPendingDeletion: 0,
 			}
-			groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
-			require.NoError(t, err)
+			groupStatus, err2 := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, err2)
 			assert.Equal(t, expectedStatus, groupStatus)
 		})
 
@@ -770,8 +770,8 @@ func TestGetGroupStatus(t *testing.T) {
 				InstallationsHibernating:     1,
 				InstallationsPendingDeletion: 0,
 			}
-			groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
-			require.NoError(t, err)
+			groupStatus, err2 := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, err2)
 			assert.Equal(t, expectedStatus, groupStatus)
 		})
 
@@ -790,8 +790,8 @@ func TestGetGroupStatus(t *testing.T) {
 				InstallationsHibernating:     0,
 				InstallationsPendingDeletion: 1,
 			}
-			groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
-			require.NoError(t, err)
+			groupStatus, err2 := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, err2)
 			assert.Equal(t, expectedStatus, groupStatus)
 		})
 
@@ -810,15 +810,15 @@ func TestGetGroupStatus(t *testing.T) {
 				InstallationsHibernating:     0,
 				InstallationsPendingDeletion: 0,
 			}
-			groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
-			require.NoError(t, err)
+			groupStatus, err2 := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, err2)
 			assert.Equal(t, expectedStatus, groupStatus)
 		})
 
 		t.Run("updated", func(t *testing.T) {
 			installation1.GroupSequence = &group1.Sequence
-			err = sqlStore.UpdateInstallation(installation1)
-			require.NoError(t, err)
+			err2 := sqlStore.UpdateInstallation(installation1)
+			require.NoError(t, err2)
 
 			expectedStatus := &model.GroupStatus{
 				InstallationsTotal:           1,
@@ -827,8 +827,8 @@ func TestGetGroupStatus(t *testing.T) {
 				InstallationsHibernating:     0,
 				InstallationsPendingDeletion: 0,
 			}
-			groupStatus, err := sqlStore.GetGroupStatus(group1.ID)
-			require.NoError(t, err)
+			groupStatus, err3 := sqlStore.GetGroupStatus(group1.ID)
+			require.NoError(t, err3)
 			assert.Equal(t, expectedStatus, groupStatus)
 		})
 	})

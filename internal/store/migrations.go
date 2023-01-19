@@ -1403,9 +1403,9 @@ var migrations = []migration{
 		var id string
 		var ids []string
 		for multitenantDatabaseRows.Next() {
-			err := multitenantDatabaseRows.Scan(&id)
-			if err != nil {
-				return err
+			err2 := multitenantDatabaseRows.Scan(&id)
+			if err2 != nil {
+				return err2
 			}
 			ids = append(ids, id)
 		}
@@ -1503,16 +1503,16 @@ var migrations = []migration{
 			var id string
 			var sharedLogicalDatabaseMappingsRaw []byte
 
-			err := multitenantDatabaseRows.Scan(&id, &sharedLogicalDatabaseMappingsRaw)
-			if err != nil {
-				return err
+			err2 := multitenantDatabaseRows.Scan(&id, &sharedLogicalDatabaseMappingsRaw)
+			if err2 != nil {
+				return err2
 			}
 
 			var sharedLogicalDatabases map[string][]string
 			if sharedLogicalDatabaseMappingsRaw != nil {
-				err := json.Unmarshal(sharedLogicalDatabaseMappingsRaw, &sharedLogicalDatabases)
-				if err != nil {
-					return err
+				err2 := json.Unmarshal(sharedLogicalDatabaseMappingsRaw, &sharedLogicalDatabases)
+				if err2 != nil {
+					return err2
 				}
 			}
 			sharedDatabaseMapping[id] = sharedLogicalDatabases
@@ -1841,12 +1841,12 @@ var migrations = []migration{
 			}
 		} else if e.DriverName() == driverSqlite {
 			// We DROP DNS here and add NOT NULL for Name
-			_, err := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
-			if err != nil {
-				return err
+			_, err2 := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+			if err2 != nil {
+				return err2
 			}
 
-			_, err = e.Exec(`
+			_, err2 = e.Exec(`
 					CREATE TABLE Installation (
 						ID TEXT PRIMARY KEY,
 						OwnerID TEXT NOT NULL,
@@ -1872,11 +1872,11 @@ var migrations = []migration{
 						LockAcquiredAt BIGINT NOT NULL
 					);
 				`)
-			if err != nil {
-				return err
+			if err2 != nil {
+				return err2
 			}
 
-			_, err = e.Exec(`
+			_, err2 = e.Exec(`
 					INSERT INTO Installation
 					SELECT
 						ID,
@@ -1904,13 +1904,13 @@ var migrations = []migration{
 					FROM
 					InstallationTemp;
 				`)
-			if err != nil {
-				return err
+			if err2 != nil {
+				return err2
 			}
 
-			_, err = e.Exec(`DROP TABLE InstallationTemp;`)
-			if err != nil {
-				return err
+			_, err2 = e.Exec(`DROP TABLE InstallationTemp;`)
+			if err2 != nil {
+				return err2
 			}
 		}
 

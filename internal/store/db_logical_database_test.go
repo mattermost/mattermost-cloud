@@ -30,7 +30,7 @@ func TestGetLogicalDatabase(t *testing.T) {
 			Name:                  "ldb1",
 		}
 		createAndCheckLogicalDatabase(t, store, logicalDatabase)
-		logicalDatabase, err := store.GetLogicalDatabase(logicalDatabase.ID)
+		_, err := store.GetLogicalDatabase(logicalDatabase.ID)
 		require.NoError(t, err)
 	})
 

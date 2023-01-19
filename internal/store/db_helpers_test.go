@@ -59,12 +59,12 @@ func TestGetCreateAndDeleteProxyHelpers(t *testing.T) {
 	installation4 := createAndCheckDummyInstallation(t, store)
 
 	t.Run("create resources only once", func(t *testing.T) {
-		createdResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(installation1.ID, multitenantDatabase.ID)
-		require.NoError(t, err)
+		createdResources, err2 := store.GetOrCreateProxyDatabaseResourcesForInstallation(installation1.ID, multitenantDatabase.ID)
+		require.NoError(t, err2)
 		expectedDatabaseResourceCounts(t, store, 1, 1, 1)
 
-		existingResources, err := store.GetOrCreateProxyDatabaseResourcesForInstallation(installation1.ID, multitenantDatabase.ID)
-		require.NoError(t, err)
+		existingResources, err3 := store.GetOrCreateProxyDatabaseResourcesForInstallation(installation1.ID, multitenantDatabase.ID)
+		require.NoError(t, err3)
 		require.Equal(t, createdResources, existingResources)
 		expectedDatabaseResourceCounts(t, store, 1, 1, 1)
 	})
@@ -109,31 +109,31 @@ func TestGetCreateAndDeleteProxyHelpers(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		multitenantDatabase, err = store.GetMultitenantDatabase(multitenantDatabase.ID)
-		require.NoError(t, err)
-		require.NotNil(t, multitenantDatabase)
+		multitenantDatabase2, err2 := store.GetMultitenantDatabase(multitenantDatabase.ID)
+		require.NoError(t, err2)
+		require.NotNil(t, multitenantDatabase2)
 
-		schema, err := store.GetDatabaseSchemaForInstallationID(installation1.ID)
-		require.NoError(t, err)
+		schema, err2 := store.GetDatabaseSchemaForInstallationID(installation1.ID)
+		require.NoError(t, err2)
 		require.NotNil(t, schema)
 
-		err = store.DeleteInstallationProxyDatabaseResources(multitenantDatabase, schema)
-		require.NoError(t, err)
+		err3 := store.DeleteInstallationProxyDatabaseResources(multitenantDatabase2, schema)
+		require.NoError(t, err3)
 		expectedDatabaseResourceCounts(t, store, 1, 3, 4)
 	})
 
 	t.Run("remove installation from multitenant database first", func(t *testing.T) {
-		multitenantDatabase, err = store.GetMultitenantDatabase(multitenantDatabase.ID)
-		require.NoError(t, err)
-		require.NotNil(t, multitenantDatabase)
+		multitenantDatabase2, err2 := store.GetMultitenantDatabase(multitenantDatabase.ID)
+		require.NoError(t, err2)
+		require.NotNil(t, multitenantDatabase2)
 
-		schema, err := store.GetDatabaseSchemaForInstallationID(installation2.ID)
-		require.NoError(t, err)
+		schema, err3 := store.GetDatabaseSchemaForInstallationID(installation2.ID)
+		require.NoError(t, err3)
 		require.NotNil(t, schema)
 
-		multitenantDatabase.Installations.Remove(installation2.ID)
-		err = store.DeleteInstallationProxyDatabaseResources(multitenantDatabase, schema)
-		require.NoError(t, err)
+		multitenantDatabase2.Installations.Remove(installation2.ID)
+		err4 := store.DeleteInstallationProxyDatabaseResources(multitenantDatabase2, schema)
+		require.NoError(t, err4)
 		expectedDatabaseResourceCounts(t, store, 1, 3, 3)
 	})
 }

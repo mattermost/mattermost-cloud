@@ -59,8 +59,8 @@ func TestCreateGetDeleteSubscriptions(t *testing.T) {
 	assert.Equal(t, sub, fetchedSub)
 
 	t.Run("should return 404 on not found", func(t *testing.T) {
-		notFoundSub, err := client.GetSubscription(model.NewID())
-		require.NoError(t, err)
+		notFoundSub, err2 := client.GetSubscription(model.NewID())
+		require.NoError(t, err2)
 		assert.Nil(t, notFoundSub)
 	})
 

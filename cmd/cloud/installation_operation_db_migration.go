@@ -56,7 +56,6 @@ func newCmdInstallationDBMigrationRequest() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -77,7 +76,6 @@ func newCmdInstallationDBMigrationsList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -161,7 +159,6 @@ func newCmdInstallationDBMigrationGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -190,7 +187,6 @@ func newCmdInstallationDBMigrationCommit() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -220,7 +216,6 @@ func newCmdInstallationDBMigrationRollback() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 

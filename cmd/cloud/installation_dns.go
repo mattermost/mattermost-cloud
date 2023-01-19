@@ -54,7 +54,6 @@ func newCmdInstallationDNSAdd() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -87,7 +86,6 @@ func newCmdInstallationDNSSetPrimary() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 

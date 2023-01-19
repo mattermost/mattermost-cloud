@@ -51,24 +51,24 @@ func Test_QueryInstallationsWithDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("query correct Installation by DNS", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi-dns1.com", Paging: model.AllPagesNotDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err2 := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi-dns1.com", Paging: model.AllPagesNotDeleted()}, false, false)
+		require.NoError(t, err2)
 		assert.Equal(t, installation1, fetched[0])
 
-		fetched, err = sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi2.com", Paging: model.AllPagesNotDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err3 := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi2.com", Paging: model.AllPagesNotDeleted()}, false, false)
+		require.NoError(t, err3)
 		assert.Equal(t, installation2, fetched[0])
 	})
 
 	t.Run("return 0 installations if IDs and DNS do not match", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallations(&model.InstallationFilter{InstallationIDs: []string{installation1.ID}, DNS: "multi2.com", Paging: model.AllPagesNotDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err2 := sqlStore.GetInstallations(&model.InstallationFilter{InstallationIDs: []string{installation1.ID}, DNS: "multi2.com", Paging: model.AllPagesNotDeleted()}, false, false)
+		require.NoError(t, err2)
 		assert.Equal(t, 0, len(fetched))
 	})
 
 	t.Run("return all installation without duplicates", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallations(&model.InstallationFilter{Paging: model.AllPagesNotDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err2 := sqlStore.GetInstallations(&model.InstallationFilter{Paging: model.AllPagesNotDeleted()}, false, false)
+		require.NoError(t, err2)
 		assert.Equal(t, 3, len(fetched))
 	})
 
@@ -77,18 +77,18 @@ func Test_QueryInstallationsWithDNS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("return 0 installation if not including delete and DNS deleted", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi1.com", Paging: model.AllPagesNotDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err2 := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi1.com", Paging: model.AllPagesNotDeleted()}, false, false)
+		require.NoError(t, err2)
 		assert.Equal(t, 0, len(fetched))
 	})
 	t.Run("return installation when fetching by deleted DNS and should include deleted", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi1.com", Paging: model.AllPagesWithDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err2 := sqlStore.GetInstallations(&model.InstallationFilter{DNS: "multi1.com", Paging: model.AllPagesWithDeleted()}, false, false)
+		require.NoError(t, err2)
 		assert.Equal(t, installation2, fetched[0])
 	})
 	t.Run("return all installation without duplicates after DNS deletion", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallations(&model.InstallationFilter{Paging: model.AllPagesNotDeleted()}, false, false)
-		require.NoError(t, err)
+		fetched, err2 := sqlStore.GetInstallations(&model.InstallationFilter{Paging: model.AllPagesNotDeleted()}, false, false)
+		require.NoError(t, err2)
 		assert.Equal(t, 3, len(fetched))
 	})
 
@@ -137,9 +137,9 @@ func TestInstallationDNS(t *testing.T) {
 
 	t.Run("fail to create second primary DNS", func(t *testing.T) {
 		dnsRecord := &model.InstallationDNS{DomainName: "test.dns-2.com", IsPrimary: true}
-		err := sqlStore.AddInstallationDomain(installation, dnsRecord)
-		require.Error(t, err)
-		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint") // Make sure error comes from DB
+		err2 := sqlStore.AddInstallationDomain(installation, dnsRecord)
+		require.Error(t, err2)
+		assert.Contains(t, strings.ToLower(err2.Error()), "unique constraint") // Make sure error comes from DB
 	})
 
 	// Add DNS record

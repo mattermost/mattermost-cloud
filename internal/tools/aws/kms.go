@@ -27,36 +27,6 @@ func (a *Client) kmsCreateSymmetricKey(keyDescription string, tags []kmsTypes.Ta
 	return createKeyOut.KeyMetadata, nil
 }
 
-// kmsCreateAlias creates an alias for a symmetric encryption key. Alias allows retrieving the key ID in one call and
-// without special permissions that would be necessary if looking up it by tags for example.
-func (a *Client) kmsCreateAlias(keyID, aliasName string) error {
-	_, err := a.Service().kms.CreateAlias(
-		context.TODO(),
-		&kms.CreateAliasInput{
-			AliasName:   aws.String(aliasName),
-			TargetKeyId: aws.String(keyID),
-		})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// kmsDisableSymmetricKey disable a symmetric encryption key with alias.
-func (a *Client) kmsDisableSymmetricKey(keyID string) error {
-	_, err := a.Service().kms.DisableKey(
-		context.TODO(),
-		&kms.DisableKeyInput{
-			KeyId: aws.String(keyID),
-		})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // kmsGetSymmetricKey get a symmetric encryption key with alias.
 func (a *Client) kmsGetSymmetricKey(aliasName string) (*kmsTypes.KeyMetadata, error) {
 	describeKeyOut, err := a.Service().kms.DescribeKey(

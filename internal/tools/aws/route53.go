@@ -581,10 +581,7 @@ type Tag struct {
 func (t *Tag) Compare(tag types.Tag) bool {
 	if tag.Key != nil && *tag.Key == trimTagPrefix(t.Key) {
 		if tag.Value != nil && len(*tag.Value) > 0 {
-			if *tag.Value == t.Value {
-				return true
-			}
-			return false
+			return *tag.Value == t.Value
 		}
 		return true
 	}

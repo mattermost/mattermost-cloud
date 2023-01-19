@@ -48,7 +48,6 @@ func newCmdSchemaMigrate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.addFlags(cmd)
-			return
 		},
 	}
 
