@@ -1023,8 +1023,8 @@ func ensurePerseusAuthDatabaseProvisioned(a *Client, rdsCluster *rdsTypes.DBClus
 	}
 
 	err = func() error {
-		db, closeDB, err := connectToPostgresRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
-		if err != nil {
+		db, closeDB, errInner := connectToPostgresRDSCluster(rdsPostgresDefaultSchema, *rdsCluster.Endpoint, DefaultMattermostDatabaseUsername, *masterSecretValue.SecretString)
+		if errInner != nil {
 			return errors.Wrapf(err, "failed to connect to RDS cluster %s", rdsID)
 		}
 		defer closeDB(logger)
@@ -1032,13 +1032,13 @@ func ensurePerseusAuthDatabaseProvisioned(a *Client, rdsCluster *rdsTypes.DBClus
 		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(DefaultPostgresContextTimeSeconds*time.Second))
 		defer cancel()
 
-		err = ensureDatabaseUserIsCreated(ctx, db, authUserCredentials.MasterUsername, authUserCredentials.MasterPassword)
-		if err != nil {
+		errInner = ensureDatabaseUserIsCreated(ctx, db, authUserCredentials.MasterUsername, authUserCredentials.MasterPassword)
+		if errInner != nil {
 			return errors.Wrap(err, "failed to ensure perseus auth database user was created")
 		}
 
-		err = ensureDatabaseIsCreated(ctx, db, DefaultPerseusAuthDatabaseName)
-		if err != nil {
+		errInner = ensureDatabaseIsCreated(ctx, db, DefaultPerseusAuthDatabaseName)
+		if errInner != nil {
 			return errors.Wrap(err, "failed to ensure perseus auth logical database was created")
 		}
 
@@ -1149,8 +1149,9 @@ func getPerseusAuthDatabaseCluster(vpcID string, a *Client, logger log.FieldLogg
 	// tag match to the actual cluster. Improve this logic when a better method
 	// is found.
 	dbClusterARNs := []string{}
+	var resourceARN arn.ARN
 	for _, resource := range resourceNames {
-		resourceARN, err := arn.Parse(*resource.ResourceARN)
+		resourceARN, err = arn.Parse(*resource.ResourceARN)
 		if err != nil {
 			return nil, err
 		}
