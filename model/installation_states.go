@@ -221,6 +221,9 @@ var (
 			InstallationStateDeletionPendingRequested,
 			InstallationStateDeletionPendingInProgress,
 		},
+		InstallationStateDeletionPending: {
+			InstallationStateDeletionPending,
+		},
 		InstallationStateDeletionCancellationRequested: {
 			InstallationStateDeletionPending,
 		},

@@ -670,7 +670,8 @@ func handleUpdateInstallationDeletion(c *Context, w http.ResponseWriter, r *http
 		return
 	}
 
-	newState := model.InstallationStateDeletionCancellationRequested
+	// State won't change for this type of update.
+	newState := model.InstallationStateDeletionPending
 
 	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
 	if status != 0 {
