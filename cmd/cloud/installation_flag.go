@@ -131,9 +131,18 @@ func (flags *installationDeletionPatchRequestOptions) addFlags(command *cobra.Co
 	command.Flags().DurationVar(&flags.futureDeletionTime, "future-expiry", 0, "The amount of time from now when the installation can be deleted (0s for immediate deletion)")
 }
 
+type installationDeletionPatchRequestOptionsChanged struct {
+	futureDeletionTimeChanged bool
+}
+
+func (flags *installationDeletionPatchRequestOptionsChanged) addFlags(command *cobra.Command) {
+	flags.futureDeletionTimeChanged = command.Flags().Changed("future-expiry")
+}
+
 type installationUpdateDeletionFlags struct {
 	clusterFlags
 	installationDeletionPatchRequestOptions
+	installationDeletionPatchRequestOptionsChanged
 	installationID string
 }
 

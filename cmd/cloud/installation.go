@@ -214,10 +214,11 @@ func newCmdInstallationUpdateDeletion() *cobra.Command {
 		Short: "Updates the pending deletion parameters of an installation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
+			flags.installationDeletionPatchRequestOptionsChanged.addFlags(command)
 			client := model.NewClient(flags.serverAddress)
 
 			request := &model.PatchInstallationDeletionRequest{}
-			if command.Flags().Changed("future-expiry") {
+			if flags.installationDeletionPatchRequestOptionsChanged.futureDeletionTimeChanged {
 				newExpiryTimeMillis := model.GetMillisAtTime(time.Now().Add(flags.futureDeletionTime))
 				request.DeletionPendingExpiry = &newExpiryTimeMillis
 			}
