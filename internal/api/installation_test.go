@@ -1727,49 +1727,49 @@ func TestDeleteInstallation(t *testing.T) {
 	})
 
 	t.Run("while locked", func(t *testing.T) {
-		installation1.State = model.InstallationStateStable
-		err2 := sqlStore.UpdateInstallation(installation1.Installation)
+		installation.State = model.InstallationStateStable
+		err2 := sqlStore.UpdateInstallation(installation.Installation)
 		require.NoError(t, err2)
 
 		lockerID := model.NewID()
 
-		locked, err3 := sqlStore.LockInstallation(installation1.ID, lockerID)
+		locked, err3 := sqlStore.LockInstallation(installation.ID, lockerID)
 		require.NoError(t, err3)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err4 := sqlStore.UnlockInstallation(installation1.ID, lockerID, false)
+			unlocked, err4 := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
 			require.NoError(t, err4)
 			require.True(t, unlocked)
 
-			installation2, err5 := client.GetInstallation(installation1.ID, nil)
+			installation2, err5 := client.GetInstallation(installation.ID, nil)
 			require.NoError(t, err5)
 			require.Equal(t, int64(0), installation2.LockAcquiredAt)
 		}()
 
-		err6 := client.DeleteInstallation(installation1.ID)
+		err6 := client.DeleteInstallation(installation.ID)
 		require.EqualError(t, err6, "failed with status code 409")
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err2 := sqlStore.LockInstallationAPI(installation1.ID)
+		err2 := sqlStore.LockInstallationAPI(installation.ID)
 		require.NoError(t, err2)
 
-		err3 := client.DeleteInstallation(installation1.ID)
+		err3 := client.DeleteInstallation(installation.ID)
 		require.EqualError(t, err3, "failed with status code 403")
 
-		err4 := sqlStore.UnlockInstallationAPI(installation1.ID)
+		err4 := sqlStore.UnlockInstallationAPI(installation.ID)
 		require.NoError(t, err4)
 	})
 
 	t.Run("while backup is running", func(t *testing.T) {
-		backup1 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupRequested}
-		backup2 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupSucceeded}
+		backup1 := &model.InstallationBackup{InstallationID: installation.ID, State: model.InstallationBackupStateBackupRequested}
+		backup2 := &model.InstallationBackup{InstallationID: installation.ID, State: model.InstallationBackupStateBackupSucceeded}
 		err2 := sqlStore.CreateInstallationBackup(backup1)
 		require.NoError(t, err2)
 		err3 := sqlStore.CreateInstallationBackup(backup2)
 		require.NoError(t, err3)
 
-		err4 := client.DeleteInstallation(installation1.ID)
+		err4 := client.DeleteInstallation(installation.ID)
 		require.EqualError(t, err4, "failed with status code 400")
 
 		err5 := sqlStore.DeleteInstallationBackup(backup1.ID)
@@ -1801,9 +1801,9 @@ func TestDeleteInstallation(t *testing.T) {
 				err3 := client.DeleteInstallation(installation.ID)
 				require.NoError(t, err3)
 
-				installation, err4 := client.GetInstallation(installation.ID, nil)
+				checkedInstallation, err4 := client.GetInstallation(installation.ID, nil)
 				require.NoError(t, err4)
-				require.Equal(t, model.InstallationStateDeletionRequested, installation.State)
+				require.Equal(t, model.InstallationStateDeletionRequested, checkedInstallation.State)
 			})
 		}
 
@@ -1863,7 +1863,7 @@ func TestCancelInstallationDeletion(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown installation", func(t *testing.T) {
-		err := client.CancelInstallationDeletion(model.NewID())
+		err = client.CancelInstallationDeletion(model.NewID())
 		require.EqualError(t, err, "failed with status code 404")
 	})
 
@@ -1874,17 +1874,17 @@ func TestCancelInstallationDeletion(t *testing.T) {
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockInstallation(installation.ID, lockerID)
-		require.NoError(t, err)
+		locked, err2 := sqlStore.LockInstallation(installation.ID, lockerID)
+		require.NoError(t, err2)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, err3 := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
+			require.NoError(t, err3)
 			require.True(t, unlocked)
 
-			installation, err = client.GetInstallation(installation.ID, nil)
-			require.NoError(t, err)
-			require.Equal(t, int64(0), installation.LockAcquiredAt)
+			checkedInstallation, err4 := client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err4)
+			require.Equal(t, int64(0), checkedInstallation.LockAcquiredAt)
 		}()
 
 		err = client.CancelInstallationDeletion(installation.ID)
@@ -1908,7 +1908,7 @@ func TestCancelInstallationDeletion(t *testing.T) {
 			err = sqlStore.UpdateInstallation(installation.Installation)
 			require.NoError(t, err)
 
-			err := client.CancelInstallationDeletion(installation.ID)
+			err = client.CancelInstallationDeletion(installation.ID)
 			require.EqualError(t, err, "failed with status code 400")
 
 			installation, err = client.GetInstallation(installation.ID, nil)
@@ -1921,7 +1921,7 @@ func TestCancelInstallationDeletion(t *testing.T) {
 			err = sqlStore.UpdateInstallation(installation.Installation)
 			require.NoError(t, err)
 
-			err := client.CancelInstallationDeletion(installation.ID)
+			err = client.CancelInstallationDeletion(installation.ID)
 			require.EqualError(t, err, "failed with status code 400")
 
 			installation, err = client.GetInstallation(installation.ID, nil)
@@ -1972,8 +1972,8 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown installation", func(t *testing.T) {
-		updatedInstallation, err := client.UpdateInstallationDeletion(model.NewID(), &model.PatchInstallationDeletionRequest{})
-		require.EqualError(t, err, "failed with status code 404")
+		updatedInstallation, err2 := client.UpdateInstallationDeletion(model.NewID(), &model.PatchInstallationDeletionRequest{})
+		require.EqualError(t, err2, "failed with status code 404")
 		assert.Nil(t, updatedInstallation)
 	})
 
@@ -1984,12 +1984,12 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockInstallation(installation.ID, lockerID)
-		require.NoError(t, err)
+		locked, err2 := sqlStore.LockInstallation(installation.ID, lockerID)
+		require.NoError(t, err2)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, err3 := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
+			require.NoError(t, err3)
 			require.True(t, unlocked)
 
 			installation, err = client.GetInstallation(installation.ID, nil)
@@ -1997,8 +1997,8 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 			require.Equal(t, int64(0), installation.LockAcquiredAt)
 		}()
 
-		updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
-		require.EqualError(t, err, "failed with status code 409")
+		updatedInstallation, err4 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+		require.EqualError(t, err4, "failed with status code 409")
 		assert.Nil(t, updatedInstallation)
 	})
 
@@ -2006,8 +2006,8 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 		err = sqlStore.LockInstallationAPI(installation.ID)
 		require.NoError(t, err)
 
-		updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
-		require.EqualError(t, err, "failed with status code 403")
+		updatedInstallation, err2 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+		require.EqualError(t, err2, "failed with status code 403")
 		assert.Nil(t, updatedInstallation)
 
 		err = sqlStore.UnlockInstallationAPI(installation.ID)
@@ -2020,12 +2020,12 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 			err = sqlStore.UpdateInstallation(installation.Installation)
 			require.NoError(t, err)
 
-			updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
-			require.EqualError(t, err, "failed with status code 400")
+			updatedInstallation, err2 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+			require.EqualError(t, err2, "failed with status code 400")
 			assert.Nil(t, updatedInstallation)
 
-			installation, err = client.GetInstallation(installation.ID, nil)
-			require.NoError(t, err)
+			installation, err2 = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err2)
 			require.Equal(t, model.InstallationStateStable, installation.State)
 		})
 
@@ -2034,8 +2034,8 @@ func TestUpdateInstallationDeletion(t *testing.T) {
 			err = sqlStore.UpdateInstallation(installation.Installation)
 			require.NoError(t, err)
 
-			updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
-			require.EqualError(t, err, "failed with status code 400")
+			updatedInstallation, err2 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+			require.EqualError(t, err2, "failed with status code 400")
 			assert.Nil(t, updatedInstallation)
 
 			installation, err = client.GetInstallation(installation.ID, nil)
