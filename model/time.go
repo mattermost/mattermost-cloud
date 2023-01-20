@@ -26,8 +26,8 @@ func DateStringFromMillis(millis int64) string {
 	return TimeFromMillis(millis).Format("Jan 2 2006")
 }
 
-// CompleteTimeStringFromMillis returns a standard complete time string from millis.
-func CompleteTimeStringFromMillis(millis int64) string {
+// DateTimeStringFromMillis returns a standard complete time string from millis.
+func DateTimeStringFromMillis(millis int64) string {
 	return TimeFromMillis(millis).Format("2006-01-02 15:04:05 MST")
 }
 

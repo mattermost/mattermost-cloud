@@ -214,7 +214,6 @@ func newCmdInstallationUpdateDeletion() *cobra.Command {
 		Short: "Updates the pending deletion parameters of an installation.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
-			flags.installationDeletionPatchRequestOptionsChanged.addFlags(command)
 			client := model.NewClient(flags.serverAddress)
 
 			request := &model.PatchInstallationDeletionRequest{}
@@ -236,6 +235,7 @@ func newCmdInstallationUpdateDeletion() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.installationDeletionPatchRequestOptionsChanged.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -831,7 +831,7 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 			return err
 		}
 		for _, event := range events {
-			output += fmt.Sprintf("%s - %s > %s\n", model.CompleteTimeStringFromMillis(event.Event.Timestamp), event.StateChange.OldState, event.StateChange.NewState)
+			output += fmt.Sprintf("%s - %s > %s\n", model.DateTimeStringFromMillis(event.Event.Timestamp), event.StateChange.OldState, event.StateChange.NewState)
 		}
 	}
 

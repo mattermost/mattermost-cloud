@@ -125,7 +125,7 @@ func (i *Installation) DeletionPendingExpiryCompleteTimeString() string {
 		return "n/a"
 	}
 
-	return CompleteTimeStringFromMillis(i.DeletionPendingExpiry)
+	return DateTimeStringFromMillis(i.DeletionPendingExpiry)
 }
 
 // GetDatabaseWeight returns a value corresponding to the
