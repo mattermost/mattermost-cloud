@@ -165,34 +165,44 @@ func (s *InstallationDeletionSupervisor) transitionInstallation(installation *mo
 }
 
 func (s *InstallationDeletionSupervisor) checkIfInstallationShouldBeDeleted(installation *model.Installation, instanceID string, logger log.FieldLogger) string {
-	// Grab the latest event matching the deletion pending state change.
-	events, err := s.store.GetStateChangeEvents(&model.StateChangeEventFilter{
-		ResourceID: installation.ID,
-		NewStates:  []string{model.InstallationStateDeletionPending},
-		Paging: model.Paging{
-			Page:           0,
-			PerPage:        1,
-			IncludeDeleted: false,
-		},
-	})
-	if err != nil {
-		logger.WithError(err).Warn("Failed to query installation events")
-		return model.InstallationStateDeletionPending
-	}
-	if len(events) != 1 {
-		logger.WithError(err).Warnf("Expected 1 installation event, but got %d", len(events))
-		return model.InstallationStateDeletionPending
-	}
-	deletionQueuedEvent := events[0]
+	if installation.DeletionPendingExpiry != 0 {
+		// Primary deletion pending check.
+		if model.GetMillis() < installation.DeletionPendingExpiry {
+			timeUntilDeletion := time.Until(model.TimeFromMillis(installation.DeletionPendingExpiry))
+			logger.WithField("time-until-deletion", timeUntilDeletion.Round(time.Second).String()).Debug("Installation is not ready for deletion")
+			return model.InstallationStateDeletionPending
+		}
+	} else {
+		// Backup deletion pending check. Grab the latest event matching the
+		// deletion pending state change.
+		events, err := s.store.GetStateChangeEvents(&model.StateChangeEventFilter{
+			ResourceID: installation.ID,
+			NewStates:  []string{model.InstallationStateDeletionPending},
+			Paging: model.Paging{
+				Page:           0,
+				PerPage:        1,
+				IncludeDeleted: false,
+			},
+		})
+		if err != nil {
+			logger.WithError(err).Warn("Failed to query installation events")
+			return model.InstallationStateDeletionPending
+		}
+		if len(events) != 1 {
+			logger.WithError(err).Warnf("Expected 1 installation event, but got %d", len(events))
+			return model.InstallationStateDeletionPending
+		}
+		deletionQueuedEvent := events[0]
 
-	// Check to see if enough time has passed that the installation should be
-	// deleted.
-	timeSincePending := time.Since(model.TimeFromMillis(deletionQueuedEvent.Event.Timestamp))
-	logger = logger.WithField("time-spent-pending-deletion", timeSincePending.String())
-	if timeSincePending < s.deletionPendingTime {
-		timeUntilDeletion := s.deletionPendingTime - timeSincePending
-		logger.WithField("time-until-deletion", timeUntilDeletion.String()).Debug("Installation is not ready for deletion")
-		return model.InstallationStateDeletionPending
+		// Check to see if enough time has passed that the installation should be
+		// deleted.
+		timeSincePending := time.Since(model.TimeFromMillis(deletionQueuedEvent.Event.Timestamp))
+		logger = logger.WithField("time-spent-pending-deletion", timeSincePending.String())
+		if timeSincePending < s.deletionPendingTime {
+			timeUntilDeletion := s.deletionPendingTime - timeSincePending
+			logger.WithField("time-until-deletion", timeUntilDeletion.String()).Debug("Installation is not ready for deletion")
+			return model.InstallationStateDeletionPending
+		}
 	}
 
 	logger.Info("Installation is ready for deletion")

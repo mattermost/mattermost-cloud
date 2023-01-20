@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 
@@ -691,6 +692,102 @@ func TestNewPatchInstallationRequestFromReader(t *testing.T) {
 	})
 }
 
+func TestPatchInstallationDeletionRequestValid(t *testing.T) {
+	var testCases = []struct {
+		testName    string
+		expectError bool
+		request     *model.PatchInstallationDeletionRequest
+	}{
+		{
+			"empty",
+			false,
+			&model.PatchInstallationDeletionRequest{},
+		},
+		{
+			"deletion expiry only, valid with current time",
+			false,
+			&model.PatchInstallationDeletionRequest{
+				DeletionPendingExpiry: iToP(model.GetMillis()),
+			},
+		},
+		{
+			"deletion expiry only, valid with future time",
+			false,
+			&model.PatchInstallationDeletionRequest{
+				DeletionPendingExpiry: iToP(model.GetMillisAtTime(time.Now().Add(999999 * time.Hour))),
+			},
+		},
+		{
+			"deletion expiry only, invalid",
+			true,
+			&model.PatchInstallationDeletionRequest{
+				DeletionPendingExpiry: iToP(model.GetMillisAtTime(time.Now().Add(-time.Hour))),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			if tc.expectError {
+				assert.Error(t, tc.request.Validate())
+				return
+			}
+
+			assert.NoError(t, tc.request.Validate())
+		})
+	}
+}
+
+func TestPatchInstallationDeletionRequestApply(t *testing.T) {
+	var testCases = []struct {
+		testName             string
+		expectApply          bool
+		request              *model.PatchInstallationDeletionRequest
+		installation         *model.Installation
+		expectedInstallation *model.Installation
+	}{
+		{
+			"empty",
+			false,
+			&model.PatchInstallationDeletionRequest{},
+			&model.Installation{},
+			&model.Installation{},
+		},
+		{
+			"deletion expiry only",
+			true,
+			&model.PatchInstallationDeletionRequest{
+				DeletionPendingExpiry: iToP(999),
+			},
+			&model.Installation{},
+			&model.Installation{
+				DeletionPendingExpiry: 999,
+			},
+		},
+		{
+			"deletion expiry only, same value",
+			false,
+			&model.PatchInstallationDeletionRequest{
+				DeletionPendingExpiry: iToP(999),
+			},
+			&model.Installation{
+				DeletionPendingExpiry: 999,
+			},
+			&model.Installation{
+				DeletionPendingExpiry: 999,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			apply := tc.request.Apply(tc.installation)
+			assert.Equal(t, tc.expectApply, apply)
+			assert.Equal(t, tc.expectedInstallation, tc.installation)
+		})
+	}
+}
+
 func TestNewAssignInstallationGroupFromReader(t *testing.T) {
 	t.Run("empty request", func(t *testing.T) {
 		request, err := model.NewAssignInstallationGroupRequestFromReader(bytes.NewReader([]byte(
@@ -723,4 +820,8 @@ func TestNewAssignInstallationGroupFromReader(t *testing.T) {
 
 func sToP(s string) *string {
 	return &s
+}
+
+func iToP(i int64) *int64 {
+	return &i
 }

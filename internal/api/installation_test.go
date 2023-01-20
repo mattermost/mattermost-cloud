@@ -1701,18 +1701,19 @@ func TestDeleteInstallation(t *testing.T) {
 
 	router := mux.NewRouter()
 	api.Register(router, &api.Context{
-		Store:         sqlStore,
-		Supervisor:    &mockSupervisor{},
-		EventProducer: testutil.SetupTestEventsProducer(sqlStore, logger),
-		Metrics:       &mockMetrics{},
-		Logger:        logger,
+		Store:                             sqlStore,
+		Supervisor:                        &mockSupervisor{},
+		EventProducer:                     testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:                           &mockMetrics{},
+		Logger:                            logger,
+		InstallationDeletionExpiryDefault: 3 * time.Hour,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	client := model.NewClient(ts.URL)
 
-	installation1, err := client.CreateInstallation(&model.CreateInstallationRequest{
+	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
 		OwnerID:  "owner",
 		Version:  "version",
 		DNS:      "dns.example.com",
@@ -1726,49 +1727,49 @@ func TestDeleteInstallation(t *testing.T) {
 	})
 
 	t.Run("while locked", func(t *testing.T) {
-		installation1.State = model.InstallationStateStable
-		err2 := sqlStore.UpdateInstallation(installation1.Installation)
+		installation.State = model.InstallationStateStable
+		err2 := sqlStore.UpdateInstallation(installation.Installation)
 		require.NoError(t, err2)
 
 		lockerID := model.NewID()
 
-		locked, err3 := sqlStore.LockInstallation(installation1.ID, lockerID)
+		locked, err3 := sqlStore.LockInstallation(installation.ID, lockerID)
 		require.NoError(t, err3)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err4 := sqlStore.UnlockInstallation(installation1.ID, lockerID, false)
+			unlocked, err4 := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
 			require.NoError(t, err4)
 			require.True(t, unlocked)
 
-			installation2, err5 := client.GetInstallation(installation1.ID, nil)
+			installation2, err5 := client.GetInstallation(installation.ID, nil)
 			require.NoError(t, err5)
 			require.Equal(t, int64(0), installation2.LockAcquiredAt)
 		}()
 
-		err6 := client.DeleteInstallation(installation1.ID)
+		err6 := client.DeleteInstallation(installation.ID)
 		require.EqualError(t, err6, "failed with status code 409")
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err2 := sqlStore.LockInstallationAPI(installation1.ID)
+		err2 := sqlStore.LockInstallationAPI(installation.ID)
 		require.NoError(t, err2)
 
-		err3 := client.DeleteInstallation(installation1.ID)
+		err3 := client.DeleteInstallation(installation.ID)
 		require.EqualError(t, err3, "failed with status code 403")
 
-		err4 := sqlStore.UnlockInstallationAPI(installation1.ID)
+		err4 := sqlStore.UnlockInstallationAPI(installation.ID)
 		require.NoError(t, err4)
 	})
 
 	t.Run("while backup is running", func(t *testing.T) {
-		backup1 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupRequested}
-		backup2 := &model.InstallationBackup{InstallationID: installation1.ID, State: model.InstallationBackupStateBackupSucceeded}
+		backup1 := &model.InstallationBackup{InstallationID: installation.ID, State: model.InstallationBackupStateBackupRequested}
+		backup2 := &model.InstallationBackup{InstallationID: installation.ID, State: model.InstallationBackupStateBackupSucceeded}
 		err2 := sqlStore.CreateInstallationBackup(backup1)
 		require.NoError(t, err2)
 		err3 := sqlStore.CreateInstallationBackup(backup2)
 		require.NoError(t, err3)
 
-		err4 := client.DeleteInstallation(installation1.ID)
+		err4 := client.DeleteInstallation(installation.ID)
 		require.EqualError(t, err4, "failed with status code 400")
 
 		err5 := sqlStore.DeleteInstallationBackup(backup1.ID)
@@ -1791,16 +1792,18 @@ func TestDeleteInstallation(t *testing.T) {
 
 		for _, validDeletingState := range validDeletionRequestedStates {
 			t.Run(validDeletingState, func(t *testing.T) {
-				installation1.State = validDeletingState
-				err2 := sqlStore.UpdateInstallation(installation1.Installation)
+				installation.State = validDeletingState
+				installation.DeletionPendingExpiry = 0
+				err2 := sqlStore.UpdateInstallation(installation.Installation)
 				require.NoError(t, err2)
+				require.Equal(t, int64(0), installation.DeletionPendingExpiry)
 
-				err3 := client.DeleteInstallation(installation1.ID)
+				err3 := client.DeleteInstallation(installation.ID)
 				require.NoError(t, err3)
 
-				installation2, err4 := client.GetInstallation(installation1.ID, nil)
+				checkedInstallation, err4 := client.GetInstallation(installation.ID, nil)
 				require.NoError(t, err4)
-				require.Equal(t, model.InstallationStateDeletionRequested, installation2.State)
+				require.Equal(t, model.InstallationStateDeletionRequested, checkedInstallation.State)
 			})
 		}
 
@@ -1814,18 +1817,275 @@ func TestDeleteInstallation(t *testing.T) {
 
 		for _, validDeletingState := range validDeletionPendingRequestedStates {
 			t.Run(validDeletingState, func(t *testing.T) {
-				installation1.State = validDeletingState
-				err = sqlStore.UpdateInstallation(installation1.Installation)
+				installation.State = validDeletingState
+				installation.DeletionPendingExpiry = 0
+				err = sqlStore.UpdateInstallation(installation.Installation)
+				require.NoError(t, err)
+				require.Equal(t, int64(0), installation.DeletionPendingExpiry)
+
+				err := client.DeleteInstallation(installation.ID)
 				require.NoError(t, err)
 
-				err := client.DeleteInstallation(installation1.ID)
+				installation, err = client.GetInstallation(installation.ID, nil)
 				require.NoError(t, err)
-
-				installation1, err = client.GetInstallation(installation1.ID, nil)
-				require.NoError(t, err)
-				require.Equal(t, model.InstallationStateDeletionPendingRequested, installation1.State)
+				assert.Equal(t, model.InstallationStateDeletionPendingRequested, installation.State)
+				assert.Greater(t, installation.DeletionPendingExpiry, model.GetMillisAtTime(time.Now().Add(time.Hour)))
 			})
 		}
+	})
+}
+
+func TestCancelInstallationDeletion(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:                             sqlStore,
+		Supervisor:                        &mockSupervisor{},
+		EventProducer:                     testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:                           &mockMetrics{},
+		Logger:                            logger,
+		InstallationDeletionExpiryDefault: time.Hour,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner",
+		Version:  "version",
+		DNS:      "dns.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	t.Run("unknown installation", func(t *testing.T) {
+		err = client.CancelInstallationDeletion(model.NewID())
+		require.EqualError(t, err, "failed with status code 404")
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		installation.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation.Installation)
+		require.NoError(t, err)
+
+		lockerID := model.NewID()
+
+		locked, err2 := sqlStore.LockInstallation(installation.ID, lockerID)
+		require.NoError(t, err2)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err3 := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
+			require.NoError(t, err3)
+			require.True(t, unlocked)
+
+			checkedInstallation, err4 := client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err4)
+			require.Equal(t, int64(0), checkedInstallation.LockAcquiredAt)
+		}()
+
+		err = client.CancelInstallationDeletion(installation.ID)
+		require.EqualError(t, err, "failed with status code 409")
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+
+		err = client.CancelInstallationDeletion(installation.ID)
+		require.EqualError(t, err, "failed with status code 403")
+
+		err = sqlStore.UnlockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("while", func(t *testing.T) {
+		t.Run("stable", func(t *testing.T) {
+			installation.State = model.InstallationStateStable
+			err = sqlStore.UpdateInstallation(installation.Installation)
+			require.NoError(t, err)
+
+			err = client.CancelInstallationDeletion(installation.ID)
+			require.EqualError(t, err, "failed with status code 400")
+
+			installation, err = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err)
+			require.Equal(t, model.InstallationStateStable, installation.State)
+		})
+
+		t.Run("deleted", func(t *testing.T) {
+			installation.State = model.InstallationStateDeleted
+			err = sqlStore.UpdateInstallation(installation.Installation)
+			require.NoError(t, err)
+
+			err = client.CancelInstallationDeletion(installation.ID)
+			require.EqualError(t, err, "failed with status code 400")
+
+			installation, err = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err)
+			require.Equal(t, model.InstallationStateDeleted, installation.State)
+		})
+
+		t.Run("deletion pending", func(t *testing.T) {
+			installation.State = model.InstallationStateDeletionPending
+			err = sqlStore.UpdateInstallation(installation.Installation)
+			require.NoError(t, err)
+
+			err := client.CancelInstallationDeletion(installation.ID)
+			require.NoError(t, err)
+
+			installation, err = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err)
+			require.Equal(t, model.InstallationStateDeletionCancellationRequested, installation.State)
+		})
+	})
+}
+
+func TestUpdateInstallationDeletion(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+	sqlStore := store.MakeTestSQLStore(t, logger)
+	defer store.CloseConnection(t, sqlStore)
+
+	router := mux.NewRouter()
+	api.Register(router, &api.Context{
+		Store:                             sqlStore,
+		Supervisor:                        &mockSupervisor{},
+		EventProducer:                     testutil.SetupTestEventsProducer(sqlStore, logger),
+		Metrics:                           &mockMetrics{},
+		Logger:                            logger,
+		InstallationDeletionExpiryDefault: time.Hour,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	client := model.NewClient(ts.URL)
+
+	installation, err := client.CreateInstallation(&model.CreateInstallationRequest{
+		OwnerID:  "owner",
+		Version:  "version",
+		DNS:      "dns.example.com",
+		Affinity: model.InstallationAffinityIsolated,
+	})
+	require.NoError(t, err)
+
+	t.Run("unknown installation", func(t *testing.T) {
+		updatedInstallation, err2 := client.UpdateInstallationDeletion(model.NewID(), &model.PatchInstallationDeletionRequest{})
+		require.EqualError(t, err2, "failed with status code 404")
+		assert.Nil(t, updatedInstallation)
+	})
+
+	t.Run("while locked", func(t *testing.T) {
+		installation.State = model.InstallationStateStable
+		err = sqlStore.UpdateInstallation(installation.Installation)
+		require.NoError(t, err)
+
+		lockerID := model.NewID()
+
+		locked, err2 := sqlStore.LockInstallation(installation.ID, lockerID)
+		require.NoError(t, err2)
+		require.True(t, locked)
+		defer func() {
+			unlocked, err3 := sqlStore.UnlockInstallation(installation.ID, lockerID, false)
+			require.NoError(t, err3)
+			require.True(t, unlocked)
+
+			installation, err = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err)
+			require.Equal(t, int64(0), installation.LockAcquiredAt)
+		}()
+
+		updatedInstallation, err4 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+		require.EqualError(t, err4, "failed with status code 409")
+		assert.Nil(t, updatedInstallation)
+	})
+
+	t.Run("while api-security-locked", func(t *testing.T) {
+		err = sqlStore.LockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+
+		updatedInstallation, err2 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+		require.EqualError(t, err2, "failed with status code 403")
+		assert.Nil(t, updatedInstallation)
+
+		err = sqlStore.UnlockInstallationAPI(installation.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("while", func(t *testing.T) {
+		t.Run("stable", func(t *testing.T) {
+			installation.State = model.InstallationStateStable
+			err = sqlStore.UpdateInstallation(installation.Installation)
+			require.NoError(t, err)
+
+			updatedInstallation, err2 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+			require.EqualError(t, err2, "failed with status code 400")
+			assert.Nil(t, updatedInstallation)
+
+			installation, err2 = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err2)
+			require.Equal(t, model.InstallationStateStable, installation.State)
+		})
+
+		t.Run("deleted", func(t *testing.T) {
+			installation.State = model.InstallationStateDeleted
+			err = sqlStore.UpdateInstallation(installation.Installation)
+			require.NoError(t, err)
+
+			updatedInstallation, err2 := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+			require.EqualError(t, err2, "failed with status code 400")
+			assert.Nil(t, updatedInstallation)
+
+			installation, err = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err)
+			require.Equal(t, model.InstallationStateDeleted, installation.State)
+		})
+
+		t.Run("deletion pending", func(t *testing.T) {
+			installation.State = model.InstallationStateDeletionPending
+			err = sqlStore.UpdateInstallation(installation.Installation)
+			require.NoError(t, err)
+
+			oldExpiry := installation.DeletionPendingExpiry
+			updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{})
+			require.NoError(t, err)
+			assert.Equal(t, oldExpiry, updatedInstallation.DeletionPendingExpiry)
+
+			installation, err = client.GetInstallation(installation.ID, nil)
+			require.NoError(t, err)
+			assert.Equal(t, model.InstallationStateDeletionPending, installation.State)
+			assert.Equal(t, oldExpiry, installation.DeletionPendingExpiry)
+
+			t.Run("with new valid expiry", func(t *testing.T) {
+				newExpiry := model.GetMillis()
+				updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{
+					DeletionPendingExpiry: &newExpiry,
+				})
+				require.NoError(t, err)
+				assert.Equal(t, newExpiry, updatedInstallation.DeletionPendingExpiry)
+
+				installation, err = client.GetInstallation(installation.ID, nil)
+				require.NoError(t, err)
+				assert.Equal(t, model.InstallationStateDeletionPending, installation.State)
+				assert.Equal(t, newExpiry, installation.DeletionPendingExpiry)
+			})
+
+			t.Run("with new invalid expiry", func(t *testing.T) {
+				newExpiry := model.GetMillisAtTime(time.Now().Add(-time.Hour))
+				updatedInstallation, err := client.UpdateInstallationDeletion(installation.ID, &model.PatchInstallationDeletionRequest{
+					DeletionPendingExpiry: &newExpiry,
+				})
+				require.Error(t, err)
+				assert.Nil(t, updatedInstallation)
+
+				installation, err = client.GetInstallation(installation.ID, nil)
+				require.NoError(t, err)
+				assert.Equal(t, model.InstallationStateDeletionPending, installation.State)
+				assert.NotEqual(t, newExpiry, installation.DeletionPendingExpiry)
+			})
+		})
 	})
 }
 

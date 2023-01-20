@@ -46,6 +46,7 @@ type Installation struct {
 	CRVersion                  string
 	CreateAt                   int64
 	DeleteAt                   int64
+	DeletionPendingExpiry      int64 `json:"DeletionPendingExpiry,omitempty"`
 	APISecurityLock            bool
 	LockAcquiredBy             *string
 	LockAcquiredAt             int64
@@ -104,7 +105,7 @@ func (i *Installation) ToDTO(annotations []*Annotation, dnsRecords []*Installati
 // CreationDateString returns a standardized date string for an installation's
 // creation.
 func (i *Installation) CreationDateString() string {
-	return GetDateString(i.CreateAt)
+	return DateStringFromMillis(i.CreateAt)
 }
 
 // DeletionDateString returns a standardized date string for an installation's
@@ -114,7 +115,17 @@ func (i *Installation) DeletionDateString() string {
 		return "n/a"
 	}
 
-	return TimeFromMillis(i.DeleteAt).Format("Jan 2 2006")
+	return DateStringFromMillis(i.DeleteAt)
+}
+
+// DeletionPendingExpiryCompleteTimeString returns a standardized time string for
+// an installation's deletion or 'n/a' if not pending deletion.
+func (i *Installation) DeletionPendingExpiryCompleteTimeString() string {
+	if i.DeletionPendingExpiry == 0 {
+		return "n/a"
+	}
+
+	return DateTimeStringFromMillis(i.DeletionPendingExpiry)
 }
 
 // GetDatabaseWeight returns a value corresponding to the

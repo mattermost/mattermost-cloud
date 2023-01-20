@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -29,6 +30,7 @@ func newCmdInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdInstallationCreate())
 	cmd.AddCommand(newCmdInstallationUpdate())
 	cmd.AddCommand(newCmdInstallationDelete())
+	cmd.AddCommand(newCmdInstallationUpdateDeletion())
 	cmd.AddCommand(newCmdInstallationCancelDeletion())
 	cmd.AddCommand(newCmdInstallationHibernate())
 	cmd.AddCommand(newCmdInstallationWakeup())
@@ -136,7 +138,7 @@ func newCmdInstallationUpdate() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update an installation's configuration",
+		Short: "Update an installation's configuration.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
@@ -197,6 +199,43 @@ func newCmdInstallationDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationUpdateDeletion() *cobra.Command {
+	var flags installationUpdateDeletionFlags
+
+	cmd := &cobra.Command{
+		Use:   "update-deletion",
+		Short: "Updates the pending deletion parameters of an installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+
+			request := &model.PatchInstallationDeletionRequest{}
+			if flags.installationDeletionPatchRequestOptionsChanged.futureDeletionTimeChanged {
+				newExpiryTimeMillis := model.GetMillisAtTime(time.Now().Add(flags.futureDeletionTime))
+				request.DeletionPendingExpiry = &newExpiryTimeMillis
+			}
+
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			installation, err := client.UpdateInstallationDeletion(flags.installationID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to update installation deletion parameters")
+			}
+
+			return printJSON(installation)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			flags.installationDeletionPatchRequestOptionsChanged.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -666,8 +705,11 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	output := fmt.Sprintf("Installation: %s\n", installation.ID)
 	output += fmt.Sprintf(" ├ Created: %s\n", installation.CreationDateString())
 	output += fmt.Sprintf(" ├ State: %s\n", installation.State)
-	if installation.State == model.InstallationStateDeleted {
+	switch installation.State {
+	case model.InstallationStateDeleted:
 		output += fmt.Sprintf(" │ └ Deleted: %s\n", installation.DeletionDateString())
+	case model.InstallationStateDeletionPending:
+		output += fmt.Sprintf(" │ └ Scheduled Deletion: %s\n", installation.DeletionPendingExpiryCompleteTimeString())
 	}
 	output += fmt.Sprintf(" ├ DNS: %s\n", dnsName)
 	output += fmt.Sprintf(" ├ Version: %s:%s\n", installation.Image, installation.Version)
@@ -789,7 +831,7 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 			return err
 		}
 		for _, event := range events {
-			output += fmt.Sprintf("%s - %s > %s\n", model.TimeFromMillis(event.Event.Timestamp).Format("2006-01-02 15:04:05 MST"), event.StateChange.OldState, event.StateChange.NewState)
+			output += fmt.Sprintf("%s - %s > %s\n", model.DateTimeStringFromMillis(event.Event.Timestamp), event.StateChange.OldState, event.StateChange.NewState)
 		}
 	}
 

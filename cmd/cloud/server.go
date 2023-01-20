@@ -418,15 +418,16 @@ func executeServerCmd(flags serverFlags) error {
 	router := mux.NewRouter()
 
 	api.Register(router, &api.Context{
-		Store:         sqlStore,
-		Supervisor:    standardSupervisor,
-		Provisioner:   clusterProvisioner,
-		DBProvider:    resourceUtil,
-		EventProducer: eventsProducer,
-		Environment:   awsClient.GetCloudEnvironmentName(),
-		AwsClient:     awsClient,
-		Metrics:       cloudMetrics,
-		Logger:        logger,
+		Store:                             sqlStore,
+		Supervisor:                        standardSupervisor,
+		Provisioner:                       clusterProvisioner,
+		DBProvider:                        resourceUtil,
+		EventProducer:                     eventsProducer,
+		Environment:                       awsClient.GetCloudEnvironmentName(),
+		AwsClient:                         awsClient,
+		Metrics:                           cloudMetrics,
+		InstallationDeletionExpiryDefault: flags.installationDeletionPendingTime,
+		Logger:                            logger,
 	})
 
 	srv := &http.Server{

@@ -5,6 +5,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -162,28 +164,30 @@ type Metrics interface {
 //
 // It is cloned before each request, allowing per-request changes such as logger annotations.
 type Context struct {
-	Store         Store
-	Supervisor    Supervisor
-	Provisioner   Provisioner
-	DBProvider    DBProvider
-	EventProducer EventProducer
-	AwsClient     AwsClient
-	Metrics       Metrics
-	Logger        log.FieldLogger
-	RequestID     string
-	Environment   string
+	Store                             Store
+	Supervisor                        Supervisor
+	Provisioner                       Provisioner
+	DBProvider                        DBProvider
+	EventProducer                     EventProducer
+	AwsClient                         AwsClient
+	Metrics                           Metrics
+	Logger                            log.FieldLogger
+	InstallationDeletionExpiryDefault time.Duration
+	RequestID                         string
+	Environment                       string
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
 func (c *Context) Clone() *Context {
 	return &Context{
-		Store:         c.Store,
-		Supervisor:    c.Supervisor,
-		Provisioner:   c.Provisioner,
-		DBProvider:    c.DBProvider,
-		EventProducer: c.EventProducer,
-		AwsClient:     c.AwsClient,
-		Metrics:       c.Metrics,
-		Logger:        c.Logger,
+		Store:                             c.Store,
+		Supervisor:                        c.Supervisor,
+		Provisioner:                       c.Provisioner,
+		DBProvider:                        c.DBProvider,
+		EventProducer:                     c.EventProducer,
+		AwsClient:                         c.AwsClient,
+		Metrics:                           c.Metrics,
+		Logger:                            c.Logger,
+		InstallationDeletionExpiryDefault: c.InstallationDeletionExpiryDefault,
 	}
 }

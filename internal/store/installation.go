@@ -26,7 +26,7 @@ func init() {
 			"Installation.ID", "Installation.Name", "OwnerID", "Version", "Image", "Database", "Filestore", "Size",
 			"Affinity", "GroupID", "GroupSequence", "Installation.State", "License",
 			"MattermostEnvRaw", "PriorityEnvRaw", "SingleTenantDatabaseConfigRaw", "ExternalDatabaseConfigRaw",
-			"Installation.CreateAt", "Installation.DeleteAt",
+			"Installation.CreateAt", "Installation.DeleteAt", "Installation.DeletionPendingExpiry",
 			"APISecurityLock", "LockAcquiredBy", "LockAcquiredAt", "CRVersion",
 		).
 		From(installationTable)
@@ -426,27 +426,28 @@ func (sqlStore *SQLStore) createInstallation(db execer, installation *model.Inst
 	}
 
 	insertsMap := map[string]interface{}{
-		"Name":             installation.Name,
-		"ID":               installation.ID,
-		"OwnerID":          installation.OwnerID,
-		"GroupID":          installation.GroupID,
-		"GroupSequence":    nil,
-		"Version":          installation.Version,
-		"Image":            installation.Image,
-		"Database":         installation.Database,
-		"Filestore":        installation.Filestore,
-		"Size":             installation.Size,
-		"Affinity":         installation.Affinity,
-		"State":            installation.State,
-		"License":          installation.License,
-		"MattermostEnvRaw": envJSON,
-		"PriorityEnvRaw":   priorityEnvJSON,
-		"CreateAt":         installation.CreateAt,
-		"DeleteAt":         0,
-		"APISecurityLock":  installation.APISecurityLock,
-		"LockAcquiredBy":   nil,
-		"LockAcquiredAt":   0,
-		"CRVersion":        installation.CRVersion,
+		"Name":                  installation.Name,
+		"ID":                    installation.ID,
+		"OwnerID":               installation.OwnerID,
+		"GroupID":               installation.GroupID,
+		"GroupSequence":         nil,
+		"Version":               installation.Version,
+		"Image":                 installation.Image,
+		"Database":              installation.Database,
+		"Filestore":             installation.Filestore,
+		"Size":                  installation.Size,
+		"Affinity":              installation.Affinity,
+		"State":                 installation.State,
+		"License":               installation.License,
+		"MattermostEnvRaw":      envJSON,
+		"PriorityEnvRaw":        priorityEnvJSON,
+		"CreateAt":              installation.CreateAt,
+		"DeleteAt":              0,
+		"DeletionPendingExpiry": 0,
+		"APISecurityLock":       installation.APISecurityLock,
+		"LockAcquiredBy":        nil,
+		"LockAcquiredAt":        0,
+		"CRVersion":             installation.CRVersion,
 	}
 
 	singleTenantDBConfJSON, err := installation.SingleTenantDatabaseConfig.ToJSON()
@@ -493,7 +494,6 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal MattermostEnv")
 	}
-
 	priorityEnvJSON, err := json.Marshal(installation.PriorityEnv)
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal PriorityEnv")
@@ -502,21 +502,22 @@ func (sqlStore *SQLStore) updateInstallation(db execer, installation *model.Inst
 	_, err = sqlStore.execBuilder(db, sq.
 		Update("Installation").
 		SetMap(map[string]interface{}{
-			"Name":             installation.Name,
-			"OwnerID":          installation.OwnerID,
-			"GroupID":          installation.GroupID,
-			"GroupSequence":    installation.GroupSequence,
-			"Version":          installation.Version,
-			"Image":            installation.Image,
-			"Database":         installation.Database,
-			"Filestore":        installation.Filestore,
-			"Size":             installation.Size,
-			"Affinity":         installation.Affinity,
-			"License":          installation.License,
-			"MattermostEnvRaw": envJSON,
-			"PriorityEnvRaw":   priorityEnvJSON,
-			"State":            installation.State,
-			"CRVersion":        installation.CRVersion,
+			"Name":                  installation.Name,
+			"OwnerID":               installation.OwnerID,
+			"GroupID":               installation.GroupID,
+			"GroupSequence":         installation.GroupSequence,
+			"Version":               installation.Version,
+			"Image":                 installation.Image,
+			"Database":              installation.Database,
+			"Filestore":             installation.Filestore,
+			"Size":                  installation.Size,
+			"Affinity":              installation.Affinity,
+			"License":               installation.License,
+			"MattermostEnvRaw":      envJSON,
+			"PriorityEnvRaw":        priorityEnvJSON,
+			"State":                 installation.State,
+			"CRVersion":             installation.CRVersion,
+			"DeletionPendingExpiry": installation.DeletionPendingExpiry,
 		}).
 		Where("ID = ?", installation.ID),
 	)

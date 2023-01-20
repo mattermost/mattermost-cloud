@@ -2019,4 +2019,115 @@ var migrations = []migration{
 
 		return nil
 	}},
+	{semver.MustParse("0.40.0"), semver.MustParse("0.41.0"), func(e execer) error {
+		// Add DeletionPendingExpiry column for installations.
+
+		if e.DriverName() == driverPostgres {
+			_, err := e.Exec(`
+				ALTER TABLE Installation
+				ADD COLUMN DeletionPendingExpiry BIGINT NOT NULL DEFAULT '0';
+			`)
+			if err != nil {
+				return errors.Wrap(err, "failed to create DeletionPendingExpiry column")
+			}
+
+			_, err = e.Exec("ALTER TABLE Installation ALTER COLUMN DeletionPendingExpiry SET NOT NULL;")
+			if err != nil {
+				return errors.Wrap(err, "failed to remove not null expiry constraint")
+			}
+		} else if e.DriverName() == driverSqlite {
+			// We DROP DNS here and add NOT NULL for Name
+			_, err := e.Exec(`ALTER TABLE Installation RENAME TO InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+				CREATE TABLE Installation (
+					ID TEXT PRIMARY KEY,
+					OwnerID TEXT NOT NULL,
+					Name TEXT NOT NULL,
+					Version TEXT NOT NULL,
+					Image TEXT NOT NULL,
+					Database TEXT NOT NULL,
+					Filestore TEXT NOT NULL,
+					License TEXT NULL,
+					Size TEXT NOT NULL,
+					MattermostEnvRaw BYTEA NULL,
+					PriorityEnvRaw BYTEA NULL,
+					Affinity TEXT NOT NULL,
+					GroupSequence BIGINT NULL,
+					GroupID TEXT NULL,
+					State TEXT NOT NULL,
+					APISecurityLock NOT NULL DEFAULT FALSE,
+					SingleTenantDatabaseConfigRaw BYTEA NULL,
+					ExternalDatabaseConfigRaw BYTEA NULL,
+					CRVersion TEXT NOT NULL DEFAULT 'mattermost.com/v1alpha1',
+					CreateAt BIGINT NOT NULL,
+					DeleteAt BIGINT NOT NULL,
+					DeletionPendingExpiry BIGINT NOT NULL,
+					LockAcquiredBy TEXT NULL,
+					LockAcquiredAt BIGINT NOT NULL
+				);
+			`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`
+				INSERT INTO Installation
+				SELECT
+					ID,
+					OwnerID,
+					Name,
+					Version,
+					Image,
+					Database,
+					Filestore,
+					License,
+					Size,
+					MattermostEnvRaw,
+					PriorityEnvRaw,
+					Affinity,
+					GroupSequence,
+					GroupID,
+					State,
+					APISecurityLock,
+					SingleTenantDatabaseConfigRaw,
+					ExternalDatabaseConfigRaw,
+					CRVersion,
+					CreateAt,
+					DeleteAt,
+					'0',
+					LockAcquiredBy,
+					LockAcquiredAt
+				FROM
+					InstallationTemp;
+			`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`DROP TABLE InstallationTemp;`)
+			if err != nil {
+				return err
+			}
+
+			// Recreate indexes.
+			_, err = e.Exec("CREATE UNIQUE INDEX Installation_Name_DeleteAt ON Installation (Name, DeleteAt);")
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`CREATE INDEX ix_Installation_DeleteAt on Installation(DeleteAt)`)
+			if err != nil {
+				return err
+			}
+			_, err = e.Exec(`CREATE INDEX ix_Installation_State on Installation(State)`)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}},
 }

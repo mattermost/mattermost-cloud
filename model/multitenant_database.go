@@ -55,7 +55,7 @@ type MultitenantDatabase struct {
 // CreationDateString returns a standardized date string for a multitenant
 // database string.
 func (d *MultitenantDatabase) CreationDateString() string {
-	return GetDateString(d.CreateAt)
+	return DateStringFromMillis(d.CreateAt)
 }
 
 // LogicalDatabase represents a logical database inside a MultitenantDatabase.
