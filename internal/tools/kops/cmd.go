@@ -33,7 +33,7 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 		return nil, errors.Wrap(err, "failed to find kops installed on your PATH")
 	}
 
-	tempDir, err := os.CreateTemp("", "kops-")
+	tempDir, err := os.MkdirTemp("", "kops-")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create temporary kops directory")
 	}
@@ -41,7 +41,7 @@ func New(s3StateStore string, logger log.FieldLogger) (*Cmd, error) {
 	return &Cmd{
 		kopsPath:     kopsPath,
 		s3StateStore: s3StateStore,
-		tempDir:      tempDir.Name(),
+		tempDir:      tempDir,
 		logger:       logger,
 	}, nil
 }
