@@ -614,9 +614,9 @@ func executeInstallationRecoveryCmd(flags installationRecoveryFlags) error {
 		return errors.New("failed to acquire lock on multitenant database")
 	}
 	defer func() {
-		unlocked, err2 := sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
+		unlocked, errDefer := sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
 		if err != nil {
-			logger.WithError(err2).Error("Failed to unlock multitenant database")
+			logger.WithError(errDefer).Error("Failed to unlock multitenant database")
 			return
 		}
 		if !unlocked {
@@ -726,11 +726,12 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	}
 	output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
 	if model.IsMultiTenantRDS(installation.Database) {
-		databases, err2 := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
+		var databases []*model.MultitenantDatabase
+		databases, err = client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 			Paging: model.AllPagesWithDeleted(),
 		})
-		if err2 != nil {
-			return errors.Wrap(err2, "failed to query installation database")
+		if err != nil {
+			return errors.Wrap(err, "failed to query installation database")
 		}
 		for _, database := range databases {
 			if database.Installations.Contains(installation.ID) {
@@ -742,24 +743,27 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 			}
 		}
 		if installation.Database == model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer {
-			schemas, err2 := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+			var schemas []*model.DatabaseSchema
+			schemas, err = client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
 				InstallationID: flags.installationID,
 				Paging:         model.AllPagesWithDeleted(),
 			})
-			if err2 != nil {
-				return errors.Wrap(err2, "failed to query installation database schema")
+			if err != nil {
+				return errors.Wrap(err, "failed to query installation database schema")
 			}
 			for _, schema := range schemas {
-				logicalDatabase, err3 := client.GetLogicalDatabase(schema.LogicalDatabaseID)
-				if err3 != nil {
-					return errors.Wrap(err3, "failed to query installation logical database")
+				var logicalDatabase *model.LogicalDatabase
+				logicalDatabase, err = client.GetLogicalDatabase(schema.LogicalDatabaseID)
+				if err != nil {
+					return errors.Wrap(err, "failed to query installation logical database")
 				}
-				schemasInLogicalDatabase, err4 := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+				var schemasInLogicalDatabase []*model.DatabaseSchema
+				schemasInLogicalDatabase, err = client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
 					LogicalDatabaseID: logicalDatabase.ID,
 					Paging:            model.AllPagesNotDeleted(),
 				})
-				if err4 != nil {
-					return errors.Wrap(err4, "failed to query schemas in logical database")
+				if err != nil {
+					return errors.Wrap(err, "failed to query schemas in logical database")
 				}
 				output += fmt.Sprintf(" │   ├ Logical Database: %s\n", logicalDatabase.ID)
 				output += fmt.Sprintf(" │   ├ Name: %s\n", logicalDatabase.Name)
@@ -782,9 +786,10 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	output += fmt.Sprintf(" ├ Filestore Type: %s\n", installation.Filestore)
 
 	if installation.GroupID != nil && len(*installation.GroupID) != 0 {
-		group, err2 := client.GetGroup(*installation.GroupID)
-		if err2 != nil {
-			return errors.Wrap(err2, "failed to query installation group")
+		var group *model.GroupDTO
+		group, err = client.GetGroup(*installation.GroupID)
+		if err != nil {
+			return errors.Wrap(err, "failed to query installation group")
 		}
 		output += fmt.Sprintf(" ├ Group: %s\n", group.ID)
 		output += fmt.Sprintf(" │ ├ Name: %s\n", group.Name)

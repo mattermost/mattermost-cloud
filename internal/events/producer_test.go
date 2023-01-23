@@ -40,13 +40,13 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
-		payload, err2 := model.WebhookPayloadFromReader(r.Body)
-		require.NoError(t, err2)
+		payload, errHandler := model.WebhookPayloadFromReader(r.Body)
+		require.NoError(t, errHandler)
 		webhookChan <- payload
 	})
 	r.HandleFunc("/event", func(w http.ResponseWriter, r *http.Request) {
-		payload, err3 := model.NewStateChangeEventPayloadFromReader(r.Body)
-		require.NoError(t, err3)
+		payload, errHandler := model.NewStateChangeEventPayloadFromReader(r.Body)
+		require.NoError(t, errHandler)
 		eventChan <- payload
 	})
 

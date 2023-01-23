@@ -471,8 +471,8 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(clusterInstallation.Namespace)
 
 	defer func() {
-		err2 := jobsClient.Delete(ctx, jobName, metav1.DeleteOptions{})
-		if err2 != nil && !k8sErrors.IsNotFound(err2) {
+		errDefer := jobsClient.Delete(ctx, jobName, metav1.DeleteOptions{})
+		if errDefer != nil && !k8sErrors.IsNotFound(errDefer) {
 			logger.Errorf("Failed to cleanup exec job: %q", jobName)
 		}
 	}()

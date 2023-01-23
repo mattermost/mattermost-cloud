@@ -204,16 +204,16 @@ func (s *InstallationDBRestorationSupervisor) triggerRestoration(restoration *mo
 	}
 
 	if restoration.ClusterInstallationID == "" {
-		restoreCI, ciLock, err2 := claimClusterInstallation(s.store, installation, instanceID, logger)
-		if err2 != nil {
-			logger.WithError(err2).Error("Failed to claim Cluster Installation for restoration")
+		restoreCI, ciLock, errIf := claimClusterInstallation(s.store, installation, instanceID, logger)
+		if errIf != nil {
+			logger.WithError(errIf).Error("Failed to claim Cluster Installation for restoration")
 			return restoration.State
 		}
 		defer ciLock.Unlock()
 		restoration.ClusterInstallationID = restoreCI.ID
-		err2 = s.store.UpdateInstallationDBRestorationOperation(restoration)
-		if err2 != nil {
-			logger.WithError(err2).Error("Failed to assign cluster installation to restoration")
+		errIf = s.store.UpdateInstallationDBRestorationOperation(restoration)
+		if errIf != nil {
+			logger.WithError(errIf).Error("Failed to assign cluster installation to restoration")
 			return restoration.State
 		}
 	}
@@ -325,15 +325,16 @@ func (s *InstallationDBRestorationSupervisor) cleanupRestoration(restoration *mo
 		return restoration.State
 	}
 	if backup != nil {
-		cluster, err2 := getClusterForClusterInstallation(s.store, restoration.ClusterInstallationID)
-		if err2 != nil {
-			logger.WithError(err2).Error("Failed to get cluster for restoration")
+		var cluster *model.Cluster
+		cluster, err = getClusterForClusterInstallation(s.store, restoration.ClusterInstallationID)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get cluster for restoration")
 			return restoration.State
 		}
 
-		err2 = s.restoreOperator.CleanupRestoreJob(backup, cluster)
-		if err2 != nil {
-			logger.WithError(err2).Error("Failed to cleanup backup from cluster")
+		err = s.restoreOperator.CleanupRestoreJob(backup, cluster)
+		if err != nil {
+			logger.WithError(err).Error("Failed to cleanup backup from cluster")
 			return restoration.State
 		}
 	}

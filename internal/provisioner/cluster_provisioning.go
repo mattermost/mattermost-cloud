@@ -17,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -229,9 +230,10 @@ func provisionCluster(
 	}
 
 	for deployment, namespace := range appsWithDeployment {
-		pods, err2 := k8sClient.GetPodsFromDeployment(namespace, deployment)
-		if err2 != nil {
-			return err2
+		var pods *v1.PodList
+		pods, err = k8sClient.GetPodsFromDeployment(namespace, deployment)
+		if err != nil {
+			return err
 		}
 		if len(pods.Items) == 0 {
 			return fmt.Errorf("no pods found from %q deployment", deployment)
@@ -239,11 +241,11 @@ func provisionCluster(
 
 		for _, pod := range pods.Items {
 			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, deployment, pod.GetName())
-			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel2()
-			_, err3 := k8sClient.WaitForPodRunning(ctx2, namespace, pod.GetName())
-			if err3 != nil {
-				return err3
+			ctxGetPods, cancelGetPods := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancelGetPods()
+			_, err = k8sClient.WaitForPodRunning(ctxGetPods, namespace, pod.GetName())
+			if err != nil {
+				return err
 			}
 			logger.Infof("Successfully deployed service pod %q", pod.GetName())
 		}
@@ -255,24 +257,25 @@ func provisionCluster(
 	}
 
 	for _, operator := range operatorsWithStatefulSet {
-		pods, err2 := k8sClient.GetPodsFromStatefulset(operator, operator)
-		if err2 != nil {
-			return err2
+		var pods *v1.PodList
+		pods, err = k8sClient.GetPodsFromStatefulset(operator, operator)
+		if err != nil {
+			return err
 		}
 		if len(pods.Items) == 0 {
 			return fmt.Errorf("no pods found from %q statefulSet", operator)
 		}
 
 		for _, pod := range pods.Items {
-
 			logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, operator, pod.GetName())
-			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel2()
-			pod, err3 := k8sClient.WaitForPodRunning(ctx2, operator, pod.GetName())
-			if err3 != nil {
-				return err3
+			ctxPodRunning, cancelPodRunning := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancelPodRunning()
+			var podRunning *v1.Pod
+			podRunning, err = k8sClient.WaitForPodRunning(ctxPodRunning, operator, pod.GetName())
+			if err != nil {
+				return err
 			}
-			logger.Infof("Successfully deployed service pod %q", pod.GetName())
+			logger.Infof("Successfully deployed service pod %q", podRunning.GetName())
 		}
 	}
 
@@ -284,11 +287,11 @@ func provisionCluster(
 	for daemonSet, namespace := range supportAppsWithDaemonSets {
 		if daemonSet == "k8s-spot-termination-handler" && (len(os.Getenv(model.MattermostChannel)) > 0 || len(os.Getenv(model.MattermostWebhook)) > 0) {
 			logger.Infof("Waiting up to %d seconds for %q daemonset to get it...", wait, daemonSet)
-			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel2()
-			daemonSetObj, err2 := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctx2, daemonSet, metav1.GetOptions{})
-			if err2 != nil {
-				return errors.Wrapf(err2, " failed to get daemonSet %s", daemonSet)
+			ctxDomainSets, cancelDomainSets := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancelDomainSets()
+			daemonSetObj, errFor := k8sClient.Clientset.AppsV1().DaemonSets(namespace).Get(ctxDomainSets, daemonSet, metav1.GetOptions{})
+			if errFor != nil {
+				return errors.Wrapf(errFor, " failed to get daemonSet %s", daemonSet)
 			}
 			var payload []k8s.PatchStringValue
 			if daemonSetObj.Spec.Selector != nil {
@@ -318,15 +321,16 @@ func provisionCluster(
 					}
 				}
 
-				err2 = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
-				if err2 != nil {
-					return err2
+				errFor = k8sClient.PatchPodsDaemonSet("kube-system", "k8s-spot-termination-handler", payload)
+				if errFor != nil {
+					return errFor
 				}
 			}
 		}
-		pods, err3 := k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
-		if err3 != nil {
-			return err3
+		var pods *v1.PodList
+		pods, err = k8sClient.GetPodsFromDaemonSet(namespace, daemonSet)
+		if err != nil {
+			return err
 		}
 		// Pods for k8s-spot-termination-handler do not ment to be schedule in every cluster so doesn't need to fail provision in this case/
 		if len(pods.Items) == 0 && daemonSet != "k8s-spot-termination-handler" {
@@ -335,11 +339,11 @@ func provisionCluster(
 
 		for _, pod := range pods.Items {
 			logger.Infof("Waiting up to %d seconds for %q/%q pod %q to start...", wait, namespace, daemonSet, pod.GetName())
-			ctx3, cancel2 := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
-			defer cancel2()
-			pod, err4 := k8sClient.WaitForPodRunning(ctx3, namespace, pod.GetName())
-			if err4 != nil {
-				return err4
+			contextWait, cancelWait := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
+			defer cancelWait()
+			_, err = k8sClient.WaitForPodRunning(contextWait, namespace, pod.GetName())
+			if err != nil {
+				return err
 			}
 			logger.Infof("Successfully deployed support apps pod %q", pod.GetName())
 		}

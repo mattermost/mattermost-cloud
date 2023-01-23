@@ -55,9 +55,10 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	}
 
 	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
-		isAMIValid, err2 := awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
-		if err2 != nil {
-			return errors.Wrapf(err2, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		var isAMIValid bool
+		isAMIValid, err = awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
 		}
 		if !isAMIValid {
 			return errors.Errorf("invalid AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
@@ -301,9 +302,10 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	}
 
 	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
-		isAMIValid, err2 := awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
-		if err2 != nil {
-			return errors.Wrapf(err2, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
+		var isAMIValid bool
+		isAMIValid, err = awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
 		}
 		if !isAMIValid {
 			return errors.Errorf("invalid AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)

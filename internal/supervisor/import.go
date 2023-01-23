@@ -144,22 +144,22 @@ func (s *ImportSupervisor) Do() error {
 			attempts := 0
 
 			expBackoff := utils.NewExponentialBackoff(time.Second*5, time.Minute*10, time.Minute*30)
-			err2 := expBackoff.Retry(func() error {
+			err = expBackoff.Retry(func() error {
 				attempts++
-				err3 := s.awatClient.CompleteImport(
+				err = s.awatClient.CompleteImport(
 					&awat.ImportCompletedWorkRequest{
 						ID:         work.ID,
 						CompleteAt: completeAt,
 						Error:      workError,
 					})
-				if err3 != nil {
-					s.logger.WithError(err3).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
+				if err != nil {
+					s.logger.WithError(err).Errorf("failed to report error to AWAT for Import %s at %d attempt(s)", work.ID, attempts)
 				}
-				return err3
+				return err
 			})
 
-			if err2 != nil {
-				s.logger.WithError(err2).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
+			if err != nil {
+				s.logger.WithError(err).Errorf("failed retry to report error to AWAT for Import %s after %d attempts", work.ID, attempts)
 			}
 		}()
 	}

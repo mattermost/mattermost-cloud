@@ -232,8 +232,8 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Run("return -1 start time if not finished", func(t *testing.T) {
-				timestamp, err2 := testCase.checkFunc(jobClient, backupMeta, logrus.New())
-				require.NoError(t, err2)
+				timestamp, errTest := testCase.checkFunc(jobClient, backupMeta, logrus.New())
+				require.NoError(t, errTest)
 				assert.Equal(t, int64(-1), timestamp)
 			})
 

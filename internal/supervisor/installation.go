@@ -301,9 +301,10 @@ func (s *InstallationSupervisor) Supervise(installation *model.Installation) {
 		}
 		defer groupLock.Unlock()
 
-		group, err2 := s.store.GetGroup(*installation.GroupID)
-		if err2 != nil {
-			logger.WithError(err2).Error("Failed to get group for final configuration check")
+		var group *model.Group
+		group, err = s.store.GetGroup(*installation.GroupID)
+		if err != nil {
+			logger.WithError(err).Error("Failed to get group for final configuration check")
 			return
 		}
 		if *installation.GroupSequence != group.Sequence {
@@ -1227,9 +1228,10 @@ func (s *InstallationSupervisor) finalDeletionCleanup(installation *model.Instal
 	// Backups are stored in Installations file store, therefore if file store is deleted
 	// the backups will be deleted also.
 	if !s.keepFilestoreData {
-		finished, err2 := s.deleteBackups(installation, instanceID, logger)
-		if err2 != nil {
-			logger.WithError(err2).Error("Failed to delete backups")
+		var finished bool
+		finished, err = s.deleteBackups(installation, instanceID, logger)
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete backups")
 			return model.InstallationStateDeletionFinalCleanup
 		}
 		if !finished {

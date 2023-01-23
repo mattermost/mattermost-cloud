@@ -173,10 +173,11 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if createInstallationRequest.GroupID == "" && len(createInstallationRequest.GroupSelectionAnnotations) > 0 {
-		groupID, err2 := selectGroupForAnnotation(c, createInstallationRequest.GroupSelectionAnnotations)
-		if err2 != nil {
-			c.Logger.WithError(err2).Error("Failed to select group based on annotations")
-			w.WriteHeader(common.ErrToStatus(err2))
+		var groupID string
+		groupID, err = selectGroupForAnnotation(c, createInstallationRequest.GroupSelectionAnnotations)
+		if err != nil {
+			c.Logger.WithError(err).Error("Failed to select group based on annotations")
+			w.WriteHeader(common.ErrToStatus(err))
 			return
 		}
 		createInstallationRequest.GroupID = groupID

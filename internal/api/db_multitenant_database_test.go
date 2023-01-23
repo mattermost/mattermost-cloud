@@ -255,15 +255,15 @@ func TestUpdateMultitenantDatabase(t *testing.T) {
 	})
 
 	t.Run("update", func(t *testing.T) {
-		databaseUpdate, err2 := client.UpdateMultitenantDatabase(database1.ID,
+		databaseUpdate, errTest := client.UpdateMultitenantDatabase(database1.ID,
 			&model.PatchMultitenantDatabaseRequest{
 				MaxInstallationsPerLogicalDatabase: iToP(10),
 			})
-		require.NoError(t, err2)
+		require.NoError(t, errTest)
 		assert.Equal(t, int64(10), databaseUpdate.MaxInstallationsPerLogicalDatabase)
 
-		databaseUpdate2, err3 := sqlStore.GetMultitenantDatabase(database1.ID)
-		require.NoError(t, err3)
+		databaseUpdate2, errTest := sqlStore.GetMultitenantDatabase(database1.ID)
+		require.NoError(t, errTest)
 		assert.Equal(t, int64(10), databaseUpdate2.MaxInstallationsPerLogicalDatabase)
 	})
 }
