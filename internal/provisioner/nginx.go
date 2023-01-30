@@ -113,18 +113,13 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
-	clusterResources, err := n.awsClient.GetVpcResources(n.cluster.ID, n.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrive the VPC information")
-	}
-
 	return newHelmDeployment(
 		"ingress-nginx/ingress-nginx",
 		"nginx",
 		"nginx",
 		n.kubeconfigPath,
 		n.desiredVersion,
-		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s,controller.config.proxy-real-ip-cidr=%s", *certificate.ARN, clusterResources.VpcCIDR),
+		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
 		n.logger,
 	), nil
 }
