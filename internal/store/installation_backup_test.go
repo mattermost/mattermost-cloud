@@ -338,8 +338,8 @@ func TestUpdateInstallationBackup(t *testing.T) {
 		errTest := sqlStore.UpdateInstallationBackupStartTime(backup)
 		require.NoError(t, errTest)
 
-		fetched, errTeest := sqlStore.GetInstallationBackup(backup.ID)
-		require.NoError(t, errTeest)
+		fetched, errTest := sqlStore.GetInstallationBackup(backup.ID)
+		require.NoError(t, errTest)
 		assert.Equal(t, startTime, fetched.StartAt)
 		assert.Equal(t, originalCIId, fetched.ClusterInstallationID) // Assert ClusterInstallationID not updated
 	})
