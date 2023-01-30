@@ -143,23 +143,9 @@ func newCmdInstallationUpdate() *cobra.Command {
 			command.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
-			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
+			request, err := flags.GetPatchInstallationRequest()
 			if err != nil {
 				return err
-			}
-			priorityEnvVarMap, err := parseEnvVarInput(flags.priorityEnv, flags.priorityEnvClear)
-			if err != nil {
-				return err
-			}
-
-			request := &model.PatchInstallationRequest{
-				OwnerID:       &flags.ownerID,
-				Version:       &flags.version,
-				Image:         &flags.image,
-				Size:          &flags.size,
-				License:       &flags.license,
-				MattermostEnv: envVarMap,
-				PriorityEnv:   priorityEnvVarMap,
 			}
 
 			if flags.dryRun {
@@ -175,8 +161,10 @@ func newCmdInstallationUpdate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.installationPatchRequestChanges.addFlags(cmd)
 		},
 	}
+
 	flags.addFlags(cmd)
 
 	return cmd
@@ -303,18 +291,9 @@ func newCmdInstallationWakeup() *cobra.Command {
 			command.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
 
-			envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
+			request, err := flags.GetPatchInstallationRequest()
 			if err != nil {
 				return err
-			}
-
-			request := &model.PatchInstallationRequest{
-				OwnerID:       &flags.ownerID,
-				Version:       &flags.version,
-				Image:         &flags.image,
-				Size:          &flags.size,
-				License:       &flags.license,
-				MattermostEnv: envVarMap,
 			}
 
 			installation, err := client.WakeupInstallation(flags.installationID, request)
@@ -326,6 +305,7 @@ func newCmdInstallationWakeup() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
+			flags.installationPatchRequestChanges.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)

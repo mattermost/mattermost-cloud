@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import (
@@ -73,7 +77,24 @@ func (flags *installationCreateFlags) addFlags(command *cobra.Command) {
 	_ = command.MarkFlagRequired("dns")
 }
 
+type installationPatchRequestChanges struct {
+	ownerIDChanged bool
+	versionCHanged bool
+	imageChanged   bool
+	sizeChanged    bool
+	licenseChanged bool
+}
+
+func (flags *installationPatchRequestChanges) addFlags(command *cobra.Command) {
+	flags.ownerIDChanged = command.Flags().Changed("owner")
+	flags.versionCHanged = command.Flags().Changed("version")
+	flags.imageChanged = command.Flags().Changed("image")
+	flags.sizeChanged = command.Flags().Changed("size")
+	flags.licenseChanged = command.Flags().Changed("license")
+}
+
 type installationPatchRequestOptions struct {
+	installationPatchRequestChanges
 	ownerID            string
 	version            string
 	image              string
@@ -89,10 +110,34 @@ func (flags *installationPatchRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.image, "image", "mattermost/mattermost-enterprise-edition", "The Mattermost container image to use.")
 	command.Flags().StringVar(&flags.size, "size", model.InstallationDefaultSize, "The size of the installation. Accepts 100users, 1000users, 5000users, 10000users, 25000users, miniSingleton, or miniHA. Defaults to 100users.")
 	command.Flags().StringVar(&flags.license, "license", "", "The Mattermost License to use in the server.")
-
 	command.Flags().StringArrayVar(&flags.mattermostEnv, "mattermost-env", []string{}, "Env vars to add to the Mattermost App. Accepts format: KEY_NAME=VALUE. Use the flag multiple times to set multiple env vars.")
 	command.Flags().BoolVar(&flags.mattermostEnvClear, "mattermost-env-clear", false, "Clears all env var data.")
+}
 
+func (flags *installationPatchRequestOptions) GetPatchInstallationRequest() *model.PatchInstallationRequest {
+	request := model.PatchInstallationRequest{}
+
+	if flags.ownerIDChanged {
+		request.OwnerID = &flags.ownerID
+	}
+
+	if flags.versionCHanged {
+		request.Version = &flags.version
+	}
+
+	if flags.imageChanged {
+		request.Image = &flags.image
+	}
+
+	if flags.sizeChanged {
+		request.Size = &flags.size
+	}
+
+	if flags.licenseChanged {
+		request.License = &flags.license
+	}
+
+	return &request
 }
 
 type installationUpdateFlags struct {
@@ -111,6 +156,25 @@ func (flags *installationUpdateFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.priorityEnvClear, "priority-env-clear", false, "Clears all priority env var data.")
 
 	_ = command.MarkFlagRequired("installation")
+}
+
+func (flags *installationUpdateFlags) GetPatchInstallationRequest() (*model.PatchInstallationRequest, error) {
+	request := flags.installationPatchRequestOptions.GetPatchInstallationRequest()
+
+	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
+	if err != nil {
+		return nil, err
+	}
+
+	priorityEnv, err := parseEnvVarInput(flags.priorityEnv, flags.priorityEnvClear)
+	if err != nil {
+		return nil, err
+	}
+
+	request.MattermostEnv = envVarMap
+	request.PriorityEnv = priorityEnv
+
+	return request, nil
 }
 
 type installationDeleteFlags struct {
@@ -183,6 +247,19 @@ func (flags *installationWakeupFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().StringVar(&flags.installationID, "installation", "", "The id of the installation to wake up from hibernation.")
 	_ = command.MarkFlagRequired("installation")
+}
+
+func (flags *installationWakeupFlags) GetPatchInstallationRequest() (*model.PatchInstallationRequest, error) {
+	request := flags.installationPatchRequestOptions.GetPatchInstallationRequest()
+
+	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
+	if err != nil {
+		return nil, err
+	}
+
+	request.MattermostEnv = envVarMap
+
+	return request, nil
 }
 
 type installationGetFlags struct {
