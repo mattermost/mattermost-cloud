@@ -5,8 +5,10 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -86,7 +88,10 @@ func (n *nginx) CreateOrUpgrade() error {
 
 func (n *nginx) addLoadBalancerNameTag() error {
 
-	endpoint, elbType, err := getElasticLoadBalancerInfo(namespaceNginx, n.logger, n.kubeconfigPath)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(5)*time.Minute)
+	defer cancel()
+
+	endpoint, elbType, err := getElasticLoadBalancerInfo(ctx, namespaceNginx, n.logger, n.kubeconfigPath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get the loadbalancer endpoint (nginx)")
 	}

@@ -120,29 +120,35 @@ func getPrivateLoadBalancerEndpoint(ctx context.Context, namespace string, logge
 }
 
 // getElasticLoadBalancerInfo returns the private load balancer endpoint and type of the NGINX service.
-func getElasticLoadBalancerInfo(namespace string, logger log.FieldLogger, configPath string) (string, string, error) {
+func getElasticLoadBalancerInfo(ctx context.Context, namespace string, logger log.FieldLogger, configPath string) (string, string, error) {
 	k8sClient, err := k8s.NewFromFile(configPath, logger)
 	if err != nil {
 		return "", "", err
 	}
 
-	services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return "", "", err
-	}
+	for {
+		services, err := k8sClient.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return "", "", err
+		}
 
-	for _, service := range services.Items {
-		if service.Spec.Type == "LoadBalancer" {
-			if service.Status.LoadBalancer.Ingress != nil {
-				endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
-				if endpoint != "" {
-					return endpoint, service.Annotations["service.beta.kubernetes.io/aws-load-balancer-type"], nil
+		for _, service := range services.Items {
+			if service.Spec.Type == "LoadBalancer" {
+				if service.Status.LoadBalancer.Ingress != nil {
+					endpoint := service.Status.LoadBalancer.Ingress[0].Hostname
+					if endpoint != "" {
+						return endpoint, service.Annotations["service.beta.kubernetes.io/aws-load-balancer-type"], nil
+					}
 				}
 			}
 		}
-	}
 
-	return "", "", nil
+		select {
+		case <-ctx.Done():
+			return "", "", errors.Wrap(ctx.Err(), "timed out waiting for internal load balancer to become ready")
+		case <-time.After(5 * time.Second):
+		}
+	}
 }
 
 // GetPublicLoadBalancerEndpoint returns the public load balancer endpoint of the NGINX service.
