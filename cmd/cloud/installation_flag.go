@@ -161,7 +161,7 @@ func (flags *installationUpdateFlags) addFlags(command *cobra.Command) {
 func (flags *installationUpdateFlags) GetPatchInstallationRequest() (*model.PatchInstallationRequest, error) {
 	request := flags.installationPatchRequestOptions.GetPatchInstallationRequest()
 
-	envVarMap, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
+	mattermostEnv, err := parseEnvVarInput(flags.mattermostEnv, flags.mattermostEnvClear)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (flags *installationUpdateFlags) GetPatchInstallationRequest() (*model.Patc
 		return nil, err
 	}
 
-	request.MattermostEnv = envVarMap
+	request.MattermostEnv = mattermostEnv
 	request.PriorityEnv = priorityEnv
 
 	return request, nil
