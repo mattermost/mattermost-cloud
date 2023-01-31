@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -29,6 +30,7 @@ func newCmdInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdInstallationCreate())
 	cmd.AddCommand(newCmdInstallationUpdate())
 	cmd.AddCommand(newCmdInstallationDelete())
+	cmd.AddCommand(newCmdInstallationUpdateDeletion())
 	cmd.AddCommand(newCmdInstallationCancelDeletion())
 	cmd.AddCommand(newCmdInstallationHibernate())
 	cmd.AddCommand(newCmdInstallationWakeup())
@@ -58,7 +60,6 @@ func newCmdInstallationCreate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -97,8 +98,9 @@ func executeInstallationCreateCmd(flags installationCreateFlags) error {
 
 	// For CLI to be backward compatible, if only one DNS is passed we use
 	// the old field.
+	// TODO: properly replace with DNSNames
 	if len(flags.dns) == 1 {
-		request.DNS = flags.dns[0]
+		request.DNS = flags.dns[0] //nolint
 	} else {
 		request.DNSNames = flags.dns
 	}
@@ -136,7 +138,7 @@ func newCmdInstallationUpdate() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update an installation's configuration",
+		Short: "Update an installation's configuration.",
 		RunE: func(command *cobra.Command, args []string) error {
 			command.SilenceUsage = true
 			client := model.NewClient(flags.serverAddress)
@@ -173,7 +175,6 @@ func newCmdInstallationUpdate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -198,7 +199,43 @@ func newCmdInstallationDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func newCmdInstallationUpdateDeletion() *cobra.Command {
+	var flags installationUpdateDeletionFlags
+
+	cmd := &cobra.Command{
+		Use:   "update-deletion",
+		Short: "Updates the pending deletion parameters of an installation.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			client := model.NewClient(flags.serverAddress)
+
+			request := &model.PatchInstallationDeletionRequest{}
+			if flags.installationDeletionPatchRequestOptionsChanged.futureDeletionTimeChanged {
+				newExpiryTimeMillis := model.GetMillisAtTime(time.Now().Add(flags.futureDeletionTime))
+				request.DeletionPendingExpiry = &newExpiryTimeMillis
+			}
+
+			if flags.dryRun {
+				return runDryRun(request)
+			}
+
+			installation, err := client.UpdateInstallationDeletion(flags.installationID, request)
+			if err != nil {
+				return errors.Wrap(err, "failed to update installation deletion parameters")
+			}
+
+			return printJSON(installation)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.clusterFlags.addFlags(cmd)
+			flags.installationDeletionPatchRequestOptionsChanged.addFlags(cmd)
 		},
 	}
 	flags.addFlags(cmd)
@@ -223,7 +260,6 @@ func newCmdInstallationCancelDeletion() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -250,7 +286,6 @@ func newCmdInstallationHibernate() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -291,7 +326,6 @@ func newCmdInstallationWakeup() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -330,7 +364,6 @@ func newCmdInstallationGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -350,7 +383,6 @@ func newCmdInstallationList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -483,7 +515,6 @@ func newCmdInstallationRecovery() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -583,9 +614,9 @@ func executeInstallationRecoveryCmd(flags installationRecoveryFlags) error {
 		return errors.New("failed to acquire lock on multitenant database")
 	}
 	defer func() {
-		unlocked, err := sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
+		unlocked, errDefer := sqlStore.UnlockMultitenantDatabase(db.ID, instanceID, false)
 		if err != nil {
-			logger.WithError(err).Error("Failed to unlock multitenant database")
+			logger.WithError(errDefer).Error("Failed to unlock multitenant database")
 			return
 		}
 		if !unlocked {
@@ -645,7 +676,6 @@ func newCmdInstallationDeploymentReport() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -667,13 +697,21 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 		return nil
 	}
 
+	var dnsName string
+	if len(installation.DNSRecords) > 0 {
+		dnsName = installation.DNSRecords[0].DomainName
+	}
+
 	output := fmt.Sprintf("Installation: %s\n", installation.ID)
 	output += fmt.Sprintf(" ├ Created: %s\n", installation.CreationDateString())
 	output += fmt.Sprintf(" ├ State: %s\n", installation.State)
-	if installation.State == model.InstallationStateDeleted {
+	switch installation.State {
+	case model.InstallationStateDeleted:
 		output += fmt.Sprintf(" │ └ Deleted: %s\n", installation.DeletionDateString())
+	case model.InstallationStateDeletionPending:
+		output += fmt.Sprintf(" │ └ Scheduled Deletion: %s\n", installation.DeletionPendingExpiryCompleteTimeString())
 	}
-	output += fmt.Sprintf(" ├ DNS: %s\n", installation.DNS)
+	output += fmt.Sprintf(" ├ DNS: %s\n", dnsName)
 	output += fmt.Sprintf(" ├ Version: %s:%s\n", installation.Image, installation.Version)
 	output += fmt.Sprintf(" ├ Size: %s\n", installation.Size)
 	output += fmt.Sprintf(" ├ Affinity: %s\n", installation.Affinity)
@@ -688,7 +726,8 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	}
 	output += fmt.Sprintf(" ├ Database Type: %s\n", installation.Database)
 	if model.IsMultiTenantRDS(installation.Database) {
-		databases, err := client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
+		var databases []*model.MultitenantDatabase
+		databases, err = client.GetMultitenantDatabases(&model.GetMultitenantDatabasesRequest{
 			Paging: model.AllPagesWithDeleted(),
 		})
 		if err != nil {
@@ -704,7 +743,8 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 			}
 		}
 		if installation.Database == model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer {
-			schemas, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+			var schemas []*model.DatabaseSchema
+			schemas, err = client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
 				InstallationID: flags.installationID,
 				Paging:         model.AllPagesWithDeleted(),
 			})
@@ -712,11 +752,13 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 				return errors.Wrap(err, "failed to query installation database schema")
 			}
 			for _, schema := range schemas {
-				logicalDatabase, err := client.GetLogicalDatabase(schema.LogicalDatabaseID)
+				var logicalDatabase *model.LogicalDatabase
+				logicalDatabase, err = client.GetLogicalDatabase(schema.LogicalDatabaseID)
 				if err != nil {
 					return errors.Wrap(err, "failed to query installation logical database")
 				}
-				schemasInLogicalDatabase, err := client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
+				var schemasInLogicalDatabase []*model.DatabaseSchema
+				schemasInLogicalDatabase, err = client.GetDatabaseSchemas(&model.GetDatabaseSchemaRequest{
 					LogicalDatabaseID: logicalDatabase.ID,
 					Paging:            model.AllPagesNotDeleted(),
 				})
@@ -744,7 +786,8 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	output += fmt.Sprintf(" ├ Filestore Type: %s\n", installation.Filestore)
 
 	if installation.GroupID != nil && len(*installation.GroupID) != 0 {
-		group, err := client.GetGroup(*installation.GroupID)
+		var group *model.GroupDTO
+		group, err = client.GetGroup(*installation.GroupID)
 		if err != nil {
 			return errors.Wrap(err, "failed to query installation group")
 		}
@@ -776,7 +819,7 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 	}
 
 	if flags.eventCount > 0 {
-		output += fmt.Sprintf("\nRecent Events:\n")
+		output += "\nRecent Events:\n"
 
 		req := model.ListStateChangeEventsRequest{
 			Paging: model.Paging{
@@ -793,7 +836,7 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 			return err
 		}
 		for _, event := range events {
-			output += fmt.Sprintf("%s - %s > %s\n", model.TimeFromMillis(event.Event.Timestamp).Format("2006-01-02 15:04:05 MST"), event.StateChange.OldState, event.StateChange.NewState)
+			output += fmt.Sprintf("%s - %s > %s\n", model.DateTimeStringFromMillis(event.Event.Timestamp), event.StateChange.OldState, event.StateChange.NewState)
 		}
 	}
 

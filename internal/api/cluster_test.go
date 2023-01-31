@@ -147,88 +147,92 @@ func TestClusters(t *testing.T) {
 		require.Equal(t, model.ClusterStateCreationRequested, actualCluster3.State)
 
 		t.Run("get clusters, page 0, perPage 2, exclude deleted", func(t *testing.T) {
-			clusters, err := client.GetClusters(&model.GetClustersRequest{
+			clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 				Paging: model.Paging{
 					Page:           0,
 					PerPage:        2,
 					IncludeDeleted: false,
 				},
 			})
-			require.NoError(t, err)
+			require.NoError(t, errTest)
 			require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
 		})
 
 		t.Run("get clusters, page 1, perPage 2, exclude deleted", func(t *testing.T) {
-			clusters, err := client.GetClusters(&model.GetClustersRequest{
+			clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 				Paging: model.Paging{
 					Page:           1,
 					PerPage:        2,
 					IncludeDeleted: false,
 				},
 			})
-			require.NoError(t, err)
+			require.NoError(t, errTest)
 			require.Equal(t, []*model.ClusterDTO{cluster3.ToDTO(nil)}, clusters)
 		})
 
 		t.Run("delete cluster", func(t *testing.T) {
 			cluster2.State = model.ClusterStateStable
-			err := sqlStore.UpdateCluster(cluster2.Cluster)
-			require.NoError(t, err)
+			errTest := sqlStore.UpdateCluster(cluster2.Cluster)
+			require.NoError(t, errTest)
 
-			err = client.DeleteCluster(cluster2.ID)
-			require.NoError(t, err)
+			errTest = client.DeleteCluster(cluster2.ID)
+			require.NoError(t, errTest)
 
-			cluster2, err = client.GetCluster(cluster2.ID)
-			require.NoError(t, err)
-			require.Equal(t, model.ClusterStateDeletionRequested, cluster2.State)
+			cluster4, errTest := client.GetCluster(cluster2.ID)
+			require.NoError(t, errTest)
+			require.Equal(t, model.ClusterStateDeletionRequested, cluster4.State)
 		})
 
 		t.Run("get clusters after deletion request", func(t *testing.T) {
 			t.Run("page 0, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				cluster2Updated, errTest := client.GetCluster(cluster2.ID)
+				require.NoError(t, errTest)
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: false,
 					},
 				})
-				require.NoError(t, err)
-				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
+				require.NoError(t, errTest)
+				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2Updated}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: false,
 					},
 				})
-				require.NoError(t, err)
+				require.NoError(t, errTest)
 				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
 			})
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				cluster2Updated, errTest := client.GetCluster(cluster2.ID)
+				require.NoError(t, errTest)
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: true,
 					},
 				})
-				require.NoError(t, err)
-				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
+				require.NoError(t, errTest)
+				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2Updated}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: true,
 					},
 				})
-				require.NoError(t, err)
+				require.NoError(t, errTest)
 				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
 			})
 		})
@@ -242,50 +246,50 @@ func TestClusters(t *testing.T) {
 
 		t.Run("get clusters after actual deletion", func(t *testing.T) {
 			t.Run("page 0, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: false,
 					},
 				})
-				require.NoError(t, err)
+				require.NoError(t, errTest)
 				require.Equal(t, []*model.ClusterDTO{cluster1, cluster3}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, exclude deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: false,
 					},
 				})
-				require.NoError(t, err)
+				require.NoError(t, errTest)
 				require.Equal(t, []*model.ClusterDTO{}, clusters)
 			})
 
 			t.Run("page 0, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           0,
 						PerPage:        2,
 						IncludeDeleted: true,
 					},
 				})
-				require.NoError(t, err)
+				require.NoError(t, errTest)
 				require.Equal(t, []*model.ClusterDTO{cluster1, cluster2}, clusters)
 			})
 
 			t.Run("page 1, perPage 2, include deleted", func(t *testing.T) {
-				clusters, err := client.GetClusters(&model.GetClustersRequest{
+				clusters, errTest := client.GetClusters(&model.GetClustersRequest{
 					Paging: model.Paging{
 						Page:           1,
 						PerPage:        2,
 						IncludeDeleted: true,
 					},
 				})
-				require.NoError(t, err)
+				require.NoError(t, errTest)
 				require.Equal(t, []*model.ClusterDTO{cluster3}, clusters)
 			})
 		})
@@ -312,41 +316,41 @@ func TestCreateCluster(t *testing.T) {
 	client := model.NewClient(ts.URL)
 
 	t.Run("invalid payload", func(t *testing.T) {
-		resp, err := http.Post(fmt.Sprintf("%s/api/clusters", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
-		require.NoError(t, err)
+		resp, errTest := http.Post(fmt.Sprintf("%s/api/clusters", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("empty payload", func(t *testing.T) {
-		resp, err := http.Post(fmt.Sprintf("%s/api/clusters", ts.URL), "application/json", bytes.NewReader([]byte("")))
-		require.NoError(t, err)
+		resp, errTest := http.Post(fmt.Sprintf("%s/api/clusters", ts.URL), "application/json", bytes.NewReader([]byte("")))
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusAccepted, resp.StatusCode)
 	})
 
 	t.Run("invalid provider", func(t *testing.T) {
-		_, err := client.CreateCluster(&model.CreateClusterRequest{
+		_, errTest := client.CreateCluster(&model.CreateClusterRequest{
 			Provider: "invalid",
 			Zones:    []string{"zone"},
 		})
-		require.EqualError(t, err, "failed with status code 400")
+		require.EqualError(t, errTest, "failed with status code 400")
 	})
 
 	t.Run("invalid annotation", func(t *testing.T) {
-		_, err := client.CreateCluster(&model.CreateClusterRequest{
+		_, errTest := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:    model.ProviderAWS,
 			Zones:       []string{"zone"},
 			Annotations: []string{"my invalid annotation"},
 		})
-		require.EqualError(t, err, "failed with status code 400")
+		require.EqualError(t, errTest, "failed with status code 400")
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		cluster, err := client.CreateCluster(&model.CreateClusterRequest{
+		cluster, errTest := client.CreateCluster(&model.CreateClusterRequest{
 			Provider:    model.ProviderAWS,
 			Zones:       []string{"zone"},
 			Annotations: []string{"my-annotation"},
 		})
-		require.NoError(t, err)
+		require.NoError(t, errTest)
 		require.Equal(t, model.ProviderAWS, cluster.Provider)
 		require.Equal(t, model.ClusterStateCreationRequested, cluster.State)
 		require.True(t, containsAnnotation("my-annotation", cluster.Annotations))
@@ -360,8 +364,8 @@ func TestCreateCluster(t *testing.T) {
 		}
 
 		for _, ann := range annotations {
-			err := sqlStore.CreateAnnotation(ann)
-			require.NoError(t, err)
+			errTest := sqlStore.CreateAnnotation(ann)
+			require.NoError(t, errTest)
 		}
 
 		for _, testCase := range []struct {
@@ -414,8 +418,8 @@ func TestRetryCreateCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.RetryCreateCluster(model.NewID())
-		require.EqualError(t, err, "failed with status code 404")
+		errTest := client.RetryCreateCluster(model.NewID())
+		require.EqualError(t, errTest, "failed with status code 404")
 	})
 
 	t.Run("while locked", func(t *testing.T) {
@@ -425,40 +429,40 @@ func TestRetryCreateCluster(t *testing.T) {
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
-		require.NoError(t, err)
+		locked, errTest := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, errTest)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, errDefer := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, errDefer)
 			require.True(t, unlocked)
 		}()
 
-		err = client.RetryCreateCluster(cluster1.ID)
-		require.EqualError(t, err, "failed with status code 409")
+		errTest = client.RetryCreateCluster(cluster1.ID)
+		require.EqualError(t, errTest, "failed with status code 409")
 	})
 
 	t.Run("while creating", func(t *testing.T) {
 		cluster1.State = model.ClusterStateCreationRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		err = client.RetryCreateCluster(cluster1.ID)
-		require.NoError(t, err)
+		errTest = client.RetryCreateCluster(cluster1.ID)
+		require.NoError(t, errTest)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateCreationRequested, cluster1.State)
-		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateCreationRequested, cluster2.State)
+		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		err = client.RetryCreateCluster(cluster1.ID)
-		require.EqualError(t, err, "failed with status code 400")
+		errTest = client.RetryCreateCluster(cluster1.ID)
+		require.EqualError(t, errTest, "failed with status code 400")
 	})
 
 	t.Run("while creation failed", func(t *testing.T) {
@@ -502,122 +506,122 @@ func TestProvisionCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		clusterResp, err := client.ProvisionCluster(model.NewID(), nil)
-		require.EqualError(t, err, "failed with status code 404")
+		clusterResp, errTest := client.ProvisionCluster(model.NewID(), nil)
+		require.EqualError(t, errTest, "failed with status code 404")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
-		require.NoError(t, err)
+		locked, errTest := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, errTest)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, errDefer := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, errDefer)
 			require.True(t, unlocked)
 		}()
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.EqualError(t, err, "failed with status code 409")
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.EqualError(t, errTest, "failed with status code 409")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.EqualError(t, err, "failed with status code 403")
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.EqualError(t, errTest, "failed with status code 403")
 		assert.Nil(t, clusterResp)
 
-		err = sqlStore.UnlockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("while provisioning", func(t *testing.T) {
 		cluster1.State = model.ClusterStateProvisioningRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.NoError(t, err)
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateProvisioningRequested, cluster1.State)
-		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
+		cluster2, errTEst := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTEst)
+		require.Equal(t, model.ClusterStateProvisioningRequested, cluster2.State)
+		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
 	})
 
 	t.Run("after provisioning failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateProvisioningFailed
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.NoError(t, err)
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateProvisioningRequested, cluster1.State)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateProvisioningRequested, cluster2.State)
 	})
 
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeFailed
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateUpgradeFailed, cluster1.State)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateUpgradeFailed, cluster2.State)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.NoError(t, err)
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateProvisioningRequested, cluster1.State)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateProvisioningRequested, cluster2.State)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
 		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ProvisionCluster(cluster1.ID, nil)
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ProvisionCluster(cluster1.ID, nil)
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 }
@@ -649,152 +653,152 @@ func TestUpgradeCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		clusterResp, err := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
-		require.EqualError(t, err, "failed with status code 404")
+		clusterResp, errTest := client.UpgradeCluster(model.NewID(), &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		require.EqualError(t, errTest, "failed with status code 404")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
-		require.NoError(t, err)
+		locked, errTest := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, errTest)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, errDefer := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, errDefer)
 			require.True(t, unlocked)
 		}()
 
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
-		require.EqualError(t, err, "failed with status code 409")
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		require.EqualError(t, errTest, "failed with status code 409")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 
 		version := "latest"
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
-		require.EqualError(t, err, "failed with status code 403")
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		require.EqualError(t, errTest, "failed with status code 403")
 		assert.Nil(t, clusterResp)
 
-		err = sqlStore.UnlockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		version := "latest"
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
-		require.NoError(t, err)
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
-		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
-		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
+		assert.Equal(t, version, cluster2.ProvisionerMetadataKops.ChangeRequest.Version)
+		assert.Empty(t, cluster2.ProvisionerMetadataKops.AMI)
+		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
 	})
 
 	t.Run("after upgrade failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeFailed
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		version := "latest"
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
-		require.NoError(t, err)
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
-		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
+		assert.Equal(t, version, cluster2.ProvisionerMetadataKops.ChangeRequest.Version)
+		assert.Empty(t, cluster2.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while stable, to latest", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		version := "latest"
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
-		require.NoError(t, err)
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
-		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
+		assert.Equal(t, version, cluster2.ProvisionerMetadataKops.ChangeRequest.Version)
+		assert.Empty(t, cluster2.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while stable, to valid version", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		version := "1.14.1"
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
-		require.NoError(t, err)
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: &version})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
-		assert.Empty(t, cluster1.ProvisionerMetadataKops.AMI)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
+		assert.Equal(t, version, cluster2.ProvisionerMetadataKops.ChangeRequest.Version)
+		assert.Empty(t, cluster2.ProvisionerMetadataKops.AMI)
 	})
 
 	t.Run("while stable, to invalid version", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("invalid")})
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while stable, to valid version and new AMI", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		version := "1.14.1"
 		ami := "mattermost-os"
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
 			Version: &version,
 			KopsAMI: &ami,
 		})
-		require.NoError(t, err)
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster1.State)
-		assert.Equal(t, version, cluster1.ProvisionerMetadataKops.ChangeRequest.Version)
-		assert.Equal(t, ami, cluster1.ProvisionerMetadataKops.ChangeRequest.AMI)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateUpgradeRequested, cluster2.State)
+		assert.Equal(t, version, cluster2.ProvisionerMetadataKops.ChangeRequest.Version)
+		assert.Equal(t, ami, cluster2.ProvisionerMetadataKops.ChangeRequest.AMI)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
 		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{Version: sToP("latest")})
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 }
@@ -831,58 +835,58 @@ func TestUpdateClusterConfiguration(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		clusterResp, err := client.UpdateCluster(model.NewID(), &model.UpdateClusterRequest{})
-		require.EqualError(t, err, "failed with status code 404")
+		clusterResp, errTest := client.UpdateCluster(model.NewID(), &model.UpdateClusterRequest{})
+		require.EqualError(t, errTest, "failed with status code 404")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
-		require.NoError(t, err)
+		locked, errTest := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, errTest)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, errDefer := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, errDefer)
 			require.True(t, unlocked)
 		}()
 
-		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{})
-		require.EqualError(t, err, "failed with status code 409")
+		clusterResp, errTest := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{})
+		require.EqualError(t, errTest, "failed with status code 409")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{})
-		require.EqualError(t, err, "failed with status code 403")
+		clusterResp, errTest := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{})
+		require.EqualError(t, errTest, "failed with status code 403")
 		assert.Nil(t, clusterResp)
 
-		err = sqlStore.UnlockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{AllowInstallations: false})
-		require.NoError(t, err)
+		clusterResp, errTest := client.UpdateCluster(cluster1.ID, &model.UpdateClusterRequest{AllowInstallations: false})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		assert.Equal(t, model.ClusterStateStable, cluster1.State)
-		assert.False(t, cluster1.AllowInstallations)
-		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		assert.Equal(t, model.ClusterStateStable, cluster2.State)
+		assert.False(t, cluster2.AllowInstallations)
+		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
 	})
 }
 
@@ -917,130 +921,130 @@ func TestResizeCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		clusterResp, err := client.ResizeCluster(model.NewID(), &model.PatchClusterSizeRequest{})
-		require.EqualError(t, err, "failed with status code 404")
+		clusterResp, errTest := client.ResizeCluster(model.NewID(), &model.PatchClusterSizeRequest{})
+		require.EqualError(t, errTest, "failed with status code 404")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
-		require.NoError(t, err)
+		locked, errTest := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, errTest)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, errDefer := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, errDefer)
 			require.True(t, unlocked)
 		}()
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
-		require.EqualError(t, err, "failed with status code 409")
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
+		require.EqualError(t, errTest, "failed with status code 409")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
-		require.EqualError(t, err, "failed with status code 403")
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
+		require.EqualError(t, errTest, "failed with status code 403")
 		assert.Nil(t, clusterResp)
 
-		err = sqlStore.UnlockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("while resizing", func(t *testing.T) {
 		cluster1.State = model.ClusterStateResizeRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
-		require.NoError(t, err)
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test1")})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
-		assert.Equal(t, "test1", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
-		assert.True(t, containsAnnotation("my-annotation", cluster1.Annotations))
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateResizeRequested, cluster2.State)
+		assert.Equal(t, "test1", cluster2.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
+		assert.True(t, containsAnnotation("my-annotation", cluster2.Annotations))
 	})
 
 	t.Run("after resize failed", func(t *testing.T) {
 		cluster1.State = model.ClusterStateResizeFailed
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test2")})
-		require.NoError(t, err)
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test2")})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
-		assert.Equal(t, "test2", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateResizeRequested, cluster2.State)
+		assert.Equal(t, "test2", cluster2.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
 	})
 
 	t.Run("while stable", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test3")})
-		require.NoError(t, err)
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeInstanceType: sToP("test3")})
+		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)
 
-		cluster1, err = client.GetCluster(cluster1.ID)
-		require.NoError(t, err)
-		require.Equal(t, model.ClusterStateResizeRequested, cluster1.State)
-		assert.Equal(t, "test3", cluster1.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
+		cluster2, errTest := client.GetCluster(cluster1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, model.ClusterStateResizeRequested, cluster2.State)
+		assert.Equal(t, "test3", cluster2.ProvisionerMetadataKops.ChangeRequest.NodeInstanceType)
 	})
 
 	t.Run("while stable, to max node count lower than cluster min", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		max := int64(1)
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMaxCount: &max})
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMaxCount: &max})
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while stable, to invalid size", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		min := int64(10)
 		max := int64(5)
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMinCount: &min, NodeMaxCount: &max})
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{NodeMinCount: &min, NodeMaxCount: &max})
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while upgrading", func(t *testing.T) {
 		cluster1.State = model.ClusterStateUpgradeRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 
 	t.Run("while deleting", func(t *testing.T) {
 		cluster1.State = model.ClusterStateDeletionRequested
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
-		clusterResp, err := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
-		require.EqualError(t, err, "failed with status code 400")
+		clusterResp, errTest := client.ResizeCluster(cluster1.ID, &model.PatchClusterSizeRequest{})
+		require.EqualError(t, errTest, "failed with status code 400")
 		assert.Nil(t, clusterResp)
 	})
 }
@@ -1084,43 +1088,43 @@ func TestDeleteCluster(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster", func(t *testing.T) {
-		err := client.DeleteCluster(model.NewID())
-		require.EqualError(t, err, "failed with status code 404")
+		errTest := client.DeleteCluster(model.NewID())
+		require.EqualError(t, errTest, "failed with status code 404")
 	})
 
 	t.Run("while locked", func(t *testing.T) {
 		cluster1.State = model.ClusterStateStable
-		err = sqlStore.UpdateCluster(cluster1.Cluster)
-		require.NoError(t, err)
+		errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+		require.NoError(t, errTest)
 
 		lockerID := model.NewID()
 
-		locked, err := sqlStore.LockCluster(cluster1.ID, lockerID)
-		require.NoError(t, err)
+		locked, errTest := sqlStore.LockCluster(cluster1.ID, lockerID)
+		require.NoError(t, errTest)
 		require.True(t, locked)
 		defer func() {
-			unlocked, err := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
-			require.NoError(t, err)
+			unlocked, errDefer := sqlStore.UnlockCluster(cluster1.ID, lockerID, false)
+			require.NoError(t, errDefer)
 			require.True(t, unlocked)
 
-			cluster1, err = client.GetCluster(cluster1.ID)
-			require.NoError(t, err)
-			require.Equal(t, int64(0), cluster1.LockAcquiredAt)
+			clusterCheck, errDefer := client.GetCluster(cluster1.ID)
+			require.NoError(t, errDefer)
+			require.Equal(t, int64(0), clusterCheck.LockAcquiredAt)
 		}()
 
-		err = client.DeleteCluster(cluster1.ID)
-		require.EqualError(t, err, "failed with status code 409")
+		errTest = client.DeleteCluster(cluster1.ID)
+		require.EqualError(t, errTest, "failed with status code 409")
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 
-		err := client.DeleteCluster(cluster1.ID)
-		require.EqualError(t, err, "failed with status code 403")
+		errTest = client.DeleteCluster(cluster1.ID)
+		require.EqualError(t, errTest, "failed with status code 403")
 
-		err = sqlStore.UnlockClusterAPI(cluster1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterAPI(cluster1.ID)
+		require.NoError(t, errTest)
 	})
 
 	// valid unlocked states
@@ -1139,15 +1143,15 @@ func TestDeleteCluster(t *testing.T) {
 		for _, state := range states {
 			t.Run(state, func(t *testing.T) {
 				cluster1.State = state
-				err = sqlStore.UpdateCluster(cluster1.Cluster)
-				require.NoError(t, err)
+				errTest := sqlStore.UpdateCluster(cluster1.Cluster)
+				require.NoError(t, errTest)
 
-				err = client.DeleteCluster(cluster1.ID)
-				require.NoError(t, err)
+				errTest = client.DeleteCluster(cluster1.ID)
+				require.NoError(t, errTest)
 
-				cluster1, err = client.GetCluster(cluster1.ID)
-				require.NoError(t, err)
-				require.Equal(t, model.ClusterStateDeletionRequested, cluster1.State)
+				clusterCheck, errTest := client.GetCluster(cluster1.ID)
+				require.NoError(t, errTest)
+				require.Equal(t, model.ClusterStateDeletionRequested, clusterCheck.State)
 			})
 		}
 	})
@@ -1156,15 +1160,15 @@ func TestDeleteCluster(t *testing.T) {
 		for _, state := range states {
 			t.Run(state, func(t *testing.T) {
 				cluster2.State = state
-				err = sqlStore.UpdateCluster(cluster2.Cluster)
-				require.NoError(t, err)
+				errTest := sqlStore.UpdateCluster(cluster2.Cluster)
+				require.NoError(t, errTest)
 
-				err = client.DeleteCluster(cluster2.ID)
-				require.Error(t, err)
+				errTest = client.DeleteCluster(cluster2.ID)
+				require.Error(t, errTest)
 
-				cluster2, err = client.GetCluster(cluster2.ID)
-				require.NoError(t, err)
-				require.Equal(t, state, cluster2.State)
+				clusterCheck, errTest := client.GetCluster(cluster2.ID)
+				require.NoError(t, errTest)
+				require.Equal(t, state, clusterCheck.State)
 			})
 		}
 	})

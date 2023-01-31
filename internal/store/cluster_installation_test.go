@@ -264,20 +264,6 @@ func TestGetUnlockedClusterInstallationPendingWork(t *testing.T) {
 	err = sqlStore.CreateClusterInstallation(deletionRequestedInstallation)
 	require.NoError(t, err)
 
-	otherStates := []string{
-		model.ClusterInstallationStateCreationFailed,
-		model.ClusterInstallationStateDeletionFailed,
-		model.ClusterInstallationStateDeleted,
-		model.ClusterInstallationStateStable,
-	}
-
-	otherClusterInstallations := []*model.ClusterInstallation{}
-	for _, otherState := range otherStates {
-		otherClusterInstallations = append(otherClusterInstallations, &model.ClusterInstallation{
-			State: otherState,
-		})
-	}
-
 	clusterInstallations, err := sqlStore.GetUnlockedClusterInstallationsPendingWork()
 	require.NoError(t, err)
 	require.Equal(t, []*model.ClusterInstallation{creationRequestedInstallation, deletionRequestedInstallation}, clusterInstallations)
@@ -764,7 +750,8 @@ func TestSwitchDNS(t *testing.T) {
 	var installationIDs []string
 	var hibernatedInstallationIDs []string
 	for _, ci := range clusterInstallations {
-		installation, err := sqlStore.GetInstallation(ci.InstallationID, false, false)
+		var installation *model.Installation
+		installation, err = sqlStore.GetInstallation(ci.InstallationID, false, false)
 		require.NoError(t, err)
 
 		if installation.State == model.InstallationStateHibernating {

@@ -7,7 +7,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -160,7 +160,7 @@ func executeServerCmd(flags serverFlags) error {
 		flags.clusterResourceThresholdScaleValue,
 	)
 
-	if err := installationScheduling.Validate(); err != nil {
+	if err = installationScheduling.Validate(); err != nil {
 		return errors.Wrap(err, "invalid installation scheduling options")
 	}
 
@@ -418,15 +418,16 @@ func executeServerCmd(flags serverFlags) error {
 	router := mux.NewRouter()
 
 	api.Register(router, &api.Context{
-		Store:         sqlStore,
-		Supervisor:    standardSupervisor,
-		Provisioner:   clusterProvisioner,
-		DBProvider:    resourceUtil,
-		EventProducer: eventsProducer,
-		Environment:   awsClient.GetCloudEnvironmentName(),
-		AwsClient:     awsClient,
-		Metrics:       cloudMetrics,
-		Logger:        logger,
+		Store:                             sqlStore,
+		Supervisor:                        standardSupervisor,
+		Provisioner:                       clusterProvisioner,
+		DBProvider:                        resourceUtil,
+		EventProducer:                     eventsProducer,
+		Environment:                       awsClient.GetCloudEnvironmentName(),
+		AwsClient:                         awsClient,
+		Metrics:                           cloudMetrics,
+		InstallationDeletionExpiryDefault: flags.installationDeletionPendingTime,
+		Logger:                            logger,
 	})
 
 	srv := &http.Server{
@@ -483,7 +484,7 @@ func dbClusterUtilizationSettingsFromFlags(sf serverFlags) utils.DBClusterUtiliz
 func checkRequirements(logger logrus.FieldLogger) error {
 	// Check for required tool binaries.
 	silentLogger := logrus.New()
-	silentLogger.Out = ioutil.Discard
+	silentLogger.Out = io.Discard
 
 	terraformClient, err := terraform.New(".", "dummy-remote-state", silentLogger)
 	if err != nil {
@@ -520,7 +521,7 @@ func checkRequirements(logger logrus.FieldLogger) error {
 		"kubectl",
 	}
 	for _, extraTool := range extraTools {
-		_, err := exec.LookPath(extraTool)
+		_, err = exec.LookPath(extraTool)
 		if err != nil {
 			return errors.Errorf("failed to find %s on the PATH", extraTool)
 		}
@@ -532,7 +533,7 @@ func checkRequirements(logger logrus.FieldLogger) error {
 		return errors.Wrap(err, "failed to determine the current user's home directory")
 	}
 	sshDir := path.Join(homedir, ".ssh")
-	possibleKeys, err := ioutil.ReadDir(sshDir)
+	possibleKeys, err := os.ReadDir(sshDir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find a SSH key in %s", sshDir)
 

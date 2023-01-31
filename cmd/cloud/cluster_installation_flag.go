@@ -1,3 +1,7 @@
+// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package main
 
 import "github.com/spf13/cobra"
@@ -132,7 +136,6 @@ func (flags *inActiveClusterInstallationDeleteFlags) addFlags(command *cobra.Com
 
 type clusterRolesPostMigrationSwitchFlags struct {
 	clusterFlags
-	switchRole    string
 	sourceCluster string
 	targetCluster string
 }

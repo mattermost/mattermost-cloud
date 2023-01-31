@@ -138,7 +138,7 @@ func (a *Client) secretsManagerEnsureRDSSecretCreated(awsID string, logger log.F
 			return nil, errors.Wrap(err, "unable to marshal secrets manager payload")
 		}
 
-		err := rdsSecretPayload.Validate()
+		err = rdsSecretPayload.Validate()
 		if err != nil {
 			return nil, err
 		}

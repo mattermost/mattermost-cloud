@@ -151,7 +151,8 @@ func handleDeleteMultitenantDatabase(c *Context, w http.ResponseWriter, r *http.
 
 	// If deletion is forced we do not check and just delete.
 	if !force {
-		exists, err := c.AwsClient.RDSDBCLusterExists(db.RdsClusterID)
+		var exists bool
+		exists, err = c.AwsClient.RDSDBCLusterExists(db.RdsClusterID)
 		if err != nil {
 			c.Logger.WithError(err).Error("Failed to check if DB cluster exists")
 			w.WriteHeader(http.StatusInternalServerError)

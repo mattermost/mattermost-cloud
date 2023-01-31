@@ -229,7 +229,7 @@ func (sqlStore *SQLStore) MigrateClusterInstallations(clusterInstallations []*mo
 		clusterInstallation.ClusterID = targetCluster
 		clusterInstallation.State = model.ClusterInstallationStateCreationRequested
 		clusterInstallation.IsActive = false
-		err := sqlStore.createClusterInstallation(tx, clusterInstallation)
+		err = sqlStore.createClusterInstallation(tx, clusterInstallation)
 
 		if err != nil {
 			return errors.Wrap(err, "failed to create cluster installation")

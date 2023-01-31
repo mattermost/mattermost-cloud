@@ -6,6 +6,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
 
@@ -43,7 +44,8 @@ func initInstallation(apiRouter *mux.Router, context *Context) {
 	installationRouter.Handle("/hibernate", addContext(handleHibernateInstallation)).Methods("POST")
 	installationRouter.Handle("/wakeup", addContext(handleWakeupInstallation)).Methods("POST")
 	installationRouter.Handle("", addContext(handleDeleteInstallation)).Methods("DELETE")
-	installationRouter.Handle("/cancel_deletion", addContext(handleCancelDeletion)).Methods("POST")
+	installationRouter.Handle("/deletion", addContext(handleUpdateInstallationDeletion)).Methods("PUT")
+	installationRouter.Handle("/deletion/cancel", addContext(handleCancelInstallationDeletion)).Methods("POST")
 	installationRouter.Handle("/annotations", addContext(handleAddInstallationAnnotations)).Methods("POST")
 	installationRouter.Handle("/annotation/{annotation-name}", addContext(handleDeleteInstallationAnnotation)).Methods("DELETE")
 
@@ -171,7 +173,8 @@ func handleCreateInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	}
 
 	if createInstallationRequest.GroupID == "" && len(createInstallationRequest.GroupSelectionAnnotations) > 0 {
-		groupID, err := selectGroupForAnnotation(c, createInstallationRequest.GroupSelectionAnnotations)
+		var groupID string
+		groupID, err = selectGroupForAnnotation(c, createInstallationRequest.GroupSelectionAnnotations)
 		if err != nil {
 			c.Logger.WithError(err).Error("Failed to select group based on annotations")
 			w.WriteHeader(common.ErrToStatus(err))
@@ -629,11 +632,23 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = updateInstallationState(c, installationDTO, newState)
+	if newState == model.InstallationStateDeletionPendingRequested {
+		// Set DeletionPendingExpiry to now+InstallationDeletionExpiryDefault
+		installationDTO.DeletionPendingExpiry = model.GetMillisAtTime(time.Now().Add(c.InstallationDeletionExpiryDefault))
+	}
+
+	oldState := installationDTO.State
+	installationDTO.State = newState
+	err = c.Store.UpdateInstallation(installationDTO.Installation)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to update installation state to %q", newState)
+		c.Logger.WithError(err).Error("failed to update installation")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	err = c.EventProducer.ProduceInstallationStateChangeEvent(installationDTO.Installation, oldState)
+	if err != nil {
+		c.Logger.WithError(err).Error("Failed to create installation state change event")
 	}
 
 	unlockOnce()
@@ -642,9 +657,47 @@ func handleDeleteInstallation(c *Context, w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// handleCancelDeletion responds to POST /api/installation/{installation}/cancel_deletion,
+// handleUpdateInstallationDeletion responds to PUT /api/installation/{installation}/deletion,
+// beginning the process of updating the configuration of an upcoming deletion.
+func handleUpdateInstallationDeletion(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	installationID := vars["installation"]
+	c.Logger = c.Logger.WithField("installation", installationID)
+
+	patchInstallationDeletionRequest, err := model.NewPatchInstallationDeletionRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// State won't change for this type of update.
+	newState := model.InstallationStateDeletionPending
+
+	installationDTO, status, unlockOnce := getInstallationForTransition(c, installationID, newState)
+	if status != 0 {
+		w.WriteHeader(status)
+		return
+	}
+	defer unlockOnce()
+
+	if patchInstallationDeletionRequest.Apply(installationDTO.Installation) {
+		err := c.Store.UpdateInstallation(installationDTO.Installation)
+		if err != nil {
+			c.Logger.WithError(err).Error("failed to update installation")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, installationDTO)
+}
+
+// handleCancelInstallationDeletion responds to POST /api/installation/{installation}/deletion/cancel,
 // beginning the process of cancelling the pending deletion of the installation.
-func handleCancelDeletion(c *Context, w http.ResponseWriter, r *http.Request) {
+func handleCancelInstallationDeletion(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	installationID := vars["installation"]
 	c.Logger = c.Logger.WithField("installation", installationID)

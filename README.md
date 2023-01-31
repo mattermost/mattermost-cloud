@@ -33,6 +33,7 @@ The following is required to properly run the cloud server.
 4. Install [Helm](https://helm.sh/docs/intro/install/) version 3.5.X
 5. Install [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 6. Install [golang/mock](https://github.com/golang/mock#installation) version 1.4.x
+7. (macOS only) Upgrade [diffutils](https://www.gnu.org/software/diffutils/) with `brew install diffutils`. Used by the linters.
 
 #### Other Setup
 

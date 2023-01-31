@@ -17,10 +17,6 @@ import (
 
 const defaultTimeout = 30 * time.Second
 
-const (
-	recordExistsErrorCode = 81053 // A, AAAA, or CNAME record with that host already exists
-)
-
 func (c *Client) getZoneID(zoneName string) (zoneID string, err error) {
 	zoneID, err = c.cfClient.ZoneIDByName(zoneName)
 	if err != nil {
@@ -135,7 +131,8 @@ func (c *Client) upsertDNS(zoneNameList []string, dnsName, dnsEndpoint string, l
 	if len(existingRecords) == 0 {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 		defer cancel()
-		recordResp, err := c.cfClient.CreateDNSRecord(ctx, zoneID, record)
+		var recordResp *cf.DNSRecordResponse
+		recordResp, err = c.cfClient.CreateDNSRecord(ctx, zoneID, record)
 		if err != nil {
 			return errors.Wrap(err, "failed to create DNS Record at Cloudflare")
 		}

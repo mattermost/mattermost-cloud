@@ -55,7 +55,6 @@ func newCmdDatabaseMultitenantList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -133,7 +132,6 @@ func newCmdDatabaseMultitenantGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -171,7 +169,6 @@ func newCmdDatabaseMultitenantUpdate() *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
 			flags.databaseMultiTenantUpdateFlagChanged.addFlags(cmd)
-			return
 		},
 	}
 
@@ -197,7 +194,6 @@ func newCmdDatabaseMultitenantDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -230,7 +226,6 @@ func newCmdDatabaseLogicalList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -307,7 +302,6 @@ func newCmdDatabaseLogicalGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -340,7 +334,6 @@ func newCmdDatabaseSchemaList() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -418,7 +411,6 @@ func newCmdDatabaseSchemaGet() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 
@@ -439,7 +431,6 @@ func newCmdDatabaseMultitenantReport() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 

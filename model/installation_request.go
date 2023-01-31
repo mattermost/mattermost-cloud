@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -149,9 +150,9 @@ func (request *CreateInstallationRequest) Validate() error {
 	}
 
 	for _, ann := range request.GroupSelectionAnnotations {
-		err := validateAnnotationName(ann)
-		if err != nil {
-			return errors.Wrap(err, "invalid group selection annotation")
+		errInner := validateAnnotationName(ann)
+		if errInner != nil {
+			return errors.Wrap(errInner, "invalid group selection annotation")
 		}
 	}
 
@@ -395,6 +396,56 @@ func NewPatchInstallationRequestFromReader(reader io.Reader) (*PatchInstallation
 	}
 
 	return &patchInstallationRequest, nil
+}
+
+// PatchInstallationDeletionRequest specifies the parameters for an updating
+// installation deletion parameters.
+type PatchInstallationDeletionRequest struct {
+	DeletionPendingExpiry *int64
+}
+
+// Validate validates the values of a installation deletion patch request.
+func (p *PatchInstallationDeletionRequest) Validate() error {
+	if p.DeletionPendingExpiry != nil {
+		// DeletionPendingExpiry is the new time when an installation pending
+		// deletion can be deleted. This can be any time from "now" into the
+		// future. The cuttoff for "now" will be the current time with a 5 second
+		// buffer. Any time value lower than that will be considered an error.
+		cutoffTimeMillis := GetMillisAtTime(time.Now().Add(-5 * time.Second))
+		if cutoffTimeMillis > *p.DeletionPendingExpiry {
+			return errors.Errorf("DeletionPendingExpiry must be %d or higher", cutoffTimeMillis)
+		}
+	}
+
+	return nil
+}
+
+// Apply applies the deletion patch to the given installation.
+func (p *PatchInstallationDeletionRequest) Apply(installation *Installation) bool {
+	var applied bool
+
+	if p.DeletionPendingExpiry != nil && *p.DeletionPendingExpiry != installation.DeletionPendingExpiry {
+		applied = true
+		installation.DeletionPendingExpiry = *p.DeletionPendingExpiry
+	}
+
+	return applied
+}
+
+// NewPatchInstallationDeletionRequestFromReader will create a PatchInstallationDeletionRequest from an io.Reader with JSON data.
+func NewPatchInstallationDeletionRequestFromReader(reader io.Reader) (*PatchInstallationDeletionRequest, error) {
+	var patchInstallationDeletionRequest PatchInstallationDeletionRequest
+	err := json.NewDecoder(reader).Decode(&patchInstallationDeletionRequest)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode patch installation deletion request")
+	}
+
+	err = patchInstallationDeletionRequest.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid patch installation deletion request")
+	}
+
+	return &patchInstallationDeletionRequest, nil
 }
 
 // AssignInstallationGroupRequest specifies request body for installation group assignment.

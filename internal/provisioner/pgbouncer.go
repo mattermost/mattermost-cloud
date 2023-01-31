@@ -137,7 +137,7 @@ func (p *pgbouncer) DeployManifests() error {
 
 	// Both of these files should only be created on the first provision and
 	// should never be overwritten with cluster provisioning afterwards.
-	file := k8s.ManifestFile{}
+	var file k8s.ManifestFile
 	_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
 	if k8sErrors.IsNotFound(err) {
 		logger.Info("Configmap resource for pgbouncer-configmap does not exist, will be created...")

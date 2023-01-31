@@ -292,4 +292,70 @@ func TestInstallationDeletionSupervisor_Supervise(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, model.InstallationStateDeletionPending, installation2.State)
 	})
+
+	t.Run("deletion pending with expiry, not ready for deletion", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, 10, sqlStore, &mockEventsProducer{}, logger)
+
+		installation := &model.Installation{
+			OwnerID:  "blah",
+			Version:  "version",
+			Name:     "dns",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateDeletionPending,
+		}
+
+		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		installation.DeletionPendingExpiry = model.GetMillisAtTime(time.Now().Add(time.Hour))
+		err = sqlStore.UpdateInstallation(installation)
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		supervisor.Supervise(installation)
+		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateDeletionPending, installation.State)
+	})
+
+	t.Run("deletion pending with expiry, ready for deletion", func(t *testing.T) {
+		logger := testlib.MakeLogger(t)
+		sqlStore := store.MakeTestSQLStore(t, logger)
+		defer store.CloseConnection(t, sqlStore)
+
+		supervisor := supervisor.NewInstallationDeletionSupervisor("instanceID", time.Nanosecond, 10, sqlStore, &mockEventsProducer{}, logger)
+
+		installation := &model.Installation{
+			OwnerID:  "blah",
+			Version:  "version",
+			Name:     "dns",
+			Size:     mmv1alpha1.Size100String,
+			Affinity: model.InstallationAffinityIsolated,
+			State:    model.InstallationStateDeletionPending,
+		}
+
+		err := sqlStore.CreateInstallation(installation, nil, testutil.DNSForInstallation("dns.example.com"))
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		installation.DeletionPendingExpiry = model.GetMillis() - 1
+		err = sqlStore.UpdateInstallation(installation)
+		require.NoError(t, err)
+
+		time.Sleep(1 * time.Millisecond)
+
+		supervisor.Supervise(installation)
+		installation, err = sqlStore.GetInstallation(installation.ID, false, false)
+		require.NoError(t, err)
+		require.Equal(t, model.InstallationStateDeletionRequested, installation.State)
+	})
 }

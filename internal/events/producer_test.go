@@ -29,7 +29,7 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 	instanceID := model.NewID()
 
 	installation := &model.Installation{
-		Name:   "test",
+		Name:  "test",
 		State: model.InstallationStateStable,
 	}
 	err := sqlStore.CreateInstallation(installation, nil, nil)
@@ -40,13 +40,13 @@ func Test_ProduceAndDeliverEvents(t *testing.T) {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
-		payload, err := model.WebhookPayloadFromReader(r.Body)
-		require.NoError(t, err)
+		payload, errHandler := model.WebhookPayloadFromReader(r.Body)
+		require.NoError(t, errHandler)
 		webhookChan <- payload
 	})
 	r.HandleFunc("/event", func(w http.ResponseWriter, r *http.Request) {
-		payload, err := model.NewStateChangeEventPayloadFromReader(r.Body)
-		require.NoError(t, err)
+		payload, errHandler := model.NewStateChangeEventPayloadFromReader(r.Body)
+		require.NoError(t, errHandler)
 		eventChan <- payload
 	})
 

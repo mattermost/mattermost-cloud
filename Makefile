@@ -49,13 +49,13 @@ GOVERALLS_VER := master
 GOVERALLS_BIN := goveralls
 GOVERALLS_GEN := $(TOOLS_BIN_DIR)/$(GOVERALLS_BIN)
 
-GOLINT_VER := master
-GOLINT_BIN := golint
-GOLINT_GEN := $(TOOLS_BIN_DIR)/$(GOLINT_BIN)
-
 GOIMPORTS_VER := master
 GOIMPORTS_BIN := goimports
 GOIMPORTS := $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)
+
+GOLANGCILINT_VER := v1.50.1
+GOLANGCILINT_BIN := golangci-lint
+GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
 TRIVY_SEVERITY := CRITICAL
 TRIVY_EXIT_CODE := 1
@@ -72,11 +72,14 @@ check-style: govet lint goformat goimports
 	@echo Checking for style guide compliance
 
 ## Runs lint against all packages.
-.PHONY: lint
-lint: $(GOLINT_GEN)
-	@echo Running lint
-	$(GOLINT_GEN) -set_exit_status $(PACKAGES)
-	@echo lint success
+lint: $(GOLANGCILINT)
+	@echo Running golangci-lint
+	$(GOLANGCILINT) run
+
+## Runs lint against all packages for changes only
+lint-changes: $(GOLANGCILINT)
+	@echo Running golangci-lint over changes only
+	$(GOLANGCILINT) run -n
 
 ## Runs govet against all packages.
 .PHONY: vet
@@ -242,8 +245,8 @@ $(OUTDATED_GEN): ## Build go-mod-outdated.
 $(GOVERALLS_GEN): ## Build goveralls.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/mattn/goveralls $(GOVERALLS_BIN) $(GOVERALLS_VER)
 
-$(GOLINT_GEN): ## Build golint.
-	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/lint/golint $(GOLINT_BIN) $(GOLINT_VER)
-
 $(GOIMPORTS): ## Build goimports.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/tools/cmd/goimports $(GOIMPORTS_BIN) $(GOIMPORTS_VER)
+
+$(GOLANGCILINT): ## Build golangci-lint
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCILINT_BIN) $(GOLANGCILINT_VER)

@@ -240,9 +240,9 @@ func (sqlStore *SQLStore) DeleteClusterAnnotation(clusterID string, annotationNa
 	}
 
 	for _, ci := range clusterInstallations {
-		annotations, err := sqlStore.getAnnotationsForInstallation(tx, ci.InstallationID)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get annotations for '%s' installation", ci.InstallationID)
+		annotations, errAnnotation := sqlStore.getAnnotationsForInstallation(tx, ci.InstallationID)
+		if errAnnotation != nil {
+			return errors.Wrapf(errAnnotation, "failed to get annotations for '%s' installation", ci.InstallationID)
 		}
 		if model.ContainsAnnotation(annotations, annotation) {
 			return ErrClusterAnnotationUsedByInstallation
@@ -308,7 +308,7 @@ func (sqlStore *SQLStore) GetAnnotationsForInstallations(filter *model.Installat
 		"Annotation.ID as AnnotationID",
 		"Annotation.Name as AnnotationName").
 		From("Installation").
-		LeftJoin(fmt.Sprintf("InstallationDNS ON InstallationDNS.InstallationID = Installation.ID")).
+		LeftJoin("InstallationDNS ON InstallationDNS.InstallationID = Installation.ID").
 		LeftJoin(fmt.Sprintf("%s ON %s.InstallationID = Installation.ID", installationAnnotationTable, installationAnnotationTable)).
 		Join("Annotation ON Annotation.ID=AnnotationID")
 	builder = sqlStore.applyInstallationFilter(builder, filter)
@@ -354,9 +354,9 @@ func (sqlStore *SQLStore) CreateInstallationAnnotations(installationID string, a
 	}
 
 	for _, ci := range clusterInstallations {
-		clusterAnnotations, err := sqlStore.getAnnotationsForCluster(tx, ci.ClusterID)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get annotations for '%s' cluster", ci.ClusterID)
+		clusterAnnotations, errAnnotation := sqlStore.getAnnotationsForCluster(tx, ci.ClusterID)
+		if errAnnotation != nil {
+			return nil, errors.Wrapf(errAnnotation, "failed to get annotations for '%s' cluster", ci.ClusterID)
 		}
 
 		if !containsAllAnnotations(clusterAnnotations, annotations) {
@@ -524,8 +524,8 @@ func (sqlStore *SQLStore) createGroupAnnotations(db execer, groupID string, anno
 	return annotations, nil
 }
 
-func containsAllAnnotations(base, new []*model.Annotation) bool {
-	for _, n := range new {
+func containsAllAnnotations(base, annotations []*model.Annotation) bool {
+	for _, n := range annotations {
 		if !model.ContainsAnnotation(base, n) {
 			return false
 		}

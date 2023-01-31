@@ -29,11 +29,11 @@ func TestWaitForPodRunning(t *testing.T) {
 	t.Run("don't wait for running", func(t *testing.T) {
 		_, err := testClient.Clientset.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		require.NoError(t, err)
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		_, err = testClient.WaitForPodRunning(ctx, namespace, podName)
+		ctx2, cancel2 := context.WithCancel(context.Background())
+		cancel2()
+		_, err = testClient.WaitForPodRunning(ctx2, namespace, podName)
 		require.Error(t, err)
-		err = testClient.Clientset.CoreV1().Pods(namespace).Delete(ctx, podName, metav1.DeleteOptions{})
+		err = testClient.Clientset.CoreV1().Pods(namespace).Delete(ctx2, podName, metav1.DeleteOptions{})
 		require.NoError(t, err)
 	})
 	t.Run("create pod", func(t *testing.T) {

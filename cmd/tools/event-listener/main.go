@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -100,7 +100,7 @@ func main() {
 }
 
 func eventsHandler(w http.ResponseWriter, r *http.Request) {
-	eventBody, err := ioutil.ReadAll(r.Body)
+	eventBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error: failed to read event: %s", err)
 		return

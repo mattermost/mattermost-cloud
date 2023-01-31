@@ -64,8 +64,8 @@ func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 		return err
 	}
 	defer func() {
-		if err := kopsClient.Close(); err != nil {
-			logger.WithError(err).Error("Failed to close kops client")
+		if errDefer := kopsClient.Close(); errDefer != nil {
+			logger.WithError(errDefer).Error("Failed to close kops client")
 		}
 	}()
 
@@ -82,8 +82,8 @@ func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 		return err
 	}
 	defer func() {
-		if err := terraformClient.Close(); err != nil {
-			logger.WithError(err).Error("Failed to close terraform client")
+		if errDefer := terraformClient.Close(); errDefer != nil {
+			logger.WithError(errDefer).Error("Failed to close terraform client")
 		}
 	}()
 

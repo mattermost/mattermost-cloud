@@ -6,7 +6,7 @@ package kops
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -88,7 +88,7 @@ func (c *Cmd) runSilent(arg ...string) ([]byte, []byte, error) {
 
 func silentLogger() log.FieldLogger {
 	silentLogger := log.New()
-	silentLogger.Out = ioutil.Discard
+	silentLogger.Out = io.Discard
 
 	return silentLogger
 }

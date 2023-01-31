@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -234,7 +233,6 @@ func (s *sender) processDeliveries(sub *model.Subscription, deliveries []*model.
 		log.WithError(err).Error("Failed to update subscription status after delivery")
 		return
 	}
-	return
 }
 
 func (s *sender) processDelivery(sub *model.Subscription, delivery *model.StateChangeEventDeliveryData, logger logrus.FieldLogger) (model.SubscriptionDeliveryStatus, bool) {
@@ -310,7 +308,7 @@ func (s *sender) unlockSubscription(subID string, log logrus.FieldLogger) {
 }
 
 func attemptToReadBody(reader io.Reader) string {
-	body, err := ioutil.ReadAll(reader)
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return fmt.Sprintf("failed to read body: %s", err.Error())
 	}
@@ -318,6 +316,6 @@ func attemptToReadBody(reader io.Reader) string {
 }
 
 func drainBody(readCloser io.ReadCloser) {
-	_, _ = ioutil.ReadAll(readCloser)
+	_, _ = io.ReadAll(readCloser)
 	_ = readCloser.Close()
 }

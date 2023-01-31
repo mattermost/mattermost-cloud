@@ -66,21 +66,21 @@ func TestInstallations(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get installation", func(t *testing.T) {
-		fetched, err := sqlStore.GetInstallation(installation1.ID, false, false)
-		require.NoError(t, err)
+		fetched, errTest := sqlStore.GetInstallation(installation1.ID, false, false)
+		require.NoError(t, errTest)
 		assert.Equal(t, installation1, fetched)
 	})
 
 	t.Run("fail on not unique DNS", func(t *testing.T) {
-		err := sqlStore.CreateInstallation(&model.Installation{}, nil, fixDNSRecords(0))
-		require.Error(t, err)
-		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint")
+		errTest := sqlStore.CreateInstallation(&model.Installation{}, nil, fixDNSRecords(0))
+		require.Error(t, errTest)
+		assert.Contains(t, strings.ToLower(errTest.Error()), "unique constraint")
 	})
 
 	t.Run("fail on not unique Name", func(t *testing.T) {
-		err := sqlStore.CreateInstallation(&model.Installation{Name: "test1"}, nil, fixDNSRecords(11))
-		require.Error(t, err)
-		assert.Contains(t, strings.ToLower(err.Error()), "unique constraint")
+		errTest := sqlStore.CreateInstallation(&model.Installation{Name: "test1"}, nil, fixDNSRecords(11))
+		require.Error(t, errTest)
+		assert.Contains(t, strings.ToLower(errTest.Error()), "unique constraint")
 	})
 
 	time.Sleep(1 * time.Millisecond)
@@ -415,21 +415,6 @@ func TestGetUnlockedInstallationPendingWork(t *testing.T) {
 	}
 	err = sqlStore.CreateInstallation(deletionRequestedInstallation, nil, fixDNSRecords(3))
 	require.NoError(t, err)
-
-	otherStates := []string{
-		model.InstallationStateCreationFailed,
-		model.InstallationStateDeletionFailed,
-		model.InstallationStateDeleted,
-		model.InstallationStateUpdateFailed,
-		model.InstallationStateStable,
-	}
-
-	otherInstallations := []*model.Installation{}
-	for _, otherState := range otherStates {
-		otherInstallations = append(otherInstallations, &model.Installation{
-			State: otherState,
-		})
-	}
 
 	installations, err := sqlStore.GetUnlockedInstallationsPendingWork()
 	require.NoError(t, err)
@@ -1058,19 +1043,19 @@ func TestGetInstallationCount(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("test count all", func(t *testing.T) {
-		count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+		count, errTest := sqlStore.GetInstallationsCount(&model.InstallationFilter{
 			Paging: model.AllPagesWithDeleted(),
 		})
-		assert.NoError(t, err)
+		assert.NoError(t, errTest)
 		assert.Equal(t, int64(2), count)
 	})
 
 	t.Run("test count filter group", func(t *testing.T) {
-		count, err := sqlStore.GetInstallationsCount(&model.InstallationFilter{
+		count, errTest := sqlStore.GetInstallationsCount(&model.InstallationFilter{
 			Paging:  model.AllPagesWithDeleted(),
 			GroupID: groupID,
 		})
-		assert.NoError(t, err)
+		assert.NoError(t, errTest)
 		assert.Equal(t, int64(1), count)
 	})
 

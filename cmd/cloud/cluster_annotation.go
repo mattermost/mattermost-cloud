@@ -35,7 +35,6 @@ func newCmdClusterAnnotationAdd() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)
@@ -83,7 +82,6 @@ func newCmdClusterAnnotationDelete() *cobra.Command {
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
 			flags.clusterFlags.addFlags(cmd)
-			return
 		},
 	}
 	flags.addFlags(cmd)

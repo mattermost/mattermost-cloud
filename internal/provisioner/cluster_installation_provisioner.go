@@ -73,7 +73,8 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 	}
 
 	if installation.License != "" {
-		licenseSecretName, err := prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
+		var licenseSecretName string
+		licenseSecretName, err = prepareCILicenseSecret(installation, clusterInstallation, k8sClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to prepare license secret")
 		}

@@ -150,7 +150,7 @@ func (a *Client) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger
 		logger.WithField("s3-bucket-name", bucketName).WithError(err).Warn("Could not determine if S3 bucket exists")
 	}
 
-	if err := a.S3BatchDelete(bucketName, nil); err != nil {
+	if err = a.S3BatchDelete(bucketName, nil); err != nil {
 		return errors.Wrap(err, "can't empty bucket contents")
 	}
 
@@ -182,6 +182,9 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 			Bucket: destBucketName,
 			Key:    destBucketKey,
 		})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create multipart upload for %s/%s", *srcBucketName, *srcBucketKey)
+	}
 
 	uploadID := response.UploadId
 	copySource := fmt.Sprintf("%s/%s", *srcBucketName, *srcBucketKey)
@@ -209,7 +212,8 @@ func (a *Client) S3LargeCopy(srcBucketName, srcBucketKey, destBucketName, destBu
 		lastByte := int(math.Min(float64(bytePosition+partSize-1), float64(objectSize-1)))
 		bytesRange := fmt.Sprintf("bytes=%d-%d", bytePosition, lastByte)
 
-		resp, err := a.service.s3.UploadPartCopy(
+		var resp *s3.UploadPartCopyOutput
+		resp, err = a.service.s3.UploadPartCopy(
 			ctx,
 			&s3.UploadPartCopyInput{
 				Bucket:          destBucketName,

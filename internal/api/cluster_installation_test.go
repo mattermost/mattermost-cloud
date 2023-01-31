@@ -285,14 +285,14 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("unknown cluster installation", func(t *testing.T) {
-		config, err := client.GetClusterInstallationConfig(model.NewID())
-		require.NoError(t, err)
+		config, errTest := client.GetClusterInstallationConfig(model.NewID())
+		require.NoError(t, errTest)
 		require.Nil(t, config)
 	})
 
 	t.Run("success", func(t *testing.T) {
-		config, err := client.GetClusterInstallationConfig(clusterInstallation1.ID)
-		require.NoError(t, err)
+		config, errTest := client.GetClusterInstallationConfig(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 		require.Contains(t, config, "ServiceSettings")
 	})
 
@@ -300,8 +300,8 @@ func TestGetClusterInstallationConfig(t *testing.T) {
 		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
 		require.NoError(t, err)
 
-		config, err := client.GetClusterInstallationConfig(clusterInstallation1.ID)
-		require.Error(t, err)
+		config, errTest := client.GetClusterInstallationConfig(clusterInstallation1.ID)
+		require.Error(t, errTest)
 		require.Nil(t, config)
 	})
 }
@@ -337,50 +337,50 @@ func TestSetClusterInstallationConfig(t *testing.T) {
 	config := map[string]interface{}{"ServiceSettings": map[string]interface{}{"SiteURL": "test.example.com"}}
 
 	t.Run("unknown cluster installation", func(t *testing.T) {
-		err := client.SetClusterInstallationConfig(model.NewID(), config)
-		require.EqualError(t, err, "failed with status code 404")
+		errTest := client.SetClusterInstallationConfig(model.NewID(), config)
+		require.EqualError(t, errTest, "failed with status code 404")
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/cluster_installation/%s/config", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/cluster_installation/%s/config", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("empty payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/cluster_installation/%s/config", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/cluster_installation/%s/config", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 
-		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
-		require.EqualError(t, err, "failed with status code 403")
+		errTest = client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
+		require.EqualError(t, errTest, "failed with status code 403")
 
-		err = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("success", func(t *testing.T) {
-		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
-		require.NoError(t, err)
+		errTest := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("cluster installation deleted", func(t *testing.T) {
-		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 
-		err := client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
-		require.Error(t, err)
+		errTest = client.SetClusterInstallationConfig(clusterInstallation1.ID, config)
+		require.Error(t, errTest)
 	})
 }
 
@@ -418,58 +418,58 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 	subcommand := model.ClusterInstallationMattermostCLISubcommand{"get", "version"}
 
 	t.Run("unknown cluster installation", func(t *testing.T) {
-		bytes, err := client.ExecClusterInstallationCLI(model.NewID(), command, subcommand)
-		require.EqualError(t, err, "failed with status code 404")
+		bytes, errTest := client.ExecClusterInstallationCLI(model.NewID(), command, subcommand)
+		require.EqualError(t, errTest, "failed with status code 404")
 		require.Empty(t, bytes)
 	})
 
 	t.Run("mmctl success", func(t *testing.T) {
-		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
-		require.NoError(t, err)
+		bytes, errTest := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
+		require.NoError(t, errTest)
 		require.NotEmpty(t, bytes)
 	})
 
 	t.Run("mattermost cli success", func(t *testing.T) {
-		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, "mattermost", subcommand)
-		require.NoError(t, err)
+		bytes, errTest := client.ExecClusterInstallationCLI(clusterInstallation1.ID, "mattermost", subcommand)
+		require.NoError(t, errTest)
 		require.NotEmpty(t, bytes)
 	})
 
 	t.Run("invalid command", func(t *testing.T) {
-		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, "invalid-command", subcommand)
-		require.Error(t, err)
+		bytes, errTest := client.ExecClusterInstallationCLI(clusterInstallation1.ID, "invalid-command", subcommand)
+		require.Error(t, errTest)
 		require.Empty(t, bytes)
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 
-		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
-		require.EqualError(t, err, "failed with status code 403")
+		bytes, errTest := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
+		require.EqualError(t, errTest, "failed with status code 403")
 		require.Empty(t, bytes)
 
-		err = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("error setting up exec command", func(t *testing.T) {
 		mProvisioner.CommandError = errors.New("encountered a command error")
 
-		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTEst := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTEst)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
 
@@ -477,20 +477,20 @@ func TestRunClusterInstallationExecCommand(t *testing.T) {
 		mProvisioner.CommandError = nil
 		mProvisioner.ExecError = errors.New("encountered an error running exec")
 
-		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/exec/mmctl", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
 	})
 
 	t.Run("cluster installation deleted", func(t *testing.T) {
-		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 
-		bytes, err := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
-		require.Error(t, err)
+		bytes, errTest := client.ExecClusterInstallationCLI(clusterInstallation1.ID, command, subcommand)
+		require.Error(t, errTest)
 		require.Empty(t, bytes)
 	})
 }
@@ -528,55 +528,55 @@ func TestRunClusterInstallationMattermostCLI(t *testing.T) {
 	subcommand := model.ClusterInstallationMattermostCLISubcommand{"get", "version"}
 
 	t.Run("unknown cluster installation", func(t *testing.T) {
-		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(model.NewID(), subcommand)
-		require.EqualError(t, err, "failed with status code 404")
+		bytes, errTest := client.RunMattermostCLICommandOnClusterInstallation(model.NewID(), subcommand)
+		require.EqualError(t, errTest, "failed with status code 404")
 		require.Empty(t, bytes)
 	})
 
 	t.Run("success", func(t *testing.T) {
-		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
-		require.NoError(t, err)
+		bytes, errTest := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
+		require.NoError(t, errTest)
 		require.NotEmpty(t, bytes)
 	})
 
 	t.Run("invalid payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/mattermost_cli", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/mattermost_cli", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("invalid")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 
-		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
-		require.EqualError(t, err, "failed with status code 403")
+		bytes, errTest := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
+		require.EqualError(t, errTest, "failed with status code 403")
 		require.Empty(t, bytes)
 
-		err = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockClusterInstallationAPI(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("non-zero exit command", func(t *testing.T) {
 		mProvisioner.CommandError = errors.New("encountered a command error")
 
-		httpRequest, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/mattermost_cli", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
-		require.NoError(t, err)
+		httpRequest, errTEst := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/cluster_installation/%s/mattermost_cli", ts.URL, clusterInstallation1.ID), bytes.NewReader([]byte("[]")))
+		require.NoError(t, errTEst)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
 
 	t.Run("cluster installation deleted", func(t *testing.T) {
-		err = sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.DeleteClusterInstallation(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 
-		bytes, err := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
-		require.Error(t, err)
+		bytes, errTest := client.RunMattermostCLICommandOnClusterInstallation(clusterInstallation1.ID, subcommand)
+		require.Error(t, errTest)
 		require.Empty(t, bytes)
 	})
 }
@@ -601,31 +601,31 @@ func TestMigrateClusterInstallations(t *testing.T) {
 	model.SetDeployOperators(true, true)
 
 	t.Run("invalid payload", func(t *testing.T) {
-		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
-		require.NoError(t, err)
+		resp, errTest := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate", ts.URL), "application/json", bytes.NewReader([]byte("invalid")))
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("empty payload", func(t *testing.T) {
-		resp, err := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate", ts.URL), "application/json", bytes.NewReader([]byte("")))
-		require.NoError(t, err)
+		resp, errTest := http.Post(fmt.Sprintf("%s/api/cluster_installations/migrate", ts.URL), "application/json", bytes.NewReader([]byte("")))
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	client := model.NewClient(ts.URL)
 	t.Run("missing source cluster", func(t *testing.T) {
-		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
-		require.EqualError(t, err, "failed with status code 400")
+		_, errTest := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "", TargetClusterID: "4567"})
+		require.EqualError(t, errTest, "failed with status code 400")
 	})
 
 	t.Run("missing target cluster", func(t *testing.T) {
-		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
-		require.EqualError(t, err, "failed with status code 400")
+		_, errTest := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: ""})
+		require.EqualError(t, errTest, "failed with status code 400")
 	})
 
 	t.Run("no cluster installation found to migrate", func(t *testing.T) {
-		_, err := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
-		require.EqualError(t, err, "failed with status code 404")
+		_, errTest := client.MigrateClusterInstallation(&model.MigrateClusterInstallationRequest{SourceClusterID: "12345", TargetClusterID: "67899"})
+		require.EqualError(t, errTest, "failed with status code 404")
 	})
 
 	// Valid migration test
@@ -1245,8 +1245,8 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation in a given cluster", func(t *testing.T) {
-		deletedCIs, err := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
-		require.NoError(t, err)
+		deletedCIs, errTest := client.DeleteInActiveClusterInstallationsByCluster(sourceClusterID)
+		require.NoError(t, errTest)
 		assert.Equal(t, deletedCIs.TotalClusterInstallations, 2)
 	})
 
@@ -1255,7 +1255,6 @@ func TestDeleteInActiveClusterInstallationsByCluster(t *testing.T) {
 	for _, ci := range cis {
 		require.Equal(t, ci.State, model.ClusterInstallationStateDeletionRequested)
 	}
-
 }
 
 func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
@@ -1302,13 +1301,12 @@ func TestDeleteInActiveClusterInstallationsByID(t *testing.T) {
 	require.NotEmpty(t, ci)
 
 	t.Run("delete inActive cluster installation by ID", func(t *testing.T) {
-		deletedCi, err := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
-		require.NoError(t, err)
+		deletedCi, errTest := client.DeleteInActiveClusterInstallationByID(clusterInstallation1.ID)
+		require.NoError(t, errTest)
 		assert.Equal(t, deletedCi.ID, clusterInstallation1.ID)
 	})
 
 	ci, err = sqlStore.GetClusterInstallations(filter)
 	require.NoError(t, err)
 	require.Equal(t, ci[0].State, model.ClusterInstallationStateDeletionRequested)
-
 }

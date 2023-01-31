@@ -471,8 +471,8 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(clusterInstallation.Namespace)
 
 	defer func() {
-		err := jobsClient.Delete(ctx, jobName, metav1.DeleteOptions{})
-		if err != nil && !k8sErrors.IsNotFound(err) {
+		errDefer := jobsClient.Delete(ctx, jobName, metav1.DeleteOptions{})
+		if errDefer != nil && !k8sErrors.IsNotFound(errDefer) {
 			logger.Errorf("Failed to cleanup exec job: %q", jobName)
 		}
 	}()
@@ -697,13 +697,6 @@ func getHibernatingIngressAnnotations() map[string]string {
 func int32Ptr(i int) *int32 {
 	i32 := int32(i)
 	return &i32
-}
-
-func unwrapInt32(i *int32) int32 {
-	if i != nil {
-		return *i
-	}
-	return 0
 }
 
 func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {

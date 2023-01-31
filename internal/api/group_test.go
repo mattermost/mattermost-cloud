@@ -294,120 +294,120 @@ func TestUpdateGroup(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("invalid payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s", ts.URL, group1.ID), bytes.NewReader([]byte("invalid")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s", ts.URL, group1.ID), bytes.NewReader([]byte("invalid")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("empty payload", func(t *testing.T) {
-		httpRequest, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s", ts.URL, group1.ID), bytes.NewReader([]byte("")))
-		require.NoError(t, err)
+		httpRequest, errTest := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/api/group/%s", ts.URL, group1.ID), bytes.NewReader([]byte("")))
+		require.NoError(t, errTest)
 
-		resp, err := http.DefaultClient.Do(httpRequest)
-		require.NoError(t, err)
+		resp, errTest := http.DefaultClient.Do(httpRequest)
+		require.NoError(t, errTest)
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
 	t.Run("unknown group", func(t *testing.T) {
-		group, err := client.UpdateGroup(&model.PatchGroupRequest{ID: model.NewID()})
-		require.EqualError(t, err, "failed with status code 404")
+		group, errTest := client.UpdateGroup(&model.PatchGroupRequest{ID: model.NewID()})
+		require.EqualError(t, errTest, "failed with status code 404")
 		require.Nil(t, group)
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockGroupAPI(group1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockGroupAPI(group1.ID)
+		require.NoError(t, errTest)
 
-		groupResp, err := client.UpdateGroup(&model.PatchGroupRequest{ID: group1.ID})
-		require.EqualError(t, err, "failed with status code 403")
+		groupResp, errTest := client.UpdateGroup(&model.PatchGroupRequest{ID: group1.ID})
+		require.EqualError(t, errTest, "failed with status code 403")
 		assert.Nil(t, groupResp)
 
-		err = sqlStore.UnlockGroupAPI(group1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockGroupAPI(group1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("only sequence updated", func(t *testing.T) {
-		group1, err = client.GetGroup(group1.ID)
-		require.NoError(t, err)
-		oldSequence := group1.Sequence
+		group2, errTest := client.GetGroup(group1.ID)
+		require.NoError(t, errTest)
+		oldSequence := group2.Sequence
 
-		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
+		updateResponseGroup, errTest := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:                  group1.ID,
 			ForceSequenceUpdate: true,
 		})
-		require.NoError(t, err)
+		require.NoError(t, errTest)
 
-		group1, err = client.GetGroup(group1.ID)
-		require.NoError(t, err)
-		require.Equal(t, "name", group1.Name)
-		require.Equal(t, "description", group1.Description)
-		require.Equal(t, "version", group1.Version)
-		require.EqualValues(t, group1.MattermostEnv, mattermostEnvFooBar)
-		require.Equal(t, updateResponseGroup, group1)
-		require.Equal(t, oldSequence+1, group1.Sequence)
+		group3, errTest := client.GetGroup(group1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, "name", group3.Name)
+		require.Equal(t, "description", group3.Description)
+		require.Equal(t, "version", group3.Version)
+		require.EqualValues(t, group3.MattermostEnv, mattermostEnvFooBar)
+		require.Equal(t, updateResponseGroup, group3)
+		require.Equal(t, oldSequence+1, group3.Sequence)
 	})
 
 	t.Run("partial update", func(t *testing.T) {
-		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
+		updateResponseGroup, errTest := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:      group1.ID,
 			Version: sToP("version2"),
 		})
-		require.NoError(t, err)
+		require.NoError(t, errTest)
 
-		group1, err = client.GetGroup(group1.ID)
-		require.NoError(t, err)
-		require.Equal(t, "name", group1.Name)
-		require.Equal(t, "description", group1.Description)
-		require.Equal(t, "version2", group1.Version)
-		require.EqualValues(t, group1.MattermostEnv, mattermostEnvFooBar)
-		require.Equal(t, updateResponseGroup, group1)
+		group2, errTest := client.GetGroup(group1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, "name", group2.Name)
+		require.Equal(t, "description", group2.Description)
+		require.Equal(t, "version2", group2.Version)
+		require.EqualValues(t, group2.MattermostEnv, mattermostEnvFooBar)
+		require.Equal(t, updateResponseGroup, group2)
 	})
 
 	mattermostEnvBarBaz := model.EnvVarMap{"bar": model.EnvVar{Value: "baz"}}
 	t.Run("full update", func(t *testing.T) {
-		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
+		updateResponseGroup, errTest := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:            group1.ID,
 			Name:          sToP("name2"),
 			Description:   sToP("description2"),
 			Version:       sToP("version2"),
 			MattermostEnv: mattermostEnvBarBaz,
 		})
-		require.NoError(t, err)
+		require.NoError(t, errTest)
 
-		group1, err = client.GetGroup(group1.ID)
-		require.NoError(t, err)
-		require.Equal(t, "name2", group1.Name)
-		require.Equal(t, "description2", group1.Description)
-		require.Equal(t, "version2", group1.Version)
+		group2, errTest := client.GetGroup(group1.ID)
+		require.NoError(t, errTest)
+		require.Equal(t, "name2", group2.Name)
+		require.Equal(t, "description2", group2.Description)
+		require.Equal(t, "version2", group2.Version)
 		require.True(t, mattermostEnvFooBar.ClearOrPatch(&mattermostEnvBarBaz))
-		require.Equal(t, group1.MattermostEnv, mattermostEnvFooBar)
-		require.Equal(t, updateResponseGroup, group1)
+		require.Equal(t, group2.MattermostEnv, mattermostEnvFooBar)
+		require.Equal(t, updateResponseGroup, group2)
 	})
 
 	t.Run("force restart", func(t *testing.T) {
-		group1, err = client.GetGroup(group1.ID)
-		require.NoError(t, err)
-		oldSequence := group1.Sequence
+		group2, errTest := client.GetGroup(group1.ID)
+		require.NoError(t, errTest)
+		oldSequence := group2.Sequence
 
-		group1.MattermostEnv.Patch(model.EnvVarMap{
+		group2.MattermostEnv.Patch(model.EnvVarMap{
 			"CLOUD_PROVISIONER_ENFORCED_RESTART": model.EnvVar{Value: fmt.Sprintf("force-restart-at-sequence-%d", oldSequence)},
 		})
-		expectedEnv := group1.MattermostEnv
+		expectedEnv := group2.MattermostEnv
 
-		updateResponseGroup, err := client.UpdateGroup(&model.PatchGroupRequest{
+		updateResponseGroup, errTest := client.UpdateGroup(&model.PatchGroupRequest{
 			ID:                        group1.ID,
 			ForceInstallationsRestart: true,
 		})
-		require.NoError(t, err)
+		require.NoError(t, errTest)
 
-		group1, err = client.GetGroup(group1.ID)
-		require.NoError(t, err)
-		require.EqualValues(t, expectedEnv, group1.MattermostEnv)
-		require.Equal(t, updateResponseGroup, group1)
-		require.Equal(t, oldSequence+1, group1.Sequence)
+		group3, errTest := client.GetGroup(group1.ID)
+		require.NoError(t, errTest)
+		require.EqualValues(t, expectedEnv, group3.MattermostEnv)
+		require.Equal(t, updateResponseGroup, group3)
+		require.Equal(t, oldSequence+1, group3.Sequence)
 	})
 }
 
@@ -466,14 +466,14 @@ func TestDeleteGroup(t *testing.T) {
 	})
 
 	t.Run("while api-security-locked", func(t *testing.T) {
-		err = sqlStore.LockGroupAPI(group1.ID)
-		require.NoError(t, err)
+		errTest := sqlStore.LockGroupAPI(group1.ID)
+		require.NoError(t, errTest)
 
-		err := client.DeleteGroup(group1.ID)
-		require.EqualError(t, err, "failed with status code 403")
+		errTest = client.DeleteGroup(group1.ID)
+		require.EqualError(t, errTest, "failed with status code 403")
 
-		err = sqlStore.UnlockGroupAPI(group1.ID)
-		require.NoError(t, err)
+		errTest = sqlStore.UnlockGroupAPI(group1.ID)
+		require.NoError(t, errTest)
 	})
 
 	t.Run("installations in group", func(t *testing.T) {

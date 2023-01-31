@@ -213,7 +213,7 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 
 			valueStr, ok := value.(string)
 			if ok {
-				_, err := c.Provisioner.ExecMMCTL(cluster, clusterInstallation, "--local", "config", "set", fullKey, valueStr)
+				_, err = c.Provisioner.ExecMMCTL(cluster, clusterInstallation, "--local", "config", "set", fullKey, valueStr)
 				if err != nil {
 					c.Logger.WithError(err).Errorf("failed to set key %s to value %s", fullKey, valueStr)
 					return err

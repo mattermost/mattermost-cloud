@@ -95,16 +95,16 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 
 	t.Run("fail to trigger migration if other migration succeeded but not committed", func(t *testing.T) {
 		succeededMigration := &model.InstallationDBMigrationOperation{State: model.InstallationDBMigrationStateSucceeded, InstallationID: installation1.ID}
-		err = sqlStore.CreateInstallationDBMigrationOperation(succeededMigration)
-		require.NoError(t, err)
+		errTest := sqlStore.CreateInstallationDBMigrationOperation(succeededMigration)
+		require.NoError(t, errTest)
 		defer func() {
-			err := sqlStore.DeleteInstallationDBRestorationOperation(succeededMigration.ID)
-			assert.NoError(t, err)
+			errDefer := sqlStore.DeleteInstallationDBRestorationOperation(succeededMigration.ID)
+			assert.NoError(t, errDefer)
 		}()
 
-		migrationOperation, err = client.MigrateInstallationDatabase(migrationRequest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "400")
+		_, errTest = client.MigrateInstallationDatabase(migrationRequest)
+		require.Error(t, errTest)
+		assert.Contains(t, errTest.Error(), "400")
 	})
 
 	t.Run("fail to trigger migration if destination database not supported", func(t *testing.T) {
@@ -112,9 +112,9 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 			InstallationID:      installation1.ID,
 			DestinationDatabase: model.InstallationDatabaseMysqlOperator,
 		}
-		migrationOperation, err = client.MigrateInstallationDatabase(migrationRequest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "400")
+		_, errTest := client.MigrateInstallationDatabase(migrationRequest)
+		require.Error(t, errTest)
+		assert.Contains(t, errTest.Error(), "400")
 	})
 
 	t.Run("fail to trigger migration if destination database not found", func(t *testing.T) {
@@ -123,9 +123,9 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 			DestinationDatabase:    model.InstallationDatabaseMultiTenantRDSPostgres,
 			DestinationMultiTenant: &model.MultiTenantDBMigrationData{DatabaseID: "unknown"},
 		}
-		migrationOperation, err = client.MigrateInstallationDatabase(migrationRequest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "400")
+		_, errTest := client.MigrateInstallationDatabase(migrationRequest)
+		require.Error(t, errTest)
+		assert.Contains(t, errTest.Error(), "400")
 	})
 
 	t.Run("fail to trigger migration if destination database same as current", func(t *testing.T) {
@@ -134,9 +134,9 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 			DestinationDatabase:    model.InstallationDatabaseMultiTenantRDSPostgres,
 			DestinationMultiTenant: &model.MultiTenantDBMigrationData{DatabaseID: "database1"},
 		}
-		migrationOperation, err = client.MigrateInstallationDatabase(migrationRequest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "400")
+		_, errTest := client.MigrateInstallationDatabase(migrationRequest)
+		require.Error(t, errTest)
+		assert.Contains(t, errTest.Error(), "400")
 	})
 
 	t.Run("fail to trigger migration if destination database in different vpc", func(t *testing.T) {
@@ -145,17 +145,17 @@ func TestTriggerInstallationDBMigration(t *testing.T) {
 			VpcID:        "vpc2",
 			DatabaseType: model.DatabaseEngineTypePostgres,
 		}
-		err = sqlStore.CreateMultitenantDatabase(destinationDB)
-		require.NoError(t, err)
+		errTest := sqlStore.CreateMultitenantDatabase(destinationDB)
+		require.NoError(t, errTest)
 
 		migrationRequest := &model.InstallationDBMigrationRequest{
 			InstallationID:         installation1.ID,
 			DestinationDatabase:    model.InstallationDatabaseMultiTenantRDSPostgres,
 			DestinationMultiTenant: &model.MultiTenantDBMigrationData{DatabaseID: "database3"},
 		}
-		migrationOperation, err = client.MigrateInstallationDatabase(migrationRequest)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "400")
+		migrationOperation, errTest = client.MigrateInstallationDatabase(migrationRequest)
+		require.Error(t, errTest)
+		assert.Contains(t, errTest.Error(), "400")
 	})
 }
 
