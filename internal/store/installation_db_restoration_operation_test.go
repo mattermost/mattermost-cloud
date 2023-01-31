@@ -200,11 +200,11 @@ func TestUpdateInstallationDBRestoration(t *testing.T) {
 		dbRestoration.State = model.InstallationDBRestorationStateSucceeded
 		dbRestoration.CompleteAt = -1
 
-		err2 := sqlStore.UpdateInstallationDBRestorationOperationState(dbRestoration)
-		require.NoError(t, err2)
+		errTest := sqlStore.UpdateInstallationDBRestorationOperationState(dbRestoration)
+		require.NoError(t, errTest)
 
-		fetched, err3 := sqlStore.GetInstallationDBRestorationOperation(dbRestoration.ID)
-		require.NoError(t, err3)
+		fetched, errTest := sqlStore.GetInstallationDBRestorationOperation(dbRestoration.ID)
+		require.NoError(t, errTest)
 		assert.Equal(t, model.InstallationDBRestorationStateSucceeded, fetched.State)
 		assert.Equal(t, int64(0), fetched.CompleteAt)      // Assert complete time not updated
 		assert.Equal(t, "", fetched.ClusterInstallationID) // Assert CI ID not updated
@@ -214,11 +214,11 @@ func TestUpdateInstallationDBRestoration(t *testing.T) {
 		dbRestoration.ClusterInstallationID = "test"
 		dbRestoration.CompleteAt = 100
 		dbRestoration.State = model.InstallationDBRestorationStateFailed
-		err2 := sqlStore.UpdateInstallationDBRestorationOperation(dbRestoration)
-		require.NoError(t, err2)
+		errTest := sqlStore.UpdateInstallationDBRestorationOperation(dbRestoration)
+		require.NoError(t, errTest)
 
-		fetched, err3 := sqlStore.GetInstallationDBRestorationOperation(dbRestoration.ID)
-		require.NoError(t, err3)
+		fetched, errTest := sqlStore.GetInstallationDBRestorationOperation(dbRestoration.ID)
+		require.NoError(t, errTest)
 		assert.Equal(t, model.InstallationDBRestorationStateFailed, fetched.State)
 		assert.Equal(t, "test", fetched.ClusterInstallationID)
 		assert.Equal(t, int64(100), fetched.CompleteAt)

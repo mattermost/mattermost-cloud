@@ -160,8 +160,8 @@ func executeServerCmd(flags serverFlags) error {
 		flags.clusterResourceThresholdScaleValue,
 	)
 
-	if err2 := installationScheduling.Validate(); err2 != nil {
-		return errors.Wrap(err2, "invalid installation scheduling options")
+	if err = installationScheduling.Validate(); err != nil {
+		return errors.Wrap(err, "invalid installation scheduling options")
 	}
 
 	supervisorsEnabled := flags.supervisorOptions
@@ -521,8 +521,8 @@ func checkRequirements(logger logrus.FieldLogger) error {
 		"kubectl",
 	}
 	for _, extraTool := range extraTools {
-		_, err2 := exec.LookPath(extraTool)
-		if err2 != nil {
+		_, err = exec.LookPath(extraTool)
+		if err != nil {
 			return errors.Errorf("failed to find %s on the PATH", extraTool)
 		}
 	}

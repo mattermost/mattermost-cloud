@@ -70,8 +70,8 @@ func TestGetCreateUpdateSubscription(t *testing.T) {
 	assert.Equal(t, 2*time.Minute, fetchedSub.FailureThreshold)
 
 	t.Run("unknown ID", func(t *testing.T) {
-		s, err2 := sqlStore.GetSubscription(model.NewID())
-		require.NoError(t, err2)
+		s, errTest := sqlStore.GetSubscription(model.NewID())
+		require.NoError(t, errTest)
 		assert.Nil(t, s)
 	})
 

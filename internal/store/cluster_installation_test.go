@@ -750,8 +750,9 @@ func TestSwitchDNS(t *testing.T) {
 	var installationIDs []string
 	var hibernatedInstallationIDs []string
 	for _, ci := range clusterInstallations {
-		installation, err2 := sqlStore.GetInstallation(ci.InstallationID, false, false)
-		require.NoError(t, err2)
+		var installation *model.Installation
+		installation, err = sqlStore.GetInstallation(ci.InstallationID, false, false)
+		require.NoError(t, err)
 
 		if installation.State == model.InstallationStateHibernating {
 			hibernatedInstallationIDs = append(hibernatedInstallationIDs, ci.InstallationID)

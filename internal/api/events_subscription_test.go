@@ -59,8 +59,8 @@ func TestCreateGetDeleteSubscriptions(t *testing.T) {
 	assert.Equal(t, sub, fetchedSub)
 
 	t.Run("should return 404 on not found", func(t *testing.T) {
-		notFoundSub, err2 := client.GetSubscription(model.NewID())
-		require.NoError(t, err2)
+		notFoundSub, errTest := client.GetSubscription(model.NewID())
+		require.NoError(t, errTest)
 		assert.Nil(t, notFoundSub)
 	})
 
@@ -69,8 +69,8 @@ func TestCreateGetDeleteSubscriptions(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("fail to delete twice", func(t *testing.T) {
-		err = client.DeleteSubscription(sub.ID)
-		require.Error(t, err)
+		errTest := client.DeleteSubscription(sub.ID)
+		require.Error(t, errTest)
 	})
 
 	fetchedSub, err = client.GetSubscription(sub.ID)
