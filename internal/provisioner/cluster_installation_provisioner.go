@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
@@ -59,6 +60,9 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
 			DNSConfig: setNdots(provisioner.params.NdotsValue),
+			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
+				RevisionHistoryLimit: ptr.Int32(1),
+			},
 		},
 	}
 
