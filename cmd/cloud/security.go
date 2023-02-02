@@ -57,6 +57,7 @@ func newCmdSecurityClusterLock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -80,6 +81,7 @@ func newCmdSecurityClusterUnlock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -117,6 +119,7 @@ func newCmdSecurityInstallationLock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -140,6 +143,7 @@ func newCmdSecurityInstallationUnlock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -177,6 +181,7 @@ func newCmdSecurityClusterInstallationLock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -200,6 +205,7 @@ func newCmdSecurityClusterInstallationUnlock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -237,6 +243,7 @@ func newCmdSecurityGroupLock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -260,6 +267,7 @@ func newCmdSecurityGroupUnlock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -297,6 +305,7 @@ func newCmdSecurityBackupLock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
@@ -320,6 +329,7 @@ func newCmdSecurityBackupUnlock() *cobra.Command {
 			return nil
 		},
 		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.securityFlags.addFlags(cmd)
 			flags.addFlags(cmd)
 		},
 	}
