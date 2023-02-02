@@ -14,22 +14,22 @@ spec:
         name: mattermost-operator
     spec:
       containers:
-        - args:
-            - --enable-leader-election
-            - --metrics-addr=0.0.0.0:8383
-          command:
-            - /mattermost-operator
-          env:
-            - name: MAX_RECONCILING_INSTALLATIONS
-              value: "20"
-            - name: REQUEUE_ON_LIMIT_DELAY
-              value: 20s
-            - name: MAX_RECONCILE_CONCURRENCY
-              value: "10"
-          image: mattermost/mattermost-operator:b269a84
-          imagePullPolicy: IfNotPresent
-          name: mattermost-operator
-          ports:
-            - containerPort: 8383
-              name: metrics
+      - args:
+        - --enable-leader-election
+        - --metrics-addr=0.0.0.0:8383
+        command:
+        - /mattermost-operator
+        env:
+        - name: MAX_RECONCILING_INSTALLATIONS
+          value: "20"
+        - name: REQUEUE_ON_LIMIT_DELAY
+          value: 20s
+        - name: MAX_RECONCILE_CONCURRENCY
+          value: "10"
+        image: mattermost/mattermost-operator:b269a84
+        imagePullPolicy: IfNotPresent
+        name: mattermost-operator
+        ports:
+        - containerPort: 8383
+          name: metrics
       serviceAccountName: mattermost-operator
