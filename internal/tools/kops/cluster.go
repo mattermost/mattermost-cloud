@@ -5,6 +5,7 @@
 package kops
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -92,20 +93,48 @@ func (c *Cmd) SetCluster(name, setValue string) error {
 	return nil
 }
 
+// RollingUpdateClusterRequired invokes kops rolling-update using the context of the cmd on the
+// provided cluster name in dry-run mode to check if a rolling update is required or not.
+// This is used to know if rotator needs to be enabled when performing cluster mutation operations.
+func (c *Cmd) RollingUpdateClusterRequired(name string) (bool, error) {
+	rollingUpdateRequired := true
+	stdout, _, err := c.rollingUpdateCluster(name, true)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to invoke kops rolling-update cluster dry-run")
+	}
+
+	for _, line := range bytes.Split(stdout, []byte("\n")) {
+		if strings.Contains(string(line), "No rolling-update required.") {
+			rollingUpdateRequired = false
+			break
+		}
+	}
+
+	return rollingUpdateRequired, nil
+}
+
 // RollingUpdateCluster invokes kops rolling-update cluster, using the context of the created Cmd.
 func (c *Cmd) RollingUpdateCluster(name string) error {
-	_, _, err := c.run(
-		"rolling-update",
-		"cluster",
-		arg("name", name),
-		arg("state", "s3://", c.s3StateStore),
-		"--yes",
-	)
+	_, _, err := c.rollingUpdateCluster(name, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to invoke kops rolling-update cluster")
 	}
 
 	return nil
+}
+
+func (c *Cmd) rollingUpdateCluster(name string, dryRun bool) ([]byte, []byte, error) {
+	args := []string{
+		"rolling-update",
+		"cluster",
+		arg("name", name),
+		arg("state", "s3://", c.s3StateStore),
+	}
+	if !dryRun {
+		args = append(args, "--yes")
+	}
+
+	return c.run(args...)
 }
 
 // UpdateCluster invokes kops update cluster, using the context of the created Cmd.

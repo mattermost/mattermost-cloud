@@ -64,7 +64,7 @@ func outputLogger(line string, logger log.FieldLogger) {
 	}
 }
 
-func (c *Cmd) run(arg ...string) ([]byte, []byte, error) {
+func (c *Cmd) run(arg ...string) (stdout []byte, stderr []byte, err error) {
 	cmd := exec.Command(c.kopsPath, arg...)
 	cmd.Env = append(
 		os.Environ(),

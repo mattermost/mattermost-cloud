@@ -550,16 +550,23 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
-	// TODO: Find out where to put this logic correctly
-	// if cluster.ProvisionerMetadataKops.RotatorRequest.Config != nil {
-	// 	if *cluster.ProvisionerMetadataKops.RotatorRequest.Config.UseRotator {
-	// 		logger.Info("Using node rotator for node resize")
-	// 		err = provisioner.RotateClusterNodes(cluster)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
+	requiresClusterRotation, err := kops.RollingUpdateClusterRequired(kopsMetadata.Name)
+	if err != nil {
+		return err
+	}
+
+	if requiresClusterRotation {
+		logger.Info("Rolling update is required")
+		if cluster.ProvisionerMetadataKops.RotatorRequest.Config != nil {
+			if *cluster.ProvisionerMetadataKops.RotatorRequest.Config.UseRotator {
+				logger.Info("Using node rotator for node resize")
+				err = provisioner.RotateClusterNodes(cluster)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
 
 	err = kops.RollingUpdateCluster(kopsMetadata.Name)
 	if err != nil {
