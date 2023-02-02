@@ -3,7 +3,6 @@ module github.com/mattermost/mattermost-cloud
 go 1.19
 
 require (
-	emperror.dev/errors v0.8.0
 	github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/agnivade/easy-scrypt v1.0.0
@@ -60,6 +59,7 @@ require (
 )
 
 require (
+	emperror.dev/errors v0.8.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/aws/aws-sdk-go v1.42.16 // indirect

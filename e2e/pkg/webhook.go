@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"os"
 
-	"emperror.dev/errors"
+	"github.com/pkg/errors"
 )
 
 type webhookPayload struct {
