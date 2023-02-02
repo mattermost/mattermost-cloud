@@ -33,8 +33,8 @@ type TestConfig struct {
 	WebhookAddress            string `envconfig:"default=http://localhost:11111"`
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
 	FetchAMI                  bool   `envconfig:"default=true"`
-	KopsAMI                   string
-	Cleanup                   bool `envconfig:"default=true"`
+	KopsAMI                   string `envconfig:"optional"`
+	Cleanup                   bool   `envconfig:"default=true"`
 }
 
 // Test holds all data required for a db migration test.
