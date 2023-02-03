@@ -189,7 +189,7 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 	for _, utility := range group.utilities {
 		err := utility.Destroy()
 		if err != nil {
-			return errors.Wrap(err, "failed to destroy one of the cluster utilities")
+			group.logger.WithError(err).Warnf("failed to destroy utility `%s`", utility.Name())
 		}
 
 		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
