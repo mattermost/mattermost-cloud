@@ -19,7 +19,7 @@ func TestNewHelmDeploymentWithDefaultConfigurationNodeProblemDetector(t *testing
 	defer ctrl.Finish()
 
 	logger := log.New()
-	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.0.5"}, &model.Cluster{
+	nodeProblemDetector, err := newNodeProblemDetectorHandle(&model.HelmUtilityVersion{Chart: "2.3.2"}, &model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},
