@@ -94,7 +94,6 @@ type InstallationDatabaseStoreInterface interface {
 	GetProxyDatabaseResourcesForInstallation(installationID string) (*DatabaseResourceGrouping, error)
 	GetOrCreateProxyDatabaseResourcesForInstallation(installationID, multitenantDatabaseID string) (*DatabaseResourceGrouping, error)
 	DeleteInstallationProxyDatabaseResources(multitenantDatabase *MultitenantDatabase, databaseSchema *DatabaseSchema) error
-	GetGroupDTOs(filter *GroupFilter) ([]*GroupDTO, error)
 }
 
 // ClusterUtilityDatabaseStoreInterface is the interface necessary for SQLStore

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -20,7 +19,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 func provisionCluster(
@@ -28,9 +26,9 @@ func provisionCluster(
 	kubeconfigPath string,
 	awsClient aws.AWS,
 	params ProvisioningParams,
-	store model.InstallationDatabaseStoreInterface,
-	logger logrus.FieldLogger,
-) error {
+	store model.ClusterUtilityDatabaseStoreInterface,
+	logger logrus.FieldLogger) error {
+
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
 	deployPerseus := true
@@ -70,10 +68,10 @@ func provisionCluster(
 	}
 
 	// Remove all previously-installed operator namespaces and resources.
-	mainCtx := context.TODO()
+	ctx := context.TODO()
 	for _, namespace := range namespaces {
 		logger.Infof("Cleaning up namespace %s", namespace)
-		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(mainCtx, namespace, metav1.DeleteOptions{})
+		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
 		if k8sErrors.IsNotFound(err) {
 			logger.Infof("Namespace %s not found; skipping...", namespace)
 		} else if err != nil {
@@ -372,7 +370,7 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
-	prom, _ := k8sClient.GetNamespace(prometheusNamespace)
+	prom, _ := k8sClient.GetNamespace("prometheus")
 
 	if prom != nil && prom.Name != "" {
 		err = prepareSloth(k8sClient, logger)
@@ -381,51 +379,6 @@ func provisionCluster(
 		}
 	}
 
-	logger.Info("Ensuring cluster SLOs are present")
-	if errInner := createOrUpdateClusterSLOs(cluster, k8sClient, params.SLOTargetAvailability, logger); errInner != nil {
-		return errors.Wrap(errInner, "failed to create cluster slos")
-	}
-
-	groups, err := store.GetGroupDTOs(&model.GroupFilter{
-		Paging: model.AllPagesNotDeleted(),
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to get groups to create slos")
-	}
-
-	groupIDs := make(map[string]struct{}, len(groups))
-
-	logger.Infof("Ensuring %d Ring SLOs are present", len(groups))
-	for _, group := range groups {
-		groupIDs[makeRingSLOName(group)] = struct{}{}
-		if errInner := createOrUpdateRingSLOs(group, k8sClient, params.SLOTargetAvailability, logger); errInner != nil {
-			return errors.Wrapf(errInner, "failed to apply ring slo: %s", group.ID)
-		}
-	}
-
-	// Get cluster prometheus service levels for rings and determine if any group has been deleted
-	// and delete the appropriate SLO as well.
-	logger.Info("Ensuring outdated ring SLOs are removed")
-
-	ctx, cancel = context.WithTimeout(mainCtx, 15*time.Second)
-	defer cancel()
-
-	psls, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(map[string]string{
-			slothServiceLevelTypeLabel: slothServiceLevelTypeRingValue,
-		}).String(),
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed listing current cluster slos")
-	}
-
-	for _, psl := range psls.Items {
-		if _, exist := groupIDs[psl.Name]; !exist {
-			if errInner := deletePrometheusServiceLevel(psl, k8sClient, logger); errInner != nil {
-				return errors.Wrapf(errInner, "failed deleting removed ring slo: %s", strings.ToLower(psl.Name))
-			}
-		}
-	}
 	// Sync PGBouncer configmap if there is any change
 	var vpc string
 	if cluster.ProvisionerMetadataKops != nil {
