@@ -235,13 +235,14 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 	for _, vpc := range vpcs {
 		clusterResources, err := a.getClusterResourcesForVPC(*vpc.VpcId, *vpc.CidrBlock, logger)
 		if err != nil {
-			logger.Warn(err)
+			logger.WithError(err).WithField("vpc", *vpc.VpcId).Warn("Couldn't get cluster resources for VPC")
 			continue
 		}
 
 		err = a.claimVpc(clusterResources, cluster, owner, logger)
 		if err != nil {
-			return clusterResources, err
+			logger.WithError(err).WithField("vpc", *vpc.VpcId).Warn("Couldn't claim VPC")
+			continue
 		}
 
 		return clusterResources, nil
