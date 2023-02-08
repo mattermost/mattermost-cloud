@@ -41,7 +41,7 @@ var ValidSizes = map[string]size{
 
 // sizeAlefDev is a cluster sized for development and testing.
 var sizeAlefDev = size{
-	MasterInstanceType: "t3.medium",
+	MasterInstanceType: "t3.small",
 	MasterCount:        1,
 	NodeInstanceType:   "t3.medium",
 	NodeMinCount:       2,
@@ -50,7 +50,7 @@ var sizeAlefDev = size{
 
 // sizeAlef500 is a cluster sized for 500 users.
 var sizeAlef500 = size{
-	MasterInstanceType: "t3.medium",
+	MasterInstanceType: "t3.small",
 	MasterCount:        1,
 	NodeInstanceType:   "m5.large",
 	NodeMinCount:       2,

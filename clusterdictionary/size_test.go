@@ -46,7 +46,7 @@ func TestApplyToCreateClusterRequest(t *testing.T) {
 		}, {
 			SizeAlefDev,
 			&model.CreateClusterRequest{
-				MasterInstanceType: "t3.medium",
+				MasterInstanceType: "t3.small",
 				MasterCount:        1,
 				NodeInstanceType:   "t3.medium",
 				NodeMinCount:       2,
@@ -56,7 +56,7 @@ func TestApplyToCreateClusterRequest(t *testing.T) {
 		}, {
 			SizeAlef500,
 			&model.CreateClusterRequest{
-				MasterInstanceType: "t3.medium",
+				MasterInstanceType: "t3.small",
 				MasterCount:        1,
 				NodeInstanceType:   "m5.large",
 				NodeMinCount:       2,
