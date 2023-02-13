@@ -63,11 +63,6 @@ func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if errDefer := kopsClient.Close(); errDefer != nil {
-			logger.WithError(errDefer).Error("Failed to close kops client")
-		}
-	}()
 
 	if err = kopsClient.ExportKubecfg(cluster.ProvisionerMetadataKops.Name); err != nil {
 		return err
