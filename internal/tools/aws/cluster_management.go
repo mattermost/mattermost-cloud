@@ -242,6 +242,9 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 		err = a.claimVpc(clusterResources, cluster, owner, logger)
 		if err != nil {
 			logger.WithError(err).WithField("vpc", *vpc.VpcId).Warn("Couldn't claim VPC")
+			if err := a.releaseVpc(cluster, logger); err != nil {
+				return clusterResources, errors.Wrapf(err, "error when unclaiming faulty claimed vpc %s", *vpc.VpcId)
+			}
 			continue
 		}
 
