@@ -182,7 +182,7 @@ install: build
 # Generate mocks from the interfaces.
 .PHONY: mocks
 mocks:  $(MOCKGEN)
-	go generate ./internal/mocks/...
+	go generate --mod=mod ./internal/mocks/...
 
 .PHONY: code-gen
 code-gen:
@@ -202,7 +202,7 @@ goverall: $(GOVERALLS_GEN) ## Runs goveralls
 
 .PHONY: unittest
 unittest:
-	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+	$(GO) test -failfast ./... -v -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks:  $(MOCKGEN) mocks

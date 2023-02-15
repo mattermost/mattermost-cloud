@@ -49,7 +49,7 @@ func (s *mockInstallationStore) GetClusters(clusterFilter *model.ClusterFilter) 
 }
 
 func (s *mockInstallationStore) GetCluster(id string) (*model.Cluster, error) {
-	return nil, nil
+	return &model.Cluster{}, nil
 }
 
 func (s *mockInstallationStore) UpdateCluster(cluster *model.Cluster) error {
