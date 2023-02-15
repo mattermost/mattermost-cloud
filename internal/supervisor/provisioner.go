@@ -19,7 +19,7 @@ type ProvisionerOption interface {
 	ClusterProvisionerOption
 	InstallationProvisionerOption
 	ClusterInstallationProvisionerOption
-	backupProvisionerOption
+	BackupProvisionerOption
 	ImportProvisionerOption
 	RestoreOperatorOption
 	DBMigrationCIProvisionerOption

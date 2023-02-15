@@ -7,11 +7,10 @@ package api
 import (
 	"net/http"
 
-	"github.com/mattermost/mattermost-cloud/internal/store"
-	"github.com/pkg/errors"
-
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 )
 
 // initCluster registers cluster endpoints on the given router.

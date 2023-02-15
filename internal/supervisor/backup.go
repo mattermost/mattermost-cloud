@@ -43,7 +43,7 @@ type BackupProvisioner interface {
 	CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error
 }
 
-type backupProvisionerOption interface {
+type BackupProvisionerOption interface {
 	GetBackupProvisioner(string) BackupProvisioner
 }
 
@@ -61,13 +61,13 @@ type BackupSupervisor struct {
 	instanceID string
 	logger     log.FieldLogger
 
-	backupOperator backupProvisionerOption
+	backupOperator BackupProvisionerOption
 }
 
 // NewBackupSupervisor creates a new BackupSupervisor.
 func NewBackupSupervisor(
 	store installationBackupStore,
-	backupOperator backupProvisionerOption,
+	backupOperator BackupProvisionerOption,
 	aws aws.AWS,
 	instanceID string,
 	logger log.FieldLogger) *BackupSupervisor {
