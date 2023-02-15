@@ -186,8 +186,6 @@ func executeServerCmd(flags serverFlags) error {
 		}
 	}
 
-	provisionerFlag := flags.provisioner
-
 	logger.WithFields(logrus.Fields{
 		"build-hash":                                    model.BuildHash,
 		"cluster-supervisor":                            supervisorsEnabled.clusterSupervisor,
@@ -228,7 +226,6 @@ func executeServerCmd(flags serverFlags) error {
 		"disable-db-init-check":                         flags.disableDBInitCheck,
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
-		"provisioner":                                   provisionerFlag,
 		"slo-availability":                              flags.sloTargetAvailability,
 	}).Info("Starting Mattermost Provisioning Server")
 
