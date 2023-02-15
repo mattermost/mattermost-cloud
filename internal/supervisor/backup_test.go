@@ -104,6 +104,17 @@ func (s mockBackupStore) GetWebhooks(filter *model.WebhookFilter) ([]*model.Webh
 	return nil, nil
 }
 
+type mockBackupProvisionerOption struct {
+	mock *mockBackupProvisioner
+}
+
+func (p *mockBackupProvisionerOption) GetBackupProvisioner(provisioner string) supervisor.BackupProvisioner {
+	if p.mock == nil {
+		p.mock = &mockBackupProvisioner{}
+	}
+	return p.mock
+}
+
 type mockBackupProvisioner struct {
 	BackupStartTime int64
 	err             error
@@ -125,7 +136,7 @@ func TestBackupSupervisorDo(t *testing.T) {
 	t.Run("no backup pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockBackupStore{}
-		mockBackupOp := &mockBackupProvisioner{}
+		mockBackupOp := &mockBackupProvisionerOption{}
 
 		backupSupervisor := supervisor.NewBackupSupervisor(mockStore, mockBackupOp, &mockAWS{}, "instanceID", logger)
 		err := backupSupervisor.Do()
@@ -159,7 +170,7 @@ func TestBackupSupervisorDo(t *testing.T) {
 			UnlockChan: make(chan interface{}),
 		}
 
-		backupSupervisor := supervisor.NewBackupSupervisor(mockStore, &mockBackupProvisioner{}, &mockAWS{}, "instanceID", logger)
+		backupSupervisor := supervisor.NewBackupSupervisor(mockStore, &mockBackupProvisionerOption{}, &mockAWS{}, "instanceID", logger)
 		err := backupSupervisor.Do()
 		require.NoError(t, err)
 
@@ -174,7 +185,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		mockBackupOp := &mockBackupProvisioner{}
+		mockBackupOp := &mockBackupProvisionerOption{}
 
 		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
 
@@ -200,7 +211,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		mockBackupOp := &mockBackupProvisioner{}
+		mockBackupOp := &mockBackupProvisionerOption{}
 
 		installation, _ := setupBackupRequiredResources(t, sqlStore)
 		installation.State = model.InstallationStateStable
@@ -227,7 +238,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		mockBackupOp := &mockBackupProvisioner{}
+		mockBackupOp := &mockBackupProvisionerOption{}
 
 		backupMeta := &model.InstallationBackup{
 			InstallationID: "deleted-installation-id",
@@ -287,7 +298,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 				err := sqlStore.CreateInstallationBackup(backupMeta)
 				require.NoError(t, err)
 
-				backupSupervisor := supervisor.NewBackupSupervisor(sqlStore, testCase.mockBackupOp, &mockAWS{}, "instanceID", logger)
+				backupSupervisor := supervisor.NewBackupSupervisor(sqlStore, &mockBackupProvisionerOption{testCase.mockBackupOp}, &mockAWS{}, "instanceID", logger)
 				backupSupervisor.Supervise(backupMeta)
 
 				// Assert
@@ -306,7 +317,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
-		mockBackupOp := &mockBackupProvisioner{}
+		mockBackupOp := &mockBackupProvisionerOption{}
 
 		installation, clusterInstallation := setupBackupRequiredResources(t, sqlStore)
 
@@ -355,7 +366,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 		require.NoError(t, err)
 
 		// Requested -> InProgress
-		backupSupervisor := supervisor.NewBackupSupervisor(sqlStore, mockBackupOp, &mockAWS{}, "instanceID", logger)
+		backupSupervisor := supervisor.NewBackupSupervisor(sqlStore, &mockBackupProvisionerOption{mockBackupOp}, &mockAWS{}, "instanceID", logger)
 		backupSupervisor.Supervise(backup)
 
 		backup, err = sqlStore.GetInstallationBackup(backup.ID)

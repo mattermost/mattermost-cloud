@@ -54,7 +54,7 @@ type installationDBMigrationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
-type dbMigrationCIProvisioner interface {
+type DBMigrationCIProvisioner interface {
 	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
 	ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error
 }
@@ -74,8 +74,16 @@ type DBMigrationSupervisor struct {
 	instanceID               string
 	environment              string
 	logger                   log.FieldLogger
-	dbMigrationCIProvisioner dbMigrationCIProvisioner
+	dbMigrationCIProvisioner DBMigrationCIProvisionerOption
 	eventsProducer           eventProducer
+}
+
+type DBMigrationCIProvisionerOption interface {
+	GetDBMigrationCIProvisioner(provisioner string) DBMigrationCIProvisioner
+}
+
+func (p provisionerOption) GetDBMigrationCIProvisioner(provisioner string) DBMigrationCIProvisioner {
+	return p.getProvisioner(provisioner)
 }
 
 // NewInstallationDBMigrationSupervisor creates a new DBMigrationSupervisor.
@@ -84,9 +92,10 @@ func NewInstallationDBMigrationSupervisor(
 	aws aws.AWS,
 	dbProvider databaseProvider,
 	instanceID string,
-	provisioner dbMigrationCIProvisioner,
+	provisioner DBMigrationCIProvisionerOption,
 	eventsProducer eventProducer,
-	logger log.FieldLogger) *DBMigrationSupervisor {
+	logger log.FieldLogger,
+) *DBMigrationSupervisor {
 	return &DBMigrationSupervisor{
 		store:                    store,
 		aws:                      aws,
@@ -410,7 +419,7 @@ func (s *DBMigrationSupervisor) updateInstallationConfig(dbMigration *model.Inst
 		command = []string{"/bin/sh", "-c", "MM_CLUSTERSETTINGS_ENABLE=false mattermost & pid=$!; until $(curl --output /dev/null --silent --fail localhost:8065/api/v4/system/ping); do sleep 2; done; mmctl --local config set SqlSettings.DataSource $MM_CONFIG && kill $pid"}
 	}
 
-	err = s.dbMigrationCIProvisioner.ExecClusterInstallationJob(cluster, clusterInstallation, command...)
+	err = s.dbMigrationCIProvisioner.GetDBMigrationCIProvisioner(cluster.Provisioner).ExecClusterInstallationJob(cluster, clusterInstallation, command...)
 	if err != nil {
 		logger.WithError(err).Error("Failed to execute command on cluster installation")
 		return dbMigration.State
@@ -534,7 +543,7 @@ func (s *DBMigrationSupervisor) refreshSecrets(installation *model.Installation)
 			return errors.Wrap(err, "failed to get cluster")
 		}
 
-		err = s.dbMigrationCIProvisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		err = s.dbMigrationCIProvisioner.GetDBMigrationCIProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 			RefreshSecrets(cluster, installation, cis[0])
 		if err != nil {
 			return errors.Wrap(err, "failed to refresh credentials of cluster installation")

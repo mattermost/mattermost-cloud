@@ -6,11 +6,40 @@ package supervisor
 
 // Provisioner groups different provisioner interfaces.
 type Provisioner interface {
-	clusterProvisioner
-	installationProvisioner
-	clusterInstallationProvisioner
+	ClusterProvisioner
+	InstallationProvisioner
+	ClusterInstallationProvisioner
 	BackupProvisioner
-	restoreOperator
-	importProvisioner
-	dbMigrationCIProvisioner
+	RestoreOperator
+	ImportProvisioner
+	DBMigrationCIProvisioner
+}
+
+type ProvisionerOption interface {
+	ClusterProvisionerOption
+	InstallationProvisionerOption
+	ClusterInstallationProvisionerOption
+	backupProvisionerOption
+	ImportProvisionerOption
+	RestoreOperatorOption
+	DBMigrationCIProvisionerOption
+}
+
+type provisionerOption struct {
+	kopsProvisioner Provisioner
+	eksProvisioner  Provisioner
+}
+
+func GetProvisionerOption(eks, kops Provisioner) ProvisionerOption {
+	return provisionerOption{
+		eksProvisioner:  eks,
+		kopsProvisioner: kops,
+	}
+}
+
+func (p provisionerOption) getProvisioner(provisioner string) Provisioner {
+	if provisioner == "eks" {
+		return p.eksProvisioner
+	}
+	return p.kopsProvisioner
 }

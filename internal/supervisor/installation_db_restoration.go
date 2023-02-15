@@ -39,8 +39,8 @@ type installationDBRestorationStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
-// restoreOperator abstracts different restoration operations required by the installation db restoration supervisor.
-type restoreOperator interface {
+// RestoreOperator abstracts different restoration operations required by the installation db restoration supervisor.
+type RestoreOperator interface {
 	TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error
 	CheckRestoreStatus(backupMeta *model.InstallationBackup, cluster *model.Cluster) (int64, error)
 	CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error
@@ -56,18 +56,27 @@ type InstallationDBRestorationSupervisor struct {
 	instanceID      string
 	environment     string
 	logger          log.FieldLogger
-	restoreOperator restoreOperator
+	restoreOperator RestoreOperatorOption
 	eventsProducer  eventProducer
+}
+
+type RestoreOperatorOption interface {
+	GetRestoreOperator(provisioner string) RestoreOperator
+}
+
+func (p provisionerOption) GetRestoreOperator(provisioner string) RestoreOperator {
+	return p.getProvisioner(provisioner)
 }
 
 // NewInstallationDBRestorationSupervisor creates a new InstallationDBRestorationSupervisor.
 func NewInstallationDBRestorationSupervisor(
 	store installationDBRestorationStore,
 	aws aws.AWS,
-	restoreOperator restoreOperator,
+	restoreOperator RestoreOperatorOption,
 	eventsProducer eventProducer,
 	instanceID string,
-	logger log.FieldLogger) *InstallationDBRestorationSupervisor {
+	logger log.FieldLogger,
+) *InstallationDBRestorationSupervisor {
 	return &InstallationDBRestorationSupervisor{
 		store:           store,
 		aws:             aws,
@@ -224,7 +233,7 @@ func (s *InstallationDBRestorationSupervisor) triggerRestoration(restoration *mo
 		return restoration.State
 	}
 
-	err = s.restoreOperator.TriggerRestore(installation, backup, cluster)
+	err = s.restoreOperator.GetRestoreOperator(cluster.Provisioner).TriggerRestore(installation, backup, cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to trigger restoration job")
 		return restoration.State
@@ -246,7 +255,7 @@ func (s *InstallationDBRestorationSupervisor) checkRestorationStatus(restoration
 		return restoration.State
 	}
 
-	completeAt, err := s.restoreOperator.CheckRestoreStatus(backup, cluster)
+	completeAt, err := s.restoreOperator.GetRestoreOperator(cluster.Provisioner).CheckRestoreStatus(backup, cluster)
 	if err != nil {
 		if err == provisioner.ErrJobBackoffLimitReached {
 			logger.WithError(err).Error("Installation db restoration failed")
@@ -332,7 +341,7 @@ func (s *InstallationDBRestorationSupervisor) cleanupRestoration(restoration *mo
 			return restoration.State
 		}
 
-		err = s.restoreOperator.CleanupRestoreJob(backup, cluster)
+		err = s.restoreOperator.GetRestoreOperator(cluster.Provisioner).CleanupRestoreJob(backup, cluster)
 		if err != nil {
 			logger.WithError(err).Error("Failed to cleanup backup from cluster")
 			return restoration.State

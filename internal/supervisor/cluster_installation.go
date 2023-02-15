@@ -39,8 +39,8 @@ type clusterInstallationStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
-// clusterInstallationProvisioner abstracts the provisioning operations required by the cluster installation supervisor.
-type clusterInstallationProvisioner interface {
+// ClusterInstallationProvisioner abstracts the provisioning operations required by the cluster installation supervisor.
+type ClusterInstallationProvisioner interface {
 	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
 }
 
@@ -50,7 +50,7 @@ type clusterInstallationProvisioner interface {
 // other clients needing to coordinate background jobs.
 type ClusterInstallationSupervisor struct {
 	store          clusterInstallationStore
-	provisioner    clusterInstallationProvisioner
+	provisioner    ClusterInstallationProvisionerOption
 	aws            aws.AWS
 	eventsProducer eventProducer
 	instanceID     string
@@ -58,8 +58,16 @@ type ClusterInstallationSupervisor struct {
 	metrics        *metrics.CloudMetrics
 }
 
+type ClusterInstallationProvisionerOption interface {
+	GetClusterInstallationProvisioner(provisioner string) ClusterInstallationProvisioner
+}
+
+func (p provisionerOption) GetClusterInstallationProvisioner(provisioner string) ClusterInstallationProvisioner {
+	return p.getProvisioner(provisioner)
+}
+
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
-func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner clusterInstallationProvisioner, aws aws.AWS, eventsProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterInstallationSupervisor {
+func NewClusterInstallationSupervisor(store clusterInstallationStore, clusterInstallationProvisioner ClusterInstallationProvisionerOption, aws aws.AWS, eventsProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterInstallationSupervisor {
 	return &ClusterInstallationSupervisor{
 		store:          store,
 		provisioner:    clusterInstallationProvisioner,
@@ -209,7 +217,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 }
 
 func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-	err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+	err := s.provisioner.GetClusterInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 		PrepareClusterUtilities(cluster, installation, s.store, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")
@@ -222,7 +230,7 @@ func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstall
 		return model.ClusterInstallationStateCreationRequested
 	}
 
-	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+	err = s.provisioner.GetClusterInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 		CreateClusterInstallation(cluster, installation, dnsRecords, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")
@@ -254,7 +262,7 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 		return clusterInstallation.State
 	}
 
-	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+	err = s.provisioner.GetClusterInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 		DeleteClusterInstallation(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete cluster installation")
@@ -272,7 +280,7 @@ func (s *ClusterInstallationSupervisor) deleteClusterInstallation(clusterInstall
 }
 
 func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, cluster *model.Cluster, logger log.FieldLogger) string {
-	isReady, isStable, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+	isReady, isStable, err := s.provisioner.GetClusterInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 		IsResourceReadyAndStable(cluster, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster installation resource")
@@ -289,7 +297,7 @@ func (s *ClusterInstallationSupervisor) checkReconcilingClusterInstallation(clus
 		return model.ClusterInstallationStateReady
 	}
 
-	err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+	err = s.provisioner.GetClusterInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 		DeleteOldClusterInstallationLicenseSecrets(cluster, installation, clusterInstallation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to ensure old license secrets were deleted")

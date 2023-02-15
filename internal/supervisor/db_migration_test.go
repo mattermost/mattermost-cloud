@@ -194,6 +194,17 @@ func (m *mockResourceUtil) GetDatabase(installationID, dbType string) model.Data
 	return &mockDatabase{}
 }
 
+type mockMigrationProvisionerOption struct {
+	mock *mockMigrationProvisioner
+}
+
+func (p *mockMigrationProvisionerOption) GetDBMigrationCIProvisioner(provisioner string) supervisor.DBMigrationCIProvisioner {
+	if p.mock == nil {
+		p.mock = &mockMigrationProvisioner{}
+	}
+	return p.mock
+}
+
 type mockMigrationProvisioner struct{}
 
 func (m *mockMigrationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
@@ -421,7 +432,7 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 			&mockAWS{},
 			&mockResourceUtil{},
 			"instanceID",
-			&mockMigrationProvisioner{},
+			&mockMigrationProvisionerOption{},
 			&mockEventProducer{},
 			logger,
 		)
@@ -611,7 +622,7 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 			&mockAWS{},
 			&mockResourceUtil{},
 			"instanceID",
-			&mockMigrationProvisioner{},
+			&mockMigrationProvisionerOption{},
 			&mockEventProducer{},
 			logger,
 		)
@@ -716,7 +727,7 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 			&mockAWS{},
 			&mockResourceUtil{},
 			"instanceID",
-			&mockMigrationProvisioner{},
+			&mockMigrationProvisionerOption{},
 			&mockEventProducer{},
 			logger,
 		)
@@ -752,7 +763,7 @@ func TestDBMigrationSupervisor_Supervise(t *testing.T) {
 			&mockAWS{},
 			&mockResourceUtil{},
 			"instanceID",
-			&mockMigrationProvisioner{},
+			&mockMigrationProvisionerOption{},
 			&mockEventProducer{},
 			logger,
 		)

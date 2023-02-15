@@ -166,7 +166,7 @@ type Metrics interface {
 type Context struct {
 	Store                             Store
 	Supervisor                        Supervisor
-	Provisioner                       Provisioner
+	Provisioner                       ProvisionerOption
 	DBProvider                        DBProvider
 	EventProducer                     EventProducer
 	AwsClient                         AwsClient

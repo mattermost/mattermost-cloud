@@ -331,6 +331,17 @@ func (m *mockMultitenantDBStore) GetLogicalDatabase(logicalDatabaseID string) (*
 	return nil, nil
 }
 
+type mockInstallationProvisionerOption struct {
+	mock *mockInstallationProvisioner
+}
+
+func (p *mockInstallationProvisionerOption) GetInstallationProvisioner(provisioner string) supervisor.InstallationProvisioner {
+	if p.mock == nil {
+		p.mock = &mockInstallationProvisioner{}
+	}
+	return p.mock
+}
+
 type mockInstallationProvisioner struct {
 	UseCustomClusterResources bool
 	CustomClusterResources    *k8s.ClusterResources
@@ -648,7 +659,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisionerOption{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -666,7 +677,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		mockStore.Installation = mockStore.UnlockedInstallationsPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisionerOption{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -709,7 +720,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		}
 
 		mockEventProducer := &mockEventProducer{}
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisionerOption{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -756,7 +767,7 @@ func TestInstallationSupervisor(t *testing.T) {
 	standardTestInstallationSupervisor := func(sqlStore *store.SQLStore, logger log.FieldLogger) *supervisor.InstallationSupervisor {
 		return supervisor.NewInstallationSupervisor(
 			sqlStore,
-			&mockInstallationProvisioner{},
+			&mockInstallationProvisionerOption{},
 			&mockAWS{},
 			model.NewID(),
 			false,
@@ -2426,7 +2437,7 @@ func TestInstallationSupervisor(t *testing.T) {
 			}
 			supervisor := supervisor.NewInstallationSupervisor(
 				sqlStore,
-				mockInstallationProvisioner,
+				&mockInstallationProvisionerOption{mockInstallationProvisioner},
 				&mockAWS{},
 				"instanceID",
 				false,
@@ -2486,7 +2497,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, schedulingOptions.Validate())
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
-			mockInstallationProvisioner,
+			&mockInstallationProvisionerOption{mockInstallationProvisioner},
 			&mockAWS{},
 			"instanceID",
 			false,
@@ -2534,7 +2545,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		require.NoError(t, schedulingOptions.Validate())
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
-			&mockInstallationProvisioner{},
+			&mockInstallationProvisionerOption{},
 			&mockAWS{},
 			"instanceID",
 			false,
@@ -2669,7 +2680,7 @@ func TestInstallationSupervisor(t *testing.T) {
 		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
-			&mockInstallationProvisioner{},
+			&mockInstallationProvisionerOption{},
 			&mockAWS{},
 			"instanceID",
 			false,

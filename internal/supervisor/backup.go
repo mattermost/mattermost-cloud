@@ -43,6 +43,14 @@ type BackupProvisioner interface {
 	CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error
 }
 
+type backupProvisionerOption interface {
+	GetBackupProvisioner(string) BackupProvisioner
+}
+
+func (p provisionerOption) GetBackupProvisioner(provisioner string) BackupProvisioner {
+	return p.getProvisioner(provisioner)
+}
+
 // BackupSupervisor finds backup pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
@@ -53,13 +61,13 @@ type BackupSupervisor struct {
 	instanceID string
 	logger     log.FieldLogger
 
-	backupOperator BackupProvisioner
+	backupOperator backupProvisionerOption
 }
 
 // NewBackupSupervisor creates a new BackupSupervisor.
 func NewBackupSupervisor(
 	store installationBackupStore,
-	backupOperator BackupProvisioner,
+	backupOperator backupProvisionerOption,
 	aws aws.AWS,
 	instanceID string,
 	logger log.FieldLogger) *BackupSupervisor {
@@ -213,7 +221,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 		return backup.State
 	}
 
-	dataRes, err := s.backupOperator.TriggerBackup(backup, cluster, installation)
+	dataRes, err := s.backupOperator.GetBackupProvisioner(cluster.Provisioner).TriggerBackup(backup, cluster, installation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to trigger backup")
 		return backup.State
@@ -238,7 +246,7 @@ func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, insta
 		return backup.State
 	}
 
-	startTime, err := s.backupOperator.CheckBackupStatus(backup, cluster)
+	startTime, err := s.backupOperator.GetBackupProvisioner(cluster.Provisioner).CheckBackupStatus(backup, cluster)
 	if err != nil {
 		if err == provisioner.ErrJobBackoffLimitReached {
 			logger.WithError(err).Error("Backup job backoff limit reached, backup failed")
@@ -271,7 +279,7 @@ func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, instan
 		return backup.State
 	}
 
-	err = s.backupOperator.CleanupBackupJob(backup, cluster)
+	err = s.backupOperator.GetBackupProvisioner(cluster.Provisioner).CleanupBackupJob(backup, cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to cleanup backup from cluster")
 		return backup.State

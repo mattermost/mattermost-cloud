@@ -5,6 +5,7 @@
 package api_test
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -21,6 +22,17 @@ type mockMetrics struct{}
 func (m *mockMetrics) IncrementAPIRequest() {}
 
 func (m *mockMetrics) ObserveAPIEndpointDuration(handler, method string, statusCode int, elapsed float64) {
+}
+
+type mockProvisionerOption struct {
+	mock *mockProvisioner
+}
+
+func (p *mockProvisionerOption) GetProvisioner(provisioner string) api.Provisioner {
+	if p.mock == nil {
+		p.mock = &mockProvisioner{}
+	}
+	return p.mock
 }
 
 type mockProvisioner struct {

@@ -7,8 +7,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/pkg/errors"
 
@@ -109,15 +107,9 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if createClusterRequest.EKSConfig != nil && c.Provisioner.ProvisionerType() != provisioner.EKSProvisionerType {
-		c.Logger.Error("invalid request: specified EKSConfig when provisioner type is not 'eks")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if c.Provisioner.ProvisionerType() == provisioner.EKSProvisionerType && createClusterRequest.EKSConfig == nil {
-		c.Logger.Error("invalid request: EKSConfig is required when provisioner type is not 'eks")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	provisioner := "kops"
+	if createClusterRequest.EKSConfig != nil {
+		provisioner = "eks"
 	}
 
 	cluster := model.Cluster{
@@ -125,7 +117,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		ProviderMetadataAWS: &model.AWSMetadata{
 			Zones: createClusterRequest.Zones,
 		},
-		Provisioner:        c.Provisioner.ProvisionerType(),
+		Provisioner:        provisioner,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,

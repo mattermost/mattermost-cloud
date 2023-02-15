@@ -128,7 +128,7 @@ func handleGetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 
 	// TODO: `--format` is now deprecated in favor of `--json` however the new flag was introduced 6.0 so it does not work with earlier versions.
 	// We should keep an eye on mmctl for removal of the flag, and switch to use `--json` when we are sure we no longer support 5.x servers.
-	output, err := c.Provisioner.ExecMMCTL(cluster, clusterInstallation, "--local", "config", "show", "--format", "json")
+	output, err := c.Provisioner.GetProvisioner(cluster.Provisioner).ExecMMCTL(cluster, clusterInstallation, "--local", "config", "show", "--format", "json")
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to exec mmctl config show")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -213,7 +213,7 @@ func handleSetClusterInstallationConfig(c *Context, w http.ResponseWriter, r *ht
 
 			valueStr, ok := value.(string)
 			if ok {
-				_, err = c.Provisioner.ExecMMCTL(cluster, clusterInstallation, "--local", "config", "set", fullKey, valueStr)
+				_, err = c.Provisioner.GetProvisioner(cluster.Provisioner).ExecMMCTL(cluster, clusterInstallation, "--local", "config", "set", fullKey, valueStr)
 				if err != nil {
 					c.Logger.WithError(err).Errorf("failed to set key %s to value %s", fullKey, valueStr)
 					return err
@@ -297,7 +297,7 @@ func handleRunClusterInstallationExecCommand(c *Context, w http.ResponseWriter, 
 	}
 
 	args := append([]string{fmt.Sprintf("./bin/%s", command)}, clusterInstallationExecSubcommand...)
-	output, execErr, err := c.Provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, args...)
+	output, execErr, err := c.Provisioner.GetProvisioner(cluster.Provisioner).ExecClusterInstallationCLI(cluster, clusterInstallation, args...)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to prepare command execution")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -364,7 +364,7 @@ func handleRunClusterInstallationMattermostCLI(c *Context, w http.ResponseWriter
 		return
 	}
 
-	output, err := c.Provisioner.ExecMattermostCLI(cluster, clusterInstallation, clusterInstallationMattermostCLISubcommandRequest...)
+	output, err := c.Provisioner.GetProvisioner(cluster.Provisioner).ExecMattermostCLI(cluster, clusterInstallation, clusterInstallationMattermostCLISubcommandRequest...)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to execute mattermost cli")
 		w.WriteHeader(http.StatusInternalServerError)

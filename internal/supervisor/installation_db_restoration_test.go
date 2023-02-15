@@ -114,6 +114,17 @@ func (m *mockRestorationStore) GetWebhooks(filter *model.WebhookFilter) ([]*mode
 	return nil, nil
 }
 
+type mockRestoreProvisionerOption struct {
+	mock *mockRestoreProvisioner
+}
+
+func (p *mockRestoreProvisionerOption) GetRestoreOperator(provisioner string) supervisor.RestoreOperator {
+	if p.mock == nil {
+		p.mock = &mockRestoreProvisioner{}
+	}
+	return p.mock
+}
+
 type mockRestoreProvisioner struct {
 	RestoreCompleteTime int64
 	err                 error
@@ -136,7 +147,7 @@ func TestInstallationDBRestorationSupervisor_Do(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockRestorationStore{}
 
-		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(mockStore, &mockAWS{}, &mockRestoreProvisioner{}, nil, "instanceID", logger)
+		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(mockStore, &mockAWS{}, &mockRestoreProvisionerOption{}, nil, "instanceID", logger)
 		err := restorationSupervisor.Do()
 		require.NoError(t, err)
 
@@ -164,7 +175,7 @@ func TestInstallationDBRestorationSupervisor_Do(t *testing.T) {
 		restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
 			mockStore,
 			&mockAWS{},
-			&mockRestoreProvisioner{},
+			&mockRestoreProvisionerOption{},
 			&mockEventProducer{},
 			"instanceID",
 			logger,
@@ -184,7 +195,7 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		mockRestoreOp := &mockRestoreProvisioner{}
+		mockRestoreOp := &mockRestoreProvisionerOption{}
 
 		installation, clusterInstallation, backup := setupRestoreRequiredResources(t, sqlStore)
 
@@ -264,7 +275,7 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 				restorationSupervisor := supervisor.NewInstallationDBRestorationSupervisor(
 					sqlStore,
 					&mockAWS{},
-					testCase.mockRestoreOp,
+					&mockRestoreProvisionerOption{testCase.mockRestoreOp},
 					&mockEventProducer{},
 					"instanceID",
 					logger,
@@ -285,7 +296,7 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		mockRestoreOp := &mockRestoreProvisioner{}
+		mockRestoreOp := &mockRestoreProvisionerOption{}
 
 		installation, clusterInstallation, backup := setupRestoreRequiredResources(t, sqlStore)
 
@@ -324,7 +335,7 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		mockRestoreOp := &mockRestoreProvisioner{}
+		mockRestoreOp := &mockRestoreProvisionerOption{}
 
 		installation, clusterInstallation, backup := setupRestoreRequiredResources(t, sqlStore)
 
@@ -363,7 +374,7 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 		sqlStore := store.MakeTestSQLStore(t, logger)
 		defer store.CloseConnection(t, sqlStore)
 
-		mockRestoreOp := &mockRestoreProvisioner{}
+		mockRestoreOp := &mockRestoreProvisionerOption{}
 
 		installation, clusterInstallation, backup := setupRestoreRequiredResources(t, sqlStore)
 

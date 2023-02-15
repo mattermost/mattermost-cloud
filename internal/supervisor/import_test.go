@@ -43,7 +43,7 @@ func TestImportSupervisor(t *testing.T) {
 			aws,
 			awatClient,
 			store,
-			&mockImportProvisioner{Fail: false},
+			&mockImportProvisionerOption{&mockImportProvisioner{Fail: false}},
 			&mockEventProducer{},
 			logger)
 
@@ -96,7 +96,7 @@ func TestImportSupervisor(t *testing.T) {
 			aws,
 			awatClient,
 			store,
-			&mockImportProvisioner{Fail: true},
+			&mockImportProvisionerOption{&mockImportProvisioner{Fail: true}},
 			&mockEventProducer{},
 			logger)
 
@@ -153,7 +153,7 @@ func TestImportSupervisor(t *testing.T) {
 			aws,
 			awatClient,
 			store,
-			&mockImportProvisioner{Fail: false},
+			&mockImportProvisionerOption{&mockImportProvisioner{Fail: false}},
 			&mockEventProducer{},
 			logger)
 
@@ -178,7 +178,7 @@ func TestImportSupervisor(t *testing.T) {
 			aws,
 			awatClient,
 			store,
-			&mockImportProvisioner{Fail: false},
+			&mockImportProvisionerOption{&mockImportProvisioner{Fail: false}},
 			&mockEventProducer{},
 			logger)
 
@@ -203,7 +203,7 @@ func TestImportSupervisor(t *testing.T) {
 			aws,
 			awatClient,
 			store,
-			&mockImportProvisioner{Fail: false},
+			&mockImportProvisionerOption{&mockImportProvisioner{Fail: false}},
 			&mockEventProducer{},
 			logger)
 
@@ -256,6 +256,17 @@ func TestImportSupervisor(t *testing.T) {
 		// done, but the Supervisor in the actual code exists forever
 		assert.Error(t, err, "error not handled properly")
 	})
+}
+
+type mockImportProvisionerOption struct {
+	mock *mockImportProvisioner
+}
+
+func (p *mockImportProvisionerOption) GetImportProvisioner(provisioner string) supervisor.ImportProvisioner {
+	if p.mock == nil {
+		p.mock = &mockImportProvisioner{}
+	}
+	return p.mock
 }
 
 type mockImportProvisioner struct {

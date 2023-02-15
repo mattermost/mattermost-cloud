@@ -91,11 +91,19 @@ type eventProducer interface {
 	ProduceClusterInstallationStateChangeEvent(clusterInstallation *model.ClusterInstallation, oldState string, extraDataFields ...events.DataField) error
 }
 
-// provisioner abstracts the provisioning operations required by the installation supervisor.
-type installationProvisioner interface {
+// InstallationProvisioner abstracts the provisioning operations required by the installation supervisor.
+type InstallationProvisioner interface {
 	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
 	GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger log.FieldLogger) (*k8s.ClusterResources, error)
 	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
+}
+
+type InstallationProvisionerOption interface {
+	GetInstallationProvisioner(provisioner string) InstallationProvisioner
+}
+
+func (p provisionerOption) GetInstallationProvisioner(provisioner string) InstallationProvisioner {
+	return p.getProvisioner(provisioner)
 }
 
 // InstallationSupervisor finds installations pending work and effects the required changes.
@@ -104,7 +112,7 @@ type installationProvisioner interface {
 // other clients needing to coordinate background jobs.
 type InstallationSupervisor struct {
 	store             installationStore
-	provisioner       installationProvisioner
+	provisioner       InstallationProvisionerOption
 	aws               aws.AWS
 	instanceID        string
 	keepDatabaseData  bool
@@ -143,7 +151,7 @@ type InstallationSupervisorSchedulingOptions struct {
 // NewInstallationSupervisor creates a new InstallationSupervisor.
 func NewInstallationSupervisor(
 	store installationStore,
-	installationProvisioner installationProvisioner,
+	installationProvisioner InstallationProvisionerOption,
 	aws aws.AWS,
 	instanceID string,
 	keepDatabaseData,
@@ -534,7 +542,7 @@ func (s *InstallationSupervisor) getClusterResources(cluster *model.Cluster, log
 		return clusterResources, nil
 	}
 
-	clusterResources, err := s.provisioner.GetClusterResources(cluster, true, logger)
+	clusterResources, err := s.provisioner.GetInstallationProvisioner(cluster.Provisioner).GetClusterResources(cluster, true, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get cluster resources")
 	}
@@ -778,7 +786,7 @@ func (s *InstallationSupervisor) getPublicLBEndpoint(installation *model.Install
 			return nil, errors.Wrapf(err, "failed to find cluster %s", clusterInstallation.ClusterID)
 		}
 
-		endpoint, err := s.provisioner.GetPublicLoadBalancerEndpoint(cluster, "nginx")
+		endpoint, err := s.provisioner.GetInstallationProvisioner(cluster.Provisioner).GetPublicLoadBalancerEndpoint(cluster, "nginx")
 		if err != nil {
 			return nil, errors.Wrap(err, "Couldn't get the load balancer endpoint (nginx) for Cluster Installation")
 		}
@@ -865,7 +873,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 			return failedClusterInstallationState(clusterInstallation.State)
 		}
 
-		isReady, err := s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		isReady, err := s.provisioner.GetInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 			EnsureCRMigrated(cluster, clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Error("Failed to migrate cluster installation CR")
@@ -876,7 +884,7 @@ func (s *InstallationSupervisor) updateInstallation(installation *model.Installa
 			return installation.State
 		}
 
-		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		err = s.provisioner.GetInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 			UpdateClusterInstallation(cluster, installation, dnsRecords, clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Error("Failed to update cluster installation")
@@ -1020,7 +1028,7 @@ func (s *InstallationSupervisor) performInstallationHibernation(installation *mo
 			return false
 		}
 
-		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		err = s.provisioner.GetInstallationProvisioner(cluster.Provisioner).ClusterInstallationProvisioner(installation.CRVersion).
 			HibernateClusterInstallation(cluster, installation, clusterInstallation)
 		if err != nil {
 			logger.WithError(err).Error("Failed to update cluster installation")
@@ -1664,7 +1672,7 @@ func (s *InstallationSupervisor) manageInstallationResourcesCache() {
 					continue
 				}
 
-				clusterResources, err := s.provisioner.GetClusterResources(cluster, true, cacheLogger)
+				clusterResources, err := s.provisioner.GetInstallationProvisioner(cluster.Provisioner).GetClusterResources(cluster, true, cacheLogger)
 				if err != nil {
 					cacheLogger.WithError(err).Error("Failed to get cluster resources")
 					s.cache.mu.Lock()
