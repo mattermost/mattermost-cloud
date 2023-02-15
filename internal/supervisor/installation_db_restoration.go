@@ -46,6 +46,14 @@ type RestoreOperator interface {
 	CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error
 }
 
+type RestoreOperatorOption interface {
+	GetRestoreOperator(provisioner string) RestoreOperator
+}
+
+func (p provisionerOption) GetRestoreOperator(provisioner string) RestoreOperator {
+	return p.getProvisioner(provisioner)
+}
+
 // InstallationDBRestorationSupervisor finds pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
@@ -60,14 +68,6 @@ type InstallationDBRestorationSupervisor struct {
 	eventsProducer  eventProducer
 }
 
-type RestoreOperatorOption interface {
-	GetRestoreOperator(provisioner string) RestoreOperator
-}
-
-func (p provisionerOption) GetRestoreOperator(provisioner string) RestoreOperator {
-	return p.getProvisioner(provisioner)
-}
-
 // NewInstallationDBRestorationSupervisor creates a new InstallationDBRestorationSupervisor.
 func NewInstallationDBRestorationSupervisor(
 	store installationDBRestorationStore,
@@ -75,8 +75,7 @@ func NewInstallationDBRestorationSupervisor(
 	restoreOperator RestoreOperatorOption,
 	eventsProducer eventProducer,
 	instanceID string,
-	logger log.FieldLogger,
-) *InstallationDBRestorationSupervisor {
+	logger log.FieldLogger) *InstallationDBRestorationSupervisor {
 	return &InstallationDBRestorationSupervisor{
 		store:           store,
 		aws:             aws,

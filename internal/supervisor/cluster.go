@@ -29,14 +29,6 @@ type clusterStore interface {
 	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
 }
 
-type ClusterProvisionerOption interface {
-	GetClusterProvisioner(provisioner string) ClusterProvisioner
-}
-
-func (p provisionerOption) GetClusterProvisioner(provisioner string) ClusterProvisioner {
-	return p.getProvisioner(provisioner)
-}
-
 // ClusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
 type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
@@ -47,6 +39,14 @@ type ClusterProvisioner interface {
 	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
 	RefreshKopsMetadata(cluster *model.Cluster) error
+}
+
+type ClusterProvisionerOption interface {
+	GetClusterProvisioner(provisioner string) ClusterProvisioner
+}
+
+func (p provisionerOption) GetClusterProvisioner(provisioner string) ClusterProvisioner {
+	return p.getProvisioner(provisioner)
 }
 
 // ClusterSupervisor finds clusters pending work and effects the required changes.
@@ -64,10 +64,10 @@ type ClusterSupervisor struct {
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, provisionerOpt ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, clusterProvisioner ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
-		provisioner:    provisionerOpt,
+		provisioner:    clusterProvisioner,
 		aws:            aws,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,

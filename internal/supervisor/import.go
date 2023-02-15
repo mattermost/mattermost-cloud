@@ -37,6 +37,18 @@ type AWATClient interface {
 	ReleaseLockOnImport(importID string) error
 }
 
+type ImportProvisioner interface {
+	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+}
+
+type ImportProvisionerOption interface {
+	GetImportProvisioner(provisioner string) ImportProvisioner
+}
+
+func (p provisionerOption) GetImportProvisioner(provisioner string) ImportProvisioner {
+	return p.getProvisioner(provisioner)
+}
+
 // ImportSupervisor is a supervisor which performs Workspace Imports
 // from ready Imports produced by the AWAT. It periodically queries
 // the AWAT for Imports waiting to be performed and then performs
@@ -55,10 +67,6 @@ type importStore interface {
 	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
 
 	installationStore
-}
-
-type ImportProvisioner interface {
-	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 }
 
 type mmctl struct {
@@ -90,14 +98,6 @@ type jobResponseData struct {
 	Error      string `json:"error"`
 	LineNumber string `json:"line_number"`
 	ImportFile string `json:"import_file"`
-}
-
-type ImportProvisionerOption interface {
-	GetImportProvisioner(provisioner string) ImportProvisioner
-}
-
-func (p provisionerOption) GetImportProvisioner(provisioner string) ImportProvisioner {
-	return p.getProvisioner(provisioner)
 }
 
 // NewImportSupervisor creates a new Import Supervisor

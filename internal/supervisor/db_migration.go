@@ -59,6 +59,14 @@ type DBMigrationCIProvisioner interface {
 	ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error
 }
 
+type DBMigrationCIProvisionerOption interface {
+	GetDBMigrationCIProvisioner(provisioner string) DBMigrationCIProvisioner
+}
+
+func (p provisionerOption) GetDBMigrationCIProvisioner(provisioner string) DBMigrationCIProvisioner {
+	return p.getProvisioner(provisioner)
+}
+
 type databaseProvider interface {
 	GetDatabase(installationID, dbType string) model.Database
 }
@@ -78,14 +86,6 @@ type DBMigrationSupervisor struct {
 	eventsProducer           eventProducer
 }
 
-type DBMigrationCIProvisionerOption interface {
-	GetDBMigrationCIProvisioner(provisioner string) DBMigrationCIProvisioner
-}
-
-func (p provisionerOption) GetDBMigrationCIProvisioner(provisioner string) DBMigrationCIProvisioner {
-	return p.getProvisioner(provisioner)
-}
-
 // NewInstallationDBMigrationSupervisor creates a new DBMigrationSupervisor.
 func NewInstallationDBMigrationSupervisor(
 	store installationDBMigrationStore,
@@ -94,8 +94,7 @@ func NewInstallationDBMigrationSupervisor(
 	instanceID string,
 	provisioner DBMigrationCIProvisionerOption,
 	eventsProducer eventProducer,
-	logger log.FieldLogger,
-) *DBMigrationSupervisor {
+	logger log.FieldLogger) *DBMigrationSupervisor {
 	return &DBMigrationSupervisor{
 		store:                    store,
 		aws:                      aws,

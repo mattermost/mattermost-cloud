@@ -44,6 +44,14 @@ type ClusterInstallationProvisioner interface {
 	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
 }
 
+type ClusterInstallationProvisionerOption interface {
+	GetClusterInstallationProvisioner(provisioner string) ClusterInstallationProvisioner
+}
+
+func (p provisionerOption) GetClusterInstallationProvisioner(provisioner string) ClusterInstallationProvisioner {
+	return p.getProvisioner(provisioner)
+}
+
 // ClusterInstallationSupervisor finds cluster installations pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
@@ -56,14 +64,6 @@ type ClusterInstallationSupervisor struct {
 	instanceID     string
 	logger         log.FieldLogger
 	metrics        *metrics.CloudMetrics
-}
-
-type ClusterInstallationProvisionerOption interface {
-	GetClusterInstallationProvisioner(provisioner string) ClusterInstallationProvisioner
-}
-
-func (p provisionerOption) GetClusterInstallationProvisioner(provisioner string) ClusterInstallationProvisioner {
-	return p.getProvisioner(provisioner)
 }
 
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
