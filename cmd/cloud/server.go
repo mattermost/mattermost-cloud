@@ -273,11 +273,6 @@ func executeServerCmd(flags serverFlags) error {
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
 
-	// TODO: In the future we can support both provisioners running
-	// at the same time, and the correct one should be chosen based
-	// on request. For now for simplicity we configure it with a
-	// flag.
-
 	kopsProvisioner := provisioner.NewKopsProvisioner(
 		provisioningParams,
 		resourceUtil,
