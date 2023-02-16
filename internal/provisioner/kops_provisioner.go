@@ -68,6 +68,7 @@ func NewKopsProvisioner(
 			resourceUtil: resourceUtil,
 			store:        store,
 			params:       provisioningParams,
+			logger:       logger,
 		},
 	}
 }
