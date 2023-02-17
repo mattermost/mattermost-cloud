@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +53,19 @@ func (cr *ClusterResources) IsValid() error {
 	return nil
 }
 
+func (a *Client) fixSubnetTypeTag(subnet ec2Types.Subnet, tagKey, tagIncorrectValue, tagCorrectValue, vpcID string, logger log.FieldLogger) error {
+	for _, tag := range subnet.Tags {
+		if tag.Key == ptr.String(tagKey) && tag.Value == ptr.String(tagIncorrectValue) {
+			a.logger.WithFields(log.Fields{
+				"vpc_id":    vpcID,
+				"subnet_id": *subnet.SubnetId,
+			}).Warnf("Incorrect SubnetType for Subnet, setting it to '%s' from '%s'", tagCorrectValue, tagIncorrectValue)
+			return a.TagResource(*subnet.SubnetId, "SubnetType", tagCorrectValue, a.logger)
+		}
+	}
+	return nil
+}
+
 func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.FieldLogger) (ClusterResources, error) {
 	clusterResources := ClusterResources{
 		VpcID:   vpcID,
@@ -67,7 +81,7 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 
 	privateSubnetFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:SubnetType"),
-		Values: []string{"private"},
+		Values: []string{"private", "Private"},
 	})
 
 	privateSubnets, err := a.GetSubnetsWithFilters(privateSubnetFilter)
@@ -76,12 +90,15 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 	}
 
 	for _, subnet := range privateSubnets {
+		if err = a.fixSubnetTypeTag(subnet, "SubnetType", "Private", "private", vpcID, logger); err != nil {
+			logger.WithError(err).WithField("subnet_id", *subnet.SubnetId).Error("Error fixing subnetType tag for subnet")
+		}
 		clusterResources.PrivateSubnetIDs = append(clusterResources.PrivateSubnetIDs, *subnet.SubnetId)
 	}
 
 	publicSubnetFilter := append(baseFilter, ec2Types.Filter{
 		Name:   aws.String("tag:SubnetType"),
-		Values: []string{"public"},
+		Values: []string{"public", "Utility"},
 	})
 
 	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
@@ -90,6 +107,9 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 	}
 
 	for _, subnet := range publicSubnets {
+		if err = a.fixSubnetTypeTag(subnet, "SubnetType", "Utility", "public", vpcID, logger); err != nil {
+			logger.WithError(err).WithField("subnet_id", *subnet.SubnetId).Error("Error fixing subnetType tag for subnet")
+		}
 		clusterResources.PublicSubnetsIDs = append(clusterResources.PublicSubnetsIDs, *subnet.SubnetId)
 	}
 
