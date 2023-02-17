@@ -482,13 +482,13 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 		return errors.Wrap(err, "failed to create CLI command job")
 	}
 
-	err = wait.Poll(time.Second, 2*time.Minute, func() (bool, error) {
+	err = wait.Poll(time.Second, 10*time.Minute, func() (bool, error) {
 		job, err = jobsClient.Get(ctx, jobName, metav1.GetOptions{})
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to get %q job", jobName)
 		}
 		if job.Status.Succeeded < 1 {
-			logger.Infof("job %q not yet finished, waiting up to 1 minute", jobName)
+			logger.Infof("job %q not yet finished, waiting up to 10 minute", jobName)
 			return false, nil
 		}
 		return true, nil
