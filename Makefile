@@ -181,8 +181,8 @@ install: build
 
 # Generate mocks from the interfaces.
 .PHONY: mocks
-mocks:  $(MOCKGEN)
-	go generate ./internal/mocks/...
+mocks: $(MOCKGEN)
+	go generate --mod=mod ./internal/mocks/...
 
 .PHONY: code-gen
 code-gen:

@@ -7,6 +7,7 @@ package provisioner
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -17,8 +18,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"os"
 )
 
 // EKSProvisionerType is provisioner type for EKS clusters.
@@ -87,7 +86,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		return errors.New("error: EKS metadata not set when creating EKS cluster")
 	}
 
-	var clusterResources aws.ClusterResources
+	var clusterResources model.ClusterResources
 	var err error
 	if eksMetadata.VPC != "" {
 		clusterResources, err = awsClient.ClaimVPC(eksMetadata.VPC, cluster, provisioner.params.Owner, logger)
@@ -101,8 +100,14 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		}
 	}
 
+	clusterResources, err = awsClient.FilterClusterResources(cluster, clusterResources)
+	if err != nil {
+		return errors.Wrap(err, "failed to filter subnets")
+	}
+
 	// Update cluster to set VPC ID that is needed later.
 	cluster.ProvisionerMetadataEKS.VPC = clusterResources.VpcID
+	cluster.ProvisionerMetadataEKS.ClusterResource = clusterResources
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
 		releaseErr := awsClient.ReleaseVpc(cluster, logger)
@@ -112,7 +117,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		return errors.Wrap(err, "failed to update EKS metadata with VPC ID")
 	}
 
-	_, err = awsClient.EnsureEKSCluster(cluster, clusterResources, *eksMetadata)
+	_, err = awsClient.EnsureEKSCluster(cluster, *eksMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure EKS cluster exists")
 	}
@@ -128,11 +133,6 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, errors.New("expected EKS metadata not to be nil")
 	}
 
-	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get VPC resources")
-	}
-
 	ready, err := awsClient.IsClusterReady(cluster.ID)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check if EKS cluster is ready")
@@ -142,7 +142,19 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, nil
 	}
 
-	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, clusterResources, *cluster.ProvisionerMetadataEKS)
+	launchTemplate, err := awsClient.EnsureLaunchTemplate(cluster.ID, *cluster.ProvisionerMetadataEKS)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to ensure launch template")
+	}
+	if launchTemplate != nil {
+		cluster.ProvisionerMetadataEKS.LaunchTemplateName = *launchTemplate.LaunchTemplateName
+		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to update cluster with launch template")
+		}
+	}
+
+	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, *cluster.ProvisionerMetadataEKS)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to ensure node groups created")
 	}
@@ -229,6 +241,14 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 	deleted, err := awsClient.EnsureNodeGroupsDeleted(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete node groups")
+	}
+	if !deleted {
+		return false, nil
+	}
+
+	deleted, err = awsClient.EnsureLaunchTemplateDeleted(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to delete launch template")
 	}
 	if !deleted {
 		return false, nil
@@ -347,7 +367,7 @@ func NewEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Conf
 				Exec: &clientcmdapi.ExecConfig{
 					Command:    "aws",
 					Args:       []string{"--region", region, "eks", "get-token", "--cluster-name", *cluster.Name},
-					APIVersion: "client.authentication.k8s.io/v1alpha1",
+					APIVersion: "client.authentication.k8s.io/v1beta1",
 				},
 			},
 		},

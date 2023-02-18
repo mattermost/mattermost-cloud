@@ -143,9 +143,17 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		cluster.ProvisionerMetadataEKS = &model.EKSMetadata{
 			KubernetesVersion: version,
 			VPC:               createClusterRequest.VPC,
-			Networking:        "",
+			AMI:               createClusterRequest.KopsAMI,
+			Networking:        createClusterRequest.Networking,
 			ClusterRoleARN:    createClusterRequest.EKSConfig.ClusterRoleARN,
-			EKSNodeGroups:     createClusterRequest.EKSConfig.NodeGroups,
+			NodeGroup: model.EKSNodeGroup{
+				RoleARN:       createClusterRequest.EKSConfig.NodeRoleARN,
+				InstanceTypes: []string{createClusterRequest.NodeInstanceType},
+				DesiredSize:   int32Ptr(int32(createClusterRequest.NodeMinCount)),
+				MinSize:       int32Ptr(int32(createClusterRequest.NodeMinCount)),
+				MaxSize:       int32Ptr(int32(createClusterRequest.NodeMaxCount)),
+			},
+			MaxPodsPerNode: createClusterRequest.MaxPodsPerNode,
 		}
 	} else {
 		cluster.ProvisionerMetadataKops = &model.KopsMetadata{
