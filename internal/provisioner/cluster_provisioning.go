@@ -179,23 +179,6 @@ func provisionCluster(
 				DeployNamespace: "kube-system",
 			})
 		}
-	} else {
-
-		// Only deploy or re-provision calico netpol if current networking option is other than calico
-		if len(cluster.ProvisionerMetadataEKS.Networking) > 0 && cluster.ProvisionerMetadataEKS.Networking == "calico" {
-			files = append(files, k8s.ManifestFile{
-				Path:            "manifests/calico-cni.yaml",
-				DeployNamespace: "kube-system",
-			})
-		}
-
-		if len(cluster.ProvisionerMetadataEKS.Networking) > 0 && cluster.ProvisionerMetadataEKS.Networking != "calico" {
-			files = append(files, k8s.ManifestFile{
-				Path:            "manifests/calico-network-policy-only.yaml",
-				DeployNamespace: "kube-system",
-			})
-		}
-
 	}
 
 	if deployPerseus {
@@ -234,12 +217,6 @@ func provisionCluster(
 	if cluster.ProvisionerMetadataEKS == nil {
 		if (cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico") ||
 			(cluster.ProvisionerMetadataKops.ChangeRequest != nil && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico") {
-			appsWithDeployment["calico-typha-horizontal-autoscaler"] = "kube-system"
-		}
-	}
-
-	if cluster.ProvisionerMetadataEKS != nil {
-		if cluster.ProvisionerMetadataEKS != nil && cluster.ProvisionerMetadataEKS.Networking == "calico" {
 			appsWithDeployment["calico-typha-horizontal-autoscaler"] = "kube-system"
 		}
 	}
