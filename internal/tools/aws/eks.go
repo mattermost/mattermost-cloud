@@ -6,6 +6,7 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,32 +19,14 @@ import (
 )
 
 // CreateEKSCluster creates EKS cluster.
-func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
+func (a *Client) CreateEKSCluster(cluster *model.Cluster, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
 	ctx := context.TODO()
 
-	// TODO: we do not expect to query that many subnets but for safety
-	// we can check the NextToken.
-	subnetsOut, err := a.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
-		SubnetIds: resources.PublicSubnetsIDs,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to describe subnets")
-	}
-
-	subnetsIDs := []string{}
-	for _, sub := range subnetsOut.Subnets {
-		// TODO: for some reason it is not possible to creates EKS in this zone
-		if *sub.AvailabilityZone == "us-east-1e" {
-			continue
-		}
-		subnetsIDs = append(subnetsIDs, *sub.SubnetId)
-	}
-
+	resources := eksMetadata.ClusterResource
 	vpcConfig := eksTypes.VpcConfigRequest{
-		EndpointPrivateAccess: nil,
-		EndpointPublicAccess:  nil,
-		SecurityGroupIds:      resources.MasterSecurityGroupIDs,
-		SubnetIds:             subnetsIDs,
+		EndpointPrivateAccess: aws.Bool(true),
+		EndpointPublicAccess:  aws.Bool(true),
+		SubnetIds:             append(resources.PrivateSubnetIDs, resources.PublicSubnetsIDs...),
 	}
 
 	// TODO: we can allow further parametrization in the future
@@ -81,7 +64,7 @@ func (a *Client) InstallEKSEBSAddon(cluster *model.Cluster) error {
 }
 
 // EnsureEKSCluster ensures EKS cluster is created.
-func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
+func (a *Client) EnsureEKSCluster(cluster *model.Cluster, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
 	input := eks.DescribeClusterInput{
 		Name: aws.String(cluster.ID),
 	}
@@ -89,7 +72,7 @@ func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResou
 	out, err := a.Service().eks.DescribeCluster(context.TODO(), &input)
 	if err != nil {
 		if IsErrorResourceNotFound(err) {
-			return a.CreateEKSCluster(cluster, resources, eksMetadata)
+			return a.CreateEKSCluster(cluster, eksMetadata)
 		}
 		return nil, errors.Wrap(err, "failed to check if EKS cluster exists")
 	}
@@ -213,12 +196,12 @@ func (a *Client) getEKSPostgresIPPermissions(cluster *eksTypes.Cluster) ([]ec2Ty
 }
 
 // EnsureEKSClusterNodeGroups ensures EKS cluster node groups are created.
-func (a *Client) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
-	return a.CreateNodeGroups(cluster.ID, resources, eksMetadata)
+func (a *Client) EnsureEKSClusterNodeGroups(cluster *model.Cluster, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
+	return a.CreateNodeGroups(cluster.ID, eksMetadata)
 }
 
 // CreateNodeGroups creates node groups for EKS cluster.
-func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
+func (a *Client) CreateNodeGroups(clusterName string, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
 	ctx := context.TODO()
 
 	// If more node groups exist than we expect, this function will not
@@ -228,47 +211,41 @@ func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources
 		return nil, errors.Wrap(err, "failed to list existing node groups")
 	}
 
-	allNodeGroups := make([]*eksTypes.Nodegroup, 0, len(eksMetadata.EKSNodeGroups))
-
-	for ngName, ngCfg := range eksMetadata.EKSNodeGroups {
-		// If given node group already exist, just return it
-		foundExisting := false
-		for _, existingNg := range existingNgs {
-			if *existingNg.NodegroupName == ngName {
-				// TODO: theoretically the node group config could change
-				// so we probably should update here.
-				allNodeGroups = append(allNodeGroups, existingNg)
-				foundExisting = true
-				break
-			}
+	for _, existingNg := range existingNgs {
+		if *existingNg.NodegroupName == "worker" {
+			return nil, nil
 		}
-		if foundExisting {
-			continue
-		}
-
-		nodeGroupReq := eks.CreateNodegroupInput{
-			ClusterName:    aws.String(clusterName),
-			InstanceTypes:  ngCfg.InstanceTypes,
-			NodeRole:       ngCfg.RoleARN,
-			NodegroupName:  aws.String(ngName),
-			ReleaseVersion: ngCfg.AMIVersion,
-			ScalingConfig: &eksTypes.NodegroupScalingConfig{
-				DesiredSize: ngCfg.DesiredSize,
-				MaxSize:     ngCfg.MaxSize,
-				MinSize:     ngCfg.MinSize,
-			},
-			Subnets: resources.PrivateSubnetIDs,
-			Version: eksMetadata.KubernetesVersion,
-		}
-
-		out, err := a.Service().eks.CreateNodegroup(ctx, &nodeGroupReq)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create one of the node groups")
-		}
-
-		allNodeGroups = append(allNodeGroups, out.Nodegroup)
 	}
-	return allNodeGroups, nil
+
+	ngCfg := eksMetadata.NodeGroup
+
+	nodeGroupReq := eks.CreateNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		InstanceTypes: ngCfg.InstanceTypes,
+		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
+			Name:    aws.String(eksMetadata.LaunchTemplateName),
+			Version: aws.String("$Latest"),
+		},
+		AmiType:       eksTypes.AMITypesCustom,
+		NodeRole:      ngCfg.RoleARN,
+		NodegroupName: aws.String("worker"),
+		ScalingConfig: &eksTypes.NodegroupScalingConfig{
+			DesiredSize: ngCfg.DesiredSize,
+			MaxSize:     ngCfg.MaxSize,
+			MinSize:     ngCfg.MinSize,
+		},
+		Subnets: append(eksMetadata.ClusterResource.PrivateSubnetIDs),
+		Tags: map[string]string{
+			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
+		},
+	}
+
+	out, err := a.Service().eks.CreateNodegroup(ctx, &nodeGroupReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create one of the node groups")
+	}
+
+	return []*eksTypes.Nodegroup{out.Nodegroup}, nil
 }
 
 // IsClusterReady checks if EKS cluster is ready.

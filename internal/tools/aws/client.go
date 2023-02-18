@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -35,12 +36,13 @@ type AWS interface {
 
 	GetCloudEnvironmentName() string
 
-	GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
-	ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error)
-	GetVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error)
+	GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (model.ClusterResources, error)
+	ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (model.ClusterResources, error)
+	GetVpcResources(clusterID string, logger log.FieldLogger) (model.ClusterResources, error)
 	ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error
 	AttachPolicyToRole(roleName, policyName string, logger log.FieldLogger) error
 	DetachPolicyFromRole(roleName, policyName string, logger log.FieldLogger) error
+	FilterClusterResources(cluster *model.Cluster, resources model.ClusterResources) (model.ClusterResources, error)
 
 	GetPrivateZoneDomainName(logger log.FieldLogger) (string, error)
 	GetPrivateHostedZoneID() string
@@ -71,20 +73,23 @@ type AWS interface {
 	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 
-	GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error)
-	TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error
+	GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (model.ClusterResources, error)
+	TagResourcesByCluster(clusterResources model.ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error
 
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 
-	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error)
-	EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error)
+	EnsureEKSCluster(cluster *model.Cluster, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error)
+	EnsureEKSClusterNodeGroups(cluster *model.Cluster, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error)
 	GetEKSCluster(clusterName string) (*eksTypes.Cluster, error)
 	IsClusterReady(clusterName string) (bool, error)
 	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
 	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
 	InstallEKSEBSAddon(cluster *model.Cluster) error
+
+	EnsureLaunchTemplate(clusterName string, eksMetadata model.EKSMetadata) (*ec2Types.LaunchTemplate, error)
+	EnsureLaunchTemplateDeleted(clusterName string) (bool, error)
 
 	AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
 	RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error

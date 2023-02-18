@@ -80,7 +80,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	}
 	defer kops.Close()
 
-	var clusterResources aws.ClusterResources
+	var clusterResources model.ClusterResources
 	if kopsMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
 		clusterResources, err = awsClient.ClaimVPC(kopsMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
 		if err != nil {
