@@ -89,6 +89,10 @@ func (p *mockClusterProvisioner) CheckClusterCreated(cluster *model.Cluster, aws
 	return true, nil
 }
 
+func (p *mockClusterProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	return true, nil
+}
+
 func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }

@@ -124,10 +124,15 @@ func provisionCluster(
 	} else if err != nil {
 		return errors.Wrap(err, "failed to delete DaemonSet k8s-spot-termination-handler")
 	}
-
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
+		{
+			// some manifest requires 'kops-csi-1-21' storageClass
+			// which is not available by default in EKS
+			// TODO: we need separate manifest/helm for kops & eks
+			Path: "manifests/storageclass.yaml",
+		},
 		{
 			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
@@ -179,23 +184,6 @@ func provisionCluster(
 				DeployNamespace: "kube-system",
 			})
 		}
-	} else {
-
-		// Only deploy or re-provision calico netpol if current networking option is other than calico
-		if len(cluster.ProvisionerMetadataEKS.Networking) > 0 && cluster.ProvisionerMetadataEKS.Networking == "calico" {
-			files = append(files, k8s.ManifestFile{
-				Path:            "manifests/calico-cni.yaml",
-				DeployNamespace: "kube-system",
-			})
-		}
-
-		if len(cluster.ProvisionerMetadataEKS.Networking) > 0 && cluster.ProvisionerMetadataEKS.Networking != "calico" {
-			files = append(files, k8s.ManifestFile{
-				Path:            "manifests/calico-network-policy-only.yaml",
-				DeployNamespace: "kube-system",
-			})
-		}
-
 	}
 
 	if deployPerseus {
@@ -234,12 +222,6 @@ func provisionCluster(
 	if cluster.ProvisionerMetadataEKS == nil {
 		if (cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico") ||
 			(cluster.ProvisionerMetadataKops.ChangeRequest != nil && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico") {
-			appsWithDeployment["calico-typha-horizontal-autoscaler"] = "kube-system"
-		}
-	}
-
-	if cluster.ProvisionerMetadataEKS != nil {
-		if cluster.ProvisionerMetadataEKS != nil && cluster.ProvisionerMetadataEKS.Networking == "calico" {
 			appsWithDeployment["calico-typha-horizontal-autoscaler"] = "kube-system"
 		}
 	}

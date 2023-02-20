@@ -5,6 +5,7 @@
 package provisioner
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -86,7 +88,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		return errors.New("error: EKS metadata not set when creating EKS cluster")
 	}
 
-	var clusterResources model.ClusterResources
+	var clusterResources aws.ClusterResources
 	var err error
 	if eksMetadata.VPC != "" {
 		clusterResources, err = awsClient.ClaimVPC(eksMetadata.VPC, cluster, provisioner.params.Owner, logger)
@@ -100,14 +102,8 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		}
 	}
 
-	clusterResources, err = awsClient.FilterClusterResources(cluster, clusterResources)
-	if err != nil {
-		return errors.Wrap(err, "failed to filter subnets")
-	}
-
 	// Update cluster to set VPC ID that is needed later.
 	cluster.ProvisionerMetadataEKS.VPC = clusterResources.VpcID
-	cluster.ProvisionerMetadataEKS.ClusterResource = clusterResources
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
 		releaseErr := awsClient.ReleaseVpc(cluster, logger)
@@ -117,7 +113,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		return errors.Wrap(err, "failed to update EKS metadata with VPC ID")
 	}
 
-	_, err = awsClient.EnsureEKSCluster(cluster, *eksMetadata)
+	_, err = awsClient.EnsureEKSCluster(cluster, clusterResources, *eksMetadata)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure EKS cluster exists")
 	}
@@ -142,19 +138,46 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, nil
 	}
 
-	launchTemplate, err := awsClient.EnsureLaunchTemplate(cluster.ID, *cluster.ProvisionerMetadataEKS)
+	_, err = awsClient.EnsureLaunchTemplate(cluster.ID, *cluster.ProvisionerMetadataEKS)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to ensure launch template")
 	}
-	if launchTemplate != nil {
-		cluster.ProvisionerMetadataEKS.LaunchTemplateName = *launchTemplate.LaunchTemplateName
-		err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
-		if err != nil {
-			return false, errors.Wrap(err, "failed to update cluster with launch template")
-		}
+
+	kubeConfigFile, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to prepare kubeconfig file")
+	}
+	// Begin deploying the mattermost operator.
+	k8sClient, err := k8s.NewFromFile(kubeConfigFile, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
+	}
+	_ = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(context.Background(), "aws-node", metav1.DeleteOptions{})
+
+	var files []k8s.ManifestFile
+	files = append(files, k8s.ManifestFile{
+		Path:            "manifests/eks/calico-eks.yaml",
+		DeployNamespace: "kube-system",
+	})
+
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return false, err
 	}
 
-	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, *cluster.ProvisionerMetadataEKS)
+	return true, nil
+}
+
+// CheckNodesCreated provisions EKS cluster.
+func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get VPC resources")
+	}
+
+	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, clusterResources, *cluster.ProvisionerMetadataEKS)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to ensure node groups created")
 	}

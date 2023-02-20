@@ -9,11 +9,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -181,10 +181,7 @@ func (a *Client) EnsureLaunchTemplate(clusterName string, eksMetadata model.EKSM
 	}
 
 	if launchTemplate != nil {
-		if eksMetadata.LaunchTemplateName == "" {
-			return launchTemplate, nil
-		}
-		return nil, nil
+		return launchTemplate, nil
 	}
 
 	return a.createLaunchTemplate(clusterName, eksMetadata)

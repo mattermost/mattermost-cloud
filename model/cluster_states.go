@@ -11,6 +11,10 @@ const (
 	ClusterStateCreationRequested = "creation-requested"
 	// ClusterStateCreationInProgress is a cluster that is being actively created.
 	ClusterStateCreationInProgress = "creation-in-progress"
+	// ClusterStateWaitingForNode is a cluster that is waiting for nodes to be ready
+	ClusterStateWaitingForNode = "waiting-for-node"
+	// ClusterStateProvisionInProgress is a cluster in the process of being provisioned.
+	ClusterStateProvisionInProgress = "provision-in-progress"
 	// ClusterStateCreationFailed is a cluster that failed creation.
 	ClusterStateCreationFailed = "creation-failed"
 	// ClusterStateProvisioningRequested is a cluster in the process of being
@@ -44,6 +48,8 @@ var AllClusterStates = []string{
 	ClusterStateRefreshMetadata,
 	ClusterStateCreationRequested,
 	ClusterStateCreationInProgress,
+	ClusterStateWaitingForNode,
+	ClusterStateProvisionInProgress,
 	ClusterStateCreationFailed,
 	ClusterStateProvisioningRequested,
 	ClusterStateProvisioningFailed,
@@ -64,6 +70,8 @@ var AllClusterStates = []string{
 var AllClusterStatesPendingWork = []string{
 	ClusterStateCreationRequested,
 	ClusterStateCreationInProgress,
+	ClusterStateWaitingForNode,
+	ClusterStateProvisionInProgress,
 	ClusterStateProvisioningRequested,
 	ClusterStateRefreshMetadata,
 	ClusterStateUpgradeRequested,
@@ -74,8 +82,10 @@ var AllClusterStatesPendingWork = []string{
 // ClusterStateWorkPriority is a map of states to their priority. Default priority is 0.
 // States with higher priority will be processed first.
 var ClusterStateWorkPriority = map[string]int{
-	ClusterStateCreationRequested:  2,
-	ClusterStateCreationInProgress: 1,
+	ClusterStateCreationRequested:   4,
+	ClusterStateCreationInProgress:  3,
+	ClusterStateWaitingForNode:      2,
+	ClusterStateProvisionInProgress: 1,
 }
 
 // AllClusterRequestStates is a list of all states that a cluster can be put in
