@@ -80,7 +80,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	}
 	defer kops.Close()
 
-	var clusterResources model.ClusterResources
+	var clusterResources aws.ClusterResources
 	if kopsMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
 		clusterResources, err = awsClient.ClaimVPC(kopsMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
 		if err != nil {
@@ -268,6 +268,14 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 // CheckClusterCreated is a noop for KopsProvisioner.
 func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	// TODO: this is currently not implemented for kops.
+	// Entire waiting logic happens as part of cluster creation therefore we
+	// just skip this step and report cluster as created.
+	return true, nil
+}
+
+// CheckNodesCreated is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	// TODO: this is currently not implemented for kops.
 	// Entire waiting logic happens as part of cluster creation therefore we
 	// just skip this step and report cluster as created.

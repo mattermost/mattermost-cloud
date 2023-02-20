@@ -780,7 +780,7 @@ func TestUpgradeCluster(t *testing.T) {
 		ami := "mattermost-os"
 		clusterResp, errTest := client.UpgradeCluster(cluster1.ID, &model.PatchUpgradeClusterRequest{
 			Version: &version,
-			AMI:     &ami,
+			KopsAMI: &ami,
 		})
 		require.NoError(t, errTest)
 		assert.NotNil(t, clusterResp)

@@ -10,15 +10,14 @@ import (
 
 // EKSMetadata is metadata for EKS cluster and node groups.
 type EKSMetadata struct {
-	KubernetesVersion  *string
-	VPC                string
-	Networking         string
-	ClusterRoleARN     *string
-	ClusterResource    ClusterResources
-	AMI                string
-	LaunchTemplateName string
-	NodeGroup          EKSNodeGroup
-	MaxPodsPerNode     int64
+	KubernetesVersion *string
+	AMI               string
+	VPC               string
+	Networking        string
+	ClusterRoleARN    *string
+	IsCalicoDeployed  bool
+	NodeGroup         EKSNodeGroup
+	MaxPodsPerNode    int64
 }
 
 // EKSNodeGroup is node group configuration.

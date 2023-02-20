@@ -27,6 +27,7 @@ type nginxInternal struct {
 	cluster        *model.Cluster
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
+	provisioner    string
 }
 
 func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginxInternal, error) {
@@ -51,6 +52,7 @@ func newNginxInternalHandle(version *model.HelmUtilityVersion, cluster *model.Cl
 		logger:         logger.WithField("cluster-utility", model.NginxInternalCanonicalName),
 		desiredVersion: version,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.NginxInternal,
+		provisioner:    cluster.Provisioner,
 	}, nil
 }
 
@@ -136,7 +138,7 @@ func (n *nginxInternal) Migrate() error {
 }
 
 func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, error) {
-	var setArguments string
+	var setArguments []string
 	if withArguments {
 		certificate, err := n.awsClient.GetCertificateSummaryByTag(aws.DefaultInstallPrivateCertificatesTagKey, aws.DefaultInstallPrivateCertificatesTagValue, n.logger)
 		if err != nil {
@@ -147,7 +149,18 @@ func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, 
 			return nil, errors.New("retrieved certificate does not have ARN")
 		}
 
-		setArguments = fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN)
+		setArguments = append(setArguments, fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN))
+	}
+
+	if n.provisioner == "eks" {
+		// Calico networking cannot currently be installed on the EKS control plane nodes.
+		// As a result the control plane nodes will not be able to initiate network connections to Calico pods.
+		// As a workaround, trusted pods that require control plane nodes to connect to them,
+		// such as those implementing admission controller webhooks, can include hostNetwork:true in their pod spec.
+		// See https://docs.tigera.io/calico/3.25/getting-started/kubernetes/managed-public-cloud/eks
+		setArguments = append(setArguments, "controller.hostNetwork=true")
+		// hostNetwork can cause port conflict, that's why we need to use DaemonSet
+		setArguments = append(setArguments, "controller.kind=DaemonSet")
 	}
 
 	return newHelmDeployment(
@@ -156,7 +169,7 @@ func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, 
 		namespaceNginxInternal,
 		n.kubeconfigPath,
 		n.desiredVersion,
-		setArguments,
+		strings.Join(setArguments, ","),
 		n.logger,
 	), nil
 }

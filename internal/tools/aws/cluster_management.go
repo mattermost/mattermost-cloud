@@ -16,8 +16,44 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.FieldLogger) (model.ClusterResources, error) {
-	clusterResources := model.ClusterResources{
+// ClusterResources is a collection of AWS resources that will be used to create
+// a kops cluster.
+type ClusterResources struct {
+	VpcID                  string
+	VpcCIDR                string
+	PrivateSubnetIDs       []string
+	PublicSubnetsIDs       []string
+	MasterSecurityGroupIDs []string
+	WorkerSecurityGroupIDs []string
+	CallsSecurityGroupIDs  []string
+}
+
+// IsValid returns whether or not ClusterResources is valid or not.
+func (cr *ClusterResources) IsValid() error {
+	if cr.VpcID == "" {
+		return errors.New("vpc ID is empty")
+	}
+	if len(cr.PrivateSubnetIDs) == 0 {
+		return errors.New("private subnet list is empty")
+	}
+	if len(cr.PublicSubnetsIDs) == 0 {
+		return errors.New("public subnet list is empty")
+	}
+	if len(cr.MasterSecurityGroupIDs) == 0 {
+		return errors.New("master security group list is empty")
+	}
+	if len(cr.WorkerSecurityGroupIDs) == 0 {
+		return errors.New("worker security group list is empty")
+	}
+	if len(cr.CallsSecurityGroupIDs) == 0 {
+		return errors.New("calls security group list is empty")
+	}
+
+	return nil
+}
+
+func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.FieldLogger) (ClusterResources, error) {
+	clusterResources := ClusterResources{
 		VpcID:   vpcID,
 		VpcCIDR: vpcCIDR,
 	}
@@ -108,33 +144,33 @@ func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.Fie
 }
 
 // ClaimVPC claims specified VPC for specified cluster.
-func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (model.ClusterResources, error) {
+func (a *Client) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
 	ctx := context.TODO()
 	vpcOut, err := a.Service().ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{VpcIds: []string{vpcID}})
 	if err != nil {
-		return model.ClusterResources{}, errors.Wrap(err, "failed to describe vpc")
+		return ClusterResources{}, errors.Wrap(err, "failed to describe vpc")
 	}
 
 	if len(vpcOut.Vpcs) == 0 {
-		return model.ClusterResources{}, fmt.Errorf("couldn't find vpcs")
+		return ClusterResources{}, fmt.Errorf("couldn't find vpcs")
 	}
 
 	clusterResources, err := a.getClusterResourcesForVPC(vpcID, *vpcOut.Vpcs[0].CidrBlock, logger)
 	if err != nil {
-		return model.ClusterResources{}, errors.Wrap(err, "failed to get cluster resources for VPC")
+		return ClusterResources{}, errors.Wrap(err, "failed to get cluster resources for VPC")
 	}
 
 	err = a.claimVpc(clusterResources, cluster, owner, logger)
 	if err != nil {
-		return model.ClusterResources{}, errors.Wrap(err, "failed to claim VPC")
+		return ClusterResources{}, errors.Wrap(err, "failed to claim VPC")
 	}
 
 	return clusterResources, nil
 }
 
-// GetAndClaimVpcResources creates model.ClusterResources from an available VPC and
+// GetAndClaimVpcResources creates ClusterResources from an available VPC and
 // tags them appropriately.
-func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (model.ClusterResources, error) {
+func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (ClusterResources, error) {
 	// First, check if a VPC has been claimed by this cluster. If only one has
 	// already been claimed, then return that with no error.
 	clusterAlreadyClaimedFilter := []ec2Types.Filter{
@@ -153,10 +189,10 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 	}
 	clusterAlreadyClaimedVpcs, err := a.GetVpcsWithFilters(clusterAlreadyClaimedFilter)
 	if err != nil {
-		return model.ClusterResources{}, err
+		return ClusterResources{}, err
 	}
 	if len(clusterAlreadyClaimedVpcs) > 1 {
-		return model.ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), cluster.ID)
+		return ClusterResources{}, fmt.Errorf("multiple VPCs (%d) have been claimed by cluster %s; aborting claim process", len(clusterAlreadyClaimedVpcs), cluster.ID)
 	}
 	if len(clusterAlreadyClaimedVpcs) == 1 {
 		return a.getClusterResourcesForVPC(*clusterAlreadyClaimedVpcs[0].VpcId, *clusterAlreadyClaimedVpcs[0].CidrBlock, logger)
@@ -174,7 +210,7 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 	}
 	totalVpcs, err := a.GetVpcsWithFilters(totalVpcsFilter)
 	if err != nil {
-		return model.ClusterResources{}, err
+		return ClusterResources{}, err
 	}
 	totalVpcCount := len(totalVpcs)
 
@@ -187,7 +223,7 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 
 	vpcs, err := a.GetVpcsWithFilters(vpcFilters)
 	if err != nil {
-		return model.ClusterResources{}, err
+		return ClusterResources{}, err
 	}
 	availableVpcCount := len(vpcs)
 
@@ -211,14 +247,14 @@ func (a *Client) GetAndClaimVpcResources(cluster *model.Cluster, owner string, l
 		return clusterResources, nil
 	}
 
-	return model.ClusterResources{}, fmt.Errorf("%d VPCs were returned as currently available; none of them were configured correctly", len(vpcs))
+	return ClusterResources{}, fmt.Errorf("%d VPCs were returned as currently available; none of them were configured correctly", len(vpcs))
 }
 
 // GetVpcResources retrieves the VPC information for a particulary cluster.
-func (a *Client) GetVpcResources(clusterID string, logger log.FieldLogger) (model.ClusterResources, error) {
+func (a *Client) GetVpcResources(clusterID string, logger log.FieldLogger) (ClusterResources, error) {
 	vpc, err := getVPCForCluster(clusterID, a)
 	if err != nil {
-		return model.ClusterResources{}, errors.Wrap(err, "failed to find cluster VPC")
+		return ClusterResources{}, errors.Wrap(err, "failed to find cluster VPC")
 	}
 
 	return a.getClusterResourcesForVPC(*vpc.VpcId, *vpc.CidrBlock, logger)
@@ -236,7 +272,7 @@ func (a *Client) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 // - VPC cluster ID tag must by "none"
 // If that conditions are not met, we will try to set this cluster as secondary in the VPC only if
 // the `CloudSecondaryClusterID` is set to `none`.
-func (a *Client) claimVpc(clusterResources model.ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
+func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
 	vpcFilter := []ec2Types.Filter{
 		{
 			Name:   aws.String("vpc-id"),
@@ -512,7 +548,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 }
 
 // GetVpcResourcesByVpcID retrieve the VPC information for a particulary cluster.
-func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (model.ClusterResources, error) {
+func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error) {
 	ctx := context.TODO()
 	input := &ec2.DescribeVpcsInput{
 		VpcIds: []string{
@@ -522,13 +558,13 @@ func (a *Client) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (m
 
 	vpcCidr, err := a.Service().ec2.DescribeVpcs(ctx, input)
 	if err != nil {
-		return model.ClusterResources{}, errors.Wrapf(err, "failed to fetch the VPC information using VPC ID %s", vpcID)
+		return ClusterResources{}, errors.Wrapf(err, "failed to fetch the VPC information using VPC ID %s", vpcID)
 	}
 	return a.getClusterResourcesForVPC(vpcID, *vpcCidr.Vpcs[0].CidrBlock, logger)
 }
 
 // TagResourcesByCluster for secondary cluster.
-func (a *Client) TagResourcesByCluster(clusterResources model.ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
+func (a *Client) TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
 		err := a.TagResource(subnet, fmt.Sprintf("kubernetes.io/cluster/%s", getClusterTag(cluster)), "shared", logger)
 		if err != nil {
@@ -575,49 +611,4 @@ func kopsClusterTag(clusterID string) string {
 }
 func eksClusterTag(clusterID string) string {
 	return clusterID
-}
-
-func (a *Client) FilterClusterResources(cluster *model.Cluster, resources model.ClusterResources) (model.ClusterResources, error) {
-	// TODO: we do not expect to query that many subnets but for safety
-	// we can check the NextToken.
-	subnetsOut, err := a.Service().ec2.DescribeSubnets(context.TODO(), &ec2.DescribeSubnetsInput{
-		SubnetIds: resources.PrivateSubnetIDs,
-		Filters: []ec2Types.Filter{
-			{
-				Name:   aws.String("availability-zone"),
-				Values: cluster.ProviderMetadataAWS.Zones,
-			},
-		},
-	})
-	if err != nil {
-		return model.ClusterResources{}, errors.Wrap(err, "failed to describe subnets")
-	}
-
-	var privateSubnetIDs []string
-	for _, sub := range subnetsOut.Subnets {
-		privateSubnetIDs = append(privateSubnetIDs, *sub.SubnetId)
-	}
-
-	subnetsOut, err = a.Service().ec2.DescribeSubnets(context.TODO(), &ec2.DescribeSubnetsInput{
-		SubnetIds: resources.PublicSubnetsIDs,
-		Filters: []ec2Types.Filter{
-			{
-				Name:   aws.String("availability-zone"),
-				Values: cluster.ProviderMetadataAWS.Zones,
-			},
-		},
-	})
-	if err != nil {
-		return model.ClusterResources{}, errors.Wrap(err, "failed to describe subnets")
-	}
-
-	var publicSubnetsIDs []string
-	for _, sub := range subnetsOut.Subnets {
-		publicSubnetsIDs = append(publicSubnetsIDs, *sub.SubnetId)
-	}
-
-	resources.PublicSubnetsIDs = publicSubnetsIDs
-	resources.PrivateSubnetIDs = privateSubnetIDs
-
-	return resources, nil
 }

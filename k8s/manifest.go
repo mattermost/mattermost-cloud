@@ -21,9 +21,11 @@ import (
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacbetav1 "k8s.io/api/rbac/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
 	apixv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apixv1beta1scheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
@@ -159,6 +161,8 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdateDaemonSetV1(deployNamespace, obj.(*appsv1.DaemonSet))
 	case *policyv1beta1.PodDisruptionBudget:
 		return kc.createOrUpdatePodDisruptionBudgetBetaV1(deployNamespace, obj.(*policyv1beta1.PodDisruptionBudget))
+	case *policyv1.PodDisruptionBudget:
+		return kc.createOrUpdatePodDisruptionBudgetV1(deployNamespace, obj.(*policyv1.PodDisruptionBudget))
 	case *networkingv1.NetworkPolicy:
 		return kc.createOrUpdateNetworkPolicyV1(deployNamespace, obj.(*networkingv1.NetworkPolicy))
 	case *apiregistrationv1beta1.APIService:
@@ -167,7 +171,9 @@ func (kc *KubeClient) createFileResource(deployNamespace string, obj interface{}
 		return kc.createOrUpdatePersistentVolume(obj.(*apiv1.PersistentVolume))
 	case *apiv1.PersistentVolumeClaim:
 		return kc.createOrUpdatePersistentVolumeClaim(deployNamespace, obj.(*apiv1.PersistentVolumeClaim))
+	case *storagev1.StorageClass:
+		return kc.createOrUpdateStorageClass(obj.(*storagev1.StorageClass))
 	default:
-		return nil, fmt.Errorf("Error: unsupported k8s manifest type %T", o)
+		return nil, fmt.Errorf("error: unsupported k8s manifest type %T", o)
 	}
 }
