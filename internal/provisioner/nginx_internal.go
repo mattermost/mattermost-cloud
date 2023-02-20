@@ -158,9 +158,11 @@ func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, 
 		// As a workaround, trusted pods that require control plane nodes to connect to them,
 		// such as those implementing admission controller webhooks, can include hostNetwork:true in their pod spec.
 		// See https://docs.tigera.io/calico/3.25/getting-started/kubernetes/managed-public-cloud/eks
-		setArguments = append(setArguments, "controller.hostNetwork=true")
+		// setArguments = append(setArguments, "controller.hostNetwork=true")
 		// hostNetwork can cause port conflict, that's why we need to use DaemonSet
-		setArguments = append(setArguments, "controller.kind=DaemonSet")
+		// setArguments = append(setArguments, "controller.kind=DaemonSet")
+
+		setArguments = append(setArguments, "controller.admissionWebhooks.enabled=false")
 	}
 
 	return newHelmDeployment(
