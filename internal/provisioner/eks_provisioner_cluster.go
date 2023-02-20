@@ -138,11 +138,14 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, nil
 	}
 
+	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
 	_, err = awsClient.EnsureLaunchTemplate(cluster.ID, *cluster.ProvisionerMetadataEKS)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to ensure launch template")
 	}
 
+	// To install Calico Networking, We need to delete VPC CNI plugin (aws-node)
+	// and install Calico CNI plugin before creating any pods
 	kubeConfigFile, err := provisioner.prepareClusterKubeconfig(cluster.ID)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to prepare kubeconfig file")
