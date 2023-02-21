@@ -11,12 +11,11 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 )
 
 // NewDBMigrationSuite creates new DBMigrationSuite.

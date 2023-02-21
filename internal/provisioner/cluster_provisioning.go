@@ -28,7 +28,7 @@ func provisionCluster(
 	params ProvisioningParams,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	logger logrus.FieldLogger,
-	) error {
+) error {
 
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
@@ -58,27 +58,26 @@ func provisionCluster(
 	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
 
-	namespaceNames := []string{
+	namespaceList := []string{
 		mattermostOperatorNamespace,
 	}
 	if params.DeployMysqlOperator {
-		namespaceNames = append(namespaceNames, mysqlOperatorNamespace)
+		namespaceList = append(namespaceList, mysqlOperatorNamespace)
 	}
 	if params.DeployMinioOperator {
-		namespaceNames = append(namespaceNames, minioOperatorNamespace)
+		namespaceList = append(namespaceList, minioOperatorNamespace)
 	}
 
-
-	err = k8sClient.DeleteNamespacesWithFinalizer(namespaceNames)
+	err = k8sClient.DeleteNamespacesWithFinalizer(namespaceList)
 	if err != nil {
-		return errors.Wrap(err, "failed to delete namespaceNames")
+		return errors.Wrap(err, "failed to delete namespace")
 	}
 
 	wait := 300
-	logger.Infof("Waiting up to %d seconds for namespaceNames to be terminated...", wait)
+	logger.Infof("Waiting up to %d seconds for namespace to be terminated...", wait)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	err = waitForNamespacesDeleted(ctx, namespaceNames, k8sClient)
+	err = waitForNamespacesDeleted(ctx, namespaceList, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -87,12 +86,12 @@ func provisionCluster(
 	// part of the standard namespace cleanup and recreation flow. We always
 	// only update both.
 	perseusNamespace := "perseus"
-	namespaceNames = append(namespaceNames, perseusNamespace)
+	namespaceList = append(namespaceList, perseusNamespace)
 	bifrostNamespace := "bifrost"
-	namespaceNames = append(namespaceNames, bifrostNamespace)
+	namespaceList = append(namespaceList, bifrostNamespace)
 
-	logger.Info("Creating utility namespaceNames")
-	_, err = k8sClient.CreateOrUpdateNamespaces(namespaceNames)
+	logger.Info("Creating utility namespace")
+	_, err = k8sClient.CreateOrUpdateNamespaces(namespaceList)
 	if err != nil {
 		return errors.Wrap(err, "failed to create bifrost namespace")
 	}

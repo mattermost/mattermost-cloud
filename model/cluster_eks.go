@@ -15,7 +15,6 @@ type EKSMetadata struct {
 	VPC               string
 	Networking        string
 	ClusterRoleARN    *string
-	IsCalicoDeployed  bool
 	NodeGroup         EKSNodeGroup
 	MaxPodsPerNode    int64
 }

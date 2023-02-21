@@ -92,7 +92,7 @@ func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespac
 // skipped.
 func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
 	policy := metav1.DeletePropagationForeground
-	gracePeriod := int64(0)
+	gracePeriod := int64(45)
 	deleteOpts := metav1.DeleteOptions{
 		GracePeriodSeconds: &gracePeriod,
 		PropagationPolicy:  &policy,
@@ -128,12 +128,12 @@ func (kc *KubeClient) finalizeNamespaces(namespaces []*corev1.Namespace) error {
 // DeleteNamespacesWithFinalizer deletes kubernetes namespaces with a finalizer cleanup.
 func (kc *KubeClient) DeleteNamespacesWithFinalizer(namespaceNames []string) error {
 	if err := kc.DeleteNamespaces(namespaceNames); err != nil {
-		return errors.Wrap(err, "failed to delete namespaceNames")
+		return errors.Wrap(err, "failed to delete namespace")
 	}
 
 	namespaces, err := kc.GetNamespaces(namespaceNames)
 	if err != nil {
-		return errors.Wrap(err, "failed to get namespaceNames")
+		return errors.Wrap(err, "failed to get namespace")
 	}
 
 	for i := range namespaces {
@@ -141,7 +141,7 @@ func (kc *KubeClient) DeleteNamespacesWithFinalizer(namespaceNames []string) err
 	}
 
 	if err := kc.finalizeNamespaces(namespaces); err != nil {
-		return errors.Wrap(err, "failed to finalize namespaceNames")
+		return errors.Wrap(err, "failed to finalize namespace")
 	}
 
 	return nil

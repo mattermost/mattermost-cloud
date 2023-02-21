@@ -9,6 +9,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
