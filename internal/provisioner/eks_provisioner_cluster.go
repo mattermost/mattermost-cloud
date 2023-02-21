@@ -150,11 +150,12 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 	if err != nil {
 		return false, errors.Wrap(err, "failed to prepare kubeconfig file")
 	}
-	// Begin deploying the mattermost operator.
+
 	k8sClient, err := k8s.NewFromFile(kubeConfigFile, logger)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
+	// Delete aws-node daemonset to disable VPC CNI plugin
 	_ = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(context.Background(), "aws-node", metav1.DeleteOptions{})
 
 	var files []k8s.ManifestFile
