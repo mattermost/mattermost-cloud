@@ -36,8 +36,9 @@ type CreateClusterRequest struct {
 	Annotations            []string                       `json:"annotations,omitempty"`
 	Networking             string                         `json:"networking,omitempty"`
 	VPC                    string                         `json:"vpc,omitempty"`
-	MaxPodsPerNode         int64
-	EKSConfig              *EKSConfig `json:"EKSConfig,omitempty"`
+	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
+	EKSConfig              *EKSConfig                     `json:"EKSConfig,omitempty"`
+	Provisioner            string                         `json:"provisioner,omitempty"`
 }
 
 // EKSConfig is EKS cluster configuration.

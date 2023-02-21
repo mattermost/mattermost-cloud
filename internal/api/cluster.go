@@ -7,13 +7,12 @@ package api
 import (
 	"net/http"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-
-	"github.com/mattermost/mattermost-cloud/internal/store"
-	"github.com/pkg/errors"
-
+	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
+	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 )
 
 // initCluster registers cluster endpoints on the given router.
@@ -148,9 +147,9 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			NodeGroup: model.EKSNodeGroup{
 				RoleARN:       createClusterRequest.EKSConfig.NodeRoleARN,
 				InstanceTypes: []string{createClusterRequest.NodeInstanceType},
-				DesiredSize:   int32Ptr(int32(createClusterRequest.NodeMinCount)),
-				MinSize:       int32Ptr(int32(createClusterRequest.NodeMinCount)),
-				MaxSize:       int32Ptr(int32(createClusterRequest.NodeMaxCount)),
+				DesiredSize:   ptr.Int32(int32(createClusterRequest.NodeMinCount)),
+				MinSize:       ptr.Int32(int32(createClusterRequest.NodeMinCount)),
+				MaxSize:       ptr.Int32(int32(createClusterRequest.NodeMaxCount)),
 			},
 			MaxPodsPerNode: createClusterRequest.MaxPodsPerNode,
 			AMI:            createClusterRequest.KopsAMI,

@@ -361,26 +361,7 @@ func (provisioner *KopsProvisioner) ExecMMCTL(cluster *model.Cluster, clusterIns
 	return output, nil
 }
 
-// ExecClusterInstallationCLI execs the provided command on the defined cluster
-// installation and returns both exec preparation errors as well as errors from
-// the exec command itself.
-func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
-		"cluster":      clusterInstallation.ClusterID,
-		"installation": clusterInstallation.InstallationID,
-	})
-
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
-	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
-
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
-	}
-
+func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, args ...string) ([]byte, error, error) {
 	ctx := context.TODO()
 	podList, err := k8sClient.Clientset.CoreV1().Pods(clusterInstallation.Namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "app=mattermost",
@@ -429,6 +410,29 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cl
 	}
 
 	return output, execErr, nil
+}
+
+// ExecClusterInstallationCLI execs the provided command on the defined cluster
+// installation and returns both exec preparation errors as well as errors from
+// the exec command itself.
+func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
+	}
+	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
+
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return execClusterInstallationCLI(k8sClient, clusterInstallation, logger, args...)
 }
 
 // ExecClusterInstallationJob creates job executing command on cluster installation.

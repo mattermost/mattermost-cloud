@@ -59,33 +59,25 @@ func provisionCluster(
 	minioOperatorNamespace := "minio-operator"
 	mattermostOperatorNamespace := "mattermost-operator"
 
-	namespaces := []string{
+	namespaceNames := []string{
 		mattermostOperatorNamespace,
 	}
 	if params.DeployMysqlOperator {
-		namespaces = append(namespaces, mysqlOperatorNamespace)
+		namespaceNames = append(namespaceNames, mysqlOperatorNamespace)
 	}
 	if params.DeployMinioOperator {
-		namespaces = append(namespaces, minioOperatorNamespace)
+		namespaceNames = append(namespaceNames, minioOperatorNamespace)
 	}
 
-	// Remove all previously-installed operator namespaces and resources.
-	mainCtx := context.TODO()
-	for _, namespace := range namespaces {
-		logger.Infof("Cleaning up namespace %s", namespace)
-		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(mainCtx, namespace, metav1.DeleteOptions{})
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Namespace %s not found; skipping...", namespace)
-		} else if err != nil {
-			return errors.Wrapf(err, "failed to delete namespace %s", namespace)
-		}
+	if err := k8sClient.DeleteNamespacesWithFinalizer(namespaceNames); err != nil {
+		return errors.Wrap(err, "failed to delete namespaceNames")
 	}
 
-	wait := 60
-	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
+	wait := 300
+	logger.Infof("Waiting up to %d seconds for namespaceNames to be terminated...", wait)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	err = waitForNamespacesDeleted(ctx, namespaces, k8sClient)
+	err = waitForNamespacesDeleted(ctx, namespaceNames, k8sClient)
 	if err != nil {
 		return err
 	}
@@ -94,12 +86,12 @@ func provisionCluster(
 	// part of the standard namespace cleanup and recreation flow. We always
 	// only update both.
 	perseusNamespace := "perseus"
-	namespaces = append(namespaces, perseusNamespace)
+	namespaceNames = append(namespaceNames, perseusNamespace)
 	bifrostNamespace := "bifrost"
-	namespaces = append(namespaces, bifrostNamespace)
+	namespaceNames = append(namespaceNames, bifrostNamespace)
 
-	logger.Info("Creating utility namespaces")
-	_, err = k8sClient.CreateOrUpdateNamespaces(namespaces)
+	logger.Info("Creating utility namespaceNames")
+	_, err = k8sClient.CreateOrUpdateNamespaces(namespaceNames)
 	if err != nil {
 		return errors.Wrap(err, "failed to create bifrost namespace")
 	}
@@ -412,7 +404,7 @@ func provisionCluster(
 	// and delete the appropriate SLO as well.
 	logger.Info("Ensuring outdated ring SLOs are removed")
 
-	ctx, cancel = context.WithTimeout(mainCtx, 15*time.Second)
+	ctx, cancel = context.WithTimeout(context.TODO(), 15*time.Second)
 	defer cancel()
 
 	psls, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).List(ctx, metav1.ListOptions{

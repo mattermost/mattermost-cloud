@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+//go:build e2e
 // +build e2e
 
 package workflow
@@ -24,7 +25,6 @@ func NewClusterSuite(params ClusterSuiteParams, client *model.Client, whChan <-c
 		whChan: whChan,
 		logger: logger.WithField("suite", "cluster"),
 		Params: params,
-		Meta:   ClusterSuiteMeta{},
 	}
 }
 
@@ -113,20 +113,53 @@ func (w *ClusterSuite) DeleteCluster(ctx context.Context) error {
 // ClusterCreationEvents returns expected events that should occur while creating the cluster.
 // This method should be called only after executing the workflow so that IDs are not empty.
 func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
-	return []eventstest.EventOccurrence{
+	events := []eventstest.EventOccurrence{
 		{
 			ResourceType: model.TypeCluster.String(),
 			ResourceID:   w.Meta.ClusterID,
 			OldState:     "n/a",
 			NewState:     model.ClusterStateCreationRequested,
 		},
-		{
+	}
+
+	if w.Params.CreateRequest.Provisioner == "eks" {
+		events = append(events, eventstest.EventOccurrence{
 			ResourceType: model.TypeCluster.String(),
 			ResourceID:   w.Meta.ClusterID,
 			OldState:     model.ClusterStateCreationRequested,
-			NewState:     model.ClusterStateStable,
-		},
+			NewState:     model.ClusterStateCreationInProgress,
+		})
+
+		events = append(events, eventstest.EventOccurrence{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateCreationInProgress,
+			NewState:     model.ClusterStateWaitingForNode,
+		})
+
+		events = append(events, eventstest.EventOccurrence{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateWaitingForNode,
+			NewState:     model.ClusterStateProvisionInProgress,
+		})
+	} else {
+		events = append(events, eventstest.EventOccurrence{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateCreationRequested,
+			NewState:     model.ClusterStateProvisionInProgress,
+		})
 	}
+
+	events = append(events, eventstest.EventOccurrence{
+		ResourceType: model.TypeCluster.String(),
+		ResourceID:   w.Meta.ClusterID,
+		OldState:     model.ClusterStateProvisionInProgress,
+		NewState:     model.ClusterStateStable,
+	})
+
+	return events
 }
 
 // ClusterReprovisionEvents returns expected events that should occur while reprovisioning the cluster.
