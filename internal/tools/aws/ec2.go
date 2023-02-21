@@ -16,6 +16,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type TagResourceInput struct {
+	ResourceID string
+	Key        string
+	Value      string
+}
+
 // TagResource tags an AWS EC2 resource.
 func (a *Client) TagResource(resourceID, key, value string, logger log.FieldLogger) error {
 	ctx := context.TODO()

@@ -18,6 +18,10 @@ type Tags struct {
 	tags map[string]string
 }
 
+func (t *Tags) Get(key string) string {
+	return t.tags[key]
+}
+
 // Add adds a new tag in a key,value format
 func (t *Tags) Add(key, value string) {
 	t.tags[key] = value
@@ -80,4 +84,16 @@ func NewTags(items ...string) (*Tags, error) {
 	}
 
 	return &t, nil
+}
+
+func NewTagsFromEC2Tags(tags []ec2Types.Tag) *Tags {
+	t := Tags{
+		tags: make(map[string]string),
+	}
+	for _, tag := range tags {
+		if tag.Key != nil && tag.Value != nil {
+			t.Add(*tag.Key, *tag.Value)
+		}
+	}
+	return &t
 }

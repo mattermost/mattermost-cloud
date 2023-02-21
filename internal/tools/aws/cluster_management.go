@@ -333,27 +333,63 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 		}
 	}
 
+	cleanupTagResources := []TagResourceInput{}
+	currentTags := NewTagsFromEC2Tags(vpcs[0].Tags)
+
+	cleanup := func() error {
+		cleanupLogger := logger.WithField("vpc_id", clusterResources.VpcID)
+		cleanupLogger.Info("Cleaning up VPC and related resources after failing to claim it")
+		for _, op := range cleanupTagResources {
+			if err := a.TagResource(op.ResourceID, op.Key, op.Value, logger); err != nil {
+				cleanupLogger.WithField("resource_id", op.ResourceID).WithError(err).Error("failed to tag resouce to its original value")
+				return errors.Wrap(err, "failed to tag resource to its original value")
+			}
+		}
+
+		return nil
+	}
+
 	if claimSecondaryCluster {
 		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcSecondaryClusterIDTagKey), cluster.ID, logger)
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
 		}
+		cleanupTagResources = append(cleanupTagResources, TagResourceInput{
+			ResourceID: clusterResources.VpcID,
+			Key:        trimTagPrefix(VpcSecondaryClusterIDTagKey),
+			Value:      currentTags.Get(trimTagPrefix(VpcSecondaryClusterIDTagKey)),
+		})
 		// TODO: what about ownership when dealing with secondary clusters?
 	} else {
 		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcAvailableTagKey), VpcAvailableTagValueFalse, logger)
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcAvailableTagKey)
 		}
+		cleanupTagResources = append(cleanupTagResources, TagResourceInput{
+			ResourceID: clusterResources.VpcID,
+			Key:        trimTagPrefix(VpcAvailableTagKey),
+			Value:      currentTags.Get(trimTagPrefix(VpcAvailableTagKey)),
+		})
 
 		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterIDTagKey), cluster.ID, logger)
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcClusterIDTagKey)
 		}
+		cleanupTagResources = append(cleanupTagResources, TagResourceInput{
+			ResourceID: clusterResources.VpcID,
+			Key:        trimTagPrefix(VpcClusterIDTagKey),
+			Value:      currentTags.Get(trimTagPrefix(VpcClusterIDTagKey)),
+		})
 
 		err = a.TagResource(clusterResources.VpcID, trimTagPrefix(VpcClusterOwnerKey), owner, logger)
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcClusterOwnerKey)
 		}
+		cleanupTagResources = append(cleanupTagResources, TagResourceInput{
+			ResourceID: clusterResources.VpcID,
+			Key:        trimTagPrefix(VpcClusterOwnerKey),
+			Value:      currentTags.Get(trimTagPrefix(VpcClusterOwnerKey)),
+		})
 	}
 
 	for _, subnet := range clusterResources.PublicSubnetsIDs {
@@ -368,11 +404,21 @@ func (a *Client) claimVpc(clusterResources ClusterResources, cluster *model.Clus
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
+		cleanupTagResources = append(cleanupTagResources, TagResourceInput{
+			ResourceID: callsSecurityGroup,
+			Key:        trimTagPrefix(VpcClusterOwnerKey),
+			Value:      currentTags.Get(trimTagPrefix(VpcClusterOwnerKey)),
+		})
 
 		err = a.TagResource(callsSecurityGroup, "KubernetesCluster", getClusterTag(cluster), logger)
 		if err != nil {
 			return errors.Wrap(err, "failed to tag subnet")
 		}
+		cleanupTagResources = append(cleanupTagResources, TagResourceInput{
+			ResourceID: callsSecurityGroup,
+			Key:        "KubernetesCluster",
+			Value:      VpcClusterIDTagValueNone,
+		})
 	}
 
 	logger.Debugf("Claimed VPC %s", clusterResources.VpcID)
