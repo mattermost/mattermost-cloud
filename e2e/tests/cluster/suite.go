@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
@@ -80,8 +80,8 @@ func SetupClusterLifecycleTest() (*Test, error) {
 
 	if config.Provisioner == "eks" {
 		createClusterReq.EKSConfig = &model.EKSConfig{
-			ClusterRoleARN: aws.String(config.ClusterRoleARN),
-			NodeRoleARN:    aws.String(config.NodeRoleARN),
+			ClusterRoleARN: ptr.String(config.ClusterRoleARN),
+			NodeRoleARN:    ptr.String(config.NodeRoleARN),
 		}
 	}
 

@@ -93,7 +93,7 @@ func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 
 	err := pkg.WaitForInstallationToBeStable(ctx, w.Meta.InstallationID, w.whChan, w.logger)
 	if err != nil {
-		return errors.Wrap(err, "while waiting for cluster creation")
+		return errors.Wrap(err, "while waiting for installation creation")
 	}
 
 	err = pkg.WaitForInstallationAvailability(w.Meta.InstallationDNS, w.logger)
