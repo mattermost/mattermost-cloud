@@ -20,14 +20,15 @@ import (
 )
 
 // NewInstallationSuite creates new Installation testing suite.
-func NewInstallationSuite(params InstallationSuiteParams, dnsSubdomain string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *InstallationSuite {
+func NewInstallationSuite(params InstallationSuiteParams, meta InstallationSuiteMeta, dnsSubdomain string, client *model.Client, kubeClient kubernetes.Interface, whChan <-chan *model.WebhookPayload, logger logrus.FieldLogger) *InstallationSuite {
 	return &InstallationSuite{
 		client:       client,
 		kubeClient:   kubeClient,
+		whChan:       whChan,
 		logger:       logger.WithField("suite", "installation"),
 		dnsSubdomain: dnsSubdomain,
 		Params:       params,
-		Meta:         InstallationSuiteMeta{},
+		Meta:         meta,
 	}
 }
 
@@ -35,6 +36,7 @@ func NewInstallationSuite(params InstallationSuiteParams, dnsSubdomain string, c
 type InstallationSuite struct {
 	client       *model.Client
 	kubeClient   kubernetes.Interface
+	whChan       <-chan *model.WebhookPayload
 	logger       logrus.FieldLogger
 	dnsSubdomain string
 
@@ -74,11 +76,25 @@ func (w *InstallationSuite) CreateInstallation(ctx context.Context) error {
 		w.logger.Infof("Installation created: %s", installation.ID)
 		w.Meta.InstallationID = installation.ID
 		w.Meta.InstallationDNS = installation.DNS
+	} else {
+		installation, err := w.client.GetInstallation(w.Meta.InstallationID, nil)
+		if err != nil {
+			return errors.Wrap(err, "failed to get installation")
+		}
+		w.Meta.InstallationDNS = installation.DNS
+
+		if installation.State == model.InstallationStateStable {
+			return nil
+		}
+		if installation.State == model.InstallationStateCreationFailed {
+			return errors.Errorf("installation creation failed: %s", installation.State)
+		}
+
 	}
 
-	err := pkg.WaitForStable(w.client, w.Meta.InstallationID, w.logger)
+	err := pkg.WaitForInstallationToBeStable(ctx, w.Meta.InstallationID, w.whChan, w.logger)
 	if err != nil {
-		return errors.Wrap(err, "while waiting for installation creation")
+		return errors.Wrap(err, "while waiting for cluster creation")
 	}
 
 	err = pkg.WaitForInstallationAvailability(w.Meta.InstallationDNS, w.logger)
@@ -222,7 +238,7 @@ func (w *InstallationSuite) Cleanup(ctx context.Context) error {
 		return errors.Wrap(err, "while requesting installation removal")
 	}
 
-	err = pkg.WaitForInstallationDeletion(w.client, installation.ID, w.logger)
+	err = pkg.WaitForInstallationToBeDeleted(context.TODO(), installation.ID, w.whChan, w.logger)
 	if err != nil {
 		return errors.Wrap(err, "while waiting for installation deletion")
 	}

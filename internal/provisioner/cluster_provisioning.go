@@ -69,7 +69,8 @@ func provisionCluster(
 		namespaceNames = append(namespaceNames, minioOperatorNamespace)
 	}
 
-	if err := k8sClient.DeleteNamespacesWithFinalizer(namespaceNames); err != nil {
+	err = k8sClient.DeleteNamespacesWithFinalizer(namespaceNames)
+	if err != nil {
 		return errors.Wrap(err, "failed to delete namespaceNames")
 	}
 
@@ -119,12 +120,6 @@ func provisionCluster(
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
-		{
-			// some manifest requires 'kops-csi-1-21' storageClass
-			// which is not available by default in EKS
-			// TODO: we need separate manifest/helm for kops & eks
-			Path: "manifests/storageclass.yaml",
-		},
 		{
 			Path:            "manifests/operator-manifests/mattermost/crds/mm_clusterinstallation_crd.yaml",
 			DeployNamespace: mattermostOperatorNamespace,
@@ -199,7 +194,19 @@ func provisionCluster(
 		})
 	}
 
-	err = k8sClient.CreateFromFiles(files)
+	var manifestFiles []k8s.ManifestFile
+	if cluster.Provisioner == "eks" {
+		manifestFiles = append(manifestFiles, k8s.ManifestFile{
+			// some manifest requires 'kops-csi-1-21' storageClass
+			// which is not available by default in EKS
+			// TODO: we need separate manifest/helm for kops & eks
+			Path: "manifests/storageclass.yaml",
+		})
+	}
+
+	manifestFiles = append(manifestFiles, files...)
+
+	err = k8sClient.CreateFromFiles(manifestFiles)
 	if err != nil {
 		return err
 	}

@@ -202,7 +202,7 @@ goverall: $(GOVERALLS_GEN) ## Runs goveralls
 
 .PHONY: unittest
 unittest:
-	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+	$(GO) test -failfast ./... -v -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
 verify-mocks: mocks

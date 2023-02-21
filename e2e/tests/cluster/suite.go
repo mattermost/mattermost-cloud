@@ -37,6 +37,8 @@ type TestConfig struct {
 	Cleanup                   bool   `envconfig:"default=true"`
 	ClusterRoleARN            string `envconfig:"optional"`
 	NodeRoleARN               string `envconfig:"optional"`
+	ClusterID                 string `envconfig:"optional"`
+	InstallationID            string `envconfig:"optional"`
 }
 
 // Test holds all data required for a db migration test.
@@ -73,7 +75,6 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		KopsAMI:            config.KopsAMI,
 		VPC:                config.VPC,
 		Provisioner:        config.Provisioner,
-		Version:            "1.23",
 	}
 
 	if config.Provisioner == "eks" {
@@ -122,8 +123,12 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		return nil, errors.Wrap(err, "failed to setup webhook")
 	}
 
-	clusterSuite := workflow.NewClusterSuite(clusterParams, client, webhookChan, logger)
-	installationSuite := workflow.NewInstallationSuite(installationParams, config.DNSSubdomain, client, kubeClient, logger)
+	clusterMeta := workflow.ClusterSuiteMeta{ClusterID: config.ClusterID}
+	clusterSuite := workflow.NewClusterSuite(clusterParams, clusterMeta, client, webhookChan, logger)
+
+	installationMeta := workflow.InstallationSuiteMeta{InstallationID: config.InstallationID}
+
+	installationSuite := workflow.NewInstallationSuite(installationParams, installationMeta, config.DNSSubdomain, client, kubeClient, webhookChan, logger)
 
 	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
 

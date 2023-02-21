@@ -19,12 +19,13 @@ import (
 )
 
 // NewClusterSuite creates new Cluster testing suite.
-func NewClusterSuite(params ClusterSuiteParams, client *model.Client, whChan <-chan *model.WebhookPayload, logger logrus.FieldLogger) *ClusterSuite {
+func NewClusterSuite(params ClusterSuiteParams, meta ClusterSuiteMeta, client *model.Client, whChan <-chan *model.WebhookPayload, logger logrus.FieldLogger) *ClusterSuite {
 	return &ClusterSuite{
 		client: client,
 		whChan: whChan,
 		logger: logger.WithField("suite", "cluster"),
 		Params: params,
+		Meta:   meta,
 	}
 }
 

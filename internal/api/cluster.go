@@ -114,7 +114,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if c.Provisioner.ProvisionerType() == provisioner.EKSProvisionerType && createClusterRequest.EKSConfig == nil {
-		c.Logger.Error("invalid request: EKSConfig is required when provisioner type is not 'eks")
+		c.Logger.Error("invalid request: EKSConfig is required when provisioner type is 'eks")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+//go:build e2e
 // +build e2e
 
 package workflow
@@ -20,7 +21,7 @@ import (
 
 // NewDBMigrationSuite creates new DBMigrationSuite.
 func NewDBMigrationSuite(params DBMigrationSuiteParams, dnsSubdomain string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *DBMigrationSuite {
-	installationSuite := NewInstallationSuite(params.InstallationSuiteParams, dnsSubdomain, client, kubeClient, logger)
+	installationSuite := NewInstallationSuite(params.InstallationSuiteParams, InstallationSuiteMeta{}, dnsSubdomain, client, kubeClient, nil, logger)
 
 	return &DBMigrationSuite{
 		InstallationSuite: installationSuite,
