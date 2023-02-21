@@ -307,7 +307,7 @@ func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log
 		return model.ClusterStateCreationFailed
 	}
 	if !ready {
-		logger.Info("Cluster not yet ready")
+		logger.Info("Cluster nodes are not ready yet")
 		return model.ClusterStateWaitingForNode
 	}
 
