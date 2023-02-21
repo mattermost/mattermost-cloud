@@ -202,8 +202,6 @@ type serverFlags struct {
 
 	poll     int
 	slowPoll int
-
-	sloTargetAvailability float64
 }
 
 func (flags *serverFlags) addFlags(command *cobra.Command) {
@@ -229,6 +227,4 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().IntVar(&flags.poll, "poll", 30, "The interval in seconds to poll for background work.")
 	command.Flags().IntVar(&flags.slowPoll, "slow-poll", 60, "The interval in seconds to poll for background work for supervisors that are not time sensitive (slow-poll supervisors).")
-
-	command.Flags().Float64Var(&flags.sloTargetAvailability, "slo-target-availability", 99.5, "The default SLOs availability when provisioning clusters")
 }

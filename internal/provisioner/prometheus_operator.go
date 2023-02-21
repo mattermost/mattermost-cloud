@@ -89,12 +89,12 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	_, err = k8sClient.CreateOrUpdateNamespace("prometheus")
+	_, err = k8sClient.CreateOrUpdateNamespace(prometheusNamespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the prometheus namespace")
 	}
 
-	_, err = k8sClient.CreateOrUpdateSecret("prometheus", thanosObjStoreSecret)
+	_, err = k8sClient.CreateOrUpdateSecret(prometheusNamespace, thanosObjStoreSecret)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 	}
@@ -179,7 +179,7 @@ func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeploy
 	return newHelmDeployment(
 		"prometheus-community/kube-prometheus-stack",
 		"prometheus-operator",
-		"prometheus",
+		prometheusNamespace,
 		p.kubeconfigPath,
 		p.desiredVersion,
 		helmValueArguments,
