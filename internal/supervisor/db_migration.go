@@ -109,7 +109,7 @@ func NewInstallationDBMigrationSupervisor(
 
 // Shutdown performs graceful shutdown tasks for the supervisor.
 func (s *DBMigrationSupervisor) Shutdown() {
-	s.logger.Debug("Shutting down installation db restoration supervisor")
+	s.logger.Debug("Shutting down installation db migration supervisor")
 }
 
 // Do looks for work to be done on any pending backups and attempts to schedule the required work.

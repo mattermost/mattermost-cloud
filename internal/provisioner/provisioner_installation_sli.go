@@ -58,7 +58,7 @@ func createInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sCl
 	sli := makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Create(ctx, &sli, metav1.CreateOptions{})
+	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Create(ctx, &sli, metav1.CreateOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
 		return nil
@@ -73,12 +73,12 @@ func updateInstallationSLI(sli slothv1.PrometheusServiceLevel, k8sClient *k8s.Ku
 	wait := 60
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli.Name, metav1.GetOptions{})
+	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, sli.Name, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get cluster installation sli")
 	}
 	sli.ResourceVersion = obj.GetResourceVersion()
-	_, err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Update(ctx, &sli, metav1.UpdateOptions{})
+	_, err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Update(ctx, &sli, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation sli")
 	}
@@ -90,7 +90,7 @@ func createOrUpdateInstallationSLI(clusterInstallation *model.ClusterInstallatio
 	sli := makeSLIs(clusterInstallation)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli.GetName(), metav1.GetOptions{})
+	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, sli.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed to get cluster installation sli")
 	}
@@ -115,12 +115,12 @@ func deleteInstallationSLI(clusterInstallation *model.ClusterInstallation, k8sCl
 	sli := clusterInstallation.InstallationID
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Get(ctx, sli, metav1.GetOptions{})
+	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, sli, metav1.GetOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
 		return nil
 	}
-	err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels("prometheus").Delete(ctx, sli, metav1.DeleteOptions{})
+	err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Delete(ctx, sli, metav1.DeleteOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to delete cluster installation sli")
 	}

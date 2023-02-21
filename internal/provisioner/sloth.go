@@ -72,18 +72,3 @@ func createOrUpdateClusterPrometheusServiceLevel(psl slothv1.PrometheusServiceLe
 	}
 	return nil
 }
-
-func deletePrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
-	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, psl.Name, metav1.GetOptions{})
-	if err != nil && k8sErrors.IsNotFound(err) {
-		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
-		return nil
-	}
-	err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Delete(ctx, psl.Name, metav1.DeleteOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to delete cluster installation sli")
-	}
-	return nil
-}

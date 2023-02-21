@@ -34,7 +34,6 @@ type ProvisioningParams struct {
 	SLOInstallationGroups   []string
 	SLOEnterpriseGroups     []string
 	EtcdManagerEnv          map[string]string
-	SLOTargetAvailability   float64
 }
 
 // KopsProvisioner provisions clusters using kops+terraform.
@@ -68,6 +67,7 @@ func NewKopsProvisioner(
 			resourceUtil: resourceUtil,
 			store:        store,
 			params:       provisioningParams,
+			logger:       logger,
 		},
 	}
 }

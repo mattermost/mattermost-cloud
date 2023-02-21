@@ -226,7 +226,6 @@ func executeServerCmd(flags serverFlags) error {
 		"disable-db-init-check":                         flags.disableDBInitCheck,
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
-		"slo-availability":                              flags.sloTargetAvailability,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
@@ -268,7 +267,6 @@ func executeServerCmd(flags serverFlags) error {
 		SLOInstallationGroups:   flags.sloInstallationGroups,
 		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
 		EtcdManagerEnv:          etcdManagerEnv,
-		SLOTargetAvailability:   flags.sloTargetAvailability,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)

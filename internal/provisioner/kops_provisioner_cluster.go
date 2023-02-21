@@ -759,11 +759,11 @@ func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 	files := []k8s.ManifestFile{
 		{
 			Path:            "manifests/sloth/crd_sloth.slok.dev_prometheusservicelevels.yaml",
-			DeployNamespace: "prometheus",
+			DeployNamespace: prometheusNamespace,
 		},
 		{
 			Path:            "manifests/sloth/sloth.yaml",
-			DeployNamespace: "prometheus",
+			DeployNamespace: prometheusNamespace,
 		},
 	}
 
@@ -772,7 +772,7 @@ func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 		return errors.Wrapf(err, "failed to create sloth resources.")
 	}
 	wait := 240
-	pods, err := k8sClient.GetPodsFromDeployment("prometheus", "sloth")
+	pods, err := k8sClient.GetPodsFromDeployment(prometheusNamespace, "sloth")
 	if err != nil {
 		return err
 	}
@@ -784,7 +784,7 @@ func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 		logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, "sloth", pod.GetName())
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 		defer cancel()
-		_, err := k8sClient.WaitForPodRunning(ctx, "prometheus", pod.GetName())
+		_, err := k8sClient.WaitForPodRunning(ctx, prometheusNamespace, pod.GetName())
 		if err != nil {
 			return err
 		}

@@ -63,6 +63,7 @@ func NewEKSProvisioner(
 			resourceUtil: resourceUtil,
 			store:        store,
 			params:       params,
+			logger:       logger,
 		},
 	}
 }
