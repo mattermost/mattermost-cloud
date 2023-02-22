@@ -44,7 +44,7 @@ type CloudMetrics struct {
 }
 
 // New creates a new Prometheus-based Metrics object to be used
-// throughout the provisioner in order to record various performance
+// throughout the Provisioner in order to record various performance
 // metrics
 func New() *CloudMetrics {
 	return &CloudMetrics{

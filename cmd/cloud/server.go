@@ -280,8 +280,6 @@ func executeServerCmd(flags serverFlags) error {
 		logger,
 	)
 
-	provisionerOptionForAPI := api.GetProvisionerOption(provisionerInterface)
-
 	cloudMetrics := metrics.New()
 
 	delivererCfg := events.DelivererConfig{
@@ -391,7 +389,7 @@ func executeServerCmd(flags serverFlags) error {
 	api.Register(router, &api.Context{
 		Store:                             sqlStore,
 		Supervisor:                        standardSupervisor,
-		Provisioner:                       provisionerOptionForAPI,
+		Provisioner:                       provisionerInterface,
 		DBProvider:                        resourceUtil,
 		EventProducer:                     eventsProducer,
 		Environment:                       awsClient.GetCloudEnvironmentName(),

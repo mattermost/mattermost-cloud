@@ -5,15 +5,15 @@
 package supervisor_test
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )

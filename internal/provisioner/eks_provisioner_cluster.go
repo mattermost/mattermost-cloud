@@ -201,7 +201,7 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("expected EKS metadata not to be nil when using EKS provisioner")
+		return errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
 	}
 
 	// TODO: ideally we would do it as part of cluster creation as this
@@ -276,7 +276,7 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return false, errors.New("expected EKS metadata not to be nil when using EKS provisioner")
+		return false, errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
 	}
 
 	err := awsClient.RevokeEKSPostgresTraffic(cluster, *eksMetadata)

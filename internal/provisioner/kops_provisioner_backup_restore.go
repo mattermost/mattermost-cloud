@@ -19,6 +19,11 @@ func (p provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *mo
 	})
 	logger.Info("Triggering backup for installation")
 
+	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube client")
+	}
+
 	filestoreCfg, filestoreSecret, err := p.resourceUtil.GetFilestore(installation).
 		GenerateFilestoreSpecAndSecret(p.store, logger)
 	if err != nil {
@@ -35,11 +40,6 @@ func (p provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *mo
 	// InstallationBackup is not supported for local MySQL, therefore this should not happen
 	if dbSecret == nil {
 		return nil, errors.New("database secret cannot be empty for backup")
-	}
-
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kube client")
 	}
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(installation.ID)
