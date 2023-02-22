@@ -6,10 +6,9 @@ package supervisor_test
 
 import (
 	"fmt"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"testing"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -117,66 +116,6 @@ func (s *mockClusterInstallationStore) GetDNSRecordsForInstallation(installation
 }
 
 type mockClusterInstallationProvisioner struct{}
-
-func (p *mockClusterInstallationProvisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterInstallationProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
 
 func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
 	return &mockInstallationProvisioner{}
