@@ -276,7 +276,7 @@ func (d *RDSMultitenantDatabase) GenerateDatabaseSecret(store model.Installation
 
 	logger.Debug("AWS RDS multitenant database configuration generated for cluster installation")
 
-	return secret.ToK8sSecret(false), nil
+	return secret.ToK8sSecret(d.disableDBCheck), nil
 }
 
 // Teardown removes all AWS resources related to a RDS multitenant database.
