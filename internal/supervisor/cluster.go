@@ -34,6 +34,7 @@ type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
+	CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
 	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
@@ -170,6 +171,10 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.createCluster(cluster, logger)
 	case model.ClusterStateCreationInProgress:
 		return s.checkClusterCreated(cluster, logger)
+	case model.ClusterStateWaitingForNode:
+		return s.checkNodesCreated(cluster, logger)
+	case model.ClusterStateProvisionInProgress:
+		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateProvisioningRequested:
 		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateUpgradeRequested:
@@ -300,7 +305,21 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 		return model.ClusterStateCreationInProgress
 	}
 
-	return s.provisionCluster(cluster, logger)
+	return s.checkNodesCreated(cluster, logger)
+}
+
+func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
+	ready, err := s.provisioner.CheckNodesCreated(cluster, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to check if node creation finished")
+		return model.ClusterStateCreationFailed
+	}
+	if !ready {
+		logger.Info("Cluster nodes are not ready yet")
+		return model.ClusterStateWaitingForNode
+	}
+
+	return model.ClusterStateProvisionInProgress
 }
 
 func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger log.FieldLogger) error {

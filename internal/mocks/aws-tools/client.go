@@ -8,7 +8,8 @@
 package mockawstools
 
 import (
-	types "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	types0 "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	gomock "github.com/golang/mock/gomock"
 	aws "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	model "github.com/mattermost/mattermost-cloud/model"
@@ -572,10 +573,10 @@ func (mr *MockAWSMockRecorder) SwitchClusterTags(clusterID, targetClusterID, log
 }
 
 // EnsureEKSCluster mocks base method
-func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*types.Cluster, error) {
+func (m *MockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*types0.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSCluster", cluster, resources, eksMetadata)
-	ret0, _ := ret[0].(*types.Cluster)
+	ret0, _ := ret[0].(*types0.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -587,10 +588,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources, eksMetadata 
 }
 
 // EnsureEKSClusterNodeGroups mocks base method
-func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*types.Nodegroup, error) {
+func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*types0.Nodegroup, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSClusterNodeGroups", cluster, resources, eksMetadata)
-	ret0, _ := ret[0].([]*types.Nodegroup)
+	ret0, _ := ret[0].([]*types0.Nodegroup)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -602,10 +603,10 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterNodeGroups(cluster, resources, ek
 }
 
 // GetEKSCluster mocks base method
-func (m *MockAWS) GetEKSCluster(clusterName string) (*types.Cluster, error) {
+func (m *MockAWS) GetEKSCluster(clusterName string) (*types0.Cluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEKSCluster", clusterName)
-	ret0, _ := ret[0].(*types.Cluster)
+	ret0, _ := ret[0].(*types0.Cluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -673,6 +674,36 @@ func (m *MockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
 func (mr *MockAWSMockRecorder) InstallEKSEBSAddon(cluster interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallEKSEBSAddon", reflect.TypeOf((*MockAWS)(nil).InstallEKSEBSAddon), cluster)
+}
+
+// EnsureLaunchTemplate mocks base method
+func (m *MockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata model.EKSMetadata) (*types.LaunchTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureLaunchTemplate", clusterName, eksMetadata)
+	ret0, _ := ret[0].(*types.LaunchTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureLaunchTemplate indicates an expected call of EnsureLaunchTemplate
+func (mr *MockAWSMockRecorder) EnsureLaunchTemplate(clusterName, eksMetadata interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLaunchTemplate", reflect.TypeOf((*MockAWS)(nil).EnsureLaunchTemplate), clusterName, eksMetadata)
+}
+
+// EnsureLaunchTemplateDeleted mocks base method
+func (m *MockAWS) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureLaunchTemplateDeleted", clusterName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnsureLaunchTemplateDeleted indicates an expected call of EnsureLaunchTemplateDeleted
+func (mr *MockAWSMockRecorder) EnsureLaunchTemplateDeleted(clusterName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLaunchTemplateDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureLaunchTemplateDeleted), clusterName)
 }
 
 // AllowEKSPostgresTraffic mocks base method

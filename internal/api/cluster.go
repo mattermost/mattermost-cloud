@@ -7,6 +7,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -136,7 +137,15 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			VPC:               createClusterRequest.VPC,
 			Networking:        "",
 			ClusterRoleARN:    createClusterRequest.EKSConfig.ClusterRoleARN,
-			EKSNodeGroups:     createClusterRequest.EKSConfig.NodeGroups,
+			NodeGroup: model.EKSNodeGroup{
+				RoleARN:       createClusterRequest.EKSConfig.NodeRoleARN,
+				InstanceTypes: []string{createClusterRequest.NodeInstanceType},
+				DesiredSize:   ptr.Int32(int32(createClusterRequest.NodeMinCount)),
+				MinSize:       ptr.Int32(int32(createClusterRequest.NodeMinCount)),
+				MaxSize:       ptr.Int32(int32(createClusterRequest.NodeMaxCount)),
+			},
+			MaxPodsPerNode: createClusterRequest.MaxPodsPerNode,
+			AMI:            createClusterRequest.KopsAMI,
 		}
 	} else {
 		cluster.ProvisionerMetadataKops = &model.KopsMetadata{

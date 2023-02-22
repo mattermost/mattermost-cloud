@@ -116,18 +116,9 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 	}
 
 	if flags.useEKS {
-		nodeGroupsConfigRaw, err := os.ReadFile(flags.eksNodeGroupsConfig)
-		if err != nil {
-			return errors.Wrap(err, "failed to read node groups config")
-		}
-		var nodeGroupsConfig model.EKSNodeGroups
-		err = json.Unmarshal(nodeGroupsConfigRaw, &nodeGroupsConfig)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal node groups config")
-		}
 		request.EKSConfig = &model.EKSConfig{
-			ClusterRoleARN: &flags.eksRoleArn,
-			NodeGroups:     nodeGroupsConfig,
+			ClusterRoleARN: &flags.eksClusterRoleARN,
+			NodeRoleARN:    &flags.eksNodeRoleARN,
 		}
 	}
 
@@ -520,6 +511,10 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		if cluster.AllowInstallations {
 			status = "online"
 		}
+		if cluster.ProvisionerMetadataKops == nil {
+			cluster.ProvisionerMetadataKops = &model.KopsMetadata{}
+		}
+
 		values = append(values, []string{
 			cluster.ID,
 			cluster.State,

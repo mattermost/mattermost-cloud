@@ -67,19 +67,12 @@ func provisionCluster(
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
-	// Remove all previously-installed operator namespaces and resources.
-	ctx := context.TODO()
-	for _, namespace := range namespaces {
-		logger.Infof("Cleaning up namespace %s", namespace)
-		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Namespace %s not found; skipping...", namespace)
-		} else if err != nil {
-			return errors.Wrapf(err, "failed to delete namespace %s", namespace)
-		}
+	err = k8sClient.DeleteNamespacesWithFinalizer(namespaces)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete namespacesß")
 	}
 
-	wait := 60
+	wait := 300
 	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
@@ -122,7 +115,6 @@ func provisionCluster(
 	} else if err != nil {
 		return errors.Wrap(err, "failed to delete DaemonSet k8s-spot-termination-handler")
 	}
-
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
@@ -200,7 +192,19 @@ func provisionCluster(
 		})
 	}
 
-	err = k8sClient.CreateFromFiles(files)
+	var manifestFiles []k8s.ManifestFile
+	if cluster.Provisioner == "eks" {
+		manifestFiles = append(manifestFiles, k8s.ManifestFile{
+			// some manifest requires 'kops-csi-1-21' storageClass
+			// which is not available by default in EKS
+			// TODO: we need separate manifest/helm for kops & eks
+			Path: "manifests/storageclass.yaml",
+		})
+	}
+
+	manifestFiles = append(manifestFiles, files...)
+
+	err = k8sClient.CreateFromFiles(manifestFiles)
 	if err != nil {
 		return err
 	}

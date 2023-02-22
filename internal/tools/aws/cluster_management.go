@@ -497,7 +497,7 @@ func (a *Client) releaseVpc(cluster *model.Cluster, logger log.FieldLogger) erro
 		if err != nil {
 			return errors.Wrapf(err, "unable to update %s", VpcSecondaryClusterIDTagKey)
 		}
-		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", cluster.ID, vpc.VpcId)
+		logger.Debugf("Secondary cluster %s related tags has been unset from VPC %s", cluster.ID, *vpc.VpcId)
 		return nil
 	}
 

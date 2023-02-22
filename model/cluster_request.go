@@ -19,11 +19,6 @@ const (
 	NetworkingAmazon = "amazon-vpc-routed-eni"
 )
 
-var (
-	defaultEKSRoleARN       string
-	defaultNodeGroupRoleARN string
-)
-
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
 	Provider               string                         `json:"provider,omitempty"`
@@ -41,14 +36,15 @@ type CreateClusterRequest struct {
 	Annotations            []string                       `json:"annotations,omitempty"`
 	Networking             string                         `json:"networking,omitempty"`
 	VPC                    string                         `json:"vpc,omitempty"`
-	MaxPodsPerNode         int64
-	EKSConfig              *EKSConfig `json:"EKSConfig,omitempty"`
+	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
+	EKSConfig              *EKSConfig                     `json:"EKSConfig,omitempty"`
+	Provisioner            string                         `json:"provisioner,omitempty"`
 }
 
 // EKSConfig is EKS cluster configuration.
 type EKSConfig struct {
-	ClusterRoleARN *string                 `json:"clusterRoleARN,omitempty"`
-	NodeGroups     map[string]EKSNodeGroup `json:"nodeGroups,omitempty"`
+	ClusterRoleARN *string `json:"clusterRoleARN,omitempty"`
+	NodeRoleARN    *string `json:"nodeRoleARN,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -103,17 +99,6 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Networking) == 0 {
 		request.Networking = NetworkingCalico
 	}
-	if request.EKSConfig != nil {
-		if request.EKSConfig.ClusterRoleARN == nil {
-			request.EKSConfig.ClusterRoleARN = &defaultEKSRoleARN
-		}
-
-		for _, ng := range request.EKSConfig.NodeGroups {
-			if ng.RoleARN == nil {
-				ng.RoleARN = &defaultNodeGroupRoleARN
-			}
-		}
-	}
 
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
@@ -147,8 +132,8 @@ func (request *CreateClusterRequest) Validate() error {
 		if request.EKSConfig.ClusterRoleARN == nil || *request.EKSConfig.ClusterRoleARN == "" {
 			return errors.New("cluster role ARN for EKS cluster cannot be empty")
 		}
-		if len(request.EKSConfig.NodeGroups) == 0 {
-			return errors.New("at least 1 node group is required when using EKS")
+		if request.EKSConfig.NodeRoleARN == nil || *request.EKSConfig.NodeRoleARN == "" {
+			return errors.New("node role ARN for EKS cluster cannot be empty")
 		}
 	}
 

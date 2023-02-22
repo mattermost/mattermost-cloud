@@ -100,6 +100,10 @@ func (p *mockClusterProvisioner) CheckClusterCreated(cluster *model.Cluster, aws
 	return true, nil
 }
 
+func (p *mockClusterProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	return true, nil
+}
+
 func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error {
 	return nil
 }
@@ -164,7 +168,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		require.NoError(t, err)
 
 		<-mockStore.UnlockChan
-		require.Equal(t, 3, mockStore.UpdateClusterCalls)
+		require.Equal(t, 2, mockStore.UpdateClusterCalls)
 	})
 
 	t.Run("order of pending works", func(t *testing.T) {
@@ -228,7 +232,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		ExpectedState string
 	}{
 		{"unexpected state", model.ClusterStateStable, model.ClusterStateStable},
-		{"creation requested", model.ClusterStateCreationRequested, model.ClusterStateStable},
+		{"creation requested", model.ClusterStateCreationRequested, model.ClusterStateProvisionInProgress},
 		{"provision requested", model.ClusterStateProvisioningRequested, model.ClusterStateStable},
 		{"upgrade requested", model.ClusterStateUpgradeRequested, model.ClusterStateStable},
 		{"resize requested", model.ClusterStateResizeRequested, model.ClusterStateStable},
