@@ -36,13 +36,6 @@ type installationBackupStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
-// BackupProvisioner provisions backup jobs on a cluster.
-type BackupProvisioner interface {
-	TriggerBackup(backupMeta *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error)
-	CheckBackupStatus(backupMeta *model.InstallationBackup, cluster *model.Cluster) (int64, error)
-	CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error
-}
-
 // BackupSupervisor finds backup pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
@@ -53,13 +46,13 @@ type BackupSupervisor struct {
 	instanceID string
 	logger     log.FieldLogger
 
-	provisioner BackupProvisioner
+	provisioner provisioner.BackupProvisioner
 }
 
 // NewBackupSupervisor creates a new BackupSupervisor.
 func NewBackupSupervisor(
 	store installationBackupStore,
-	provisioner BackupProvisioner,
+	provisioner provisioner.BackupProvisioner,
 	aws aws.AWS,
 	instanceID string,
 	logger log.FieldLogger) *BackupSupervisor {
