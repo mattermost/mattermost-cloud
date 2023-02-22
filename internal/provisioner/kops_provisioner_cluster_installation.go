@@ -36,67 +36,47 @@ const (
 	ciExecJobTTLSeconds int32 = 180
 )
 
-// ClusterInstallationProvisioner is an interface for provisioning and managing ClusterInstallations.
-type ClusterInstallationProvisioner interface {
-	CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error
-	EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error)
-	HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error
-	VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error)
-	DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error)
-	RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error
-}
-
 // ClusterInstallationProvisioner function returns an implementation of ClusterInstallationProvisioner interface
 // based on specified Custom Resource version.
-func (provisioner *KopsProvisioner) ClusterInstallationProvisioner(crVersion string) ClusterInstallationProvisioner {
-	if crVersion != model.V1betaCRVersion {
-		provisioner.logger.Errorf("Unexpected resource version: %s", crVersion)
+func (p provisioner) ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner {
+	if version != model.V1betaCRVersion {
+		p.logger.Errorf("Unexpected resource version: %s", version)
 	}
 
-	return &crProvisionerWrapper{KopsProvisioner: provisioner}
-}
-
-type crProvisionerWrapper struct {
-	*KopsProvisioner
+	return p
 }
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (provisioner *crProvisionerWrapper) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 		"version":      "v1beta1",
 	})
 	logger.Info("Creating cluster installation")
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return provisioner.commonProvisioner.createClusterInstallation(clusterInstallation, installation, installationDNS, configLocation, logger)
+	return p.createClusterInstallation(clusterInstallation, installation, installationDNS, kubeConfigPath, logger)
 }
 
 // HibernateClusterInstallation updates a cluster installation to consume fewer
 // resources.
-func (provisioner *crProvisionerWrapper) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return hibernateInstallation(configLocation, logger, clusterInstallation, installation)
+	return hibernateInstallation(kubeConfigPath, logger, clusterInstallation, installation)
 }
 
 func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, installation *model.Installation, clusterInstallation *model.ClusterInstallation) {
@@ -118,40 +98,38 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
-func (provisioner *crProvisionerWrapper) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return provisioner.commonProvisioner.updateClusterInstallation(configLocation, installation, installationDNS, clusterInstallation, logger)
+	return p.updateClusterInstallation(kubeConfigPath, installation, installationDNS, clusterInstallation, logger)
 }
 
 // RefreshSecrets deletes old secrets for database and file store and replaces them with new ones.
-func (provisioner *crProvisionerWrapper) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 	logger.Info("Refreshing secrets for cluster installation")
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return provisioner.commonProvisioner.refreshSecrets(installation, clusterInstallation, configLocation)
+	return p.refreshSecrets(installation, clusterInstallation, kubeConfigPath)
 }
 
-func (provisioner *crProvisionerWrapper) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -166,15 +144,15 @@ func (provisioner *crProvisionerWrapper) EnsureCRMigrated(cluster *model.Cluster
 // NOTE: this does NOT ensure that other resources such as network policies for
 // that namespace are correct. Also, the values checked are ONLY values that are
 // defined by both the installation and group configuration.
-func (provisioner *crProvisionerWrapper) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
 	logger.Info("Verifying cluster installation resource configuration")
 
-	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
+	cr, err := p.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
@@ -204,31 +182,30 @@ func (provisioner *crProvisionerWrapper) VerifyClusterInstallationMatchesConfig(
 }
 
 // DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
-func (provisioner *crProvisionerWrapper) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return deleteClusterInstallation(installation, clusterInstallation, configLocation, logger)
+	return deleteClusterInstallation(installation, clusterInstallation, kubeConfigPath, logger)
 }
 
 // IsResourceReadyAndStable checks if the ClusterInstallation Custom Resource is
 // both ready and stable on the cluster.
-func (provisioner *crProvisionerWrapper) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":              clusterInstallation.ClusterID,
 		"installation":         clusterInstallation.InstallationID,
 		"cluster_installation": clusterInstallation.ID,
 	})
 
-	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
+	cr, err := p.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
 		return false, false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
@@ -323,20 +300,19 @@ func overrideReplicasAndResourcesFromSize(size v1alpha1.ClusterInstallationSize,
 
 // getMattermostCustomResource gets the cluster installation resource from
 // the kubernetes API.
-func (provisioner *crProvisionerWrapper) getMattermostCustomResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1beta1.Mattermost, error) {
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+func (p provisioner) getMattermostCustomResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1beta1.Mattermost, error) {
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kops config from cache")
+		return nil, errors.Wrap(err, "failed to get kubeconfig path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return getMattermostCustomResource(clusterInstallation, configLocation, logger)
+	return getMattermostCustomResource(clusterInstallation, kubeConfigPath, logger)
 }
 
 // ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation
 // with the given args. Setup and exec errors both result in a single return error.
-func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
+func (p provisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	output, execErr, err := p.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
 	if err != nil {
 		return output, errors.Wrap(err, "failed to run mattermost command")
 	}
@@ -349,8 +325,8 @@ func (provisioner *KopsProvisioner) ExecMattermostCLI(cluster *model.Cluster, cl
 
 // ExecMMCTL runs the given MMCTL command against the given cluster installation.
 // Setup and exec errors both result in a single return error.
-func (provisioner *KopsProvisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
+func (p provisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	output, execErr, err := p.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
 	if err != nil {
 		return output, errors.Wrap(err, "failed to run mmctl command")
 	}
@@ -415,39 +391,32 @@ func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *
 // ExecClusterInstallationCLI execs the provided command on the defined cluster
 // installation and returns both exec preparation errors as well as errors from
 // the exec command itself.
-func (provisioner *KopsProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
-	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
-
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
+		return nil, nil, errors.Wrap(err, "failed to get kube client")
 	}
 
 	return execClusterInstallationCLI(k8sClient, clusterInstallation, logger, args...)
 }
 
 // ExecClusterInstallationJob creates job executing command on cluster installation.
-func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 	logger.Info("Executing job with CLI command on cluster installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to create k8s client")
+		return errors.Wrap(err, "failed to get kube client")
 	}
-	defer invalidateCache(err)
 
 	ctx := context.TODO()
 	deploymentList, err := k8sClient.Clientset.AppsV1().Deployments(clusterInstallation.Namespace).List(ctx, metav1.ListOptions{
@@ -507,25 +476,24 @@ func (provisioner *KopsProvisioner) ExecClusterInstallationJob(cluster *model.Cl
 // DeleteOldClusterInstallationLicenseSecrets removes k8s secrets found matching
 // the license naming scheme that are not the current license used by the
 // installation.
-func (provisioner *KopsProvisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return deleteOldClusterInstallationLicenseSecrets(configLocation, installation, clusterInstallation, logger)
+	return deleteOldClusterInstallationLicenseSecrets(kubeConfigPath, installation, clusterInstallation, logger)
 }
 
 // PrepareClusterUtilities performs any updates to cluster utilities that may
 // be needed for clusterinstallations to function correctly.
-func (provisioner *KopsProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
-	logger := provisioner.logger.WithField("cluster", cluster.ID)
+func (p provisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+	logger := p.logger.WithField("cluster", cluster.ID)
 	logger.Info("Preparing cluster utilities")
 
 	// TODO: move this logic to a database interface method.
@@ -533,13 +501,12 @@ func (provisioner *KopsProvisioner) PrepareClusterUtilities(cluster *model.Clust
 		return nil
 	}
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kops config from cache")
+		return errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return prepareClusterUtilities(cluster, configLocation, store, awsClient, provisioner.params.PGBouncerConfig, logger)
+	return prepareClusterUtilities(cluster, kubeConfigPath, store, awsClient, p.provisioningParams.PGBouncerConfig, logger)
 }
 
 func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {

@@ -75,17 +75,6 @@ func (s *mockClusterStore) GetStateChangeEvents(filter *model.StateChangeEventFi
 	return nil, nil
 }
 
-type mockClusterProvisionerOption struct {
-	mock *mockClusterProvisioner
-}
-
-func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
-	if p.mock == nil {
-		p.mock = &mockClusterProvisioner{}
-	}
-	return p.mock
-}
-
 type mockClusterProvisioner struct{}
 
 func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
@@ -131,7 +120,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
-			&mockClusterProvisionerOption{},
+			nil,
 			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
@@ -157,7 +146,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
-			&mockClusterProvisionerOption{},
+			nil,
 			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
@@ -209,7 +198,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		mockEventProducer := &mockEventProducer{}
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
-			&mockClusterProvisionerOption{},
+			nil,
 			&mockAWS{},
 			mockEventProducer,
 			"instanceID",
@@ -247,7 +236,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewClusterSupervisor(
 				sqlStore,
-				&mockClusterProvisionerOption{},
+				nil,
 				&mockAWS{},
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				"instanceID",
@@ -277,7 +266,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewClusterSupervisor(
 			sqlStore,
-			&mockClusterProvisionerOption{},
+			nil,
 			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",

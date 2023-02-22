@@ -30,7 +30,7 @@ type CommonProvisioner struct {
 	logger       log.FieldLogger
 }
 
-func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
+func (p provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client from file")
@@ -59,7 +59,7 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 			Scheduling: mmv1beta1.Scheduling{
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
-			DNSConfig: setNdots(provisioner.params.NdotsValue),
+			DNSConfig: setNdots(p.provisioningParams.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
 				RevisionHistoryLimit: ptr.Int32(1),
 			},
@@ -87,20 +87,20 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 		logger.Debug("Cluster installation configured with a Mattermost license")
 	}
 
-	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
+	err = p.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
 
 	if installation.GroupID != nil && *installation.GroupID != "" {
-		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+		if containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOInstallationGroups) {
 			logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
 			err = createInstallationSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to create installation SLI")
 			}
 		}
-		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
+		if containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOEnterpriseGroups) {
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
 			err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
@@ -120,14 +120,14 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 	return nil
 }
 
-func (provisioner *CommonProvisioner) ensureFilestoreAndDatabase(
+func (p provisioner) ensureFilestoreAndDatabase(
 	mattermost *mmv1beta1.Mattermost,
 	installation *model.Installation,
 	clusterInstallation *model.ClusterInstallation,
 	k8sClient *k8s.KubeClient,
 	logger log.FieldLogger) error {
 
-	databaseSecret, err := provisioner.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(provisioner.store, logger)
+	databaseSecret, err := p.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(p.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate database configuration")
 	}
@@ -142,7 +142,7 @@ func (provisioner *CommonProvisioner) ensureFilestoreAndDatabase(
 		}
 	}
 
-	filestoreConfig, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(provisioner.store, logger)
+	filestoreConfig, filestoreSecret, err := p.resourceUtil.GetFilestore(installation).GenerateFilestoreSpecAndSecret(p.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate filestore configuration")
 	}
@@ -199,8 +199,8 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 }
 
 // refreshSecrets deletes old secrets for database and file store and replaces them with new ones.
-func (provisioner *CommonProvisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
-	logger := provisioner.logger.WithFields(log.Fields{
+func (p provisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
+	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -226,7 +226,7 @@ func (provisioner *CommonProvisioner) refreshSecrets(installation *model.Install
 		return errors.Wrap(err, "failed to delete old secrets")
 	}
 
-	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
+	err = p.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
@@ -241,7 +241,7 @@ func (provisioner *CommonProvisioner) refreshSecrets(installation *model.Install
 	return nil
 }
 
-func (provisioner *CommonProvisioner) updateClusterInstallation(
+func (p provisioner) updateClusterInstallation(
 	configLocation string,
 	installation *model.Installation,
 	installationDNS []*model.InstallationDNS,
@@ -271,7 +271,7 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
-	mattermost.Spec.DNSConfig = setNdots(provisioner.params.NdotsValue)
+	mattermost.Spec.DNSConfig = setNdots(p.provisioningParams.NdotsValue)
 
 	version := translateMattermostVersion(installation.Version)
 	if mattermost.Spec.Version == version {
@@ -316,7 +316,7 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		}
 	}
 
-	err = provisioner.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
+	err = p.ensureFilestoreAndDatabase(mattermost, installation, clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to ensure database and filestore")
 	}
@@ -334,7 +334,7 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
+	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOInstallationGroups) {
 		logger.Debug("Creating or updating Mattermost installation SLI")
 		err = createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
 		if err != nil {
@@ -348,7 +348,7 @@ func (provisioner *CommonProvisioner) updateClusterInstallation(
 		}
 	}
 
-	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOEnterpriseGroups) {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
 		if err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
 			return errors.Wrapf(err, "failed to create enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))

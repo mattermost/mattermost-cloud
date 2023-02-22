@@ -13,6 +13,7 @@ import (
 
 	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/events"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -37,18 +38,6 @@ type AWATClient interface {
 	ReleaseLockOnImport(importID string) error
 }
 
-type ImportProvisioner interface {
-	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
-}
-
-type ImportProvisionerOption interface {
-	GetImportProvisioner(provisioner string) ImportProvisioner
-}
-
-func (p provisionerOption) GetImportProvisioner(provisioner string) ImportProvisioner {
-	return p.getProvisioner(provisioner)
-}
-
 // ImportSupervisor is a supervisor which performs Workspace Imports
 // from ready Imports produced by the AWAT. It periodically queries
 // the AWAT for Imports waiting to be performed and then performs
@@ -58,7 +47,7 @@ type ImportSupervisor struct {
 	awatClient     AWATClient
 	logger         logrus.FieldLogger
 	store          importStore
-	provisioner    ImportProvisionerOption
+	provisioner    provisioner.ImportProvisioner
 	eventsProducer eventProducer
 	ID             string
 }
@@ -78,7 +67,7 @@ type mmctl struct {
 
 func (m *mmctl) Run(args ...string) ([]byte, error) {
 	args = append([]string{"--format", "json", "--local"}, args...)
-	return m.provisioner.GetImportProvisioner(m.cluster.Provisioner).ExecMMCTL(m.cluster, m.clusterInstallation, args...)
+	return m.provisioner.ExecMMCTL(m.cluster, m.clusterInstallation, args...)
 }
 
 type team struct {
@@ -101,7 +90,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner ImportProvisionerOption, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner provisioner.ImportProvisioner, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:      awsClient,
 		awatClient:     awat,

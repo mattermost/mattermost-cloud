@@ -271,25 +271,16 @@ func executeServerCmd(flags serverFlags) error {
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
 
-	kopsProvisioner := provisioner.NewKopsProvisioner(
-		provisioningParams,
-		resourceUtil,
-		logger,
-		sqlStore,
-		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
-	)
-	defer kopsProvisioner.Teardown()
-
-	eksProvisioner := provisioner.NewEKSProvisioner(sqlStore,
-		sqlStore,
+	provisionerInterface := provisioner.NewProvisioner(
 		provisioningParams,
 		resourceUtil,
 		awsClient,
+		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
+		sqlStore,
 		logger,
 	)
 
-	provisionerOptionForSupervisor := supervisor.GetProvisionerOption(eksProvisioner, kopsProvisioner)
-	provisionerOptionForAPI := api.GetProvisionerOption(eksProvisioner, kopsProvisioner)
+	provisionerOptionForAPI := api.GetProvisionerOption(provisionerInterface)
 
 	cloudMetrics := metrics.New()
 
@@ -328,31 +319,31 @@ func executeServerCmd(flags serverFlags) error {
 
 	var multiDoer supervisor.MultiDoer
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerInterface, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.groupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
+		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerInterface, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerInterface, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.backupSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, instanceID, logger))
+		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerInterface, awsClient, instanceID, logger))
 	}
 	if supervisorsEnabled.importSupervisor {
 		if flags.awatAddress == "" {
 			return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 		}
-		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerOptionForSupervisor, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerInterface, eventsProducer, logger))
 	}
 	if supervisorsEnabled.installationDBRestorationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerOptionForSupervisor, eventsProducer, instanceID, logger))
+		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerInterface, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationDBMigrationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerOptionForSupervisor, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerInterface, eventsProducer, logger))
 	}
 
 	// Setup the supervisor to effect any requested changes. It is wrapped in a

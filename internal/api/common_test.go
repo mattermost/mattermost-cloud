@@ -5,7 +5,6 @@
 package api_test
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -28,11 +27,24 @@ type mockProvisionerOption struct {
 	mock *mockProvisioner
 }
 
-func (p *mockProvisionerOption) GetProvisioner(provisioner string) api.Provisioner {
-	if p.mock == nil {
-		p.mock = &mockProvisioner{}
-	}
-	return p.mock
+func (p *mockProvisionerOption) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockProvisionerOption) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockProvisionerOption) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockProvisionerOption) GetClusterResources(cluster *model.Cluster, b bool, logger log.FieldLogger) (*k8s.ClusterResources, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 type mockProvisioner struct {

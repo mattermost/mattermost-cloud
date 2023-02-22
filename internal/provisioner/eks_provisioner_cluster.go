@@ -41,11 +41,6 @@ type EKSProvisioner struct {
 	commonProvisioner *CommonProvisioner
 }
 
-// ClusterInstallationProvisioner returns ClusterInstallationProvisioner based on EKS provisioner.
-func (provisioner *EKSProvisioner) ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner {
-	return provisioner
-}
-
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
 	store model.InstallationDatabaseStoreInterface,
@@ -206,7 +201,7 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
+		return errors.New("expected EKS metadata not to be nil when using EKS provisioner")
 	}
 
 	// TODO: ideally we would do it as part of cluster creation as this
@@ -249,6 +244,30 @@ func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) e
 	return nil
 }
 
+func (provisioner *EKSProvisioner) GetKubeConfigPath(cluster *model.Cluster) (string, error) {
+	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to prepare kubeconfig")
+	}
+
+	return configLocation, nil
+}
+
+func (provisioner *EKSProvisioner) GetKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	configLocation, err := provisioner.GetKubeConfigPath(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
+	}
+
+	var k8sClient *k8s.KubeClient
+	k8sClient, err = k8s.NewFromFile(configLocation, provisioner.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient, nil
+}
+
 // DeleteCluster deletes EKS cluster.
 func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
@@ -257,7 +276,7 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
-		return false, errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
+		return false, errors.New("expected EKS metadata not to be nil when using EKS provisioner")
 	}
 
 	err := awsClient.RevokeEKSPostgresTraffic(cluster, *eksMetadata)

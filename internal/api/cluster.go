@@ -108,8 +108,8 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	provisioner := "kops"
-	if createClusterRequest.EKSConfig != nil {
-		provisioner = "eks"
+	if createClusterRequest.Provisioner != "" {
+		provisioner = createClusterRequest.Provisioner
 	}
 
 	cluster := model.Cluster{
@@ -123,7 +123,7 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		State:              model.ClusterStateCreationRequested,
 	}
 
-	if createClusterRequest.EKSConfig != nil {
+	if provisioner == "eks" {
 		var version *string
 		// We cannot pass empty string or "latest" as version it needs
 		// to be either correct version or nil.

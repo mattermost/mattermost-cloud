@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -29,34 +30,13 @@ type clusterStore interface {
 	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
 }
 
-// ClusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
-type ClusterProvisioner interface {
-	PrepareCluster(cluster *model.Cluster) bool
-	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
-	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
-	CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
-	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
-	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
-	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
-	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
-	RefreshKopsMetadata(cluster *model.Cluster) error
-}
-
-type ClusterProvisionerOption interface {
-	GetClusterProvisioner(provisioner string) ClusterProvisioner
-}
-
-func (p provisionerOption) GetClusterProvisioner(provisioner string) ClusterProvisioner {
-	return p.getProvisioner(provisioner)
-}
-
 // ClusterSupervisor finds clusters pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type ClusterSupervisor struct {
 	store          clusterStore
-	provisioner    ClusterProvisionerOption
+	provisioner    provisioner.ClusterProvisionerOption
 	aws            aws.AWS
 	eventsProducer eventProducer
 	instanceID     string
@@ -65,10 +45,10 @@ type ClusterSupervisor struct {
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, clusterProvisioner ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, provisioner provisioner.ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
-		provisioner:    clusterProvisioner,
+		provisioner:    provisioner,
 		aws:            aws,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,
@@ -309,7 +289,7 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 }
 
 func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
-	ready, err := s.provisioner.CheckNodesCreated(cluster, s.aws)
+	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if node creation finished")
 		return model.ClusterStateCreationFailed
