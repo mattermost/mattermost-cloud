@@ -5,10 +5,10 @@
 package supervisor
 
 import (
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
