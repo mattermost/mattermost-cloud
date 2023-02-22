@@ -59,7 +59,7 @@ func (p provisioner) createClusterInstallation(clusterInstallation *model.Cluste
 			Scheduling: mmv1beta1.Scheduling{
 				Affinity: generateAffinityConfig(installation, clusterInstallation),
 			},
-			DNSConfig: setNdots(p.provisioningParams.NdotsValue),
+			DNSConfig: setNdots(p.params.NdotsValue),
 			DeploymentTemplate: &mmv1beta1.DeploymentTemplate{
 				RevisionHistoryLimit: ptr.Int32(1),
 			},
@@ -93,14 +93,14 @@ func (p provisioner) createClusterInstallation(clusterInstallation *model.Cluste
 	}
 
 	if installation.GroupID != nil && *installation.GroupID != "" {
-		if containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOInstallationGroups) {
+		if containsInstallationGroup(*installation.GroupID, p.params.SLOInstallationGroups) {
 			logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
 			err = createInstallationSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to create installation SLI")
 			}
 		}
-		if containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOEnterpriseGroups) {
+		if containsInstallationGroup(*installation.GroupID, p.params.SLOEnterpriseGroups) {
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
 			err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger)
 			if err != nil {
@@ -271,7 +271,7 @@ func (p provisioner) updateClusterInstallation(
 
 	mattermost.Spec.Scheduling.Affinity = generateAffinityConfig(installation, clusterInstallation)
 
-	mattermost.Spec.DNSConfig = setNdots(p.provisioningParams.NdotsValue)
+	mattermost.Spec.DNSConfig = setNdots(p.params.NdotsValue)
 
 	version := translateMattermostVersion(installation.Version)
 	if mattermost.Spec.Version == version {
@@ -334,7 +334,7 @@ func (p provisioner) updateClusterInstallation(
 		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
 	}
 
-	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOInstallationGroups) {
+	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, p.params.SLOInstallationGroups) {
 		logger.Debug("Creating or updating Mattermost installation SLI")
 		err = createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
 		if err != nil {
@@ -348,7 +348,7 @@ func (p provisioner) updateClusterInstallation(
 		}
 	}
 
-	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, p.provisioningParams.SLOEnterpriseGroups) {
+	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, p.params.SLOEnterpriseGroups) {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
 		if err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
 			return errors.Wrapf(err, "failed to create enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))

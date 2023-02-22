@@ -506,7 +506,7 @@ func (p provisioner) PrepareClusterUtilities(cluster *model.Cluster, installatio
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return prepareClusterUtilities(cluster, kubeConfigPath, store, awsClient, p.provisioningParams.PGBouncerConfig, logger)
+	return prepareClusterUtilities(cluster, kubeConfigPath, store, awsClient, p.params.PGBouncerConfig, logger)
 }
 
 func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {

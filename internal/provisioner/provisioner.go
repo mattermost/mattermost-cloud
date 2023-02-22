@@ -99,15 +99,15 @@ func (c clusterProvisionerOption) GetClusterProvisioner(provisioner string) Clus
 
 type provisioner struct {
 	clusterProvisionerOption
-	provisioningParams ProvisioningParams
-	resourceUtil       *utils.ResourceUtil
-	backupOperator     *BackupOperator
-	store              *store.SQLStore
-	logger             log.FieldLogger
+	params         ProvisioningParams
+	resourceUtil   *utils.ResourceUtil
+	backupOperator *BackupOperator
+	store          *store.SQLStore
+	logger         log.FieldLogger
 }
 
 func NewProvisioner(
-	provisioningParams ProvisioningParams,
+	params ProvisioningParams,
 	resourceUtil *utils.ResourceUtil,
 	awsClient aws.AWS,
 	backupOperator *BackupOperator,
@@ -116,7 +116,7 @@ func NewProvisioner(
 ) Provisioner {
 
 	kopsProvisioner := NewKopsProvisioner(
-		provisioningParams,
+		params,
 		resourceUtil,
 		logger,
 		sqlStore,
@@ -125,7 +125,7 @@ func NewProvisioner(
 
 	eksProvisioner := NewEKSProvisioner(sqlStore,
 		sqlStore,
-		provisioningParams,
+		params,
 		resourceUtil,
 		awsClient,
 		logger,
@@ -136,10 +136,10 @@ func NewProvisioner(
 			kopsProvisioner: kopsProvisioner,
 			eksProvisioner:  eksProvisioner,
 		},
-		provisioningParams: provisioningParams,
-		resourceUtil:       resourceUtil,
-		backupOperator:     backupOperator,
-		store:              sqlStore,
-		logger:             logger,
+		params:         params,
+		resourceUtil:   resourceUtil,
+		backupOperator: backupOperator,
+		store:          sqlStore,
+		logger:         logger,
 	}
 }
