@@ -9,7 +9,6 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -41,8 +40,6 @@ type ClusterProvisioner interface {
 	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
 	RefreshKopsMetadata(cluster *model.Cluster) error
-	GetKubeConfigPath(cluster *model.Cluster) (string, error)
-	GetKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error)
 }
 
 type ClusterProvisionerOption interface {

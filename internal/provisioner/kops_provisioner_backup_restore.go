@@ -11,21 +11,21 @@ import (
 )
 
 // TriggerBackup triggers backup job for specific installation on the cluster.
-func (p Provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": installation.ID,
 		"backup":       backup.ID,
 	})
 	logger.Info("Triggering backup for installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kube client")
+		return nil, errors.Wrap(err, "failed to create k8s client")
 	}
 
-	filestoreCfg, filestoreSecret, err := p.resourceUtil.GetFilestore(installation).
-		GenerateFilestoreSpecAndSecret(p.store, logger)
+	filestoreCfg, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).
+		GenerateFilestoreSpecAndSecret(provisioner.store, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get files store configuration for installation")
 	}
@@ -33,7 +33,7 @@ func (p Provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *mo
 	if filestoreCfg == nil || filestoreSecret == nil {
 		return nil, errors.New("filestore secret and config cannot be empty for backup")
 	}
-	dbSecret, err := p.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(p.store, logger)
+	dbSecret, err := provisioner.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(provisioner.store, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get database configuration")
 	}
@@ -44,65 +44,65 @@ func (p Provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *mo
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(installation.ID)
 
-	return p.backupOperator.TriggerBackup(jobsClient, backup, installation, filestoreCfg, dbSecret.Name, logger)
+	return provisioner.backupOperator.TriggerBackup(jobsClient, backup, installation, filestoreCfg, dbSecret.Name, logger)
 }
 
 // CheckBackupStatus checks status of running backup job,
 // returns job start time, when the job finished or -1 if it is still running.
-func (p Provisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
 		"backup":       backup.ID,
 	})
 	logger.Info("Checking backup status for installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to get kube client")
+		return -1, errors.Wrap(err, "failed to create k8s client")
 	}
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
-	return p.backupOperator.CheckBackupStatus(jobsClient, backup, logger)
+	return provisioner.backupOperator.CheckBackupStatus(jobsClient, backup, logger)
 }
 
 // CleanupBackupJob deletes backup job from the cluster if it exists.
-func (p Provisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
 		"backup":       backup.ID,
 	})
 	logger.Info("Cleaning up backup job for installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kube client")
+		return errors.Wrap(err, "failed to create k8s client")
 	}
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
-	return p.backupOperator.CleanupBackupJob(jobsClient, backup, logger)
+	return provisioner.backupOperator.CleanupBackupJob(jobsClient, backup, logger)
 }
 
 // TriggerRestore triggers restoration job for specific installation on the cluster.
 
-func (p Provisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": installation.ID,
 		"backup":       backup.ID,
 	})
 	logger.Info("Triggering restoration for installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kube client")
+		return errors.Wrap(err, "failed to create k8s client")
 	}
 
-	filestoreCfg, filestoreSecret, err := p.resourceUtil.GetFilestore(installation).
-		GenerateFilestoreSpecAndSecret(p.store, logger)
+	filestoreCfg, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).
+		GenerateFilestoreSpecAndSecret(provisioner.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get files store configuration for installation")
 	}
@@ -110,7 +110,7 @@ func (p Provisioner) TriggerRestore(installation *model.Installation, backup *mo
 	if filestoreCfg == nil || filestoreSecret == nil {
 		return errors.New("filestore secret and config cannot be empty for database restoration")
 	}
-	dbSecret, err := p.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(p.store, logger)
+	dbSecret, err := provisioner.resourceUtil.GetDatabaseForInstallation(installation).GenerateDatabaseSecret(provisioner.store, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to get database configuration")
 	}
@@ -121,44 +121,44 @@ func (p Provisioner) TriggerRestore(installation *model.Installation, backup *mo
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(installation.ID)
 
-	return p.backupOperator.TriggerRestore(jobsClient, backup, installation, filestoreCfg, dbSecret.Name, logger)
+	return provisioner.backupOperator.TriggerRestore(jobsClient, backup, installation, filestoreCfg, dbSecret.Name, logger)
 }
 
 // CheckRestoreStatus checks status of running backup job,
 // returns job completion time, when the job finished or -1 if it is still running.
-func (p Provisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
 		"backup":       backup.ID,
 	})
 	logger.Info("Checking restoration status for installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to get kube client")
+		return -1, errors.Wrap(err, "failed to create k8s client")
 	}
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
-	return p.backupOperator.CheckRestoreStatus(jobsClient, backup, logger)
+	return provisioner.backupOperator.CheckRestoreStatus(jobsClient, backup, logger)
 }
 
 // CleanupRestoreJob deletes restore job from the cluster if it exists.
-func (p Provisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
 		"backup":       backup.ID,
 	})
 	logger.Info("Cleaning up restoration job for installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to get kube client")
+		return errors.Wrap(err, "failed to create k8s client")
 	}
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
-	return p.backupOperator.CleanupRestoreJob(jobsClient, backup, logger)
+	return provisioner.backupOperator.CleanupRestoreJob(jobsClient, backup, logger)
 }

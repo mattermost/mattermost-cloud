@@ -8,8 +8,8 @@ import (
 )
 
 type ClusterProvisionerOption struct {
-	kopsProvisioner supervisor.ClusterProvisioner
-	eksProvisioner  supervisor.ClusterProvisioner
+	kopsProvisioner *KopsProvisioner
+	eksProvisioner  *EKSProvisioner
 }
 
 func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
@@ -27,6 +27,7 @@ type Provisioner struct {
 	backupOperator *BackupOperator
 	store          *store.SQLStore
 	logger         log.FieldLogger
+	kubeOption     ClusterProvisionerOption
 }
 
 func NewProvisioner(
@@ -49,5 +50,9 @@ func NewProvisioner(
 		backupOperator: backupOperator,
 		store:          sqlStore,
 		logger:         logger,
+		kubeOption: ClusterProvisionerOption{
+			kopsProvisioner: kopsProvisioner,
+			eksProvisioner:  eksProvisioner,
+		},
 	}
 }

@@ -714,12 +714,14 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 }
 
 // GetClusterResources returns a snapshot of resources of a given cluster.
-func (p Provisioner) GetClusterResources(cluster *model.Cluster, canSchedule bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+func (provisioner Provisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
+	logger = logger.WithField("cluster", cluster.ID)
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get kube config path")
 	}
-	return getClusterResources(kubeConfigPath, canSchedule, logger)
+	return getClusterResources(configLocation, onlySchedulable, logger)
 }
 
 // RefreshKopsMetadata updates the kops metadata of a cluster with the current
@@ -757,28 +759,21 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 	return nil
 }
 
-func (provisioner *KopsProvisioner) GetKubeConfigPath(cluster *model.Cluster) (string, error) {
+func (provisioner *KopsProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get kops config from cache")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
 	return configLocation, nil
 }
 
-func (provisioner *KopsProvisioner) GetKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
-	configLocation, err := provisioner.GetKubeConfigPath(cluster)
+func (provisioner *KopsProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	k8sClient, err := provisioner.k8sClient(cluster.ID, provisioner.logger)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kops config from cache")
-	}
-
-	var k8sClient *k8s.KubeClient
-	k8sClient, err = k8s.NewFromFile(configLocation, provisioner.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create k8s client from file")
+		return nil, errors.Wrap(err, "failed to create k8s client")
 	}
 
 	return k8sClient, nil

@@ -36,45 +36,45 @@ const (
 
 // ClusterInstallationProvisioner function returns an implementation of ClusterInstallationProvisioner interface
 // based on specified Custom Resource version.
-func (p Provisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
+func (provisioner Provisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
 	if version != model.V1betaCRVersion {
-		p.logger.Errorf("Unexpected resource version: %s", version)
+		provisioner.logger.Errorf("Unexpected resource version: %s", version)
 	}
 
-	return p
+	return provisioner
 }
 
 // CreateClusterInstallation creates a Mattermost installation within the given cluster.
-func (p Provisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 		"version":      "v1beta1",
 	})
 	logger.Info("Creating cluster installation")
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return p.createClusterInstallation(clusterInstallation, installation, installationDNS, kubeConfigPath, logger)
+	return provisioner.createClusterInstallation(clusterInstallation, installation, installationDNS, configLocation, logger)
 }
 
 // HibernateClusterInstallation updates a cluster installation to consume fewer
 // resources.
-func (p Provisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return hibernateInstallation(kubeConfigPath, logger, clusterInstallation, installation)
+	return hibernateInstallation(configLocation, logger, clusterInstallation, installation)
 }
 
 func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, installation *model.Installation, clusterInstallation *model.ClusterInstallation) {
@@ -96,38 +96,38 @@ func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, insta
 
 // UpdateClusterInstallation updates the cluster installation spec to match the
 // installation specification.
-func (p Provisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return p.updateClusterInstallation(kubeConfigPath, installation, installationDNS, clusterInstallation, logger)
+	return provisioner.updateClusterInstallation(configLocation, installation, installationDNS, clusterInstallation, logger)
 }
 
 // RefreshSecrets deletes old secrets for database and file store and replaces them with new ones.
-func (p Provisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 	logger.Info("Refreshing secrets for cluster installation")
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return p.refreshSecrets(installation, clusterInstallation, kubeConfigPath)
+	return provisioner.refreshSecrets(installation, clusterInstallation, configLocation)
 }
 
-func (p Provisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
@@ -138,19 +138,19 @@ func (p Provisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallatio
 
 // VerifyClusterInstallationMatchesConfig attempts to verify that a cluster
 // installation custom resource matches the configuration that is defined in the
-// Provisioner
+// provisioner
 // NOTE: this does NOT ensure that other resources such as network policies for
 // that namespace are correct. Also, the values checked are ONLY values that are
 // defined by both the installation and group configuration.
-func (p Provisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
 	logger.Info("Verifying cluster installation resource configuration")
 
-	cr, err := p.getMattermostCustomResource(cluster, clusterInstallation, logger)
+	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
 	}
@@ -180,30 +180,30 @@ func (p Provisioner) VerifyClusterInstallationMatchesConfig(cluster *model.Clust
 }
 
 // DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
-func (p Provisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return deleteClusterInstallation(installation, clusterInstallation, kubeConfigPath, logger)
+	return deleteClusterInstallation(installation, clusterInstallation, configLocation, logger)
 }
 
 // IsResourceReadyAndStable checks if the ClusterInstallation Custom Resource is
 // both ready and stable on the cluster.
-func (p Provisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":              clusterInstallation.ClusterID,
 		"installation":         clusterInstallation.InstallationID,
 		"cluster_installation": clusterInstallation.ID,
 	})
 
-	cr, err := p.getMattermostCustomResource(cluster, clusterInstallation, logger)
+	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
 	if err != nil {
 		return false, false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
 	}
@@ -298,19 +298,19 @@ func overrideReplicasAndResourcesFromSize(size v1alpha1.ClusterInstallationSize,
 
 // getMattermostCustomResource gets the cluster installation resource from
 // the kubernetes API.
-func (p Provisioner) getMattermostCustomResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1beta1.Mattermost, error) {
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+func (provisioner Provisioner) getMattermostCustomResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1beta1.Mattermost, error) {
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kubeconfig path")
+		return nil, errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return getMattermostCustomResource(clusterInstallation, kubeConfigPath, logger)
+	return getMattermostCustomResource(clusterInstallation, configLocation, logger)
 }
 
 // ExecMattermostCLI invokes the Mattermost CLI for the given cluster installation
 // with the given args. Setup and exec errors both result in a single return error.
-func (p Provisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	output, execErr, err := p.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
+func (provisioner Provisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mattermost"}, args...)...)
 	if err != nil {
 		return output, errors.Wrap(err, "failed to run mattermost command")
 	}
@@ -323,8 +323,8 @@ func (p Provisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallati
 
 // ExecMMCTL runs the given MMCTL command against the given cluster installation.
 // Setup and exec errors both result in a single return error.
-func (p Provisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	output, execErr, err := p.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
+func (provisioner Provisioner) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	output, execErr, err := provisioner.ExecClusterInstallationCLI(cluster, clusterInstallation, append([]string{"./bin/mmctl"}, args...)...)
 	if err != nil {
 		return output, errors.Wrap(err, "failed to run mmctl command")
 	}
@@ -389,13 +389,13 @@ func execClusterInstallationCLI(k8sClient *k8s.KubeClient, clusterInstallation *
 // ExecClusterInstallationCLI execs the provided command on the defined cluster
 // installation and returns both exec preparation errors as well as errors from
 // the exec command itself.
-func (p Provisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to get kube client")
 	}
@@ -404,14 +404,14 @@ func (p Provisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterI
 }
 
 // ExecClusterInstallationJob creates job executing command on cluster installation.
-func (p Provisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 	logger.Info("Executing job with CLI command on cluster installation")
 
-	k8sClient, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeClient(cluster)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube client")
 	}
@@ -474,24 +474,24 @@ func (p Provisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterI
 // DeleteOldClusterInstallationLicenseSecrets removes k8s secrets found matching
 // the license naming scheme that are not the current license used by the
 // installation.
-func (p Provisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
-	logger := p.logger.WithFields(log.Fields{
+func (provisioner Provisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
 	})
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return deleteOldClusterInstallationLicenseSecrets(kubeConfigPath, installation, clusterInstallation, logger)
+	return deleteOldClusterInstallationLicenseSecrets(configLocation, installation, clusterInstallation, logger)
 }
 
 // PrepareClusterUtilities performs any updates to cluster utilities that may
 // be needed for clusterinstallations to function correctly.
-func (p Provisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
-	logger := p.logger.WithField("cluster", cluster.ID)
+func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
 	logger.Info("Preparing cluster utilities")
 
 	// TODO: move this logic to a database interface method.
@@ -499,12 +499,12 @@ func (p Provisioner) PrepareClusterUtilities(cluster *model.Cluster, installatio
 		return nil
 	}
 
-	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return prepareClusterUtilities(cluster, kubeConfigPath, store, awsClient, p.params.PGBouncerConfig, logger)
+	return prepareClusterUtilities(cluster, configLocation, store, awsClient, provisioner.params.PGBouncerConfig, logger)
 }
 
 func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {

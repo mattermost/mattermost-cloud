@@ -22,7 +22,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// EKSProvisionerType is Provisioner type for EKS clusters.
+// EKSProvisionerType is provisioner type for EKS clusters.
 const EKSProvisionerType = "eks"
 
 type clusterUpdateStore interface {
@@ -234,7 +234,7 @@ func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) e
 	return nil
 }
 
-func (provisioner *EKSProvisioner) GetKubeConfigPath(cluster *model.Cluster) (string, error) {
+func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
 	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to prepare kubeconfig")
@@ -243,8 +243,8 @@ func (provisioner *EKSProvisioner) GetKubeConfigPath(cluster *model.Cluster) (st
 	return configLocation, nil
 }
 
-func (provisioner *EKSProvisioner) GetKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
-	configLocation, err := provisioner.GetKubeConfigPath(cluster)
+func (provisioner *EKSProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	configLocation, err := provisioner.getKubeConfigPath(cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get kops config from cache")
 	}

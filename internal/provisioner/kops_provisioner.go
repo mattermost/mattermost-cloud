@@ -184,10 +184,10 @@ func (provisioner *KopsProvisioner) invalidateCachedKopsClientOnError(err error,
 	provisioner.invalidateCachedKopsClient(name, logger)
 }
 
-func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.FieldLogger) (*k8s.KubeClient, func(err error), error) {
+func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.FieldLogger) (*k8s.KubeClient, error) {
 	configLocation, err := provisioner.getCachedKopsClusterKubecfg(clusterName, logger)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
 	}
 	invalidateOnError := func(err error) {
 		provisioner.invalidateCachedKopsClientOnError(err, clusterName, logger)
@@ -197,8 +197,8 @@ func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.Fie
 	var k8sClient *k8s.KubeClient
 	k8sClient, err = k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	return k8sClient, invalidateOnError, nil
+	return k8sClient, nil
 }
