@@ -37,6 +37,10 @@ type AWATClient interface {
 	ReleaseLockOnImport(importID string) error
 }
 
+type ImportProvisioner interface {
+	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+}
+
 // ImportSupervisor is a supervisor which performs Workspace Imports
 // from ready Imports produced by the AWAT. It periodically queries
 // the AWAT for Imports waiting to be performed and then performs

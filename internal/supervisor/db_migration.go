@@ -55,6 +55,11 @@ type databaseProvider interface {
 	GetDatabase(installationID, dbType string) model.Database
 }
 
+type DBMigrationCIProvisioner interface {
+	ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner
+	ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error
+}
+
 // DBMigrationSupervisor finds pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with

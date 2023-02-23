@@ -129,6 +129,13 @@ type InstallationSupervisorSchedulingOptions struct {
 	ClusterResourceThresholdScaleValue int
 }
 
+// InstallationProvisioner abstracts the provisioning operations required by the installation supervisor.
+type InstallationProvisioner interface {
+	ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner
+	GetClusterResources(cluster *model.Cluster, canSchedule bool, logger log.FieldLogger) (*k8s.ClusterResources, error)
+	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
+}
+
 // NewInstallationSupervisor creates a new InstallationSupervisor.
 func NewInstallationSupervisor(
 	store installationStore,

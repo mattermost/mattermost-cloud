@@ -127,7 +127,7 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			mockStore,
-			&mockClusterInstallationProvisioner{},
+			&mockInstallationProvisioner{},
 			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
@@ -160,7 +160,7 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			mockStore,
-			&mockClusterInstallationProvisioner{},
+			&mockInstallationProvisioner{},
 			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
@@ -211,7 +211,7 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		mockEventProducer := &mockEventProducer{}
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			mockStore,
-			&mockClusterInstallationProvisioner{},
+			&mockInstallationProvisioner{},
 			&mockAWS{},
 			mockEventProducer,
 			"instanceID",
@@ -253,7 +253,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				defer store.CloseConnection(t, sqlStore)
 				supervisor := supervisor.NewClusterInstallationSupervisor(
 					sqlStore,
-					&mockClusterInstallationProvisioner{},
+					&mockInstallationProvisioner{},
 					&mockAWS{},
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
@@ -297,7 +297,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				defer store.CloseConnection(t, sqlStore)
 				supervisor := supervisor.NewClusterInstallationSupervisor(
 					sqlStore,
-					&mockClusterInstallationProvisioner{},
+					&mockInstallationProvisioner{},
 					&mockAWS{},
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
@@ -330,7 +330,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			sqlStore,
-			&mockClusterInstallationProvisioner{},
+			&mockInstallationProvisioner{},
 			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
@@ -386,7 +386,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				defer store.CloseConnection(t, sqlStore)
 				supervisor := supervisor.NewClusterInstallationSupervisor(
 					sqlStore,
-					&mockClusterInstallationProvisioner{},
+					&mockInstallationProvisioner{},
 					&mockAWS{},
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
@@ -423,7 +423,7 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			sqlStore,
-			&mockClusterInstallationProvisioner{},
+			&mockInstallationProvisioner{},
 			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",

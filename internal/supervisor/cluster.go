@@ -9,6 +9,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -27,6 +28,25 @@ type clusterStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 
 	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
+}
+
+// ClusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
+type ClusterProvisioner interface {
+	PrepareCluster(cluster *model.Cluster) bool
+	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
+	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
+	CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
+	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
+	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
+	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
+	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
+	RefreshKopsMetadata(cluster *model.Cluster) error
+	GetKubeConfigPath(cluster *model.Cluster) (string, error)
+	GetKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error)
+}
+
+type ClusterProvisionerOption interface {
+	GetClusterProvisioner(provisioner string) ClusterProvisioner
 }
 
 // ClusterSupervisor finds clusters pending work and effects the required changes.

@@ -38,6 +38,13 @@ type installationDBRestorationStore interface {
 	GetWebhooks(filter *model.WebhookFilter) ([]*model.Webhook, error)
 }
 
+// RestoreProvisioner abstracts different restoration operations required by the installation db restoration supervisor.
+type RestoreProvisioner interface {
+	TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error
+	CheckRestoreStatus(backupMeta *model.InstallationBackup, cluster *model.Cluster) (int64, error)
+	CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error
+}
+
 // InstallationDBRestorationSupervisor finds pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
