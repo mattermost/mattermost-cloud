@@ -23,30 +23,6 @@ func (m *mockMetrics) IncrementAPIRequest() {}
 func (m *mockMetrics) ObserveAPIEndpointDuration(handler, method string, statusCode int, elapsed float64) {
 }
 
-type mockProvisionerOption struct {
-	mock *mockProvisioner
-}
-
-func (p *mockProvisionerOption) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockProvisionerOption) ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockProvisionerOption) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockProvisionerOption) GetClusterResources(cluster *model.Cluster, b bool, logger log.FieldLogger) (*k8s.ClusterResources, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 type mockProvisioner struct {
 	Output       []byte
 	ExecError    error

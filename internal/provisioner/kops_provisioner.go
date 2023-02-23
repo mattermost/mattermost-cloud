@@ -15,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// KopsProvisionerType is Provisioner type for Kops clusters.
+// KopsProvisionerType is provisioner type for Kops clusters.
 const KopsProvisionerType = "kops"
 
 // ProvisioningParams represent configuration used during various provisioning operations.
@@ -49,7 +49,7 @@ func NewKopsProvisioner(
 	logger log.FieldLogger,
 ) *KopsProvisioner {
 
-	logger = logger.WithField("Provisioner", "kops")
+	logger = logger.WithField("provisioner", "kops")
 
 	return &KopsProvisioner{
 		params:    params,
@@ -59,14 +59,14 @@ func NewKopsProvisioner(
 	}
 }
 
-// ProvisionerType returns type of the Provisioner.
+// ProvisionerType returns type of the provisioner.
 func (provisioner *KopsProvisioner) ProvisionerType() string {
 	return KopsProvisionerType
 }
 
-// Teardown cleans up cached kops Provisioner data.
+// Teardown cleans up cached kops provisioner data.
 func (provisioner *KopsProvisioner) Teardown() {
-	provisioner.logger.Debug("Performing kops Provisioner cleanup")
+	provisioner.logger.Debug("Performing kops provisioner cleanup")
 	for name, kops := range provisioner.kopsCache {
 		provisioner.logger.Debugf("Cleaning up kops cache for %s", name)
 		kops.Close()

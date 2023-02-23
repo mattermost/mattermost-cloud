@@ -134,13 +134,13 @@ func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
 			ResourceType: model.TypeCluster.String(),
 			ResourceID:   w.Meta.ClusterID,
 			OldState:     model.ClusterStateCreationInProgress,
-			NewState:     model.ClusterStateWaitingForNode,
+			NewState:     model.ClusterStateWaitingForNodes,
 		})
 
 		events = append(events, eventstest.EventOccurrence{
 			ResourceType: model.TypeCluster.String(),
 			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateWaitingForNode,
+			OldState:     model.ClusterStateWaitingForNodes,
 			NewState:     model.ClusterStateProvisionInProgress,
 		})
 	} else {
