@@ -167,7 +167,7 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.createCluster(cluster, logger)
 	case model.ClusterStateCreationInProgress:
 		return s.checkClusterCreated(cluster, logger)
-	case model.ClusterStateWaitingForNode:
+	case model.ClusterStateWaitingForNodes:
 		return s.checkNodesCreated(cluster, logger)
 	case model.ClusterStateProvisionInProgress:
 		return s.provisionCluster(cluster, logger)
@@ -312,7 +312,7 @@ func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log
 	}
 	if !ready {
 		logger.Info("Cluster nodes are not ready yet")
-		return model.ClusterStateWaitingForNode
+		return model.ClusterStateWaitingForNodes
 	}
 
 	return model.ClusterStateProvisionInProgress
