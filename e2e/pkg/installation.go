@@ -8,6 +8,7 @@
 package pkg
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -66,6 +67,25 @@ func WaitForStable(client *model.Client, installationID string, log logrus.Field
 	return err
 }
 
+// WaitForInstallationToBeStable waits until installation reaches Stable state.
+func WaitForInstallationToBeStable(ctx context.Context, installationID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
+	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	whWaiter := webhookWaiter{
+		whChan:        whChan,
+		resourceType:  model.TypeInstallation.String(),
+		desiredState:  model.InstallationStateStable,
+		failureStates: []string{model.InstallationStateCreationFailed, model.InstallationStateCreationNoCompatibleClusters},
+		logger: log.WithFields(map[string]interface{}{
+			"installation":  installationID,
+			"desired-state": model.InstallationStateStable,
+		}),
+	}
+
+	return whWaiter.waitForState(waitCtx, installationID)
+}
+
 // WaitForInstallationDeletion waits until Installation reaches Deleted state.
 func WaitForInstallationDeletion(client *model.Client, installationID string, log logrus.FieldLogger) error {
 	err := WaitForFunc(NewWaitConfig(10*time.Minute, 10*time.Second, 2, log), func() (bool, error) {
@@ -84,6 +104,25 @@ func WaitForInstallationDeletion(client *model.Client, installationID string, lo
 		return false, nil
 	})
 	return err
+}
+
+// WaitForInstallationToBeDeleted waits until installation is deleted.
+func WaitForInstallationToBeDeleted(ctx context.Context, installationID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
+	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	whWaiter := webhookWaiter{
+		whChan:        whChan,
+		resourceType:  model.TypeInstallation.String(),
+		desiredState:  model.InstallationStateDeleted,
+		failureStates: []string{model.InstallationStateDeletionFailed},
+		logger: log.WithFields(map[string]interface{}{
+			"installation":  installationID,
+			"desired-state": model.InstallationStateDeleted,
+		}),
+	}
+
+	return whWaiter.waitForState(waitCtx, installationID)
 }
 
 // PingInstallation hits Mattermost ping endpoint.

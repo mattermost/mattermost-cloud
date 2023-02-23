@@ -274,6 +274,14 @@ func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, 
 	return true, nil
 }
 
+// CheckNodesCreated is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	// TODO: this is currently not implemented for kops.
+	// Entire waiting logic happens as part of cluster creation therefore we
+	// just skip this step and report cluster as created.
+	return true, nil
+}
+
 // ProvisionCluster installs all the baseline kubernetes resources needed for
 // managing installations. This can be called on an already-provisioned cluster
 // to re-provision with the newest version of the resources.

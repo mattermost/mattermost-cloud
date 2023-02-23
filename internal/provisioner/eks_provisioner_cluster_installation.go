@@ -6,6 +6,7 @@ package provisioner
 
 import (
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
 	"github.com/pkg/errors"
@@ -150,8 +151,22 @@ func (provisioner *EKSProvisioner) PrepareClusterUtilities(cluster *model.Cluste
 
 // ExecClusterInstallationCLI executes command on ClusterInstallation.
 func (provisioner *EKSProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
-	//TODO implement me
-	panic("implement me")
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
+	}
+
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return execClusterInstallationCLI(k8sClient, clusterInstallation, logger, args...)
 }
 
 // ExecMMCTL executes mmctl command on ClusterInstallation.

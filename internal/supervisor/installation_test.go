@@ -6,6 +6,7 @@ package supervisor_test
 
 import (
 	"fmt"
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"math/rand"
 	"testing"
 
@@ -399,6 +400,14 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
 // can be tested.
 type mockAWS struct{}
+
+func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata model.EKSMetadata) (*ec2Types.LaunchTemplate, error) {
+	return &ec2Types.LaunchTemplate{}, nil
+}
+
+func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) {
+	return true, nil
+}
 
 func (a *mockAWS) GetLoadBalancerAPIByType(s string) aws.ELB {
 	//TODO implement me

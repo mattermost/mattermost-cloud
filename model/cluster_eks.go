@@ -4,20 +4,20 @@
 
 package model
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // EKSMetadata is metadata for EKS cluster and node groups.
 type EKSMetadata struct {
 	KubernetesVersion *string
+	AMI               string
 	VPC               string
 	Networking        string
 	ClusterRoleARN    *string
-
-	EKSNodeGroups EKSNodeGroups
+	NodeGroup         EKSNodeGroup
+	MaxPodsPerNode    int64
 }
-
-// EKSNodeGroups maps node group name to configuration.
-type EKSNodeGroups map[string]EKSNodeGroup
 
 // EKSNodeGroup is node group configuration.
 type EKSNodeGroup struct {

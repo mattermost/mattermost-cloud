@@ -5,8 +5,10 @@
 package provisioner
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -15,10 +17,9 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"os"
 )
 
 // EKSProvisionerType is provisioner type for EKS clusters.
@@ -128,11 +129,6 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, errors.New("expected EKS metadata not to be nil")
 	}
 
-	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get VPC resources")
-	}
-
 	ready, err := awsClient.IsClusterReady(cluster.ID)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check if EKS cluster is ready")
@@ -140,6 +136,49 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 	if !ready {
 		logger.Info("EKS cluster not ready")
 		return false, nil
+	}
+
+	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
+	_, err = awsClient.EnsureLaunchTemplate(cluster.ID, *cluster.ProvisionerMetadataEKS)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to ensure launch template")
+	}
+
+	// To install Calico Networking, We need to delete VPC CNI plugin (aws-node)
+	// and install Calico CNI plugin before creating any pods
+	kubeConfigFile, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to prepare kubeconfig file")
+	}
+
+	k8sClient, err := k8s.NewFromFile(kubeConfigFile, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
+	}
+	// Delete aws-node daemonset to disable VPC CNI plugin
+	_ = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(context.Background(), "aws-node", metav1.DeleteOptions{})
+
+	var files []k8s.ManifestFile
+	files = append(files, k8s.ManifestFile{
+		Path:            "manifests/eks/calico-eks.yaml",
+		DeployNamespace: "kube-system",
+	})
+
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// CheckNodesCreated provisions EKS cluster.
+func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get VPC resources")
 	}
 
 	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, clusterResources, *cluster.ProvisionerMetadataEKS)
@@ -229,6 +268,14 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 	deleted, err := awsClient.EnsureNodeGroupsDeleted(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete node groups")
+	}
+	if !deleted {
+		return false, nil
+	}
+
+	deleted, err = awsClient.EnsureLaunchTemplateDeleted(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to delete launch template")
 	}
 	if !deleted {
 		return false, nil
@@ -347,7 +394,7 @@ func NewEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Conf
 				Exec: &clientcmdapi.ExecConfig{
 					Command:    "aws",
 					Args:       []string{"--region", region, "eks", "get-token", "--cluster-name", *cluster.Name},
-					APIVersion: "client.authentication.k8s.io/v1alpha1",
+					APIVersion: "client.authentication.k8s.io/v1beta1",
 				},
 			},
 		},

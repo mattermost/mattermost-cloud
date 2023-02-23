@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+//go:build e2e
 // +build e2e
 
 package workflow
@@ -10,17 +11,16 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 )
 
 // NewDBMigrationSuite creates new DBMigrationSuite.
 func NewDBMigrationSuite(params DBMigrationSuiteParams, dnsSubdomain string, client *model.Client, kubeClient kubernetes.Interface, logger logrus.FieldLogger) *DBMigrationSuite {
-	installationSuite := NewInstallationSuite(params.InstallationSuiteParams, dnsSubdomain, client, kubeClient, logger)
+	installationSuite := NewInstallationSuite(params.InstallationSuiteParams, InstallationSuiteMeta{}, dnsSubdomain, client, kubeClient, nil, logger)
 
 	return &DBMigrationSuite{
 		InstallationSuite: installationSuite,

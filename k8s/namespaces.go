@@ -7,6 +7,7 @@ package k8s
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,6 +75,9 @@ func (kc *KubeClient) GetNamespaces(namespaceNames []string) ([]*corev1.Namespac
 	for _, namespaceName := range namespaceNames {
 		namespace, err := kc.Clientset.CoreV1().Namespaces().Get(ctx, namespaceName, metav1.GetOptions{})
 		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				continue
+			}
 			return namespaces, err
 		}
 		namespaces = append(namespaces, namespace)
@@ -97,8 +101,47 @@ func (kc *KubeClient) DeleteNamespaces(namespaceNames []string) error {
 	for _, namespaceName := range namespaceNames {
 		err := kc.Clientset.CoreV1().Namespaces().Delete(ctx, namespaceName, deleteOpts)
 		if err != nil {
-			return err
+			if !k8sErrors.IsNotFound(err) {
+				return err
+			}
 		}
+	}
+
+	return nil
+}
+
+// finalizeNamespaces deletes kubernetes namespaces.
+func (kc *KubeClient) finalizeNamespaces(namespaces []*corev1.Namespace) error {
+	ctx := context.TODO()
+	for i := range namespaces {
+		_, err := kc.Clientset.CoreV1().Namespaces().Finalize(ctx, namespaces[i], metav1.UpdateOptions{})
+		if err != nil {
+			if !k8sErrors.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// DeleteNamespacesWithFinalizer deletes kubernetes namespaces with a finalizer cleanup.
+func (kc *KubeClient) DeleteNamespacesWithFinalizer(namespaceNames []string) error {
+	if err := kc.DeleteNamespaces(namespaceNames); err != nil {
+		return errors.Wrap(err, "failed to delete namespace")
+	}
+
+	namespaces, err := kc.GetNamespaces(namespaceNames)
+	if err != nil {
+		return errors.Wrap(err, "failed to get namespace")
+	}
+
+	for i := range namespaces {
+		namespaces[i].Spec.Finalizers = []corev1.FinalizerName{}
+	}
+
+	if err := kc.finalizeNamespaces(namespaces); err != nil {
+		return errors.Wrap(err, "failed to finalize namespace")
 	}
 
 	return nil

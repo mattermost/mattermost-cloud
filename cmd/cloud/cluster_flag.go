@@ -42,15 +42,15 @@ func (flags *createRequestOptions) addFlags(command *cobra.Command) {
 }
 
 type eksFlags struct {
-	useEKS              bool
-	eksRoleArn          string
-	eksNodeGroupsConfig string
+	useEKS            bool
+	eksClusterRoleARN string
+	eksNodeRoleARN    string
 }
 
 func (flags *eksFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.useEKS, "eks", false, "Create EKS cluster.")
-	command.Flags().StringVar(&flags.eksRoleArn, "eks-role-arn", "", "EKS role ARN.")
-	command.Flags().StringVar(&flags.eksNodeGroupsConfig, "eks-node-groups-config", "", "Path to node groups configuration in JSON format.")
+	command.Flags().StringVar(&flags.eksClusterRoleARN, "eks-cluster-role-arn", "", "EKS role ARN for cluster.")
+	command.Flags().StringVar(&flags.eksNodeRoleARN, "eks-node-role-arn", "", "EKS role ARN for node.")
 }
 
 type utilityFlags struct {

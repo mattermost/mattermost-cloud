@@ -6,6 +6,7 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -32,7 +33,7 @@ func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResou
 
 	subnetsIDs := []string{}
 	for _, sub := range subnetsOut.Subnets {
-		// TODO: for some reason it is not possible to creates EKS in this zone
+		// us-east-1e does not currently have sufficient capacity to support the cluster
 		if *sub.AvailabilityZone == "us-east-1e" {
 			continue
 		}
@@ -228,47 +229,43 @@ func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources
 		return nil, errors.Wrap(err, "failed to list existing node groups")
 	}
 
-	allNodeGroups := make([]*eksTypes.Nodegroup, 0, len(eksMetadata.EKSNodeGroups))
-
-	for ngName, ngCfg := range eksMetadata.EKSNodeGroups {
-		// If given node group already exist, just return it
-		foundExisting := false
-		for _, existingNg := range existingNgs {
-			if *existingNg.NodegroupName == ngName {
-				// TODO: theoretically the node group config could change
-				// so we probably should update here.
-				allNodeGroups = append(allNodeGroups, existingNg)
-				foundExisting = true
-				break
-			}
+	for _, existingNg := range existingNgs {
+		if *existingNg.NodegroupName == "worker" {
+			return []*eksTypes.Nodegroup{existingNg}, nil
 		}
-		if foundExisting {
-			continue
-		}
-
-		nodeGroupReq := eks.CreateNodegroupInput{
-			ClusterName:    aws.String(clusterName),
-			InstanceTypes:  ngCfg.InstanceTypes,
-			NodeRole:       ngCfg.RoleARN,
-			NodegroupName:  aws.String(ngName),
-			ReleaseVersion: ngCfg.AMIVersion,
-			ScalingConfig: &eksTypes.NodegroupScalingConfig{
-				DesiredSize: ngCfg.DesiredSize,
-				MaxSize:     ngCfg.MaxSize,
-				MinSize:     ngCfg.MinSize,
-			},
-			Subnets: resources.PrivateSubnetIDs,
-			Version: eksMetadata.KubernetesVersion,
-		}
-
-		out, err := a.Service().eks.CreateNodegroup(ctx, &nodeGroupReq)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create one of the node groups")
-		}
-
-		allNodeGroups = append(allNodeGroups, out.Nodegroup)
 	}
-	return allNodeGroups, nil
+
+	ngCfg := eksMetadata.NodeGroup
+
+	launchTemplate := getLaunchTemplateName(clusterName)
+
+	nodeGroupReq := eks.CreateNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		InstanceTypes: ngCfg.InstanceTypes,
+		NodeRole:      ngCfg.RoleARN,
+		NodegroupName: aws.String("worker"),
+		AmiType:       eksTypes.AMITypesCustom,
+		ScalingConfig: &eksTypes.NodegroupScalingConfig{
+			DesiredSize: ngCfg.DesiredSize,
+			MaxSize:     ngCfg.MaxSize,
+			MinSize:     ngCfg.MinSize,
+		},
+		Subnets: resources.PrivateSubnetIDs,
+		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
+			Name:    aws.String(launchTemplate),
+			Version: aws.String("$Latest"),
+		},
+		Tags: map[string]string{
+			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
+		},
+	}
+
+	out, err := a.Service().eks.CreateNodegroup(ctx, &nodeGroupReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create one of the node groups")
+	}
+
+	return []*eksTypes.Nodegroup{out.Nodegroup}, nil
 }
 
 // IsClusterReady checks if EKS cluster is ready.
