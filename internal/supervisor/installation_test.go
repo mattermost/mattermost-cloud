@@ -13,7 +13,6 @@ import (
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -343,7 +342,7 @@ func (p *mockInstallationProvisioner) ExecMattermostCLI(cluster *model.Cluster, 
 	panic("implement me")
 }
 
-func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
+func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
 	return &mockInstallationProvisioner{}
 }
 

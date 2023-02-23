@@ -7,7 +7,6 @@ package supervisor_test
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -81,7 +80,7 @@ type mockClusterProvisionerOption struct {
 	mock *mockClusterProvisioner
 }
 
-func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string) provisioner.ClusterProvisioner {
+func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
 	if p.mock == nil {
 		p.mock = &mockClusterProvisioner{}
 	}

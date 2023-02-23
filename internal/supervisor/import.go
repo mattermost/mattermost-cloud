@@ -13,7 +13,6 @@ import (
 
 	awat "github.com/mattermost/awat/model"
 	"github.com/mattermost/mattermost-cloud/internal/events"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	toolsAWS "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -47,7 +46,7 @@ type ImportSupervisor struct {
 	awatClient     AWATClient
 	logger         logrus.FieldLogger
 	store          importStore
-	provisioner    provisioner.ImportProvisioner
+	provisioner    ImportProvisioner
 	eventsProducer eventProducer
 	ID             string
 }
@@ -90,7 +89,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner provisioner.ImportProvisioner, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner ImportProvisioner, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:      awsClient,
 		awatClient:     awat,

@@ -7,10 +7,10 @@ package supervisor
 import (
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,13 +46,13 @@ type BackupSupervisor struct {
 	instanceID string
 	logger     log.FieldLogger
 
-	provisioner provisioner.BackupProvisioner
+	provisioner BackupProvisioner
 }
 
 // NewBackupSupervisor creates a new BackupSupervisor.
 func NewBackupSupervisor(
 	store installationBackupStore,
-	provisioner provisioner.BackupProvisioner,
+	provisioner BackupProvisioner,
 	aws aws.AWS,
 	instanceID string,
 	logger log.FieldLogger) *BackupSupervisor {
@@ -64,6 +64,9 @@ func NewBackupSupervisor(
 		logger:      logger,
 	}
 }
+
+// ErrJobBackoffLimitReached indicates that job failed all possible attempts and there is no reason for retrying.
+var ErrJobBackoffLimitReached = errors.New("job reached backoff limit")
 
 // Shutdown performs graceful shutdown tasks for the backup supervisor.
 func (s *BackupSupervisor) Shutdown() {
@@ -233,7 +236,7 @@ func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, insta
 
 	startTime, err := s.provisioner.CheckBackupStatus(backup, cluster)
 	if err != nil {
-		if err == provisioner.ErrJobBackoffLimitReached {
+		if err == ErrJobBackoffLimitReached {
 			logger.WithError(err).Error("Backup job backoff limit reached, backup failed")
 			return model.InstallationBackupStateBackupFailed
 		}

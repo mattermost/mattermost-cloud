@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ type clusterStore interface {
 // other clients needing to coordinate background jobs.
 type ClusterSupervisor struct {
 	store          clusterStore
-	provisioner    provisioner.ClusterProvisionerOption
+	provisioner    ClusterProvisionerOption
 	aws            aws.AWS
 	eventsProducer eventProducer
 	instanceID     string
@@ -45,7 +44,7 @@ type ClusterSupervisor struct {
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, provisioner provisioner.ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, provisioner ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
 		provisioner:    provisioner,

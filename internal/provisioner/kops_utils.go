@@ -146,7 +146,7 @@ func getElasticLoadBalancerInfo(namespace string, logger log.FieldLogger, config
 }
 
 // GetPublicLoadBalancerEndpoint returns the public load balancer endpoint of the NGINX service.
-func (p provisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+func (p Provisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
 
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":         cluster.ID,

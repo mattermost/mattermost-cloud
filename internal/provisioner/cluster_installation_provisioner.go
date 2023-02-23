@@ -30,7 +30,7 @@ type CommonProvisioner struct {
 	logger       log.FieldLogger
 }
 
-func (p provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
+func (p Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client from file")
@@ -120,7 +120,7 @@ func (p provisioner) createClusterInstallation(clusterInstallation *model.Cluste
 	return nil
 }
 
-func (p provisioner) ensureFilestoreAndDatabase(
+func (p Provisioner) ensureFilestoreAndDatabase(
 	mattermost *mmv1beta1.Mattermost,
 	installation *model.Installation,
 	clusterInstallation *model.ClusterInstallation,
@@ -199,7 +199,7 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 }
 
 // refreshSecrets deletes old secrets for database and file store and replaces them with new ones.
-func (p provisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
+func (p Provisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -241,7 +241,7 @@ func (p provisioner) refreshSecrets(installation *model.Installation, clusterIns
 	return nil
 }
 
-func (p provisioner) updateClusterInstallation(
+func (p Provisioner) updateClusterInstallation(
 	configLocation string,
 	installation *model.Installation,
 	installationDNS []*model.InstallationDNS,

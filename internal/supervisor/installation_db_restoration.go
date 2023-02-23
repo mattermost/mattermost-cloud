@@ -7,7 +7,6 @@ package supervisor
 import (
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -49,7 +48,7 @@ type InstallationDBRestorationSupervisor struct {
 	instanceID     string
 	environment    string
 	logger         log.FieldLogger
-	provisioner    provisioner.RestoreProvisioner
+	provisioner    RestoreProvisioner
 	eventsProducer eventProducer
 }
 
@@ -57,7 +56,7 @@ type InstallationDBRestorationSupervisor struct {
 func NewInstallationDBRestorationSupervisor(
 	store installationDBRestorationStore,
 	aws aws.AWS,
-	provisioner provisioner.RestoreProvisioner,
+	provisioner RestoreProvisioner,
 	eventsProducer eventProducer,
 	instanceID string,
 	logger log.FieldLogger) *InstallationDBRestorationSupervisor {
@@ -241,7 +240,7 @@ func (s *InstallationDBRestorationSupervisor) checkRestorationStatus(restoration
 
 	completeAt, err := s.provisioner.CheckRestoreStatus(backup, cluster)
 	if err != nil {
-		if err == provisioner.ErrJobBackoffLimitReached {
+		if err == ErrJobBackoffLimitReached {
 			logger.WithError(err).Error("Installation db restoration failed")
 			return model.InstallationDBRestorationStateFailing
 		}

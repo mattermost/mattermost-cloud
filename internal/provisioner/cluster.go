@@ -1,6 +1,8 @@
 package provisioner
 
-func (p provisioner) GetClusterProvisioner(provisioner string) ClusterProvisioner {
+import "github.com/mattermost/mattermost-cloud/internal/supervisor"
+
+func (p Provisioner) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
 	if provisioner == "eks" {
 		return p.eksProvisioner
 	}

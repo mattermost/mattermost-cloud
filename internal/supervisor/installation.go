@@ -13,7 +13,6 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
@@ -94,7 +93,7 @@ type eventProducer interface {
 // other clients needing to coordinate background jobs.
 type InstallationSupervisor struct {
 	store             installationStore
-	provisioner       provisioner.InstallationProvisioner
+	provisioner       InstallationProvisioner
 	aws               aws.AWS
 	instanceID        string
 	keepDatabaseData  bool
@@ -133,7 +132,7 @@ type InstallationSupervisorSchedulingOptions struct {
 // NewInstallationSupervisor creates a new InstallationSupervisor.
 func NewInstallationSupervisor(
 	store installationStore,
-	provisioner provisioner.InstallationProvisioner,
+	provisioner InstallationProvisioner,
 	aws aws.AWS,
 	instanceID string,
 	keepDatabaseData,

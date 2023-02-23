@@ -11,8 +11,8 @@ import (
 	"os"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-// EKSProvisionerType is provisioner type for EKS clusters.
+// EKSProvisionerType is Provisioner type for EKS clusters.
 const EKSProvisionerType = "eks"
 
 type clusterUpdateStore interface {
@@ -31,40 +31,30 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	logger             log.FieldLogger
-	store              model.InstallationDatabaseStoreInterface
+	params             ProvisioningParams
+	awsClient          aws.AWS
 	clusterUpdateStore clusterUpdateStore
-
-	awsClient aws.AWS
-
-	params            ProvisioningParams
-	commonProvisioner *CommonProvisioner
+	store              model.InstallationDatabaseStoreInterface
+	logger             log.FieldLogger
 }
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
-	store model.InstallationDatabaseStoreInterface,
-	clusterUpdateStore clusterUpdateStore,
 	params ProvisioningParams,
-	resourceUtil *utils.ResourceUtil,
 	awsClient aws.AWS,
-	logger log.FieldLogger) *EKSProvisioner {
+	store *store.SQLStore,
+	logger log.FieldLogger,
+) *EKSProvisioner {
 	return &EKSProvisioner{
-		logger:             logger,
-		store:              store,
-		clusterUpdateStore: clusterUpdateStore,
-		awsClient:          awsClient,
 		params:             params,
-		commonProvisioner: &CommonProvisioner{
-			resourceUtil: resourceUtil,
-			store:        store,
-			params:       params,
-			logger:       logger,
-		},
+		awsClient:          awsClient,
+		clusterUpdateStore: store,
+		store:              store,
+		logger:             logger,
 	}
 }
 
-// ProvisionerType returns type of the provisioner.
+// ProvisionerType returns type of the Provisioner.
 func (provisioner *EKSProvisioner) ProvisionerType() string {
 	return EKSProvisionerType
 }

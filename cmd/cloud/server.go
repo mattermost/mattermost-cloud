@@ -271,10 +271,23 @@ func executeServerCmd(flags serverFlags) error {
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
 
+	kopsProvisioner := provisioner.NewKopsProvisioner(
+		provisioningParams,
+		sqlStore,
+		logger,
+	)
+
+	eksProvisioner := provisioner.NewEKSProvisioner(
+		provisioningParams,
+		awsClient,
+		sqlStore,
+		logger,
+	)
+
 	provisionerInterface := provisioner.NewProvisioner(
+		kopsProvisioner, eksProvisioner,
 		provisioningParams,
 		resourceUtil,
-		awsClient,
 		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
 		sqlStore,
 		logger,
@@ -317,7 +330,7 @@ func executeServerCmd(flags serverFlags) error {
 
 	var multiDoer supervisor.MultiDoer
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerInterface, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerInterface.ClusterProvisionerOption, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.groupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))

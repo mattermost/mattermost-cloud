@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -67,7 +66,7 @@ type DBMigrationSupervisor struct {
 	instanceID     string
 	environment    string
 	logger         log.FieldLogger
-	provisioner    provisioner.DBMigrationCIProvisioner
+	provisioner    DBMigrationCIProvisioner
 	eventsProducer eventProducer
 }
 
@@ -77,7 +76,7 @@ func NewInstallationDBMigrationSupervisor(
 	aws aws.AWS,
 	dbProvider databaseProvider,
 	instanceID string,
-	provisioner provisioner.DBMigrationCIProvisioner,
+	provisioner DBMigrationCIProvisioner,
 	eventsProducer eventProducer,
 	logger log.FieldLogger) *DBMigrationSupervisor {
 	return &DBMigrationSupervisor{

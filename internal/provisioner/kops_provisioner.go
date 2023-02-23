@@ -8,16 +8,14 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
-	"github.com/mattermost/mattermost-cloud/model"
 )
 
-// KopsProvisionerType is provisioner type for Kops clusters.
+// KopsProvisionerType is Provisioner type for Kops clusters.
 const KopsProvisionerType = "kops"
 
 // ProvisioningParams represent configuration used during various provisioning operations.
@@ -38,48 +36,37 @@ type ProvisioningParams struct {
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	params            ProvisioningParams
-	resourceUtil      *utils.ResourceUtil
-	logger            log.FieldLogger
-	store             model.InstallationDatabaseStoreInterface
-	backupOperator    *BackupOperator
-	kopsCache         map[string]*kops.Cmd
-	commonProvisioner *CommonProvisioner
+	params    ProvisioningParams
+	store     model.InstallationDatabaseStoreInterface
+	logger    log.FieldLogger
+	kopsCache map[string]*kops.Cmd
 }
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 func NewKopsProvisioner(
-	provisioningParams ProvisioningParams,
-	resourceUtil *utils.ResourceUtil,
-	logger log.FieldLogger,
+	params ProvisioningParams,
 	store model.InstallationDatabaseStoreInterface,
-	backupOperator *BackupOperator) *KopsProvisioner {
-	logger = logger.WithField("provisioner", "kops")
+	logger log.FieldLogger,
+) *KopsProvisioner {
+
+	logger = logger.WithField("Provisioner", "kops")
 
 	return &KopsProvisioner{
-		params:         provisioningParams,
-		logger:         logger,
-		resourceUtil:   resourceUtil,
-		store:          store,
-		backupOperator: backupOperator,
-		kopsCache:      make(map[string]*kops.Cmd),
-		commonProvisioner: &CommonProvisioner{
-			resourceUtil: resourceUtil,
-			store:        store,
-			params:       provisioningParams,
-			logger:       logger,
-		},
+		params:    params,
+		store:     store,
+		logger:    logger,
+		kopsCache: make(map[string]*kops.Cmd),
 	}
 }
 
-// ProvisionerType returns type of the provisioner.
+// ProvisionerType returns type of the Provisioner.
 func (provisioner *KopsProvisioner) ProvisionerType() string {
 	return KopsProvisionerType
 }
 
-// Teardown cleans up cached kops provisioner data.
+// Teardown cleans up cached kops Provisioner data.
 func (provisioner *KopsProvisioner) Teardown() {
-	provisioner.logger.Debug("Performing kops provisioner cleanup")
+	provisioner.logger.Debug("Performing kops Provisioner cleanup")
 	for name, kops := range provisioner.kopsCache {
 		provisioner.logger.Debugf("Cleaning up kops cache for %s", name)
 		kops.Close()

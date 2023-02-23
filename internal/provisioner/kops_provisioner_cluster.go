@@ -10,10 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
@@ -21,6 +17,9 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	rotatorModel "github.com/mattermost/rotator/model"
 	"github.com/mattermost/rotator/rotator"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 )
 
 // DefaultKubernetesVersion is the default value for a kubernetes cluster
@@ -715,7 +714,7 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 }
 
 // GetClusterResources returns a snapshot of resources of a given cluster.
-func (p provisioner) GetClusterResources(cluster *model.Cluster, canSchedule bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
+func (p Provisioner) GetClusterResources(cluster *model.Cluster, canSchedule bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
 	kubeConfigPath, err := p.GetClusterProvisioner(cluster.Provisioner).GetKubeConfigPath(cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get kube config path")

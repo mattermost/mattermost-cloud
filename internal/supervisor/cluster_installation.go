@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -41,7 +40,7 @@ type clusterInstallationStore interface {
 
 // clusterInstallationProvisioner abstracts the provisioning operations required by the cluster installation supervisor.
 type clusterInstallationProvisioner interface {
-	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
+	ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner
 }
 
 // ClusterInstallationSupervisor finds cluster installations pending work and effects the required changes.

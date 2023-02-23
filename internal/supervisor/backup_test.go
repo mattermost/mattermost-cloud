@@ -7,13 +7,11 @@ package supervisor_test
 import (
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -268,7 +266,7 @@ func TestBackupMetadataSupervisorSupervise(t *testing.T) {
 			},
 			{
 				description:   "when terminal error",
-				mockBackupOp:  &mockBackupProvisioner{BackupStartTime: -1, err: provisioner.ErrJobBackoffLimitReached},
+				mockBackupOp:  &mockBackupProvisioner{BackupStartTime: -1, err: supervisor.ErrJobBackoffLimitReached},
 				expectedState: model.InstallationBackupStateBackupFailed,
 			},
 		} {

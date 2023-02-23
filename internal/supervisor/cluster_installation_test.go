@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -117,7 +116,7 @@ func (s *mockClusterInstallationStore) GetDNSRecordsForInstallation(installation
 
 type mockClusterInstallationProvisioner struct{}
 
-func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
+func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
 	return &mockInstallationProvisioner{}
 }
 

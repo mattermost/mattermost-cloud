@@ -11,7 +11,7 @@ import (
 )
 
 // TriggerBackup triggers backup job for specific installation on the cluster.
-func (p provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
+func (p Provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": installation.ID,
@@ -49,7 +49,7 @@ func (p provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *mo
 
 // CheckBackupStatus checks status of running backup job,
 // returns job start time, when the job finished or -1 if it is still running.
-func (p provisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+func (p Provisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -68,7 +68,7 @@ func (p provisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster
 }
 
 // CleanupBackupJob deletes backup job from the cluster if it exists.
-func (p provisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+func (p Provisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -88,7 +88,7 @@ func (p provisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster 
 
 // TriggerRestore triggers restoration job for specific installation on the cluster.
 
-func (p provisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
+func (p Provisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": installation.ID,
@@ -126,7 +126,7 @@ func (p provisioner) TriggerRestore(installation *model.Installation, backup *mo
 
 // CheckRestoreStatus checks status of running backup job,
 // returns job completion time, when the job finished or -1 if it is still running.
-func (p provisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+func (p Provisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -145,7 +145,7 @@ func (p provisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluste
 }
 
 // CleanupRestoreJob deletes restore job from the cluster if it exists.
-func (p provisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+func (p Provisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := p.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
