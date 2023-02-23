@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
@@ -21,14 +20,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// CommonProvisioner groups functions common to different provisioners.
-type CommonProvisioner struct {
-	resourceUtil *utils.ResourceUtil
-	store        model.InstallationDatabaseStoreInterface
-	params       ProvisioningParams
-	logger       log.FieldLogger
-}
 
 func (provisioner Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)

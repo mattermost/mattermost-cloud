@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -41,6 +42,8 @@ type KopsProvisioner struct {
 	logger    log.FieldLogger
 	kopsCache map[string]*kops.Cmd
 }
+
+var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 func NewKopsProvisioner(

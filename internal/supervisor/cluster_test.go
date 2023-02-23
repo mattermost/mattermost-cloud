@@ -12,7 +12,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
@@ -88,16 +87,6 @@ func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string)
 }
 
 type mockClusterProvisioner struct{}
-
-func (p *mockClusterProvisioner) GetKubeConfigPath(cluster *model.Cluster) (string, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p *mockClusterProvisioner) GetKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
-	//TODO implement me
-	panic("implement me")
-}
 
 func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 	return true

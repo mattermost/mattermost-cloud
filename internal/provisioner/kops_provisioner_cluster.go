@@ -771,7 +771,7 @@ func (provisioner *KopsProvisioner) getKubeConfigPath(cluster *model.Cluster) (s
 }
 
 func (provisioner *KopsProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
-	k8sClient, err := provisioner.k8sClient(cluster.ID, provisioner.logger)
+	k8sClient, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, provisioner.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create k8s client")
 	}

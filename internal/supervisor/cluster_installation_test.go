@@ -114,12 +114,6 @@ func (s *mockClusterInstallationStore) GetDNSRecordsForInstallation(installation
 	}, nil
 }
 
-type mockClusterInstallationProvisioner struct{}
-
-func (p *mockClusterInstallationProvisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
-	return &mockInstallationProvisioner{}
-}
-
 func TestClusterInstallationSupervisorDo(t *testing.T) {
 	t.Run("no clusters pending work", func(t *testing.T) {
 		logger := testlib.MakeLogger(t)

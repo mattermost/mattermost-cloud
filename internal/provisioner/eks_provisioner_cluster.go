@@ -12,6 +12,7 @@ import (
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -38,6 +39,8 @@ type EKSProvisioner struct {
 	logger             log.FieldLogger
 }
 
+var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
+
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
 	params ProvisioningParams,
@@ -54,7 +57,7 @@ func NewEKSProvisioner(
 	}
 }
 
-// ProvisionerType returns type of the Provisioner.
+// ProvisionerType returns type of the provisioner.
 func (provisioner *EKSProvisioner) ProvisionerType() string {
 	return EKSProvisionerType
 }
@@ -237,7 +240,7 @@ func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) e
 func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
 	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to prepare kubeconfig")
+		return "", errors.Wrap(err, "failed to prepare kube config")
 	}
 
 	return configLocation, nil
@@ -246,7 +249,7 @@ func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (st
 func (provisioner *EKSProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
 	configLocation, err := provisioner.getKubeConfigPath(cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kops config from cache")
+		return nil, errors.Wrap(err, "failed to get kube config")
 	}
 
 	var k8sClient *k8s.KubeClient

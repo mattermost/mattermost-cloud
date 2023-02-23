@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
@@ -29,6 +30,17 @@ type Provisioner struct {
 	logger         log.FieldLogger
 	kubeOption     ClusterProvisionerOption
 }
+
+var _ supervisor.ClusterInstallationProvisioner = (*Provisioner)(nil)
+var _ supervisor.InstallationProvisioner = (*Provisioner)(nil)
+var _ supervisor.BackupProvisioner = (*Provisioner)(nil)
+var _ supervisor.RestoreProvisioner = (*Provisioner)(nil)
+var _ supervisor.ImportProvisioner = (*Provisioner)(nil)
+var _ supervisor.DBMigrationCIProvisioner = (*Provisioner)(nil)
+
+var _ api.Provisioner = (*Provisioner)(nil)
+
+var _ kube = (*KopsProvisioner)(nil)
 
 func NewProvisioner(
 	kopsProvisioner *KopsProvisioner,

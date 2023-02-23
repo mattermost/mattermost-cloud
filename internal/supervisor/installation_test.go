@@ -6,7 +6,6 @@ package supervisor_test
 
 import (
 	"fmt"
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"math/rand"
 	"testing"
 
