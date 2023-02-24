@@ -380,7 +380,7 @@ func executeServerCmd(flags serverFlags) error {
 		logger.WithField("poll", flags.poll).Info("Scheduler is disabled")
 	}
 
-	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second)
+	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second, logger)
 	defer standardSupervisor.Close()
 
 	if flags.slowPoll == 0 {
@@ -389,7 +389,7 @@ func executeServerCmd(flags serverFlags) error {
 	if supervisorsEnabled.installationDeletionSupervisor {
 		var slowMultiDoer supervisor.MultiDoer
 		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, flags.installationDeletionPendingTime, flags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
-		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second)
+		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second, logger)
 		defer slowSupervisor.Close()
 	}
 
