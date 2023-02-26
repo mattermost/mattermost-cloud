@@ -7,11 +7,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -40,6 +42,7 @@ func newCmdInstallation() *cobra.Command {
 	cmd.AddCommand(newCmdInstallationShowStateReport())
 	cmd.AddCommand(newCmdInstallationRecovery())
 	cmd.AddCommand(newCmdInstallationDeploymentReport())
+	cmd.AddCommand(newCmdInstallationDeletionReport())
 	cmd.AddCommand(newCmdInstallationAnnotation())
 	cmd.AddCommand(newCmdInstallationBackup())
 	cmd.AddCommand(newCmdInstallationOperation())
@@ -836,6 +839,85 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 
 	fmt.Println(output)
 	return nil
+}
+
+func newCmdInstallationDeletionReport() *cobra.Command {
+	var flags clusterFlags
+
+	cmd := &cobra.Command{
+		Use:   "deletion-report",
+		Short: "Get a report of installation deletion pending times.",
+		RunE: func(command *cobra.Command, args []string) error {
+			command.SilenceUsage = true
+			return executeInstallationDeletionReportCmd(flags)
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			flags.addFlags(cmd)
+		},
+	}
+	flags.addFlags(cmd)
+
+	return cmd
+}
+
+func executeInstallationDeletionReportCmd(flags clusterFlags) error {
+	client := model.NewClient(flags.serverAddress)
+
+	installations, err := client.GetInstallations(&model.GetInstallationsRequest{
+		State:  model.InstallationStateDeletionPending,
+		Paging: model.AllPagesNotDeleted(),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to query installations")
+	}
+
+	// Prepare the time cutoffs for the report.
+	now := time.Now()
+	var report DeletionPendingReport
+	report.NewCutoff("Under 1 hour", now.Add(time.Hour))
+	report.NewCutoff("1-24 hours", now.Add(24*time.Hour))
+	report.NewCutoff("1-7 days", now.Add(24*7*time.Hour))
+	report.NewCutoff("7-30 days", now.Add(24*30*time.Hour))
+
+	for _, installation := range installations {
+		report.Count(installation.DeletionPendingExpiry)
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetHeader([]string{"TIME TO DELETION", "COUNT"})
+	for _, cutoff := range report {
+		table.Append([]string{cutoff.Name, toStr(cutoff.Count)})
+	}
+
+	table.Render()
+	return nil
+}
+
+type DeletionPendingReport []*DeletionPendingTimeCutoff
+
+func (dc *DeletionPendingReport) NewCutoff(name string, cutoffTime time.Time) {
+	*dc = append(*dc, &DeletionPendingTimeCutoff{
+		Name:         name,
+		CutoffTime:   cutoffTime,
+		CutoffMillis: model.GetMillisAtTime(cutoffTime),
+	})
+}
+
+func (dc *DeletionPendingReport) Count(millis int64) {
+	for _, cutoff := range *dc {
+		if cutoff.CutoffMillis > millis {
+			cutoff.Count++
+			return
+		}
+	}
+}
+
+type DeletionPendingTimeCutoff struct {
+	Name         string
+	Count        int
+	CutoffMillis int64
+	CutoffTime   time.Time
 }
 
 func hideMattermostLicense(installation *model.Installation) {
