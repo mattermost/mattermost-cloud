@@ -25,6 +25,7 @@ type nginx struct {
 	cluster        *model.Cluster
 	actualVersion  *model.HelmUtilityVersion
 	desiredVersion *model.HelmUtilityVersion
+	provisioner    string
 }
 
 func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*nginx, error) {
@@ -48,6 +49,7 @@ func newNginxHandle(version *model.HelmUtilityVersion, cluster *model.Cluster, k
 		logger:         logger.WithField("cluster-utility", model.NginxCanonicalName),
 		desiredVersion: version,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Nginx,
+		provisioner:    cluster.Provisioner,
 	}, nil
 
 }
@@ -138,13 +140,32 @@ func (n *nginx) NewHelmDeployment() (*helmDeployment, error) {
 		return nil, errors.New("retrieved certificate does not have ARN")
 	}
 
+	setArguments := []string{
+		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
+	}
+
+	if n.provisioner == model.ProvisionerEKS {
+		// Calico networking cannot currently be installed on the EKS control plane nodes.
+		// As a result the control plane nodes will not be able to initiate network connections to Calico pods.
+		// As a workaround, trusted pods that require control plane nodes to connect to them,
+		// such as those implementing admission controller webhooks, can include hostNetwork:true in their pod spec.
+		// See https://docs.tigera.io/calico/3.25/getting-started/kubernetes/managed-public-cloud/eks
+
+		// setArguments = append(setArguments, "controller.hostNetwork=true")
+
+		// hostNetwork can cause port conflict, that's why we need to use DaemonSet
+		// setArguments = append(setArguments, "controller.kind=DaemonSet")
+
+		setArguments = append(setArguments, "controller.admissionWebhooks.enabled=false")
+	}
+
 	return newHelmDeployment(
 		"ingress-nginx/ingress-nginx",
 		"nginx",
 		namespaceNginx,
 		n.kubeconfigPath,
 		n.desiredVersion,
-		fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN),
+		strings.Join(setArguments, ","),
 		n.logger,
 	), nil
 }

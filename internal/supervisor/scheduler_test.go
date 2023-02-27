@@ -9,17 +9,20 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestScheduler(t *testing.T) {
+	logger := testlib.MakeLogger(t)
+
 	t.Run("disabled", func(t *testing.T) {
 		t.Parallel()
 
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := supervisor.NewScheduler(doer, 0*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 0*time.Second, logger)
 		defer scheduler.Close()
 
 		scheduler.Do()
@@ -37,7 +40,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := supervisor.NewScheduler(doer, 100*time.Millisecond)
+		scheduler := supervisor.NewScheduler(doer, 100*time.Millisecond, logger)
 		defer scheduler.Close()
 
 		for i := 0; i < 5; i++ {
@@ -55,7 +58,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := supervisor.NewScheduler(doer, 30*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
 		defer scheduler.Close()
 
 		scheduler.Do()
@@ -73,7 +76,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool, 1),
 		}
-		scheduler := supervisor.NewScheduler(doer, 30*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
 		scheduler.Close()
 
 		scheduler.Do()
@@ -91,7 +94,7 @@ func TestScheduler(t *testing.T) {
 		doer := &testDoer{
 			calls: make(chan bool),
 		}
-		scheduler := supervisor.NewScheduler(doer, 30*time.Second)
+		scheduler := supervisor.NewScheduler(doer, 30*time.Second, logger)
 		defer scheduler.Close()
 
 		scheduler.Do()

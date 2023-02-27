@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	_ "github.com/golang/mock/mockgen/model"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

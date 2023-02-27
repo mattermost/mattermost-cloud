@@ -32,12 +32,12 @@ type Cluster struct {
 	ProvisionerMetadataEKS  *EKSMetadata
 	UtilityMetadata         *UtilityMetadata
 	AllowInstallations      bool
-	CreateAt                int64
-	DeleteAt                int64
+	Networking              string
 	APISecurityLock         bool
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
-	Networking              string
+	CreateAt                int64
+	DeleteAt                int64
 }
 
 // Clone returns a deep copy the cluster.
@@ -94,7 +94,8 @@ type AnnotationsFilter struct {
 	MatchAllIDs []string
 }
 
-var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|(latest))$`)
+// EKS only support x.xx versioning
+var clusterVersionMatcher = regexp.MustCompile(`^(([0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3})|([0-9]{1,3}.[0-9]{1,3})|(latest))$`)
 
 // ValidClusterVersion returns true if the provided version is either "latest"
 // or a valid k8s version number.

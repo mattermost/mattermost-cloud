@@ -76,7 +76,7 @@ func (r *rawCluster) toCluster() (*model.Cluster, error) {
 		return nil, err
 	}
 
-	if r.Provisioner == "eks" {
+	if r.Provisioner == model.ProvisionerEKS {
 		r.Cluster.ProvisionerMetadataEKS, err = model.NewEKSMetadata(r.ProvisionerMetadataRaw)
 		if err != nil {
 			return nil, err

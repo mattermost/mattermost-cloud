@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
@@ -20,17 +19,16 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 func provisionCluster(
 	cluster *model.Cluster,
-	kubeconfigPath string,
+	kubeConfigPath string,
 	awsClient aws.AWS,
 	params ProvisioningParams,
-	store model.InstallationDatabaseStoreInterface,
-	logger logrus.FieldLogger,
-) error {
+	store model.ClusterUtilityDatabaseStoreInterface,
+	logger logrus.FieldLogger) error {
+
 	// Start by gathering resources that will be needed later. If any of this
 	// fails then no cluster changes have been made which reduces risk.
 	deployPerseus := true
@@ -50,7 +48,7 @@ func provisionCluster(
 	}
 
 	// Begin deploying the mattermost operator.
-	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
+	k8sClient, err := k8s.NewFromFile(kubeConfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
@@ -69,19 +67,12 @@ func provisionCluster(
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
-	// Remove all previously-installed operator namespaces and resources.
-	mainCtx := context.TODO()
-	for _, namespace := range namespaces {
-		logger.Infof("Cleaning up namespace %s", namespace)
-		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(mainCtx, namespace, metav1.DeleteOptions{})
-		if k8sErrors.IsNotFound(err) {
-			logger.Infof("Namespace %s not found; skipping...", namespace)
-		} else if err != nil {
-			return errors.Wrapf(err, "failed to delete namespace %s", namespace)
-		}
+	err = k8sClient.DeleteNamespacesWithFinalizer(namespaces)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete namespacesß")
 	}
 
-	wait := 60
+	wait := 300
 	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
@@ -124,7 +115,6 @@ func provisionCluster(
 	} else if err != nil {
 		return errors.Wrap(err, "failed to delete DaemonSet k8s-spot-termination-handler")
 	}
-
 	// TODO: determine if we want to hard-code the k8s resource objects in code.
 	// For now, we will ingest manifest files to deploy the mattermost operator.
 	files := []k8s.ManifestFile{
@@ -159,7 +149,7 @@ func provisionCluster(
 	}
 
 	// Do not deploy calico if we use EKS
-	if cluster.ProvisionerMetadataEKS == nil {
+	if cluster.Provisioner == model.ProvisionerKops {
 		// Only deploy calico CNI at cluster creation time if networking option is calico
 		if cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
 			len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 &&
@@ -202,7 +192,19 @@ func provisionCluster(
 		})
 	}
 
-	err = k8sClient.CreateFromFiles(files)
+	var manifestFiles []k8s.ManifestFile
+	if cluster.Provisioner == model.ProvisionerEKS {
+		manifestFiles = append(manifestFiles, k8s.ManifestFile{
+			// some manifest requires 'kops-csi-1-21' storageClass
+			// which is not available by default in EKS
+			// TODO: we need separate manifest/helm for kops & eks
+			Path: "manifests/storageclass.yaml",
+		})
+	}
+
+	manifestFiles = append(manifestFiles, files...)
+
+	err = k8sClient.CreateFromFiles(manifestFiles)
 	if err != nil {
 		return err
 	}
@@ -362,7 +364,7 @@ func provisionCluster(
 		}
 	}
 
-	ugh, err := newUtilityGroupHandle(params, kubeconfigPath, cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(params, kubeConfigPath, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}
@@ -381,51 +383,6 @@ func provisionCluster(
 		}
 	}
 
-	logger.Info("Ensuring cluster SLOs are present")
-	if errInner := createOrUpdateClusterSLOs(cluster, k8sClient, params.SLOTargetAvailability, logger); errInner != nil {
-		return errors.Wrap(errInner, "failed to create cluster slos")
-	}
-
-	groups, err := store.GetGroupDTOs(&model.GroupFilter{
-		Paging: model.AllPagesNotDeleted(),
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to get groups to create slos")
-	}
-
-	groupIDs := make(map[string]struct{}, len(groups))
-
-	logger.Infof("Ensuring %d Ring SLOs are present", len(groups))
-	for _, group := range groups {
-		groupIDs[makeRingSLOName(group)] = struct{}{}
-		if errInner := createOrUpdateRingSLOs(group, k8sClient, params.SLOTargetAvailability, logger); errInner != nil {
-			return errors.Wrapf(errInner, "failed to apply ring slo: %s", group.ID)
-		}
-	}
-
-	// Get cluster prometheus service levels for rings and determine if any group has been deleted
-	// and delete the appropriate SLO as well.
-	logger.Info("Ensuring outdated ring SLOs are removed")
-
-	ctx, cancel = context.WithTimeout(mainCtx, 15*time.Second)
-	defer cancel()
-
-	psls, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(map[string]string{
-			slothServiceLevelTypeLabel: slothServiceLevelTypeRingValue,
-		}).String(),
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed listing current cluster slos")
-	}
-
-	for _, psl := range psls.Items {
-		if _, exist := groupIDs[psl.Name]; !exist {
-			if errInner := deletePrometheusServiceLevel(psl, k8sClient, logger); errInner != nil {
-				return errors.Wrapf(errInner, "failed deleting removed ring slo: %s", strings.ToLower(psl.Name))
-			}
-		}
-	}
 	// Sync PGBouncer configmap if there is any change
 	var vpc string
 	if cluster.ProvisionerMetadataKops != nil {

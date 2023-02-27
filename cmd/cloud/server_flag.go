@@ -68,7 +68,6 @@ func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 }
 
 type provisioningParams struct {
-	provisioner           string
 	s3StateStore          string
 	allowListCIDRRange    []string
 	sloInstallationGroups []string
@@ -87,7 +86,6 @@ type provisioningParams struct {
 }
 
 func (flags *provisioningParams) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.provisioner, "provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
 	command.Flags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.Flags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	command.Flags().StringSliceVar(&flags.sloInstallationGroups, "slo-installation-groups", []string{}, "The list of installation group ids to create dedicated SLOs for.")
@@ -202,8 +200,6 @@ type serverFlags struct {
 
 	poll     int
 	slowPoll int
-
-	sloTargetAvailability float64
 }
 
 func (flags *serverFlags) addFlags(command *cobra.Command) {
@@ -229,6 +225,4 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().IntVar(&flags.poll, "poll", 30, "The interval in seconds to poll for background work.")
 	command.Flags().IntVar(&flags.slowPoll, "slow-poll", 60, "The interval in seconds to poll for background work for supervisors that are not time sensitive (slow-poll supervisors).")
-
-	command.Flags().Float64Var(&flags.sloTargetAvailability, "slo-target-availability", 99.5, "The default SLOs availability when provisioning clusters")
 }

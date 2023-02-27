@@ -25,6 +25,6 @@ func TestNewKopsMetadata(t *testing.T) {
 	t.Run("valid payload", func(t *testing.T) {
 		eksMetadata, err := NewEKSMetadata([]byte(`{"ClusterRoleARN": "test"}`))
 		require.NoError(t, err)
-		require.Equal(t, "test", *eksMetadata.ClusterRoleARN)
+		require.Equal(t, "test", eksMetadata.ClusterRoleARN)
 	})
 }

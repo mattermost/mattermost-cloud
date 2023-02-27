@@ -29,24 +29,21 @@ type clusterStore interface {
 	GetStateChangeEvents(filter *model.StateChangeEventFilter) ([]*model.StateChangeEventData, error)
 }
 
-type ClusterProvisionerOption interface {
-	GetClusterProvisioner(provisioner string) ClusterProvisioner
-}
-
-func (p provisionerOption) GetClusterProvisioner(provisioner string) ClusterProvisioner {
-	return p.getProvisioner(provisioner)
-}
-
 // ClusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
 type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
+	CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
 	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
 	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
-	RefreshKopsMetadata(cluster *model.Cluster) error
+	RefreshClusterMetadata(cluster *model.Cluster) error
+}
+
+type ClusterProvisionerOption interface {
+	GetClusterProvisioner(provisioner string) ClusterProvisioner
 }
 
 // ClusterSupervisor finds clusters pending work and effects the required changes.
@@ -64,10 +61,10 @@ type ClusterSupervisor struct {
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, provisionerOpt ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, provisioner ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
-		provisioner:    provisionerOpt,
+		provisioner:    provisioner,
 		aws:            aws,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,
@@ -170,6 +167,10 @@ func (s *ClusterSupervisor) transitionCluster(cluster *model.Cluster, logger log
 		return s.createCluster(cluster, logger)
 	case model.ClusterStateCreationInProgress:
 		return s.checkClusterCreated(cluster, logger)
+	case model.ClusterStateWaitingForNodes:
+		return s.checkNodesCreated(cluster, logger)
+	case model.ClusterStateProvisionInProgress:
+		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateProvisioningRequested:
 		return s.provisionCluster(cluster, logger)
 	case model.ClusterStateUpgradeRequested:
@@ -247,14 +248,8 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 }
 
 func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logger log.FieldLogger) string {
-	if cluster.ProvisionerMetadataKops != nil {
-		cluster.ProvisionerMetadataKops.ApplyChangeRequest()
-		cluster.ProvisionerMetadataKops.ClearChangeRequest()
-		cluster.ProvisionerMetadataKops.ClearRotatorRequest()
-		cluster.ProvisionerMetadataKops.ClearWarnings()
-	}
 
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).RefreshKopsMetadata(cluster)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).RefreshClusterMetadata(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to refresh cluster")
 		return model.ClusterStateRefreshMetadata
@@ -300,7 +295,21 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 		return model.ClusterStateCreationInProgress
 	}
 
-	return s.provisionCluster(cluster, logger)
+	return s.checkNodesCreated(cluster, logger)
+}
+
+func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
+	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to check if node creation finished")
+		return model.ClusterStateCreationFailed
+	}
+	if !ready {
+		logger.Info("Cluster nodes are not ready yet")
+		return model.ClusterStateWaitingForNodes
+	}
+
+	return model.ClusterStateProvisionInProgress
 }
 
 func (s *ClusterSupervisor) processClusterMetrics(cluster *model.Cluster, logger log.FieldLogger) error {

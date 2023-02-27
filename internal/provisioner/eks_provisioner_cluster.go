@@ -5,20 +5,23 @@
 package provisioner
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/aws/smithy-go/ptr"
+	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"os"
 )
 
 // EKSProvisionerType is provisioner type for EKS clusters.
@@ -30,40 +33,28 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	logger             log.FieldLogger
-	store              model.InstallationDatabaseStoreInterface
+	params             ProvisioningParams
+	awsClient          aws.AWS
 	clusterUpdateStore clusterUpdateStore
-
-	awsClient aws.AWS
-
-	params            ProvisioningParams
-	commonProvisioner *CommonProvisioner
+	store              model.InstallationDatabaseStoreInterface
+	logger             log.FieldLogger
 }
 
-// ClusterInstallationProvisioner returns ClusterInstallationProvisioner based on EKS provisioner.
-func (provisioner *EKSProvisioner) ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner {
-	return provisioner
-}
+var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
-	store model.InstallationDatabaseStoreInterface,
-	clusterUpdateStore clusterUpdateStore,
 	params ProvisioningParams,
-	resourceUtil *utils.ResourceUtil,
 	awsClient aws.AWS,
-	logger log.FieldLogger) *EKSProvisioner {
+	store *store.SQLStore,
+	logger log.FieldLogger,
+) *EKSProvisioner {
 	return &EKSProvisioner{
-		logger:             logger,
-		store:              store,
-		clusterUpdateStore: clusterUpdateStore,
-		awsClient:          awsClient,
 		params:             params,
-		commonProvisioner: &CommonProvisioner{
-			resourceUtil: resourceUtil,
-			store:        store,
-			params:       params,
-		},
+		awsClient:          awsClient,
+		clusterUpdateStore: store,
+		store:              store,
+		logger:             logger,
 	}
 }
 
@@ -74,7 +65,15 @@ func (provisioner *EKSProvisioner) ProvisionerType() string {
 
 // PrepareCluster is noop for EKSProvisioner.
 func (provisioner *EKSProvisioner) PrepareCluster(cluster *model.Cluster) bool {
-	return false
+	// Don't regenerate the name if already set.
+	if cluster.ProvisionerMetadataEKS.Name != "" {
+		return false
+	}
+
+	// Generate the kops name using the cluster id.
+	cluster.ProvisionerMetadataEKS.Name = fmt.Sprintf("%s-eks.k8s.local", cluster.ID)
+
+	return true
 }
 
 // CreateCluster creates the EKS cluster.
@@ -86,22 +85,49 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 		return errors.New("error: EKS metadata not set when creating EKS cluster")
 	}
 
-	var clusterResources aws.ClusterResources
-	var err error
-	if eksMetadata.VPC != "" {
-		clusterResources, err = awsClient.ClaimVPC(eksMetadata.VPC, cluster, provisioner.params.Owner, logger)
+	err := eksMetadata.ValidateChangeRequest()
+	if err != nil {
+		return errors.Wrap(err, "EKS Metadata ChangeRequest failed validation")
+	}
+
+	if eksMetadata.ChangeRequest.AMI != "" && eksMetadata.ChangeRequest.AMI != "latest" {
+		var isAMIValid bool
+		isAMIValid, err = awsClient.IsValidAMI(eksMetadata.ChangeRequest.AMI, logger)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", eksMetadata.ChangeRequest.AMI)
 		}
-	} else {
+		if !isAMIValid {
+			return errors.Errorf("invalid AWS AMI image %s", eksMetadata.ChangeRequest.AMI)
+		}
+	}
+
+	// TODO: Add cncVPCCIDR
+
+	var clusterResources aws.ClusterResources
+	if eksMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
+		clusterResources, err = awsClient.ClaimVPC(eksMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
+		if err != nil {
+			return errors.Wrap(err, "couldn't claim VPC")
+		}
+	} else if provisioner.params.UseExistingAWSResources {
 		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
 	}
 
+	_, err = awsClient.EnsureEKSCluster(cluster, clusterResources)
+	if err != nil {
+		releaseErr := awsClient.ReleaseVpc(cluster, logger)
+		if releaseErr != nil {
+			logger.WithError(releaseErr).Error("Unable to release VPC")
+		}
+
+		return errors.Wrap(err, "unable to create eks cluster")
+	}
+
 	// Update cluster to set VPC ID that is needed later.
-	cluster.ProvisionerMetadataEKS.VPC = clusterResources.VpcID
+	cluster.ProvisionerMetadataEKS.ChangeRequest.VPC = clusterResources.VpcID
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
 		releaseErr := awsClient.ReleaseVpc(cluster, logger)
@@ -109,11 +135,6 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 			logger.WithError(releaseErr).Error("Failed to release VPC after failed update")
 		}
 		return errors.Wrap(err, "failed to update EKS metadata with VPC ID")
-	}
-
-	_, err = awsClient.EnsureEKSCluster(cluster, clusterResources, *eksMetadata)
-	if err != nil {
-		return errors.Wrap(err, "failed to ensure EKS cluster exists")
 	}
 
 	return nil
@@ -127,34 +148,87 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, errors.New("expected EKS metadata not to be nil")
 	}
 
-	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get VPC resources")
-	}
+	eksMetadata := cluster.ProvisionerMetadataEKS
 
-	ready, err := awsClient.IsClusterReady(cluster.ID)
+	eksCluster, err := awsClient.GetReadyCluster(eksMetadata.Name)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check if EKS cluster is ready")
 	}
-	if !ready {
+	if eksCluster == nil {
 		logger.Info("EKS cluster not ready")
 		return false, nil
 	}
 
-	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, clusterResources, *cluster.ProvisionerMetadataEKS)
+	if eksCluster.Version != nil {
+		eksMetadata.ChangeRequest.Version = *eksCluster.Version
+	}
+
+	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
+	launchTemplateVersion, err := awsClient.EnsureLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
 	if err != nil {
+		return false, errors.Wrap(err, "failed to ensure launch template")
+	}
+	eksMetadata.ChangeRequest.LaunchTemplateVersion = launchTemplateVersion
+
+	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to store cluster")
+	}
+
+	// To install Calico Networking, We need to delete VPC CNI plugin (aws-node)
+	// and install Calico CNI plugin before creating any pods
+	k8sClient, err := provisioner.getKubeClient(cluster)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
+	}
+
+	// Delete aws-node daemonset to disable VPC CNI plugin
+	_ = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(context.Background(), "aws-node", metav1.DeleteOptions{})
+
+	var files []k8s.ManifestFile
+	files = append(files, k8s.ManifestFile{
+		Path:            "manifests/eks/calico-eks.yaml",
+		DeployNamespace: "kube-system",
+	})
+
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// CheckNodesCreated provisions EKS cluster.
+func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+
+	nodeGroup, err := awsClient.EnsureEKSClusterNodeGroups(cluster)
+	if err != nil || nodeGroup == nil {
 		return false, errors.Wrap(err, "failed to ensure node groups created")
 	}
 
-	for _, ng := range nodeGroups {
-		if ng.Status == eksTypes.NodegroupStatusCreateFailed {
-			return false, errors.Errorf("failed to check node group ready %q", *ng.NodegroupName)
-		}
+	if nodeGroup.Status == eksTypes.NodegroupStatusCreateFailed {
+		return false, errors.New("node group creation failed")
+	}
 
-		if ng.Status != eksTypes.NodegroupStatusActive {
-			logger.WithField("node=group", *ng.NodegroupName).Info("Node group not yet ready")
-			return false, nil
-		}
+	if nodeGroup.Status != eksTypes.NodegroupStatusActive {
+		logger.WithField("node=group", *nodeGroup.NodegroupName).Info("Node group not yet ready")
+		return false, nil
+	}
+
+	eksMetadata.NodeInstanceGroups[*nodeGroup.NodegroupName] = model.EKSInstanceGroupMetadata{
+		NodeInstanceType: nodeGroup.InstanceTypes[0],
+		NodeMinCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MinSize)),
+		NodeMaxCount:     int64(ptr.ToInt32(nodeGroup.ScalingConfig.MaxSize)),
+	}
+	eksMetadata.NodeRoleARN = *nodeGroup.NodegroupArn
+
+	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to store cluster")
 	}
 
 	return true, nil
@@ -181,16 +255,61 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 		return errors.Wrap(err, "failed to create ingress rule to allow Postgres traffic")
 	}
 
-	kubeconfigFile, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	kubeConfigPath, err := provisioner.getKubeConfigPath(cluster)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare kubeconfig file")
+		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	return provisionCluster(cluster, kubeconfigFile, awsClient, provisioner.params, provisioner.store, logger)
+	return provisionCluster(cluster, kubeConfigPath, awsClient, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades EKS cluster - not implemented.
 func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+	changeRequest := eksMetadata.ChangeRequest
+
+	err := eksMetadata.ValidateChangeRequest()
+	if err != nil {
+		return errors.Wrap(err, "eks Metadata ChangeRequest failed validation")
+	}
+
+	if changeRequest.AMI != "" && changeRequest.AMI != "latest" {
+		var isAMIValid bool
+		isAMIValid, err = awsClient.IsValidAMI(eksMetadata.ChangeRequest.AMI, logger)
+		if err != nil {
+			return errors.Wrapf(err, "error checking the AWS AMI image %s", eksMetadata.ChangeRequest.AMI)
+		}
+		if !isAMIValid {
+			return errors.Errorf("invalid AWS AMI image %s", eksMetadata.ChangeRequest.AMI)
+		}
+	}
+
+	if changeRequest.AMI != "" || changeRequest.MaxPodsPerNode > 0 {
+		// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
+		launchTemplateVersion, err := awsClient.UpdateLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
+		if err != nil {
+			return errors.Wrap(err, "failed to update launch template")
+		}
+		changeRequest.LaunchTemplateVersion = launchTemplateVersion
+	}
+
+	if changeRequest.LaunchTemplateVersion != nil || changeRequest.Version != "" {
+		// Update node group
+		_, err = awsClient.EnsureEKSClusterNodeGroupUpdated(cluster)
+		if err != nil {
+			return errors.Wrap(err, "failed to update node groups")
+		}
+	}
+
+	wait := 1000
+	logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
+	err = awsClient.WaitForNodeGroupReadiness(eksMetadata.Name, wait)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -207,6 +326,30 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster, awsClie
 // RefreshKopsMetadata is a noop for EKSProvisioner.
 func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) error {
 	return nil
+}
+
+func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
+	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to prepare kube config")
+	}
+
+	return configLocation, nil
+}
+
+func (provisioner *EKSProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	configLocation, err := provisioner.getKubeConfigPath(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube config")
+	}
+
+	var k8sClient *k8s.KubeClient
+	k8sClient, err = k8s.NewFromFile(configLocation, provisioner.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient, nil
 }
 
 // DeleteCluster deletes EKS cluster.
@@ -228,6 +371,14 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 	deleted, err := awsClient.EnsureNodeGroupsDeleted(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete node groups")
+	}
+	if !deleted {
+		return false, nil
+	}
+
+	deleted, err = awsClient.EnsureLaunchTemplateDeleted(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to delete launch template")
 	}
 	if !deleted {
 		return false, nil
@@ -279,36 +430,39 @@ func (provisioner *EKSProvisioner) GetPublicLoadBalancerEndpoint(cluster *model.
 }
 
 func (provisioner *EKSProvisioner) prepareClusterKubeconfig(clusterID string) (string, error) {
-	eksCluster, err := provisioner.awsClient.GetEKSCluster(clusterID)
+	eksCluster, err := provisioner.awsClient.GetReadyCluster(clusterID)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get eks cluster")
 	}
+	if eksCluster == nil {
+		return "", errors.New("eks cluster not ready")
+	}
 
-	kubeconfig, err := NewEKSKubeconfig(eksCluster, provisioner.awsClient)
+	kubeConfig, err := newEKSKubeconfig(eksCluster, provisioner.awsClient)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create kubeconfig")
 	}
 
-	kubconfFile, err := os.CreateTemp("", clusterID)
+	kubeConfigFile, err := os.CreateTemp("", clusterID)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create kubeconfig tempfile")
 	}
-	defer kubconfFile.Close()
+	defer kubeConfigFile.Close()
 
-	rawKubeconfig, err := clientcmd.Write(kubeconfig)
+	rawKubeconfig, err := clientcmd.Write(kubeConfig)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to serialize kubeconfig")
 	}
-	_, err = kubconfFile.Write(rawKubeconfig)
+	_, err = kubeConfigFile.Write(rawKubeconfig)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to write kubeconfig")
 	}
 
-	return kubconfFile.Name(), nil
+	return kubeConfigFile.Name(), nil
 }
 
-// NewEKSKubeconfig creates kubeconfig for EKS cluster.
-func NewEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Config, error) {
+// newEKSKubeconfig creates kubeconfig for EKS cluster.
+func newEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Config, error) {
 	region := aws.GetRegion()
 	accountID, err := aws.GetAccountID()
 	if err != nil {
@@ -346,9 +500,18 @@ func NewEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Conf
 				Exec: &clientcmdapi.ExecConfig{
 					Command:    "aws",
 					Args:       []string{"--region", region, "eks", "get-token", "--cluster-name", *cluster.Name},
-					APIVersion: "client.authentication.k8s.io/v1alpha1",
+					APIVersion: "client.authentication.k8s.io/v1beta1",
 				},
 			},
 		},
 	}, nil
+}
+
+func (provisioner *EKSProvisioner) RefreshClusterMetadata(cluster *model.Cluster) error {
+	if cluster.ProvisionerMetadataEKS != nil {
+		cluster.ProvisionerMetadataEKS.ApplyChangeRequest()
+		cluster.ProvisionerMetadataEKS.ClearChangeRequest()
+		cluster.ProvisionerMetadataEKS.ClearWarnings()
+	}
+	return nil
 }

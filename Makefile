@@ -181,8 +181,8 @@ install: build
 
 # Generate mocks from the interfaces.
 .PHONY: mocks
-mocks:  $(MOCKGEN)
-	go generate ./internal/mocks/...
+mocks: $(MOCKGEN)
+	go generate --mod=mod ./internal/mocks/...
 
 .PHONY: code-gen
 code-gen:
@@ -194,7 +194,7 @@ code-gen:
 .PHONY: check-modules
 check-modules: $(OUTDATED_GEN) ## Check outdated modules
 	@echo Checking outdated modules
-	$(GO) list -u -m -json all | $(OUTDATED_GEN) -update -direct
+	$(GO) list -mod=mod -u -m -json all | $(OUTDATED_GEN) -update -direct
 
 .PHONY: goverall
 goverall: $(GOVERALLS_GEN) ## Runs goveralls
@@ -202,10 +202,10 @@ goverall: $(GOVERALLS_GEN) ## Runs goveralls
 
 .PHONY: unittest
 unittest:
-	$(GO) test ./... -v -covermode=count -coverprofile=coverage.out
+	$(GO) test -failfast ./... -v -covermode=count -coverprofile=coverage.out
 
 .PHONY: verify-mocks
-verify-mocks:  $(MOCKGEN) mocks
+verify-mocks: mocks
 	@if !(git diff --quiet HEAD); then \
 		echo "generated files are out of date, run make mocks"; exit 1; \
 	fi
@@ -230,7 +230,7 @@ e2e-db-migration:
 .PHONY: e2e-cluster
 e2e-cluster:
 	@echo Starting cluster e2e test.
-	go test ./e2e/tests/cluster -tags=e2e -v -timeout 60m
+	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m
 
 ## --------------------------------------
 ## Tooling Binaries

@@ -78,13 +78,18 @@ type AWS interface {
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 
-	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error)
-	EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error)
-	GetEKSCluster(clusterName string) (*eksTypes.Cluster, error)
-	IsClusterReady(clusterName string) (bool, error)
+	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
+	EnsureEKSClusterNodeGroups(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
+	EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
+	GetReadyCluster(clusterName string) (*eksTypes.Cluster, error)
 	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
 	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
 	InstallEKSEBSAddon(cluster *model.Cluster) error
+	WaitForNodeGroupReadiness(clusterName string, timeout int) error
+
+	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
+	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
+	EnsureLaunchTemplateDeleted(clusterName string) (bool, error)
 
 	AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
 	RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error

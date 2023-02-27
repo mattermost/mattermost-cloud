@@ -6,6 +6,8 @@ package supervisor
 
 import (
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Scheduler schedules a doer for periodic, serial execution.
@@ -15,19 +17,21 @@ type Scheduler struct {
 	notify chan bool
 	stop   chan bool
 	done   chan bool
+	logger logrus.FieldLogger
 }
 
 // NewScheduler creates a new scheduler.
 //
 // If the period is zero, the scheduler is never run, even if manually run. Otherwise, the period
 // specifies how long to wait after its last successful execution.
-func NewScheduler(doer Doer, period time.Duration) *Scheduler {
+func NewScheduler(doer Doer, period time.Duration, logger logrus.FieldLogger) *Scheduler {
 	s := &Scheduler{
 		doer:   doer,
 		period: period,
 		notify: make(chan bool, 1),
 		stop:   make(chan bool),
 		done:   make(chan bool),
+		logger: logger,
 	}
 
 	go s.run()
@@ -62,9 +66,13 @@ func (s *Scheduler) run() {
 
 		select {
 		case <-poll:
-			_ = s.doer.Do()
+			if err := s.doer.Do(); err != nil {
+				s.logger.WithError(err).Error("error running doer")
+			}
 		case <-notify:
-			_ = s.doer.Do()
+			if err := s.doer.Do(); err != nil {
+				s.logger.WithError(err).Error("error running doer")
+			}
 		case <-s.stop:
 			s.doer.Shutdown()
 			close(s.done)

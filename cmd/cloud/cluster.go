@@ -106,29 +106,25 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 	request := &model.CreateClusterRequest{
 		Provider:               flags.provider,
 		Version:                flags.version,
-		KopsAMI:                flags.kopsAMI,
+		AMI:                    flags.kopsAMI,
 		Zones:                  strings.Split(flags.zones, ","),
 		AllowInstallations:     flags.allowInstallations,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
 		Annotations:            flags.annotations,
 		Networking:             flags.networking,
 		VPC:                    flags.vpc,
+		Provisioner:            model.ProvisionerKops,
+	}
+	// "kops-ami" flag is deprecated. Flag "ami" will override
+	if flags.ami != "" {
+		request.AMI = flags.ami
 	}
 
 	if flags.useEKS {
-		nodeGroupsConfigRaw, err := os.ReadFile(flags.eksNodeGroupsConfig)
-		if err != nil {
-			return errors.Wrap(err, "failed to read node groups config")
-		}
-		var nodeGroupsConfig model.EKSNodeGroups
-		err = json.Unmarshal(nodeGroupsConfigRaw, &nodeGroupsConfig)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal node groups config")
-		}
-		request.EKSConfig = &model.EKSConfig{
-			ClusterRoleARN: &flags.eksRoleArn,
-			NodeGroups:     nodeGroupsConfig,
-		}
+		request.Provisioner = model.ProvisionerEKS
+		request.ClusterRoleARN = flags.clusterRoleARN
+		request.NodeRoleARN = flags.nodeRoleARN
+
 	}
 
 	err := clusterdictionary.ApplyToCreateClusterRequest(flags.size, request)
@@ -297,8 +293,13 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 		request.Version = &flags.version
 	}
 	if flags.isKopsAmiChanged {
-		request.KopsAMI = &flags.kopsAMI
+		request.AMI = &flags.kopsAMI
 	}
+
+	if flags.isAmiChanged {
+		request.AMI = &flags.ami
+	}
+
 	if flags.isMaxPodsPerNodeChanged {
 		request.MaxPodsPerNode = &flags.maxPodsPerNode
 	}
@@ -520,6 +521,10 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		if cluster.AllowInstallations {
 			status = "online"
 		}
+		if cluster.ProvisionerMetadataKops == nil {
+			cluster.ProvisionerMetadataKops = &model.KopsMetadata{}
+		}
+
 		values = append(values, []string{
 			cluster.ID,
 			cluster.State,

@@ -6,37 +6,52 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/aws/smithy-go/ptr"
+	"github.com/mattermost/mattermost-cloud/internal/common"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 )
 
-// CreateEKSCluster creates EKS cluster.
-func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
+// createEKSCluster creates EKS cluster.
+func (c *Client) createEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error) {
 	ctx := context.TODO()
 
 	// TODO: we do not expect to query that many subnets but for safety
 	// we can check the NextToken.
-	subnetsOut, err := a.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+	subnetsOut, err := c.Service().ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+		// TODO: is it public/private
 		SubnetIds: resources.PublicSubnetsIDs,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to describe subnets")
 	}
 
-	subnetsIDs := []string{}
+	var zones []string
+	if cluster.ProviderMetadataAWS != nil {
+		zones = cluster.ProviderMetadataAWS.Zones
+	}
+	var subnetsIDs []string
 	for _, sub := range subnetsOut.Subnets {
-		// TODO: for some reason it is not possible to creates EKS in this zone
+		// us-east-1e does not currently have sufficient capacity to support the cluster
 		if *sub.AvailabilityZone == "us-east-1e" {
 			continue
 		}
-		subnetsIDs = append(subnetsIDs, *sub.SubnetId)
+		if len(zones) > 0 {
+			if common.Contains(zones, *sub.AvailabilityZone) {
+				subnetsIDs = append(subnetsIDs, *sub.SubnetId)
+			}
+		} else {
+			subnetsIDs = append(subnetsIDs, *sub.SubnetId)
+		}
 	}
 
 	vpcConfig := eksTypes.VpcConfigRequest{
@@ -46,15 +61,18 @@ func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResou
 		SubnetIds:             subnetsIDs,
 	}
 
+	eksMetadata := cluster.ProvisionerMetadataEKS
 	// TODO: we can allow further parametrization in the future
 	input := eks.CreateClusterInput{
 		Name:               aws.String(cluster.ID),
 		ResourcesVpcConfig: &vpcConfig,
-		RoleArn:            eksMetadata.ClusterRoleARN,
-		Version:            eksMetadata.KubernetesVersion,
+		RoleArn:            &eksMetadata.ChangeRequest.ClusterRoleARN,
+	}
+	if eksMetadata.ChangeRequest.Version != "" {
+		input.Version = &eksMetadata.ChangeRequest.Version
 	}
 
-	out, err := a.Service().eks.CreateCluster(ctx, &input)
+	out, err := c.Service().eks.CreateCluster(ctx, &input)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create EKS cluster")
 	}
@@ -63,12 +81,12 @@ func (a *Client) CreateEKSCluster(cluster *model.Cluster, resources ClusterResou
 }
 
 // InstallEKSEBSAddon installs EKS EBS addon to the existing cluster.
-func (a *Client) InstallEKSEBSAddon(cluster *model.Cluster) error {
+func (c *Client) InstallEKSEBSAddon(cluster *model.Cluster) error {
 	input := eks.CreateAddonInput{
 		AddonName:   aws.String("aws-ebs-csi-driver"),
 		ClusterName: aws.String(cluster.ID),
 	}
-	_, err := a.Service().eks.CreateAddon(context.TODO(), &input)
+	_, err := c.Service().eks.CreateAddon(context.TODO(), &input)
 	if err != nil {
 		// In case addon already configured we do not want to fail.
 		if IsErrorResourceInUseException(err) {
@@ -81,46 +99,43 @@ func (a *Client) InstallEKSEBSAddon(cluster *model.Cluster) error {
 }
 
 // EnsureEKSCluster ensures EKS cluster is created.
-func (a *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
-	input := eks.DescribeClusterInput{
-		Name: aws.String(cluster.ID),
-	}
-
-	out, err := a.Service().eks.DescribeCluster(context.TODO(), &input)
+func (c *Client) EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error) {
+	clusterName := cluster.ProvisionerMetadataEKS.Name
+	eksCluster, err := c.describeCluster(clusterName)
 	if err != nil {
-		if IsErrorResourceNotFound(err) {
-			return a.CreateEKSCluster(cluster, resources, eksMetadata)
-		}
-		return nil, errors.Wrap(err, "failed to check if EKS cluster exists")
+		return nil, err
 	}
 
-	return out.Cluster, nil
+	if eksCluster != nil {
+		return eksCluster, nil
+	}
+	return c.createEKSCluster(cluster, resources)
 }
 
 // AllowEKSPostgresTraffic allows traffic to Postgres from EKS Security
 // Group.
-func (a *Client) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+func (c *Client) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
 	input := eks.DescribeClusterInput{
 		Name: aws.String(cluster.ID),
 	}
-	out, err := a.Service().eks.DescribeCluster(context.TODO(), &input)
+	out, err := c.Service().eks.DescribeCluster(context.TODO(), &input)
 	if err != nil {
 		return errors.Wrap(err, "failed to describe EKS cluster")
 	}
 
-	postgresSG, err := a.getPostgresSecurityGroup(eksMetadata.VPC)
+	postgresSG, err := c.getPostgresSecurityGroup(eksMetadata.ChangeRequest.VPC)
 	if err != nil {
 		return errors.Wrap(err, "failed to get Postgres security group for VPC")
 	}
 
-	ipPermissions, err := a.getEKSPostgresIPPermissions(out.Cluster)
+	ipPermissions, err := c.getEKSPostgresIPPermissions(out.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get EKS Postgres IP permissions")
 	}
 
 	ctx := context.TODO()
 
-	_, err = a.Service().ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
+	_, err = c.Service().ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId:       postgresSG.GroupId,
 		IpPermissions: ipPermissions,
 	})
@@ -136,9 +151,9 @@ func (a *Client) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mod
 
 // RevokeEKSPostgresTraffic revokes Postgres traffic permission from EKS
 // Security Group.
-func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+func (c *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
 	ctx := context.TODO()
-	postgresSG, err := a.getPostgresSecurityGroup(eksMetadata.VPC)
+	postgresSG, err := c.getPostgresSecurityGroup(eksMetadata.ChangeRequest.VPC)
 	if err != nil {
 		return errors.Wrap(err, "failed to get Postgres security group for VPC")
 	}
@@ -146,7 +161,7 @@ func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mo
 	input := eks.DescribeClusterInput{
 		Name: aws.String(cluster.ID),
 	}
-	out, err := a.Service().eks.DescribeCluster(ctx, &input)
+	out, err := c.Service().eks.DescribeCluster(ctx, &input)
 	if err != nil {
 		if IsErrorResourceNotFound(err) {
 			return nil
@@ -154,12 +169,12 @@ func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mo
 		return errors.Wrap(err, "failed to describe EKS cluster")
 	}
 
-	ipPermissions, err := a.getEKSPostgresIPPermissions(out.Cluster)
+	ipPermissions, err := c.getEKSPostgresIPPermissions(out.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get EKS Postgres IP permissions")
 	}
 
-	_, err = a.Service().ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
+	_, err = c.Service().ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
 		GroupId:       postgresSG.GroupId,
 		IpPermissions: ipPermissions,
 	})
@@ -172,10 +187,10 @@ func (a *Client) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata mo
 	return nil
 }
 
-func (a *Client) getPostgresSecurityGroup(vpcID string) (ec2Types.SecurityGroup, error) {
+func (c *Client) getPostgresSecurityGroup(vpcID string) (ec2Types.SecurityGroup, error) {
 	ctx := context.TODO()
 	var postgresSG ec2Types.SecurityGroup
-	securityGroupsResp, err := a.Service().ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+	securityGroupsResp, err := c.Service().ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
 		DryRun: nil,
 		Filters: []ec2Types.Filter{
 			{Name: aws.String("vpc-id"), Values: []string{vpcID}},
@@ -199,7 +214,7 @@ func (a *Client) getPostgresSecurityGroup(vpcID string) (ec2Types.SecurityGroup,
 	return postgresSG, nil
 }
 
-func (a *Client) getEKSPostgresIPPermissions(cluster *eksTypes.Cluster) ([]ec2Types.IpPermission, error) {
+func (c *Client) getEKSPostgresIPPermissions(cluster *eksTypes.Cluster) ([]ec2Types.IpPermission, error) {
 	eksSecurityGroup := cluster.ResourcesVpcConfig.ClusterSecurityGroupId
 
 	return []ec2Types.IpPermission{{
@@ -212,91 +227,182 @@ func (a *Client) getEKSPostgresIPPermissions(cluster *eksTypes.Cluster) ([]ec2Ty
 	}}, nil
 }
 
-// EnsureEKSClusterNodeGroups ensures EKS cluster node groups are created.
-func (a *Client) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
-	return a.CreateNodeGroups(cluster.ID, resources, eksMetadata)
-}
+func (c *Client) createEKSClusterNodeGroup(clusterName string, eksMetadata *model.EKSMetadata) (*eksTypes.Nodegroup, error) {
 
-// CreateNodeGroups creates node groups for EKS cluster.
-func (a *Client) CreateNodeGroups(clusterName string, resources ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
-	ctx := context.TODO()
-
-	// If more node groups exist than we expect, this function will not
-	// delete them, nor return them.
-	existingNgs, err := a.listNodeGroups(ctx, clusterName)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list existing node groups")
+	changeRequest := eksMetadata.ChangeRequest
+	if changeRequest == nil {
+		return nil, errors.New("change request is nil")
 	}
 
-	allNodeGroups := make([]*eksTypes.Nodegroup, 0, len(eksMetadata.EKSNodeGroups))
+	clusterResource, err := c.GetVpcResourcesByVpcID(eksMetadata.ChangeRequest.VPC, c.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get VPC resources")
+	}
 
-	for ngName, ngCfg := range eksMetadata.EKSNodeGroups {
-		// If given node group already exist, just return it
-		foundExisting := false
-		for _, existingNg := range existingNgs {
-			if *existingNg.NodegroupName == ngName {
-				// TODO: theoretically the node group config could change
-				// so we probably should update here.
-				allNodeGroups = append(allNodeGroups, existingNg)
-				foundExisting = true
-				break
+	launchTemplate := getLaunchTemplateName(clusterName)
+
+	nodeGroupReq := eks.CreateNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		InstanceTypes: []string{changeRequest.NodeInstanceType},
+		NodeRole:      &changeRequest.NodeRoleARN,
+		NodegroupName: aws.String("worker"),
+		AmiType:       eksTypes.AMITypesCustom,
+		ScalingConfig: &eksTypes.NodegroupScalingConfig{
+			DesiredSize: ptr.Int32(int32(changeRequest.NodeMinCount)),
+			MaxSize:     ptr.Int32(int32(changeRequest.NodeMaxCount)),
+			MinSize:     ptr.Int32(int32(changeRequest.NodeMinCount)),
+		},
+		Subnets: clusterResource.PrivateSubnetIDs,
+		LaunchTemplate: &eksTypes.LaunchTemplateSpecification{
+			Name:    aws.String(launchTemplate),
+			Version: aws.String(fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)),
+		},
+		Tags: map[string]string{
+			fmt.Sprintf("kubernetes.io/cluster/%s", clusterName): "owned",
+		},
+	}
+
+	out, err := c.Service().eks.CreateNodegroup(context.TODO(), &nodeGroupReq)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create one of the node groups")
+	}
+
+	return out.Nodegroup, nil
+}
+
+// EnsureEKSClusterNodeGroups ensures EKS cluster node groups are created.
+func (c *Client) EnsureEKSClusterNodeGroups(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+
+	clusterName := cluster.ProvisionerMetadataEKS.Name
+	existingNodeGroup, err := c.describeNodeGroup(clusterName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get existing node group")
+	}
+
+	if existingNodeGroup != nil {
+		return existingNodeGroup, nil
+	}
+
+	return c.createEKSClusterNodeGroup(clusterName, cluster.ProvisionerMetadataEKS)
+}
+
+// EnsureEKSClusterNodeGroupUpdated updates EKS cluster node group.
+func (c *Client) EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+	eksMetadata := cluster.ProvisionerMetadataEKS
+	changeRequest := eksMetadata.ChangeRequest
+	clusterName := eksMetadata.Name
+
+	if eksMetadata.ChangeRequest == nil {
+		return nil, errors.New("change request is nil")
+	}
+
+	nodeGroup, err := c.describeNodeGroup(clusterName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to describe node group")
+	}
+
+	if nodeGroup == nil {
+		return c.createEKSClusterNodeGroup(clusterName, eksMetadata)
+	}
+
+	if nodeGroup.Status != eksTypes.NodegroupStatusActive {
+		return nodeGroup, nil
+	}
+
+	updateRequest := &eks.UpdateNodegroupVersionInput{
+		ClusterName:   aws.String(clusterName),
+		NodegroupName: aws.String("worker"),
+	}
+
+	isUpdateRequired := false
+
+	if changeRequest.Version != "" {
+		if nodeGroup.Version != nil && *nodeGroup.Version != changeRequest.Version {
+			isUpdateRequired = true
+			updateRequest.Version = aws.String(changeRequest.Version)
+		}
+	}
+
+	if changeRequest.LaunchTemplateVersion != nil {
+		if nodeGroup.LaunchTemplate != nil && nodeGroup.LaunchTemplate.Version != nil &&
+			*nodeGroup.LaunchTemplate.Version != fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion) {
+			isUpdateRequired = true
+			updateRequest.LaunchTemplate = &eksTypes.LaunchTemplateSpecification{
+				Name:    aws.String(getLaunchTemplateName(clusterName)),
+				Version: aws.String(fmt.Sprintf("%d", *changeRequest.LaunchTemplateVersion)),
 			}
 		}
-		if foundExisting {
-			continue
-		}
-
-		nodeGroupReq := eks.CreateNodegroupInput{
-			ClusterName:    aws.String(clusterName),
-			InstanceTypes:  ngCfg.InstanceTypes,
-			NodeRole:       ngCfg.RoleARN,
-			NodegroupName:  aws.String(ngName),
-			ReleaseVersion: ngCfg.AMIVersion,
-			ScalingConfig: &eksTypes.NodegroupScalingConfig{
-				DesiredSize: ngCfg.DesiredSize,
-				MaxSize:     ngCfg.MaxSize,
-				MinSize:     ngCfg.MinSize,
-			},
-			Subnets: resources.PrivateSubnetIDs,
-			Version: eksMetadata.KubernetesVersion,
-		}
-
-		out, err := a.Service().eks.CreateNodegroup(ctx, &nodeGroupReq)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create one of the node groups")
-		}
-
-		allNodeGroups = append(allNodeGroups, out.Nodegroup)
 	}
-	return allNodeGroups, nil
+
+	if !isUpdateRequired {
+		return nodeGroup, nil
+	}
+
+	_, err = c.Service().eks.UpdateNodegroupVersion(context.TODO(), updateRequest)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update one of the node groups")
+	}
+
+	nodeGroup, err = c.describeNodeGroup(clusterName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to describe node group")
+	}
+
+	return nodeGroup, nil
 }
 
-// IsClusterReady checks if EKS cluster is ready.
-func (a *Client) IsClusterReady(clusterName string) (bool, error) {
-	cluster, err := a.GetEKSCluster(clusterName)
+// GetReadyCluster returns the EKS cluster if ready.
+func (c *Client) GetReadyCluster(clusterName string) (*eksTypes.Cluster, error) {
+	cluster, err := c.getEKSCluster(clusterName)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get EKS cluster")
+		return nil, errors.Wrap(err, "failed to get EKS cluster")
 	}
 
 	if cluster.Status == eksTypes.ClusterStatusFailed {
-		return false, errors.New("cluster creation failed")
+		return nil, errors.New("cluster creation failed")
 	}
 	if cluster.Status != eksTypes.ClusterStatusActive {
-		return false, nil
+		return nil, nil
 	}
 
-	return true, nil
+	return cluster, nil
 }
 
-// GetEKSCluster returns EKS cluster with given name.
-func (a *Client) GetEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
+func (c *Client) WaitForNodeGroupReadiness(clusterName string, timeout int) error {
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			return errors.New("timed out waiting for eks nodegroup to become ready")
+		default:
+			nodeGroup, err := c.describeNodeGroup(clusterName)
+			if err != nil {
+				return errors.Wrap(err, "failed to describe node group")
+			}
+			if nodeGroup == nil {
+				return errors.New("node group not found")
+			}
+
+			if nodeGroup.Status == eksTypes.NodegroupStatusActive {
+				return nil
+			}
+
+			time.Sleep(5 * time.Second)
+		}
+	}
+}
+
+// getEKSCluster returns EKS cluster with given name.
+func (c *Client) getEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 	input := eks.DescribeClusterInput{
 		Name: aws.String(clusterName),
 	}
 
-	out, err := a.Service().eks.DescribeCluster(context.TODO(), &input)
+	out, err := c.Service().eks.DescribeCluster(context.TODO(), &input)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create EKS cluster")
+		return nil, errors.Wrap(err, "failed to get EKS cluster")
 	}
 
 	return out.Cluster, nil
@@ -304,33 +410,29 @@ func (a *Client) GetEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 
 // EnsureNodeGroupsDeleted ensures EKS node groups are deleted.
 func (a *Client) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
-	ctx := context.TODO()
-	nodeGroups, err := a.listNodeGroups(ctx, cluster.ID)
+
+	nodeGroups, err := a.describeNodeGroup(cluster.ID)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to list node groups for the cluster")
+		return false, errors.Wrap(err, "failed to get node group")
 	}
 	// Node groups deleted, we can return
-	if len(nodeGroups) == 0 {
+	if nodeGroups == nil {
 		return true, nil
 	}
 
-	for _, ng := range nodeGroups {
-		if ng.Status == eksTypes.NodegroupStatusDeleting {
-			continue
-		}
-		if ng.Status == eksTypes.NodegroupStatusDeleteFailed {
-			return false, errors.Wrapf(err, "node group deletion failed %q", *ng.NodegroupName)
-		}
+	if nodeGroups.Status == eksTypes.NodegroupStatusDeleting {
+		return false, nil
+	}
+	if nodeGroups.Status == eksTypes.NodegroupStatusDeleteFailed {
+		return false, errors.Wrapf(err, "node group deletion failed %q", *nodeGroups.NodegroupName)
+	}
 
-		delNgReq := &eks.DeleteNodegroupInput{
-			ClusterName:   aws.String(cluster.ID),
-			NodegroupName: ng.NodegroupName,
-		}
-
-		_, err = a.Service().eks.DeleteNodegroup(ctx, delNgReq)
-		if err != nil {
-			return false, errors.Wrap(err, "failed to delete node group")
-		}
+	_, err = a.Service().eks.DeleteNodegroup(context.TODO(), &eks.DeleteNodegroupInput{
+		ClusterName:   aws.String(cluster.ID),
+		NodegroupName: nodeGroups.NodegroupName,
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "failed to delete node group")
 	}
 
 	// Node groups still exist therefore we return false
@@ -341,25 +443,23 @@ func (a *Client) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
 func (a *Client) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
 	ctx := context.TODO()
 
-	input := eks.DescribeClusterInput{
-		Name: aws.String(cluster.ID),
+	clusterName := cluster.ProvisionerMetadataEKS.Name
+
+	eksCLuster, err := a.describeCluster(clusterName)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to describe cluster")
 	}
 
-	out, err := a.Service().eks.DescribeCluster(ctx, &input)
-	if err != nil {
-		// Cluster was deleted
-		if IsErrorResourceNotFound(err) {
-			return true, nil
-		}
-		return false, errors.Wrap(err, "failed to check if EKS cluster exists")
+	if eksCLuster == nil {
+		return true, nil
 	}
 
 	// Still deleting
-	if out.Cluster.Status == eksTypes.ClusterStatusDeleting {
+	if eksCLuster.Status == eksTypes.ClusterStatusDeleting {
 		return false, nil
 	}
 
-	delInput := &eks.DeleteClusterInput{Name: aws.String(cluster.ID)}
+	delInput := &eks.DeleteClusterInput{Name: aws.String(clusterName)}
 	_, err = a.Service().eks.DeleteCluster(ctx, delInput)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to trigger EKS cluster deletion")
@@ -369,40 +469,40 @@ func (a *Client) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
 	return false, nil
 }
 
-func (a *Client) listNodeGroups(ctx context.Context, clusterName string) ([]*eksTypes.Nodegroup, error) {
-	listNgInput := eks.ListNodegroupsInput{
-		ClusterName: aws.String(clusterName),
+func (c *Client) describeCluster(clusterName string) (*eksTypes.Cluster, error) {
+
+	cluster, err := c.Service().eks.DescribeCluster(context.TODO(), &eks.DescribeClusterInput{
+		Name: aws.String(clusterName),
+	})
+	if err != nil {
+		if !IsErrorResourceNotFound(err) {
+			return nil, errors.Wrap(err, "failed to describe cluster")
+		}
 	}
 
-	nodeGroups := make([]*eksTypes.Nodegroup, 0)
-	for {
-		ngListOut, err := a.Service().eks.ListNodegroups(ctx, &listNgInput)
-		if err != nil {
-			// If cluster does not exist anymore, listing node groups will
-			// fail with ResourceNotFoundException.
-			if IsErrorResourceNotFound(err) {
-				return nodeGroups, nil
-			}
-			return nil, errors.Wrap(err, "failed to list node groups for the cluster")
-		}
-
-		for _, ng := range ngListOut.Nodegroups {
-			ngInput := eks.DescribeNodegroupInput{
-				ClusterName:   aws.String(clusterName),
-				NodegroupName: aws.String(ng),
-			}
-			out, err := a.Service().eks.DescribeNodegroup(ctx, &ngInput)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to describe node group %q", ng)
-			}
-			nodeGroups = append(nodeGroups, out.Nodegroup)
-		}
-
-		if ngListOut.NextToken == nil {
-			break
-		}
-		listNgInput.NextToken = ngListOut.NextToken
+	if cluster == nil || cluster.Cluster == nil {
+		return nil, nil
 	}
 
-	return nodeGroups, nil
+	return cluster.Cluster, nil
+
+}
+
+func (c *Client) describeNodeGroup(clusterName string) (*eksTypes.Nodegroup, error) {
+
+	nodeGroup, err := c.Service().eks.DescribeNodegroup(context.TODO(), &eks.DescribeNodegroupInput{
+		ClusterName:   aws.String(clusterName),
+		NodegroupName: aws.String("worker"),
+	})
+	if err != nil {
+		if !IsErrorResourceNotFound(err) {
+			return nil, errors.Wrap(err, "failed to describe node group")
+		}
+	}
+
+	if nodeGroup == nil || nodeGroup.Nodegroup == nil {
+		return nil, nil
+	}
+
+	return nodeGroup.Nodegroup, nil
 }

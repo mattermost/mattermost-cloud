@@ -72,7 +72,7 @@ var helmRepos = map[string]string{
 
 func newUtilityGroupHandle(
 	params ProvisioningParams,
-	kubeconfigPath string,
+	kubeConfigPath string,
 	cluster *model.Cluster,
 	awsClient aws.AWS,
 	parentLogger log.FieldLogger,
@@ -81,24 +81,24 @@ func newUtilityGroupHandle(
 
 	nginx, err := newNginxHandle(
 		cluster.DesiredUtilityVersion(model.NginxCanonicalName),
-		cluster, kubeconfigPath, awsClient, logger)
+		cluster, kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
 
 	nginxInternal, err := newNginxInternalHandle(
 		cluster.DesiredUtilityVersion(model.NginxInternalCanonicalName),
-		cluster, kubeconfigPath, awsClient, logger)
+		cluster, kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
 	}
 
-	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeConfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
-	thanos, err := newThanosHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	thanos, err := newThanosHandle(cluster, kubeConfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
@@ -106,63 +106,63 @@ func newUtilityGroupHandle(
 	fluentbit, err := newFluentbitHandle(
 		cluster,
 		cluster.DesiredUtilityVersion(model.FluentbitCanonicalName),
-		kubeconfigPath, awsClient, logger)
+		kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
 	teleport, err := newTeleportHandle(
 		cluster, cluster.DesiredUtilityVersion(model.TeleportCanonicalName),
-		kubeconfigPath, awsClient, logger)
+		kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
 
 	pgbouncer, err := newPgbouncerHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName),
-		kubeconfigPath, awsClient, logger)
+		kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
 	promtail, err := newPromtailHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PromtailCanonicalName),
-		kubeconfigPath, awsClient, logger)
+		kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
 	rtcd, err := newRtcdHandle(
 		cluster, cluster.DesiredUtilityVersion(model.RtcdCanonicalName),
-		kubeconfigPath, awsClient, logger)
+		kubeConfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for RTCD")
 	}
 
 	nodeProblemDetector, err := newNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
-		cluster, kubeconfigPath, logger)
+		cluster, kubeConfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
 
 	metricsServer, err := newMetricsServerHandle(
 		cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName),
-		cluster, kubeconfigPath, logger)
+		cluster, kubeConfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
 	}
 
 	velero, err := newVeleroHandle(
 		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
-		kubeconfigPath, logger)
+		kubeConfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
 	cloudprober, err := newCloudproberHandle(
 		cluster.DesiredUtilityVersion(model.CloudproberCanonicalName), cluster,
-		kubeconfigPath, logger)
+		kubeConfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for cloudprober")
 	}

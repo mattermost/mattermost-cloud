@@ -186,8 +186,6 @@ func executeServerCmd(flags serverFlags) error {
 		}
 	}
 
-	provisionerFlag := flags.provisioner
-
 	logger.WithFields(logrus.Fields{
 		"build-hash":                                    model.BuildHash,
 		"cluster-supervisor":                            supervisorsEnabled.clusterSupervisor,
@@ -228,8 +226,6 @@ func executeServerCmd(flags serverFlags) error {
 		"disable-db-init-check":                         flags.disableDBInitCheck,
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
-		"provisioner":                                   provisionerFlag,
-		"slo-availability":                              flags.sloTargetAvailability,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
@@ -271,35 +267,31 @@ func executeServerCmd(flags serverFlags) error {
 		SLOInstallationGroups:   flags.sloInstallationGroups,
 		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
 		EtcdManagerEnv:          etcdManagerEnv,
-		SLOTargetAvailability:   flags.sloTargetAvailability,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
 
-	// TODO: In the future we can support both provisioners running
-	// at the same time, and the correct one should be chosen based
-	// on request. For now for simplicity we configure it with a
-	// flag.
-
 	kopsProvisioner := provisioner.NewKopsProvisioner(
 		provisioningParams,
-		resourceUtil,
+		sqlStore,
 		logger,
-		sqlStore,
-		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
 	)
-	defer kopsProvisioner.Teardown()
 
-	eksProvisioner := provisioner.NewEKSProvisioner(sqlStore,
+	eksProvisioner := provisioner.NewEKSProvisioner(
+		provisioningParams,
+		awsClient,
 		sqlStore,
+		logger,
+	)
+
+	provisionerObj := provisioner.NewProvisioner(
+		kopsProvisioner, eksProvisioner,
 		provisioningParams,
 		resourceUtil,
-		awsClient,
+		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
+		sqlStore,
 		logger,
 	)
-
-	provisionerOptionForSupervisor := supervisor.GetProvisionerOption(eksProvisioner, kopsProvisioner)
-	provisionerOptionForAPI := api.GetProvisionerOption(eksProvisioner, kopsProvisioner)
 
 	cloudMetrics := metrics.New()
 
@@ -338,31 +330,31 @@ func executeServerCmd(flags serverFlags) error {
 
 	var multiDoer supervisor.MultiDoer
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.groupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
+		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.backupSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerOptionForSupervisor, awsClient, instanceID, logger))
+		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerObj, awsClient, instanceID, logger))
 	}
 	if supervisorsEnabled.importSupervisor {
 		if flags.awatAddress == "" {
 			return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 		}
-		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerOptionForSupervisor, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerObj, eventsProducer, logger))
 	}
 	if supervisorsEnabled.installationDBRestorationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerOptionForSupervisor, eventsProducer, instanceID, logger))
+		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerObj, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationDBMigrationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerOptionForSupervisor, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
 	}
 
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -372,7 +364,7 @@ func executeServerCmd(flags serverFlags) error {
 		logger.WithField("poll", flags.poll).Info("Scheduler is disabled")
 	}
 
-	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second)
+	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second, logger)
 	defer standardSupervisor.Close()
 
 	if flags.slowPoll == 0 {
@@ -381,7 +373,7 @@ func executeServerCmd(flags serverFlags) error {
 	if supervisorsEnabled.installationDeletionSupervisor {
 		var slowMultiDoer supervisor.MultiDoer
 		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, flags.installationDeletionPendingTime, flags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
-		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second)
+		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second, logger)
 		defer slowSupervisor.Close()
 	}
 
@@ -410,7 +402,7 @@ func executeServerCmd(flags serverFlags) error {
 	api.Register(router, &api.Context{
 		Store:                             sqlStore,
 		Supervisor:                        standardSupervisor,
-		Provisioner:                       provisionerOptionForAPI,
+		Provisioner:                       provisionerObj,
 		DBProvider:                        resourceUtil,
 		EventProducer:                     eventsProducer,
 		Environment:                       awsClient.GetCloudEnvironmentName(),
