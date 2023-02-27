@@ -11,7 +11,7 @@ import (
 )
 
 // TriggerBackup triggers backup job for specific installation on the cluster.
-func (provisioner *KopsProvisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
+func (provisioner Provisioner) TriggerBackup(backup *model.InstallationBackup, cluster *model.Cluster, installation *model.Installation) (*model.S3DataResidence, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": installation.ID,
@@ -19,11 +19,10 @@ func (provisioner *KopsProvisioner) TriggerBackup(backup *model.InstallationBack
 	})
 	logger.Info("Triggering backup for installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create k8s client")
 	}
-	defer invalidateCache(err)
 
 	filestoreCfg, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).
 		GenerateFilestoreSpecAndSecret(provisioner.store, logger)
@@ -50,7 +49,7 @@ func (provisioner *KopsProvisioner) TriggerBackup(backup *model.InstallationBack
 
 // CheckBackupStatus checks status of running backup job,
 // returns job start time, when the job finished or -1 if it is still running.
-func (provisioner *KopsProvisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+func (provisioner Provisioner) CheckBackupStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -58,11 +57,10 @@ func (provisioner *KopsProvisioner) CheckBackupStatus(backup *model.Installation
 	})
 	logger.Info("Checking backup status for installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return -1, errors.Wrap(err, "failed to create k8s client")
 	}
-	defer invalidateCache(err)
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
@@ -70,7 +68,7 @@ func (provisioner *KopsProvisioner) CheckBackupStatus(backup *model.Installation
 }
 
 // CleanupBackupJob deletes backup job from the cluster if it exists.
-func (provisioner *KopsProvisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+func (provisioner Provisioner) CleanupBackupJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -78,11 +76,10 @@ func (provisioner *KopsProvisioner) CleanupBackupJob(backup *model.InstallationB
 	})
 	logger.Info("Cleaning up backup job for installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client")
 	}
-	defer invalidateCache(err)
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
@@ -90,7 +87,8 @@ func (provisioner *KopsProvisioner) CleanupBackupJob(backup *model.InstallationB
 }
 
 // TriggerRestore triggers restoration job for specific installation on the cluster.
-func (provisioner *KopsProvisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
+
+func (provisioner Provisioner) TriggerRestore(installation *model.Installation, backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": installation.ID,
@@ -98,11 +96,10 @@ func (provisioner *KopsProvisioner) TriggerRestore(installation *model.Installat
 	})
 	logger.Info("Triggering restoration for installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client")
 	}
-	defer invalidateCache(err)
 
 	filestoreCfg, filestoreSecret, err := provisioner.resourceUtil.GetFilestore(installation).
 		GenerateFilestoreSpecAndSecret(provisioner.store, logger)
@@ -129,7 +126,7 @@ func (provisioner *KopsProvisioner) TriggerRestore(installation *model.Installat
 
 // CheckRestoreStatus checks status of running backup job,
 // returns job completion time, when the job finished or -1 if it is still running.
-func (provisioner *KopsProvisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
+func (provisioner Provisioner) CheckRestoreStatus(backup *model.InstallationBackup, cluster *model.Cluster) (int64, error) {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -137,11 +134,10 @@ func (provisioner *KopsProvisioner) CheckRestoreStatus(backup *model.Installatio
 	})
 	logger.Info("Checking restoration status for installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return -1, errors.Wrap(err, "failed to create k8s client")
 	}
-	defer invalidateCache(err)
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 
@@ -149,7 +145,7 @@ func (provisioner *KopsProvisioner) CheckRestoreStatus(backup *model.Installatio
 }
 
 // CleanupRestoreJob deletes restore job from the cluster if it exists.
-func (provisioner *KopsProvisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
+func (provisioner Provisioner) CleanupRestoreJob(backup *model.InstallationBackup, cluster *model.Cluster) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      cluster.ID,
 		"installation": backup.InstallationID,
@@ -157,11 +153,10 @@ func (provisioner *KopsProvisioner) CleanupRestoreJob(backup *model.Installation
 	})
 	logger.Info("Cleaning up restoration job for installation")
 
-	k8sClient, invalidateCache, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, logger)
+	k8sClient, err := provisioner.k8sClient(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client")
 	}
-	defer invalidateCache(err)
 
 	jobsClient := k8sClient.Clientset.BatchV1().Jobs(backup.InstallationID)
 

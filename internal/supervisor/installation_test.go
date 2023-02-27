@@ -6,14 +6,13 @@ package supervisor_test
 
 import (
 	"fmt"
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"math/rand"
 	"testing"
 
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -50,7 +49,7 @@ func (s *mockInstallationStore) GetClusters(clusterFilter *model.ClusterFilter) 
 }
 
 func (s *mockInstallationStore) GetCluster(id string) (*model.Cluster, error) {
-	return nil, nil
+	return &model.Cluster{}, nil
 }
 
 func (s *mockInstallationStore) UpdateCluster(cluster *model.Cluster) error {
@@ -333,8 +332,23 @@ type mockInstallationProvisioner struct {
 	CustomClusterResources    *k8s.ClusterResources
 }
 
-func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
-	return p
+func (p *mockInstallationProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockInstallationProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
+	return &mockInstallationProvisioner{}
+}
+
+func (p *mockInstallationProvisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (p *mockInstallationProvisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {

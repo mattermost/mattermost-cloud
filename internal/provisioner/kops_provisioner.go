@@ -8,13 +8,12 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
+	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
-	"github.com/mattermost/mattermost-cloud/model"
 )
 
 // KopsProvisionerType is provisioner type for Kops clusters.
@@ -38,37 +37,28 @@ type ProvisioningParams struct {
 
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
-	params            ProvisioningParams
-	resourceUtil      *utils.ResourceUtil
-	logger            log.FieldLogger
-	store             model.InstallationDatabaseStoreInterface
-	backupOperator    *BackupOperator
-	kopsCache         map[string]*kops.Cmd
-	commonProvisioner *CommonProvisioner
+	params    ProvisioningParams
+	store     model.InstallationDatabaseStoreInterface
+	logger    log.FieldLogger
+	kopsCache map[string]*kops.Cmd
 }
+
+var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 
 // NewKopsProvisioner creates a new KopsProvisioner.
 func NewKopsProvisioner(
-	provisioningParams ProvisioningParams,
-	resourceUtil *utils.ResourceUtil,
-	logger log.FieldLogger,
+	params ProvisioningParams,
 	store model.InstallationDatabaseStoreInterface,
-	backupOperator *BackupOperator) *KopsProvisioner {
+	logger log.FieldLogger,
+) *KopsProvisioner {
+
 	logger = logger.WithField("provisioner", "kops")
 
 	return &KopsProvisioner{
-		params:         provisioningParams,
-		logger:         logger,
-		resourceUtil:   resourceUtil,
-		store:          store,
-		backupOperator: backupOperator,
-		kopsCache:      make(map[string]*kops.Cmd),
-		commonProvisioner: &CommonProvisioner{
-			resourceUtil: resourceUtil,
-			store:        store,
-			params:       provisioningParams,
-			logger:       logger,
-		},
+		params:    params,
+		store:     store,
+		logger:    logger,
+		kopsCache: make(map[string]*kops.Cmd),
 	}
 }
 
@@ -197,10 +187,10 @@ func (provisioner *KopsProvisioner) invalidateCachedKopsClientOnError(err error,
 	provisioner.invalidateCachedKopsClient(name, logger)
 }
 
-func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.FieldLogger) (*k8s.KubeClient, func(err error), error) {
+func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.FieldLogger) (*k8s.KubeClient, error) {
 	configLocation, err := provisioner.getCachedKopsClusterKubecfg(clusterName, logger)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get kops config from cache")
+		return nil, errors.Wrap(err, "failed to get kops config from cache")
 	}
 	invalidateOnError := func(err error) {
 		provisioner.invalidateCachedKopsClientOnError(err, clusterName, logger)
@@ -210,8 +200,8 @@ func (provisioner *KopsProvisioner) k8sClient(clusterName string, logger log.Fie
 	var k8sClient *k8s.KubeClient
 	k8sClient, err = k8s.NewFromFile(configLocation, logger)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create k8s client from file")
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
 	}
 
-	return k8sClient, invalidateOnError, nil
+	return k8sClient, nil
 }

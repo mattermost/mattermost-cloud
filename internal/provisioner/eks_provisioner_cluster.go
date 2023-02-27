@@ -11,8 +11,9 @@ import (
 	"os"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -31,41 +32,28 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	logger             log.FieldLogger
-	store              model.InstallationDatabaseStoreInterface
+	params             ProvisioningParams
+	awsClient          aws.AWS
 	clusterUpdateStore clusterUpdateStore
-
-	awsClient aws.AWS
-
-	params            ProvisioningParams
-	commonProvisioner *CommonProvisioner
+	store              model.InstallationDatabaseStoreInterface
+	logger             log.FieldLogger
 }
 
-// ClusterInstallationProvisioner returns ClusterInstallationProvisioner based on EKS provisioner.
-func (provisioner *EKSProvisioner) ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner {
-	return provisioner
-}
+var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
-	store model.InstallationDatabaseStoreInterface,
-	clusterUpdateStore clusterUpdateStore,
 	params ProvisioningParams,
-	resourceUtil *utils.ResourceUtil,
 	awsClient aws.AWS,
-	logger log.FieldLogger) *EKSProvisioner {
+	store *store.SQLStore,
+	logger log.FieldLogger,
+) *EKSProvisioner {
 	return &EKSProvisioner{
-		logger:             logger,
-		store:              store,
-		clusterUpdateStore: clusterUpdateStore,
-		awsClient:          awsClient,
 		params:             params,
-		commonProvisioner: &CommonProvisioner{
-			resourceUtil: resourceUtil,
-			store:        store,
-			params:       params,
-			logger:       logger,
-		},
+		awsClient:          awsClient,
+		clusterUpdateStore: store,
+		store:              store,
+		logger:             logger,
 	}
 }
 
@@ -247,6 +235,30 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster, awsClie
 // RefreshKopsMetadata is a noop for EKSProvisioner.
 func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) error {
 	return nil
+}
+
+func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
+	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to prepare kube config")
+	}
+
+	return configLocation, nil
+}
+
+func (provisioner *EKSProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	configLocation, err := provisioner.getKubeConfigPath(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube config")
+	}
+
+	var k8sClient *k8s.KubeClient
+	k8sClient, err = k8s.NewFromFile(configLocation, provisioner.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient, nil
 }
 
 // DeleteCluster deletes EKS cluster.

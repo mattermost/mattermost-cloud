@@ -9,13 +9,10 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/common"
-
-	"github.com/pkg/errors"
-
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,13 +51,13 @@ type installationDBMigrationStore interface {
 	model.InstallationDatabaseStoreInterface
 }
 
-type dbMigrationCIProvisioner interface {
-	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
-	ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error
-}
-
 type databaseProvider interface {
 	GetDatabase(installationID, dbType string) model.Database
+}
+
+type DBMigrationCIProvisioner interface {
+	ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner
+	ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error
 }
 
 // DBMigrationSupervisor finds pending work and effects the required changes.
@@ -68,14 +65,14 @@ type databaseProvider interface {
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type DBMigrationSupervisor struct {
-	store                    installationDBMigrationStore
-	aws                      aws.AWS
-	dbProvider               databaseProvider
-	instanceID               string
-	environment              string
-	logger                   log.FieldLogger
-	dbMigrationCIProvisioner dbMigrationCIProvisioner
-	eventsProducer           eventProducer
+	store          installationDBMigrationStore
+	aws            aws.AWS
+	dbProvider     databaseProvider
+	instanceID     string
+	environment    string
+	logger         log.FieldLogger
+	provisioner    DBMigrationCIProvisioner
+	eventsProducer eventProducer
 }
 
 // NewInstallationDBMigrationSupervisor creates a new DBMigrationSupervisor.
@@ -84,18 +81,18 @@ func NewInstallationDBMigrationSupervisor(
 	aws aws.AWS,
 	dbProvider databaseProvider,
 	instanceID string,
-	provisioner dbMigrationCIProvisioner,
+	provisioner DBMigrationCIProvisioner,
 	eventsProducer eventProducer,
 	logger log.FieldLogger) *DBMigrationSupervisor {
 	return &DBMigrationSupervisor{
-		store:                    store,
-		aws:                      aws,
-		dbProvider:               dbProvider,
-		instanceID:               instanceID,
-		environment:              aws.GetCloudEnvironmentName(),
-		logger:                   logger,
-		eventsProducer:           eventsProducer,
-		dbMigrationCIProvisioner: provisioner,
+		store:          store,
+		aws:            aws,
+		dbProvider:     dbProvider,
+		instanceID:     instanceID,
+		environment:    aws.GetCloudEnvironmentName(),
+		logger:         logger,
+		eventsProducer: eventsProducer,
+		provisioner:    provisioner,
 	}
 }
 
@@ -410,7 +407,7 @@ func (s *DBMigrationSupervisor) updateInstallationConfig(dbMigration *model.Inst
 		command = []string{"/bin/sh", "-c", "MM_CLUSTERSETTINGS_ENABLE=false mattermost & pid=$!; until $(curl --output /dev/null --silent --fail localhost:8065/api/v4/system/ping); do sleep 2; done; mmctl --local config set SqlSettings.DataSource $MM_CONFIG && kill $pid"}
 	}
 
-	err = s.dbMigrationCIProvisioner.ExecClusterInstallationJob(cluster, clusterInstallation, command...)
+	err = s.provisioner.ExecClusterInstallationJob(cluster, clusterInstallation, command...)
 	if err != nil {
 		logger.WithError(err).Error("Failed to execute command on cluster installation")
 		return dbMigration.State
@@ -534,7 +531,7 @@ func (s *DBMigrationSupervisor) refreshSecrets(installation *model.Installation)
 			return errors.Wrap(err, "failed to get cluster")
 		}
 
-		err = s.dbMigrationCIProvisioner.ClusterInstallationProvisioner(installation.CRVersion).
+		err = s.provisioner.ClusterInstallationProvisioner(installation.CRVersion).
 			RefreshSecrets(cluster, installation, cis[0])
 		if err != nil {
 			return errors.Wrap(err, "failed to refresh credentials of cluster installation")

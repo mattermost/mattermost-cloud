@@ -37,6 +37,10 @@ type AWATClient interface {
 	ReleaseLockOnImport(importID string) error
 }
 
+type ImportProvisioner interface {
+	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
+}
+
 // ImportSupervisor is a supervisor which performs Workspace Imports
 // from ready Imports produced by the AWAT. It periodically queries
 // the AWAT for Imports waiting to be performed and then performs
@@ -46,7 +50,7 @@ type ImportSupervisor struct {
 	awatClient     AWATClient
 	logger         logrus.FieldLogger
 	store          importStore
-	provisioner    importProvisioner
+	provisioner    ImportProvisioner
 	eventsProducer eventProducer
 	ID             string
 }
@@ -55,10 +59,6 @@ type importStore interface {
 	GetInstallations(filter *model.InstallationFilter, includeGroupConfig, includeGroupConfigOverrides bool) ([]*model.Installation, error)
 
 	installationStore
-}
-
-type importProvisioner interface {
-	ExecMMCTL(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error)
 }
 
 type mmctl struct {
@@ -93,7 +93,7 @@ type jobResponseData struct {
 }
 
 // NewImportSupervisor creates a new Import Supervisor
-func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner importProvisioner, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
+func NewImportSupervisor(awsClient toolsAWS.AWS, awat AWATClient, store importStore, provisioner ImportProvisioner, eventsProducer eventProducer, logger logrus.FieldLogger) *ImportSupervisor {
 	return &ImportSupervisor{
 		awsClient:      awsClient,
 		awatClient:     awat,
