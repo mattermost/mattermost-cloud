@@ -145,6 +145,9 @@ func provisionCluster(
 		}, {
 			Path:            "manifests/k8s-spot-termination-handler/k8s-spot-termination-handler.yaml",
 			DeployNamespace: "kube-system",
+		}, {
+			Path:            "manifests/external-snapshotter/external-snapshotter.yaml",
+			DeployNamespace: "kube-system",
 		},
 	}
 
