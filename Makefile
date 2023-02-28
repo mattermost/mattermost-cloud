@@ -53,7 +53,7 @@ GOIMPORTS_VER := master
 GOIMPORTS_BIN := goimports
 GOIMPORTS := $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)
 
-GOLANGCILINT_VER := v1.50.1
+GOLANGCILINT_VER := v1.51.1
 GOLANGCILINT_BIN := golangci-lint
 GOLANGCILINT := $(TOOLS_BIN_DIR)/$(GOLANGCILINT_BIN)
 
@@ -231,6 +231,11 @@ e2e-db-migration:
 e2e-cluster:
 	@echo Starting cluster e2e test.
 	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m
+
+.PHONY: e2e-local
+e2e-local:
+	@echo Running e2e tests locally
+
 
 ## --------------------------------------
 ## Tooling Binaries
