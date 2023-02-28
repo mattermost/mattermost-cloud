@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/store"
@@ -414,26 +415,41 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // can be tested.
 type mockAWS struct{}
 
-func (a *mockAWS) EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
-	return &eksTypes.Nodegroup{}, nil
+func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
+	return nil
+}
+
+func (a *mockAWS) EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) error {
+	return nil
+}
+
+func (a *mockAWS) GetActiveNode(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+	return nil, nil
+}
+
+func (a *mockAWS) EnsureNodeGroupsDeleted(clusterName, workerName string) (bool, error) {
+	return true, nil
+}
+
+func (a *mockAWS) WaitForNodeGroupReadiness(clusterName, workerName string, timeout int) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (a *mockAWS) WaitForClusterReadiness(clusterName string, timeout int) error {
+	return nil
 }
 
 func (a *mockAWS) GetReadyCluster(clusterName string) (*eksTypes.Cluster, error) {
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) WaitForNodeGroupReadiness(clusterName string, timeout int) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (a *mockAWS) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
-	//TODO implement me
-	panic("implement me")
+	return ptr.Int64(2), nil
 }
 
 func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
-	return nil, nil
+	return ptr.Int64(1), nil
 }
 
 func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) {
@@ -485,11 +501,7 @@ func (a *mockAWS) IsClusterReady(clusterName string) (bool, error) {
 	return true, nil
 }
 
-func (a *mockAWS) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
-	return true, nil
-}
-
-func (a *mockAWS) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
+func (a *mockAWS) EnsureEKSClusterDeleted(clusterName string) (bool, error) {
 	return true, nil
 }
 
@@ -810,6 +822,7 @@ func TestInstallationSupervisor(t *testing.T) {
 
 	standardStableTestCluster := func() *model.Cluster {
 		return &model.Cluster{
+			Provisioner:        model.ProvisionerKops,
 			State:              model.ClusterStateStable,
 			AllowInstallations: true,
 			ProvisionerMetadataKops: &model.KopsMetadata{

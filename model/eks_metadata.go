@@ -26,6 +26,7 @@ type EKSMetadata struct {
 	NodeInstanceGroups    EKSInstanceGroupsMetadata
 	ChangeRequest         *EKSMetadataRequestedState `json:"ChangeRequest,omitempty"`
 	Warnings              []string                   `json:"Warnings,omitempty"`
+	WorkerName            string
 	LaunchTemplateVersion *int64
 }
 
@@ -52,6 +53,7 @@ type EKSMetadataRequestedState struct {
 	ClusterRoleARN        string `json:"ClusterRoleARN,omitempty"`
 	NodeRoleARN           string `json:"NodeRoleARN,omitempty"`
 	LaunchTemplateVersion *int64 `json:"LaunchTemplateVersion,omitempty"`
+	WorkerName            string `json:"WorkerName,omitempty"`
 }
 
 // ApplyUpgradePatch applies the patch to the given cluster's metadata.
@@ -113,8 +115,9 @@ func (em *EKSMetadata) ValidateChangeRequest() error {
 	if len(em.ChangeRequest.Version) == 0 &&
 		len(em.ChangeRequest.AMI) == 0 &&
 		len(em.ChangeRequest.NodeInstanceType) == 0 &&
-		em.NodeMinCount == 0 &&
-		em.NodeMaxCount == 0 {
+		em.ChangeRequest.NodeMinCount == 0 &&
+		em.ChangeRequest.NodeMaxCount == 0 &&
+		em.ChangeRequest.MaxPodsPerNode == 0 {
 		return errors.New("the EKS Metadata ChangeRequest has no change values set")
 	}
 
@@ -140,6 +143,20 @@ func (em *EKSMetadata) ApplyChangeRequest() {
 		if em.ChangeRequest.LaunchTemplateVersion != nil {
 			em.LaunchTemplateVersion = em.ChangeRequest.LaunchTemplateVersion
 		}
+	}
+}
+
+func (em *EKSMetadata) GetCommonMetadata() ProvisionerMetadata {
+	return ProvisionerMetadata{
+		Name:             em.Name,
+		Version:          em.Version,
+		AMI:              em.AMI,
+		NodeInstanceType: em.NodeInstanceType,
+		NodeMinCount:     em.NodeMinCount,
+		NodeMaxCount:     em.NodeMaxCount,
+		MaxPodsPerNode:   em.MaxPodsPerNode,
+		VPC:              em.VPC,
+		Networking:       em.Networking,
 	}
 }
 

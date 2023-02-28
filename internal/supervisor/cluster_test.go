@@ -88,6 +88,10 @@ func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string)
 
 type mockClusterProvisioner struct{}
 
+func (p *mockClusterProvisioner) CreateNodes(cluster *model.Cluster, aws aws.AWS) error {
+	return nil
+}
+
 func (p *mockClusterProvisioner) RefreshClusterMetadata(cluster *model.Cluster) error {
 	return nil
 }

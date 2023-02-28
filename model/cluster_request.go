@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/aws/smithy-go/ptr"
 	"github.com/pkg/errors"
 )
 
@@ -21,9 +22,11 @@ const (
 
 // CreateClusterRequest specifies the parameters for a new cluster.
 type CreateClusterRequest struct {
-	Provider               string                         `json:"provider,omitempty"`
-	Zones                  []string                       `json:"zones,omitempty"`
-	Version                string                         `json:"version,omitempty"`
+	Provider string   `json:"provider,omitempty"`
+	Zones    []string `json:"zones,omitempty"`
+	Version  string   `json:"version,omitempty"`
+	// Deprecated: Use AMI instead. For now, AMI overrides KopsAMI.
+	KopsAMI                string                         `json:"kops-ami,omitempty"`
 	AMI                    string                         `json:"ami,omitempty"`
 	MasterInstanceType     string                         `json:"master-instance-type,omitempty"`
 	MasterCount            int64                          `json:"master-count,omitempty"`
@@ -97,6 +100,11 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Provisioner) == 0 {
 		request.Provisioner = ProvisionerKops
 	}
+
+	if request.AMI == "" {
+		request.AMI = request.KopsAMI
+	}
+	request.KopsAMI = ""
 
 	if request.DesiredUtilityVersions == nil {
 		request.DesiredUtilityVersions = make(map[string]*HelmUtilityVersion)
@@ -211,10 +219,22 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 
 // PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
-	Version        *string        `json:"version,omitempty"`
+	Version *string `json:"version,omitempty"`
+	// Deprecated: Use AMI instead. For now, AMI overrides KopsAMI.
+	KopsAMI        *string        `json:"kops-ami,omitempty"`
 	AMI            *string        `json:"ami,omitempty"`
 	RotatorConfig  *RotatorConfig `json:"rotatorConfig,omitempty"`
 	MaxPodsPerNode *int64
+}
+
+func (p *PatchUpgradeClusterRequest) SetDefaults() {
+	if p.AMI == nil || *p.AMI == "" {
+		kopsAmi := p.KopsAMI
+		if kopsAmi != nil {
+			p.AMI = ptr.String(*kopsAmi)
+		}
+	}
+	p.KopsAMI = nil
 }
 
 // Validate validates the values of a cluster upgrade request.
@@ -243,6 +263,7 @@ func NewUpgradeClusterRequestFromReader(reader io.Reader) (*PatchUpgradeClusterR
 		return nil, errors.Wrap(err, "failed to decode upgrade cluster request")
 	}
 
+	upgradeClusterRequest.SetDefaults()
 	err = upgradeClusterRequest.Validate()
 	if err != nil {
 		return nil, errors.Wrap(err, "upgrade cluster request failed validation")

@@ -28,8 +28,8 @@ type Cluster struct {
 	Provider                string
 	ProviderMetadataAWS     *AWSMetadata
 	Provisioner             string
-	ProvisionerMetadataKops *KopsMetadata
-	ProvisionerMetadataEKS  *EKSMetadata
+	ProvisionerMetadataKops *KopsMetadata // kops
+	ProvisionerMetadataEKS  *EKSMetadata  // eks
 	UtilityMetadata         *UtilityMetadata
 	AllowInstallations      bool
 	Networking              string

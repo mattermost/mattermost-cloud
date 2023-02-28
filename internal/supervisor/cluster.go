@@ -34,6 +34,7 @@ type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
 	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
+	CreateNodes(cluster *model.Cluster, aws aws.AWS) error
 	CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
 	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
 	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
@@ -295,10 +296,17 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 		return model.ClusterStateCreationInProgress
 	}
 
+	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodes(cluster, s.aws)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create cluster nodes")
+		return model.ClusterStateCreationFailed
+	}
+
 	return s.checkNodesCreated(cluster, logger)
 }
 
 func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
+
 	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster, s.aws)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if node creation finished")

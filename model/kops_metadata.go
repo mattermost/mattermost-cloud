@@ -317,6 +317,20 @@ func (km *KopsMetadata) ApplyUpgradePatch(patchRequest *PatchUpgradeClusterReque
 	return applied
 }
 
+func (km *KopsMetadata) GetCommonMetadata() ProvisionerMetadata {
+	return ProvisionerMetadata{
+		Name:             km.Name,
+		Version:          km.Version,
+		AMI:              km.AMI,
+		NodeInstanceType: km.NodeInstanceType,
+		NodeMinCount:     km.NodeMinCount,
+		NodeMaxCount:     km.NodeMaxCount,
+		MaxPodsPerNode:   km.MaxPodsPerNode,
+		VPC:              km.VPC,
+		Networking:       km.Networking,
+	}
+}
+
 func (km *KopsMetadata) ApplyClusterSizePatch(patchRequest *PatchClusterSizeRequest) bool {
 	changes := &KopsMetadataRequestedState{}
 

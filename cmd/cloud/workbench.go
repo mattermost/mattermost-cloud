@@ -47,6 +47,8 @@ func newCmdWorkbenchCluster() *cobra.Command {
 }
 
 func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
+	// TODO: add support for EKS
+
 	client := model.NewClient(flags.serverAddress)
 	cluster, err := client.GetCluster(flags.clusterID)
 	if err != nil {

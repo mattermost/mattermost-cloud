@@ -790,12 +790,23 @@ func executeInstallationDeploymentReportCmd(flags installationDeploymentReportFl
 		if err != nil {
 			return errors.Wrap(err, "failed to query cluster")
 		}
+
+		var provisionerMetadata model.ProvisionerMetadata
+		var masterCount int64
+		if cluster.Provisioner == model.ProvisionerKops && cluster.ProvisionerMetadataKops != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
+			masterCount = cluster.ProvisionerMetadataKops.MasterCount
+		} else if cluster.Provisioner == model.ProvisionerEKS && cluster.ProvisionerMetadataEKS != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
+			masterCount = 1
+		}
+
 		output += fmt.Sprintf("   ├ State: %s\n", clusterInstallation.State)
 		output += fmt.Sprintf("   └ Cluster: %s\n", cluster.ID)
 		output += fmt.Sprintf("     ├ State: %s\n", cluster.State)
-		output += fmt.Sprintf("     ├ VPC: %s\n", cluster.ProvisionerMetadataKops.VPC)
-		output += fmt.Sprintf("     ├ Nodes: Masters %d, Workers %d\n", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.NodeMaxCount)
-		output += fmt.Sprintf("     └ Version: %s\n", cluster.ProvisionerMetadataKops.Version)
+		output += fmt.Sprintf("     ├ VPC: %s\n", provisionerMetadata.VPC)
+		output += fmt.Sprintf("     ├ Nodes: Masters %d, Workers %d\n", masterCount, provisionerMetadata.NodeMaxCount)
+		output += fmt.Sprintf("     └ Version: %s\n", provisionerMetadata.Version)
 	}
 
 	if flags.eventCount > 0 {

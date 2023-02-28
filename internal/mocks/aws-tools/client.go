@@ -586,6 +586,20 @@ func (mr *MockAWSMockRecorder) EnsureEKSCluster(cluster, resources interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSCluster", reflect.TypeOf((*MockAWS)(nil).EnsureEKSCluster), cluster, resources)
 }
 
+// EnsureEKSClusterUpdated mocks base method
+func (m *MockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureEKSClusterUpdated", cluster)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureEKSClusterUpdated indicates an expected call of EnsureEKSClusterUpdated
+func (mr *MockAWSMockRecorder) EnsureEKSClusterUpdated(cluster interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterUpdated", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterUpdated), cluster)
+}
+
 // EnsureEKSClusterNodeGroups mocks base method
 func (m *MockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster) (*types.Nodegroup, error) {
 	m.ctrl.T.Helper()
@@ -602,12 +616,11 @@ func (mr *MockAWSMockRecorder) EnsureEKSClusterNodeGroups(cluster interface{}) *
 }
 
 // EnsureEKSClusterNodeGroupUpdated mocks base method
-func (m *MockAWS) EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) (*types.Nodegroup, error) {
+func (m *MockAWS) EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureEKSClusterNodeGroupUpdated", cluster)
-	ret0, _ := ret[0].(*types.Nodegroup)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // EnsureEKSClusterNodeGroupUpdated indicates an expected call of EnsureEKSClusterNodeGroupUpdated
@@ -631,34 +644,49 @@ func (mr *MockAWSMockRecorder) GetReadyCluster(clusterName interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReadyCluster", reflect.TypeOf((*MockAWS)(nil).GetReadyCluster), clusterName)
 }
 
-// EnsureNodeGroupsDeleted mocks base method
-func (m *MockAWS) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
+// GetActiveNode mocks base method
+func (m *MockAWS) GetActiveNode(clusterName, workerName string) (*types.Nodegroup, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureNodeGroupsDeleted", cluster)
+	ret := m.ctrl.Call(m, "GetActiveNode", clusterName, workerName)
+	ret0, _ := ret[0].(*types.Nodegroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActiveNode indicates an expected call of GetActiveNode
+func (mr *MockAWSMockRecorder) GetActiveNode(clusterName, workerName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveNode", reflect.TypeOf((*MockAWS)(nil).GetActiveNode), clusterName, workerName)
+}
+
+// EnsureNodeGroupsDeleted mocks base method
+func (m *MockAWS) EnsureNodeGroupsDeleted(clusterName, workerName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureNodeGroupsDeleted", clusterName, workerName)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureNodeGroupsDeleted indicates an expected call of EnsureNodeGroupsDeleted
-func (mr *MockAWSMockRecorder) EnsureNodeGroupsDeleted(cluster interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) EnsureNodeGroupsDeleted(clusterName, workerName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureNodeGroupsDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureNodeGroupsDeleted), cluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureNodeGroupsDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureNodeGroupsDeleted), clusterName, workerName)
 }
 
 // EnsureEKSClusterDeleted mocks base method
-func (m *MockAWS) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
+func (m *MockAWS) EnsureEKSClusterDeleted(clusterName string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureEKSClusterDeleted", cluster)
+	ret := m.ctrl.Call(m, "EnsureEKSClusterDeleted", clusterName)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureEKSClusterDeleted indicates an expected call of EnsureEKSClusterDeleted
-func (mr *MockAWSMockRecorder) EnsureEKSClusterDeleted(cluster interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) EnsureEKSClusterDeleted(clusterName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterDeleted), cluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureEKSClusterDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureEKSClusterDeleted), clusterName)
 }
 
 // InstallEKSEBSAddon mocks base method
@@ -676,17 +704,31 @@ func (mr *MockAWSMockRecorder) InstallEKSEBSAddon(cluster interface{}) *gomock.C
 }
 
 // WaitForNodeGroupReadiness mocks base method
-func (m *MockAWS) WaitForNodeGroupReadiness(clusterName string, timeout int) error {
+func (m *MockAWS) WaitForNodeGroupReadiness(clusterName, workerName string, timeout int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForNodeGroupReadiness", clusterName, timeout)
+	ret := m.ctrl.Call(m, "WaitForNodeGroupReadiness", clusterName, workerName, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForNodeGroupReadiness indicates an expected call of WaitForNodeGroupReadiness
-func (mr *MockAWSMockRecorder) WaitForNodeGroupReadiness(clusterName, timeout interface{}) *gomock.Call {
+func (mr *MockAWSMockRecorder) WaitForNodeGroupReadiness(clusterName, workerName, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodeGroupReadiness", reflect.TypeOf((*MockAWS)(nil).WaitForNodeGroupReadiness), clusterName, timeout)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForNodeGroupReadiness", reflect.TypeOf((*MockAWS)(nil).WaitForNodeGroupReadiness), clusterName, workerName, timeout)
+}
+
+// WaitForClusterReadiness mocks base method
+func (m *MockAWS) WaitForClusterReadiness(clusterName string, timeout int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForClusterReadiness", clusterName, timeout)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForClusterReadiness indicates an expected call of WaitForClusterReadiness
+func (mr *MockAWSMockRecorder) WaitForClusterReadiness(clusterName, timeout interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForClusterReadiness", reflect.TypeOf((*MockAWS)(nil).WaitForClusterReadiness), clusterName, timeout)
 }
 
 // EnsureLaunchTemplate mocks base method
@@ -732,34 +774,6 @@ func (m *MockAWS) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) 
 func (mr *MockAWSMockRecorder) EnsureLaunchTemplateDeleted(clusterName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureLaunchTemplateDeleted", reflect.TypeOf((*MockAWS)(nil).EnsureLaunchTemplateDeleted), clusterName)
-}
-
-// AllowEKSPostgresTraffic mocks base method
-func (m *MockAWS) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AllowEKSPostgresTraffic", cluster, eksMetadata)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AllowEKSPostgresTraffic indicates an expected call of AllowEKSPostgresTraffic
-func (mr *MockAWSMockRecorder) AllowEKSPostgresTraffic(cluster, eksMetadata interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowEKSPostgresTraffic", reflect.TypeOf((*MockAWS)(nil).AllowEKSPostgresTraffic), cluster, eksMetadata)
-}
-
-// RevokeEKSPostgresTraffic mocks base method
-func (m *MockAWS) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RevokeEKSPostgresTraffic", cluster, eksMetadata)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RevokeEKSPostgresTraffic indicates an expected call of RevokeEKSPostgresTraffic
-func (mr *MockAWSMockRecorder) RevokeEKSPostgresTraffic(cluster, eksMetadata interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeEKSPostgresTraffic", reflect.TypeOf((*MockAWS)(nil).RevokeEKSPostgresTraffic), cluster, eksMetadata)
 }
 
 // GetRegion mocks base method

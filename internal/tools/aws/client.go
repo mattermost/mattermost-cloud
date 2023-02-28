@@ -79,20 +79,20 @@ type AWS interface {
 	SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error
 
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
+	EnsureEKSClusterUpdated(cluster *model.Cluster) error
 	EnsureEKSClusterNodeGroups(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
-	EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
+	EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) error
 	GetReadyCluster(clusterName string) (*eksTypes.Cluster, error)
-	EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error)
-	EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error)
+	GetActiveNode(clusterName, workerName string) (*eksTypes.Nodegroup, error)
+	EnsureNodeGroupsDeleted(clusterName, workerName string) (bool, error)
+	EnsureEKSClusterDeleted(clusterName string) (bool, error)
 	InstallEKSEBSAddon(cluster *model.Cluster) error
-	WaitForNodeGroupReadiness(clusterName string, timeout int) error
+	WaitForNodeGroupReadiness(clusterName, workerName string, timeout int) error
+	WaitForClusterReadiness(clusterName string, timeout int) error
 
 	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
 	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
 	EnsureLaunchTemplateDeleted(clusterName string) (bool, error)
-
-	AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
-	RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error
 
 	GetRegion() string
 	GetAccountID() (string, error)
@@ -109,6 +109,8 @@ type Client struct {
 	config  *aws.Config
 	mux     *sync.Mutex
 }
+
+var _ AWS = (*Client)(nil)
 
 // NewAWSClientWithConfig returns a new instance of Client with a custom configuration.
 func NewAWSClientWithConfig(config *aws.Config, logger log.FieldLogger) (*Client, error) {

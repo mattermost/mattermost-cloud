@@ -276,6 +276,10 @@ func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, 
 	return true, nil
 }
 
+func (provisioner *KopsProvisioner) CreateNodes(cluster *model.Cluster, awsClient aws.AWS) error {
+	return nil
+}
+
 // CheckNodesCreated is a noop for KopsProvisioner.
 func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	// TODO: this is currently not implemented for kops.

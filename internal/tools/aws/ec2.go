@@ -217,6 +217,17 @@ func (a *Client) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKS
 		return nil, errors.Wrap(err, "failed to get eks cluster")
 	}
 
+	if eksMetadata.ChangeRequest == nil {
+		eksMetadata.ChangeRequest = &model.EKSMetadataRequestedState{}
+	}
+
+	if eksMetadata.ChangeRequest.AMI == "" {
+		eksMetadata.ChangeRequest.AMI = eksMetadata.AMI
+	}
+	if eksMetadata.ChangeRequest.MaxPodsPerNode == 0 {
+		eksMetadata.ChangeRequest.MaxPodsPerNode = eksMetadata.MaxPodsPerNode
+	}
+
 	userData := getLaunchTemplateUserData(eksCluster, eksMetadata)
 	encodedUserData := base64.StdEncoding.EncodeToString([]byte(userData))
 

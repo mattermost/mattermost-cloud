@@ -44,13 +44,13 @@ func TestClusterDTOs(t *testing.T) {
 	}
 
 	cluster2 := &model.Cluster{
-		Provider:                "azure",
-		Provisioner:             "cluster-api",
-		ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
-		ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
-		UtilityMetadata:         &model.UtilityMetadata{},
-		State:                   model.ClusterStateStable,
-		AllowInstallations:      true,
+		Provider:               "azure",
+		Provisioner:            "eks",
+		ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
+		ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
+		UtilityMetadata:        &model.UtilityMetadata{},
+		State:                  model.ClusterStateStable,
+		AllowInstallations:     true,
 	}
 
 	err = sqlStore.CreateCluster(cluster1, annotations)

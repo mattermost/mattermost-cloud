@@ -521,19 +521,29 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		if cluster.AllowInstallations {
 			status = "online"
 		}
-		if cluster.ProvisionerMetadataKops == nil {
-			cluster.ProvisionerMetadataKops = &model.KopsMetadata{}
+
+		var provisionerMetadata model.ProvisionerMetadata
+		var masterCount int64
+		var masterInstanceType string
+		if cluster.Provisioner == model.ProvisionerKops && cluster.ProvisionerMetadataKops != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
+			masterCount = cluster.ProvisionerMetadataKops.MasterCount
+			masterInstanceType = cluster.ProvisionerMetadataKops.MasterInstanceType
+		} else if cluster.Provisioner == model.ProvisionerEKS && cluster.ProvisionerMetadataEKS != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
+			masterCount = 1
+			masterInstanceType = "-"
 		}
 
 		values = append(values, []string{
 			cluster.ID,
 			cluster.State,
-			cluster.ProvisionerMetadataKops.Version,
-			fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
-			fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
-			cluster.ProvisionerMetadataKops.AMI,
-			cluster.ProvisionerMetadataKops.Networking,
-			cluster.ProvisionerMetadataKops.VPC,
+			provisionerMetadata.Version,
+			fmt.Sprintf("%d x %s", masterCount, masterInstanceType),
+			fmt.Sprintf("%d x %s (max %d)", provisionerMetadata.NodeMinCount, provisionerMetadata.NodeInstanceType, provisionerMetadata.NodeMaxCount),
+			provisionerMetadata.AMI,
+			provisionerMetadata.Networking,
+			provisionerMetadata.VPC,
 			status,
 		})
 	}

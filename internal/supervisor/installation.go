@@ -435,6 +435,7 @@ func (s *InstallationSupervisor) createInstallation(installation *model.Installa
 		logger.WithError(err).Warn("Failed to query clusters")
 		return model.InstallationStateCreationRequested
 	}
+
 	if len(clusters) == 0 {
 		logger.Warnf("No clusters found matching the filter, installation annotations are: [%s]", strings.Join(getAnnotationsNames(annotations), ", "))
 	}
@@ -580,8 +581,16 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 	if cpuPercent > s.scheduling.ClusterResourceThresholdCPU ||
 		memoryPercent > s.scheduling.ClusterResourceThresholdMemory ||
 		podPercent > s.scheduling.ClusterResourceThresholdPodCount {
+
+		var provisionerMetadata model.ProvisionerMetadata
+		if cluster.Provisioner == model.ProvisionerKops {
+			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
+		} else if cluster.Provisioner == model.ProvisionerEKS {
+			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
+		}
+
 		if s.scheduling.ClusterResourceThresholdScaleValue == 0 ||
-			cluster.ProvisionerMetadataKops.NodeMinCount == cluster.ProvisionerMetadataKops.NodeMaxCount ||
+			provisionerMetadata.NodeMinCount == provisionerMetadata.NodeMaxCount ||
 			cluster.State != model.ClusterStateStable {
 			logger.WithFields(log.Fields{
 				"scheduling-cpu-threshold":       s.scheduling.ClusterResourceThresholdCPU,
@@ -601,21 +610,24 @@ func (s *InstallationSupervisor) createClusterInstallation(cluster *model.Cluste
 		// updating the cluster. We should try to reuse some of the API flow
 		// that already does this.
 
-		newWorkerCount := cluster.ProvisionerMetadataKops.NodeMinCount + int64(s.scheduling.ClusterResourceThresholdScaleValue)
-		if newWorkerCount > cluster.ProvisionerMetadataKops.NodeMaxCount {
-			newWorkerCount = cluster.ProvisionerMetadataKops.NodeMaxCount
+		newWorkerCount := provisionerMetadata.NodeMinCount + int64(s.scheduling.ClusterResourceThresholdScaleValue)
+		if newWorkerCount > provisionerMetadata.NodeMaxCount {
+			newWorkerCount = provisionerMetadata.NodeMaxCount
 		}
 
 		cluster.State = model.ClusterStateResizeRequested
-		cluster.ProvisionerMetadataKops.ChangeRequest = &model.KopsMetadataRequestedState{
-			NodeMinCount: newWorkerCount,
+		if cluster.Provisioner == model.ProvisionerKops {
+			cluster.ProvisionerMetadataKops.ChangeRequest = &model.KopsMetadataRequestedState{
+				NodeMinCount: newWorkerCount,
+			}
+		} else if cluster.Provisioner == model.ProvisionerEKS {
+			cluster.ProvisionerMetadataEKS.ChangeRequest = &model.EKSMetadataRequestedState{
+				NodeMinCount: newWorkerCount,
+			}
 		}
 
-		logger.WithField("cluster", cluster.ID).Infof("Scaling cluster worker nodes from %d to %d (max=%d)",
-			cluster.ProvisionerMetadataKops.NodeMinCount,
-			cluster.ProvisionerMetadataKops.ChangeRequest.NodeMinCount,
-			cluster.ProvisionerMetadataKops.NodeMaxCount,
-		)
+		logger.WithField("cluster", cluster.ID).Infof("Scaling cluster worker nodes from %d to %d (max=%d)", provisionerMetadata.NodeMinCount, newWorkerCount, provisionerMetadata.NodeMaxCount)
+
 		err = s.store.UpdateCluster(cluster)
 		if err != nil {
 			logger.WithError(err).Error("Failed to update cluster")
