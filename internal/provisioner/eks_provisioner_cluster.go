@@ -77,7 +77,7 @@ func (provisioner *EKSProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 }
 
 // CreateCluster creates the EKS cluster.
-func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -92,7 +92,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 
 	if eksMetadata.ChangeRequest.AMI != "" && eksMetadata.ChangeRequest.AMI != "latest" {
 		var isAMIValid bool
-		isAMIValid, err = awsClient.IsValidAMI(eksMetadata.ChangeRequest.AMI, logger)
+		isAMIValid, err = provisioner.awsClient.IsValidAMI(eksMetadata.ChangeRequest.AMI, logger)
 		if err != nil {
 			return errors.Wrapf(err, "error checking the AWS AMI image %s", eksMetadata.ChangeRequest.AMI)
 		}
@@ -105,12 +105,12 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 
 	var clusterResources aws.ClusterResources
 	if eksMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
-		clusterResources, err = awsClient.ClaimVPC(eksMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
+		clusterResources, err = provisioner.awsClient.ClaimVPC(eksMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return errors.Wrap(err, "couldn't claim VPC")
 		}
 	} else if provisioner.params.UseExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
+		clusterResources, err = provisioner.awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
@@ -119,9 +119,9 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 	// Update cluster to set VPC ID that is needed later.
 	cluster.ProvisionerMetadataEKS.ChangeRequest.VPC = clusterResources.VpcID
 
-	_, err = awsClient.EnsureEKSCluster(cluster, clusterResources)
+	_, err = provisioner.awsClient.EnsureEKSCluster(cluster, clusterResources)
 	if err != nil {
-		releaseErr := awsClient.ReleaseVpc(cluster, logger)
+		releaseErr := provisioner.awsClient.ReleaseVpc(cluster, logger)
 		if releaseErr != nil {
 			logger.WithError(releaseErr).Error("Unable to release VPC")
 		}
@@ -131,7 +131,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 
 	err = provisioner.clusterUpdateStore.UpdateCluster(cluster)
 	if err != nil {
-		releaseErr := awsClient.ReleaseVpc(cluster, logger)
+		releaseErr := provisioner.awsClient.ReleaseVpc(cluster, logger)
 		if releaseErr != nil {
 			logger.WithError(releaseErr).Error("Failed to release VPC after failed update")
 		}
@@ -142,7 +142,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster, awsClie
 }
 
 // CheckClusterCreated checks if cluster creation finished.
-func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	if cluster.ProvisionerMetadataEKS == nil {
@@ -151,7 +151,7 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 
-	eksCluster, err := awsClient.GetReadyCluster(eksMetadata.Name)
+	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(eksMetadata.Name)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check if EKS cluster is ready")
 	}
@@ -168,7 +168,7 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 	eksMetadata.Networking = model.NetworkingCalico
 
 	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
-	launchTemplateVersion, err := awsClient.EnsureLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
+	launchTemplateVersion, err := provisioner.awsClient.EnsureLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to ensure launch template")
 	}
@@ -204,7 +204,7 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 }
 
 // CreateNodes creates the EKS nodes.
-func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster) error {
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	if eksMetadata == nil {
@@ -212,7 +212,7 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster, awsClient
 	}
 	eksMetadata.ChangeRequest.WorkerName = "worker-1"
 
-	nodeGroup, err := awsClient.EnsureEKSClusterNodeGroups(cluster)
+	nodeGroup, err := provisioner.awsClient.EnsureEKSNodeGroup(cluster)
 	if err != nil || nodeGroup == nil {
 		return errors.Wrap(err, "failed to ensure EKS node group")
 	}
@@ -226,14 +226,14 @@ func (provisioner *EKSProvisioner) CreateNodes(cluster *model.Cluster, awsClient
 }
 
 // CheckNodesCreated provisions EKS cluster.
-func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 	clusterName := eksMetadata.Name
 	workerName := eksMetadata.ChangeRequest.WorkerName
 
-	nodeGroup, err := awsClient.GetActiveNode(clusterName, workerName)
+	nodeGroup, err := provisioner.awsClient.GetActiveEKSNodeGroup(clusterName, workerName)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to ensure node groups created")
 	}
@@ -269,7 +269,7 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster, aws
 }
 
 // ProvisionCluster provisions EKS cluster.
-func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -279,7 +279,7 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 
 	// TODO: ideally we would do it as part of cluster creation as this
 	// also is async operation.
-	err := awsClient.InstallEKSEBSAddon(cluster)
+	err := provisioner.awsClient.InstallEKSAddons(cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to install EKS EBS Addon")
 	}
@@ -289,11 +289,11 @@ func (provisioner *EKSProvisioner) ProvisionCluster(cluster *model.Cluster, awsC
 		return errors.Wrap(err, "failed to get kubeconfig file path")
 	}
 
-	return provisionCluster(cluster, kubeConfigPath, awsClient, provisioner.params, provisioner.store, logger)
+	return provisionCluster(cluster, kubeConfigPath, provisioner.awsClient, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades EKS cluster - not implemented.
-func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
@@ -306,7 +306,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster, awsCli
 
 	if changeRequest.AMI != "" && changeRequest.AMI != "latest" {
 		var isAMIValid bool
-		isAMIValid, err = awsClient.IsValidAMI(eksMetadata.ChangeRequest.AMI, logger)
+		isAMIValid, err = provisioner.awsClient.IsValidAMI(eksMetadata.ChangeRequest.AMI, logger)
 		if err != nil {
 			return errors.Wrapf(err, "error checking the AWS AMI image %s", eksMetadata.ChangeRequest.AMI)
 		}
@@ -318,13 +318,13 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster, awsCli
 	if changeRequest.AMI != "" || changeRequest.MaxPodsPerNode > 0 {
 		// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
 		var launchTemplateVersion *int64
-		launchTemplateVersion, err = awsClient.UpdateLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
+		launchTemplateVersion, err = provisioner.awsClient.UpdateLaunchTemplate(eksMetadata.Name, cluster.ProvisionerMetadataEKS)
 		if err != nil {
 			return errors.Wrap(err, "failed to update launch template")
 		}
 		changeRequest.LaunchTemplateVersion = launchTemplateVersion
 
-		err = awsClient.EnsureEKSClusterNodeGroupUpdated(cluster)
+		err = provisioner.awsClient.EnsureEKSNodeGroupMigrated(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to update node group")
 		}
@@ -336,7 +336,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster, awsCli
 	}
 
 	if changeRequest.Version != "" {
-		err = awsClient.EnsureEKSClusterUpdated(cluster)
+		err = provisioner.awsClient.EnsureEKSClusterUpdated(cluster)
 		if err != nil {
 			return errors.Wrap(err, "failed to update EKS cluster")
 		}
@@ -344,7 +344,7 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster, awsCli
 
 	wait := 3600 // seconds
 	logger.Infof("Waiting up to %d seconds for k8s cluster to become ready...", wait)
-	err = awsClient.WaitForClusterReadiness(eksMetadata.Name, wait)
+	err = provisioner.awsClient.WaitForEKSClusterToBeActive(eksMetadata.Name, wait)
 	if err != nil {
 		return err
 	}
@@ -358,12 +358,7 @@ func (provisioner *EKSProvisioner) RotateClusterNodes(cluster *model.Cluster) er
 }
 
 // ResizeCluster resizes cluster - not implemented.
-func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
-	return nil
-}
-
-// RefreshKopsMetadata is a noop for EKSProvisioner.
-func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) error {
+func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
@@ -392,7 +387,7 @@ func (provisioner *EKSProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.K
 }
 
 // DeleteCluster deletes EKS cluster.
-func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	logger.Info("Deleting cluster")
@@ -402,7 +397,7 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 		return false, errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
 	}
 
-	deleted, err := awsClient.EnsureNodeGroupsDeleted(eksMetadata.Name, eksMetadata.WorkerName)
+	deleted, err := provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, eksMetadata.WorkerName)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete node groups")
 	}
@@ -410,7 +405,7 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 		return false, nil
 	}
 
-	deleted, err = awsClient.EnsureLaunchTemplateDeleted(eksMetadata.Name)
+	deleted, err = provisioner.awsClient.EnsureLaunchTemplateDeleted(eksMetadata.Name)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete launch template")
 	}
@@ -418,7 +413,7 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 		return false, nil
 	}
 
-	deleted, err = awsClient.EnsureEKSClusterDeleted(eksMetadata.Name)
+	deleted, err = provisioner.awsClient.EnsureEKSClusterDeleted(eksMetadata.Name)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete EKS cluster")
 	}
@@ -426,7 +421,7 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 		return false, nil
 	}
 
-	err = awsClient.ReleaseVpc(cluster, logger)
+	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to release cluster VPC")
 	}
@@ -464,7 +459,7 @@ func (provisioner *EKSProvisioner) GetPublicLoadBalancerEndpoint(cluster *model.
 }
 
 func (provisioner *EKSProvisioner) prepareClusterKubeConfig(clusterName string) (string, error) {
-	eksCluster, err := provisioner.awsClient.GetReadyCluster(clusterName)
+	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(clusterName)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get eks cluster")
 	}

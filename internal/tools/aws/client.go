@@ -80,15 +80,16 @@ type AWS interface {
 
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)
 	EnsureEKSClusterUpdated(cluster *model.Cluster) error
-	EnsureEKSClusterNodeGroups(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
-	EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) error
-	GetReadyCluster(clusterName string) (*eksTypes.Cluster, error)
-	GetActiveNode(clusterName, workerName string) (*eksTypes.Nodegroup, error)
-	EnsureNodeGroupsDeleted(clusterName, workerName string) (bool, error)
+	EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error)
+	EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error
+	GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error)
+	GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error)
+	EnsureEKSNodeGroupDeleted(clusterName, workerName string) (bool, error)
 	EnsureEKSClusterDeleted(clusterName string) (bool, error)
-	InstallEKSEBSAddon(cluster *model.Cluster) error
-	WaitForNodeGroupReadiness(clusterName, workerName string, timeout int) error
-	WaitForClusterReadiness(clusterName string, timeout int) error
+	InstallEKSAddons(cluster *model.Cluster) error
+	WaitForEKSNodeGroupToBeActive(clusterName, workerName string, timeout int) error
+	WaitForEKSClusterToBeActive(clusterName string, timeout int) error
+	WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error
 
 	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
 	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)

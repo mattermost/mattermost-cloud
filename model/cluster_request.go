@@ -70,11 +70,15 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Provider) == 0 {
 		request.Provider = ProviderAWS
 	}
-	if len(request.Version) == 0 {
-		request.Version = "latest"
+	if len(request.Provisioner) == 0 {
+		request.Provisioner = ProvisionerKops
 	}
 	if len(request.Zones) == 0 {
-		request.Zones = []string{"us-east-1a"}
+		if request.Provisioner == ProvisionerEKS {
+			request.Zones = []string{"us-east-1a", "us-east-1b"}
+		} else if request.Provisioner == ProvisionerKops {
+			request.Zones = []string{"us-east-1a"}
+		}
 	}
 	if len(request.MasterInstanceType) == 0 {
 		request.MasterInstanceType = "t3.medium"
@@ -97,8 +101,13 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Networking) == 0 {
 		request.Networking = NetworkingCalico
 	}
-	if len(request.Provisioner) == 0 {
-		request.Provisioner = ProvisionerKops
+
+	if len(request.Version) == 0 {
+		if request.Provisioner == ProvisionerKops {
+			request.Version = "latest"
+		} else if request.Provisioner == ProvisionerEKS {
+			request.Version = "1.23"
+		}
 	}
 
 	if request.AMI == "" {
@@ -117,6 +126,9 @@ func (request *CreateClusterRequest) Validate() error {
 	if request.Provider != ProviderAWS {
 		return errors.Errorf("unsupported provider %s", request.Provider)
 	}
+	if request.Provisioner != ProvisionerKops && request.Provisioner != ProvisionerEKS {
+		return errors.Errorf("unsupported provisioner %s", request.Provisioner)
+	}
 	if !ValidClusterVersion(request.Version) {
 		return errors.Errorf("unsupported cluster version %s", request.Version)
 	}
@@ -133,10 +145,6 @@ func (request *CreateClusterRequest) Validate() error {
 		return errors.Errorf("max pods per node (%d) must be 10 or greater", request.MaxPodsPerNode)
 	}
 	// TODO: check zones and instance types?
-
-	if request.Provisioner != ProvisionerKops && request.Provisioner != ProvisionerEKS {
-		return errors.Errorf("unsupported provisioner %s", request.Provisioner)
-	}
 
 	if request.Provisioner == ProvisionerEKS {
 		if request.ClusterRoleARN == "" {

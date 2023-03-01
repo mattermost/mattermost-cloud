@@ -415,32 +415,36 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // can be tested.
 type mockAWS struct{}
 
+func (a *mockAWS) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error {
+	return nil
+}
+
 func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
 	return nil
 }
 
-func (a *mockAWS) EnsureEKSClusterNodeGroupUpdated(cluster *model.Cluster) error {
+func (a *mockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
 	return nil
 }
 
-func (a *mockAWS) GetActiveNode(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+func (a *mockAWS) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
 	return nil, nil
 }
 
-func (a *mockAWS) EnsureNodeGroupsDeleted(clusterName, workerName string) (bool, error) {
+func (a *mockAWS) EnsureEKSNodeGroupDeleted(clusterName, workerName string) (bool, error) {
 	return true, nil
 }
 
-func (a *mockAWS) WaitForNodeGroupReadiness(clusterName, workerName string, timeout int) error {
+func (a *mockAWS) WaitForEKSNodeGroupToBeActive(clusterName, workerName string, timeout int) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (a *mockAWS) WaitForClusterReadiness(clusterName string, timeout int) error {
+func (a *mockAWS) WaitForEKSClusterToBeActive(clusterName string, timeout int) error {
 	return nil
 }
 
-func (a *mockAWS) GetReadyCluster(clusterName string) (*eksTypes.Cluster, error) {
+func (a *mockAWS) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 	return &eksTypes.Cluster{}, nil
 }
 
@@ -461,7 +465,7 @@ func (a *mockAWS) GetLoadBalancerAPIByType(s string) aws.ELB {
 	panic("implement me")
 }
 
-func (a *mockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
+func (a *mockAWS) InstallEKSAddons(cluster *model.Cluster) error {
 	return nil
 }
 
@@ -489,16 +493,12 @@ func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.Cluster
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+func (a *mockAWS) EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
 	return &eksTypes.Nodegroup{}, nil
 }
 
 func (a *mockAWS) GetEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
 	return &eksTypes.Cluster{}, nil
-}
-
-func (a *mockAWS) IsClusterReady(clusterName string) (bool, error) {
-	return true, nil
 }
 
 func (a *mockAWS) EnsureEKSClusterDeleted(clusterName string) (bool, error) {
@@ -696,7 +696,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -714,7 +714,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		mockStore.Installation = mockStore.UnlockedInstallationsPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -757,7 +757,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		}
 
 		mockEventProducer := &mockEventProducer{}
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -805,7 +805,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		return supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			model.NewID(),
 			false,
 			false,
@@ -2476,7 +2475,6 @@ func TestInstallationSupervisor(t *testing.T) {
 			supervisor := supervisor.NewInstallationSupervisor(
 				sqlStore,
 				mockInstallationProvisioner,
-				&mockAWS{},
 				"instanceID",
 				false,
 				false,
@@ -2536,7 +2534,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			mockInstallationProvisioner,
-			&mockAWS{},
 			"instanceID",
 			false,
 			false,
@@ -2584,7 +2581,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			"instanceID",
 			false,
 			false,
@@ -2719,7 +2715,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			"instanceID",
 			false,
 			false,
