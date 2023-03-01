@@ -12,6 +12,7 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
+	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -91,6 +92,7 @@ func (w *ClusterSuite) ProvisionCluster(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "while waiting for cluster provisioning")
 	}
+	state.ClusterID = cluster.ID
 
 	return nil
 }

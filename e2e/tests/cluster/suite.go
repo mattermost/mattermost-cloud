@@ -14,6 +14,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
+	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -58,6 +59,7 @@ type Test struct {
 // SetupClusterLifecycleTest sets up cluster lifecycle test.
 func SetupClusterLifecycleTest() (*Test, error) {
 	testID := model.NewID()
+	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
 		"test":   "cluster-lifecycle",
 		"testID": testID,
@@ -95,6 +97,8 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	} else if config.KopsAMI != "" {
 		createClusterReq.KopsAMI = config.KopsAMI
 	}
+
+	// TODO: A way to fetch the latest AMI automatically for local development
 
 	err = clusterdictionary.ApplyToCreateClusterRequest("SizeAlef1000", createClusterReq)
 	if err != nil {
