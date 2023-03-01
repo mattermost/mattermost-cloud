@@ -46,11 +46,7 @@ func enableLogStacktrace() {
 }
 
 func enableIndividualClusterLogFiles(path string) {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	logger.Hooks.Add(NewClusterLoggerHook(wd, log.AllLevels))
+	logger.Hooks.Add(NewClusterLoggerHook(path, log.AllLevels))
 }
 
 func (s *stacktrace) Levels() []log.Level {
