@@ -232,11 +232,6 @@ e2e-cluster:
 	@echo Starting cluster e2e test.
 	go test ./e2e/tests/cluster -tags=e2e -v -timeout 90m
 
-.PHONY: e2e-local
-e2e-local:
-	@echo Running e2e tests locally
-
-
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
