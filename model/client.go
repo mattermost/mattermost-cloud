@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -1392,7 +1393,8 @@ func (c *Client) CreateWebhook(request *CreateWebhookRequest) (*Webhook, error) 
 		return WebhookFromReader(resp.Body)
 
 	default:
-		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return nil, errors.Errorf("failed with status code %d (%s)", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 }
 
