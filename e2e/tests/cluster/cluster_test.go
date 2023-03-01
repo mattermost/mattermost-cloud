@@ -35,9 +35,9 @@ const (
 func TestMain(m *testing.M) {
 	// This is mainly used to send a notification when tests are finished to a mattermost webhook
 	// provided with the WEBHOOOK_URL environment variable.
-	state.State.StartTime = time.Now()
+	state.StartTime = time.Now()
 	code := m.Run()
-	state.State.EndTime = time.Now()
+	state.EndTime = time.Now()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

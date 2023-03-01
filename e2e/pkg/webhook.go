@@ -87,17 +87,17 @@ func SendE2EResult(ctx context.Context, icon, text, color string) error {
 				{
 					Short: true,
 					Title: "TestID",
-					Value: "`" + state.State.TestID + "`",
+					Value: "`" + state.TestID + "`",
 				},
 				{
 					Short: true,
 					Title: "ClusterID",
-					Value: "`" + state.State.ClusterID + "`",
+					Value: "`" + state.ClusterID + "`",
 				},
 				{
 					Short: true,
 					Title: "Runtime",
-					Value: (state.State.EndTime.Sub(state.State.StartTime)).String(),
+					Value: (state.EndTime.Sub(state.StartTime)).String(),
 				},
 			},
 		}},

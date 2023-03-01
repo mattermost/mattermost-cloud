@@ -92,7 +92,7 @@ func (w *ClusterSuite) ProvisionCluster(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "while waiting for cluster provisioning")
 	}
-	state.State.ClusterID = cluster.ID
+	state.ClusterID = cluster.ID
 
 	return nil
 }

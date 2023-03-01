@@ -59,7 +59,7 @@ type Test struct {
 // SetupClusterLifecycleTest sets up cluster lifecycle test.
 func SetupClusterLifecycleTest() (*Test, error) {
 	testID := model.NewID()
-	state.State.TestID = testID
+	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
 		"test":   "cluster-lifecycle",
 		"testID": testID,

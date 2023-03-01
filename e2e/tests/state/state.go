@@ -6,11 +6,9 @@ package state
 
 import "time"
 
-type E2EState struct {
+var (
 	ClusterID string
 	TestID    string
 	StartTime time.Time
 	EndTime   time.Time
-}
-
-var State E2EState
+)
