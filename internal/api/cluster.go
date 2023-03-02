@@ -402,14 +402,6 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer unlockOnce()
 
-	if clusterDTO.Provisioner == model.ProvisionerEKS {
-		c.Logger.Error("resize patch not supported for EKS yet")
-
-		w.WriteHeader(http.StatusBadRequest)
-		outputJSON(c, w, clusterDTO)
-		return
-	}
-
 	// One more check that can't be done without both the request and the cluster.
 	if resizeClusterRequest.NodeMinCount == nil &&
 		resizeClusterRequest.NodeMaxCount != nil &&
@@ -425,7 +417,6 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 	if clusterDTO.Provisioner == model.ProvisionerKops {
 		isResizeApplied = clusterDTO.ProvisionerMetadataKops.ApplyClusterSizePatch(resizeClusterRequest)
 	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
-		c.Logger.Error("resize patch not supported for EKS yet")
 		isResizeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyClusterSizePatch(resizeClusterRequest)
 	}
 

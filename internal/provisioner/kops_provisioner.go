@@ -66,11 +66,6 @@ func NewKopsProvisioner(
 	}
 }
 
-// ProvisionerType returns type of the provisioner.
-func (provisioner *KopsProvisioner) ProvisionerType() string {
-	return KopsProvisionerType
-}
-
 // Teardown cleans up cached kops provisioner data.
 func (provisioner *KopsProvisioner) Teardown() {
 	provisioner.logger.Debug("Performing kops provisioner cleanup")

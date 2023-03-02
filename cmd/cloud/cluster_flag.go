@@ -22,34 +22,30 @@ func (flags *clusterFlags) addFlags(command *cobra.Command) {
 type createRequestOptions struct {
 	provider           string
 	version            string
-	kopsAMI            string
 	ami                string
 	zones              string
 	allowInstallations bool
 	annotations        []string
 	networking         string
 	vpc                string
-	useEKS             bool
 	clusterRoleARN     string
 	nodeRoleARN        string
+	useEKS             bool
 }
 
 func (flags *createRequestOptions) addFlags(command *cobra.Command) {
 	command.Flags().StringVar(&flags.provider, "provider", "aws", "Cloud provider hosting the cluster.")
 	command.Flags().StringVar(&flags.version, "version", "latest", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
-	command.Flags().StringVar(&flags.kopsAMI, "kops-ami", "", "The AMI to use for the cluster hosts. Leave empty for the default kops image.")
-	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts. Leave empty for the default image. Must set for EKS cluster.")
+	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts.")
 	command.Flags().StringVar(&flags.zones, "zones", "us-east-1a", "The zones where the cluster will be deployed. Use commas to separate multiple zones.")
 	command.Flags().BoolVar(&flags.allowInstallations, "allow-installations", true, "Whether the cluster will allow for new installations to be scheduled.")
 	command.Flags().StringArrayVar(&flags.annotations, "annotation", []string{}, "Additional annotations for the cluster. Accepts multiple values, for example: '... --annotation abc --annotation def'")
 	command.Flags().StringVar(&flags.networking, "networking", "calico", "Networking mode to use, for example: weave, calico, canal, amazon-vpc-routed-eni")
 	command.Flags().StringVar(&flags.vpc, "vpc", "", "Set to use a shared VPC")
 
-	command.Flags().BoolVar(&flags.useEKS, "eks", false, "Create EKS cluster.")
 	command.Flags().StringVar(&flags.clusterRoleARN, "cluster-role-arn", "", "AWS role ARN for cluster.")
 	command.Flags().StringVar(&flags.nodeRoleARN, "node-role-arn", "", "AWS role ARN for node.")
-
-	_ = command.Flags().MarkDeprecated("kops-ami", "use --ami instead")
+	command.Flags().BoolVar(&flags.useEKS, "eks", false, "Create EKS cluster.")
 }
 
 type utilityFlags struct {
@@ -195,14 +191,12 @@ func (flags *rotatorConfig) addFlags(command *cobra.Command) {
 
 type clusterUpgradeFlagChanged struct {
 	isVersionChanged        bool
-	isKopsAmiChanged        bool
 	isAmiChanged            bool
 	isMaxPodsPerNodeChanged bool
 }
 
 func (flags *clusterUpgradeFlagChanged) addFlags(command *cobra.Command) {
 	flags.isVersionChanged = command.Flags().Changed("version")
-	flags.isKopsAmiChanged = command.Flags().Changed("kops-ami")
 	flags.isAmiChanged = command.Flags().Changed("ami")
 	flags.isMaxPodsPerNodeChanged = command.Flags().Changed("max-pods-per-node")
 }
@@ -213,7 +207,6 @@ type clusterUpgradeFlags struct {
 	clusterUpgradeFlagChanged
 	cluster        string
 	version        string
-	kopsAMI        string
 	ami            string
 	maxPodsPerNode int64
 }
@@ -223,12 +216,10 @@ func (flags *clusterUpgradeFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().StringVar(&flags.cluster, "cluster", "", "The id of the cluster to be upgraded.")
 	command.Flags().StringVar(&flags.version, "version", "", "The Kubernetes version to target. Use 'latest' or versions such as '1.16.10'.")
-	command.Flags().StringVar(&flags.kopsAMI, "kops-ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
-	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts. Use 'latest' for the default kops image.")
+	command.Flags().StringVar(&flags.ami, "ami", "", "The AMI to use for the cluster hosts.")
 	command.Flags().Int64Var(&flags.maxPodsPerNode, "max-pods-per-node", 0, "The maximum number of pods that can run on a single worker node.")
 
 	_ = command.MarkFlagRequired("cluster")
-	_ = command.Flags().MarkDeprecated("kops-ami", "use --ami instead")
 }
 
 type clusterResizeFlags struct {

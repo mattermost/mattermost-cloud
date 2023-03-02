@@ -258,7 +258,7 @@ func getDecreasedWorkerNodesResizeChanges(changes KopsInstanceGroupsMetadata, co
 }
 
 // ApplyChangeRequest applies change request values to the KopsMetadata that are
-// not reflected by calling refreshKopsMetadata().
+// not reflected by calling RefreshKopsMetadata().
 func (km *KopsMetadata) ApplyChangeRequest() {
 	if km.ChangeRequest != nil {
 		if km.ChangeRequest.NodeMaxCount != 0 {

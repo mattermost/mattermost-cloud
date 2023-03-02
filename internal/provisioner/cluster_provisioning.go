@@ -23,7 +23,7 @@ import (
 
 func provisionCluster(
 	cluster *model.Cluster,
-	kubeConfigPath string,
+	kubeconfigPath string,
 	awsClient aws.AWS,
 	params ProvisioningParams,
 	store model.ClusterUtilityDatabaseStoreInterface,
@@ -48,7 +48,7 @@ func provisionCluster(
 	}
 
 	// Begin deploying the mattermost operator.
-	k8sClient, err := k8s.NewFromFile(kubeConfigPath, logger)
+	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
 	}
@@ -367,7 +367,7 @@ func provisionCluster(
 		}
 	}
 
-	ugh, err := newUtilityGroupHandle(params, kubeConfigPath, cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(params, kubeconfigPath, cluster, awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new cluster utility group handle")
 	}

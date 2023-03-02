@@ -139,7 +139,6 @@ func TestClusterSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
 			&mockClusterProvisionerOption{},
-
 			&mockEventProducer{},
 			"instanceID",
 			logger,

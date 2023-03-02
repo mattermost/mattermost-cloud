@@ -106,7 +106,7 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 	request := &model.CreateClusterRequest{
 		Provider:               flags.provider,
 		Version:                flags.version,
-		AMI:                    flags.kopsAMI,
+		AMI:                    flags.ami,
 		Zones:                  strings.Split(flags.zones, ","),
 		AllowInstallations:     flags.allowInstallations,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
@@ -114,10 +114,6 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 		Networking:             flags.networking,
 		VPC:                    flags.vpc,
 		Provisioner:            model.ProvisionerKops,
-	}
-	// "kops-ami" flag is deprecated. Flag "ami" will override
-	if flags.ami != "" {
-		request.AMI = flags.ami
 	}
 
 	if flags.useEKS {
@@ -292,14 +288,9 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 	if flags.isVersionChanged {
 		request.Version = &flags.version
 	}
-	if flags.isKopsAmiChanged {
-		request.AMI = &flags.kopsAMI
-	}
-
 	if flags.isAmiChanged {
 		request.AMI = &flags.ami
 	}
-
 	if flags.isMaxPodsPerNodeChanged {
 		request.MaxPodsPerNode = &flags.maxPodsPerNode
 	}
