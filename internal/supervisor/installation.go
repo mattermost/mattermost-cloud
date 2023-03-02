@@ -13,7 +13,6 @@ import (
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -94,7 +93,6 @@ type eventProducer interface {
 type InstallationSupervisor struct {
 	store             installationStore
 	provisioner       InstallationProvisioner
-	aws               aws.AWS
 	instanceID        string
 	keepDatabaseData  bool
 	keepFilestoreData bool
@@ -140,7 +138,6 @@ type InstallationProvisioner interface {
 func NewInstallationSupervisor(
 	store installationStore,
 	provisioner InstallationProvisioner,
-	aws aws.AWS,
 	instanceID string,
 	keepDatabaseData,
 	keepFilestoreData bool,
@@ -155,7 +152,6 @@ func NewInstallationSupervisor(
 	return &InstallationSupervisor{
 		store:             store,
 		provisioner:       provisioner,
-		aws:               aws,
 		instanceID:        instanceID,
 		keepDatabaseData:  keepDatabaseData,
 		keepFilestoreData: keepFilestoreData,

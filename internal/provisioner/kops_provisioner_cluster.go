@@ -43,7 +43,7 @@ func (provisioner *KopsProvisioner) PrepareCluster(cluster *model.Cluster) bool 
 }
 
 // CreateCluster creates a cluster using kops and terraform.
-func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -55,7 +55,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
 		var isAMIValid bool
-		isAMIValid, err = awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		isAMIValid, err = provisioner.awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
 		if err != nil {
 			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
 		}
@@ -64,8 +64,8 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		}
 	}
 
-	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", awsClient.GetCloudEnvironmentName())
-	cncVPCCIDR, err := awsClient.GetCIDRByVPCTag(cncVPCName, logger)
+	cncVPCName := fmt.Sprintf("mattermost-cloud-%s-command-control", provisioner.awsClient.GetCloudEnvironmentName())
+	cncVPCCIDR, err := provisioner.awsClient.GetCIDRByVPCTag(cncVPCName, logger)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get the CIDR for the VPC Name %s", cncVPCName)
 	}
@@ -81,12 +81,12 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 	var clusterResources aws.ClusterResources
 	if kopsMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {
-		clusterResources, err = awsClient.ClaimVPC(kopsMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
+		clusterResources, err = provisioner.awsClient.ClaimVPC(kopsMetadata.ChangeRequest.VPC, cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return errors.Wrap(err, "couldn't claim VPC")
 		}
 	} else if provisioner.params.UseExistingAWSResources {
-		clusterResources, err = awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
+		clusterResources, err = provisioner.awsClient.GetAndClaimVpcResources(cluster, provisioner.params.Owner, logger)
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	)
 	// release VPC resources
 	if err != nil {
-		releaseErr := awsClient.ReleaseVpc(cluster, logger)
+		releaseErr := provisioner.awsClient.ReleaseVpc(cluster, logger)
 		if releaseErr != nil {
 			logger.WithError(releaseErr).Error("Unable to release VPC")
 		}
@@ -241,23 +241,23 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 	logger.WithField("name", kopsMetadata.Name).Info("Successfully deployed kubernetes")
 
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
-	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
 
 	iamRole = fmt.Sprintf("masters.%s", kopsMetadata.Name)
-	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy to master")
 	}
 
-	ugh, err := newUtilityGroupHandle(provisioner.params, kops.GetKubeConfigPath(), cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(provisioner.params, kops.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 }
 
 // CheckClusterCreated is a noop for KopsProvisioner.
-func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
 	// TODO: this is currently not implemented for kops.
 	// Entire waiting logic happens as part of cluster creation therefore we
 	// just skip this step and report cluster as created.
@@ -274,7 +274,7 @@ func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, 
 }
 
 // CheckNodesCreated is a noop for KopsProvisioner.
-func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
 	// TODO: this is currently not implemented for kops.
 	// Entire waiting logic happens as part of cluster creation therefore we
 	// just skip this step and report cluster as created.
@@ -284,7 +284,7 @@ func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster, aw
 // ProvisionCluster installs all the baseline kubernetes resources needed for
 // managing installations. This can be called on an already-provisioned cluster
 // to re-provision with the newest version of the resources.
-func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	logger.Info("Provisioning cluster")
@@ -294,11 +294,11 @@ func (provisioner *KopsProvisioner) ProvisionCluster(cluster *model.Cluster, aws
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
-	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), awsClient, provisioner.params, provisioner.store, logger)
+	return provisionCluster(cluster, kopsClient.GetKubeConfigPath(), provisioner.awsClient, provisioner.params, provisioner.store, logger)
 }
 
 // UpgradeCluster upgrades a cluster to the latest recommended production ready k8s version.
-func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -310,7 +310,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 
 	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
 		var isAMIValid bool
-		isAMIValid, err = awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
+		isAMIValid, err = provisioner.awsClient.IsValidAMI(kopsMetadata.ChangeRequest.AMI, logger)
 		if err != nil {
 			return errors.Wrapf(err, "error checking the AWS AMI image %s", kopsMetadata.ChangeRequest.AMI)
 		}
@@ -432,12 +432,12 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 	}
 
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
-	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
@@ -493,7 +493,7 @@ func (provisioner *KopsProvisioner) RotateClusterNodes(cluster *model.Cluster) e
 }
 
 // ResizeCluster resizes a cluster.
-func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsClient aws.AWS) error {
+func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -594,12 +594,12 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 	}
 
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach custom node policy")
 	}
 
-	err = awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
+	err = provisioner.awsClient.AttachPolicyToRole(iamRole, aws.VeleroNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to attach velero node policy")
 	}
@@ -610,7 +610,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 }
 
 // DeleteCluster deletes a previously created cluster using kops and terraform.
-func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
@@ -622,7 +622,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		return false, errors.Wrap(err, "failed to check if kops cluster exists")
 	}
 	if exists {
-		err = provisioner.cleanupKopsCluster(cluster, awsClient, logger)
+		err = provisioner.cleanupKopsCluster(cluster, logger)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to delete kops cluster")
 		}
@@ -630,7 +630,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 		logger.Infof("Kops cluster %s does not exist, assuming already deleted", kopsMetadata.Name)
 	}
 
-	err = awsClient.ReleaseVpc(cluster, logger)
+	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to release cluster VPC")
 	}
@@ -643,7 +643,7 @@ func (provisioner *KopsProvisioner) DeleteCluster(cluster *model.Cluster, awsCli
 }
 
 // cleanupKopsCluster cleans up Kops cluster. Make sure cluster exists before calling this method.
-func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, awsClient aws.AWS, logger logrus.FieldLogger) error {
+func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, logger logrus.FieldLogger) error {
 	kopsMetadata := cluster.ProvisionerMetadataKops
 
 	kopsClient, err := provisioner.getCachedKopsClient(kopsMetadata.Name, logger)
@@ -652,7 +652,7 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 	}
 	defer provisioner.invalidateCachedKopsClientOnError(err, kopsMetadata.Name, logger)
 
-	ugh, err := newUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, awsClient, logger)
+	ugh, err := newUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}
@@ -663,11 +663,11 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 	}
 
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)
-	err = awsClient.DetachPolicyFromRole(iamRole, aws.CustomNodePolicyName, logger)
+	err = provisioner.awsClient.DetachPolicyFromRole(iamRole, aws.CustomNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to detach custom node policy")
 	}
-	err = awsClient.DetachPolicyFromRole(iamRole, aws.VeleroNodePolicyName, logger)
+	err = provisioner.awsClient.DetachPolicyFromRole(iamRole, aws.VeleroNodePolicyName, logger)
 	if err != nil {
 		return errors.Wrap(err, "unable to detach velero node policy")
 	}

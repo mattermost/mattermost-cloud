@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -32,13 +31,13 @@ type clusterStore interface {
 // ClusterProvisioner abstracts the provisioning operations required by the cluster supervisor.
 type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
-	CreateCluster(cluster *model.Cluster, aws aws.AWS) error
-	CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
-	CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error)
-	ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error
-	UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error
-	ResizeCluster(cluster *model.Cluster, aws aws.AWS) error
-	DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error)
+	CreateCluster(cluster *model.Cluster) error
+	CheckClusterCreated(cluster *model.Cluster) (bool, error)
+	CheckNodesCreated(cluster *model.Cluster) (bool, error)
+	ProvisionCluster(cluster *model.Cluster) error
+	UpgradeCluster(cluster *model.Cluster) error
+	ResizeCluster(cluster *model.Cluster) error
+	DeleteCluster(cluster *model.Cluster) (bool, error)
 	RefreshKopsMetadata(cluster *model.Cluster) error
 }
 
@@ -53,7 +52,6 @@ type ClusterProvisionerOption interface {
 type ClusterSupervisor struct {
 	store          clusterStore
 	provisioner    ClusterProvisionerOption
-	aws            aws.AWS
 	eventsProducer eventProducer
 	instanceID     string
 	metrics        *metrics.CloudMetrics
@@ -61,11 +59,10 @@ type ClusterSupervisor struct {
 }
 
 // NewClusterSupervisor creates a new ClusterSupervisor.
-func NewClusterSupervisor(store clusterStore, provisioner ClusterProvisionerOption, aws aws.AWS, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
+func NewClusterSupervisor(store clusterStore, provisioner ClusterProvisionerOption, eventProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterSupervisor {
 	return &ClusterSupervisor{
 		store:          store,
 		provisioner:    provisioner,
-		aws:            aws,
 		eventsProducer: eventProducer,
 		instanceID:     instanceID,
 		metrics:        metrics,
@@ -198,7 +195,7 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 		}
 	}
 
-	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateCluster(cluster, s.aws)
+	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create cluster")
 		return model.ClusterStateCreationFailed
@@ -209,7 +206,7 @@ func (s *ClusterSupervisor) createCluster(cluster *model.Cluster, logger log.Fie
 }
 
 func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).ProvisionCluster(cluster, s.aws)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).ProvisionCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster")
 		return model.ClusterStateProvisioningFailed
@@ -220,7 +217,7 @@ func (s *ClusterSupervisor) provisionCluster(cluster *model.Cluster, logger log.
 }
 
 func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).UpgradeCluster(cluster, s.aws)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).UpgradeCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to upgrade cluster")
 		logger.Info("Updating cluster store with latest cluster data")
@@ -237,7 +234,7 @@ func (s *ClusterSupervisor) upgradeCluster(cluster *model.Cluster, logger log.Fi
 }
 
 func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).ResizeCluster(cluster, s.aws)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).ResizeCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to resize cluster")
 		return model.ClusterStateResizeFailed
@@ -270,7 +267,7 @@ func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logge
 }
 
 func (s *ClusterSupervisor) deleteCluster(cluster *model.Cluster, logger log.FieldLogger) string {
-	deleted, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteCluster(cluster, s.aws)
+	deleted, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).DeleteCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to delete cluster")
 		return model.ClusterStateDeletionFailed
@@ -291,7 +288,7 @@ func (s *ClusterSupervisor) deleteCluster(cluster *model.Cluster, logger log.Fie
 }
 
 func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger log.FieldLogger) string {
-	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckClusterCreated(cluster, s.aws)
+	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckClusterCreated(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if cluster creation finished")
 		return model.ClusterStateCreationFailed
@@ -305,7 +302,7 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 }
 
 func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
-	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster, s.aws)
+	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if node creation finished")
 		return model.ClusterStateCreationFailed

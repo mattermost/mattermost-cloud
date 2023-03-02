@@ -11,7 +11,6 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
 	"github.com/mattermost/mattermost-cloud/internal/testutil"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/stretchr/testify/require"
 )
@@ -92,31 +91,31 @@ func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 	return true
 }
 
-func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster, aws aws.AWS) error {
+func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockClusterProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (p *mockClusterProvisioner) CheckClusterCreated(cluster *model.Cluster) (bool, error) {
 	return true, nil
 }
 
-func (p *mockClusterProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (p *mockClusterProvisioner) CheckNodesCreated(cluster *model.Cluster) (bool, error) {
 	return true, nil
 }
 
-func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster, aws aws.AWS) error {
+func (p *mockClusterProvisioner) ProvisionCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster, aws aws.AWS) error {
+func (p *mockClusterProvisioner) UpgradeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockClusterProvisioner) ResizeCluster(cluster *model.Cluster, aws aws.AWS) error {
+func (p *mockClusterProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster, aws aws.AWS) (bool, error) {
+func (p *mockClusterProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	return true, nil
 }
 
@@ -132,7 +131,6 @@ func TestClusterSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
 			&mockClusterProvisionerOption{},
-			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
 			logger,
@@ -158,7 +156,6 @@ func TestClusterSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
 			&mockClusterProvisionerOption{},
-			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
 			logger,
@@ -210,7 +207,6 @@ func TestClusterSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
 			&mockClusterProvisionerOption{},
-			&mockAWS{},
 			mockEventProducer,
 			"instanceID",
 			logger,
@@ -248,7 +244,6 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			supervisor := supervisor.NewClusterSupervisor(
 				sqlStore,
 				&mockClusterProvisionerOption{},
-				&mockAWS{},
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				"instanceID",
 				logger,
@@ -278,7 +273,6 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		supervisor := supervisor.NewClusterSupervisor(
 			sqlStore,
 			&mockClusterProvisionerOption{},
-			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
 			logger,

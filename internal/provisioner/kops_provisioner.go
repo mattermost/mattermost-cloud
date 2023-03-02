@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -38,6 +39,7 @@ type ProvisioningParams struct {
 // KopsProvisioner provisions clusters using kops+terraform.
 type KopsProvisioner struct {
 	params    ProvisioningParams
+	awsClient aws.AWS
 	store     model.InstallationDatabaseStoreInterface
 	logger    log.FieldLogger
 	kopsCache map[string]*kops.Cmd
@@ -48,6 +50,7 @@ var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 // NewKopsProvisioner creates a new KopsProvisioner.
 func NewKopsProvisioner(
 	params ProvisioningParams,
+	awsClient aws.AWS,
 	store model.InstallationDatabaseStoreInterface,
 	logger log.FieldLogger,
 ) *KopsProvisioner {
@@ -56,6 +59,7 @@ func NewKopsProvisioner(
 
 	return &KopsProvisioner{
 		params:    params,
+		awsClient: awsClient,
 		store:     store,
 		logger:    logger,
 		kopsCache: make(map[string]*kops.Cmd),
