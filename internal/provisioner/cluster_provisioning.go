@@ -67,12 +67,19 @@ func provisionCluster(
 		namespaces = append(namespaces, minioOperatorNamespace)
 	}
 
-	err = k8sClient.DeleteNamespacesWithFinalizer(namespaces)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete namespacesß")
+	// Remove all previously-installed operator namespaces and resources.
+	ctx := context.TODO()
+	for _, namespace := range namespaces {
+		logger.Infof("Cleaning up namespace %s", namespace)
+		err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
+		if k8sErrors.IsNotFound(err) {
+			logger.Infof("Namespace %s not found; skipping...", namespace)
+		} else if err != nil {
+			return errors.Wrapf(err, "failed to delete namespace %s", namespace)
+		}
 	}
 
-	wait := 300
+	wait := 60
 	logger.Infof("Waiting up to %d seconds for namespaces to be terminated...", wait)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()

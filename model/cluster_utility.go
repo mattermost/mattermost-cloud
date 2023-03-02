@@ -62,7 +62,7 @@ var DefaultUtilityVersions map[string]*HelmUtilityVersion = map[string]*HelmUtil
 	// PrometheusOperatorCanonicalName defines the default version and values path for the Helm chart
 	PrometheusOperatorCanonicalName: {Chart: "40.5.0", ValuesPath: ""},
 	// ThanosCanonicalName defines the default version and values path for the Helm chart
-	ThanosCanonicalName: {Chart: "10.5.4", ValuesPath: ""},
+	ThanosCanonicalName: {Chart: "11.5.4", ValuesPath: ""},
 	// NginxCanonicalName defines the default version and values path for the Helm chart
 	NginxCanonicalName: {Chart: "4.2.0", ValuesPath: ""},
 	// NginxInternalCanonicalName defines the default version and values path for the Helm chart

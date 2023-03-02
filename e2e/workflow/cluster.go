@@ -59,6 +59,7 @@ func (w *ClusterSuite) CreateCluster(ctx context.Context) error {
 		}
 		w.logger.Infof("Cluster creation requested: %s", cluster.ID)
 		w.Meta.ClusterID = cluster.ID
+		state.ClusterID = cluster.ID
 	}
 
 	// Make sure cluster not ready or failed - otherwise we will hang on webhook
@@ -92,7 +93,6 @@ func (w *ClusterSuite) ProvisionCluster(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "while waiting for cluster provisioning")
 	}
-	state.ClusterID = cluster.ID
 
 	return nil
 }
