@@ -59,6 +59,10 @@ func newCmdServer() *cobra.Command {
 			if flags.enableLogStacktrace {
 				enableLogStacktrace()
 			}
+
+			if flags.enableLogFilesPerCluster {
+				enableIndividualClusterLogFiles(flags.logFilesPerClusterPath)
+			}
 		},
 	}
 	flags.addFlags(cmd)
@@ -74,6 +78,10 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	helm.SetVerboseHelmLogging(flags.debugHelm)
+
+	if flags.enableLogFilesPerCluster && flags.logFilesPerClusterPath == "" {
+		return fmt.Errorf("log files per cluster path must not be empty")
+	}
 
 	if err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(flags.maxSchemas); err != nil {
 		return err

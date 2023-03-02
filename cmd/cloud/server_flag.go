@@ -188,11 +188,13 @@ type serverFlags struct {
 	listen      string
 	metricsPort int
 
-	debug               bool
-	debugHelm           bool
-	devMode             bool
-	machineLogs         bool
-	enableLogStacktrace bool
+	debug                    bool
+	debugHelm                bool
+	devMode                  bool
+	machineLogs              bool
+	enableLogStacktrace      bool
+	enableLogFilesPerCluster bool
+	logFilesPerClusterPath   string
 
 	database      string
 	maxSchemas    int64
@@ -218,6 +220,9 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.devMode, "dev", false, "Set sane defaults for development")
 	command.Flags().BoolVar(&flags.machineLogs, "machine-readable-logs", false, "Output the logs in machine readable format.")
 	command.Flags().BoolVar(&flags.enableLogStacktrace, "enable-log-stacktrace", false, "Add stacktrace in error logs.")
+	command.Flags().BoolVar(&flags.enableLogFilesPerCluster, "enable-log-files-per-cluster", false, "Store individual log files per cluster.")
+	command.Flags().StringVar(&flags.logFilesPerClusterPath, "log-files-per-cluster-path", "", "Where to store the cluster log files.")
+	command.MarkFlagsRequiredTogether("enable-log-files-per-cluster", "log-files-per-cluster-path")
 
 	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	command.Flags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
