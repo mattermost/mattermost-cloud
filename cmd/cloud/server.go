@@ -296,6 +296,7 @@ func executeServerCmd(flags serverFlags) error {
 	provisionerObj := provisioner.NewProvisioner(
 		kopsProvisioner, eksProvisioner,
 		provisioningParams,
+		awsClient,
 		resourceUtil,
 		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
 		sqlStore,
@@ -348,7 +349,7 @@ func executeServerCmd(flags serverFlags) error {
 		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.backupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerObj, awsClient, instanceID, logger))

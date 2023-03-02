@@ -407,7 +407,7 @@ func (p *mockInstallationProvisioner) RefreshSecrets(cluster *model.Cluster, ins
 	return nil
 }
 
-func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface) error {
 	return nil
 }
 

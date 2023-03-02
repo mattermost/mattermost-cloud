@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +47,7 @@ type ClusterInstallationProvisioner interface {
 	DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
 	IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error)
 	RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error
-	PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error
+	PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface) error
 }
 
 // ClusterInstallationSupervisor finds cluster installations pending work and effects the required changes.
@@ -58,7 +57,6 @@ type ClusterInstallationProvisioner interface {
 type ClusterInstallationSupervisor struct {
 	store          clusterInstallationStore
 	provisioner    ClusterInstallationProvisioner
-	aws            aws.AWS
 	eventsProducer eventProducer
 	instanceID     string
 	logger         log.FieldLogger
@@ -66,11 +64,10 @@ type ClusterInstallationSupervisor struct {
 }
 
 // NewClusterInstallationSupervisor creates a new ClusterInstallationSupervisor.
-func NewClusterInstallationSupervisor(store clusterInstallationStore, provisioner ClusterInstallationProvisioner, aws aws.AWS, eventsProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterInstallationSupervisor {
+func NewClusterInstallationSupervisor(store clusterInstallationStore, provisioner ClusterInstallationProvisioner, eventsProducer eventProducer, instanceID string, logger log.FieldLogger, metrics *metrics.CloudMetrics) *ClusterInstallationSupervisor {
 	return &ClusterInstallationSupervisor{
 		store:          store,
 		provisioner:    provisioner,
-		aws:            aws,
 		eventsProducer: eventsProducer,
 		instanceID:     instanceID,
 		logger:         logger,
@@ -216,7 +213,7 @@ func (s *ClusterInstallationSupervisor) transitionClusterInstallation(clusterIns
 }
 
 func (s *ClusterInstallationSupervisor) createClusterInstallation(clusterInstallation *model.ClusterInstallation, logger log.FieldLogger, installation *model.Installation, cluster *model.Cluster) string {
-	err := s.provisioner.PrepareClusterUtilities(cluster, installation, s.store, s.aws)
+	err := s.provisioner.PrepareClusterUtilities(cluster, installation, s.store)
 	if err != nil {
 		logger.WithError(err).Error("Failed to provision cluster installation")
 		return model.ClusterInstallationStateCreationRequested

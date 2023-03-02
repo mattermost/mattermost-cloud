@@ -51,7 +51,6 @@ type RestoreProvisioner interface {
 // other clients needing to coordinate background jobs.
 type InstallationDBRestorationSupervisor struct {
 	store          installationDBRestorationStore
-	aws            aws.AWS
 	instanceID     string
 	environment    string
 	logger         log.FieldLogger
@@ -69,7 +68,6 @@ func NewInstallationDBRestorationSupervisor(
 	logger log.FieldLogger) *InstallationDBRestorationSupervisor {
 	return &InstallationDBRestorationSupervisor{
 		store:          store,
-		aws:            aws,
 		provisioner:    provisioner,
 		eventsProducer: eventsProducer,
 		instanceID:     instanceID,

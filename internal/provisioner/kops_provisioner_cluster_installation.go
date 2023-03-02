@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
-	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
@@ -490,7 +489,7 @@ func (provisioner Provisioner) DeleteOldClusterInstallationLicenseSecrets(cluste
 
 // PrepareClusterUtilities performs any updates to cluster utilities that may
 // be needed for clusterinstallations to function correctly.
-func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 	logger.Info("Preparing cluster utilities")
 
@@ -504,7 +503,7 @@ func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, i
 		return errors.Wrap(err, "failed to get kube config path")
 	}
 
-	return prepareClusterUtilities(cluster, configLocation, store, awsClient, provisioner.params.PGBouncerConfig, logger)
+	return prepareClusterUtilities(cluster, configLocation, store, provisioner.awsClient, provisioner.params.PGBouncerConfig, logger)
 }
 
 func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
