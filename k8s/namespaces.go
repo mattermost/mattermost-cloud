@@ -6,6 +6,7 @@ package k8s
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -127,11 +128,43 @@ func (kc *KubeClient) finalizeNamespaces(namespaces []*corev1.Namespace) error {
 
 // DeleteNamespacesWithFinalizer deletes kubernetes namespaces with a finalizer cleanup.
 func (kc *KubeClient) DeleteNamespacesWithFinalizer(namespaceNames []string) error {
-	if err := kc.DeleteNamespaces(namespaceNames); err != nil {
+	err := kc.DeleteNamespaces(namespaceNames)
+	if err != nil {
 		return errors.Wrap(err, "failed to delete namespace")
 	}
 
-	namespaces, err := kc.GetNamespaces(namespaceNames)
+	var namespaces []*corev1.Namespace
+
+	failTimeout := time.Now().Add(5 * time.Minute)
+
+	for {
+		namespaces, err = kc.GetNamespaces(namespaceNames)
+		if err != nil {
+			return errors.Wrap(err, "failed to get namespaces")
+		}
+		if len(namespaces) == 0 {
+			return nil
+		}
+
+		readyToFinalize := 0
+		for _, namespace := range namespaces {
+			if namespace.DeletionTimestamp != nil {
+				readyToFinalize++
+			}
+		}
+
+		if len(namespaces) == readyToFinalize {
+			break
+		}
+
+		if time.Now().After(failTimeout) {
+			return errors.New("timeout waiting for namespaces to be deleted")
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	namespaces, err = kc.GetNamespaces(namespaceNames)
 	if err != nil {
 		return errors.Wrap(err, "failed to get namespace")
 	}

@@ -69,7 +69,7 @@ func provisionCluster(
 
 	err = k8sClient.DeleteNamespacesWithFinalizer(namespaces)
 	if err != nil {
-		return errors.Wrap(err, "failed to delete namespacesß")
+		return errors.Wrap(err, "failed to delete namespaces")
 	}
 
 	wait := 300
