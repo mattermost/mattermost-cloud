@@ -15,6 +15,149 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func (a *AWSTestSuite) TestFixSubnetTagsForVPC() {
+	vpcID := "mock-vpc"
+	privateSubnetID := "private-id1"
+	publicSubnetID := "public-id1"
+	ctx := context.TODO()
+
+	a.Run("correct vpc subnets does nothing", func() {
+		a.SetupTest()
+		gomock.InOrder(
+			// Look into private subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Private"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
+			// Look into public subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Utility"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
+		)
+
+		logger := logrus.New()
+
+		err := a.Mocks.AWS.FixSubnetTagsForVPC(vpcID, logger)
+		a.Assert().NoError(err)
+	})
+
+	a.Run("incorrect vpc subnets fixes tags", func() {
+		a.SetupTest()
+		gomock.InOrder(
+			// Look into private subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Private"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{{
+						SubnetId: aws.String(privateSubnetID),
+						Tags: []ec2Types.Tag{
+							{
+								Key:   aws.String("SubnetType"),
+								Value: aws.String("Private"),
+							},
+						},
+					}},
+				}, nil).
+				Times(1),
+			// Fix private tag
+			a.Mocks.API.EC2.EXPECT().
+				CreateTags(ctx, &ec2.CreateTagsInput{
+					Resources: []string{privateSubnetID},
+					Tags: []ec2Types.Tag{
+						{
+							Key:   aws.String("SubnetType"),
+							Value: aws.String("private"),
+						},
+					},
+				}).
+				Return(&ec2.CreateTagsOutput{}, nil).
+				Times(1),
+			// Look into public subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Utility"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{{
+						SubnetId: aws.String(publicSubnetID),
+						Tags: []ec2Types.Tag{
+							{
+								Key:   aws.String("SubnetType"),
+								Value: aws.String("Utility"),
+							},
+						},
+					}},
+				}, nil).
+				Times(1),
+			// Fix public tag
+			a.Mocks.API.EC2.EXPECT().
+				CreateTags(ctx, &ec2.CreateTagsInput{
+					Resources: []string{publicSubnetID},
+					Tags: []ec2Types.Tag{
+						{
+							Key:   aws.String("SubnetType"),
+							Value: aws.String("public"),
+						},
+					},
+				}).
+				Return(&ec2.CreateTagsOutput{}, nil).
+				Times(1),
+		)
+
+		logger := logrus.New()
+
+		err := a.Mocks.AWS.FixSubnetTagsForVPC(vpcID, logger)
+		a.Assert().NoError(err)
+	})
+}
+
 func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 	owner := "test"
 	vpcID := "mock-vpc"

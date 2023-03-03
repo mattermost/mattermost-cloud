@@ -500,6 +500,10 @@ func (a *mockAWS) GetS3RegionURL() string {
 	return "s3.amazonaws.test.com"
 }
 
+func (a *mockAWS) FixSubnetTagsForVPC(vpcID string, logger log.FieldLogger) error {
+	return nil
+}
+
 func (a *mockAWS) GetAndClaimVpcResources(cluster *model.Cluster, owner string, logger log.FieldLogger) (aws.ClusterResources, error) {
 	return aws.ClusterResources{}, nil
 }

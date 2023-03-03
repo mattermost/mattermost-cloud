@@ -222,6 +222,11 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
+	err = awsClient.FixSubnetTagsForVPC(clusterResources.VpcID, logger)
+	if err != nil {
+		return err
+	}
+
 	err = terraformClient.Apply()
 	if err != nil {
 		return err
@@ -376,6 +381,11 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster, awsCl
 		return err
 	}
 
+	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	if err != nil {
+		return err
+	}
+
 	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
@@ -514,6 +524,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 		return err
 	}
 
+	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	if err != nil {
+		return err
+	}
+
 	terraformClient, err := terraform.New(kops.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
 	if err != nil {
 		return err
@@ -544,6 +559,11 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster, awsCli
 	}
 
 	err = kops.UpdateCluster(kopsMetadata.Name, kops.GetOutputDirectory())
+	if err != nil {
+		return err
+	}
+
+	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
 	if err != nil {
 		return err
 	}
@@ -680,6 +700,11 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 	err = kopsClient.UpdateCluster(kopsMetadata.Name, kopsClient.GetOutputDirectory())
 	if err != nil {
 		return errors.Wrap(err, "failed to run kops update")
+	}
+
+	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	if err != nil {
+		return err
 	}
 
 	terraformClient, err := terraform.New(kopsClient.GetOutputDirectory(), provisioner.params.S3StateStore, logger)
