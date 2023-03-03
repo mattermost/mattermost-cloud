@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -241,7 +240,7 @@ func TestInstallationDBRestorationSupervisor_Supervise(t *testing.T) {
 			},
 			{
 				description:   "when terminal error",
-				mockRestoreOp: &mockRestoreProvisioner{RestoreCompleteTime: -1, err: provisioner.ErrJobBackoffLimitReached},
+				mockRestoreOp: &mockRestoreProvisioner{RestoreCompleteTime: -1, err: supervisor.ErrJobBackoffLimitReached},
 				expectedState: model.InstallationDBRestorationStateFailing,
 			},
 		} {

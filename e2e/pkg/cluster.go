@@ -2,7 +2,8 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+//go:build e2e
+// +build e2e
 
 package pkg
 
@@ -18,10 +19,9 @@ var (
 	ClusterProvisioningFailedStates = []string{model.ClusterStateCreationFailed, model.ClusterStateProvisioningFailed}
 )
 
-
 // WaitForClusterToBeStable waits until Cluster reaches Stable state.
 func WaitForClusterToBeStable(ctx context.Context, clusterID string, whChan <-chan *model.WebhookPayload, log logrus.FieldLogger) error {
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	waitCtx, cancel := context.WithTimeout(ctx, 60*time.Minute)
 	defer cancel()
 
 	whWaiter := webhookWaiter{

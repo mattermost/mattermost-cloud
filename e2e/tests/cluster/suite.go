@@ -10,11 +10,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
-
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
-
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
+	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
+	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/mattermost/mattermost-cloud/e2e/workflow"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -26,6 +26,7 @@ import (
 
 // TestConfig is test configuration coming from env vars.
 type TestConfig struct {
+	Provisioner               string `envconfig:"default=kops"`
 	CloudURL                  string `envconfig:"default=http://localhost:8075"`
 	InstallationDBType        string `envconfig:"default=mysql-operator"`
 	InstallationFileStoreType string `envconfig:"default=minio-operator"`
@@ -34,7 +35,12 @@ type TestConfig struct {
 	EventListenerAddress      string `envconfig:"default=http://localhost:11112"`
 	FetchAMI                  bool   `envconfig:"default=true"`
 	KopsAMI                   string `envconfig:"optional"`
+	VPC                       string `envconfig:"optional"`
 	Cleanup                   bool   `envconfig:"default=true"`
+	ClusterRoleARN            string `envconfig:"optional"`
+	NodeRoleARN               string `envconfig:"optional"`
+	ClusterID                 string `envconfig:"optional"`
+	InstallationID            string `envconfig:"optional"`
 }
 
 // Test holds all data required for a db migration test.
@@ -53,6 +59,7 @@ type Test struct {
 // SetupClusterLifecycleTest sets up cluster lifecycle test.
 func SetupClusterLifecycleTest() (*Test, error) {
 	testID := model.NewID()
+	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
 		"test":   "cluster-lifecycle",
 		"testID": testID,
@@ -69,6 +76,15 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		AllowInstallations: true,
 		Annotations:        testAnnotations(testID),
 		KopsAMI:            config.KopsAMI,
+		VPC:                config.VPC,
+		Provisioner:        config.Provisioner,
+	}
+
+	if config.Provisioner == "eks" {
+		createClusterReq.EKSConfig = &model.EKSConfig{
+			ClusterRoleARN: ptr.String(config.ClusterRoleARN),
+			NodeRoleARN:    ptr.String(config.NodeRoleARN),
+		}
 	}
 
 	// If specified, we fetch AMI from existing clusters.
@@ -81,6 +97,8 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	} else if config.KopsAMI != "" {
 		createClusterReq.KopsAMI = config.KopsAMI
 	}
+
+	// TODO: A way to fetch the latest AMI automatically for local development
 
 	err = clusterdictionary.ApplyToCreateClusterRequest("SizeAlef1000", createClusterReq)
 	if err != nil {
@@ -110,8 +128,12 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		return nil, errors.Wrap(err, "failed to setup webhook")
 	}
 
-	clusterSuite := workflow.NewClusterSuite(clusterParams, client, webhookChan, logger)
-	installationSuite := workflow.NewInstallationSuite(installationParams, config.DNSSubdomain, client, kubeClient, logger)
+	clusterMeta := workflow.ClusterSuiteMeta{ClusterID: config.ClusterID}
+	clusterSuite := workflow.NewClusterSuite(clusterParams, clusterMeta, client, webhookChan, logger)
+
+	installationMeta := workflow.InstallationSuiteMeta{InstallationID: config.InstallationID}
+
+	installationSuite := workflow.NewInstallationSuite(installationParams, installationMeta, config.DNSSubdomain, client, kubeClient, webhookChan, logger)
 
 	eventsRecorder := eventstest.NewEventsRecorder(subOwner, config.EventListenerAddress, logger.WithField("component", "event-recorder"), eventstest.RecordAll)
 

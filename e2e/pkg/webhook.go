@@ -12,14 +12,29 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/pkg/errors"
 )
 
+type webhookPayloadAttachmentField struct {
+	Short bool   `json:"short"`
+	Title string `json:"title"`
+	Value string `json:"value"`
+}
+
+type webhookPayloadAttachment struct {
+	Title     string                          `json:"title"`
+	TitleLink string                          `json:"title_link"`
+	Color     string                          `json:"color"`
+	Fields    []webhookPayloadAttachmentField `json:"fields"`
+}
+
 type webhookPayload struct {
-	Username  string `json:"username"`
-	IconURL   string `json:"icon_url"`
-	IconEmoji string `json:"icon_emoji"`
-	Text      string `json:"text"`
+	Username    string                     `json:"username"`
+	IconURL     string                     `json:"icon_url"`
+	IconEmoji   string                     `json:"icon_emoji"`
+	Text        string                     `json:"text"`
+	Attachments []webhookPayloadAttachment `json:"attachments"`
 }
 
 // sendWebhook sends a Mattermost webhook to the provided URL.
@@ -53,7 +68,7 @@ func sendWebhook(ctx context.Context, webhookURL string, payload *webhookPayload
 
 // SendE2EResult sends the webhook with the provided icon and message. Errors on trying to send a
 // message or if the webhook URL is not provided properly.
-func SendE2EResult(ctx context.Context, icon, text string) error {
+func SendE2EResult(ctx context.Context, icon, text, color string) error {
 	webhookURL := os.Getenv("WEBHOOK_URL")
 	_, err := url.ParseRequestURI(webhookURL)
 	if err != nil {
@@ -63,7 +78,29 @@ func SendE2EResult(ctx context.Context, icon, text string) error {
 	payload := webhookPayload{
 		Username:  "E2E",
 		IconEmoji: icon,
-		Text:      text,
+		Text:      " ",
+		Attachments: []webhookPayloadAttachment{{
+			Title:     text,
+			TitleLink: `https://grafana.internal.mattermost.com/goto/kWlEn-24k?orgId=1`,
+			Color:     color,
+			Fields: []webhookPayloadAttachmentField{
+				{
+					Short: true,
+					Title: "TestID",
+					Value: "`" + state.TestID + "`",
+				},
+				{
+					Short: true,
+					Title: "ClusterID",
+					Value: "`" + state.ClusterID + "`",
+				},
+				{
+					Short: true,
+					Title: "Runtime",
+					Value: (state.EndTime.Sub(state.StartTime)).String(),
+				},
+			},
+		}},
 	}
 
 	if err := sendWebhook(ctx, webhookURL, &payload); err != nil {

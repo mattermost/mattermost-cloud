@@ -75,6 +75,17 @@ func (s *mockClusterStore) GetStateChangeEvents(filter *model.StateChangeEventFi
 	return nil, nil
 }
 
+type mockClusterProvisionerOption struct {
+	mock *mockClusterProvisioner
+}
+
+func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
+	if p.mock == nil {
+		p.mock = &mockClusterProvisioner{}
+	}
+	return p.mock
+}
+
 type mockClusterProvisioner struct{}
 
 func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
@@ -86,6 +97,10 @@ func (p *mockClusterProvisioner) CreateCluster(cluster *model.Cluster, aws aws.A
 }
 
 func (p *mockClusterProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	return true, nil
+}
+
+func (p *mockClusterProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	return true, nil
 }
 
@@ -116,7 +131,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
-			&mockClusterProvisioner{},
+			&mockClusterProvisionerOption{},
 			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
@@ -142,7 +157,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
-			&mockClusterProvisioner{},
+			&mockClusterProvisionerOption{},
 			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
@@ -153,7 +168,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		require.NoError(t, err)
 
 		<-mockStore.UnlockChan
-		require.Equal(t, 3, mockStore.UpdateClusterCalls)
+		require.Equal(t, 2, mockStore.UpdateClusterCalls)
 	})
 
 	t.Run("order of pending works", func(t *testing.T) {
@@ -194,7 +209,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 		mockEventProducer := &mockEventProducer{}
 		supervisor := supervisor.NewClusterSupervisor(
 			mockStore,
-			&mockClusterProvisioner{},
+			&mockClusterProvisionerOption{},
 			&mockAWS{},
 			mockEventProducer,
 			"instanceID",
@@ -217,7 +232,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		ExpectedState string
 	}{
 		{"unexpected state", model.ClusterStateStable, model.ClusterStateStable},
-		{"creation requested", model.ClusterStateCreationRequested, model.ClusterStateStable},
+		{"creation requested", model.ClusterStateCreationRequested, model.ClusterStateProvisionInProgress},
 		{"provision requested", model.ClusterStateProvisioningRequested, model.ClusterStateStable},
 		{"upgrade requested", model.ClusterStateUpgradeRequested, model.ClusterStateStable},
 		{"resize requested", model.ClusterStateResizeRequested, model.ClusterStateStable},
@@ -232,7 +247,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 			defer store.CloseConnection(t, sqlStore)
 			supervisor := supervisor.NewClusterSupervisor(
 				sqlStore,
-				&mockClusterProvisioner{},
+				&mockClusterProvisionerOption{},
 				&mockAWS{},
 				testutil.SetupTestEventsProducer(sqlStore, logger),
 				"instanceID",
@@ -262,7 +277,7 @@ func TestClusterSupervisorSupervise(t *testing.T) {
 		defer store.CloseConnection(t, sqlStore)
 		supervisor := supervisor.NewClusterSupervisor(
 			sqlStore,
-			&mockClusterProvisioner{},
+			&mockClusterProvisionerOption{},
 			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",

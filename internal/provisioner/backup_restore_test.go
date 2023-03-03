@@ -10,19 +10,18 @@ import (
 	"testing"
 	"time"
 
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"k8s.io/apimachinery/pkg/util/wait"
-	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
-
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/fake"
+	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 )
 
 func TestOperator_TriggerBackup(t *testing.T) {
@@ -244,7 +243,7 @@ func TestOperator_CheckJobStatus(t *testing.T) {
 			t.Run("ErrJobBackoffLimitReached when failed enough times", func(t *testing.T) {
 				_, err = testCase.checkFunc(jobClient, backupMeta, logrus.New())
 				require.Error(t, err)
-				assert.Equal(t, ErrJobBackoffLimitReached, err)
+				assert.Equal(t, supervisor.ErrJobBackoffLimitReached, err)
 			})
 
 			job.Status = testCase.successStatus

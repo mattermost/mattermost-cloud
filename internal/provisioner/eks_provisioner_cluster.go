@@ -5,20 +5,22 @@
 package provisioner
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/mattermost/mattermost-cloud/internal/store"
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"os"
 )
 
 // EKSProvisionerType is provisioner type for EKS clusters.
@@ -30,41 +32,28 @@ type clusterUpdateStore interface {
 
 // EKSProvisioner provisions clusters using AWS EKS.
 type EKSProvisioner struct {
-	logger             log.FieldLogger
-	store              model.InstallationDatabaseStoreInterface
+	params             ProvisioningParams
+	awsClient          aws.AWS
 	clusterUpdateStore clusterUpdateStore
-
-	awsClient aws.AWS
-
-	params            ProvisioningParams
-	commonProvisioner *CommonProvisioner
+	store              model.InstallationDatabaseStoreInterface
+	logger             log.FieldLogger
 }
 
-// ClusterInstallationProvisioner returns ClusterInstallationProvisioner based on EKS provisioner.
-func (provisioner *EKSProvisioner) ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner {
-	return provisioner
-}
+var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
-	store model.InstallationDatabaseStoreInterface,
-	clusterUpdateStore clusterUpdateStore,
 	params ProvisioningParams,
-	resourceUtil *utils.ResourceUtil,
 	awsClient aws.AWS,
-	logger log.FieldLogger) *EKSProvisioner {
+	store *store.SQLStore,
+	logger log.FieldLogger,
+) *EKSProvisioner {
 	return &EKSProvisioner{
-		logger:             logger,
-		store:              store,
-		clusterUpdateStore: clusterUpdateStore,
-		awsClient:          awsClient,
 		params:             params,
-		commonProvisioner: &CommonProvisioner{
-			resourceUtil: resourceUtil,
-			store:        store,
-			params:       params,
-			logger:       logger,
-		},
+		awsClient:          awsClient,
+		clusterUpdateStore: store,
+		store:              store,
+		logger:             logger,
 	}
 }
 
@@ -128,11 +117,6 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 		return false, errors.New("expected EKS metadata not to be nil")
 	}
 
-	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get VPC resources")
-	}
-
 	ready, err := awsClient.IsClusterReady(cluster.ID)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check if EKS cluster is ready")
@@ -140,6 +124,49 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster, a
 	if !ready {
 		logger.Info("EKS cluster not ready")
 		return false, nil
+	}
+
+	// When cluster is ready, we need to create LaunchTemplate for NodeGroup.
+	_, err = awsClient.EnsureLaunchTemplate(cluster.ID, *cluster.ProvisionerMetadataEKS)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to ensure launch template")
+	}
+
+	// To install Calico Networking, We need to delete VPC CNI plugin (aws-node)
+	// and install Calico CNI plugin before creating any pods
+	kubeConfigFile, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to prepare kubeconfig file")
+	}
+
+	k8sClient, err := k8s.NewFromFile(kubeConfigFile, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to initialize K8s client from kubeconfig")
+	}
+	// Delete aws-node daemonset to disable VPC CNI plugin
+	_ = k8sClient.Clientset.AppsV1().DaemonSets("kube-system").Delete(context.Background(), "aws-node", metav1.DeleteOptions{})
+
+	var files []k8s.ManifestFile
+	files = append(files, k8s.ManifestFile{
+		Path:            "manifests/eks/calico-eks.yaml",
+		DeployNamespace: "kube-system",
+	})
+
+	err = k8sClient.CreateFromFiles(files)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// CheckNodesCreated provisions EKS cluster.
+func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	clusterResources, err := awsClient.GetVpcResourcesByVpcID(cluster.ProvisionerMetadataEKS.VPC, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get VPC resources")
 	}
 
 	nodeGroups, err := awsClient.EnsureEKSClusterNodeGroups(cluster, clusterResources, *cluster.ProvisionerMetadataEKS)
@@ -210,6 +237,30 @@ func (provisioner *EKSProvisioner) RefreshKopsMetadata(cluster *model.Cluster) e
 	return nil
 }
 
+func (provisioner *EKSProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
+	configLocation, err := provisioner.prepareClusterKubeconfig(cluster.ID)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to prepare kube config")
+	}
+
+	return configLocation, nil
+}
+
+func (provisioner *EKSProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	configLocation, err := provisioner.getKubeConfigPath(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube config")
+	}
+
+	var k8sClient *k8s.KubeClient
+	k8sClient, err = k8s.NewFromFile(configLocation, provisioner.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	return k8sClient, nil
+}
+
 // DeleteCluster deletes EKS cluster.
 func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
@@ -229,6 +280,14 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClie
 	deleted, err := awsClient.EnsureNodeGroupsDeleted(cluster)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to delete node groups")
+	}
+	if !deleted {
+		return false, nil
+	}
+
+	deleted, err = awsClient.EnsureLaunchTemplateDeleted(cluster.ID)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to delete launch template")
 	}
 	if !deleted {
 		return false, nil
@@ -347,7 +406,7 @@ func NewEKSKubeconfig(cluster *eksTypes.Cluster, aws aws.AWS) (clientcmdapi.Conf
 				Exec: &clientcmdapi.ExecConfig{
 					Command:    "aws",
 					Args:       []string{"--region", region, "eks", "get-token", "--cluster-name", *cluster.Name},
-					APIVersion: "client.authentication.k8s.io/v1alpha1",
+					APIVersion: "client.authentication.k8s.io/v1beta1",
 				},
 			},
 		},

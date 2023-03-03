@@ -146,17 +146,17 @@ func getElasticLoadBalancerInfo(namespace string, logger log.FieldLogger, config
 }
 
 // GetPublicLoadBalancerEndpoint returns the public load balancer endpoint of the NGINX service.
-func (provisioner *KopsProvisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+func (provisioner Provisioner) GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error) {
+
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":         cluster.ID,
 		"nginx-namespace": namespace,
 	})
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get kops config from cache")
+		return "", errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
 
 	return getPublicLoadBalancerEndpoint(configLocation, namespace, logger)
 }

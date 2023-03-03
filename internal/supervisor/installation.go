@@ -12,17 +12,13 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/events"
-
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -91,20 +87,13 @@ type eventProducer interface {
 	ProduceClusterInstallationStateChangeEvent(clusterInstallation *model.ClusterInstallation, oldState string, extraDataFields ...events.DataField) error
 }
 
-// provisioner abstracts the provisioning operations required by the installation supervisor.
-type installationProvisioner interface {
-	ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner
-	GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger log.FieldLogger) (*k8s.ClusterResources, error)
-	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
-}
-
 // InstallationSupervisor finds installations pending work and effects the required changes.
 //
 // The degree of parallelism is controlled by a weighted semaphore, intended to be shared with
 // other clients needing to coordinate background jobs.
 type InstallationSupervisor struct {
 	store             installationStore
-	provisioner       installationProvisioner
+	provisioner       InstallationProvisioner
 	aws               aws.AWS
 	instanceID        string
 	keepDatabaseData  bool
@@ -140,10 +129,17 @@ type InstallationSupervisorSchedulingOptions struct {
 	ClusterResourceThresholdScaleValue int
 }
 
+// InstallationProvisioner abstracts the provisioning operations required by the installation supervisor.
+type InstallationProvisioner interface {
+	ClusterInstallationProvisioner(version string) ClusterInstallationProvisioner
+	GetClusterResources(cluster *model.Cluster, canSchedule bool, logger log.FieldLogger) (*k8s.ClusterResources, error)
+	GetPublicLoadBalancerEndpoint(cluster *model.Cluster, namespace string) (string, error)
+}
+
 // NewInstallationSupervisor creates a new InstallationSupervisor.
 func NewInstallationSupervisor(
 	store installationStore,
-	installationProvisioner installationProvisioner,
+	provisioner InstallationProvisioner,
 	aws aws.AWS,
 	instanceID string,
 	keepDatabaseData,
@@ -158,7 +154,7 @@ func NewInstallationSupervisor(
 	disableDNSUpdates bool) *InstallationSupervisor {
 	return &InstallationSupervisor{
 		store:             store,
-		provisioner:       installationProvisioner,
+		provisioner:       provisioner,
 		aws:               aws,
 		instanceID:        instanceID,
 		keepDatabaseData:  keepDatabaseData,

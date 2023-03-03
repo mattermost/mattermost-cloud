@@ -10,8 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
+	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +19,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/kubernetes/typed/batch/v1"
 )
 
@@ -30,9 +30,6 @@ const (
 	backupAction              = "backup"
 	restoreAction             = "restore"
 )
-
-// ErrJobBackoffLimitReached indicates that job failed all possible attempts and there is no reason for retrying.
-var ErrJobBackoffLimitReached = errors.New("job reached backoff limit")
 
 // BackupOperator provides methods to run, check and cleanup backup jobs.
 type BackupOperator struct {
@@ -215,7 +212,7 @@ func (o BackupOperator) checkJobStatus(
 	backoffLimit := getInt32(job.Spec.BackoffLimit)
 	if job.Status.Failed > backoffLimit {
 		logger.Error("Job reached backoff limit")
-		return -1, ErrJobBackoffLimitReached
+		return -1, supervisor.ErrJobBackoffLimitReached
 	}
 
 	logger.Infof("Job waiting for retry, will be retried at most %d more times", backoffLimit+1-job.Status.Failed)

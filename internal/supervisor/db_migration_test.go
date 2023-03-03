@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -146,10 +145,6 @@ func (m *mockDBMigrationStore) GetWebhooks(filter *model.WebhookFilter) ([]*mode
 	return nil, nil
 }
 
-func (m *mockDBMigrationStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.GroupDTO, error) {
-	panic("implement me")
-}
-
 type mockDatabase struct{}
 
 func (m *mockDatabase) TeardownMigrated(store model.InstallationDatabaseStoreInterface, migrationOp *model.InstallationDBMigrationOperation, logger log.FieldLogger) error {
@@ -196,7 +191,7 @@ func (m *mockResourceUtil) GetDatabase(installationID, dbType string) model.Data
 
 type mockMigrationProvisioner struct{}
 
-func (m *mockMigrationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
+func (m *mockMigrationProvisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
 	return &mockInstallationProvisioner{}
 }
 

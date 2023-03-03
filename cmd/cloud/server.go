@@ -42,12 +42,6 @@ import (
 
 const defaultLocalServerAPI = "http://localhost:8075"
 
-// Provisioner is an interface for different types of provisioners.
-type Provisioner interface {
-	api.Provisioner
-	supervisor.Provisioner
-}
-
 func newCmdServer() *cobra.Command {
 	var flags serverFlags
 
@@ -65,6 +59,10 @@ func newCmdServer() *cobra.Command {
 			if flags.enableLogStacktrace {
 				enableLogStacktrace()
 			}
+
+			if flags.enableLogFilesPerCluster {
+				enableIndividualClusterLogFiles(flags.logFilesPerClusterPath)
+			}
 		},
 	}
 	flags.addFlags(cmd)
@@ -80,6 +78,10 @@ func executeServerCmd(flags serverFlags) error {
 	}
 
 	helm.SetVerboseHelmLogging(flags.debugHelm)
+
+	if flags.enableLogFilesPerCluster && flags.logFilesPerClusterPath == "" {
+		return fmt.Errorf("log files per cluster path must not be empty")
+	}
 
 	if err := model.SetDefaultProxyDatabaseMaxInstallationsPerLogicalDatabase(flags.maxSchemas); err != nil {
 		return err
@@ -192,8 +194,6 @@ func executeServerCmd(flags serverFlags) error {
 		}
 	}
 
-	provisionerFlag := flags.provisioner
-
 	logger.WithFields(logrus.Fields{
 		"build-hash":                                    model.BuildHash,
 		"cluster-supervisor":                            supervisorsEnabled.clusterSupervisor,
@@ -234,8 +234,6 @@ func executeServerCmd(flags serverFlags) error {
 		"disable-db-init-check":                         flags.disableDBInitCheck,
 		"enable-route53":                                flags.enableRoute53,
 		"disable-dns-updates":                           flags.disableDNSUpdates,
-		"provisioner":                                   provisionerFlag,
-		"slo-availability":                              flags.sloTargetAvailability,
 	}).Info("Starting Mattermost Provisioning Server")
 
 	// Warn on settings we consider to be non-production.
@@ -277,39 +275,31 @@ func executeServerCmd(flags serverFlags) error {
 		SLOInstallationGroups:   flags.sloInstallationGroups,
 		SLOEnterpriseGroups:     flags.sloEnterpriseGroups,
 		EtcdManagerEnv:          etcdManagerEnv,
-		SLOTargetAvailability:   flags.sloTargetAvailability,
 	}
 
 	resourceUtil := utils.NewResourceUtil(instanceID, awsClient, dbClusterUtilizationSettingsFromFlags(flags), flags.disableDBInitCheck)
 
-	// TODO: In the future we can support both provisioners running
-	// at the same time, and the correct one should be chosen based
-	// on request. For now for simplicity we configure it with a
-	// flag.
-	var clusterProvisioner Provisioner
-	switch provisionerFlag {
-	case provisioner.KopsProvisionerType:
-		kopsProvisioner := provisioner.NewKopsProvisioner(
-			provisioningParams,
-			resourceUtil,
-			logger,
-			sqlStore,
-			provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
-		)
-		defer kopsProvisioner.Teardown()
-		clusterProvisioner = kopsProvisioner
-	case provisioner.EKSProvisionerType:
-		eksProvisioner := provisioner.NewEKSProvisioner(sqlStore,
-			sqlStore,
-			provisioningParams,
-			resourceUtil,
-			awsClient,
-			logger)
+	kopsProvisioner := provisioner.NewKopsProvisioner(
+		provisioningParams,
+		sqlStore,
+		logger,
+	)
 
-		clusterProvisioner = eksProvisioner
-	default:
-		return errors.Errorf("invalid value for provisioner flag %q, expected one of: kops, eks", provisionerFlag)
-	}
+	eksProvisioner := provisioner.NewEKSProvisioner(
+		provisioningParams,
+		awsClient,
+		sqlStore,
+		logger,
+	)
+
+	provisionerObj := provisioner.NewProvisioner(
+		kopsProvisioner, eksProvisioner,
+		provisioningParams,
+		resourceUtil,
+		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
+		sqlStore,
+		logger,
+	)
 
 	cloudMetrics := metrics.New()
 
@@ -348,31 +338,31 @@ func executeServerCmd(flags serverFlags) error {
 
 	var multiDoer supervisor.MultiDoer
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.groupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
+		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, clusterProvisioner, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.backupSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, clusterProvisioner, awsClient, instanceID, logger))
+		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerObj, awsClient, instanceID, logger))
 	}
 	if supervisorsEnabled.importSupervisor {
 		if flags.awatAddress == "" {
 			return errors.New("--awat flag must be provided when --import-supervisor flag is provided")
 		}
-		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, clusterProvisioner, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewImportSupervisor(awsClient, awat.NewClient(flags.awatAddress), sqlStore, provisionerObj, eventsProducer, logger))
 	}
 	if supervisorsEnabled.installationDBRestorationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, clusterProvisioner, eventsProducer, instanceID, logger))
+		multiDoer = append(multiDoer, supervisor.NewInstallationDBRestorationSupervisor(sqlStore, awsClient, provisionerObj, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationDBMigrationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, clusterProvisioner, eventsProducer, logger))
+		multiDoer = append(multiDoer, supervisor.NewInstallationDBMigrationSupervisor(sqlStore, awsClient, resourceUtil, instanceID, provisionerObj, eventsProducer, logger))
 	}
 
 	// Setup the supervisor to effect any requested changes. It is wrapped in a
@@ -382,7 +372,7 @@ func executeServerCmd(flags serverFlags) error {
 		logger.WithField("poll", flags.poll).Info("Scheduler is disabled")
 	}
 
-	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second)
+	standardSupervisor := supervisor.NewScheduler(multiDoer, time.Duration(flags.poll)*time.Second, logger)
 	defer standardSupervisor.Close()
 
 	if flags.slowPoll == 0 {
@@ -391,7 +381,7 @@ func executeServerCmd(flags serverFlags) error {
 	if supervisorsEnabled.installationDeletionSupervisor {
 		var slowMultiDoer supervisor.MultiDoer
 		slowMultiDoer = append(slowMultiDoer, supervisor.NewInstallationDeletionSupervisor(instanceID, flags.installationDeletionPendingTime, flags.installationDeletionMaxUpdating, sqlStore, eventsProducer, logger))
-		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second)
+		slowSupervisor := supervisor.NewScheduler(slowMultiDoer, time.Duration(flags.slowPoll)*time.Second, logger)
 		defer slowSupervisor.Close()
 	}
 
@@ -420,7 +410,7 @@ func executeServerCmd(flags serverFlags) error {
 	api.Register(router, &api.Context{
 		Store:                             sqlStore,
 		Supervisor:                        standardSupervisor,
-		Provisioner:                       clusterProvisioner,
+		Provisioner:                       provisionerObj,
 		DBProvider:                        resourceUtil,
 		EventProducer:                     eventsProducer,
 		Environment:                       awsClient.GetCloudEnvironmentName(),

@@ -10,10 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
@@ -21,6 +17,9 @@ import (
 	"github.com/mattermost/mattermost-cloud/model"
 	rotatorModel "github.com/mattermost/rotator/model"
 	"github.com/mattermost/rotator/rotator"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 )
 
 // DefaultKubernetesVersion is the default value for a kubernetes cluster
@@ -268,6 +267,14 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster, awsCli
 
 // CheckClusterCreated is a noop for KopsProvisioner.
 func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+	// TODO: this is currently not implemented for kops.
+	// Entire waiting logic happens as part of cluster creation therefore we
+	// just skip this step and report cluster as created.
+	return true, nil
+}
+
+// CheckNodesCreated is a noop for KopsProvisioner.
+func (provisioner *KopsProvisioner) CheckNodesCreated(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
 	// TODO: this is currently not implemented for kops.
 	// Entire waiting logic happens as part of cluster creation therefore we
 	// just skip this step and report cluster as created.
@@ -707,15 +714,13 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, a
 }
 
 // GetClusterResources returns a snapshot of resources of a given cluster.
-func (provisioner *KopsProvisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
+func (provisioner Provisioner) GetClusterResources(cluster *model.Cluster, onlySchedulable bool, logger logrus.FieldLogger) (*k8s.ClusterResources, error) {
 	logger = logger.WithField("cluster", cluster.ID)
 
-	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get kops config from cache")
+		return nil, errors.Wrap(err, "failed to get kube config path")
 	}
-	defer provisioner.invalidateCachedKopsClientOnError(err, cluster.ProvisionerMetadataKops.Name, logger)
-
 	return getClusterResources(configLocation, onlySchedulable, logger)
 }
 
@@ -754,16 +759,36 @@ func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) 
 	return nil
 }
 
+func (provisioner *KopsProvisioner) getKubeConfigPath(cluster *model.Cluster) (string, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	configLocation, err := provisioner.getCachedKopsClusterKubecfg(cluster.ProvisionerMetadataKops.Name, logger)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get kops config from cache")
+	}
+
+	return configLocation, nil
+}
+
+func (provisioner *KopsProvisioner) getKubeClient(cluster *model.Cluster) (*k8s.KubeClient, error) {
+	k8sClient, err := provisioner.k8sClient(cluster.ProvisionerMetadataKops.Name, provisioner.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create k8s client")
+	}
+
+	return k8sClient, nil
+}
+
 // prepareSloth prepares sloth resources after prometheus utility is installed.
 func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 	files := []k8s.ManifestFile{
 		{
 			Path:            "manifests/sloth/crd_sloth.slok.dev_prometheusservicelevels.yaml",
-			DeployNamespace: "prometheus",
+			DeployNamespace: prometheusNamespace,
 		},
 		{
 			Path:            "manifests/sloth/sloth.yaml",
-			DeployNamespace: "prometheus",
+			DeployNamespace: prometheusNamespace,
 		},
 	}
 
@@ -772,7 +797,7 @@ func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 		return errors.Wrapf(err, "failed to create sloth resources.")
 	}
 	wait := 240
-	pods, err := k8sClient.GetPodsFromDeployment("prometheus", "sloth")
+	pods, err := k8sClient.GetPodsFromDeployment(prometheusNamespace, "sloth")
 	if err != nil {
 		return err
 	}
@@ -784,7 +809,7 @@ func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 		logger.Infof("Waiting up to %d seconds for %q pod %q to start...", wait, "sloth", pod.GetName())
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 		defer cancel()
-		_, err := k8sClient.WaitForPodRunning(ctx, "prometheus", pod.GetName())
+		_, err := k8sClient.WaitForPodRunning(ctx, prometheusNamespace, pod.GetName())
 		if err != nil {
 			return err
 		}

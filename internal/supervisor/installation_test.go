@@ -9,10 +9,10 @@ import (
 	"math/rand"
 	"testing"
 
+	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/testlib"
@@ -49,7 +49,7 @@ func (s *mockInstallationStore) GetClusters(clusterFilter *model.ClusterFilter) 
 }
 
 func (s *mockInstallationStore) GetCluster(id string) (*model.Cluster, error) {
-	return nil, nil
+	return &model.Cluster{}, nil
 }
 
 func (s *mockInstallationStore) UpdateCluster(cluster *model.Cluster) error {
@@ -253,10 +253,6 @@ func (s *mockInstallationStore) DeleteInstallationDNS(installationID string, dns
 	return nil
 }
 
-func (s *mockInstallationStore) GetGroupDTOs(filter *model.GroupFilter) ([]*model.GroupDTO, error) {
-	return []*model.GroupDTO{{Group: &model.Group{ID: "group-id"}}}, nil
-}
-
 type mockMultitenantDBStore struct{}
 
 func (m *mockMultitenantDBStore) GetMultitenantDatabase(multitenantdatabaseID string) (*model.MultitenantDatabase, error) {
@@ -336,8 +332,23 @@ type mockInstallationProvisioner struct {
 	CustomClusterResources    *k8s.ClusterResources
 }
 
-func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) provisioner.ClusterInstallationProvisioner {
-	return p
+func (p *mockInstallationProvisioner) ExecClusterInstallationCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockInstallationProvisioner) ExecMattermostCLI(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *mockInstallationProvisioner) ClusterInstallationProvisioner(version string) supervisor.ClusterInstallationProvisioner {
+	return &mockInstallationProvisioner{}
+}
+
+func (p *mockInstallationProvisioner) ExecClusterInstallationJob(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, args ...string) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (p *mockInstallationProvisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
@@ -403,6 +414,14 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // TODO(gsagula): this can be replaced with /internal/mocks/aws-tools/AWS.go so that inputs and other variants
 // can be tested.
 type mockAWS struct{}
+
+func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata model.EKSMetadata) (*ec2Types.LaunchTemplate, error) {
+	return &ec2Types.LaunchTemplate{}, nil
+}
+
+func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) {
+	return true, nil
+}
 
 func (a *mockAWS) GetLoadBalancerAPIByType(s string) aws.ELB {
 	//TODO implement me

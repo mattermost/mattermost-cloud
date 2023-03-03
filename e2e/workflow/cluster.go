@@ -2,6 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
+//go:build e2e
 // +build e2e
 
 package workflow
@@ -9,22 +10,22 @@ package workflow
 import (
 	"context"
 
-	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
-
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
+	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
+	"github.com/mattermost/mattermost-cloud/e2e/tests/state"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 // NewClusterSuite creates new Cluster testing suite.
-func NewClusterSuite(params ClusterSuiteParams, client *model.Client, whChan <-chan *model.WebhookPayload, logger logrus.FieldLogger) *ClusterSuite {
+func NewClusterSuite(params ClusterSuiteParams, meta ClusterSuiteMeta, client *model.Client, whChan <-chan *model.WebhookPayload, logger logrus.FieldLogger) *ClusterSuite {
 	return &ClusterSuite{
 		client: client,
 		whChan: whChan,
 		logger: logger.WithField("suite", "cluster"),
 		Params: params,
-		Meta:   ClusterSuiteMeta{},
+		Meta:   meta,
 	}
 }
 
@@ -58,6 +59,7 @@ func (w *ClusterSuite) CreateCluster(ctx context.Context) error {
 		}
 		w.logger.Infof("Cluster creation requested: %s", cluster.ID)
 		w.Meta.ClusterID = cluster.ID
+		state.ClusterID = cluster.ID
 	}
 
 	// Make sure cluster not ready or failed - otherwise we will hang on webhook
@@ -113,20 +115,53 @@ func (w *ClusterSuite) DeleteCluster(ctx context.Context) error {
 // ClusterCreationEvents returns expected events that should occur while creating the cluster.
 // This method should be called only after executing the workflow so that IDs are not empty.
 func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
-	return []eventstest.EventOccurrence{
+	events := []eventstest.EventOccurrence{
 		{
 			ResourceType: model.TypeCluster.String(),
 			ResourceID:   w.Meta.ClusterID,
 			OldState:     "n/a",
 			NewState:     model.ClusterStateCreationRequested,
 		},
-		{
+	}
+
+	if w.Params.CreateRequest.Provisioner == "eks" {
+		events = append(events, eventstest.EventOccurrence{
 			ResourceType: model.TypeCluster.String(),
 			ResourceID:   w.Meta.ClusterID,
 			OldState:     model.ClusterStateCreationRequested,
-			NewState:     model.ClusterStateStable,
-		},
+			NewState:     model.ClusterStateCreationInProgress,
+		})
+
+		events = append(events, eventstest.EventOccurrence{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateCreationInProgress,
+			NewState:     model.ClusterStateWaitingForNodes,
+		})
+
+		events = append(events, eventstest.EventOccurrence{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateWaitingForNodes,
+			NewState:     model.ClusterStateProvisionInProgress,
+		})
+	} else {
+		events = append(events, eventstest.EventOccurrence{
+			ResourceType: model.TypeCluster.String(),
+			ResourceID:   w.Meta.ClusterID,
+			OldState:     model.ClusterStateCreationRequested,
+			NewState:     model.ClusterStateProvisionInProgress,
+		})
 	}
+
+	events = append(events, eventstest.EventOccurrence{
+		ResourceType: model.TypeCluster.String(),
+		ResourceID:   w.Meta.ClusterID,
+		OldState:     model.ClusterStateProvisionInProgress,
+		NewState:     model.ClusterStateStable,
+	})
+
+	return events
 }
 
 // ClusterReprovisionEvents returns expected events that should occur while reprovisioning the cluster.

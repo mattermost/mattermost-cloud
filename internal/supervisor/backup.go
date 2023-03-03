@@ -7,10 +7,10 @@ package supervisor
 import (
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/webhook"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -53,24 +53,27 @@ type BackupSupervisor struct {
 	instanceID string
 	logger     log.FieldLogger
 
-	backupOperator BackupProvisioner
+	provisioner BackupProvisioner
 }
 
 // NewBackupSupervisor creates a new BackupSupervisor.
 func NewBackupSupervisor(
 	store installationBackupStore,
-	backupOperator BackupProvisioner,
+	provisioner BackupProvisioner,
 	aws aws.AWS,
 	instanceID string,
 	logger log.FieldLogger) *BackupSupervisor {
 	return &BackupSupervisor{
-		store:          store,
-		backupOperator: backupOperator,
-		aws:            aws,
-		instanceID:     instanceID,
-		logger:         logger,
+		store:       store,
+		provisioner: provisioner,
+		aws:         aws,
+		instanceID:  instanceID,
+		logger:      logger,
 	}
 }
+
+// ErrJobBackoffLimitReached indicates that job failed all possible attempts and there is no reason for retrying.
+var ErrJobBackoffLimitReached = errors.New("job reached backoff limit")
 
 // Shutdown performs graceful shutdown tasks for the backup supervisor.
 func (s *BackupSupervisor) Shutdown() {
@@ -213,7 +216,7 @@ func (s *BackupSupervisor) triggerBackup(backup *model.InstallationBackup, insta
 		return backup.State
 	}
 
-	dataRes, err := s.backupOperator.TriggerBackup(backup, cluster, installation)
+	dataRes, err := s.provisioner.TriggerBackup(backup, cluster, installation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to trigger backup")
 		return backup.State
@@ -238,9 +241,9 @@ func (s *BackupSupervisor) monitorBackup(backup *model.InstallationBackup, insta
 		return backup.State
 	}
 
-	startTime, err := s.backupOperator.CheckBackupStatus(backup, cluster)
+	startTime, err := s.provisioner.CheckBackupStatus(backup, cluster)
 	if err != nil {
-		if err == provisioner.ErrJobBackoffLimitReached {
+		if err == ErrJobBackoffLimitReached {
 			logger.WithError(err).Error("Backup job backoff limit reached, backup failed")
 			return model.InstallationBackupStateBackupFailed
 		}
@@ -271,7 +274,7 @@ func (s *BackupSupervisor) deleteBackup(backup *model.InstallationBackup, instan
 		return backup.State
 	}
 
-	err = s.backupOperator.CleanupBackupJob(backup, cluster)
+	err = s.provisioner.CleanupBackupJob(backup, cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to cleanup backup from cluster")
 		return backup.State

@@ -12,7 +12,6 @@ import (
 
 	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
-	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
@@ -22,15 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CommonProvisioner groups functions common to different provisioners.
-type CommonProvisioner struct {
-	resourceUtil *utils.ResourceUtil
-	store        model.InstallationDatabaseStoreInterface
-	params       ProvisioningParams
-	logger       log.FieldLogger
-}
-
-func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
+func (provisioner Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to create k8s client from file")
@@ -120,7 +111,7 @@ func (provisioner *CommonProvisioner) createClusterInstallation(clusterInstallat
 	return nil
 }
 
-func (provisioner *CommonProvisioner) ensureFilestoreAndDatabase(
+func (provisioner Provisioner) ensureFilestoreAndDatabase(
 	mattermost *mmv1beta1.Mattermost,
 	installation *model.Installation,
 	clusterInstallation *model.ClusterInstallation,
@@ -199,7 +190,7 @@ func hibernateInstallation(configLocation string, logger *log.Entry, clusterInst
 }
 
 // refreshSecrets deletes old secrets for database and file store and replaces them with new ones.
-func (provisioner *CommonProvisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
+func (provisioner Provisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
 	logger := provisioner.logger.WithFields(log.Fields{
 		"cluster":      clusterInstallation.ClusterID,
 		"installation": clusterInstallation.InstallationID,
@@ -241,7 +232,7 @@ func (provisioner *CommonProvisioner) refreshSecrets(installation *model.Install
 	return nil
 }
 
-func (provisioner *CommonProvisioner) updateClusterInstallation(
+func (provisioner Provisioner) updateClusterInstallation(
 	configLocation string,
 	installation *model.Installation,
 	installationDNS []*model.InstallationDNS,

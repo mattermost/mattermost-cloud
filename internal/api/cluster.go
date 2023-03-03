@@ -7,13 +7,11 @@ package api
 import (
 	"net/http"
 
-	"github.com/mattermost/mattermost-cloud/internal/provisioner"
-
-	"github.com/mattermost/mattermost-cloud/internal/store"
-	"github.com/pkg/errors"
-
+	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
+	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 )
 
 // initCluster registers cluster endpoints on the given router.
@@ -109,15 +107,9 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if createClusterRequest.EKSConfig != nil && c.Provisioner.ProvisionerType() != provisioner.EKSProvisionerType {
-		c.Logger.Error("invalid request: specified EKSConfig when provisioner type is not 'eks")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if c.Provisioner.ProvisionerType() == provisioner.EKSProvisionerType && createClusterRequest.EKSConfig == nil {
-		c.Logger.Error("invalid request: EKSConfig is required when provisioner type is not 'eks")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	provisioner := "kops"
+	if createClusterRequest.Provisioner != "" {
+		provisioner = createClusterRequest.Provisioner
 	}
 
 	cluster := model.Cluster{
@@ -125,13 +117,13 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		ProviderMetadataAWS: &model.AWSMetadata{
 			Zones: createClusterRequest.Zones,
 		},
-		Provisioner:        c.Provisioner.ProvisionerType(),
+		Provisioner:        provisioner,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
 	}
 
-	if createClusterRequest.EKSConfig != nil {
+	if provisioner == "eks" {
 		var version *string
 		// We cannot pass empty string or "latest" as version it needs
 		// to be either correct version or nil.
@@ -145,7 +137,15 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 			VPC:               createClusterRequest.VPC,
 			Networking:        "",
 			ClusterRoleARN:    createClusterRequest.EKSConfig.ClusterRoleARN,
-			EKSNodeGroups:     createClusterRequest.EKSConfig.NodeGroups,
+			NodeGroup: model.EKSNodeGroup{
+				RoleARN:       createClusterRequest.EKSConfig.NodeRoleARN,
+				InstanceTypes: []string{createClusterRequest.NodeInstanceType},
+				DesiredSize:   ptr.Int32(int32(createClusterRequest.NodeMinCount)),
+				MinSize:       ptr.Int32(int32(createClusterRequest.NodeMinCount)),
+				MaxSize:       ptr.Int32(int32(createClusterRequest.NodeMaxCount)),
+			},
+			MaxPodsPerNode: createClusterRequest.MaxPodsPerNode,
+			AMI:            createClusterRequest.KopsAMI,
 		}
 	} else {
 		cluster.ProvisionerMetadataKops = &model.KopsMetadata{

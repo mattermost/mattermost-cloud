@@ -68,7 +68,6 @@ func (flags *schedulingOptions) addFlags(command *cobra.Command) {
 }
 
 type provisioningParams struct {
-	provisioner           string
 	s3StateStore          string
 	allowListCIDRRange    []string
 	sloInstallationGroups []string
@@ -87,7 +86,6 @@ type provisioningParams struct {
 }
 
 func (flags *provisioningParams) addFlags(command *cobra.Command) {
-	command.Flags().StringVar(&flags.provisioner, "provisioner", "kops", "Specifies which provisioner to use, one of: kops, eks.")
 	command.Flags().StringVar(&flags.s3StateStore, "state-store", "dev.cloud.mattermost.com", "The S3 bucket used to store cluster state.")
 	command.Flags().StringSliceVar(&flags.allowListCIDRRange, "allow-list-cidr-range", []string{"0.0.0.0/0"}, "The list of CIDRs to allow communication with the private ingress.")
 	command.Flags().StringSliceVar(&flags.sloInstallationGroups, "slo-installation-groups", []string{}, "The list of installation group ids to create dedicated SLOs for.")
@@ -190,11 +188,13 @@ type serverFlags struct {
 	listen      string
 	metricsPort int
 
-	debug               bool
-	debugHelm           bool
-	devMode             bool
-	machineLogs         bool
-	enableLogStacktrace bool
+	debug                    bool
+	debugHelm                bool
+	devMode                  bool
+	machineLogs              bool
+	enableLogStacktrace      bool
+	enableLogFilesPerCluster bool
+	logFilesPerClusterPath   string
 
 	database      string
 	maxSchemas    int64
@@ -202,8 +202,6 @@ type serverFlags struct {
 
 	poll     int
 	slowPoll int
-
-	sloTargetAvailability float64
 }
 
 func (flags *serverFlags) addFlags(command *cobra.Command) {
@@ -222,6 +220,9 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 	command.Flags().BoolVar(&flags.devMode, "dev", false, "Set sane defaults for development")
 	command.Flags().BoolVar(&flags.machineLogs, "machine-readable-logs", false, "Output the logs in machine readable format.")
 	command.Flags().BoolVar(&flags.enableLogStacktrace, "enable-log-stacktrace", false, "Add stacktrace in error logs.")
+	command.Flags().BoolVar(&flags.enableLogFilesPerCluster, "enable-log-files-per-cluster", false, "Store individual log files per cluster.")
+	command.Flags().StringVar(&flags.logFilesPerClusterPath, "log-files-per-cluster-path", "", "Where to store the cluster log files.")
+	command.MarkFlagsRequiredTogether("enable-log-files-per-cluster", "log-files-per-cluster-path")
 
 	command.Flags().StringVar(&flags.database, "database", "sqlite://cloud.db", "The database backing the provisioning server.")
 	command.Flags().Int64Var(&flags.maxSchemas, "default-max-schemas-per-logical-database", 10, "When importing and creating new proxy multitenant databases, this value is used for MaxInstallationsPerLogicalDatabase.")
@@ -229,6 +230,4 @@ func (flags *serverFlags) addFlags(command *cobra.Command) {
 
 	command.Flags().IntVar(&flags.poll, "poll", 30, "The interval in seconds to poll for background work.")
 	command.Flags().IntVar(&flags.slowPoll, "slow-poll", 60, "The interval in seconds to poll for background work for supervisors that are not time sensitive (slow-poll supervisors).")
-
-	command.Flags().Float64Var(&flags.sloTargetAvailability, "slo-target-availability", 99.5, "The default SLOs availability when provisioning clusters")
 }
