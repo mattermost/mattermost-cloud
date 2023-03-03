@@ -185,6 +185,42 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 					}},
 				}, nil).
 				Times(1),
+			// Look into private subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Private"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
+			// Look into public subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Utility"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
 			// getClusterResourcesForVPC
 			a.Mocks.API.EC2.EXPECT().DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
 				Filters: []ec2Types.Filter{
@@ -371,6 +407,42 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 					}},
 				}, nil).
 				Times(1),
+			// Look into private subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Private"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
+			// Look into public subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Utility"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
 			// getClusterResourcesForVPC
 			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
 				Filters: []ec2Types.Filter{
@@ -553,6 +625,42 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 					}},
 				}, nil).
 				Times(1),
+			// Look into private subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Private"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
+			// Look into public subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Utility"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
 			// getClusterResourcesForVPC
 			a.Mocks.API.EC2.EXPECT().DescribeSubnets(gomock.Any(), &ec2.DescribeSubnetsInput{
 				Filters: []ec2Types.Filter{
@@ -729,6 +837,42 @@ func (a *AWSTestSuite) TestClaimVPCCreateCluster() {
 						VpcId:     aws.String(vpcID),
 						CidrBlock: aws.String(cidrBlock),
 					}},
+				}, nil).
+				Times(1),
+			// Look into private subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Private"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
+				}, nil).
+				Times(1),
+			// Look into public subnets
+			a.Mocks.API.EC2.EXPECT().
+				DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+					Filters: []ec2Types.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []string{vpcID},
+						},
+						{
+							Name:   aws.String("tag:SubnetType"),
+							Values: []string{"Utility"},
+						},
+					},
+				}).
+				Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []ec2Types.Subnet{},
 				}, nil).
 				Times(1),
 			// getClusterResourcesForVPC
