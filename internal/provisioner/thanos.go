@@ -149,7 +149,10 @@ func (t *thanos) Destroy() error {
 	}
 
 	t.actualVersion = nil
-	return nil
+
+	helm := t.NewHelmDeployment(dns, grpcDNS)
+	return helm.Delete()
+
 }
 
 func (t *thanos) Migrate() error {

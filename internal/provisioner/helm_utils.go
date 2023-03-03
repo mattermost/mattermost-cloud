@@ -94,7 +94,7 @@ func (d *helmDeployment) Exists() (bool, error) {
 	}
 
 	for _, chart := range list.asSlice() {
-		if chart.Name == d.chartDeploymentName && chart.Chart == d.chartName && chart.Namespace == d.namespace {
+		if chart.Name == d.chartDeploymentName && chart.Namespace == d.namespace {
 			return true, nil
 		}
 	}
