@@ -123,36 +123,13 @@ func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
 			NewState:     model.ClusterStateCreationRequested,
 		},
 	}
-
-	if w.Params.CreateRequest.Provisioner == model.ProvisionerEKS {
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateCreationRequested,
-			NewState:     model.ClusterStateCreationInProgress,
-		})
-
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateCreationInProgress,
-			NewState:     model.ClusterStateWaitingForNodes,
-		})
-
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateWaitingForNodes,
-			NewState:     model.ClusterStateProvisionInProgress,
-		})
-	} else {
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateCreationRequested,
-			NewState:     model.ClusterStateProvisionInProgress,
-		})
-	}
+	
+	events = append(events, eventstest.EventOccurrence{
+		ResourceType: model.TypeCluster.String(),
+		ResourceID:   w.Meta.ClusterID,
+		OldState:     model.ClusterStateCreationRequested,
+		NewState:     model.ClusterStateProvisionInProgress,
+	})
 
 	events = append(events, eventstest.EventOccurrence{
 		ResourceType: model.TypeCluster.String(),

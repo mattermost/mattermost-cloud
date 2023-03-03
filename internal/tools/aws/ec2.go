@@ -245,27 +245,27 @@ func (a *Client) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKS
 	return launchTemplate.LaunchTemplateVersion.VersionNumber, nil
 }
 
-func (a *Client) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) {
+func (a *Client) EnsureLaunchTemplateDeleted(clusterName string) error {
 	launchTemplate, err := a.getLaunchTemplate(clusterName)
 	if err != nil {
 		if IsErrorCode(err, "InvalidLaunchTemplateName.NotFoundException") {
-			return true, nil
+			return nil
 		}
-		return false, err
+		return err
 	}
 
 	if launchTemplate == nil {
-		return true, nil
+		return nil
 	}
 
 	_, err = a.Service().ec2.DeleteLaunchTemplate(context.TODO(), &ec2.DeleteLaunchTemplateInput{
 		LaunchTemplateId: launchTemplate.LaunchTemplateId,
 	})
 	if err != nil {
-		return false, errors.Wrap(err, "failed to delete eks launch template")
+		return errors.Wrap(err, "failed to delete eks launch template")
 	}
 
-	return true, nil
+	return nil
 }
 
 func prettyCreateTagsResponse(output *ec2.CreateTagsOutput) string {

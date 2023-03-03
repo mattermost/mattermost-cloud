@@ -69,16 +69,17 @@ type AWS interface {
 	EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error
 	GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error)
 	GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error)
-	EnsureEKSNodeGroupDeleted(clusterName, workerName string) (bool, error)
-	EnsureEKSClusterDeleted(clusterName string) (bool, error)
+	EnsureEKSNodeGroupDeleted(clusterName, workerName string) error
+	EnsureEKSClusterDeleted(clusterName string) error
 	InstallEKSAddons(cluster *model.Cluster) error
-	WaitForEKSNodeGroupToBeActive(clusterName, workerName string, timeout int) error
-	WaitForEKSClusterToBeActive(clusterName string, timeout int) error
+	WaitForActiveEKSCluster(clusterName string, timeout int) (*eksTypes.Cluster, error)
+	WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error)
 	WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error
+	WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error
 
 	EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
 	UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error)
-	EnsureLaunchTemplateDeleted(clusterName string) (bool, error)
+	EnsureLaunchTemplateDeleted(clusterName string) error
 
 	GetRegion() string
 	GetAccountID() (string, error)

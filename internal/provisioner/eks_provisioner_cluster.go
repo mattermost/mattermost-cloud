@@ -146,13 +146,11 @@ func (provisioner *EKSProvisioner) CheckClusterCreated(cluster *model.Cluster) (
 
 	eksMetadata := cluster.ProvisionerMetadataEKS
 
-	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(eksMetadata.Name)
+	wait := 1200
+	logger.Infof("Waiting up to %d seconds for EKS cluster to become active...", wait)
+	eksCluster, err := provisioner.awsClient.WaitForActiveEKSCluster(eksMetadata.Name, wait)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to check if EKS cluster is ready")
-	}
-	if eksCluster == nil {
-		logger.Info("EKS cluster not ready")
-		return false, nil
+		return false, err
 	}
 
 	if eksCluster.Version != nil {
@@ -228,14 +226,11 @@ func (provisioner *EKSProvisioner) CheckNodesCreated(cluster *model.Cluster) (bo
 	clusterName := eksMetadata.Name
 	workerName := eksMetadata.ChangeRequest.WorkerName
 
-	nodeGroup, err := provisioner.awsClient.GetActiveEKSNodeGroup(clusterName, workerName)
+	wait := 300
+	logger.Infof("Waiting up to %d seconds for EKS NodeGroup to become active...", wait)
+	nodeGroup, err := provisioner.awsClient.WaitForActiveEKSNodeGroup(clusterName, workerName, wait)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to ensure EKS NodeGroup created")
-	}
-
-	if nodeGroup == nil {
-		logger.Info("EKS NodeGroup not ready")
-		return false, nil
+		return false, err
 	}
 
 	if eksMetadata.NodeInstanceGroups == nil {
@@ -338,8 +333,8 @@ func (provisioner *EKSProvisioner) UpgradeCluster(cluster *model.Cluster) error 
 	}
 
 	wait := 3600 // seconds
-	logger.Infof("Waiting up to %d seconds for EKS cluster to become ready...", wait)
-	err = provisioner.awsClient.WaitForEKSClusterToBeActive(eksMetadata.Name, wait)
+	logger.Infof("Waiting up to %d seconds for EKS cluster to become active...", wait)
+	_, err = provisioner.awsClient.WaitForActiveEKSCluster(eksMetadata.Name, wait)
 	if err != nil {
 		return err
 	}
@@ -357,6 +352,58 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
+func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	kubeConfigPath, err := provisioner.getKubeConfigPath(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kubeconfig file path")
+	}
+
+	ugh, err := newUtilityGroupHandle(provisioner.params, kubeConfigPath, cluster, provisioner.awsClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
+	}
+
+	err = ugh.DestroyUtilityGroup()
+	if err != nil {
+		return errors.Wrap(err, "failed to destroy all services in the utility group")
+	}
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+
+	err = provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, eksMetadata.WorkerName)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete EKS NodeGroup")
+	}
+	wait := 600
+	logger.Infof("Waiting up to %d seconds for NodeGroup to be deleted...", wait)
+	err = provisioner.awsClient.WaitForEKSNodeGroupToBeDeleted(eksMetadata.Name, eksMetadata.WorkerName, wait)
+	if err != nil {
+		return err
+	}
+
+	err = provisioner.awsClient.EnsureLaunchTemplateDeleted(eksMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete launch template")
+	}
+
+	err = provisioner.awsClient.EnsureEKSClusterDeleted(eksMetadata.Name)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete EKS cluster")
+	}
+
+	wait = 1200
+	logger.Infof("Waiting up to %d seconds for EKS cluster to be deleted...", wait)
+	err = provisioner.awsClient.WaitForEKSClusterToBeDeleted(eksMetadata.Name, wait)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 // DeleteCluster deletes EKS cluster.
 func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
@@ -368,28 +415,18 @@ func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster) (bool, 
 		return false, errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
 	}
 
-	deleted, err := provisioner.awsClient.EnsureEKSNodeGroupDeleted(eksMetadata.Name, eksMetadata.WorkerName)
+	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(eksMetadata.Name)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to delete EKS NodeGroup")
-	}
-	if !deleted {
-		return false, nil
+		return false, errors.Wrap(err, "failed to get EKS cluster")
 	}
 
-	deleted, err = provisioner.awsClient.EnsureLaunchTemplateDeleted(eksMetadata.Name)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to delete launch template")
-	}
-	if !deleted {
-		return false, nil
-	}
-
-	deleted, err = provisioner.awsClient.EnsureEKSClusterDeleted(eksMetadata.Name)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to delete EKS cluster")
-	}
-	if !deleted {
-		return false, nil
+	if eksCluster == nil {
+		logger.Infof("EKS cluster %s does not exist, assuming already deleted", eksMetadata.Name)
+	} else {
+		err = provisioner.cleanupCluster(cluster)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to cleanup EKS cluster")
+		}
 	}
 
 	err = provisioner.awsClient.ReleaseVpc(cluster, logger)

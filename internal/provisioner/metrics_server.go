@@ -17,6 +17,7 @@ type metricsServer struct {
 	logger         log.FieldLogger
 	desiredVersion *model.HelmUtilityVersion
 	actualVersion  *model.HelmUtilityVersion
+	provisioner    string
 }
 
 func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
@@ -32,6 +33,7 @@ func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *m
 		logger:         logger.WithField("cluster-utility", model.MetricsServerCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.MetricsServer,
+		provisioner:    cluster.Provisioner,
 	}, nil
 }
 
@@ -75,13 +77,26 @@ func (m *metricsServer) Name() string {
 }
 
 func (m *metricsServer) NewHelmDeployment(logger log.FieldLogger) *helmDeployment {
+
+	var setArguments []string
+
+	if m.provisioner == model.ProvisionerEKS {
+		// Calico networking cannot currently be installed on the EKS control plane nodes.
+		// As a result the control plane nodes will not be able to initiate network connections to Calico pods.
+		// As a workaround, trusted pods that require control plane nodes to connect to them,
+		// such as those implementing admission controller webhooks, can include hostNetwork:true in their pod spec.
+		// See https://docs.tigera.io/calico/3.25/getting-started/kubernetes/managed-public-cloud/eks
+
+		setArguments = append(setArguments, "hostNetwork.enabled=true")
+	}
+
 	return newHelmDeployment(
 		"metrics-server/metrics-server",
 		"metrics-server",
 		"kube-system",
 		m.kubeconfigPath,
 		m.desiredVersion,
-		defaultHelmDeploymentSetArgument,
+		strings.Join(setArguments, ","),
 		logger,
 	)
 }
