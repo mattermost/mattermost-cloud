@@ -104,7 +104,7 @@ func (a *Client) fixSubnetTypeTag(subnet ec2Types.Subnet, tagKey, tagIncorrectVa
 				"vpc_id":    vpcID,
 				"subnet_id": *subnet.SubnetId,
 			}).Warnf("Incorrect SubnetType for Subnet, setting it to '%s' from '%s'", tagCorrectValue, tagIncorrectValue)
-			return a.TagResource(*subnet.SubnetId, "SubnetType", tagCorrectValue, logger)
+			return a.TagResource(*subnet.SubnetId, tagKey, tagCorrectValue, logger)
 		}
 	}
 	return nil
