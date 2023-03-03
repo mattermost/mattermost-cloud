@@ -410,8 +410,10 @@ func deleteClusterInstallation(
 		}
 	}
 
-	err = k8sClient.DeleteNamespacesWithFinalizer([]string{clusterInstallation.Namespace})
-	if err != nil {
+	err = k8sClient.Clientset.CoreV1().Namespaces().Delete(ctx, clusterInstallation.Namespace, metav1.DeleteOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Warnf("Namespace %s not found, assuming already deleted", clusterInstallation.Namespace)
+	} else if err != nil {
 		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
 	}
 

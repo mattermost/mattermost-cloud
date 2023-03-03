@@ -36,7 +36,14 @@ func NewClusterLoggerHook(path string, levels []logrus.Level) *ClusterLoggerHook
 		path:   path,
 	}
 
-	// TODO: Ensure paths are created here rather on every write
+	// Ensure paths are created to put the logs in there
+	if err := os.MkdirAll(filepath.Join(hook.path, "cluster"), os.ModePerm); err != nil {
+		panic(err)
+	}
+
+	if err := os.MkdirAll(filepath.Join(hook.path, "installation"), os.ModePerm); err != nil {
+		panic(err)
+	}
 
 	hook.formatter = fileLogrusFormatter
 
@@ -68,11 +75,7 @@ func (hook *ClusterLoggerHook) fileWrite(entry *logrus.Entry, kind string) error
 
 	clusterID := dataClusterID.(string)
 
-	//  TODO: move this to NewClusterLoggerHook
-	dir := filepath.Dir(filepath.Join(hook.path, kind))
-	os.MkdirAll(dir, os.ModePerm)
-
-	path := filepath.Join(dir, clusterID+".log")
+	path := filepath.Join(hook.path, kind, clusterID+".log")
 
 	fd, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
