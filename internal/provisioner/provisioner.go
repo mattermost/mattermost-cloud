@@ -4,6 +4,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/api"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
 	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
@@ -25,6 +26,7 @@ func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supe
 type Provisioner struct {
 	ClusterProvisionerOption
 	params         ProvisioningParams
+	awsClient      aws.AWS
 	resourceUtil   *utils.ResourceUtil
 	backupOperator *BackupOperator
 	store          *store.SQLStore
@@ -47,6 +49,7 @@ func NewProvisioner(
 	kopsProvisioner *KopsProvisioner,
 	eksProvisioner *EKSProvisioner,
 	params ProvisioningParams,
+	awsClient aws.AWS,
 	resourceUtil *utils.ResourceUtil,
 	backupOperator *BackupOperator,
 	sqlStore *store.SQLStore,
@@ -59,6 +62,7 @@ func NewProvisioner(
 			eksProvisioner:  eksProvisioner,
 		},
 		params:         params,
+		awsClient:      awsClient,
 		resourceUtil:   resourceUtil,
 		backupOperator: backupOperator,
 		store:          sqlStore,
