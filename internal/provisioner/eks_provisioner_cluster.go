@@ -405,7 +405,7 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 }
 
 // DeleteCluster deletes EKS cluster.
-func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster, awsClient aws.AWS) (bool, error) {
+func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	logger.Info("Deleting cluster")
