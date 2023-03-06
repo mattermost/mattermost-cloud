@@ -86,7 +86,8 @@ func (p *promtail) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (p *promtail) Destroy() error {
-	return nil
+	helm := p.NewHelmDeployment()
+	return helm.Delete()
 }
 
 func (p *promtail) Migrate() error {
