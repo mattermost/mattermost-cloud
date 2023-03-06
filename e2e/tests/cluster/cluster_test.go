@@ -86,6 +86,9 @@ func Test_ClusterLifecycle(t *testing.T) {
 	err = test.Run()
 	require.NoError(t, err)
 
+	// Make sure we wait for al subscription events
+	time.Sleep(time.Second * 1)
+
 	// Make sure that expected events occurred in correct order.
 	expectedEvents := workflow.GetExpectedEvents(test.Steps)
 	err = test.EventsRecorder.VerifyInOrder(expectedEvents)
