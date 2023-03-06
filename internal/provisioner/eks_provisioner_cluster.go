@@ -40,7 +40,7 @@ type EKSProvisioner struct {
 	logger             log.FieldLogger
 }
 
-var _ supervisor.ClusterProvisioner = (*KopsProvisioner)(nil)
+var _ supervisor.ClusterProvisioner = (*EKSProvisioner)(nil)
 
 // NewEKSProvisioner creates new EKSProvisioner.
 func NewEKSProvisioner(
