@@ -407,7 +407,7 @@ func (p *mockInstallationProvisioner) RefreshSecrets(cluster *model.Cluster, ins
 	return nil
 }
 
-func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface, awsClient aws.AWS) error {
+func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface) error {
 	return nil
 }
 
@@ -667,7 +667,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		logger := testlib.MakeLogger(t)
 		mockStore := &mockInstallationStore{}
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, nil, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -685,7 +685,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		mockStore.Installation = mockStore.UnlockedInstallationsPendingWork[0]
 		mockStore.UnlockChan = make(chan interface{})
 
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, &mockEventProducer{}, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -728,7 +728,7 @@ func TestInstallationSupervisorDo(t *testing.T) {
 		}
 
 		mockEventProducer := &mockEventProducer{}
-		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, &mockAWS{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
+		supervisor := supervisor.NewInstallationSupervisor(mockStore, &mockInstallationProvisioner{}, "instanceID", false, false, standardSchedulingOptions, &utils.ResourceUtil{}, logger, cloudMetrics, mockEventProducer, false, &mockCloudflareClient{}, false)
 		err := supervisor.Do()
 		require.NoError(t, err)
 
@@ -776,7 +776,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		return supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			model.NewID(),
 			false,
 			false,
@@ -2446,7 +2445,6 @@ func TestInstallationSupervisor(t *testing.T) {
 			supervisor := supervisor.NewInstallationSupervisor(
 				sqlStore,
 				mockInstallationProvisioner,
-				&mockAWS{},
 				"instanceID",
 				false,
 				false,
@@ -2506,7 +2504,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			mockInstallationProvisioner,
-			&mockAWS{},
 			"instanceID",
 			false,
 			false,
@@ -2554,7 +2551,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			"instanceID",
 			false,
 			false,
@@ -2689,7 +2685,6 @@ func TestInstallationSupervisor(t *testing.T) {
 		supervisor := supervisor.NewInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			"instanceID",
 			false,
 			false,

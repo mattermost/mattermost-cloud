@@ -122,7 +122,6 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			mockStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
 			logger,
@@ -155,7 +154,6 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			mockStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			&mockEventProducer{},
 			"instanceID",
 			logger,
@@ -206,7 +204,6 @@ func TestClusterInstallationSupervisorDo(t *testing.T) {
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			mockStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			mockEventProducer,
 			"instanceID",
 			logger,
@@ -248,7 +245,6 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				supervisor := supervisor.NewClusterInstallationSupervisor(
 					sqlStore,
 					&mockInstallationProvisioner{},
-					&mockAWS{},
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
 					logger,
@@ -292,7 +288,6 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				supervisor := supervisor.NewClusterInstallationSupervisor(
 					sqlStore,
 					&mockInstallationProvisioner{},
-					&mockAWS{},
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
 					logger,
@@ -325,7 +320,6 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
 			logger,
@@ -381,7 +375,6 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 				supervisor := supervisor.NewClusterInstallationSupervisor(
 					sqlStore,
 					&mockInstallationProvisioner{},
-					&mockAWS{},
 					testutil.SetupTestEventsProducer(sqlStore, logger),
 					"instanceID",
 					logger,
@@ -418,7 +411,6 @@ func TestClusterInstallationSupervisorSupervise(t *testing.T) {
 		supervisor := supervisor.NewClusterInstallationSupervisor(
 			sqlStore,
 			&mockInstallationProvisioner{},
-			&mockAWS{},
 			testutil.SetupTestEventsProducer(sqlStore, logger),
 			"instanceID",
 			logger,

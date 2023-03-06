@@ -281,6 +281,7 @@ func executeServerCmd(flags serverFlags) error {
 
 	kopsProvisioner := provisioner.NewKopsProvisioner(
 		provisioningParams,
+		awsClient,
 		sqlStore,
 		logger,
 	)
@@ -295,6 +296,7 @@ func executeServerCmd(flags serverFlags) error {
 	provisionerObj := provisioner.NewProvisioner(
 		kopsProvisioner, eksProvisioner,
 		provisioningParams,
+		awsClient,
 		resourceUtil,
 		provisioner.NewBackupOperator(flags.backupRestoreToolImage, awsConfig.Region, flags.backupJobTTL),
 		sqlStore,
@@ -338,16 +340,16 @@ func executeServerCmd(flags serverFlags) error {
 
 	var multiDoer supervisor.MultiDoer
 	if supervisorsEnabled.clusterSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterSupervisor(sqlStore, provisionerObj.ClusterProvisionerOption, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.groupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewGroupSupervisor(sqlStore, eventsProducer, instanceID, logger))
 	}
 	if supervisorsEnabled.installationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, awsClient, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
+		multiDoer = append(multiDoer, supervisor.NewInstallationSupervisor(sqlStore, provisionerObj, instanceID, keepDatabaseData, keepFileStoreData, installationScheduling, resourceUtil, logger, cloudMetrics, eventsProducer, flags.forceCRUpgrade, dnsManager, flags.disableDNSUpdates))
 	}
 	if supervisorsEnabled.clusterInstallationSupervisor {
-		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, awsClient, eventsProducer, instanceID, logger, cloudMetrics))
+		multiDoer = append(multiDoer, supervisor.NewClusterInstallationSupervisor(sqlStore, provisionerObj, eventsProducer, instanceID, logger, cloudMetrics))
 	}
 	if supervisorsEnabled.backupSupervisor {
 		multiDoer = append(multiDoer, supervisor.NewBackupSupervisor(sqlStore, provisionerObj, awsClient, instanceID, logger))
