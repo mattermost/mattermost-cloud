@@ -91,8 +91,6 @@ func SetupClusterLifecycleTest() (*Test, error) {
 			return nil, errors.Wrap(err, "failed to fetch AMI")
 		}
 		createClusterReq.AMI = ami
-	} else if config.KopsAMI != "" {
-		createClusterReq.AMI = config.KopsAMI
 	}
 
 	// TODO: A way to fetch the latest AMI automatically for local development

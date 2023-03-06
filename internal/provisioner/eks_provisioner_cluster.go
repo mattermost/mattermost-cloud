@@ -96,7 +96,7 @@ func (provisioner *EKSProvisioner) CreateCluster(cluster *model.Cluster) error {
 		}
 	}
 
-	// TODO: Add cncVPCCIDR
+	// TODO: Add cncVPCCIDR like KOPS
 
 	var clusterResources aws.ClusterResources
 	if eksMetadata.ChangeRequest.VPC != "" && provisioner.params.UseExistingAWSResources {

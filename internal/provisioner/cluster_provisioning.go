@@ -158,7 +158,6 @@ func provisionCluster(
 		},
 	}
 
-	// Do not deploy calico if we use EKS
 	if cluster.Provisioner == model.ProvisionerKops {
 		// Only deploy calico CNI at cluster creation time if networking option is calico
 		if cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
