@@ -73,7 +73,7 @@ func Test_ClusterLifecycle(t *testing.T) {
 			if err != nil {
 				test.Logger.WithError(err).Error("Error cleaning up installation")
 			}
-			err := test.ClusterSuite.DeleteCluster(context.Background())
+			err := test.ClusterSuite.Cleanup(context.Background())
 			if err != nil {
 				test.Logger.WithError(err).Error("Error cleaning up cluster")
 			}
