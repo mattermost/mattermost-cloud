@@ -86,7 +86,7 @@ func Test_ClusterLifecycle(t *testing.T) {
 	err = test.Run()
 	require.NoError(t, err)
 
-	// Make sure we wait for al subscription events
+	// Make sure we wait for all subscription events
 	time.Sleep(time.Second * 1)
 
 	// Make sure that expected events occurred in correct order.
