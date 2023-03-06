@@ -60,7 +60,8 @@ func (f *velero) Name() string {
 }
 
 func (f *velero) Destroy() error {
-	return nil
+	helm := f.NewHelmDeployment(f.logger)
+	return helm.Delete()
 }
 
 func (f *velero) Migrate() error {

@@ -38,7 +38,8 @@ func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *m
 }
 
 func (m *metricsServer) Destroy() error {
-	return nil
+	helm := m.NewHelmDeployment(m.logger)
+	return helm.Delete()
 }
 
 func (m *metricsServer) Migrate() error {

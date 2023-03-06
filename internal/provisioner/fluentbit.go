@@ -40,7 +40,8 @@ func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilit
 }
 
 func (f *fluentbit) Destroy() error {
-	return nil
+	helm := f.NewHelmDeployment()
+	return helm.Delete()
 }
 
 func (f *fluentbit) Migrate() error {

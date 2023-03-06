@@ -94,7 +94,8 @@ func (n *teleport) Destroy() error {
 		return errors.Wrap(err, "unable to delete Teleport bucket")
 	}
 
-	return nil
+	helm := n.NewHelmDeployment()
+	return helm.Delete()
 }
 
 func (n *teleport) Migrate() error {

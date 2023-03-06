@@ -89,8 +89,8 @@ func (r *rtcd) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (r *rtcd) Destroy() error {
-	// if anything needs to be deleted can be added here
-	return nil
+	helm := r.NewHelmDeployment()
+	return helm.Delete()
 }
 
 func (r *rtcd) Migrate() error {
