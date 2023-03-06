@@ -41,6 +41,7 @@ type TestConfig struct {
 	NodeRoleARN               string `envconfig:"optional"`
 	ClusterID                 string `envconfig:"optional"`
 	InstallationID            string `envconfig:"optional"`
+	Debug                     bool   `envconfig:"optional,default=false"`
 }
 
 // Test holds all data required for a db migration test.
@@ -68,6 +69,10 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	config, err := readConfig(logger)
 	if err != nil {
 		return nil, err
+	}
+
+	if config.Debug {
+		logger.Logger.SetLevel(logrus.DebugLevel)
 	}
 
 	client := model.NewClient(config.CloudURL)
