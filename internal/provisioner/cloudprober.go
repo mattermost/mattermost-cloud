@@ -60,7 +60,8 @@ func (f *cloudprober) Name() string {
 }
 
 func (f *cloudprober) Destroy() error {
-	return nil
+	helm := f.NewHelmDeployment(f.logger)
+	return helm.Delete()
 }
 
 func (f *cloudprober) Migrate() error {

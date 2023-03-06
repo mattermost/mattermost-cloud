@@ -166,7 +166,9 @@ func (p *prometheusOperator) Destroy() error {
 	}
 
 	p.actualVersion = nil
-	return nil
+
+	helm := p.NewHelmDeployment(dns)
+	return helm.Delete()
 }
 
 func (p *prometheusOperator) Migrate() error {

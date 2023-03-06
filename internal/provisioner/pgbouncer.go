@@ -99,7 +99,8 @@ func (p *pgbouncer) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (p *pgbouncer) Destroy() error {
-	return nil
+	helm := p.NewHelmDeployment()
+	return helm.Delete()
 }
 
 func (p *pgbouncer) Migrate() error {
