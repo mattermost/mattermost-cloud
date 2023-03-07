@@ -399,7 +399,7 @@ func provisionCluster(
 	} else if cluster.Provisioner == model.ProvisionerEKS {
 		vpc = cluster.ProvisionerMetadataEKS.VPC
 	} else {
-		return errors.New("cluster metadata is nil cannot determine VPC")
+		return errors.New("cannot get metadata from unknown provisioner")
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
