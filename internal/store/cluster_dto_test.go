@@ -45,7 +45,7 @@ func TestClusterDTOs(t *testing.T) {
 
 	cluster2 := &model.Cluster{
 		Provider:               "azure",
-		Provisioner:            "eks",
+		Provisioner:            model.ProvisionerEKS,
 		ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 		ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 		UtilityMetadata:        &model.UtilityMetadata{},
