@@ -74,6 +74,7 @@ type AWS interface {
 
 	GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (ClusterResources, error)
 	TagResourcesByCluster(clusterResources ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error
+	FixSubnetTagsForVPC(vpc string, logger log.FieldLogger) error
 
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
 	SecretsManagerValidateExternalDatabaseSecret(name string) error
