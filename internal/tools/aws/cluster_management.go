@@ -52,10 +52,72 @@ func (cr *ClusterResources) IsValid() error {
 	return nil
 }
 
+// FixSubnetTagsForVPC finds and corrects subnet tagging for the ones that contain an incorrect
+// SubnetType tag which happens after some kops commands.
+func (a *Client) FixSubnetTagsForVPC(vpcID string, logger log.FieldLogger) error {
+	baseFilter := []ec2Types.Filter{
+		{
+			Name:   aws.String("vpc-id"),
+			Values: []string{vpcID},
+		},
+	}
+
+	privateSubnetFilter := append(baseFilter, ec2Types.Filter{
+		Name:   aws.String("tag:SubnetType"),
+		Values: []string{"Private"},
+	})
+
+	privateSubnets, err := a.GetSubnetsWithFilters(privateSubnetFilter)
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve private subnets")
+	}
+
+	for _, subnet := range privateSubnets {
+		if err = a.fixSubnetTypeTag(subnet, "SubnetType", "Private", "private", vpcID, logger); err != nil {
+			logger.WithError(err).WithField("subnet_id", *subnet.SubnetId).Error("Error fixing subnetType tag for subnet")
+		}
+	}
+
+	publicSubnetFilter := append(baseFilter, ec2Types.Filter{
+		Name:   aws.String("tag:SubnetType"),
+		Values: []string{"Utility"},
+	})
+
+	publicSubnets, err := a.GetSubnetsWithFilters(publicSubnetFilter)
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve public subnets")
+	}
+
+	for _, subnet := range publicSubnets {
+		if err = a.fixSubnetTypeTag(subnet, "SubnetType", "Utility", "public", vpcID, logger); err != nil {
+			logger.WithError(err).WithField("subnet_id", *subnet.SubnetId).Error("Error fixing subnetType tag for subnet")
+		}
+	}
+
+	return nil
+}
+
+func (a *Client) fixSubnetTypeTag(subnet ec2Types.Subnet, tagKey, tagIncorrectValue, tagCorrectValue, vpcID string, logger log.FieldLogger) error {
+	for _, tag := range subnet.Tags {
+		if *tag.Key == tagKey && *tag.Value == tagIncorrectValue {
+			logger.WithFields(log.Fields{
+				"vpc_id":    vpcID,
+				"subnet_id": *subnet.SubnetId,
+			}).Warnf("Incorrect SubnetType for Subnet, setting it to '%s' from '%s'", tagCorrectValue, tagIncorrectValue)
+			return a.TagResource(*subnet.SubnetId, tagKey, tagCorrectValue, logger)
+		}
+	}
+	return nil
+}
+
 func (a *Client) getClusterResourcesForVPC(vpcID, vpcCIDR string, logger log.FieldLogger) (ClusterResources, error) {
 	clusterResources := ClusterResources{
 		VpcID:   vpcID,
 		VpcCIDR: vpcCIDR,
+	}
+
+	if err := a.FixSubnetTagsForVPC(vpcID, logger); err != nil {
+		logger.WithError(err).WithField("vpc", vpcID).Error("failed fixing tags for vpc")
 	}
 
 	baseFilter := []ec2Types.Filter{

@@ -61,6 +61,8 @@ type AWS interface {
 	GenerateBifrostUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error)
 	GetCIDRByVPCTag(vpcTagName string, logger log.FieldLogger) (string, error)
 
+	FixSubnetTagsForVPC(vpc string, logger log.FieldLogger) error
+
 	SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error)
 
 	EnsureEKSCluster(cluster *model.Cluster, resources ClusterResources) (*eksTypes.Cluster, error)

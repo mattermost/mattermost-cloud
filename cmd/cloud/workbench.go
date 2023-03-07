@@ -5,6 +5,9 @@
 package main
 
 import (
+	"context"
+
+	awsTools "github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -57,6 +60,14 @@ func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 	if cluster == nil {
 		return errors.Errorf("unable to find cluster %s", flags.clusterID)
 	}
+	awsConfig, err := awsTools.NewAWSConfig(context.TODO())
+	if err != nil {
+		return errors.Wrap(err, "failed to get aws configuration")
+	}
+	awsClient, err := awsTools.NewAWSClientWithConfig(&awsConfig, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to build AWS client")
+	}
 
 	logger := logger.WithField("cluster", flags.clusterID)
 	logger.Info("Setting up cluster workbench")
@@ -71,6 +82,11 @@ func executeWorkbenchClusterCmd(flags workbenchClusterFlag) error {
 	}
 
 	if err = kopsClient.UpdateCluster(cluster.ProvisionerMetadataKops.Name, kopsClient.GetOutputDirectory()); err != nil {
+		return err
+	}
+
+	err = awsClient.FixSubnetTagsForVPC(cluster.ProvisionerMetadataKops.VPC, logger)
+	if err != nil {
 		return err
 	}
 

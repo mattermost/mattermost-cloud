@@ -357,6 +357,20 @@ func (mr *MockAWSMockRecorder) GetCIDRByVPCTag(vpcTagName, logger interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCIDRByVPCTag", reflect.TypeOf((*MockAWS)(nil).GetCIDRByVPCTag), vpcTagName, logger)
 }
 
+// FixSubnetTagsForVPC mocks base method
+func (m *MockAWS) FixSubnetTagsForVPC(vpc string, logger logrus.FieldLogger) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FixSubnetTagsForVPC", vpc, logger)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FixSubnetTagsForVPC indicates an expected call of FixSubnetTagsForVPC
+func (mr *MockAWSMockRecorder) FixSubnetTagsForVPC(vpc, logger interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FixSubnetTagsForVPC", reflect.TypeOf((*MockAWS)(nil).FixSubnetTagsForVPC), vpc, logger)
+}
+
 // SecretsManagerGetPGBouncerAuthUserPassword mocks base method
 func (m *MockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
 	m.ctrl.T.Helper()
