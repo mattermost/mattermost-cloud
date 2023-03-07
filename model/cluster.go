@@ -32,12 +32,12 @@ type Cluster struct {
 	ProvisionerMetadataEKS  *EKSMetadata
 	UtilityMetadata         *UtilityMetadata
 	AllowInstallations      bool
-	Networking              string
+	CreateAt                int64
+	DeleteAt                int64
 	APISecurityLock         bool
 	LockAcquiredBy          *string
 	LockAcquiredAt          int64
-	CreateAt                int64
-	DeleteAt                int64
+	Networking              string
 }
 
 // Clone returns a deep copy the cluster.

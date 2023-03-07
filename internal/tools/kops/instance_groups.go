@@ -56,7 +56,7 @@ type InstanceGroupSpec struct {
 // assume and check the following:
 // - There is one worker node instance group.
 // - There is one or more master instance groups.
-// - All of the cluster hosts are running the same ami.
+// - All of the cluster hosts are running the same AMI.
 // - All of the master nodes are running the same instance type.
 // Note:
 // If any violations are found, we don't return an error as that is beyond the
@@ -80,7 +80,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			if AMI == "" {
 				AMI = ig.Spec.Image
 			} else if AMI != ig.Spec.Image {
-				warning := fmt.Sprintf("Expected all hosts to be running same ami, but instance group %s has ami %s", ig.Metadata.Name, ig.Spec.Image)
+				warning := fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
 				metadata.AddWarning(warning)
 				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}
@@ -103,7 +103,7 @@ func (c *Cmd) UpdateMetadata(metadata *model.KopsMetadata) error {
 			if AMI == "" {
 				AMI = ig.Spec.Image
 			} else if AMI != ig.Spec.Image {
-				warning := fmt.Sprintf("Expected all hosts to be running same ami, but instance group %s has ami %s", ig.Metadata.Name, ig.Spec.Image)
+				warning := fmt.Sprintf("Expected all hosts to be running same AMI, but instance group %s has AMI %s", ig.Metadata.Name, ig.Spec.Image)
 				metadata.AddWarning(warning)
 				c.logger.WithField("kops-metadata-error", warning).Warn("Encountered a kops metadata validation error")
 			}

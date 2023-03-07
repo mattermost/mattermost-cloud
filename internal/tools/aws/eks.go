@@ -166,14 +166,13 @@ func (c *Client) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
 func (a *Client) createEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
 
 	clusterName := cluster.ProvisionerMetadataEKS.Name
-	workerName := cluster.ProvisionerMetadataEKS.ChangeRequest.WorkerName
-
 	eksMetadata := cluster.ProvisionerMetadataEKS
-
 	changeRequest := eksMetadata.ChangeRequest
 	if changeRequest == nil {
 		return nil, errors.New("change request is nil")
 	}
+
+	workerName := cluster.ProvisionerMetadataEKS.ChangeRequest.WorkerName
 
 	clusterResource, err := a.GetVpcResourcesByVpcID(changeRequest.VPC, a.logger)
 	if err != nil {

@@ -70,10 +70,18 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Provisioner) == 0 {
 		request.Provisioner = ProvisionerKops
 	}
+	if len(request.Version) == 0 {
+		if request.Provisioner == ProvisionerEKS {
+			request.Version = "1.23"
+		} else {
+			request.Version = "latest"
+		}
+	}
+
 	if len(request.Zones) == 0 {
 		if request.Provisioner == ProvisionerEKS {
 			request.Zones = []string{"us-east-1a", "us-east-1b"}
-		} else if request.Provisioner == ProvisionerKops {
+		} else {
 			request.Zones = []string{"us-east-1a"}
 		}
 	}
@@ -97,14 +105,6 @@ func (request *CreateClusterRequest) SetDefaults() {
 	}
 	if len(request.Networking) == 0 {
 		request.Networking = NetworkingCalico
-	}
-
-	if len(request.Version) == 0 {
-		if request.Provisioner == ProvisionerKops {
-			request.Version = "latest"
-		} else if request.Provisioner == ProvisionerEKS {
-			request.Version = "1.23"
-		}
 	}
 
 	if request.DesiredUtilityVersions == nil {
