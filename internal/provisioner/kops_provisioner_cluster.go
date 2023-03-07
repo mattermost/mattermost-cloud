@@ -222,7 +222,7 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	err = awsClient.FixSubnetTagsForVPC(clusterResources.VpcID, logger)
+	err = provisioner.awsClient.FixSubnetTagsForVPC(clusterResources.VpcID, logger)
 	if err != nil {
 		return err
 	}
@@ -381,7 +381,7 @@ func (provisioner *KopsProvisioner) UpgradeCluster(cluster *model.Cluster) error
 		return err
 	}
 
-	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	err = provisioner.awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
 	if err != nil {
 		return err
 	}
@@ -524,7 +524,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	err = provisioner.awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
 	if err != nil {
 		return err
 	}
@@ -563,7 +563,7 @@ func (provisioner *KopsProvisioner) ResizeCluster(cluster *model.Cluster) error 
 		return err
 	}
 
-	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	err = provisioner.awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
 	if err != nil {
 		return err
 	}
@@ -702,7 +702,7 @@ func (provisioner *KopsProvisioner) cleanupKopsCluster(cluster *model.Cluster, l
 		return errors.Wrap(err, "failed to run kops update")
 	}
 
-	err = awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
+	err = provisioner.awsClient.FixSubnetTagsForVPC(kopsMetadata.VPC, logger)
 	if err != nil {
 		return err
 	}
