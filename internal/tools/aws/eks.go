@@ -481,14 +481,16 @@ func (c *Client) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksType
 
 // WaitForActiveEKSCluster waits for EKS cluster to be ready.
 func (c *Client) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksTypes.Cluster, error) {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timer.Stop()
+	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timeoutTimer.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-timeoutTimer.C:
 			return nil, errors.New("timed out waiting for EKS cluster to become active")
-		default:
+		case <-tick.C:
 			eksCluster, err := c.GetActiveEKSCluster(clusterName)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to check if EKS cluster is active")
@@ -496,21 +498,21 @@ func (c *Client) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksT
 			if eksCluster != nil {
 				return eksCluster, nil
 			}
-
-			time.Sleep(5 * time.Second)
 		}
 	}
 }
 
 func (c *Client) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error) {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timer.Stop()
+	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timeoutTimer.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-timeoutTimer.C:
 			return nil, errors.New("timed out waiting for EKS NodeGroup to become active")
-		default:
+		case <-tick.C:
 			nodeGroup, err := c.GetActiveEKSNodeGroup(clusterName, workerName)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to check if EKS NodeGroup is active")
@@ -518,21 +520,21 @@ func (c *Client) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeo
 			if nodeGroup != nil {
 				return nodeGroup, nil
 			}
-
-			time.Sleep(5 * time.Second)
 		}
 	}
 }
 
 func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timer.Stop()
+	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timeoutTimer.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-timeoutTimer.C:
 			return errors.New("timed out waiting for EKS NodeGroup to become ready")
-		default:
+		case <-tick.C:
 			nodeGroup, err := c.getEKSNodeGroup(clusterName, workerName)
 			if err != nil {
 				return errors.Wrap(err, "failed to describe NodeGroup")
@@ -540,21 +542,21 @@ func (c *Client) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, 
 			if nodeGroup == nil {
 				return nil
 			}
-
-			time.Sleep(5 * time.Second)
 		}
 	}
 }
 
 func (c *Client) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second)
-	defer timer.Stop()
+	timeoutTimer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timeoutTimer.Stop()
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
 
 	for {
 		select {
-		case <-timer.C:
+		case <-timeoutTimer.C:
 			return errors.New("timed out waiting for EKS cluster to become ready")
-		default:
+		case <-tick.C:
 			eksCluster, err := c.getEKSCluster(clusterName)
 			if err != nil {
 				return errors.Wrap(err, "failed to describe EKS cluster")
@@ -562,8 +564,6 @@ func (c *Client) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) e
 			if eksCluster == nil {
 				return nil
 			}
-
-			time.Sleep(5 * time.Second)
 		}
 	}
 }

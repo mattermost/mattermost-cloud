@@ -41,7 +41,7 @@ func TestClusters(t *testing.T) {
 
 		cluster2 := &model.Cluster{
 			Provider:               "azure",
-			Provisioner:            "eks",
+			Provisioner:            model.ProvisionerEKS,
 			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 			UtilityMetadata:        &model.UtilityMetadata{},
@@ -109,7 +109,7 @@ func TestClusters(t *testing.T) {
 
 		cluster2 := &model.Cluster{
 			Provider:               "azure",
-			Provisioner:            "eks",
+			Provisioner:            model.ProvisionerEKS,
 			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 			UtilityMetadata:        &model.UtilityMetadata{},
@@ -124,7 +124,7 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 
 		cluster1.Provider = "azure"
-		cluster1.Provisioner = "eks"
+		cluster1.Provisioner = model.ProvisionerEKS
 		cluster1.ProviderMetadataAWS = &model.AWSMetadata{Zones: []string{"zone2"}}
 		cluster1.ProvisionerMetadataEKS = &model.EKSMetadata{Version: "version2"}
 		cluster1.ProvisionerMetadataKops = nil
@@ -159,7 +159,7 @@ func TestClusters(t *testing.T) {
 
 		cluster2 := &model.Cluster{
 			Provider:               "azure",
-			Provisioner:            "eks",
+			Provisioner:            model.ProvisionerEKS,
 			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
 			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
 			UtilityMetadata:        &model.UtilityMetadata{},
