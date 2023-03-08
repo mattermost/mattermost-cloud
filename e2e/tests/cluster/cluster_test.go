@@ -73,7 +73,7 @@ func Test_ClusterLifecycle(t *testing.T) {
 			if err != nil {
 				test.Logger.WithError(err).Error("Error cleaning up installation")
 			}
-			err := test.ClusterSuite.DeleteCluster(context.Background())
+			err := test.ClusterSuite.Cleanup(context.Background())
 			if err != nil {
 				test.Logger.WithError(err).Error("Error cleaning up cluster")
 			}
@@ -85,6 +85,9 @@ func Test_ClusterLifecycle(t *testing.T) {
 
 	err = test.Run()
 	require.NoError(t, err)
+
+	// Make sure we wait for all subscription events
+	time.Sleep(time.Second * 1)
 
 	// Make sure that expected events occurred in correct order.
 	expectedEvents := workflow.GetExpectedEvents(test.Steps)
