@@ -116,7 +116,11 @@ func (n *nginx) ActualVersion() *model.HelmUtilityVersion {
 }
 
 func (n *nginx) Destroy() error {
-	return nil
+	helm, err := n.NewHelmDeployment()
+	if err != nil {
+		return err
+	}
+	return helm.Delete()
 }
 
 func (n *nginx) ValuesPath() string {

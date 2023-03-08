@@ -36,7 +36,8 @@ func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, clus
 }
 
 func (f *nodeProblemDetector) Destroy() error {
-	return nil
+	helm := f.NewHelmDeployment(f.logger)
+	return helm.Delete()
 }
 
 func (f *nodeProblemDetector) Migrate() error {

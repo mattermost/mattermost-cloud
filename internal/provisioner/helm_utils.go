@@ -94,7 +94,7 @@ func (d *helmDeployment) Exists() (bool, error) {
 	}
 
 	for _, chart := range list.asSlice() {
-		if chart.Name == d.chartDeploymentName && chart.Chart == d.chartName && chart.Namespace == d.namespace {
+		if chart.Name == d.chartDeploymentName && chart.Namespace == d.namespace {
 			return true, nil
 		}
 	}
@@ -213,11 +213,12 @@ func upgradeHelmChart(chart helmDeployment, configPath string, logger log.FieldL
 // deleteHelmChart is used to delete Helm charts.
 func deleteHelmChart(chart helmDeployment, configPath string, logger log.FieldLogger) error {
 	arguments := []string{
-		"--debug",
-		"delete",
+		"uninstall",
+		chart.chartDeploymentName,
 		"--kubeconfig", configPath,
 		"--namespace", chart.namespace,
-		chart.chartDeploymentName,
+		"--wait",
+		"--debug",
 	}
 
 	helmClient, err := helm.New(logger)

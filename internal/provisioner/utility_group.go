@@ -191,11 +191,6 @@ func (group utilityGroup) DestroyUtilityGroup() error {
 		if err != nil {
 			group.logger.WithError(err).Warnf("failed to destroy utility `%s`", utility.Name())
 		}
-
-		err = group.cluster.SetUtilityActualVersion(utility.Name(), utility.ActualVersion())
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
