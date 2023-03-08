@@ -9,6 +9,7 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
@@ -61,8 +62,9 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	testID := model.NewID()
 	state.TestID = testID
 	logger := logrus.WithFields(map[string]interface{}{
-		"test":   "cluster-lifecycle",
-		"testID": testID,
+		"test":     "cluster-lifecycle",
+		"testID":   testID,
+		"hostname": os.Getenv("HOSTNAME"),
 	})
 
 	config, err := readConfig(logger)
