@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/signal"
+	"syscall"
 	"testing"
 	"time"
 
@@ -38,6 +40,15 @@ func TestMain(m *testing.M) {
 	state.StartTime = time.Now()
 	code := m.Run()
 	state.EndTime = time.Now()
+
+	// Notify if we receive any signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		for sig := range c {
+			fmt.Printf("caught signal: %s", sig)
+		}
+	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
