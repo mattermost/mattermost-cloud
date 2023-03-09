@@ -724,12 +724,12 @@ func (provisioner *KopsProvisioner) cleanupCluster(cluster *model.Cluster, logge
 
 	ugh, err := newUtilityGroupHandle(provisioner.params, kopsClient.GetKubeConfigPath(), cluster, provisioner.awsClient, logger)
 	if err != nil {
-		return errors.Wrap(err, "couldn't create new helm group handle while deleting the cluster")
+		return errors.Wrap(err, "couldn't create new utility group handle while deleting the cluster")
 	}
 
 	err = ugh.DestroyUtilityGroup()
 	if err != nil {
-		return errors.Wrap(err, "failed to destroy all services in the helm group")
+		return errors.Wrap(err, "failed to destroy all services in the utility group")
 	}
 
 	iamRole := fmt.Sprintf("nodes.%s", kopsMetadata.Name)

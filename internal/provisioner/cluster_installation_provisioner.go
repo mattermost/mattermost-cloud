@@ -1001,16 +1001,6 @@ func int32Ptr(i int) *int32 {
 	return &i32
 }
 
-func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
-	for _, env := range all {
-		if env == wanted {
-			return true
-		}
-	}
-
-	return false
-}
-
 func setNdots(ndotsValue string) *corev1.PodDNSConfig {
 	return &corev1.PodDNSConfig{Options: []corev1.PodDNSConfigOption{{Name: "ndots", Value: &ndotsValue}}}
 }

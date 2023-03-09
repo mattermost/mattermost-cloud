@@ -7,6 +7,9 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/mattermost-operator/pkg/resources"
@@ -18,8 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
-	"strings"
-	"time"
 )
 
 const (
