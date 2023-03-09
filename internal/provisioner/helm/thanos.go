@@ -112,7 +112,7 @@ func (t *thanos) CreateOrUpgrade() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 		defer cancel()
 
-		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, prometheus.PrometheusNamespace, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
+		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, prometheus.Namespace, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get the load balancer endpoint for Thanos")
 		}
@@ -166,7 +166,7 @@ func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeploym
 	return newHelmDeployment(
 		"bitnami/thanos",
 		"thanos",
-		prometheus.PrometheusNamespace,
+		prometheus.Namespace,
 		t.kubeconfigPath,
 		t.desiredVersion,
 		helmValueArguments,

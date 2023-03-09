@@ -385,7 +385,7 @@ func provisionCluster(
 		return errors.Wrap(err, "failed to upgrade all services in utility group")
 	}
 
-	prom, _ := k8sClient.GetNamespace(prometheus.PrometheusNamespace)
+	prom, _ := k8sClient.GetNamespace(prometheus.Namespace)
 
 	if prom != nil && prom.Name != "" {
 		err = prometheus.PrepareSloth(k8sClient, logger)
