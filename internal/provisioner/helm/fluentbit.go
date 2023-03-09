@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"strings"
@@ -21,7 +21,7 @@ type fluentbit struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*fluentbit, error) {
+func NewFluentbitHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*fluentbit, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Fluentbit handle with nil logger")
 	}

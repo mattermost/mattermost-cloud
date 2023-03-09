@@ -2,136 +2,52 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package pgbouncer
 
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-cloud/k8s"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
+	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type pgbouncer struct {
-	awsClient      aws.AWS
-	environment    string
-	kubeconfigPath string
-	cluster        *model.Cluster
-	logger         log.FieldLogger
-	desiredVersion *model.HelmUtilityVersion
-	actualVersion  *model.HelmUtilityVersion
-}
-
-func newPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*pgbouncer, error) {
-	if logger == nil {
-		return nil, errors.New("cannot instantiate Pgbouncer handle with nil logger")
-	}
-	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create utility without kubeconfig")
-	}
-
-	return &pgbouncer{
-		awsClient:      awsClient,
-		environment:    awsClient.GetCloudEnvironmentName(),
-		cluster:        cluster,
-		kubeconfigPath: kubeconfigPath,
-		logger:         logger.WithField("cluster-utility", model.PgbouncerCanonicalName),
-		desiredVersion: desiredVersion,
-		actualVersion:  cluster.UtilityMetadata.ActualVersions.Pgbouncer,
-	}, nil
-
-}
-
-func (p *pgbouncer) updateVersion(h *helmDeployment) error {
-	actualVersion, err := h.Version()
+func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
 	}
 
-	p.actualVersion = actualVersion
+	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+	if configMap.Data["pgbouncer.ini"] != ini {
+		logger.Debug("Updating pgbouncer.ini with new database configuration")
+
+		configMap.Data["pgbouncer.ini"] = ini
+		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
+		}
+	}
 	return nil
 }
 
-func (p *pgbouncer) ValuesPath() string {
-	if p.desiredVersion == nil {
-		return ""
-	}
-	return p.desiredVersion.Values()
-}
-
-func (p *pgbouncer) CreateOrUpgrade() error {
-	err := p.DeployManifests()
-	if err != nil {
-		return err
-	}
-
-	h := p.NewHelmDeployment()
-
-	err = h.Update()
-	if err != nil {
-		return err
-	}
-
-	err = p.updateVersion(h)
-	return err
-}
-
-func (p *pgbouncer) DesiredVersion() *model.HelmUtilityVersion {
-	return p.desiredVersion
-}
-
-func (p *pgbouncer) ActualVersion() *model.HelmUtilityVersion {
-	if p.actualVersion == nil {
-		return nil
-	}
-	return &model.HelmUtilityVersion{
-		Chart:      strings.TrimPrefix(p.actualVersion.Version(), "pgbouncer-"),
-		ValuesPath: p.actualVersion.Values(),
-	}
-}
-
-func (p *pgbouncer) Destroy() error {
-	helm := p.NewHelmDeployment()
-	return helm.Delete()
-}
-
-func (p *pgbouncer) Migrate() error {
-	return nil
-}
-
-func (p *pgbouncer) NewHelmDeployment() *helmDeployment {
-	return newHelmDeployment(
-		"chartmuseum/pgbouncer",
-		"pgbouncer",
-		"pgbouncer",
-		p.kubeconfigPath,
-		p.desiredVersion,
-		defaultHelmDeploymentSetArgument,
-		p.logger,
-	)
-}
-
-// Deploys pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret
-func (p *pgbouncer) DeployManifests() error {
-	logger := p.logger.WithField("pgbouncer-action", "create-manifests")
+// DeployManifests deploy pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret
+func DeployManifests(k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	logger = logger.WithField("pgbouncer-action", "create-manifests")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
 	defer cancel()
 
-	k8sClient, err := k8s.NewFromFile(p.kubeconfigPath, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to set up the k8s client")
-	}
-
-	_, err = k8sClient.CreateOrUpdateNamespace("pgbouncer")
+	_, err := k8sClient.CreateOrUpdateNamespace("pgbouncer")
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the pgbouncer namespace")
 	}
@@ -172,10 +88,6 @@ func (p *pgbouncer) DeployManifests() error {
 	return nil
 }
 
-func (p *pgbouncer) Name() string {
-	return model.PgbouncerCanonicalName
-}
-
 const baseIni = `
 [pgbouncer]
 listen_addr = *
@@ -206,7 +118,7 @@ server_reset_query_always = %d
 `
 
 func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *PGBouncerConfig) (string, error) {
-	ini := config.generatePGBouncerBaseIni()
+	ini := config.GeneratePGBouncerBaseIni()
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
@@ -249,7 +161,7 @@ func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreI
 	return ini, nil
 }
 
-func generatePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {
+func GeneratePGBouncerUserlist(vpcID string, awsClient aws.AWS) (string, error) {
 	password, err := awsClient.SecretsManagerGetPGBouncerAuthUserPassword(vpcID)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get pgbouncer auth user password")
@@ -306,7 +218,7 @@ func (c *PGBouncerConfig) Validate() error {
 	return nil
 }
 
-func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
+func (c *PGBouncerConfig) GeneratePGBouncerBaseIni() string {
 	return fmt.Sprintf(
 		baseIni,
 		c.MinPoolSize, c.DefaultPoolSize, c.ReservePoolSize,

@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"strings"
@@ -19,7 +19,7 @@ type nodeProblemDetector struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*nodeProblemDetector, error) {
+func NewNodeProblemDetectorHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*nodeProblemDetector, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate NodeProblemDetector handle with nil logger")
 	}

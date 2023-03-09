@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package prometheus
 
 import (
 	"context"
@@ -17,14 +17,14 @@ import (
 )
 
 const (
-	prometheusNamespace  = "prometheus"
-	slothDefaultWaitTime = time.Second * 60
+	PrometheusNamespace  = "prometheus"
+	SlothDefaultWaitTime = time.Second * 60
 )
 
 func createPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
+	ctx, cancel := context.WithTimeout(context.Background(), SlothDefaultWaitTime)
 	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Create(ctx, &psl, metav1.CreateOptions{})
+	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(PrometheusNamespace).Create(ctx, &psl, metav1.CreateOptions{})
 	if err != nil && k8sErrors.IsNotFound(err) {
 		logger.Debugf("Sloth CRD doesn't exist on cluster: %s", err)
 		return nil
@@ -36,24 +36,24 @@ func createPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient 
 }
 
 func updatePrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
+	ctx, cancel := context.WithTimeout(context.Background(), SlothDefaultWaitTime)
 	defer cancel()
-	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, psl.Name, metav1.GetOptions{})
+	obj, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(PrometheusNamespace).Get(ctx, psl.Name, metav1.GetOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get cluster installation sli")
 	}
 	psl.ResourceVersion = obj.GetResourceVersion()
-	_, err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Update(ctx, &psl, metav1.UpdateOptions{})
+	_, err = k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(PrometheusNamespace).Update(ctx, &psl, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "failed to update cluster installation sli")
 	}
 	return nil
 }
 
-func createOrUpdateClusterPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	ctx, cancel := context.WithTimeout(context.Background(), slothDefaultWaitTime)
+func CreateOrUpdateClusterPrometheusServiceLevel(psl slothv1.PrometheusServiceLevel, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	ctx, cancel := context.WithTimeout(context.Background(), SlothDefaultWaitTime)
 	defer cancel()
-	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(prometheusNamespace).Get(ctx, psl.GetName(), metav1.GetOptions{})
+	_, err := k8sClient.SlothClientsetV1.SlothV1().PrometheusServiceLevels(PrometheusNamespace).Get(ctx, psl.GetName(), metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed to get cluster installation sli")
 	}

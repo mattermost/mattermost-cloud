@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type velero struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*velero, error) {
+func NewVeleroHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*velero, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Velero handle with nil logger")
 	}

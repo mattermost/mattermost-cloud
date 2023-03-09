@@ -5,6 +5,7 @@
 package provisioner
 
 import (
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/helm"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -79,31 +80,31 @@ func newUtilityGroupHandle(
 ) (*utilityGroup, error) {
 	logger := parentLogger.WithField("utility-group", "create-handle")
 
-	nginx, err := newNginxHandle(
+	nginx, err := helm.NewNginxHandle(
 		cluster.DesiredUtilityVersion(model.NginxCanonicalName),
 		cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX")
 	}
 
-	nginxInternal, err := newNginxInternalHandle(
+	nginxInternal, err := helm.NewNginxInternalHandle(
 		cluster.DesiredUtilityVersion(model.NginxInternalCanonicalName),
 		cluster, kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for NGINX INTERNAL")
 	}
 
-	prometheusOperator, err := newPrometheusOperatorHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	prometheusOperator, err := helm.NewPrometheusOperatorHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Prometheus Operator")
 	}
 
-	thanos, err := newThanosHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
+	thanos, err := helm.NewThanosHandle(cluster, kubeconfigPath, params.AllowCIDRRangeList, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Thanos")
 	}
 
-	fluentbit, err := newFluentbitHandle(
+	fluentbit, err := helm.NewFluentbitHandle(
 		cluster,
 		cluster.DesiredUtilityVersion(model.FluentbitCanonicalName),
 		kubeconfigPath, awsClient, logger)
@@ -111,56 +112,56 @@ func newUtilityGroupHandle(
 		return nil, errors.Wrap(err, "failed to get handle for Fluentbit")
 	}
 
-	teleport, err := newTeleportHandle(
+	teleport, err := helm.NewTeleportHandle(
 		cluster, cluster.DesiredUtilityVersion(model.TeleportCanonicalName),
 		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Teleport")
 	}
 
-	pgbouncer, err := newPgbouncerHandle(
+	pgbouncer, err := helm.NewPgbouncerHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PgbouncerCanonicalName),
 		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	promtail, err := newPromtailHandle(
+	promtail, err := helm.NewPromtailHandle(
 		cluster, cluster.DesiredUtilityVersion(model.PromtailCanonicalName),
 		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Pgbouncer")
 	}
 
-	rtcd, err := newRtcdHandle(
+	rtcd, err := helm.NewRtcdHandle(
 		cluster, cluster.DesiredUtilityVersion(model.RtcdCanonicalName),
 		kubeconfigPath, awsClient, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for RTCD")
 	}
 
-	nodeProblemDetector, err := newNodeProblemDetectorHandle(
+	nodeProblemDetector, err := helm.NewNodeProblemDetectorHandle(
 		cluster.DesiredUtilityVersion(model.NodeProblemDetectorCanonicalName),
 		cluster, kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Node Problem Detector")
 	}
 
-	metricsServer, err := newMetricsServerHandle(
+	metricsServer, err := helm.NewMetricsServerHandle(
 		cluster.DesiredUtilityVersion(model.MetricsServerCanonicalName),
 		cluster, kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Metrics Server")
 	}
 
-	velero, err := newVeleroHandle(
+	velero, err := helm.NewVeleroHandle(
 		cluster.DesiredUtilityVersion(model.VeleroCanonicalName), cluster,
 		kubeconfigPath, logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get handle for Velero")
 	}
 
-	cloudprober, err := newCloudproberHandle(
+	cloudprober, err := helm.NewCloudproberHandle(
 		cluster.DesiredUtilityVersion(model.CloudproberCanonicalName), cluster,
 		kubeconfigPath, logger)
 	if err != nil {
@@ -202,7 +203,7 @@ func (group utilityGroup) ProvisionUtilityGroup() error {
 
 	logger.Info("Adding new Helm repos.")
 	for repoName, repoURL := range helmRepos {
-		err := helmRepoAdd(repoName, repoURL, logger)
+		err := helm.AddRepo(repoName, repoURL, logger)
 		if err != nil {
 			return errors.Wrap(err, "unable to add helm repos")
 		}

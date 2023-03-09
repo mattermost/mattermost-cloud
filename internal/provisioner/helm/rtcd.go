@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"strings"
@@ -22,7 +22,7 @@ type rtcd struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*rtcd, error) {
+func NewRtcdHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*rtcd, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate RTCD handle with nil logger")
 	}

@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -30,7 +31,7 @@ type prometheusOperator struct {
 	actualVersion      *model.HelmUtilityVersion
 }
 
-func newPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*prometheusOperator, error) {
+func NewPrometheusOperatorHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*prometheusOperator, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Prometheus Operator handle with nil logger")
 	}
@@ -89,12 +90,12 @@ func (p *prometheusOperator) CreateOrUpgrade() error {
 		return errors.Wrap(err, "failed to set up the k8s client")
 	}
 
-	_, err = k8sClient.CreateOrUpdateNamespace(prometheusNamespace)
+	_, err = k8sClient.CreateOrUpdateNamespace(prometheus.PrometheusNamespace)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the prometheus namespace")
 	}
 
-	_, err = k8sClient.CreateOrUpdateSecret(prometheusNamespace, thanosObjStoreSecret)
+	_, err = k8sClient.CreateOrUpdateSecret(prometheus.PrometheusNamespace, thanosObjStoreSecret)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create the Thanos object storage secret")
 	}
@@ -181,7 +182,7 @@ func (p *prometheusOperator) NewHelmDeployment(prometheusDNS string) *helmDeploy
 	return newHelmDeployment(
 		"prometheus-community/kube-prometheus-stack",
 		"prometheus-operator",
-		prometheusNamespace,
+		prometheus.PrometheusNamespace,
 		p.kubeconfigPath,
 		p.desiredVersion,
 		helmValueArguments,

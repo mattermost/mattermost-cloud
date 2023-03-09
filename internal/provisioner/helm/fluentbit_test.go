@@ -2,15 +2,14 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	mocks "github.com/mattermost/mattermost-cloud/internal/mocks/aws-tools"
 	"github.com/mattermost/mattermost-cloud/model"
-
-	"github.com/golang/mock/gomock"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +20,7 @@ func TestNewHelmDeploymentWithDefaultConfiguration(t *testing.T) {
 
 	logger := log.New()
 	awsClient := mocks.NewMockAWS(ctrl)
-	fluentbit, err := newFluentbitHandle(&model.Cluster{
+	fluentbit, err := NewFluentbitHandle(&model.Cluster{
 		UtilityMetadata: &model.UtilityMetadata{
 			ActualVersions: model.UtilityGroupVersions{},
 		},

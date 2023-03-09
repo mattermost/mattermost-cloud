@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type cloudprober struct {
 	desiredVersion *model.HelmUtilityVersion
 }
 
-func newCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*cloudprober, error) {
+func NewCloudproberHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*cloudprober, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Cloudprober handle with nil logger")
 	}

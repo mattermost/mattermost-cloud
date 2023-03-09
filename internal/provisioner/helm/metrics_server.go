@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"strings"
@@ -20,7 +20,7 @@ type metricsServer struct {
 	provisioner    string
 }
 
-func newMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
+func NewMetricsServerHandle(desiredVersion *model.HelmUtilityVersion, cluster *model.Cluster, kubeconfigPath string, logger log.FieldLogger) (*metricsServer, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate MetricsServer handle with nil logger")
 	}

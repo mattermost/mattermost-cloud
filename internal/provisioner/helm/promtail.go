@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ type promtail struct {
 	actualVersion  *model.HelmUtilityVersion
 }
 
-func newPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*promtail, error) {
+func NewPromtailHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilityVersion, kubeconfigPath string, awsClient aws.AWS, logger log.FieldLogger) (*promtail, error) {
 	if logger == nil {
 		return nil, errors.New("cannot instantiate Promtail handle with nil logger")
 	}

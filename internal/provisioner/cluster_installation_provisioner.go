@@ -6,20 +6,172 @@ package provisioner
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/aws/smithy-go/ptr"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/pgbouncer"
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/mattermost/mattermost-operator/apis/mattermost/v1alpha1"
 	mmv1beta1 "github.com/mattermost/mattermost-operator/apis/mattermost/v1beta1"
+	"github.com/mattermost/mattermost-operator/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const (
+	bifrostEndpoint = "bifrost.bifrost:80"
+)
+
+// CreateClusterInstallation creates a Mattermost installation within the given cluster.
+func (provisioner Provisioner) CreateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+		"version":      "v1beta1",
+	})
+	logger.Info("Creating cluster installation")
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return provisioner.createClusterInstallation(clusterInstallation, installation, installationDNS, configLocation, logger)
+}
+
+func (provisioner Provisioner) EnsureCRMigrated(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+	logger.Debug("All cluster installation are expected to be v1beta version")
+
+	return true, nil
+}
+
+// HibernateClusterInstallation updates a cluster installation to consume fewer
+// resources.
+func (provisioner Provisioner) HibernateClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return hibernateInstallation(configLocation, logger, clusterInstallation, installation)
+}
+
+// UpdateClusterInstallation updates the cluster installation spec to match the
+// installation specification.
+func (provisioner Provisioner) UpdateClusterInstallation(cluster *model.Cluster, installation *model.Installation, installationDNS []*model.InstallationDNS, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return provisioner.updateClusterInstallation(configLocation, installation, installationDNS, clusterInstallation, logger)
+}
+
+// DeleteOldClusterInstallationLicenseSecrets removes k8s secrets found matching
+// the license naming scheme that are not the current license used by the
+// installation.
+func (provisioner Provisioner) DeleteOldClusterInstallationLicenseSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return deleteOldClusterInstallationLicenseSecrets(configLocation, installation, clusterInstallation, logger)
+}
+
+// DeleteClusterInstallation deletes a Mattermost installation within the given cluster.
+func (provisioner Provisioner) DeleteClusterInstallation(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return deleteClusterInstallation(installation, clusterInstallation, configLocation, logger)
+}
+
+// IsResourceReadyAndStable checks if the ClusterInstallation Custom Resource is
+// both ready and stable on the cluster.
+func (provisioner Provisioner) IsResourceReadyAndStable(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation) (bool, bool, error) {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":              clusterInstallation.ClusterID,
+		"installation":         clusterInstallation.InstallationID,
+		"cluster_installation": clusterInstallation.ID,
+	})
+
+	cr, err := provisioner.getMattermostCustomResource(cluster, clusterInstallation, logger)
+	if err != nil {
+		return false, false, errors.Wrap(err, "failed to get ClusterInstallation Custom Resource")
+	}
+	return isMattermostReady(cr)
+}
+
+// RefreshSecrets deletes old secrets for database and file store and replaces them with new ones.
+func (provisioner Provisioner) RefreshSecrets(cluster *model.Cluster, installation *model.Installation, clusterInstallation *model.ClusterInstallation) error {
+	logger := provisioner.logger.WithFields(log.Fields{
+		"cluster":      clusterInstallation.ClusterID,
+		"installation": clusterInstallation.InstallationID,
+	})
+	logger.Info("Refreshing secrets for cluster installation")
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return provisioner.refreshSecrets(installation, clusterInstallation, configLocation)
+}
+
+// PrepareClusterUtilities performs any updates to cluster utilities that may
+// be needed for clusterinstallations to function correctly.
+func (provisioner Provisioner) PrepareClusterUtilities(cluster *model.Cluster, installation *model.Installation, store model.ClusterUtilityDatabaseStoreInterface) error {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+	logger.Info("Preparing cluster utilities")
+
+	// TODO: move this logic to a database interface method.
+	if installation.Database != model.InstallationDatabaseMultiTenantRDSPostgresPGBouncer {
+		return nil
+	}
+
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return prepareClusterUtilities(cluster, configLocation, store, provisioner.awsClient, provisioner.params.PGBouncerConfig, logger)
+}
 
 func (provisioner Provisioner) createClusterInstallation(clusterInstallation *model.ClusterInstallation, installation *model.Installation, installationDNS []*model.InstallationDNS, kubeconfigPath string, logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(kubeconfigPath, logger)
@@ -86,14 +238,16 @@ func (provisioner Provisioner) createClusterInstallation(clusterInstallation *mo
 	if installation.GroupID != nil && *installation.GroupID != "" {
 		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
 			logger.Debug("Installation belongs in the approved SLO installation group list. Adding SLI")
-			err = createInstallationSLI(clusterInstallation, k8sClient, logger)
+			installationName := makeClusterInstallationName(clusterInstallation)
+			err = prometheus.CreateInstallationSLI(clusterInstallation, k8sClient, installationName, logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to create installation SLI")
 			}
 		}
 		if containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
 			logger.Debug("Installation belongs in the approved enterprise installation group list. Adding Nginx SLI")
-			err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger)
+			serviceName := makeClusterInstallationName(clusterInstallation)
+			err = prometheus.CreateOrUpdateNginxSLI(clusterInstallation, k8sClient, serviceName, logger)
 			if err != nil {
 				return errors.Wrap(err, "failed to create enterprise nginx SLI")
 			}
@@ -151,40 +305,6 @@ func (provisioner Provisioner) ensureFilestoreAndDatabase(
 			Secret: filestoreConfig.Secret,
 		}}
 	}
-
-	return nil
-}
-
-func hibernateInstallation(configLocation string, logger *log.Entry, clusterInstallation *model.ClusterInstallation, installation *model.Installation) error {
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create k8s client from file")
-	}
-
-	ctx := context.TODO()
-	name := makeClusterInstallationName(clusterInstallation)
-
-	cr, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
-	}
-
-	configureInstallationForHibernation(cr, installation, clusterInstallation)
-
-	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
-	}
-	err = deleteInstallationSLI(clusterInstallation, k8sClient, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete installation SLI")
-	}
-
-	if err = ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
-		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
-	}
-
-	logger.Info("Updated cluster installation")
 
 	return nil
 }
@@ -327,13 +447,13 @@ func (provisioner Provisioner) updateClusterInstallation(
 
 	if *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOInstallationGroups) {
 		logger.Debug("Creating or updating Mattermost installation SLI")
-		err = createOrUpdateInstallationSLI(clusterInstallation, k8sClient, logger)
+		err = prometheus.CreateOrUpdateInstallationSLI(clusterInstallation, k8sClient, installationName, logger)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create cluster installation SLI %s", clusterInstallation.ID)
 		}
 	} else {
 		logger.Debug("Removing Mattermost installation SLI as installation group not in the approved list")
-		err = deleteInstallationSLI(clusterInstallation, k8sClient, logger)
+		err = prometheus.DeleteInstallationSLI(clusterInstallation, k8sClient, logger)
 		if err != nil {
 			return errors.Wrapf(err, "failed to delete cluster installation SLI %s", clusterInstallation.ID)
 		}
@@ -341,14 +461,60 @@ func (provisioner Provisioner) updateClusterInstallation(
 
 	if installation.GroupID != nil && *installation.GroupID != "" && containsInstallationGroup(*installation.GroupID, provisioner.params.SLOEnterpriseGroups) {
 		logger.Debug("Creating or updating Mattermost Enterprise Nginx SLI")
-		if err = createOrUpdateNginxSLI(clusterInstallation, k8sClient, logger); err != nil {
-			return errors.Wrapf(err, "failed to create enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))
+		serviceName := makeClusterInstallationName(clusterInstallation)
+		if err = prometheus.CreateOrUpdateNginxSLI(clusterInstallation, k8sClient, serviceName, logger); err != nil {
+			return errors.Wrapf(err, "failed to create enterprise nginx SLI %s", prometheus.GetNginxSlothObjectName(clusterInstallation))
 		}
 	} else {
 		logger.Debug("Removing Mattermost Enterprise Nginx SLI")
-		if err := ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
-			return errors.Wrapf(err, "failed to delete enterprise nginx SLI %s", getNginxSlothObjectName(clusterInstallation))
+		if err := prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
+			return errors.Wrapf(err, "failed to delete enterprise nginx SLI %s", prometheus.GetNginxSlothObjectName(clusterInstallation))
 		}
+	}
+
+	logger.Info("Updated cluster installation")
+
+	return nil
+}
+
+// getMattermostCustomResource gets the cluster installation resource from
+// the kubernetes API.
+func (provisioner Provisioner) getMattermostCustomResource(cluster *model.Cluster, clusterInstallation *model.ClusterInstallation, logger log.FieldLogger) (*mmv1beta1.Mattermost, error) {
+	configLocation, err := provisioner.getClusterKubecfg(cluster)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get kube config path")
+	}
+
+	return getMattermostCustomResource(clusterInstallation, configLocation, logger)
+}
+
+func hibernateInstallation(configLocation string, logger *log.Entry, clusterInstallation *model.ClusterInstallation, installation *model.Installation) error {
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	ctx := context.TODO()
+	name := makeClusterInstallationName(clusterInstallation)
+
+	cr, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	configureInstallationForHibernation(cr, installation, clusterInstallation)
+
+	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
+	}
+	err = prometheus.DeleteInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation SLI")
+	}
+
+	if err = prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
+		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
 	}
 
 	logger.Info("Updated cluster installation")
@@ -417,12 +583,12 @@ func deleteClusterInstallation(
 		return errors.Wrapf(err, "failed to delete namespace %s", clusterInstallation.Namespace)
 	}
 
-	err = deleteInstallationSLI(clusterInstallation, k8sClient, logger)
+	err = prometheus.DeleteInstallationSLI(clusterInstallation, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete installation SLI")
 	}
 
-	if err = ensureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
+	if err = prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
 		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
 	}
 
@@ -458,7 +624,7 @@ func prepareClusterUtilities(
 	configLocation string,
 	store model.ClusterUtilityDatabaseStoreInterface,
 	awsClient aws.AWS,
-	pgbouncerConfig *PGBouncerConfig,
+	pgbouncerConfig *pgbouncer.PGBouncerConfig,
 	logger log.FieldLogger) error {
 	k8sClient, err := k8s.NewFromFile(configLocation, logger)
 	if err != nil {
@@ -479,7 +645,7 @@ func prepareClusterUtilities(
 	// isn't really feasible right now.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
-	err = updatePGBouncerConfigMap(ctx, vpc, store, pgbouncerConfig, k8sClient, logger)
+	err = pgbouncer.UpdatePGBouncerConfigMap(ctx, vpc, store, pgbouncerConfig, k8sClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "failed to update configmap for pgbouncer-configmap")
 	}
@@ -492,7 +658,7 @@ func prepareClusterUtilities(
 	if !strings.Contains(string(userlistSecret.Data["userlist.txt"]), aws.DefaultPGBouncerAuthUsername) {
 		logger.Debug("Updating pgbouncer userlist.txt with auth_user credentials")
 
-		userlist, err := generatePGBouncerUserlist(vpc, awsClient)
+		userlist, err := pgbouncer.GeneratePGBouncerUserlist(vpc, awsClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to generate pgbouncer userlist")
 		}
@@ -504,28 +670,6 @@ func prepareClusterUtilities(
 		}
 	}
 
-	return nil
-}
-
-func updatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
-	}
-
-	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
-	}
-	if configMap.Data["pgbouncer.ini"] != ini {
-		logger.Debug("Updating pgbouncer.ini with new database configuration")
-
-		configMap.Data["pgbouncer.ini"] = ini
-		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
-		}
-	}
 	return nil
 }
 
@@ -591,4 +735,282 @@ func containsInstallationGroup(installationGroup string, installationGroups []st
 		}
 	}
 	return false
+}
+
+func configureInstallationForHibernation(mattermost *mmv1beta1.Mattermost, installation *model.Installation, clusterInstallation *model.ClusterInstallation) {
+	// Hibernation is currently considered changing the Mattermost app deployment
+	// to 0 replicas in the pod. i.e. Scale down to no Mattermost apps running.
+	// The current way to do this is to set a negative replica count in the
+	// k8s custom resource. Custom ingress annotations are also used.
+	// TODO: enhance hibernation to include database and/or filestore.
+	mattermost.Spec.Replicas = int32Ptr(0)
+	mattermost.Spec.Size = ""
+	if mattermost.Spec.Ingress != nil { // In case Installation was not yet updated and still uses old Ingress spec.
+		mattermost.Spec.Ingress.Annotations = getHibernatingIngressAnnotations()
+	} else {
+		mattermost.Spec.IngressAnnotations = getHibernatingIngressAnnotations()
+	}
+
+	mattermost.Spec.ResourceLabels = clusterInstallationHibernatedLabels(installation, clusterInstallation)
+}
+
+func makeIngressSpec(installationDNS []*model.InstallationDNS) *mmv1beta1.Ingress {
+	primaryRecord := installationDNS[0]
+	for _, rec := range installationDNS {
+		if rec.IsPrimary {
+			primaryRecord = rec
+			break
+		}
+	}
+
+	ingressClass := "nginx-controller"
+	return &mmv1beta1.Ingress{
+		Enabled:      true,
+		Host:         primaryRecord.DomainName,
+		Hosts:        mapDomains(installationDNS),
+		Annotations:  getIngressAnnotations(),
+		IngressClass: &ingressClass,
+	}
+}
+
+func mapDomains(installationDNS []*model.InstallationDNS) []mmv1beta1.IngressHost {
+	hosts := make([]mmv1beta1.IngressHost, 0, len(installationDNS))
+
+	for _, dns := range installationDNS {
+		hosts = append(hosts, mmv1beta1.IngressHost{
+			HostName: dns.DomainName,
+		})
+	}
+
+	return hosts
+}
+
+// generateAffinityConfig generates pods Affinity configuration aiming to spread pods of single cluster installation
+// across different availability zones and nodes.
+func generateAffinityConfig(installation *model.Installation, clusterInstallation *model.ClusterInstallation) *corev1.Affinity {
+	return &corev1.Affinity{
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+				{
+					Weight: 100,
+					PodAffinityTerm: corev1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+						},
+						Namespaces:  []string{clusterInstallation.Namespace},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+				{
+					Weight: 100,
+					PodAffinityTerm: corev1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: clusterInstallationBaseLabels(installation, clusterInstallation),
+						},
+						Namespaces:  []string{clusterInstallation.Namespace},
+						TopologyKey: "topology.kubernetes.io/zone",
+					},
+				},
+			},
+		},
+	}
+}
+
+func setMMInstanceSize(installation *model.Installation, mattermost *mmv1beta1.Mattermost) error {
+	if strings.HasPrefix(installation.Size, model.ProvisionerSizePrefix) {
+		resSize, err := model.ParseProvisionerSize(installation.Size)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse custom installation size")
+		}
+		overrideReplicasAndResourcesFromSize(resSize, mattermost)
+		return nil
+	}
+	mattermost.Spec.Size = installation.Size
+	return nil
+}
+
+// This function is adapted from Mattermost Operator, we can make it public
+// there to avoid copying.
+func overrideReplicasAndResourcesFromSize(size v1alpha1.ClusterInstallationSize, mm *mmv1beta1.Mattermost) {
+	mm.Spec.Size = ""
+
+	mm.Spec.Replicas = utils.NewInt32(size.App.Replicas)
+	mm.Spec.Scheduling.Resources = size.App.Resources
+	mm.Spec.FileStore.OverrideReplicasAndResourcesFromSize(size)
+	mm.Spec.Database.OverrideReplicasAndResourcesFromSize(size)
+}
+
+func prepareCILicenseSecret(installation *model.Installation, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient) (string, error) {
+	licenseSecretName := generateCILicenseName(installation, clusterInstallation)
+	licenseSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      licenseSecretName,
+			Namespace: clusterInstallation.Namespace,
+		},
+		StringData: map[string]string{"license": installation.License},
+	}
+
+	_, err := k8sClient.CreateOrUpdateSecret(clusterInstallation.Namespace, licenseSecret)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to create the license secret %s/%s", clusterInstallation.Namespace, licenseSecretName)
+	}
+
+	return licenseSecretName, nil
+}
+
+// generateCILicenseName generates a unique license secret name by using a short
+// sha256 hash.
+func generateCILicenseName(installation *model.Installation, clusterInstallation *model.ClusterInstallation) string {
+	return fmt.Sprintf("%s-%s-license",
+		makeClusterInstallationName(clusterInstallation),
+		fmt.Sprintf("%x", sha256.Sum256([]byte(installation.License)))[0:6],
+	)
+}
+
+// cleanupOldLicenseSecrets removes an secrets matching the license naming
+// convention except the current license secret name. Pass in a blank name value
+// to cleanup all license secrets.
+func cleanupOldLicenseSecrets(currentSecretName string, clusterInstallation *model.ClusterInstallation, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	secrets, err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to list secrets")
+	}
+	for _, secret := range secrets.Items {
+		if !strings.HasPrefix(secret.Name, makeClusterInstallationName(clusterInstallation)) || !strings.HasSuffix(secret.Name, "-license") {
+			continue
+		}
+		if secret.Name == currentSecretName {
+			continue
+		}
+
+		logger.Infof("Deleting old license secret %s", secret.Name)
+
+		err := k8sClient.Clientset.CoreV1().Secrets(clusterInstallation.Namespace).Delete(context.Background(), secret.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete secret %s/%s", clusterInstallation.Namespace, secret.Name)
+		}
+	}
+
+	return nil
+}
+
+// generateClusterInstallationResourceLabels generates standard resource labels
+// for ClusterInstallation resources.
+func generateClusterInstallationResourceLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+	if installation.GroupID != nil {
+		labels["group-id"] = *installation.GroupID
+	}
+	if installation.GroupSequence != nil {
+		labels["group-sequence"] = fmt.Sprintf("%d", *installation.GroupSequence)
+	}
+
+	return labels
+}
+
+func clusterInstallationBaseLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	return map[string]string{
+		"installation-id":         installation.ID,
+		"cluster-installation-id": clusterInstallation.ID,
+	}
+}
+
+func clusterInstallationStableLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+	labels["state"] = "running"
+	return labels
+}
+
+func clusterInstallationHibernatedLabels(installation *model.Installation, clusterInstallation *model.ClusterInstallation) map[string]string {
+	labels := clusterInstallationBaseLabels(installation, clusterInstallation)
+	labels["state"] = "hibernated"
+	return labels
+}
+
+// Set env overrides that are required from installations for function correctly
+// in the cloud environment.
+// NOTE: this should be called whenever the Mattermost custom resource is created
+// or updated.
+func getMattermostEnvWithOverrides(installation *model.Installation) model.EnvVarMap {
+	mattermostEnv := installation.GetEnvVars()
+	if mattermostEnv == nil {
+		mattermostEnv = map[string]model.EnvVar{}
+	}
+
+	// General overrides.
+	mattermostEnv["MM_CLOUD_INSTALLATION_ID"] = model.EnvVar{Value: installation.ID}
+	groupID := installation.GroupID
+	if groupID != nil {
+		mattermostEnv["MM_CLOUD_GROUP_ID"] = model.EnvVar{Value: *groupID}
+	}
+	mattermostEnv["MM_SERVICESETTINGS_ENABLELOCALMODE"] = model.EnvVar{Value: "true"}
+
+	// Filestore overrides.
+	if !installation.InternalFilestore() {
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "true"}
+	}
+	if installation.Filestore == model.InstallationFilestoreMultiTenantAwsS3 ||
+		installation.Filestore == model.InstallationFilestoreBifrost {
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3PATHPREFIX"] = model.EnvVar{Value: installation.ID}
+	}
+	if installation.Filestore == model.InstallationFilestoreBifrost {
+		mattermostEnv["MM_CLOUD_FILESTORE_BIFROST"] = model.EnvVar{Value: "true"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3ENDPOINT"] = model.EnvVar{Value: bifrostEndpoint}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SIGNV2"] = model.EnvVar{Value: "false"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSE"] = model.EnvVar{Value: "false"}
+		mattermostEnv["MM_FILESETTINGS_AMAZONS3SSL"] = model.EnvVar{Value: "false"}
+	}
+
+	return mattermostEnv
+}
+
+// getIngressAnnotations returns ingress annotations used by Mattermost installations.
+func getIngressAnnotations() map[string]string {
+	return map[string]string{
+		"kubernetes.io/tls-acme":                               "true",
+		"nginx.ingress.kubernetes.io/proxy-buffering":          "on",
+		"nginx.ingress.kubernetes.io/proxy-body-size":          "100m",
+		"nginx.ingress.kubernetes.io/proxy-send-timeout":       "600",
+		"nginx.ingress.kubernetes.io/proxy-read-timeout":       "600",
+		"nginx.ingress.kubernetes.io/proxy-max-temp-file-size": "0",
+		"nginx.ingress.kubernetes.io/ssl-redirect":             "true",
+		"nginx.ingress.kubernetes.io/configuration-snippet": `
+				  proxy_force_ranges on;
+				  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+				  proxy_cache mattermost_cache;
+				  proxy_cache_revalidate on;
+				  proxy_cache_min_uses 2;
+				  proxy_cache_use_stale timeout;
+				  proxy_cache_lock on;
+				  proxy_cache_key "$host$request_uri$cookie_user";`,
+		"nginx.org/server-snippets": "gzip on;",
+	}
+}
+
+// getHibernatingIngressAnnotations returns ingress annotations used by
+// hibernating Mattermost installations.
+func getHibernatingIngressAnnotations() map[string]string {
+	annotations := getIngressAnnotations()
+	annotations["nginx.ingress.kubernetes.io/configuration-snippet"] = "return 410;"
+
+	return annotations
+}
+
+func int32Ptr(i int) *int32 {
+	i32 := int32(i)
+	return &i32
+}
+
+func ensureEnvMatch(wanted corev1.EnvVar, all []corev1.EnvVar) bool {
+	for _, env := range all {
+		if env == wanted {
+			return true
+		}
+	}
+
+	return false
+}
+
+func setNdots(ndotsValue string) *corev1.PodDNSConfig {
+	return &corev1.PodDNSConfig{Options: []corev1.PodDNSConfigOption{{Name: "ndots", Value: &ndotsValue}}}
 }

@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 //
 
-package provisioner
+package helm
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattermost/mattermost-cloud/internal/provisioner/prometheus"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -26,7 +27,7 @@ type thanos struct {
 	desiredVersion     *model.HelmUtilityVersion
 }
 
-func newThanosHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*thanos, error) {
+func NewThanosHandle(cluster *model.Cluster, kubeconfigPath string, allowCIDRRangeList []string, awsClient aws.AWS, logger log.FieldLogger) (*thanos, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("cannot instantiate Thanos handle with nil logger")
 	}
@@ -111,7 +112,7 @@ func (t *thanos) CreateOrUpgrade() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(120)*time.Second)
 		defer cancel()
 
-		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, prometheusNamespace, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
+		endpoint, err := getPrivateLoadBalancerEndpoint(ctx, prometheus.PrometheusNamespace, logger.WithField("thanos-action", "create"), t.kubeconfigPath)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get the load balancer endpoint for Thanos")
 		}
@@ -165,7 +166,7 @@ func (t *thanos) NewHelmDeployment(thanosDNS, thanosDNSGRPC string) *helmDeploym
 	return newHelmDeployment(
 		"bitnami/thanos",
 		"thanos",
-		prometheusNamespace,
+		prometheus.PrometheusNamespace,
 		t.kubeconfigPath,
 		t.desiredVersion,
 		helmValueArguments,
