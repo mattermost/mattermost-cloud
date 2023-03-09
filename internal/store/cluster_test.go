@@ -40,13 +40,13 @@ func TestClusters(t *testing.T) {
 		}
 
 		cluster2 := &model.Cluster{
-			Provider:                "azure",
-			Provisioner:             "cluster-api",
-			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
-			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
-			UtilityMetadata:         &model.UtilityMetadata{},
-			State:                   model.ClusterStateStable,
-			AllowInstallations:      true,
+			Provider:               "azure",
+			Provisioner:            model.ProvisionerEKS,
+			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
+			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
+			UtilityMetadata:        &model.UtilityMetadata{},
+			State:                  model.ClusterStateStable,
+			AllowInstallations:     true,
 		}
 
 		annotations := []*model.Annotation{{Name: "annotation1"}, {Name: "annotation2"}}
@@ -108,13 +108,13 @@ func TestClusters(t *testing.T) {
 		}
 
 		cluster2 := &model.Cluster{
-			Provider:                "azure",
-			Provisioner:             "cluster-api",
-			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
-			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
-			UtilityMetadata:         &model.UtilityMetadata{},
-			State:                   model.ClusterStateStable,
-			AllowInstallations:      true,
+			Provider:               "azure",
+			Provisioner:            model.ProvisionerEKS,
+			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
+			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
+			UtilityMetadata:        &model.UtilityMetadata{},
+			State:                  model.ClusterStateStable,
+			AllowInstallations:     true,
 		}
 
 		err := sqlStore.CreateCluster(cluster1, nil)
@@ -124,9 +124,10 @@ func TestClusters(t *testing.T) {
 		require.NoError(t, err)
 
 		cluster1.Provider = "azure"
-		cluster1.Provisioner = "cluster-api"
+		cluster1.Provisioner = model.ProvisionerEKS
 		cluster1.ProviderMetadataAWS = &model.AWSMetadata{Zones: []string{"zone2"}}
-		cluster1.ProvisionerMetadataKops = &model.KopsMetadata{Version: "version2"}
+		cluster1.ProvisionerMetadataEKS = &model.EKSMetadata{Version: "version2"}
+		cluster1.ProvisionerMetadataKops = nil
 		cluster1.State = model.ClusterStateDeletionRequested
 		cluster1.AllowInstallations = true
 
@@ -157,12 +158,12 @@ func TestClusters(t *testing.T) {
 		}
 
 		cluster2 := &model.Cluster{
-			Provider:                "azure",
-			Provisioner:             "cluster-api",
-			ProviderMetadataAWS:     &model.AWSMetadata{Zones: []string{"zone1"}},
-			ProvisionerMetadataKops: &model.KopsMetadata{Version: "version1"},
-			UtilityMetadata:         &model.UtilityMetadata{},
-			AllowInstallations:      true,
+			Provider:               "azure",
+			Provisioner:            model.ProvisionerEKS,
+			ProviderMetadataAWS:    &model.AWSMetadata{Zones: []string{"zone1"}},
+			ProvisionerMetadataEKS: &model.EKSMetadata{Version: "version1"},
+			UtilityMetadata:        &model.UtilityMetadata{},
+			AllowInstallations:     true,
 		}
 
 		err := sqlStore.CreateCluster(cluster1, nil)
@@ -224,7 +225,8 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	sqlStore := MakeTestSQLStore(t, logger)
 
 	creationRequestedCluster := &model.Cluster{
-		State: model.ClusterStateCreationRequested,
+		Provisioner: model.ProvisionerKops,
+		State:       model.ClusterStateCreationRequested,
 	}
 	err := sqlStore.CreateCluster(creationRequestedCluster, nil)
 	require.NoError(t, err)
@@ -232,7 +234,8 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	upgradeRequestedCluster := &model.Cluster{
-		State: model.ClusterStateUpgradeRequested,
+		Provisioner: model.ProvisionerKops,
+		State:       model.ClusterStateUpgradeRequested,
 	}
 	err = sqlStore.CreateCluster(upgradeRequestedCluster, nil)
 	require.NoError(t, err)
@@ -240,7 +243,8 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 	time.Sleep(1 * time.Millisecond)
 
 	deletionRequestedCluster := &model.Cluster{
-		State: model.ClusterStateDeletionRequested,
+		Provisioner: model.ProvisionerKops,
+		State:       model.ClusterStateDeletionRequested,
 	}
 	err = sqlStore.CreateCluster(deletionRequestedCluster, nil)
 	require.NoError(t, err)
@@ -255,7 +259,7 @@ func TestGetUnlockedClustersPendingWork(t *testing.T) {
 		model.ClusterStateStable,
 	}
 	for _, otherState := range otherStates {
-		err = sqlStore.CreateCluster(&model.Cluster{State: otherState}, nil)
+		err = sqlStore.CreateCluster(&model.Cluster{State: otherState, Provisioner: model.ProvisionerKops}, nil)
 		require.NoError(t, err)
 	}
 
@@ -440,7 +444,9 @@ func TestClustersAnnotationsFilter(t *testing.T) {
 
 	clusters := make([]*model.Cluster, len(clustersAnnotations))
 	for i := range clusters {
-		clusters[i] = &model.Cluster{}
+		clusters[i] = &model.Cluster{
+			Provisioner: model.ProvisionerKops,
+		}
 		err := sqlStore.CreateCluster(clusters[i], clustersAnnotations[i])
 		require.NoError(t, err)
 		time.Sleep(1 * time.Millisecond)

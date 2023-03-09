@@ -33,12 +33,13 @@ type ClusterProvisioner interface {
 	PrepareCluster(cluster *model.Cluster) bool
 	CreateCluster(cluster *model.Cluster) error
 	CheckClusterCreated(cluster *model.Cluster) (bool, error)
+	CreateNodes(cluster *model.Cluster) error
 	CheckNodesCreated(cluster *model.Cluster) (bool, error)
 	ProvisionCluster(cluster *model.Cluster) error
 	UpgradeCluster(cluster *model.Cluster) error
 	ResizeCluster(cluster *model.Cluster) error
 	DeleteCluster(cluster *model.Cluster) (bool, error)
-	RefreshKopsMetadata(cluster *model.Cluster) error
+	RefreshClusterMetadata(cluster *model.Cluster) error
 }
 
 type ClusterProvisionerOption interface {
@@ -245,18 +246,13 @@ func (s *ClusterSupervisor) resizeCluster(cluster *model.Cluster, logger log.Fie
 }
 
 func (s *ClusterSupervisor) refreshClusterMetadata(cluster *model.Cluster, logger log.FieldLogger) string {
-	if cluster.ProvisionerMetadataKops != nil {
-		cluster.ProvisionerMetadataKops.ApplyChangeRequest()
-		cluster.ProvisionerMetadataKops.ClearChangeRequest()
-		cluster.ProvisionerMetadataKops.ClearRotatorRequest()
-		cluster.ProvisionerMetadataKops.ClearWarnings()
-	}
 
-	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).RefreshKopsMetadata(cluster)
+	err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).RefreshClusterMetadata(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to refresh cluster")
 		return model.ClusterStateRefreshMetadata
 	}
+
 	err = s.store.UpdateCluster(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to save updated cluster metadata")
@@ -294,21 +290,28 @@ func (s *ClusterSupervisor) checkClusterCreated(cluster *model.Cluster, logger l
 		return model.ClusterStateCreationFailed
 	}
 	if !ready {
-		logger.Info("Cluster not yet ready")
+		logger.Debug("Cluster not yet ready")
 		return model.ClusterStateCreationInProgress
+	}
+
+	err = s.provisioner.GetClusterProvisioner(cluster.Provisioner).CreateNodes(cluster)
+	if err != nil {
+		logger.WithError(err).Error("Failed to create cluster nodes")
+		return model.ClusterStateCreationFailed
 	}
 
 	return s.checkNodesCreated(cluster, logger)
 }
 
 func (s *ClusterSupervisor) checkNodesCreated(cluster *model.Cluster, logger log.FieldLogger) string {
+
 	ready, err := s.provisioner.GetClusterProvisioner(cluster.Provisioner).CheckNodesCreated(cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to check if node creation finished")
 		return model.ClusterStateCreationFailed
 	}
 	if !ready {
-		logger.Info("Cluster nodes are not ready yet")
+		logger.Debug("Cluster nodes are not ready yet")
 		return model.ClusterStateWaitingForNodes
 	}
 

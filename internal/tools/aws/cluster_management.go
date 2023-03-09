@@ -662,15 +662,12 @@ func (a *Client) SwitchClusterTags(clusterID string, targetClusterID string, log
 }
 
 func getClusterTag(cluster *model.Cluster) string {
-	if cluster.ProvisionerMetadataEKS != nil {
-		return eksClusterTag(cluster.ID)
+	if cluster.Provisioner == model.ProvisionerKops {
+		return cluster.ProvisionerMetadataKops.Name
 	}
-	return kopsClusterTag(cluster.ID)
-}
+	if cluster.Provisioner == model.ProvisionerEKS {
+		return cluster.ProvisionerMetadataEKS.Name
+	}
 
-func kopsClusterTag(clusterID string) string {
-	return fmt.Sprintf("%s-kops.k8s.local", clusterID)
-}
-func eksClusterTag(clusterID string) string {
-	return clusterID
+	return ""
 }

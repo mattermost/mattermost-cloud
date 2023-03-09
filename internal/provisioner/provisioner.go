@@ -6,6 +6,7 @@ import (
 	"github.com/mattermost/mattermost-cloud/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/internal/tools/aws"
 	"github.com/mattermost/mattermost-cloud/internal/tools/utils"
+	"github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,7 +16,7 @@ type ClusterProvisionerOption struct {
 }
 
 func (c ClusterProvisionerOption) GetClusterProvisioner(provisioner string) supervisor.ClusterProvisioner {
-	if provisioner == "eks" {
+	if provisioner == model.ProvisionerEKS {
 		return c.eksProvisioner
 	}
 

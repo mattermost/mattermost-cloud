@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/clusterdictionary"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg"
 	"github.com/mattermost/mattermost-cloud/e2e/pkg/eventstest"
@@ -80,16 +79,14 @@ func SetupClusterLifecycleTest() (*Test, error) {
 	createClusterReq := &model.CreateClusterRequest{
 		AllowInstallations: true,
 		Annotations:        testAnnotations(testID),
-		KopsAMI:            config.KopsAMI,
+		AMI:                config.KopsAMI,
 		VPC:                config.VPC,
 		Provisioner:        config.Provisioner,
 	}
 
-	if config.Provisioner == "eks" {
-		createClusterReq.EKSConfig = &model.EKSConfig{
-			ClusterRoleARN: ptr.String(config.ClusterRoleARN),
-			NodeRoleARN:    ptr.String(config.NodeRoleARN),
-		}
+	if config.Provisioner == model.ProvisionerEKS {
+		createClusterReq.ClusterRoleARN = config.ClusterRoleARN
+		createClusterReq.NodeRoleARN = config.NodeRoleARN
 	}
 
 	// If specified, we fetch AMI from existing clusters.
@@ -98,9 +95,7 @@ func SetupClusterLifecycleTest() (*Test, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch AMI")
 		}
-		createClusterReq.KopsAMI = ami
-	} else if config.KopsAMI != "" {
-		createClusterReq.KopsAMI = config.KopsAMI
+		createClusterReq.AMI = ami
 	}
 
 	// TODO: A way to fetch the latest AMI automatically for local development

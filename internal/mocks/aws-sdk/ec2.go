@@ -77,6 +77,26 @@ func (mr *MockEC2APIMockRecorder) CreateLaunchTemplate(arg0, arg1 interface{}, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLaunchTemplate", reflect.TypeOf((*MockEC2API)(nil).CreateLaunchTemplate), varargs...)
 }
 
+// CreateLaunchTemplateVersion mocks base method
+func (m *MockEC2API) CreateLaunchTemplateVersion(arg0 context.Context, arg1 *ec2.CreateLaunchTemplateVersionInput, arg2 ...func(*ec2.Options)) (*ec2.CreateLaunchTemplateVersionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateLaunchTemplateVersion", varargs...)
+	ret0, _ := ret[0].(*ec2.CreateLaunchTemplateVersionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateLaunchTemplateVersion indicates an expected call of CreateLaunchTemplateVersion
+func (mr *MockEC2APIMockRecorder) CreateLaunchTemplateVersion(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLaunchTemplateVersion", reflect.TypeOf((*MockEC2API)(nil).CreateLaunchTemplateVersion), varargs...)
+}
+
 // CreateTags mocks base method
 func (m *MockEC2API) CreateTags(arg0 context.Context, arg1 *ec2.CreateTagsInput, arg2 ...func(*ec2.Options)) (*ec2.CreateTagsOutput, error) {
 	m.ctrl.T.Helper()

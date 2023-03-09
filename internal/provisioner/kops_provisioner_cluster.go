@@ -47,10 +47,13 @@ func (provisioner *KopsProvisioner) CreateCluster(cluster *model.Cluster) error 
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	kopsMetadata := cluster.ProvisionerMetadataKops
+	if kopsMetadata == nil {
+		return errors.New("error: Kops metadata not set when creating Kops cluster")
+	}
 
 	err := kopsMetadata.ValidateChangeRequest()
 	if err != nil {
-		return errors.Wrap(err, "KopsMetadata ChangeRequest failed validation")
+		return errors.Wrap(err, "Kops Metadata ChangeRequest failed validation")
 	}
 
 	if kopsMetadata.ChangeRequest.AMI != "" && kopsMetadata.ChangeRequest.AMI != "latest" {
@@ -276,6 +279,10 @@ func (provisioner *KopsProvisioner) CheckClusterCreated(cluster *model.Cluster) 
 	// Entire waiting logic happens as part of cluster creation therefore we
 	// just skip this step and report cluster as created.
 	return true, nil
+}
+
+func (provisioner *KopsProvisioner) CreateNodes(cluster *model.Cluster) error {
+	return nil
 }
 
 // CheckNodesCreated is a noop for KopsProvisioner.
@@ -749,9 +756,9 @@ func (provisioner Provisioner) GetClusterResources(cluster *model.Cluster, onlyS
 	return getClusterResources(configLocation, onlySchedulable, logger)
 }
 
-// RefreshKopsMetadata updates the kops metadata of a cluster with the current
+// refreshKopsMetadata updates the kops metadata of a cluster with the current
 // values of the running cluster.
-func (provisioner *KopsProvisioner) RefreshKopsMetadata(cluster *model.Cluster) error {
+func (provisioner *KopsProvisioner) refreshKopsMetadata(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
 	logger.Info("Refreshing kops metadata")
@@ -842,4 +849,15 @@ func prepareSloth(k8sClient *k8s.KubeClient, logger logrus.FieldLogger) error {
 	}
 
 	return nil
+}
+
+func (provisioner *KopsProvisioner) RefreshClusterMetadata(cluster *model.Cluster) error {
+	if cluster.ProvisionerMetadataKops != nil {
+		cluster.ProvisionerMetadataKops.ApplyChangeRequest()
+		cluster.ProvisionerMetadataKops.ClearChangeRequest()
+		cluster.ProvisionerMetadataKops.ClearRotatorRequest()
+		cluster.ProvisionerMetadataKops.ClearWarnings()
+	}
+
+	return provisioner.refreshKopsMetadata(cluster)
 }

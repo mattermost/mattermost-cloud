@@ -152,7 +152,7 @@ func (n *nginxInternal) NewHelmDeployment(withArguments bool) (*helmDeployment, 
 		setArguments = append(setArguments, fmt.Sprintf("controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-ssl-cert=%s", *certificate.ARN))
 	}
 
-	if n.provisioner == "eks" {
+	if n.provisioner == model.ProvisionerEKS {
 		// Calico networking cannot currently be installed on the EKS control plane nodes.
 		// As a result the control plane nodes will not be able to initiate network connections to Calico pods.
 		// As a workaround, trusted pods that require control plane nodes to connect to them,
