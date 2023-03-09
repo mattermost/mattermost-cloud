@@ -33,7 +33,7 @@ func NewPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilit
 		return nil, errors.New("cannot instantiate Pgbouncer handle with nil logger")
 	}
 	if kubeconfigPath == "" {
-		return nil, errors.New("cannot create helm without kubeconfig")
+		return nil, errors.New("cannot create utility without kubeconfig")
 	}
 
 	return &pgbouncer{
@@ -41,7 +41,7 @@ func NewPgbouncerHandle(cluster *model.Cluster, desiredVersion *model.HelmUtilit
 		environment:    awsClient.GetCloudEnvironmentName(),
 		cluster:        cluster,
 		kubeconfigPath: kubeconfigPath,
-		logger:         logger.WithField("cluster-helm", model.PgbouncerCanonicalName),
+		logger:         logger.WithField("cluster-utility", model.PgbouncerCanonicalName),
 		desiredVersion: desiredVersion,
 		actualVersion:  cluster.UtilityMetadata.ActualVersions.Pgbouncer,
 	}, nil
@@ -110,10 +110,6 @@ func (p *pgbouncer) Migrate() error {
 	return nil
 }
 
-func (p *pgbouncer) Name() string {
-	return model.PgbouncerCanonicalName
-}
-
 func (p *pgbouncer) NewHelmDeployment() *helmDeployment {
 	return newHelmDeployment(
 		"chartmuseum/pgbouncer",
@@ -124,6 +120,10 @@ func (p *pgbouncer) NewHelmDeployment() *helmDeployment {
 		defaultHelmDeploymentSetArgument,
 		p.logger,
 	)
+}
+
+func (p *pgbouncer) Name() string {
+	return model.PgbouncerCanonicalName
 }
 
 // deployManifests deploy pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret
