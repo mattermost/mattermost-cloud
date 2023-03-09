@@ -18,76 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
-	if err != nil {
-		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
-	}
-
-	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
-	}
-	if configMap.Data["pgbouncer.ini"] != ini {
-		logger.Debug("Updating pgbouncer.ini with new database configuration")
-
-		configMap.Data["pgbouncer.ini"] = ini
-		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
-		if err != nil {
-			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
-		}
-	}
-	return nil
-}
-
-// DeployManifests deploy pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret
-func DeployManifests(k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
-	logger = logger.WithField("pgbouncer-action", "create-manifests")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
-	defer cancel()
-
-	_, err := k8sClient.CreateOrUpdateNamespace("pgbouncer")
-	if err != nil {
-		return errors.Wrapf(err, "failed to create the pgbouncer namespace")
-	}
-
-	// Both of these files should only be created on the first provision and
-	// should never be overwritten with cluster provisioning afterwards.
-	var file k8s.ManifestFile
-	_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("Configmap resource for pgbouncer-configmap does not exist, will be created...")
-		file = k8s.ManifestFile{
-			Path:            "manifests/pgbouncer-manifests/pgbouncer-configmap.yaml",
-			DeployNamespace: "pgbouncer",
-		}
-		err = k8sClient.CreateFromFile(file, "")
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
-	}
-
-	_, err = k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Get(ctx, "pgbouncer-userlist-secret", metav1.GetOptions{})
-	if k8sErrors.IsNotFound(err) {
-		logger.Info("Secret resource for pgbouncer-userlist-secret does not exist, will be created...")
-		file = k8s.ManifestFile{
-			Path:            "manifests/pgbouncer-manifests/pgbouncer-secret.yaml",
-			DeployNamespace: "pgbouncer",
-		}
-		err = k8sClient.CreateFromFile(file, "")
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
-		return errors.Wrap(err, "failed to get secret for pgbouncer-userlist-secret")
-	}
-
-	return nil
-}
-
 const baseIni = `
 [pgbouncer]
 listen_addr = *
@@ -239,4 +169,74 @@ func NewPGBouncerConfig(minPoolSize, defaultPoolSize, reservePoolSize, maxClient
 		ServerLifetime:                serverLifetime,
 		ServerResetQueryAlways:        serverResetQueryAlways,
 	}
+}
+
+func UpdatePGBouncerConfigMap(ctx context.Context, vpc string, store model.ClusterUtilityDatabaseStoreInterface, pgbouncerConfig *PGBouncerConfig, k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	ini, err := generatePGBouncerIni(vpc, store, pgbouncerConfig)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate updated pgbouncer ini contents")
+	}
+
+	configMap, err := k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+	if configMap.Data["pgbouncer.ini"] != ini {
+		logger.Debug("Updating pgbouncer.ini with new database configuration")
+
+		configMap.Data["pgbouncer.ini"] = ini
+		_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Update(ctx, configMap, metav1.UpdateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to update configmap pgbouncer-configmap")
+		}
+	}
+	return nil
+}
+
+// DeployManifests deploy pgbouncer manifests if they don't exist: pgbouncer-configmap and pgbouncer-userlist-secret
+func DeployManifests(k8sClient *k8s.KubeClient, logger log.FieldLogger) error {
+	logger = logger.WithField("pgbouncer-action", "create-manifests")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(180)*time.Second)
+	defer cancel()
+
+	_, err := k8sClient.CreateOrUpdateNamespace("pgbouncer")
+	if err != nil {
+		return errors.Wrapf(err, "failed to create the pgbouncer namespace")
+	}
+
+	// Both of these files should only be created on the first provision and
+	// should never be overwritten with cluster provisioning afterwards.
+	var file k8s.ManifestFile
+	_, err = k8sClient.Clientset.CoreV1().ConfigMaps("pgbouncer").Get(ctx, "pgbouncer-configmap", metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Configmap resource for pgbouncer-configmap does not exist, will be created...")
+		file = k8s.ManifestFile{
+			Path:            "manifests/pgbouncer-manifests/pgbouncer-configmap.yaml",
+			DeployNamespace: "pgbouncer",
+		}
+		err = k8sClient.CreateFromFile(file, "")
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return errors.Wrap(err, "failed to get configmap for pgbouncer-configmap")
+	}
+
+	_, err = k8sClient.Clientset.CoreV1().Secrets("pgbouncer").Get(ctx, "pgbouncer-userlist-secret", metav1.GetOptions{})
+	if k8sErrors.IsNotFound(err) {
+		logger.Info("Secret resource for pgbouncer-userlist-secret does not exist, will be created...")
+		file = k8s.ManifestFile{
+			Path:            "manifests/pgbouncer-manifests/pgbouncer-secret.yaml",
+			DeployNamespace: "pgbouncer",
+		}
+		err = k8sClient.CreateFromFile(file, "")
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return errors.Wrap(err, "failed to get secret for pgbouncer-userlist-secret")
+	}
+
+	return nil
 }

@@ -309,6 +309,40 @@ func (provisioner Provisioner) ensureFilestoreAndDatabase(
 	return nil
 }
 
+func hibernateInstallation(configLocation string, logger *log.Entry, clusterInstallation *model.ClusterInstallation, installation *model.Installation) error {
+	k8sClient, err := k8s.NewFromFile(configLocation, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to create k8s client from file")
+	}
+
+	ctx := context.TODO()
+	name := makeClusterInstallationName(clusterInstallation)
+
+	cr, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
+	}
+
+	configureInstallationForHibernation(cr, installation, clusterInstallation)
+
+	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
+	if err != nil {
+		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
+	}
+	err = prometheus.DeleteInstallationSLI(clusterInstallation, k8sClient, logger)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete installation SLI")
+	}
+
+	if err = prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
+		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
+	}
+
+	logger.Info("Updated cluster installation")
+
+	return nil
+}
+
 // refreshSecrets deletes old secrets for database and file store and replaces them with new ones.
 func (provisioner Provisioner) refreshSecrets(installation *model.Installation, clusterInstallation *model.ClusterInstallation, configLocation string) error {
 	logger := provisioner.logger.WithFields(log.Fields{
@@ -486,40 +520,6 @@ func (provisioner Provisioner) getMattermostCustomResource(cluster *model.Cluste
 	}
 
 	return getMattermostCustomResource(clusterInstallation, configLocation, logger)
-}
-
-func hibernateInstallation(configLocation string, logger *log.Entry, clusterInstallation *model.ClusterInstallation, installation *model.Installation) error {
-	k8sClient, err := k8s.NewFromFile(configLocation, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to create k8s client from file")
-	}
-
-	ctx := context.TODO()
-	name := makeClusterInstallationName(clusterInstallation)
-
-	cr, err := k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "failed to get cluster installation %s", clusterInstallation.ID)
-	}
-
-	configureInstallationForHibernation(cr, installation, clusterInstallation)
-
-	_, err = k8sClient.MattermostClientsetV1Beta.MattermostV1beta1().Mattermosts(clusterInstallation.Namespace).Update(ctx, cr, metav1.UpdateOptions{})
-	if err != nil {
-		return errors.Wrapf(err, "failed to update cluster installation %s", clusterInstallation.ID)
-	}
-	err = prometheus.DeleteInstallationSLI(clusterInstallation, k8sClient, logger)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete installation SLI")
-	}
-
-	if err = prometheus.EnsureNginxSLIDeleted(clusterInstallation, k8sClient, logger); err != nil {
-		return errors.Wrap(err, "failed to delete enterprise nginx SLI")
-	}
-
-	logger.Info("Updated cluster installation")
-
-	return nil
 }
 
 func deleteMMSecrets(ns string, mattermost *mmv1beta1.Mattermost, kubeClient *k8s.KubeClient, logger log.FieldLogger) error {
