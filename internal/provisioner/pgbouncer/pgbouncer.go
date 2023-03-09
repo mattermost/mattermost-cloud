@@ -46,7 +46,7 @@ server_reset_query_always = %d
 `
 
 func generatePGBouncerIni(vpcID string, store model.ClusterUtilityDatabaseStoreInterface, config *PGBouncerConfig) (string, error) {
-	ini := config.GeneratePGBouncerBaseIni()
+	ini := config.generatePGBouncerBaseIni()
 
 	multitenantDatabases, err := store.GetMultitenantDatabases(&model.MultitenantDatabaseFilter{
 		DatabaseType:          model.DatabaseEngineTypePostgresProxy,
@@ -146,7 +146,7 @@ func (c *PGBouncerConfig) Validate() error {
 	return nil
 }
 
-func (c *PGBouncerConfig) GeneratePGBouncerBaseIni() string {
+func (c *PGBouncerConfig) generatePGBouncerBaseIni() string {
 	return fmt.Sprintf(
 		baseIni,
 		c.MinPoolSize, c.DefaultPoolSize, c.ReservePoolSize,

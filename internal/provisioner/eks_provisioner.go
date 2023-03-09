@@ -352,41 +352,6 @@ func (provisioner *EKSProvisioner) ResizeCluster(cluster *model.Cluster) error {
 	return nil
 }
 
-// DeleteCluster deletes EKS cluster.
-func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
-	logger := provisioner.logger.WithField("cluster", cluster.ID)
-
-	logger.Info("Deleting cluster")
-
-	eksMetadata := cluster.ProvisionerMetadataEKS
-	if eksMetadata == nil {
-		return false, errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
-	}
-
-	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(eksMetadata.Name)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to get EKS cluster")
-	}
-
-	if eksCluster == nil {
-		logger.Infof("EKS cluster %s does not exist, assuming already deleted", eksMetadata.Name)
-	} else {
-		err = provisioner.cleanupCluster(cluster)
-		if err != nil {
-			return false, errors.Wrap(err, "failed to cleanup EKS cluster")
-		}
-	}
-
-	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to release cluster VPC")
-	}
-
-	logger.Info("Successfully deleted EKS cluster")
-
-	return true, nil
-}
-
 func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error {
 	logger := provisioner.logger.WithField("cluster", cluster.ID)
 
@@ -437,6 +402,41 @@ func (provisioner *EKSProvisioner) cleanupCluster(cluster *model.Cluster) error 
 
 	return nil
 
+}
+
+// DeleteCluster deletes EKS cluster.
+func (provisioner *EKSProvisioner) DeleteCluster(cluster *model.Cluster) (bool, error) {
+	logger := provisioner.logger.WithField("cluster", cluster.ID)
+
+	logger.Info("Deleting cluster")
+
+	eksMetadata := cluster.ProvisionerMetadataEKS
+	if eksMetadata == nil {
+		return false, errors.New("expected EKS metadata not to be nil when using EKS Provisioner")
+	}
+
+	eksCluster, err := provisioner.awsClient.GetActiveEKSCluster(eksMetadata.Name)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to get EKS cluster")
+	}
+
+	if eksCluster == nil {
+		logger.Infof("EKS cluster %s does not exist, assuming already deleted", eksMetadata.Name)
+	} else {
+		err = provisioner.cleanupCluster(cluster)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to cleanup EKS cluster")
+		}
+	}
+
+	err = provisioner.awsClient.ReleaseVpc(cluster, logger)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to release cluster VPC")
+	}
+
+	logger.Info("Successfully deleted EKS cluster")
+
+	return true, nil
 }
 
 func (provisioner *EKSProvisioner) RefreshClusterMetadata(cluster *model.Cluster) error {

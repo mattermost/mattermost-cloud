@@ -51,7 +51,7 @@ func TestGeneratePGBouncerBaseIni(t *testing.T) {
 	config := NewPGBouncerConfig(5, 10, 54, 2000, 63, 11, 44, 0)
 	require.NoError(t, config.Validate())
 
-	ini := config.GeneratePGBouncerBaseIni()
+	ini := config.generatePGBouncerBaseIni()
 	assert.Contains(t, ini, "[pgbouncer]")
 
 	// Most of the other values are integers so just spot check a few
