@@ -112,6 +112,38 @@ func (w *ClusterSuite) DeleteCluster(ctx context.Context) error {
 	return nil
 }
 
+// Cleanup cleans up installation saved in suite metadata.
+func (w *ClusterSuite) Cleanup(ctx context.Context) error {
+	cluster, err := w.client.GetCluster(w.Meta.ClusterID)
+	if err != nil {
+		return errors.Wrap(err, "error getting cluster")
+	}
+	if cluster == nil {
+		return nil
+	}
+	if cluster.State == model.ClusterStateDeleted {
+		w.logger.Info("cluster already deleted")
+		return nil
+	}
+	if cluster.State == model.ClusterStateDeletionRequested ||
+		cluster.State == model.ClusterStateDeletionFailed {
+		w.logger.Info("cluster already marked for deletion")
+		return nil
+	}
+
+	err = w.client.DeleteCluster(w.Meta.ClusterID)
+	if err != nil {
+		return errors.Wrap(err, "while requesting cluster removal")
+	}
+
+	err = pkg.WaitForClusterDeletion(context.TODO(), cluster.ID, w.whChan, w.logger)
+	if err != nil {
+		return errors.Wrap(err, "while waiting for cluster deletion")
+	}
+
+	return nil
+}
+
 // ClusterCreationEvents returns expected events that should occur while creating the cluster.
 // This method should be called only after executing the workflow so that IDs are not empty.
 func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
@@ -123,36 +155,13 @@ func (w *ClusterSuite) ClusterCreationEvents() []eventstest.EventOccurrence {
 			NewState:     model.ClusterStateCreationRequested,
 		},
 	}
-
-	if w.Params.CreateRequest.Provisioner == "eks" {
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateCreationRequested,
-			NewState:     model.ClusterStateCreationInProgress,
-		})
-
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateCreationInProgress,
-			NewState:     model.ClusterStateWaitingForNodes,
-		})
-
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateWaitingForNodes,
-			NewState:     model.ClusterStateProvisionInProgress,
-		})
-	} else {
-		events = append(events, eventstest.EventOccurrence{
-			ResourceType: model.TypeCluster.String(),
-			ResourceID:   w.Meta.ClusterID,
-			OldState:     model.ClusterStateCreationRequested,
-			NewState:     model.ClusterStateProvisionInProgress,
-		})
-	}
+	
+	events = append(events, eventstest.EventOccurrence{
+		ResourceType: model.TypeCluster.String(),
+		ResourceID:   w.Meta.ClusterID,
+		OldState:     model.ClusterStateCreationRequested,
+		NewState:     model.ClusterStateProvisionInProgress,
+	})
 
 	events = append(events, eventstest.EventOccurrence{
 		ResourceType: model.TypeCluster.String(),

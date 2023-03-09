@@ -106,20 +106,21 @@ func executeClusterCreateCmd(flags clusterCreateFlags) error {
 	request := &model.CreateClusterRequest{
 		Provider:               flags.provider,
 		Version:                flags.version,
-		KopsAMI:                flags.kopsAMI,
+		AMI:                    flags.ami,
 		Zones:                  strings.Split(flags.zones, ","),
 		AllowInstallations:     flags.allowInstallations,
 		DesiredUtilityVersions: processUtilityFlags(flags.utilityFlags),
 		Annotations:            flags.annotations,
 		Networking:             flags.networking,
 		VPC:                    flags.vpc,
+		Provisioner:            model.ProvisionerKops,
 	}
 
 	if flags.useEKS {
-		request.EKSConfig = &model.EKSConfig{
-			ClusterRoleARN: &flags.eksClusterRoleARN,
-			NodeRoleARN:    &flags.eksNodeRoleARN,
-		}
+		request.Provisioner = model.ProvisionerEKS
+		request.ClusterRoleARN = flags.clusterRoleARN
+		request.NodeRoleARN = flags.nodeRoleARN
+
 	}
 
 	err := clusterdictionary.ApplyToCreateClusterRequest(flags.size, request)
@@ -287,8 +288,8 @@ func executeClusterUpgradeCmd(flags clusterUpgradeFlags) error {
 	if flags.isVersionChanged {
 		request.Version = &flags.version
 	}
-	if flags.isKopsAmiChanged {
-		request.KopsAMI = &flags.kopsAMI
+	if flags.isAmiChanged {
+		request.AMI = &flags.ami
 	}
 	if flags.isMaxPodsPerNodeChanged {
 		request.MaxPodsPerNode = &flags.maxPodsPerNode
@@ -511,19 +512,29 @@ func defaultClustersTableData(clusters []*model.ClusterDTO) ([]string, [][]strin
 		if cluster.AllowInstallations {
 			status = "online"
 		}
-		if cluster.ProvisionerMetadataKops == nil {
-			cluster.ProvisionerMetadataKops = &model.KopsMetadata{}
+
+		var provisionerMetadata model.ProvisionerMetadata
+		var masterCount int64
+		var masterInstanceType string
+		if cluster.Provisioner == model.ProvisionerKops && cluster.ProvisionerMetadataKops != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataKops.GetCommonMetadata()
+			masterCount = cluster.ProvisionerMetadataKops.MasterCount
+			masterInstanceType = cluster.ProvisionerMetadataKops.MasterInstanceType
+		} else if cluster.Provisioner == model.ProvisionerEKS && cluster.ProvisionerMetadataEKS != nil {
+			provisionerMetadata = cluster.ProvisionerMetadataEKS.GetCommonMetadata()
+			masterCount = 1
+			masterInstanceType = "-"
 		}
 
 		values = append(values, []string{
 			cluster.ID,
 			cluster.State,
-			cluster.ProvisionerMetadataKops.Version,
-			fmt.Sprintf("%d x %s", cluster.ProvisionerMetadataKops.MasterCount, cluster.ProvisionerMetadataKops.MasterInstanceType),
-			fmt.Sprintf("%d x %s (max %d)", cluster.ProvisionerMetadataKops.NodeMinCount, cluster.ProvisionerMetadataKops.NodeInstanceType, cluster.ProvisionerMetadataKops.NodeMaxCount),
-			cluster.ProvisionerMetadataKops.AMI,
-			cluster.ProvisionerMetadataKops.Networking,
-			cluster.ProvisionerMetadataKops.VPC,
+			provisionerMetadata.Version,
+			fmt.Sprintf("%d x %s", masterCount, masterInstanceType),
+			fmt.Sprintf("%d x %s (max %d)", provisionerMetadata.NodeMinCount, provisionerMetadata.NodeInstanceType, provisionerMetadata.NodeMaxCount),
+			provisionerMetadata.AMI,
+			provisionerMetadata.Networking,
+			provisionerMetadata.VPC,
 			status,
 		})
 	}

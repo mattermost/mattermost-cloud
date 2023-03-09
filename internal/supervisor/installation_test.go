@@ -9,8 +9,8 @@ import (
 	"math/rand"
 	"testing"
 
-	ec2Types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	eksTypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/mattermost-cloud/internal/events"
 	"github.com/mattermost/mattermost-cloud/internal/metrics"
 	"github.com/mattermost/mattermost-cloud/internal/store"
@@ -415,12 +415,54 @@ func (p *mockInstallationProvisioner) PrepareClusterUtilities(cluster *model.Clu
 // can be tested.
 type mockAWS struct{}
 
-func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata model.EKSMetadata) (*ec2Types.LaunchTemplate, error) {
-	return &ec2Types.LaunchTemplate{}, nil
+var _ aws.AWS = (*mockAWS)(nil)
+
+func (a *mockAWS) WaitForActiveEKSNodeGroup(clusterName, workerName string, timeout int) (*eksTypes.Nodegroup, error) {
+	return nil, nil
 }
 
-func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) (bool, error) {
-	return true, nil
+func (a *mockAWS) WaitForEKSClusterToBeDeleted(clusterName string, timeout int) error {
+	return nil
+}
+
+func (a *mockAWS) WaitForEKSNodeGroupToBeDeleted(clusterName, workerName string, timeout int) error {
+	return nil
+}
+
+func (a *mockAWS) EnsureEKSClusterUpdated(cluster *model.Cluster) error {
+	return nil
+}
+
+func (a *mockAWS) EnsureEKSNodeGroupMigrated(cluster *model.Cluster) error {
+	return nil
+}
+
+func (a *mockAWS) GetActiveEKSNodeGroup(clusterName, workerName string) (*eksTypes.Nodegroup, error) {
+	return nil, nil
+}
+
+func (a *mockAWS) EnsureEKSNodeGroupDeleted(clusterName, workerName string) error {
+	return nil
+}
+
+func (a *mockAWS) WaitForActiveEKSCluster(clusterName string, timeout int) (*eksTypes.Cluster, error) {
+	return nil, nil
+}
+
+func (a *mockAWS) GetActiveEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
+	return &eksTypes.Cluster{}, nil
+}
+
+func (a *mockAWS) UpdateLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
+	return ptr.Int64(2), nil
+}
+
+func (a *mockAWS) EnsureLaunchTemplate(clusterName string, eksMetadata *model.EKSMetadata) (*int64, error) {
+	return ptr.Int64(1), nil
+}
+
+func (a *mockAWS) EnsureLaunchTemplateDeleted(clusterName string) error {
+	return nil
 }
 
 func (a *mockAWS) GetLoadBalancerAPIByType(s string) aws.ELB {
@@ -428,15 +470,7 @@ func (a *mockAWS) GetLoadBalancerAPIByType(s string) aws.ELB {
 	panic("implement me")
 }
 
-func (a *mockAWS) InstallEKSEBSAddon(cluster *model.Cluster) error {
-	return nil
-}
-
-func (a *mockAWS) AllowEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
-	return nil
-}
-
-func (a *mockAWS) RevokeEKSPostgresTraffic(cluster *model.Cluster, eksMetadata model.EKSMetadata) error {
+func (a *mockAWS) InstallEKSAddons(cluster *model.Cluster) error {
 	return nil
 }
 
@@ -452,28 +486,16 @@ func (a *mockAWS) ClaimVPC(vpcID string, cluster *model.Cluster, owner string, l
 	return aws.ClusterResources{}, nil
 }
 
-func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) (*eksTypes.Cluster, error) {
+func (a *mockAWS) EnsureEKSCluster(cluster *model.Cluster, resources aws.ClusterResources) (*eksTypes.Cluster, error) {
 	return &eksTypes.Cluster{}, nil
 }
 
-func (a *mockAWS) EnsureEKSClusterNodeGroups(cluster *model.Cluster, resources aws.ClusterResources, eksMetadata model.EKSMetadata) ([]*eksTypes.Nodegroup, error) {
-	return nil, nil
+func (a *mockAWS) EnsureEKSNodeGroup(cluster *model.Cluster) (*eksTypes.Nodegroup, error) {
+	return &eksTypes.Nodegroup{}, nil
 }
 
-func (a *mockAWS) GetEKSCluster(clusterName string) (*eksTypes.Cluster, error) {
-	return &eksTypes.Cluster{}, nil
-}
-
-func (a *mockAWS) IsClusterReady(clusterName string) (bool, error) {
-	return true, nil
-}
-
-func (a *mockAWS) EnsureNodeGroupsDeleted(cluster *model.Cluster) (bool, error) {
-	return true, nil
-}
-
-func (a *mockAWS) EnsureEKSClusterDeleted(cluster *model.Cluster) (bool, error) {
-	return true, nil
+func (a *mockAWS) EnsureEKSClusterDeleted(clusterName string) error {
+	return nil
 }
 
 func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.FieldLogger) (*model.Certificate, error) {
@@ -482,10 +504,6 @@ func (a *mockAWS) GetCertificateSummaryByTag(key, value string, logger log.Field
 
 func (a *mockAWS) GetCloudEnvironmentName() string {
 	return "test"
-}
-
-func (a *mockAWS) DynamoDBEnsureTableDeleted(tableName string, logger log.FieldLogger) error {
-	return nil
 }
 
 func (a *mockAWS) S3EnsureBucketDeleted(bucketName string, logger log.FieldLogger) error {
@@ -508,10 +526,6 @@ func (a *mockAWS) GetAndClaimVpcResources(cluster *model.Cluster, owner string, 
 	return aws.ClusterResources{}, nil
 }
 
-func (a *mockAWS) GetVpcResources(clusterID string, logger log.FieldLogger) (aws.ClusterResources, error) {
-	return aws.ClusterResources{}, nil
-}
-
 func (a *mockAWS) ReleaseVpc(cluster *model.Cluster, logger log.FieldLogger) error {
 	return nil
 }
@@ -528,29 +542,11 @@ func (a *mockAWS) GetPrivateZoneDomainName(logger log.FieldLogger) (string, erro
 	return "test.domain", nil
 }
 
-func (a *mockAWS) GetTagByKeyAndZoneID(key string, id string, logger log.FieldLogger) (*aws.Tag, error) {
-	return &aws.Tag{
-		Key:   "examplekey",
-		Value: "examplevalue",
-	}, nil
-}
-func (a *mockAWS) GetPrivateHostedZoneID() string {
-	return "EXAMPLER53ID"
-}
-
 func (a *mockAWS) CreatePrivateCNAME(dnsName string, dnsEndpoints []string, logger log.FieldLogger) error {
 	return nil
 }
 
-func (a *mockAWS) CreatePublicCNAME(dnsName string, dnsEndpoints []string, dnsIdentifier string, logger log.FieldLogger) error {
-	return nil
-}
-
 func (a *mockAWS) UpsertPublicCNAMEs(dnsNames, endpoints []string, logger log.FieldLogger) error {
-	return nil
-}
-
-func (a *mockAWS) UpdatePublicRecordIDForCNAME(dnsName, newID string, logger log.FieldLogger) error {
 	return nil
 }
 
@@ -562,10 +558,6 @@ func (a *mockAWS) DeletePrivateCNAME(dnsName string, logger log.FieldLogger) err
 	return nil
 }
 
-func (a *mockAWS) DeletePublicCNAME(dnsName string, logger log.FieldLogger) error {
-	return nil
-}
-
 func (a *mockAWS) DeletePublicCNAMEs(dnsNames []string, logger log.FieldLogger) error {
 	return nil
 }
@@ -574,28 +566,8 @@ func (a *mockAWS) GetPublicHostedZoneNames() []string {
 	return []string{"public.host.name.example.com"}
 }
 
-func (a *mockAWS) TagResource(resourceID, key, value string, logger log.FieldLogger) error {
-	return nil
-}
-
-func (a *mockAWS) UntagResource(resourceID, key, value string, logger log.FieldLogger) error {
-	return nil
-}
-
 func (a *mockAWS) IsValidAMI(AMIID string, logger log.FieldLogger) (bool, error) {
 	return true, nil
-}
-
-func (a *mockAWS) S3FilestoreProvision(installationID string, logger log.FieldLogger) error {
-	return nil
-}
-
-func (a *mockAWS) S3FilestoreTeardown(installationID string, keepBucket bool, logger log.FieldLogger) error {
-	return nil
-}
-
-func (a *mockAWS) SecretsManagerGetIAMAccessKey(installationID string, logger log.FieldLogger) (*aws.IAMAccessKey, error) {
-	return nil, nil
 }
 
 func (a *mockAWS) GeneratePerseusUtilitySecret(clusterID string, logger log.FieldLogger) (*corev1.Secret, error) {
@@ -616,22 +588,9 @@ func (a *mockAWS) S3LargeCopy(srcBucketName, srcKey, destBucketName, destKey *st
 func (a *mockAWS) GetMultitenantBucketNameForInstallation(installationID string, store model.InstallationDatabaseStoreInterface) (string, error) {
 	return "", nil
 }
-func (a *mockAWS) GetVpcResourcesByVpcID(vpcID string, logger log.FieldLogger) (aws.ClusterResources, error) {
-	return aws.ClusterResources{}, nil
-}
-func (a *mockAWS) TagResourcesByCluster(clusterResources aws.ClusterResources, cluster *model.Cluster, owner string, logger log.FieldLogger) error {
-	return nil
-}
-func (a *mockAWS) SwitchClusterTags(clusterID string, targetClusterID string, logger log.FieldLogger) error {
-	return nil
-}
 
 func (a *mockAWS) SecretsManagerGetPGBouncerAuthUserPassword(vpcID string) (string, error) {
 	return "password", nil
-}
-
-func (a *mockAWS) SecretsManagerValidateExternalDatabaseSecret(name string) error {
-	return nil
 }
 
 type mockEventProducer struct {
@@ -644,6 +603,7 @@ func (m *mockEventProducer) ProduceInstallationStateChangeEvent(installation *mo
 	m.installationListByEventOrder = append(m.installationListByEventOrder, installation.ID)
 	return nil
 }
+
 func (m *mockEventProducer) ProduceClusterStateChangeEvent(cluster *model.Cluster, oldState string, extraDataFields ...events.DataField) error {
 	m.clusterListByEventOrder = append(m.clusterListByEventOrder, cluster.ID)
 	return nil
@@ -796,6 +756,7 @@ func TestInstallationSupervisor(t *testing.T) {
 
 	standardStableTestCluster := func() *model.Cluster {
 		return &model.Cluster{
+			Provisioner:        model.ProvisionerKops,
 			State:              model.ClusterStateStable,
 			AllowInstallations: true,
 			ProvisionerMetadataKops: &model.KopsMetadata{

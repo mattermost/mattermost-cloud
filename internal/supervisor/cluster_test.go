@@ -87,6 +87,14 @@ func (p *mockClusterProvisionerOption) GetClusterProvisioner(provisioner string)
 
 type mockClusterProvisioner struct{}
 
+func (p *mockClusterProvisioner) CreateNodes(cluster *model.Cluster) error {
+	return nil
+}
+
+func (p *mockClusterProvisioner) RefreshClusterMetadata(cluster *model.Cluster) error {
+	return nil
+}
+
 func (p *mockClusterProvisioner) PrepareCluster(cluster *model.Cluster) bool {
 	return true
 }
@@ -161,6 +169,7 @@ func TestClusterSupervisorDo(t *testing.T) {
 			logger,
 			cloudMetrics,
 		)
+
 		err := supervisor.Do()
 		require.NoError(t, err)
 

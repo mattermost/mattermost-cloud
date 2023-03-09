@@ -24,7 +24,7 @@ type CreateClusterRequest struct {
 	Provider               string                         `json:"provider,omitempty"`
 	Zones                  []string                       `json:"zones,omitempty"`
 	Version                string                         `json:"version,omitempty"`
-	KopsAMI                string                         `json:"kops-ami,omitempty"`
+	AMI                    string                         `json:"ami,omitempty"`
 	MasterInstanceType     string                         `json:"master-instance-type,omitempty"`
 	MasterCount            int64                          `json:"master-count,omitempty"`
 	NodeInstanceType       string                         `json:"node-instance-type,omitempty"`
@@ -37,14 +37,9 @@ type CreateClusterRequest struct {
 	Networking             string                         `json:"networking,omitempty"`
 	VPC                    string                         `json:"vpc,omitempty"`
 	MaxPodsPerNode         int64                          `json:"max-pods-per-node,omitempty"`
-	EKSConfig              *EKSConfig                     `json:"EKSConfig,omitempty"`
+	ClusterRoleARN         string                         `json:"cluster-role-arn,omitempty"`
+	NodeRoleARN            string                         `json:"node-role-arn,omitempty"`
 	Provisioner            string                         `json:"provisioner,omitempty"`
-}
-
-// EKSConfig is EKS cluster configuration.
-type EKSConfig struct {
-	ClusterRoleARN *string `json:"clusterRoleARN,omitempty"`
-	NodeRoleARN    *string `json:"nodeRoleARN,omitempty"`
 }
 
 func (request *CreateClusterRequest) setUtilityDefaults(utilityName string) {
@@ -72,11 +67,23 @@ func (request *CreateClusterRequest) SetDefaults() {
 	if len(request.Provider) == 0 {
 		request.Provider = ProviderAWS
 	}
-	if len(request.Version) == 0 {
-		request.Version = "latest"
+	if len(request.Provisioner) == 0 {
+		request.Provisioner = ProvisionerKops
 	}
+	if len(request.Version) == 0 {
+		if request.Provisioner == ProvisionerEKS {
+			request.Version = "1.23"
+		} else {
+			request.Version = "latest"
+		}
+	}
+
 	if len(request.Zones) == 0 {
-		request.Zones = []string{"us-east-1a"}
+		if request.Provisioner == ProvisionerEKS {
+			request.Zones = []string{"us-east-1a", "us-east-1b"}
+		} else {
+			request.Zones = []string{"us-east-1a"}
+		}
 	}
 	if len(request.MasterInstanceType) == 0 {
 		request.MasterInstanceType = "t3.medium"
@@ -111,6 +118,9 @@ func (request *CreateClusterRequest) Validate() error {
 	if request.Provider != ProviderAWS {
 		return errors.Errorf("unsupported provider %s", request.Provider)
 	}
+	if request.Provisioner != ProvisionerKops && request.Provisioner != ProvisionerEKS {
+		return errors.Errorf("unsupported provisioner %s", request.Provisioner)
+	}
 	if !ValidClusterVersion(request.Version) {
 		return errors.Errorf("unsupported cluster version %s", request.Version)
 	}
@@ -128,12 +138,19 @@ func (request *CreateClusterRequest) Validate() error {
 	}
 	// TODO: check zones and instance types?
 
-	if request.EKSConfig != nil {
-		if request.EKSConfig.ClusterRoleARN == nil || *request.EKSConfig.ClusterRoleARN == "" {
+	if request.Provisioner == ProvisionerEKS {
+		if request.ClusterRoleARN == "" {
 			return errors.New("cluster role ARN for EKS cluster cannot be empty")
 		}
-		if request.EKSConfig.NodeRoleARN == nil || *request.EKSConfig.NodeRoleARN == "" {
+		if request.NodeRoleARN == "" {
 			return errors.New("node role ARN for EKS cluster cannot be empty")
+		}
+		if request.AMI == "" {
+			return errors.New("AMI for EKS cluster cannot be empty")
+		}
+
+		if len(request.Zones) < 2 {
+			return errors.New("EKS cluster needs at least two zones")
 		}
 	}
 
@@ -207,7 +224,7 @@ func NewUpdateClusterRequestFromReader(reader io.Reader) (*UpdateClusterRequest,
 // PatchUpgradeClusterRequest specifies the parameters for upgrading a cluster.
 type PatchUpgradeClusterRequest struct {
 	Version        *string        `json:"version,omitempty"`
-	KopsAMI        *string        `json:"kops-ami,omitempty"`
+	AMI            *string        `json:"ami,omitempty"`
 	RotatorConfig  *RotatorConfig `json:"rotatorConfig,omitempty"`
 	MaxPodsPerNode *int64
 }
@@ -228,36 +245,6 @@ func (p *PatchUpgradeClusterRequest) Validate() error {
 	}
 
 	return nil
-}
-
-// Apply applies the patch to the given cluster's metadata.
-func (p *PatchUpgradeClusterRequest) Apply(metadata *KopsMetadata) bool {
-	changes := &KopsMetadataRequestedState{}
-
-	var applied bool
-	if p.Version != nil && *p.Version != metadata.Version {
-		applied = true
-		changes.Version = *p.Version
-	}
-	if p.KopsAMI != nil && *p.KopsAMI != metadata.AMI {
-		applied = true
-		changes.AMI = *p.KopsAMI
-	}
-	if p.MaxPodsPerNode != nil && *p.MaxPodsPerNode != metadata.MaxPodsPerNode {
-		applied = true
-		changes.MaxPodsPerNode = *p.MaxPodsPerNode
-	}
-
-	if metadata.RotatorRequest == nil {
-		metadata.RotatorRequest = &RotatorMetadata{}
-	}
-
-	if applied {
-		metadata.ChangeRequest = changes
-		metadata.RotatorRequest.Config = p.RotatorConfig
-	}
-
-	return applied
 }
 
 // NewUpgradeClusterRequestFromReader will create an UpgradeClusterRequest from an io.Reader with JSON data.
@@ -304,36 +291,6 @@ func (p *PatchClusterSizeRequest) Validate() error {
 	}
 
 	return nil
-}
-
-// Apply applies the patch to the given cluster's kops metadata.
-func (p *PatchClusterSizeRequest) Apply(metadata *KopsMetadata) bool {
-	changes := &KopsMetadataRequestedState{}
-
-	var applied bool
-	if p.NodeInstanceType != nil && *p.NodeInstanceType != metadata.NodeInstanceType {
-		applied = true
-		changes.NodeInstanceType = *p.NodeInstanceType
-	}
-	if p.NodeMinCount != nil && *p.NodeMinCount != metadata.NodeMinCount {
-		applied = true
-		changes.NodeMinCount = *p.NodeMinCount
-	}
-	if p.NodeMaxCount != nil && *p.NodeMaxCount != metadata.NodeMaxCount {
-		applied = true
-		changes.NodeMaxCount = *p.NodeMaxCount
-	}
-
-	if metadata.RotatorRequest == nil {
-		metadata.RotatorRequest = &RotatorMetadata{}
-	}
-
-	if applied {
-		metadata.ChangeRequest = changes
-		metadata.RotatorRequest.Config = p.RotatorConfig
-	}
-
-	return applied
 }
 
 // NewResizeClusterRequestFromReader will create an PatchClusterSizeRequest from an io.Reader with JSON data.

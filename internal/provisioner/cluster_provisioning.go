@@ -158,8 +158,7 @@ func provisionCluster(
 		},
 	}
 
-	// Do not deploy calico if we use EKS
-	if cluster.ProvisionerMetadataEKS == nil {
+	if cluster.Provisioner == model.ProvisionerKops {
 		// Only deploy calico CNI at cluster creation time if networking option is calico
 		if cluster.ProvisionerMetadataKops.ChangeRequest != nil &&
 			len(cluster.ProvisionerMetadataKops.ChangeRequest.Networking) != 0 &&
@@ -203,7 +202,7 @@ func provisionCluster(
 	}
 
 	var manifestFiles []k8s.ManifestFile
-	if cluster.Provisioner == "eks" {
+	if cluster.Provisioner == model.ProvisionerEKS {
 		manifestFiles = append(manifestFiles, k8s.ManifestFile{
 			// some manifest requires 'kops-csi-1-21' storageClass
 			// which is not available by default in EKS
@@ -226,7 +225,7 @@ func provisionCluster(
 		"mattermost-operator": mattermostOperatorNamespace,
 		"bifrost":             bifrostNamespace,
 	}
-	if cluster.ProvisionerMetadataEKS == nil {
+	if cluster.Provisioner == model.ProvisionerKops {
 		if (cluster.ProvisionerMetadataKops != nil && cluster.ProvisionerMetadataKops.Networking == "calico") ||
 			(cluster.ProvisionerMetadataKops.ChangeRequest != nil && cluster.ProvisionerMetadataKops.ChangeRequest.Networking == "calico") {
 			appsWithDeployment["calico-typha-horizontal-autoscaler"] = "kube-system"
@@ -361,7 +360,7 @@ func provisionCluster(
 		}
 	}
 
-	if cluster.ProvisionerMetadataKops != nil {
+	if cluster.Provisioner == model.ProvisionerKops {
 		iamRole := fmt.Sprintf("nodes.%s", cluster.ProvisionerMetadataKops.Name)
 		err = awsClient.AttachPolicyToRole(iamRole, aws.CustomNodePolicyName, logger)
 		if err != nil {
@@ -395,12 +394,12 @@ func provisionCluster(
 
 	// Sync PGBouncer configmap if there is any change
 	var vpc string
-	if cluster.ProvisionerMetadataKops != nil {
+	if cluster.Provisioner == model.ProvisionerKops {
 		vpc = cluster.ProvisionerMetadataKops.VPC
-	} else if cluster.ProvisionerMetadataEKS != nil {
+	} else if cluster.Provisioner == model.ProvisionerEKS {
 		vpc = cluster.ProvisionerMetadataEKS.VPC
 	} else {
-		return errors.New("cluster metadata is nil cannot determine VPC")
+		return errors.New("cannot get metadata from unknown provisioner")
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
 	defer cancel()
@@ -410,9 +409,11 @@ func provisionCluster(
 	}
 	logger.Info("pgbouncer configmap updated successfully")
 
-	clusterName := cluster.ID
-	if cluster.ProvisionerMetadataKops != nil {
+	var clusterName string
+	if cluster.Provisioner == model.ProvisionerKops {
 		clusterName = cluster.ProvisionerMetadataKops.Name
+	} else if cluster.Provisioner == model.ProvisionerEKS {
+		clusterName = cluster.ProvisionerMetadataEKS.Name
 	}
 
 	logger.WithField("name", clusterName).Info("Successfully provisioned cluster")

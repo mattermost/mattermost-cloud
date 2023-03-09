@@ -11,7 +11,7 @@ type kube interface {
 }
 
 func (provisioner Provisioner) getKubeOption(provisionerOption string) kube {
-	if provisionerOption == "eks" {
+	if provisionerOption == model.ProvisionerEKS {
 		return provisioner.eksProvisioner
 	}
 

@@ -13,6 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	ProvisionerKops = "kops"
+)
+
 // KopsMetadata is the provisioner metadata stored in a model.Cluster.
 type KopsMetadata struct {
 	Name                 string
@@ -108,7 +112,7 @@ func (r RotatorConfig) Validate() error {
 // actionable value.
 func (km *KopsMetadata) ValidateChangeRequest() error {
 	if km.ChangeRequest == nil {
-		return errors.New("the KopsMetadata ChangeRequest is nil")
+		return errors.New("the Kops Metadata ChangeRequest is nil")
 	}
 
 	if len(km.ChangeRequest.Version) == 0 &&
@@ -118,7 +122,7 @@ func (km *KopsMetadata) ValidateChangeRequest() error {
 		km.MasterCount == 0 &&
 		km.NodeMinCount == 0 &&
 		km.NodeMaxCount == 0 {
-		return errors.New("the KopsMetadata ChangeRequest has no change values set")
+		return errors.New("the Kops Metadata ChangeRequest has no change values set")
 	}
 
 	return nil
@@ -281,6 +285,79 @@ func (km *KopsMetadata) ClearWarnings() {
 // AddWarning adds a warning the kops metadata warning list.
 func (km *KopsMetadata) AddWarning(warning string) {
 	km.Warnings = append(km.Warnings, warning)
+}
+
+// ApplyUpgradePatch applies the patch to the given cluster's metadata.
+func (km *KopsMetadata) ApplyUpgradePatch(patchRequest *PatchUpgradeClusterRequest) bool {
+	changes := &KopsMetadataRequestedState{}
+
+	var applied bool
+	if patchRequest.Version != nil && *patchRequest.Version != km.Version {
+		applied = true
+		changes.Version = *patchRequest.Version
+	}
+	if patchRequest.AMI != nil && *patchRequest.AMI != km.AMI {
+		applied = true
+		changes.AMI = *patchRequest.AMI
+	}
+	if patchRequest.MaxPodsPerNode != nil && *patchRequest.MaxPodsPerNode != km.MaxPodsPerNode {
+		applied = true
+		changes.MaxPodsPerNode = *patchRequest.MaxPodsPerNode
+	}
+
+	if km.RotatorRequest == nil {
+		km.RotatorRequest = &RotatorMetadata{}
+	}
+
+	if applied {
+		km.ChangeRequest = changes
+		km.RotatorRequest.Config = patchRequest.RotatorConfig
+	}
+
+	return applied
+}
+
+func (km *KopsMetadata) GetCommonMetadata() ProvisionerMetadata {
+	return ProvisionerMetadata{
+		Name:             km.Name,
+		Version:          km.Version,
+		AMI:              km.AMI,
+		NodeInstanceType: km.NodeInstanceType,
+		NodeMinCount:     km.NodeMinCount,
+		NodeMaxCount:     km.NodeMaxCount,
+		MaxPodsPerNode:   km.MaxPodsPerNode,
+		VPC:              km.VPC,
+		Networking:       km.Networking,
+	}
+}
+
+func (km *KopsMetadata) ApplyClusterSizePatch(patchRequest *PatchClusterSizeRequest) bool {
+	changes := &KopsMetadataRequestedState{}
+
+	var applied bool
+	if patchRequest.NodeInstanceType != nil && *patchRequest.NodeInstanceType != km.NodeInstanceType {
+		applied = true
+		changes.NodeInstanceType = *patchRequest.NodeInstanceType
+	}
+	if patchRequest.NodeMinCount != nil && *patchRequest.NodeMinCount != km.NodeMinCount {
+		applied = true
+		changes.NodeMinCount = *patchRequest.NodeMinCount
+	}
+	if patchRequest.NodeMaxCount != nil && *patchRequest.NodeMaxCount != km.NodeMaxCount {
+		applied = true
+		changes.NodeMaxCount = *patchRequest.NodeMaxCount
+	}
+
+	if km.RotatorRequest == nil {
+		km.RotatorRequest = &RotatorMetadata{}
+	}
+
+	if applied {
+		km.ChangeRequest = changes
+		km.RotatorRequest.Config = patchRequest.RotatorConfig
+	}
+
+	return applied
 }
 
 func (igm *KopsInstanceGroupsMetadata) getStableIterationOrder() []string {

@@ -7,7 +7,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost-cloud/internal/store"
 	"github.com/mattermost/mattermost-cloud/model"
@@ -107,51 +106,37 @@ func handleCreateCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	provisioner := "kops"
-	if createClusterRequest.Provisioner != "" {
-		provisioner = createClusterRequest.Provisioner
-	}
-
 	cluster := model.Cluster{
 		Provider: createClusterRequest.Provider,
 		ProviderMetadataAWS: &model.AWSMetadata{
 			Zones: createClusterRequest.Zones,
 		},
-		Provisioner:        provisioner,
+		Provisioner:        createClusterRequest.Provisioner,
 		AllowInstallations: createClusterRequest.AllowInstallations,
 		APISecurityLock:    createClusterRequest.APISecurityLock,
 		State:              model.ClusterStateCreationRequested,
 	}
 
-	if provisioner == "eks" {
-		var version *string
-		// We cannot pass empty string or "latest" as version it needs
-		// to be either correct version or nil.
-		// TODO: handle better the "latest" version which is set as a default for Kops clusters
-		if createClusterRequest.Version != "" && createClusterRequest.Version != "latest" {
-			version = &createClusterRequest.Version
-		}
-
+	if createClusterRequest.Provisioner == model.ProvisionerEKS {
 		cluster.ProvisionerMetadataEKS = &model.EKSMetadata{
-			KubernetesVersion: version,
-			VPC:               createClusterRequest.VPC,
-			Networking:        "",
-			ClusterRoleARN:    createClusterRequest.EKSConfig.ClusterRoleARN,
-			NodeGroup: model.EKSNodeGroup{
-				RoleARN:       createClusterRequest.EKSConfig.NodeRoleARN,
-				InstanceTypes: []string{createClusterRequest.NodeInstanceType},
-				DesiredSize:   ptr.Int32(int32(createClusterRequest.NodeMinCount)),
-				MinSize:       ptr.Int32(int32(createClusterRequest.NodeMinCount)),
-				MaxSize:       ptr.Int32(int32(createClusterRequest.NodeMaxCount)),
+			ChangeRequest: &model.EKSMetadataRequestedState{
+				Version:          createClusterRequest.Version,
+				VPC:              createClusterRequest.VPC,
+				ClusterRoleARN:   createClusterRequest.ClusterRoleARN,
+				NodeRoleARN:      createClusterRequest.NodeRoleARN,
+				NodeInstanceType: createClusterRequest.NodeInstanceType,
+				NodeMinCount:     createClusterRequest.NodeMinCount,
+				NodeMaxCount:     createClusterRequest.NodeMaxCount,
+				MaxPodsPerNode:   createClusterRequest.MaxPodsPerNode,
+				AMI:              createClusterRequest.AMI,
 			},
-			MaxPodsPerNode: createClusterRequest.MaxPodsPerNode,
-			AMI:            createClusterRequest.KopsAMI,
+			NodeInstanceGroups: make(map[string]model.EKSInstanceGroupMetadata),
 		}
 	} else {
 		cluster.ProvisionerMetadataKops = &model.KopsMetadata{
 			ChangeRequest: &model.KopsMetadataRequestedState{
 				Version:            createClusterRequest.Version,
-				AMI:                createClusterRequest.KopsAMI,
+				AMI:                createClusterRequest.AMI,
 				MasterInstanceType: createClusterRequest.MasterInstanceType,
 				MasterCount:        createClusterRequest.MasterCount,
 				NodeInstanceType:   createClusterRequest.NodeInstanceType,
@@ -362,7 +347,14 @@ func handleUpgradeKubernetes(c *Context, w http.ResponseWriter, r *http.Request)
 
 	oldState := clusterDTO.State
 
-	if upgradeClusterRequest.Apply(clusterDTO.ProvisionerMetadataKops) {
+	var isUpgradeApplied bool
+	if clusterDTO.Provisioner == model.ProvisionerKops {
+		isUpgradeApplied = clusterDTO.ProvisionerMetadataKops.ApplyUpgradePatch(upgradeClusterRequest)
+	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
+		isUpgradeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyUpgradePatch(upgradeClusterRequest)
+	}
+
+	if isUpgradeApplied {
 		clusterDTO.State = newState
 		err := c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {
@@ -421,7 +413,14 @@ func handleResizeCluster(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	oldState := clusterDTO.State
 
-	if resizeClusterRequest.Apply(clusterDTO.ProvisionerMetadataKops) {
+	var isResizeApplied bool
+	if clusterDTO.Provisioner == model.ProvisionerKops {
+		isResizeApplied = clusterDTO.ProvisionerMetadataKops.ApplyClusterSizePatch(resizeClusterRequest)
+	} else if clusterDTO.Provisioner == model.ProvisionerEKS {
+		isResizeApplied = clusterDTO.ProvisionerMetadataEKS.ApplyClusterSizePatch(resizeClusterRequest)
+	}
+
+	if isResizeApplied {
 		clusterDTO.State = newState
 		err = c.Store.UpdateCluster(clusterDTO.Cluster)
 		if err != nil {

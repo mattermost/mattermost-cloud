@@ -24,7 +24,7 @@ func TestCreateClusterRequestValid(t *testing.T) {
 		{"negative master count", &model.CreateClusterRequest{MasterCount: -1}, true},
 		{"mismatched node count", &model.CreateClusterRequest{NodeMinCount: 2, NodeMaxCount: 3}, true},
 		{"max pods too low", &model.CreateClusterRequest{MaxPodsPerNode: 1}, true},
-		{"eks no node group", &model.CreateClusterRequest{EKSConfig: &model.EKSConfig{}}, true},
+		{"eks no node group", &model.CreateClusterRequest{Provisioner: model.ProvisionerEKS}, true},
 	}
 
 	for _, tc := range testCases {
@@ -104,7 +104,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			"ami only",
 			true,
 			&model.PatchUpgradeClusterRequest{
-				KopsAMI: sToP("image1"),
+				AMI: sToP("image1"),
 			},
 			&model.KopsMetadata{
 				ChangeRequest: &model.KopsMetadataRequestedState{},
@@ -137,7 +137,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 			true,
 			&model.PatchUpgradeClusterRequest{
 				Version: sToP("version1"),
-				KopsAMI: sToP("image1"),
+				AMI:     sToP("image1"),
 			},
 			&model.KopsMetadata{
 				Version:       "old-version",
@@ -156,7 +156,7 @@ func TestUpgradeClusterRequestApply(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
-			apply := tc.request.Apply(tc.metadata)
+			apply := tc.metadata.ApplyUpgradePatch(tc.request)
 			assert.Equal(t, tc.expectApply, apply)
 			assert.Equal(t, tc.expectedMetadata, tc.metadata)
 		})

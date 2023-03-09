@@ -26,6 +26,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			MaxPodsPerNode:     200,
 			Zones:              []string{"us-east-1a"},
 			Networking:         model.NetworkingCalico,
+			Provisioner:        model.ProvisionerKops,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.5.2", ValuesPath: ""},
@@ -95,6 +96,7 @@ func TestNewCreateClusterRequestFromReader(t *testing.T) {
 			MaxPodsPerNode:     200,
 			Zones:              []string{"zone1", "zone2"},
 			Networking:         model.NetworkingCalico,
+			Provisioner:        model.ProvisionerKops,
 			DesiredUtilityVersions: map[string]*model.HelmUtilityVersion{
 				"fluentbit":             {Chart: "0.20.1", ValuesPath: ""},
 				"nginx":                 {Chart: "4.5.2", ValuesPath: ""},
