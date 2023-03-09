@@ -1004,3 +1004,21 @@ func int32Ptr(i int) *int32 {
 func setNdots(ndotsValue string) *corev1.PodDNSConfig {
 	return &corev1.PodDNSConfig{Options: []corev1.PodDNSConfigOption{{Name: "ndots", Value: &ndotsValue}}}
 }
+
+// Override the version to make match the nil value in the custom resource.
+// TODO: this could probably be better. We may want the operator to understand
+// default values instead of needing to pass in empty values.
+func translateMattermostVersion(version string) string {
+	if version == "stable" {
+		return ""
+	}
+
+	return version
+}
+
+func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation) string {
+	// TODO: Once https://mattermost.atlassian.net/browse/MM-15467 is fixed, we can use the
+	// full namespace as part of the name. For now, truncate to keep within the existing limit
+	// of 60 characters.
+	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
+}

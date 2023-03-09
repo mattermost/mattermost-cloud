@@ -5,18 +5,13 @@
 package provisioner
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/mattermost/mattermost-cloud/internal/tools/kops"
 	"github.com/mattermost/mattermost-cloud/internal/tools/terraform"
-	"github.com/mattermost/mattermost-cloud/k8s"
 	"github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // verifyTerraformAndKopsMatch looks at terraform output and verifies that the
@@ -38,52 +33,6 @@ func verifyTerraformAndKopsMatch(kopsName string, terraformClient *terraform.Cmd
 	}
 
 	return nil
-}
-
-// Override the version to make match the nil value in the custom resource.
-// TODO: this could probably be better. We may want the operator to understand
-// default values instead of needing to pass in empty values.
-func translateMattermostVersion(version string) string {
-	if version == "stable" {
-		return ""
-	}
-
-	return version
-}
-
-func makeClusterInstallationName(clusterInstallation *model.ClusterInstallation) string {
-	// TODO: Once https://mattermost.atlassian.net/browse/MM-15467 is fixed, we can use the
-	// full namespace as part of the name. For now, truncate to keep within the existing limit
-	// of 60 characters.
-	return fmt.Sprintf("mm-%s", clusterInstallation.Namespace[0:4])
-}
-
-// waitForNamespacesDeleted is used to check when all of the provided namespaces
-// have been fully terminated.
-func waitForNamespacesDeleted(ctx context.Context, namespaces []string, k8sClient *k8s.KubeClient) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return errors.Wrap(ctx.Err(), "timed out waiting for namespaces to become fully terminated")
-		default:
-			var shouldWait bool
-			for _, namespace := range namespaces {
-				_, err := k8sClient.Clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-				if err != nil && k8sErrors.IsNotFound(err) {
-					continue
-				}
-
-				shouldWait = true
-				break
-			}
-
-			if !shouldWait {
-				return nil
-			}
-
-			time.Sleep(5 * time.Second)
-		}
-	}
 }
 
 func updateKopsInstanceGroupAMIs(kops *kops.Cmd, kopsMetadata *model.KopsMetadata, logger log.FieldLogger) error {
