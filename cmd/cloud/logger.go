@@ -20,7 +20,6 @@ func init() {
 	logger.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
-	logger.WithField("hostname", os.Getenv("HOSTNAME"))
 	// Output to stdout instead of the default stderr.
 	log.SetOutput(os.Stdout)
 }
